@@ -5,6 +5,7 @@
 // @include     http://www.example.net/
 // @version     1.0
 // @grant       none
+// @require     library.js
 // @downloadURL https://raw.githubusercontent.com/amanhigh/tampermonkey-fun/master/experiment.user.js
 // ==/UserScript==
 
@@ -15,5 +16,7 @@
 
 // Use this to check if your script will update, among other things
 // Wiki: https://wiki.greasespot.net/GM_info
-console.log("Script will "+(GM_info?"":"not ")+"update.");
-  /// code
+let msg = "Script will " + (GM_info ? "" : "not ") + "update.";
+message(msg);
+console.log(msg);
+/// code
