@@ -13,6 +13,8 @@
 // @grant        GM_setValue
 // @grant        GM_addValueChangeListener
 // @require      lib/library.js
+// @require      lib/kite.js
+// @require      lib/investing.js
 // @require      https://code.jquery.com/jquery-3.4.1.min.js
 // @run-at document-end
 // ==/UserScript==
@@ -23,7 +25,6 @@ var y = 460;
 var w = 20;
 const xmssionKey = "fastAlert-event";
 const triggerMapKey = "triggerMapKey";
-const pairMapKey = "pairMapKey";
 const tickerMapKey = "tickerMapKey";
 const gttKey = "gtt-event";
 const style = "background-color: black; color: white;font-size: 15px"
@@ -116,7 +117,7 @@ if (location.pathname.includes("alert-center")) {
         gttKey, (keyName, oldValue, newValue, bRmtTrggrd) => {
             //console.log (`Received new GTT Order: ${newValue}`);
             if (newValue.qty > 0) {
-                setOrder(newValue.symb, newValue.ltp, newValue.sl, newValue.ent, newValue.tp, newValue.qty)
+                createOrder(newValue.symb, newValue.ltp, newValue.sl, newValue.ent, newValue.tp, newValue.qty)
             } else {
                 //Qty: -1 Signal for Delete GTT
                 deleteGTT(newValue.symb);
@@ -392,87 +393,7 @@ function setGtt() {
     }
 }
 
-function createAlert(pair_ID, price) {
-    //Auto Decide over under with ltp
-    var ltp = readLtp();
-    var threshold = price > ltp ? 'over' : 'under';
 
-    GM.xmlHttpRequest({
-        headers: {
-            "Accept": "application/json, text/javascript, */*; q=0.01",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Content-Type": "application/x-www-form-urlencoded",
-            "X-Requested-With": "XMLHttpRequest"
-        },
-        url: "https://in.investing.com/useralerts/service/create",
-        data: "alertType=instrument&alertParams%5Balert_trigger%5D=price&alertParams%5Bpair_ID%5D=" + pair_ID + "&alertParams%5Bthreshold%5D=" + threshold + "&alertParams%5Bfrequency%5D=Once&alertParams%5Bvalue%5D=" + price + "&alertParams%5Bplatform%5D=desktopAlertsCenter&alertParams%5Bemail_alert%5D=Yes",
-        method: "POST",
-        onload: function (response) {
-            if (response.status >= 200 && response.status < 400) {
-                message(threshold + '->' + price);
-                console.log('Alert Created: ' + pair_ID + ',' + price + ',' + threshold);
-            } else {
-                alert('Error Creating Alert: ' + pair_ID + ' (' + this.status + ' ' + this.statusText + '): ' + this.responseText);
-            }
-        },
-        onerror: function (response) {
-            console.log('Error Creating Alert: ' + pair_ID + ' : ' + response.statusText);
-        }
-    });
-}
-
-
-function searchSymbol(symb, callback) {
-    var m = GM_getValue(pairMapKey);
-    //Init m If not preset
-    m = m ? m : {};
-
-    //Try for a Cache Hit
-    if (m[symb]) {
-        var top = m[symb];
-        //console.log(`Cache Hit ${symb}-> ${top.name} ${top.pair_ID}`);
-        callback(top);
-    } else {
-        //Call and fill cache
-
-        GM.xmlHttpRequest({
-            headers: {
-                "Accept": "application/json, text/javascript, */*; q=0.01",
-                "Accept-Language": "en-US,en;q=0.5",
-                "Content-Type": "application/x-www-form-urlencoded",
-                "X-Requested-With": "XMLHttpRequest"
-            },
-            url: "https://in.investing.com/search/service/search?searchType=alertCenterInstruments",
-            data: "search_text=" + symb + "&term=" + symb + "&country_id=0&tab_id=All",
-            method: "POST",
-            onload: function (response) {
-                if (response.status >= 200 && response.status < 400) {
-                    var r = JSON.parse(response.responseText);
-                    //If Found
-                    if (r.All.length > 0) {
-                        //Select Top Result
-                        var top = r.All[0]
-                        //console.log(top);
-
-                        //Cache Top
-                        var cacheTop = {name: top.name, pair_ID: top.pair_ID};
-                        m[symb] = cacheTop;
-                        GM_setValue(pairMapKey, m);
-                        callback(cacheTop);
-                    } else {
-                        symbol.value = symb;
-                        alert("No Results Found: " + symb);
-                    }
-                } else {
-                    alert('Error doing Symbol Search: ' + symb + ' (' + this.status + ' ' + this.statusText + '): ' + this.responseText);
-                }
-            },
-            onerror: function (response) {
-                alert('Error doing Symbol Search: ' + symb + ' : ' + response.statusText);
-            }
-        });
-    }
-}
 
 
 //********************* Alerts Fast Delete *************************
@@ -520,36 +441,10 @@ function deleteAllAlerts(pairId) {
     $('.tv-dialog__close').click();
 }
 
-function deleteAlert(alert) {
-    GM.xmlHttpRequest({
-        headers: {
-            "Accept": "application/json, text/javascript, */*; q=0.01",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Content-Type": "application/x-www-form-urlencoded",
-            "X-Requested-With": "XMLHttpRequest"
-        },
-        url: "https://in.investing.com/useralerts/service/delete",
-        data: `alertType=instrument&alertParams%5Balert_ID%5D=${alert.id}&alertParams%5Bplatform%5D=desktop`,
-        method: "POST",
-        onload: function (response) {
-            if (response.status >= 200 && response.status < 400) {
-                message('Delete ->' + alert.price);
-                //console.log('Alert Deleted: ' + alert.id);
-            } else {
-                alert('Error Deleting Alert: ' + alert.id);
-            }
-        },
-        onerror: function (response) {
-            alert('Error Deleting Alert: ' + alert.id);
-        }
-    });
-}
-
-
 //*************************** Fast GTT *********************************************
 const margin = 0.005;
 
-function setOrder(pair, ltp, sl, ent, tp, qty) {
+function createOrder(pair, ltp, sl, ent, tp, qty) {
     var d = new Date();
     var year = d.getFullYear() + 1;
     var month = d.getMonth();
@@ -560,6 +455,7 @@ function setOrder(pair, ltp, sl, ent, tp, qty) {
 
 }
 
+/* Order Types */
 function createBuy(pair, price, qty, ltp, exp) {
     var buy_trg = generateTick(price + margin * price);
     var body = `condition={"exchange":"NSE","tradingsymbol":"${pair}","trigger_values":[${buy_trg}],"last_price":${ltp}}&orders=[{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"BUY","quantity":${qty},"price":${price},"order_type":"LIMIT","product":"CNC"}]&type=single&expires_at=${exp}`;
@@ -582,87 +478,6 @@ function createOco(pair, sl_trg, tp, qty, ltp, exp) {
     //console.log(body);
     createGTT(body);
 }
-
-function createGTT(body) {
-    GM.xmlHttpRequest({
-        headers: {
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Content-Type": "application/x-www-form-urlencoded",
-            "X-Requested-With": "XMLHttpRequest",
-            "X-Kite-Version": "2.4.0",
-            "Authorization": "enctoken " + JSON.parse(localStorage.getItem("__storejs_kite_enctoken"))
-        },
-        url: "https://kite.zerodha.com/oms/gtt/triggers",
-        data: encodeURI(body),
-        method: "POST",
-        onload: function (response) {
-            if (response.status >= 200 && response.status < 400) {
-                //console.log('GTT Created');
-            } else {
-                alert('Error Creating Alert: (' + this.status + ' ' + this.statusText + '): ' + this.responseText);
-            }
-        },
-        onerror: function (response) {
-            console.log('Error Making Request: ' + response.statusText);
-        }
-    });
-}
-
-function deleteGTT(symbol) {
-    var triggers = $(".gtt-list-section tr").filter(function () {
-        var $this = $(this);
-        var status = $this.find("td.status span span").text();
-        var quantity = $this.find("td.quantity span").text();
-        var sym = $this.find("span.tradingsymbol span").text();
-        if (status == "ACTIVE" && sym == symbol) {
-            //console.log(symbol,'->',quantity);
-            return true;
-        }
-    }).map(function () {
-        return $(this).attr('data-uid')
-    });
-
-    //console.log(`Delete GTT: ${symbol} -> ${triggers.length}`);
-
-    if (triggers.length == 0) {
-        message(`No Triggers Found for ${symbol}`);
-    } else if (triggers.length > 2) {
-        message(`Multiple Triggers<br/> found for ${symbol} can't delete: ${triggers.length}`);
-    } else {
-        for (var id of triggers) {
-            deleteTrigger(id);
-        }
-    }
-}
-
-function deleteTrigger(id) {
-    GM.xmlHttpRequest({
-        headers: {
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Content-Type": "application/x-www-form-urlencoded",
-            "X-Requested-With": "XMLHttpRequest",
-            "X-Kite-Version": "2.4.0",
-            "Authorization": "enctoken " + JSON.parse(localStorage.getItem("__storejs_kite_enctoken")),
-            "Pragma": "no-cache",
-            "Cache-Control": "no-cache"
-        },
-        url: "https://kite.zerodha.com/oms/gtt/triggers/" + id,
-        method: "DELETE",
-        onload: function (response) {
-            if (response.status >= 200 && response.status < 400) {
-                message('Trigger Deleted ->' + id);
-            } else {
-                alert('Error Deleting Trigger: (' + this.status + ' ' + this.statusText + '): ' + this.responseText);
-            }
-        },
-        onerror: function (response) {
-            alert('Error Deleting Trigger: (' + this.status + ' ' + this.statusText + '): ' + this.responseText);
-        }
-    });
-}
-
 
 function generateTick(n) {
     return (Math.ceil(n * 20) / 20).toFixed(2)

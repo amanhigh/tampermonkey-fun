@@ -11,7 +11,6 @@
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_addValueChangeListener
-// @grant        GM.xmlHttpRequest
 // @require      lib/library.js
 // @require      https://code.jquery.com/jquery-3.4.1.min.js
 // @run-at document-idle
