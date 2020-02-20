@@ -45,9 +45,31 @@ function kite() {
  * @param symbol
  */
 function kiteWatchAddSymbol(listNo, symbol) {
+    //Remove Symbol from Read List
+    kiteWatchRemoveSymbol(3, symbol);
+
+    //Open List
     $(`.marketwatch-selector li:nth-child(${listNo})`).click();
+    //Add Symbol
     waitInput('#search-input', symbol);
     waitClick('.search-result-item');
+}
+
+/**
+ * Removes Symbol If Present else does nothing.
+ * @param listNo List To Remove From.
+ * @param symbol Symbol to be Removed
+ */
+function kiteWatchRemoveSymbol(listNo, symbol) {
+    //Open List
+    $(`.marketwatch-selector li:nth-child(${listNo})`).click();
+
+    //Remove Symbol
+    let x = $(`span.nice-name:contains('${symbol}')`).parent().parent().parent().parent();
+    if (x.length) {
+        x[0].dispatchEvent(new Event('mouseenter'));
+        $("span.icon-trash").click();
+    }
 }
 
 // -------------------------------- TradingView ---------------------------------------------------------
