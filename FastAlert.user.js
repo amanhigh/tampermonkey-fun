@@ -13,8 +13,8 @@
 // @grant        GM_setValue
 // @grant        GM_addValueChangeListener
 // @require      lib/library.js
-// @require      lib/kite.js
-// @require      lib/investing.js
+// @require      lib/client/kite.js
+// @require      lib/client/investing.js
 // @require      https://code.jquery.com/jquery-3.4.1.min.js
 // @run-at document-end
 // ==/UserScript==
