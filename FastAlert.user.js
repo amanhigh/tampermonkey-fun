@@ -15,6 +15,7 @@
 // @require      lib/library.js
 // @require      lib/client/kite.js
 // @require      lib/client/investing.js
+// @require      lib/sites/tv.js
 // @require      https://code.jquery.com/jquery-3.4.1.min.js
 // @run-at document-end
 // ==/UserScript==
@@ -37,6 +38,7 @@ if (location.pathname.includes("alert-center")) {
 } else if (location.host.includes("kite.zerodha.com")) {
     kite();
 }
+
 //*************** KITE *********************
 function kite() {
     //Listen for GTT Orders
@@ -103,7 +105,9 @@ function alertCenter() {
         });
 
     //Add Auto Delete Confirmation Handler on all Delete Buttons
-    $('.js-delete-btn').click(confirmDelete);
+    $('.js-delete-btn').click(function () {
+        waitClick('.js-delete');
+    });
 
     //Map Symbol(PairId) to Trigger(Alerts) Map
     waitEE('#earningsAlerts', function (e) {
@@ -142,8 +146,7 @@ function tradingView() {
     document.addEventListener('keydown', doc_keyDown, false);
 
     //Register Ticker Change Listener
-    //TODO: Constants for all Selectors
-    waitEE('div.title-bcHj6pEn', function (e) {
+    waitEE(tickerSelector, function (e) {
         attributeObserver(e, onTickerChange);
     });
 
@@ -153,7 +156,6 @@ function tradingView() {
             //console.log (`Received new GTT Order: ${newValue}`);
             onTriggersChange(newValue);
         });
-    return {symbol, prices, useTicker, altz};
 }
 
 function setupFastAlertUI() {
@@ -199,7 +201,6 @@ function setupFastAlertUI() {
     document.body.appendChild(fastGtt);
     document.body.appendChild(useTicker);
     document.body.appendChild(altz);
-    return {symbol, prices, useTicker, altz};
 }
 
 // Alert Hotkeys
@@ -277,8 +278,9 @@ function autoAlert() {
     var ltp = readLtp();
 
 
+    //Wait for Alert Dialogue
     waitEE('.intent-primary-1-IOYcbg-', function (e) {
-        //Open Co-ordinates
+        //Open Co-ordinates Tab
         waitClick('.tab-1l4dFt6c:nth-of-type(2)');
 
         //Read ALert value (Line Co-ordinate)
@@ -318,16 +320,8 @@ function resetAlerts() {
     });
 }
 
-function confirmDelete() {
-    waitClick('.js-delete');
-}
-
 function deleteAllAlerts(pairId) {
-    //Delete Alert Lines
-    $('#drawing-toolbar-object-tree').click();
-    waitEE('.tv-objects-tree-item__title', function () {
-        $('.tv-objects-tree-item__title:contains("Horizontal Line")').parent().find('.js-remove-btn').click();
-    });
+    deleteAlertLines();
 
     var triggers = _getTriggers();
     if (triggers) {
@@ -398,13 +392,12 @@ function setGtt() {
 
     if (prices.value == "") {
         //Read from Order Panel
-        qty = parseFloat($('.units-3uGpy-z- input').val());
-        sl = parseFloat($('.group-2UNHLSVG input:nth(4)').val());
-        ent = parseFloat($('.group-2UNHLSVG input:nth(0)').val());
-        tp = parseFloat($('.group-2UNHLSVG input:nth(2)').val());
-
-        //Close Order Panel
-        $('.close-2XGlFxM0').click();
+        order = readOrderPanel();
+        qty = order.qty
+        sl = order.sl
+        ent = order.ent
+        tp = order.tp
+        closeOrderPanel();
 
         //console.log(`GTT ${qty}- ${sl} - ${ent} - ${tp}`);
     } else {
@@ -441,14 +434,6 @@ function setGtt() {
 }
 
 //Fast Alert: Helpers
-function readLtp() {
-    return parseFloat($('.dl-header-price').text());
-}
-
-function getTicker() {
-    return $('.input-3lfOzLDc').val();
-}
-
 function getMappedTicker() {
     var symb = getTicker();
     // Use Investing Ticker if available
@@ -459,10 +444,6 @@ function getMappedTicker() {
 
     //console.log(symb,investingTicker);
     return symb;
-}
-
-function getName() {
-    return $(".dl-header-symbol-desc")[0].innerHTML;
 }
 
 function mapTicker(tvTicker, investingTicker) {

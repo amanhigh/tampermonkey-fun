@@ -13,6 +13,7 @@
 // @grant        GM_setValue
 // @grant        GM_addValueChangeListener
 // @require      lib/library.js
+// @require      lib/sites/tv.js
 // @require      https://code.jquery.com/jquery-3.1.1.min.js
 // @run-at document-idle
 // ==/UserScript==
@@ -87,9 +88,13 @@ function onAlertClickHandler(event) {
 };
 
 // ---------------------------- KITE -------------------------------
+const kiteWatchListSelector = ".vddl-list";
+const storageWatchInfo = "__storejs_kite_marketwatch/watchInfo";
+const storageCurrentList = "__storejs_kite_marketwatch/currentWatchId";
+
 function kite() {
     //Listen to Any WatchList Change
-    waitEE(".vddl-list", (el) => {
+    waitEE(kiteWatchListSelector, (el) => {
         nodeObserver(el, onKiteWatchChange)
     });
 }
@@ -99,10 +104,10 @@ function kite() {
  */
 function onKiteWatchChange() {
     //Read Current WachInfo from Local Store
-    var watchInfo = JSON.parse(localStorage.getItem("__storejs_kite_marketwatch/watchInfo"));
+    var watchInfo = JSON.parse(localStorage.getItem(storageWatchInfo));
 
     //Read Current index and Symbols in Watch List
-    var index = JSON.parse(localStorage.getItem("__storejs_kite_marketwatch/currentWatchId"))
+    var index = JSON.parse(localStorage.getItem(storageCurrentList))
     var names = $('.nice-name').map(function () {
         return this.innerHTML;
     }).toArray();
@@ -113,7 +118,7 @@ function onKiteWatchChange() {
     watchInfo[index] = names;
 
     //Write to Local Store for future reference
-    localStorage.setItem("__storejs_kite_marketwatch/watchInfo", JSON.stringify(watchInfo));
+    localStorage.setItem(storageWatchInfo, JSON.stringify(watchInfo));
 
     //Send Event to Trading View
     GM_setValue(kiteWatchChangeKey, watchInfo);
@@ -146,8 +151,7 @@ function tradingView() {
 
 
     //Onload TV WatchList Paint
-    //TODO: Constants for Selectors
-    waitEE(".tree-T6PqyYoA", (el) => {
+    waitEE(watchListSelector, (el) => {
 
         // Paint WatchList Once Loaded
         paintTVWatchList();
@@ -156,12 +160,12 @@ function tradingView() {
         nodeObserver(el, paintAll);
 
         //Onload Details Paint
-        waitEE(".dl-header-symbol-desc", (el) => {
+        waitEE(nameSelector, (el) => {
             nodeObserver(el, paintDetails);
         });
 
         //Ensure Repaint on Screener Changes
-        waitEE(".tv-data-table", (el) => {
+        waitEE(screenerSelector, (el) => {
             attributeObserver(el, paintTVScreener);
         });
 
@@ -195,13 +199,12 @@ function paintAll() {
  * Paints TV WatchList
  */
 function paintTVWatchList() {
-    var sel = 'symbolNameText-2EYOR9jS';
     //Reset Color
-    $(`.${sel}`).css('color', 'white');
+    $(`.${watchListSymbolSelector}`).css('color', 'white');
     //Paint Index
-    paint(sel, indexSymbols, colorList[6]);
+    paint(watchListSymbolSelector, indexSymbols, colorList[6]);
     //Paint Kite
-    paintTickers(sel);
+    paintTickers(watchListSymbolSelector);
     updateSummary();
 
     //To be Used on Alert Feed; Delay Required as during paint it has nse:symbol but we require name.
@@ -213,13 +216,11 @@ function paintTVWatchList() {
  * Paints TV Screener Elements.
  */
 function paintTVScreener() {
-    var sel = 'tv-screener__symbol';
-
     //Must Run in this Order- Clear, WatchList, Kite
-    $(`.${sel}`).css('color', 'white');
+    $(`.${screenerSymbolSelector}`).css('color', 'white');
 
-    paint(sel, getWatchListTickers(), colorList[5]);
-    paintTickers(sel);
+    paint(screenerSymbolSelector, getWatchListTickers(), colorList[5]);
+    paintTickers(screenerSymbolSelector);
     //console.log("Painting Screener");
 }
 
@@ -256,23 +257,4 @@ function paint(selector, symbols, colour) {
     for (const sym of symbols) {
         $(`.${selector}:contains("${sym}")`).css('color', colour);
     }
-}
-
-//TradingView: Getters
-function getWatchListTickers() {
-    return $('.symbolNameText-2EYOR9jS').toArray().map(s => s.innerHTML);
-}
-
-function getWatchListNames() {
-    return $('div.symbol-17NLytxZ').map((i, e) => e.title.split(',')[0].toLowerCase().substring(0, nameLength)).toArray();
-}
-
-//TradingView: Ticker Actions
-/**
- * Opens Given Ticker in Trading View.
- * @param ticker
- */
-function openTicker(ticker) {
-    waitInput('input', ticker);
-    waitClick("td.symbol-edit-popup-td");
 }
