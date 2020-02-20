@@ -304,6 +304,7 @@ function altRefresh() {
     waitOn(xmssionKey, 10000, () => {
         //-- Send message to reload AlertList
         GM_setValue(xmssionKey, Date());
+        message('Refreshing Alerts'.fontcolor('skyblue'))
     });
 }
 
@@ -378,7 +379,7 @@ function setGtt() {
 
     //Delete GTT on ".."
     if (prices.value === "..") {
-        message(`GTT Delete: ${symb}`);
+        message(`GTT Delete: ${symb}`.fontcolor('red'));
 
         //Send Signal to Kite to place Order with Qty: -1
         GM_setValue(gttKey, {symb: symb, qty: -1});
@@ -419,7 +420,7 @@ function setGtt() {
         ent: ent,
         tp: tp,
     };
-    message(`${symb} (${ltp}) Qty: ${qty}, ${sl} - ${ent} - ${tp}`);
+    message(`${symb} (${ltp}) Qty: ${qty}, ${sl} - ${ent} - ${tp}`.fontcolor('yellow'));
 
     //If Valid Order Send else Alert
     if (qty > 0 && sl > 0 && ent > 0 && tp > 0) {
