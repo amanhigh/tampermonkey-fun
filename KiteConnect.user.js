@@ -12,6 +12,7 @@
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_addValueChangeListener
+// @require      lib/library.js
 // @require      https://code.jquery.com/jquery-3.1.1.min.js
 // @run-at document-idle
 // ==/UserScript==
@@ -272,67 +273,4 @@ function openTicker(ticker)
 {
     waitInput('input',ticker);
     waitClick("td.symbol-edit-popup-td");
-}
-
-
-// -------------------------- Library -----------------------------
-//WaitUntilElementExists
-function waitClick(selector)
-{
-     waitEE(selector,(e)=> e.click());
-}
-
-function waitEE(selector, callback,count=0) {
-    const el = document.querySelector(selector);
-
-    if (el) {
-        return callback(el);
-    }
-
-    if (count < 3) {
-        setTimeout(() => waitEE(selector, callback,count+1), 1200);
-    }
-     else {
-        console.log("Wait Element Failed, exiting Recursion: " + selector);
-    }
-}
-
-function waitInput(selector,inputValue)
-{
-    waitEE(selector,(e) =>{
-        e.value=inputValue
-        e.dispatchEvent(new Event('input',{'bubbles': true }));
-    })
-}
-
-//Observer for Node Count Change
-function nodeObserver(target,callback)
-{
-    new window.MutationObserver(function(mutations, observer) {
-        var hasUpdates = false;
-
-        for (var index = 0; index < mutations.length; index++) {
-            var mutation = mutations[index];
-
-            if (mutation.type === 'childList' && (mutation.addedNodes.length || mutation.removedNodes.length)) {
-                hasUpdates = true;
-                break;
-            }
-        }
-
-        if (hasUpdates) {
-            callback();
-        }
-    }).observe(target, {childList: true});
-}
-
-function attributeObserver(target,callback){
-    new window.MutationObserver(function(mutations, observer) {
-        //console.log(mutations);
-        if (mutations.length > 0){
-            callback();
-        }
-    }).observe(target, {attributes: true, subtree: true});
-
-    //console.log("Attribute Observer: ",target);
 }

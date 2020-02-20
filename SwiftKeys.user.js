@@ -12,6 +12,7 @@
 // @grant        GM_setValue
 // @grant        GM_addValueChangeListener
 // @grant        GM.xmlHttpRequest
+// @require      lib/library.js
 // @require      https://code.jquery.com/jquery-3.4.1.min.js
 // @run-at document-idle
 // ==/UserScript==
@@ -316,37 +317,6 @@ function getTicker(){
 	return $('.input-3lfOzLDc')[0].value;
 }
 
-//--------------------------- LIBRARY -----------------------------
-
-//WaitUntilElementExists
-function waitClick(selector)
-{
-     waitEE(selector,(e)=> e.click());
-}
-
-function waitEE(selector, callback,count=0) {
-    const el = document.querySelector(selector);
-
-    if (el) {
-        return callback(el);
-    }
-
-    if (count < 3) {
-        setTimeout(() => waitEE(selector, callback,count+1), 1200);
-    }
-     else {
-        console.log("Wait Element Failed, exiting Recursion: " + selector);
-    }
-}
-
-function waitInput(selector,inputValue)
-{
-    waitEE(selector,(e) =>{
-        e.value=inputValue
-        e.dispatchEvent(new Event('input',{'bubbles': true }));
-    })
-}
-
 function isModifierKey(modifier,key,e){
     if (e.key.toLowerCase() == key && modifier)
     {
@@ -356,23 +326,4 @@ function isModifierKey(modifier,key,e){
     {
         return false;
     }
-}
-
-function attributeObserver(target,callback)
-{new window.MutationObserver(function(mutations, observer) {
-        var hasUpdates = false;
-
-        for (var index = 0; index < mutations.length; index++) {
-            var mutation = mutations[index];
-
-            if (mutation.type === 'childList' && (mutation.addedNodes.length)) {
-                hasUpdates = true;
-                break;
-            }
-        }
-
-        if (hasUpdates) {
-            callback();
-        }
-    }).observe(target, {childList: true});
 }
