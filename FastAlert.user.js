@@ -146,7 +146,7 @@ function tradingView() {
     document.addEventListener('keydown', doc_keyDown, false);
 
     //Register Ticker Change Listener
-    waitEE(tickerSelector, function (e) {
+    waitEE(symbolSelector, function (e) {
         attributeObserver(e, onTickerChange);
     });
 

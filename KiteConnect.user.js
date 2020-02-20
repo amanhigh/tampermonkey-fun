@@ -108,14 +108,12 @@ function onKiteWatchChange() {
 
     //Read Current index and Symbols in Watch List
     var index = JSON.parse(localStorage.getItem(storageCurrentList))
-    var names = $('.nice-name').map(function () {
-        return this.innerHTML;
-    }).toArray();
-
     //console.log(index,names,watchInfo);
 
     //Update Names in Current WatchList
-    watchInfo[index] = names;
+    watchInfo[index] = $('.nice-name').map(function () {
+        return this.innerHTML;
+    }).toArray();
 
     //Write to Local Store for future reference
     localStorage.setItem(storageWatchInfo, JSON.stringify(watchInfo));
