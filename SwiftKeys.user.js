@@ -16,93 +16,100 @@
 // @run-at document-idle
 // ==/UserScript==
 
-const lineMenu=[6,3,4,5];
-const demandMenu=[10,4,6,8];
-const supplyMenu=[11,5,7,9];
+const lineMenu = [6, 3, 4, 5];
+const demandMenu = [10, 4, 6, 8];
+const supplyMenu = [11, 5, 7, 9];
 
-const watchListKey='watchListTicker';
-
-var enabled=document.createElement("input");
-enabled.id='enabled'
-enabled.setAttribute('type','checkbox');
-enabled.setAttribute("style", "font-size:"+24+"px;position:absolute;top:"+50+"px;right:"+580+"px;");
-
-var msg=document.createElement("p");
-msg.setAttribute("style", "font-size:"+16+"px;position:absolute;top:"+50+"px;right:"+600+"px;");
-
+const kiteWatchAddKey = 'kiteWatchAdd';
+const styleIndexKey = 'styleIndex';
 
 if (location.host.includes("tradingview")) {
- tradingView();
+    tradingView();
 } else {
     kite();
 }
 
 // ---------------------------------- KITE --------------------------------------------------------
-
-function kite()
-{
-    GM_addValueChangeListener (
-        watchListKey, (watchListKey, oldValue, newValue, bRmtTrggrd) => {
+function kite() {
+    GM_addValueChangeListener(
+        kiteWatchAddKey, (watchListKey, oldValue, newValue, bRmtTrggrd) => {
             //console.log (`WatchListAdd Event: ${newValue}`);
-            handleWatchSymbol(newValue[0],newValue[1]);
-    } );
+            kiteWatchAddSymbol(newValue[0], newValue[1]);
+        });
 }
 
-function handleWatchSymbol(listNo,symbol)
-{
+/**
+ * Add Symbol to Kite List
+ * @param listNo
+ * @param symbol
+ */
+function kiteWatchAddSymbol(listNo, symbol) {
     $(`.marketwatch-selector li:nth-child(${listNo})`).click();
-    waitInput('#search-input',symbol);
+    waitInput('#search-input', symbol);
     waitClick('.search-result-item');
 }
 
 // -------------------------------- TradingView ---------------------------------------------------------
+function tradingView() {
+    /* SwiftKey Enabled Indication */
+    var enabled = document.createElement("input");
+    enabled.id = 'enabled'
+    enabled.setAttribute('type', 'checkbox');
+    enabled.setAttribute("style", "font-size:" + 24 + "px;position:absolute;top:" + 50 + "px;right:" + 580 + "px;");
+    enabled.addEventListener('change', fixTitle)
 
-function tradingView()
-{
     document.body.appendChild(enabled);
-    document.body.appendChild(msg);
     document.addEventListener('keydown', doc_keyDown, false);
 
-    //Register Title Listner
-    waitEE("title",(el)=>{
+    //Wait for Title to Load and Fix to Signal Auto Hotkey
+    waitEE("title", (el) => {
         //console.log('Observing Title: ' + el.innerHTML);
-        attributeObserver(el,fixTitle);
+        attributeObserver(el, fixTitle);
     });
-
-    //Listen to SwiftKeys Checkbox Changes
-    enabled.addEventListener('change', fixTitle)
 }
 
-function fixTitle()
-{
-    var liner=' - SwiftKeys';
+//TradingView:: Title Management
+/**
+ * Changes Title to Signal AHK
+ */
+function fixTitle() {
+    var liner = ' - SwiftKeys';
     //console.log('Processing Title: ' + document.title);
     //SwiftKey On and No Title Add It.
-    if (enabled.checked && !document.title.includes('SwiftKeys'))
-    {
-        document.title= document.title + liner;
-    } else if (!enabled.checked && document.title.includes('SwiftKeys'))
-    {
-        // SwiftKey Off and Title present.
-        document.title= document.title.replace(liner,'');
+    if (enabled.checked && !document.title.includes('SwiftKeys')) {
+        document.title = document.title + liner;
+    } else if (!enabled.checked && document.title.includes('SwiftKeys')) {
+        // SwiftKey Off and Title present, Remove It.
+        document.title = document.title.replace(liner, '');
     }
 }
 
+function toggleSwiftKeys(checked) {
+    enabled.checked = checked;
+    if (checked) {
+        message('ENABLED'.fontcolor('green'));
+    } else {
+        message('DISABLED'.fontcolor('red'));
+    }
+    fixTitle();
+}
+
+//TradingView:: KeyHandlers
 function doc_keyDown(e) {
     //console.log(e);
     //alert(`S Pressed: ${e.altKey} | ${e.ctrlKey} | ${e.shiftKey}`);
 
-    if(isModifierKey(e.ctrlKey,'b',e)) {
+    if (isModifierKey(e.ctrlKey, 'b', e)) {
         // Toggle SwiftKeys
-        toggleSwiftKeys(!enabled.checked);        
+        toggleSwiftKeys(!enabled.checked);
     }
 
-    if(isModifierKey(e.ctrlKey,'e',e)) {
+    if (isModifierKey(e.ctrlKey, 'e', e)) {
         // Toggle Exchange
         toggleExchange();
     }
 
-    if(isModifierKey(e.shiftKey,'enter',e)) {
+    if (isModifierKey(e.shiftKey, 'enter', e)) {
         // Textbox Ok
         $('.appearance-default-dMjF_2Hu-').click();
 
@@ -111,57 +118,56 @@ function doc_keyDown(e) {
     }
 
 
-    if (enabled.checked==true) {
-        if(isModifierKey(e.shiftKey,'o',e)) {
+    if (enabled.checked == true) {
+        if (isModifierKey(e.shiftKey, 'o', e)) {
             // Flag/Unflag
             $('.uiMarker__small-1LSfKnWQ').click();
-        } else if(isModifierKey(e.shiftKey,'q',e)) {
+        } else if (isModifierKey(e.shiftKey, 'q', e)) {
             // Nifty Correlation
-            waitEE('div.item-3eXPhOmy:nth-child(5) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1)',(e) =>{e.dispatchEvent(new Event('touchend',{'bubbles': true }));})
-        } else if(isModifierKey(e.ctrlKey,'e',e)) {
+            waitEE('div.item-3eXPhOmy:nth-child(5) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1)', (e) => {
+                e.dispatchEvent(new Event('touchend', {'bubbles': true}));
+            })
+        } else if (isModifierKey(e.ctrlKey, 'e', e)) {
             // Long Position
-            tvToolbar(7);
+            toolbar(7);
         } else {
             nonModifierKey(e);
         }
     }
 }
 
-function nonModifierKey(e)
-{
+function nonModifierKey(e) {
     //Ignore Numpad Keys
-    if (e.keyCode >= 96 && e.keyCode <=110)
-    {
-      return;
+    if (e.keyCode >= 96 && e.keyCode <= 110) {
+        return;
     }
 
-    var fired=true;
-    switch (e.key)
-    {
+    var fired = true;
+    switch (e.key) {
 
         //Toolbar
         case ',':
             //TrendLine
-            tvToolbar(2);
+            toolbar(2);
             timeframeStyle(lineMenu);
             break;
         case 'e':
             //FibZone
-            tvToolbar(3);
+            toolbar(3);
             break;
         case '.':
             //Rectangle
-            tvToolbar(4);
+            toolbar(4);
             timeframeStyle(lineMenu);
             break;
         case 'k':
             //Text
-            tvToolbar(5);
+            toolbar(5);
             textBox()
             break;
         case 'a':
             // Price Range
-            tvToolbar(6);
+            toolbar(6);
             break;
 
         case 'j':
@@ -177,23 +183,23 @@ function nonModifierKey(e)
         //Timeframes
         case '1':
             // Monthly
-            timeframe(7,'MN',0);
+            timeframe(7, 'MN', 0);
             break;
         case '2':
             // Weekly
-            timeframe(6,'WK',1);
+            timeframe(6, 'WK', 1);
             break;
         case '3':
             // Daily
-            timeframe(5,'DL',2);
+            timeframe(5, 'DL', 2);
             break;
         case '4':
             // Hourly
-            timeframe(4,'HL',3);
+            timeframe(4, 'HL', 3);
             break;
 
 
-         //Kite WatchList
+        //Kite WatchList
         case 'F1':
             postWatchSymbol(1);
             break;
@@ -216,78 +222,79 @@ function nonModifierKey(e)
             document.execCommand('undo', false, null);
             break;
         default:
-            fired=false;
+            fired = false;
             break;
     }
 
     //If Key overriden prevent default.
-    if (fired){
+    if (fired) {
         e.preventDefault();
     }
 }
 
-function toggleSwiftKeys(checked)
-{
-    enabled.checked=checked;
-    if (checked)
-    {
-        msg.innerHTML='ENABLED'.fontcolor('green');
-    } else
-    {
-        msg.innerHTML='DISABLED'.fontcolor('red');
-    }
-    timedClear();
-    fixTitle();
+//Hotkeys: TradingView Toolbar & Style
+/**
+ * Select Timeframe and Remember it
+ * @param timeFrameIndex: Index to Switch to Given timeframe
+ * @param name: MN/WK/DL/HL (Unused)
+ * @param styleIndex: Style Index Based on Dropdown List in Styles
+ */
+function timeframe(timeFrameIndex, name, styleIndex) {
+    $(`#header-toolbar-intervals > div:nth-child(${timeFrameIndex})`).click();
+    GM_setValue(styleIndexKey, styleIndex);
 }
 
-//--------------------------- Keys Library ------------------------
-function timeframe(index,name,tindex)
-{
-    $(`#header-toolbar-intervals > div:nth-child(${index})`).click();
-    GM_setValue('tframe',name);
-    GM_setValue('tindex',tindex);
+/**
+ * Based on Provided Positions Select Appropriate Style
+ * @param positions
+ */
+function timeframeStyle(positions) {
+    var tindex = GM_getValue(styleIndexKey);
+    style(positions[tindex]);
 }
 
-function timeframeStyle(positions)
-{
-    var tindex=GM_getValue('tindex');
-    tvStyle(positions[tindex]);
-}
-
-function textBox()
-{
-    toggleSwiftKeys(false);
-
-    //Select Day Style
-    waitClick('div.container-AqxbM340:nth-child(1)');
-    waitClick('.menuBox-20sJGjtG > div:nth-child(4) > div:nth-child(1)');
-
-    //Select Text Area
-    waitEE('.textarea-bk9MQutx',(e)=> e.focus());
-}
-
-function tvStyle(index)
-{
-     // Template Selector
-     waitClick('a.tv-linetool-properties-toolbar__button')
-
-     //HDZ
-     waitClick(`a.item:nth-child(${index})`)
-}
-
-function tvToolbar(index)
-{
+/**
+ * Clicks Favourite Toolbar on Given Index
+ * @param index
+ */
+function toolbar(index) {
     $(`div.ui-sortable:nth-child(2) > div:nth-child(${index}) > span:nth-child(1)`).click();
 }
 
-function toggleExchange()
-{
-    var exch=$('.select-1T7DaJS6').text();
+/**
+ * Clicks Appropriate Index in Dropdown.
+ * @param index
+ */
+function style(index) {
+    // Template Selector
+    waitClick('a.tv-linetool-properties-toolbar__button')
+
+    //Clicks Style based on Index.
+    waitClick(`a.item:nth-child(${index})`)
+}
+
+//Hotkeys:: Kite
+function postWatchSymbol(listNo) {
+    var ticker = getTicker();
+    //console.log('Posting WatchList Symbol:',ticker,listNo)
+    GM_setValue(kiteWatchAddKey, [listNo, ticker])
+}
+
+//TODO: Common TV Getter Library
+function getTicker() {
+    return $('.input-3lfOzLDc')[0].value;
+}
+
+//Hotkeys:: Trading View Actions
+/**
+ * Switch TradingView Exchange
+ */
+function toggleExchange() {
+    var exch = $('.select-1T7DaJS6').text();
     //Open Toggle Menu
     $('.select-1T7DaJS6').click();
 
-    if (exch=="NSE")
-    {
+    if (exch == "NSE") {
         //Select All Exchanges
         $('.allExchanges-29JoOLdp').click();
     } else {
@@ -296,33 +303,19 @@ function toggleExchange()
     }
 }
 
-function timedClear()
-{
-    //Clear Boxes
-    setTimeout(function(){
-        msg.innerHTML="";
+/**
+ * Handles Opening TextBox and Disabling SwiftKeys
+ */
+function textBox() {
+    //Disable SwiftKeys
+    toggleSwiftKeys(false);
 
-    },5000);
-}
+    //Select Day Style
+    waitClick('div.container-AqxbM340:nth-child(1)');
 
-function postWatchSymbol(listNo)
-{
-    var ticker=getTicker();
-    //console.log('Posting WatchList Symbol:',ticker,listNo)
-    GM_setValue(watchListKey,[listNo,ticker])
-}
+    //Select First Tab
+    waitClick('.menuBox-20sJGjtG > div:nth-child(4) > div:nth-child(1)');
 
-function getTicker(){
-	return $('.input-3lfOzLDc')[0].value;
-}
-
-function isModifierKey(modifier,key,e){
-    if (e.key.toLowerCase() == key && modifier)
-    {
-        e.preventDefault();
-        return true;
-    } else
-    {
-        return false;
-    }
+    //Select Text Area
+    waitEE('.textarea-bk9MQutx', (e) => e.focus());
 }
