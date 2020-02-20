@@ -21,6 +21,11 @@
 const kiteWatchChangeKey = "kiteWatchChangeKey";
 const tvWatchChangeKey = "tvWatchChangeKey";
 const alertClickedKey = "alertClicked";
+
+const kiteWatchListSelector = ".vddl-list";
+const storageWatchInfo = "__storejs_kite_marketwatch/watchInfo";
+const storageCurrentList = "__storejs_kite_marketwatch/currentWatchId";
+
 const nameLength = 10;
 const colorList = ['orange', 'red', 'dodgerblue', 'cyan', 'lime', 'greenyellow', 'brown'];
 const indexSymbols = ['CNXMIDCAP', 'CNXSMALLCAP', 'IXIC', 'DXY', 'NIFTY', 'NIFTYJR', 'US10Y', 'USOIL', 'USDINR', 'XAUUSD', 'XAGUSD', 'SHCOMP'];
@@ -88,10 +93,6 @@ function onAlertClickHandler(event) {
 }
 
 // ---------------------------- KITE -------------------------------
-const kiteWatchListSelector = ".vddl-list";
-const storageWatchInfo = "__storejs_kite_marketwatch/watchInfo";
-const storageCurrentList = "__storejs_kite_marketwatch/currentWatchId";
-
 function kite() {
     //Listen to Any WatchList Change
     waitEE(kiteWatchListSelector, (el) => {
