@@ -22,7 +22,6 @@ const kiteWatchChangeKey = "kiteWatchChangeKey";
 const tvWatchChangeKey = "tvWatchChangeKey";
 const alertClickedKey = "alertClicked";
 
-const kiteWatchListSelector = ".vddl-list";
 const storageWatchInfo = "__storejs_kite_marketwatch/watchInfo";
 const storageCurrentList = "__storejs_kite_marketwatch/currentWatchId";
 
@@ -95,7 +94,7 @@ function onAlertClickHandler(event) {
 // ---------------------------- KITE -------------------------------
 function kite() {
     //Listen to Any WatchList Change
-    waitEE(kiteWatchListSelector, (el) => {
+    waitEE(".vddl-list", (el) => {
         nodeObserver(el, onKiteWatchChange)
     });
 }
