@@ -5,7 +5,7 @@
 // @include     http://www.example.net/
 // @version     1.0
 // @grant       none
-// @require     library.js
+// @require     lib/library.js
 // @downloadURL https://raw.githubusercontent.com/amanhigh/tampermonkey-fun/master/experiment.user.js
 // ==/UserScript==
 
