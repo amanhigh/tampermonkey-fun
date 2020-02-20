@@ -31,21 +31,75 @@ const style = "background-color: black; color: white;font-size: 15px"
 
 //-- Are we on the "interactive" page/site/domain or the "monitoring" one?
 if (location.pathname.includes("alert-center")) {
+    alertCenter();
+} else if (location.host.includes("tradingview.com")) {
+    tradingView();
+} else if (location.host.includes("kite.zerodha.com")) {
+    kite();
+}
+//*************** KITE *********************
+function kite() {
+    //Listen for GTT Orders
+    GM_addValueChangeListener(
+        gttKey, (keyName, oldValue, newValue, bRmtTrggrd) => {
+            //console.log (`Received new GTT Order: ${newValue}`);
+            if (newValue.qty > 0) {
+                createOrder(newValue.symb, newValue.ltp, newValue.sl, newValue.ent, newValue.tp, newValue.qty)
+            } else {
+                //Qty: -1 Signal for Delete GTT
+                deleteGTT(newValue.symb);
+            }
+        });
+}
+
+// FAST GTT
+const margin = 0.005;
+
+function createOrder(pair, ltp, sl, ent, tp, qty) {
+    var d = new Date();
+    var year = d.getFullYear() + 1;
+    var month = d.getMonth();
+    var day = d.getDate();
+    var exp = `${year}-${month}-${day} 00:00:00`;
+    createBuy(pair, ent, qty, ltp, exp);
+    createOco(pair, sl, tp, qty, ltp, exp);
+
+}
+
+// Order Types
+function createBuy(pair, price, qty, ltp, exp) {
+    var buy_trg = generateTick(price + margin * price);
+    var body = `condition={"exchange":"NSE","tradingsymbol":"${pair}","trigger_values":[${buy_trg}],"last_price":${ltp}}&orders=[{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"BUY","quantity":${qty},"price":${price},"order_type":"LIMIT","product":"CNC"}]&type=single&expires_at=${exp}`;
+    //console.log(body);
+    createGTT(body);
+}
+
+function createOco(pair, sl_trg, tp, qty, ltp, exp) {
+    var sl = generateTick(sl_trg - margin * sl_trg);
+
+    var tp_trg = generateTick(tp - margin * tp);
+    var ltp_trg = generateTick(ltp + 0.03 * ltp);
+
+    // Choose LTP Trigger If Price to close to TP.
+    if (tp_trg < ltp_trg) {
+        tp_trg = ltp_trg;
+    }
+
+    var body = `condition={"exchange":"NSE","tradingsymbol":"${pair}","trigger_values":[${sl_trg},${tp_trg}],"last_price":${ltp}}&orders=[{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"SELL","quantity":${qty},"price":${sl},"order_type":"LIMIT","product":"CNC"},{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"SELL","quantity":${qty},"price":${tp},"order_type":"LIMIT","product":"CNC"}]&type=two-leg&expires_at=${exp}`;
+    //console.log(body);
+    createGTT(body);
+}
+
+function generateTick(n) {
+    return (Math.ceil(n * 20) / 20).toFixed(2)
+}
+
+//************** ALERT CENTER*********************
+function alertCenter() {
     //Listen for Alert Page Reloads
     GM_addValueChangeListener(
         xmssionKey, (keyName, oldValue, newValue, bRmtTrggrd) => {
-            //console.log (`Received new event: ${newValue}`);
-            //-- User feedback, esp useful with time delay:
-            document.title = "Reloading...";
-            /*-- Important:
-                May need to wait 1 to 300 seconds to allow for
-                alerts to get created and ]reflect.
-                1222 == 1.2 seconds
-            */
-            window.scrollTo(0, 0);
-            setTimeout(() => {
-                location.reload();
-            }, 3000);
+            reloadPage();
         });
 
     //Add Auto Delete Confirmation Handler on all Delete Buttons
@@ -54,10 +108,55 @@ if (location.pathname.includes("alert-center")) {
     //Map Symbol(PairId) to Trigger(Alerts) Map
     waitEE('#earningsAlerts', function (e) {
         loadTriggerMap();
-    }, -3);
+    }, 6);
 
     //console.log("Reload Listner Added")
-} else if (location.host.includes("tradingview.com")) {
+}
+
+function loadTriggerMap() {
+    var m = {};
+    $(".js-alert-item[data-frequency=Once]").each(function () {
+        var id = $(this).attr('data-alert-id');
+        var pair = $(this).attr('data-pair-id');
+        var price = $(this).attr('data-value');
+        if (!m[pair]) {
+            m[pair] = [];
+        }
+        m[pair].push({"id": id, "price": price});
+        //console.log(pair,id);
+    });
+
+    var size = Object.keys(m).length;
+    console.log(`Trigger Map Loaded: ${size}`);
+
+    /* Send Event once alert Map is loaded */
+    if (size > 0) {
+        GM_setValue(triggerMapKey, m);
+    }
+}
+
+//***************TRADING VIEW ********************
+function tradingView() {
+    setupFastAlertUI();
+
+    document.addEventListener('keydown', doc_keyDown, false);
+
+    //Register Ticker Change Listener
+    //TODO: Constants for all Selectors
+    waitEE('div.title-bcHj6pEn', function (e) {
+        attributeObserver(e, onTickerChange);
+    });
+
+    //Register Trigger Change Listener
+    GM_addValueChangeListener(
+        triggerMapKey, (keyName, oldValue, newValue, bRmtTrggrd) => {
+            //console.log (`Received new GTT Order: ${newValue}`);
+            onTriggersChange(newValue);
+        });
+    return {symbol, prices, useTicker, altz};
+}
+
+function setupFastAlertUI() {
     //UI Elements
     var symbol = document.createElement("input");
     symbol.type = "text";
@@ -68,7 +167,11 @@ if (location.pathname.includes("alert-center")) {
     prices.type = "text";
     //prices.value="3-875.45 907.1 989.9";
     prices.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 1)) + "px;right:" + y + "px;");
-    prices.onkeypress = enterAlert;
+    prices.onkeypress = function (e) {
+        if (e.keyCode === 13) {
+            setAlert();
+        }
+    };
 
     var fastGtt = document.createElement("input");
     fastGtt.type = "button";
@@ -96,40 +199,11 @@ if (location.pathname.includes("alert-center")) {
     document.body.appendChild(fastGtt);
     document.body.appendChild(useTicker);
     document.body.appendChild(altz);
-    //document.body.appendChild(msg);
-    document.addEventListener('keydown', doc_keyDown, false);
-
-    //Register Ticker Change Lisner
-    waitEE('div.title-bcHj6pEn', function (e) {
-        attributeObserver(e, onTickerChange);
-    });
-
-    //Register Trigger Change Listner
-    GM_addValueChangeListener(
-        triggerMapKey, (keyName, oldValue, newValue, bRmtTrggrd) => {
-            //console.log (`Received new GTT Order: ${newValue}`);
-            onTriggersChange(newValue);
-        });
-
-} else if (location.host.includes("kite.zerodha.com")) {
-    //Listen for GTT Orders
-    GM_addValueChangeListener(
-        gttKey, (keyName, oldValue, newValue, bRmtTrggrd) => {
-            //console.log (`Received new GTT Order: ${newValue}`);
-            if (newValue.qty > 0) {
-                createOrder(newValue.symb, newValue.ltp, newValue.sl, newValue.ent, newValue.tp, newValue.qty)
-            } else {
-                //Qty: -1 Signal for Delete GTT
-                deleteGTT(newValue.symb);
-            }
-
-            //Reload Orders
-            //window.scrollTo(0, 0);
-            //setTimeout ( () => {location.reload(); }, 3000);
-        });
+    return {symbol, prices, useTicker, altz};
 }
 
-// ******************************** Alert Hotkeys ******************************************
+// Alert Hotkeys
+// TODO: Move to Hotkey Library
 function doc_keyDown(e) {
     //console.log(e);
     //alert(`S Pressed: ${e.altKey} | ${e.ctrlKey} | ${e.shiftKey}`);
@@ -143,31 +217,12 @@ function doc_keyDown(e) {
         resetAlerts();
     }
     if (isModifierKey(e.shiftKey, ';', e)) {
-        // GTT Reset
+        // TODO: GTT Reset
 
     }
 }
 
-function isModifierKey(modifier, key, e) {
-    if (e.key.toLowerCase() == key && modifier) {
-        e.preventDefault();
-        return true;
-    } else {
-        return false;
-    }
-}
-
-
-//********************************* Fast Alert ************************************************
-
-function enterAlert(e) {
-    if (e.keyCode === 13) {
-        //alert('enter pressed');
-        setAlert();
-    }
-    //console.log(e.key);
-}
-
+//Fast Alert: Set
 function setAlert() {
     'use strict';
 
@@ -213,80 +268,6 @@ function setAlert() {
     }
 };
 
-function resetAlerts() {
-    //Search Symbol
-    searchSymbol(getMappedTicker(), function (top) {
-        //Delete All Alerts
-        deleteAllAlerts(top.pair_ID);
-
-        altRefresh();
-    });
-}
-
-function altRefresh() {
-    waitOn(xmssionKey, 10000, () => {
-        //-- Send message to reload AlertList
-        GM_setValue(xmssionKey, Date());
-    });
-}
-
-function onTriggersChange(m) {
-    updateAlertSummary(m);
-}
-
-function onTickerChange() {
-    //console.log('Ticker Changed');
-    updateAlertSummary(GM_getValue(triggerMapKey));
-
-}
-
-function updateAlertSummary(m) {
-    var ltp = readLtp();
-    //Search Symbol
-    searchSymbol(getMappedTicker(), function (top) {
-        var ids = m[top.pair_ID];
-        var msg = "No Alertz";
-        if (ids) {
-            //Alert Below Price -> Green, Above -> Red
-            msg = ids.map(alt => alt.price).sort().map(p => p < ltp ? p.toString().fontcolor('green') : p.toString().fontcolor('red')).join('|');
-        }
-        altz.innerHTML = msg;
-    });
-}
-
-function getTicker() {
-    return $('.input-3lfOzLDc').val();
-}
-
-function getMappedTicker() {
-    var symb = getTicker();
-    // Use Investing Ticker if available
-    var investingTicker = resolveInvestingTicker(symb);
-    if (investingTicker) {
-        symb = investingTicker;
-    }
-
-    //console.log(symb,investingTicker);
-    return symb;
-}
-
-function getName() {
-    return $(".dl-header-symbol-desc")[0].innerHTML;
-}
-
-function mapTicker(tvTicker, investingTicker) {
-    var tickerMap = GM_getValue(tickerMapKey, {});
-    tickerMap[tvTicker] = investingTicker;
-    GM_setValue(tickerMapKey, tickerMap);
-
-    console.log(`Mapped Ticker: ${tvTicker} to ${investingTicker}`);
-}
-
-function resolveInvestingTicker(tvTicker) {
-    var tickerMap = GM_getValue(tickerMapKey, {});
-    return tickerMap[tvTicker];
-}
-
 function autoAlert() {
     //Click Settings
     $('.tv-floating-toolbar__content:nth(1) > div:nth-child(5) > div').click()
@@ -319,12 +300,78 @@ function autoAlert() {
     });
 }
 
-
-function readLtp() {
-    return parseFloat($('.dl-header-price').text());
+function altRefresh() {
+    waitOn(xmssionKey, 10000, () => {
+        //-- Send message to reload AlertList
+        GM_setValue(xmssionKey, Date());
+    });
 }
 
+//Fast Alert: Delete
+function resetAlerts() {
+    //Search Symbol
+    searchSymbol(getMappedTicker(), function (top) {
+        //Delete All Alerts
+        deleteAllAlerts(top.pair_ID);
 
+        altRefresh();
+    });
+}
+
+function confirmDelete() {
+    waitClick('.js-delete');
+}
+
+function deleteAllAlerts(pairId) {
+    //Delete Alert Lines
+    $('#drawing-toolbar-object-tree').click();
+    waitEE('.tv-objects-tree-item__title', function () {
+        $('.tv-objects-tree-item__title:contains("Horizontal Line")').parent().find('.js-remove-btn').click();
+    });
+
+    var triggers = _getTriggers();
+    if (triggers) {
+        //console.log(`Deleting all Alerts: ${pairId} -> ${triggers}`);
+        for (var trg of triggers) {
+            deleteAlert(trg);
+        }
+    }
+
+    //Close Object Tree
+    $('.tv-dialog__close').click();
+}
+
+function _getTriggers() {
+    var m = GM_getValue(triggerMapKey);
+    return m[pairId];
+}
+
+//Fast Alert: Summary
+function onTriggersChange(m) {
+    updateAlertSummary(m);
+}
+
+function onTickerChange() {
+    //console.log('Ticker Changed');
+    updateAlertSummary(GM_getValue(triggerMapKey));
+
+}
+
+function updateAlertSummary(m) {
+    var ltp = readLtp();
+    //Search Symbol
+    searchSymbol(getMappedTicker(), function (top) {
+        var ids = m[top.pair_ID];
+        var msg = "No Alertz";
+        if (ids) {
+            //Alert Below Price -> Green, Above -> Red
+            msg = ids.map(alt => alt.price).sort().map(p => p < ltp ? p.toString().fontcolor('green') : p.toString().fontcolor('red')).join('|');
+        }
+        altz.innerHTML = msg;
+    });
+}
+
+//Fast Alert: GTT
 function setGtt() {
     var symb;
 
@@ -393,92 +440,40 @@ function setGtt() {
     }
 }
 
-
-
-
-//********************* Alerts Fast Delete *************************
-
-function confirmDelete() {
-    waitClick('.js-delete');
+//Fast Alert: Helpers
+function readLtp() {
+    return parseFloat($('.dl-header-price').text());
 }
 
-function loadTriggerMap() {
-    var m = {};
-    $(".js-alert-item[data-frequency=Once]").each(function () {
-        var id = $(this).attr('data-alert-id');
-        var pair = $(this).attr('data-pair-id');
-        var price = $(this).attr('data-value');
-        if (!m[pair]) {
-            m[pair] = [];
-        }
-        m[pair].push({"id": id, "price": price});
-        //console.log(pair,id);
-    });
-
-    //console.log(m);
-    var size = Object.keys(m).length;
-    console.log(`Trigger Map Loaded: ${size}`);
-    if (size > 0) {
-        GM_setValue(triggerMapKey, m);
-    }
+function getTicker() {
+    return $('.input-3lfOzLDc').val();
 }
 
-function deleteAllAlerts(pairId) {
-    //Delete Alert Lines
-    $('#drawing-toolbar-object-tree').click();
-    waitEE('.tv-objects-tree-item__title', function () {
-        $('.tv-objects-tree-item__title:contains("Horizontal Line")').parent().find('.js-remove-btn').click();
-    });
-
-    var m = GM_getValue(triggerMapKey);
-    var ids = m[pairId];
-    if (ids) {
-        //console.log(`Deleting all Alerts: ${pairId} -> ${ids}`);
-        for (var id of ids) {
-            deleteAlert(id);
-        }
-    }
-    $('.tv-dialog__close').click();
-}
-
-//*************************** Fast GTT *********************************************
-const margin = 0.005;
-
-function createOrder(pair, ltp, sl, ent, tp, qty) {
-    var d = new Date();
-    var year = d.getFullYear() + 1;
-    var month = d.getMonth();
-    var day = d.getDate();
-    var exp = `${year}-${month}-${day} 00:00:00`;
-    createBuy(pair, ent, qty, ltp, exp);
-    createOco(pair, sl, tp, qty, ltp, exp);
-
-}
-
-/* Order Types */
-function createBuy(pair, price, qty, ltp, exp) {
-    var buy_trg = generateTick(price + margin * price);
-    var body = `condition={"exchange":"NSE","tradingsymbol":"${pair}","trigger_values":[${buy_trg}],"last_price":${ltp}}&orders=[{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"BUY","quantity":${qty},"price":${price},"order_type":"LIMIT","product":"CNC"}]&type=single&expires_at=${exp}`;
-    //console.log(body);
-    createGTT(body);
-}
-
-function createOco(pair, sl_trg, tp, qty, ltp, exp) {
-    var sl = generateTick(sl_trg - margin * sl_trg);
-
-    var tp_trg = generateTick(tp - margin * tp);
-    var ltp_trg = generateTick(ltp + 0.03 * ltp);
-
-    // Choose LTP Trigger If Price to close to TP.
-    if (tp_trg < ltp_trg) {
-        tp_trg = ltp_trg;
+function getMappedTicker() {
+    var symb = getTicker();
+    // Use Investing Ticker if available
+    var investingTicker = resolveInvestingTicker(symb);
+    if (investingTicker) {
+        symb = investingTicker;
     }
 
-    var body = `condition={"exchange":"NSE","tradingsymbol":"${pair}","trigger_values":[${sl_trg},${tp_trg}],"last_price":${ltp}}&orders=[{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"SELL","quantity":${qty},"price":${sl},"order_type":"LIMIT","product":"CNC"},{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"SELL","quantity":${qty},"price":${tp},"order_type":"LIMIT","product":"CNC"}]&type=two-leg&expires_at=${exp}`;
-    //console.log(body);
-    createGTT(body);
+    //console.log(symb,investingTicker);
+    return symb;
 }
 
-function generateTick(n) {
-    return (Math.ceil(n * 20) / 20).toFixed(2)
+function getName() {
+    return $(".dl-header-symbol-desc")[0].innerHTML;
+}
+
+function mapTicker(tvTicker, investingTicker) {
+    var tickerMap = GM_getValue(tickerMapKey, {});
+    tickerMap[tvTicker] = investingTicker;
+    GM_setValue(tickerMapKey, tickerMap);
+
+    console.log(`Mapped Ticker: ${tvTicker} to ${investingTicker}`);
+}
+
+function resolveInvestingTicker(tvTicker) {
+    var tickerMap = GM_getValue(tickerMapKey, {});
+    return tickerMap[tvTicker];
 }
