@@ -21,9 +21,9 @@
 // ==/UserScript==
 //UI Coordinates
 
-var x = 100;
-var y = 460;
-var w = 20;
+const x = 100;
+const y = 460;
+const w = 20;
 const xmssionKey = "fastAlert-event";
 const triggerMapKey = "triggerMapKey";
 const tickerMapKey = "tickerMapKey";
@@ -43,7 +43,7 @@ if (location.pathname.includes("alert-center")) {
 function kite() {
     //Listen for GTT Orders
     GM_addValueChangeListener(
-        gttKey, (keyName, oldValue, newValue, bRmtTrggrd) => {
+        gttKey, (keyName, oldValue, newValue) => {
             //console.log (`Received new GTT Order: ${newValue}`);
             if (newValue.qty > 0) {
                 createOrder(newValue.symb, newValue.ltp, newValue.sl, newValue.ent, newValue.tp, newValue.qty)
@@ -58,11 +58,11 @@ function kite() {
 const margin = 0.005;
 
 function createOrder(pair, ltp, sl, ent, tp, qty) {
-    var d = new Date();
-    var year = d.getFullYear() + 1;
-    var month = d.getMonth();
-    var day = d.getDate();
-    var exp = `${year}-${month}-${day} 00:00:00`;
+    let d = new Date();
+    let year = d.getFullYear() + 1;
+    let month = d.getMonth();
+    let day = d.getDate();
+    let exp = `${year}-${month}-${day} 00:00:00`;
     createBuy(pair, ent, qty, ltp, exp);
     createOco(pair, sl, tp, qty, ltp, exp);
 
@@ -70,24 +70,24 @@ function createOrder(pair, ltp, sl, ent, tp, qty) {
 
 // Order Types
 function createBuy(pair, price, qty, ltp, exp) {
-    var buy_trg = generateTick(price + margin * price);
-    var body = `condition={"exchange":"NSE","tradingsymbol":"${pair}","trigger_values":[${buy_trg}],"last_price":${ltp}}&orders=[{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"BUY","quantity":${qty},"price":${price},"order_type":"LIMIT","product":"CNC"}]&type=single&expires_at=${exp}`;
+    let buy_trg = generateTick(price + margin * price);
+    let body = `condition={"exchange":"NSE","tradingsymbol":"${pair}","trigger_values":[${buy_trg}],"last_price":${ltp}}&orders=[{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"BUY","quantity":${qty},"price":${price},"order_type":"LIMIT","product":"CNC"}]&type=single&expires_at=${exp}`;
     //console.log(body);
     createGTT(body);
 }
 
 function createOco(pair, sl_trg, tp, qty, ltp, exp) {
-    var sl = generateTick(sl_trg - margin * sl_trg);
+    let sl = generateTick(sl_trg - margin * sl_trg);
 
-    var tp_trg = generateTick(tp - margin * tp);
-    var ltp_trg = generateTick(ltp + 0.03 * ltp);
+    let tp_trg = generateTick(tp - margin * tp);
+    let ltp_trg = generateTick(ltp + 0.03 * ltp);
 
     // Choose LTP Trigger If Price to close to TP.
     if (tp_trg < ltp_trg) {
         tp_trg = ltp_trg;
     }
 
-    var body = `condition={"exchange":"NSE","tradingsymbol":"${pair}","trigger_values":[${sl_trg},${tp_trg}],"last_price":${ltp}}&orders=[{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"SELL","quantity":${qty},"price":${sl},"order_type":"LIMIT","product":"CNC"},{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"SELL","quantity":${qty},"price":${tp},"order_type":"LIMIT","product":"CNC"}]&type=two-leg&expires_at=${exp}`;
+    let body = `condition={"exchange":"NSE","tradingsymbol":"${pair}","trigger_values":[${sl_trg},${tp_trg}],"last_price":${ltp}}&orders=[{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"SELL","quantity":${qty},"price":${sl},"order_type":"LIMIT","product":"CNC"},{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"SELL","quantity":${qty},"price":${tp},"order_type":"LIMIT","product":"CNC"}]&type=two-leg&expires_at=${exp}`;
     //console.log(body);
     createGTT(body);
 }
@@ -100,7 +100,7 @@ function generateTick(n) {
 function alertCenter() {
     //Listen for Alert Page Reloads
     GM_addValueChangeListener(
-        xmssionKey, (keyName, oldValue, newValue, bRmtTrggrd) => {
+        xmssionKey, () => {
             reloadPage();
         });
 
@@ -110,7 +110,7 @@ function alertCenter() {
     });
 
     //Map Symbol(PairId) to Trigger(Alerts) Map
-    waitEE('#earningsAlerts', function (e) {
+    waitEE('#earningsAlerts', function () {
         loadTriggerMap();
     }, 6);
 
@@ -118,11 +118,11 @@ function alertCenter() {
 }
 
 function loadTriggerMap() {
-    var m = {};
+    let m = {};
     $(".js-alert-item[data-frequency=Once]").each(function () {
-        var id = $(this).attr('data-alert-id');
-        var pair = $(this).attr('data-pair-id');
-        var price = $(this).attr('data-value');
+        let id = $(this).attr('data-alert-id');
+        let pair = $(this).attr('data-pair-id');
+        let price = $(this).attr('data-value');
         if (!m[pair]) {
             m[pair] = [];
         }
@@ -130,7 +130,7 @@ function loadTriggerMap() {
         //console.log(pair,id);
     });
 
-    var size = Object.keys(m).length;
+    let size = Object.keys(m).length;
     console.log(`Trigger Map Loaded: ${size}`);
 
     /* Send Event once alert Map is loaded */
@@ -152,7 +152,7 @@ function tradingView() {
 
     //Register Trigger Change Listener
     GM_addValueChangeListener(
-        triggerMapKey, (keyName, oldValue, newValue, bRmtTrggrd) => {
+        triggerMapKey, (keyName, oldValue, newValue) => {
             //console.log (`Received new GTT Order: ${newValue}`);
             onTriggersChange(newValue);
         });
@@ -227,10 +227,10 @@ function doc_keyDown(e) {
 function setAlert() {
     'use strict';
 
-    var symb;
+    let symb;
 
     //Read Symbol from Textbox or TradingView.
-    if (symbol.value == "") {
+    if (symbol.value === "") {
         if (useTicker.checked) {
             //Use Ticker Symbol Original or Mapped
             symb = getMappedTicker();
@@ -244,17 +244,17 @@ function setAlert() {
         mapTicker(getTicker(), symb);
     }
 
-    var input = prices.value;
+    let input = prices.value;
     if (input) {
         //Split Alert Prices
-        var split = input.trim().split(" ");
+        let split = input.trim().split(" ");
 
         //Search Symbol
         searchSymbol(symb, function (top) {
             message(top.name + ': ');
 
             //Set Alerts
-            for (var p of split) {
+            for (let p of split) {
                 createAlert(top.pair_ID, p);
             }
 
@@ -267,16 +267,14 @@ function setAlert() {
             });
         });
     }
-};
+}
 
 function autoAlert() {
     //Click Settings
     $('.tv-floating-toolbar__content:nth(1) > div:nth-child(5) > div').click()
 
     //Select Mapped Ticker
-    var symb = getMappedTicker();
-    var ltp = readLtp();
-
+    let symb = getMappedTicker();
 
     //Wait for Alert Dialogue
     waitEE('.intent-primary-1-IOYcbg-', function (e) {
@@ -285,7 +283,7 @@ function autoAlert() {
 
         //Read ALert value (Line Co-ordinate)
         waitEE('.innerInput-29Ku0bwF', function (i) {
-            var altPrice = parseFloat(i.value);
+            let altPrice = parseFloat(i.value);
             //console.log(symb,altPrice,ltp);
 
             //Close Alert Dialogue
@@ -323,10 +321,10 @@ function resetAlerts() {
 function deleteAllAlerts(pairId) {
     deleteAlertLines();
 
-    var triggers = _getTriggers();
+    let triggers = _getTriggers(pairId);
     if (triggers) {
         //console.log(`Deleting all Alerts: ${pairId} -> ${triggers}`);
-        for (var trg of triggers) {
+        for (let trg of triggers) {
             deleteAlert(trg);
         }
     }
@@ -335,8 +333,8 @@ function deleteAllAlerts(pairId) {
     $('.tv-dialog__close').click();
 }
 
-function _getTriggers() {
-    var m = GM_getValue(triggerMapKey);
+function _getTriggers(pairId) {
+    let m = GM_getValue(triggerMapKey);
     return m[pairId];
 }
 
@@ -352,11 +350,11 @@ function onTickerChange() {
 }
 
 function updateAlertSummary(m) {
-    var ltp = readLtp();
+    let ltp = readLtp();
     //Search Symbol
     searchSymbol(getMappedTicker(), function (top) {
-        var ids = m[top.pair_ID];
-        var msg = "No Alertz";
+        let ids = m[top.pair_ID];
+        let msg = "No Alertz";
         if (ids) {
             //Alert Below Price -> Green, Above -> Red
             msg = ids.map(alt => alt.price).sort().map(p => p < ltp ? p.toString().fontcolor('green') : p.toString().fontcolor('red')).join('|');
@@ -367,19 +365,19 @@ function updateAlertSummary(m) {
 
 //Fast Alert: GTT
 function setGtt() {
-    var symb;
+    let symb;
 
     //Read Symbol from Textbox or TradingView.
-    if (symbol.value == "") {
+    if (symbol.value === "") {
         symb = getTicker();
     } else {
         symb = symbol.value
     }
 
-    var ltp = readLtp();
+    let ltp = readLtp();
 
     //Delete GTT on ".."
-    if (prices.value == "..") {
+    if (prices.value === "..") {
         message(`GTT Delete: ${symb}`);
 
         //Send Signal to Kite to place Order with Qty: -1
@@ -388,9 +386,9 @@ function setGtt() {
         return;
     }
 
-    var qty, sl, ent, tp;
+    let qty, sl, ent, tp;
 
-    if (prices.value == "") {
+    if (prices.value === "") {
         //Read from Order Panel
         order = readOrderPanel();
         qty = order.qty
@@ -402,10 +400,10 @@ function setGtt() {
         //console.log(`GTT ${qty}- ${sl} - ${ent} - ${tp}`);
     } else {
         //Order Format: QTY:3-SL:875.45 ENT:907.1 TP:989.9
-        var qtyPrices = prices.value.trim().split("-");
+        let qtyPrices = prices.value.trim().split("-");
         qty = parseFloat(qtyPrices[0]);
-        var nextSplit = qtyPrices[1].split(" ");
-        if (nextSplit.length == 3) {
+        let nextSplit = qtyPrices[1].split(" ");
+        if (nextSplit.length === 3) {
             sl = parseFloat(nextSplit[0]);
             ent = parseFloat(nextSplit[1]);
             tp = parseFloat(nextSplit[2]);
@@ -413,7 +411,7 @@ function setGtt() {
     }
 
     //Build Order and Display
-    var order = {
+    let order = {
         symb: symb,
         ltp: ltp,
         qty: qty,
@@ -434,9 +432,9 @@ function setGtt() {
 
 //Fast Alert: Helpers
 function getMappedTicker() {
-    var symb = getTicker();
+    let symb = getTicker();
     // Use Investing Ticker if available
-    var investingTicker = resolveInvestingTicker(symb);
+    let investingTicker = resolveInvestingTicker(symb);
     if (investingTicker) {
         symb = investingTicker;
     }
@@ -446,7 +444,7 @@ function getMappedTicker() {
 }
 
 function mapTicker(tvTicker, investingTicker) {
-    var tickerMap = GM_getValue(tickerMapKey, {});
+    let tickerMap = GM_getValue(tickerMapKey, {});
     tickerMap[tvTicker] = investingTicker;
     GM_setValue(tickerMapKey, tickerMap);
 
@@ -454,6 +452,6 @@ function mapTicker(tvTicker, investingTicker) {
 }
 
 function resolveInvestingTicker(tvTicker) {
-    var tickerMap = GM_getValue(tickerMapKey, {});
+    let tickerMap = GM_getValue(tickerMapKey, {});
     return tickerMap[tvTicker];
 }

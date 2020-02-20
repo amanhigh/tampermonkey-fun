@@ -49,7 +49,7 @@ function alertFeed() {
 
     //Listen to WatchList Changes
     GM_addValueChangeListener(
-        tvWatchChangeKey, (keyName, oldValue, newValue, bRmtTrggrd) => {
+        tvWatchChangeKey, (keyName, oldValue, newValue) => {
             //console.log (`Received new event: ${newValue}`);
             paintAlertFeed(newValue);
         });
@@ -85,7 +85,7 @@ function onAlertClickHandler(event) {
     event.preventDefault();
     //console.log('Posting AlertTicker: ' + this.innerHTML);
     GM_setValue(alertClickedKey, this.text);
-};
+}
 
 // ---------------------------- KITE -------------------------------
 const kiteWatchListSelector = ".vddl-list";
@@ -104,10 +104,10 @@ function kite() {
  */
 function onKiteWatchChange() {
     //Read Current WachInfo from Local Store
-    var watchInfo = JSON.parse(localStorage.getItem(storageWatchInfo));
+    let watchInfo = JSON.parse(localStorage.getItem(storageWatchInfo));
 
     //Read Current index and Symbols in Watch List
-    var index = JSON.parse(localStorage.getItem(storageCurrentList))
+    let index = JSON.parse(localStorage.getItem(storageCurrentList))
     //console.log(index,names,watchInfo);
 
     //Update Names in Current WatchList
@@ -129,13 +129,13 @@ var summary;
 function tradingView() {
     //Listen for Kite WatchList Changes
     GM_addValueChangeListener(
-        kiteWatchChangeKey, (keyName, oldValue, newValue, bRmtTrggrd) => {
+        kiteWatchChangeKey, () => {
             paintTVWatchList();
         });
 
     //Listen for Alert Clicks in AlertFeed
     GM_addValueChangeListener(
-        alertClickedKey, (keyName, oldValue, newValue, bRmtTrggrd) => {
+        alertClickedKey, (keyName, oldValue, newValue,) => {
             //Required for proper alert Opening
             openTicker('DHFL'); // DO NOT REMOVE DHFL Line
             openTicker(newValue);
@@ -173,11 +173,11 @@ function tradingView() {
 }
 
 function updateSummary() {
-    var msg = "Summary: "
-    var watchInfo = GM_getValue(kiteWatchChangeKey);
+    let msg = "Summary: "
+    let watchInfo = GM_getValue(kiteWatchChangeKey);
     //console.log(watchInfo);
 
-    for (var i = 0; i < 5; i++) {
+    for (let i = 0; i < 5; i++) {
         msg += watchInfo[i].length.toString().fontcolor(colorList[i]) + '|';
     }
     msg += getWatchListTickers().length.toString().fontcolor(colorList[5]);
@@ -226,10 +226,10 @@ function paintTVScreener() {
  * Paints Ticker Name in Detail Section
  */
 function paintDetails() {
-    var ref = $(".dl-header > div:nth-child(1) > a:nth-child(2)").attr('href')
+    let ref = $(".dl-header > div:nth-child(1) > a:nth-child(2)").attr('href')
     if (ref) {
-        var symbol = ref.split("-")[1].replace('/', '');
-        var $target = $(nameSelector);
+        let symbol = ref.split("-")[1].replace('/', '');
+        let $target = $(nameSelector);
         //Check if href contains symbol then paint stock name
         if (getWatchListTickers().includes(symbol)) {
             $target.css('color', colorList[5]);
@@ -243,10 +243,10 @@ function paintDetails() {
 
 //TradingView: PaintHelpers
 function paintTickers(selector) {
-    var watchInfo = GM_getValue(kiteWatchChangeKey);
+    let watchInfo = GM_getValue(kiteWatchChangeKey);
     //console.log(watchInfo);
 
-    for (var i = 0; i < 5; i++) {
+    for (let i = 0; i < 5; i++) {
         paint(selector, watchInfo[i], colorList[i]);
     }
 }

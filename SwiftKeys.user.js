@@ -33,7 +33,7 @@ if (location.host.includes("tradingview")) {
 // ---------------------------------- KITE --------------------------------------------------------
 function kite() {
     GM_addValueChangeListener(
-        kiteWatchAddKey, (watchListKey, oldValue, newValue, bRmtTrggrd) => {
+        kiteWatchAddKey, (watchListKey, oldValue, newValue) => {
             //console.log (`WatchListAdd Event: ${newValue}`);
             kiteWatchAddSymbol(newValue[0], newValue[1]);
         });
@@ -74,7 +74,7 @@ function tradingView() {
  * Changes Title to Signal AHK
  */
 function fixTitle() {
-    var liner = ' - SwiftKeys';
+    let liner = ' - SwiftKeys';
     //console.log('Processing Title: ' + document.title);
     //SwiftKey On and No Title Add It.
     if (enabled.checked && !document.title.includes('SwiftKeys')) {
@@ -143,7 +143,7 @@ function nonModifierKey(e) {
         return;
     }
 
-    var fired = true;
+    let fired = true;
     switch (e.key) {
 
         //Toolbar
@@ -250,7 +250,7 @@ function timeframe(timeFrameIndex, name, styleIndex) {
  * @param positions
  */
 function timeframeStyle(positions) {
-    var tindex = GM_getValue(styleIndexKey);
+    let tindex = GM_getValue(styleIndexKey);
     style(positions[tindex]);
 }
 
@@ -276,7 +276,7 @@ function style(index) {
 
 //Hotkeys:: Kite
 function postWatchSymbol(listNo) {
-    var ticker = getTicker();
+    let ticker = getTicker();
     //console.log('Posting WatchList Symbol:',ticker,listNo)
     GM_setValue(kiteWatchAddKey, [listNo, ticker])
 }
