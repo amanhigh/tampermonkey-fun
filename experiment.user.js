@@ -5,7 +5,7 @@
 // @include     http://www.example.net/
 // @version     1.0
 // @grant       none
-// @downloadURL https://github.com/amanhigh/tampermonkey-fun/raw/master/example.user.js
+// @downloadURL https://raw.githubusercontent.com/amanhigh/tampermonkey-fun/master/experiment.user.js
 // ==/UserScript==
 
 // Note that in most cases, updateURL and downloadURL
