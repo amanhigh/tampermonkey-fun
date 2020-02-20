@@ -30,6 +30,43 @@ const tickerMapKey = "tickerMapKey";
 const gttKey = "gtt-event";
 const style = "background-color: black; color: white;font-size: 15px"
 
+//UI Elements
+//TODO: Fix Elements
+var symbol = document.createElement("input");
+symbol.type = "text";
+//symbol.value="PNB";
+symbol.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 0)) + "px;right:" + y + "px;");
+
+var prices = document.createElement("input");
+prices.type = "text";
+//prices.value="3-875.45 907.1 989.9";
+prices.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 1)) + "px;right:" + y + "px;");
+prices.onkeypress = function (e) {
+    if (e.keyCode === 13) {
+        setAlert();
+    }
+};
+
+var fastGtt = document.createElement("input");
+fastGtt.type = "button";
+fastGtt.value = "GTT";
+fastGtt.onclick = setGtt;
+fastGtt.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 0)) + "px;right:" + (y + 200) + "px;");
+
+var fastAlert = document.createElement("input");
+fastAlert.type = "button";
+fastAlert.value = "ALT";
+fastAlert.onclick = setAlert;
+fastAlert.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 1)) + "px;right:" + (y + 200) + "px;");
+
+var useTicker = document.createElement("input");
+useTicker.checked = true;
+useTicker.setAttribute('type', 'checkbox');
+useTicker.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 1)) + "px;right:" + (y + 250) + "px;");
+
+var altz = document.createElement("p");
+altz.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 3)) + "px;right:" + y + "px;");
+
 //-- Are we on the "interactive" page/site/domain or the "monitoring" one?
 if (location.pathname.includes("alert-center")) {
     alertCenter();
@@ -140,13 +177,6 @@ function loadTriggerMap() {
 }
 
 //***************TRADING VIEW ********************
-//UI Elements
-var symbol = document.createElement("input");
-var prices = document.createElement("input");
-var fastGtt = document.createElement("input");
-var fastAlert = document.createElement("input");
-var useTicker = document.createElement("input");
-var altz = document.createElement("p");
 
 function tradingView() {
     setupFastAlertUI();
@@ -167,35 +197,6 @@ function tradingView() {
 }
 
 function setupFastAlertUI() {
-    symbol.type = "text";
-    //symbol.value="PNB";
-    symbol.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 0)) + "px;right:" + y + "px;");
-    prices.type = "text";
-
-    //prices.value="3-875.45 907.1 989.9";
-    prices.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 1)) + "px;right:" + y + "px;");
-    prices.onkeypress = function (e) {
-        if (e.keyCode === 13) {
-            setAlert();
-        }
-    };
-
-    fastGtt.type = "button";
-    fastGtt.value = "GTT";
-    fastGtt.onclick = setGtt;
-
-    fastGtt.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 0)) + "px;right:" + (y + 200) + "px;");
-    fastAlert.type = "button";
-    fastAlert.value = "ALT";
-    fastAlert.onclick = setAlert;
-
-    fastAlert.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 1)) + "px;right:" + (y + 200) + "px;");
-    useTicker.checked = true;
-    useTicker.setAttribute('type', 'checkbox');
-
-    useTicker.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 1)) + "px;right:" + (y + 250) + "px;");
-    altz.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 3)) + "px;right:" + y + "px;");
-
     document.body.appendChild(symbol);
     document.body.appendChild(prices);
     document.body.appendChild(fastAlert);
