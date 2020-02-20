@@ -231,7 +231,7 @@ function paintDetails() {
     var ref = $(".dl-header > div:nth-child(1) > a:nth-child(2)").attr('href')
     if (ref) {
         var symbol = ref.split("-")[1].replace('/', '');
-        var $target = $(".dl-header-symbol-desc");
+        var $target = $(nameSelector);
         //Check if href contains symbol then paint stock name
         if (getWatchListTickers().includes(symbol)) {
             $target.css('color', colorList[5]);
