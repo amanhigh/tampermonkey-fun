@@ -420,7 +420,6 @@ function setGtt() {
         sl: sl,
         ent: ent,
         tp: tp,
-        qty: qty
     };
     message(`${symb} (${ltp}) Qty: ${qty}, ${sl} - ${ent} - ${tp}`);
 

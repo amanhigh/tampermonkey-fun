@@ -12,6 +12,7 @@
 // @grant        GM_setValue
 // @grant        GM_addValueChangeListener
 // @require      lib/library.js
+// @require      lib/sites/tv.js
 // @require      https://code.jquery.com/jquery-3.4.1.min.js
 // @run-at document-idle
 // ==/UserScript==
@@ -118,7 +119,7 @@ function doc_keyDown(e) {
     }
 
 
-    if (enabled.checked == true) {
+    if (enabled.checked === true) {
         if (isModifierKey(e.shiftKey, 'o', e)) {
             // Flag/Unflag
             $('.uiMarker__small-1LSfKnWQ').click();
@@ -278,44 +279,4 @@ function postWatchSymbol(listNo) {
     var ticker = getTicker();
     //console.log('Posting WatchList Symbol:',ticker,listNo)
     GM_setValue(kiteWatchAddKey, [listNo, ticker])
-}
-
-//TODO: Common TV Getter Library
-function getTicker() {
-    return $('.input-3lfOzLDc')[0].value;
-}
-
-//Hotkeys:: Trading View Actions
-/**
- * Switch TradingView Exchange
- */
-function toggleExchange() {
-    var exch = $('.select-1T7DaJS6').text();
-    //Open Toggle Menu
-    $('.select-1T7DaJS6').click();
-
-    if (exch == "NSE") {
-        //Select All Exchanges
-        $('.allExchanges-29JoOLdp').click();
-    } else {
-        //Select NSE
-        $('.exchange-3hAo4mow:nth(72)').click();
-    }
-}
-
-/**
- * Handles Opening TextBox and Disabling SwiftKeys
- */
-function textBox() {
-    //Disable SwiftKeys
-    toggleSwiftKeys(false);
-
-    //Select Day Style
-    waitClick('div.container-AqxbM340:nth-child(1)');
-
-    //Select First Tab
-    waitClick('.menuBox-20sJGjtG > div:nth-child(4) > div:nth-child(1)');
-
-    //Select Text Area
-    waitEE('.textarea-bk9MQutx', (e) => e.focus());
 }
