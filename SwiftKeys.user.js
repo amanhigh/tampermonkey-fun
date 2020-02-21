@@ -21,7 +21,7 @@ const lineMenu = [6, 3, 4, 5];
 const demandMenu = [10, 4, 6, 8];
 const supplyMenu = [11, 5, 7, 9];
 
-const kiteWatchAddKey = 'kiteWatchAdd';
+const kiteWatchToggleKey = 'kiteWatchAdd';
 const styleIndexKey = 'styleIndex';
 
 if (location.host.includes("tradingview")) {
@@ -33,49 +33,35 @@ if (location.host.includes("tradingview")) {
 // ---------------------------------- KITE --------------------------------------------------------
 function kite() {
     GM_addValueChangeListener(
-        kiteWatchAddKey, (watchListKey, oldValue, newValue) => {
+        kiteWatchToggleKey, (watchListKey, oldValue, newValue) => {
             //console.log (`WatchListAdd Event: ${newValue}`);
-            kiteWatchAddSymbol(newValue[0], newValue[1]);
+            kiteWatchToggleSymbol(newValue[0], newValue[1]);
         });
 }
 
 /**
- * Add Symbol to Kite List
+ * Toggle kiteWatch Symbol.
  * @param listNo
  * @param symbol
  */
-function kiteWatchAddSymbol(listNo, symbol) {
-    //Open List
-    $(`.marketwatch-selector li:nth-child(${listNo})`).click();
-    //Add Symbol
-    waitInput('#search-input', symbol);
-    waitClick('.search-result-item', () => {
-        const readyListNo = 3;
-        if (listNo !== readyListNo) {
-            kiteWatchRemoveSymbol(readyListNo, symbol)
-        }
-    });
-}
-
-/**
- * Removes Symbol If Present else does nothing.
- * @param listNo List To Remove From.
- * @param symbol Symbol to be Removed
- */
-function kiteWatchRemoveSymbol(listNo, symbol) {
+function kiteWatchToggleSymbol(listNo, symbol) {
     //Open List
     $(`.marketwatch-selector li:nth-child(${listNo})`).click();
 
-    //Remove Symbol
+    //Wait for List to be Selected
     waitJEE(`span.nice-name:contains('${symbol}')`, (el) => {
+        /* If Exists Remove */
         let x = el.parent().parent().parent().parent();
         if (x.length) {
             x[0].dispatchEvent(new Event('mouseenter'));
             waitClick("span.icon-trash");
+        } else {
+            //Add Symbol if Missing
+            waitInput('#search-input', symbol);
+            waitClick('.search-result-item');
         }
     })
 }
-
 
 // -------------------------------- TradingView ---------------------------------------------------------
 function tradingView() {
@@ -305,5 +291,5 @@ function style(index) {
 function postWatchSymbol(listNo) {
     let ticker = getTicker();
     //console.log('Posting WatchList Symbol:',ticker,listNo)
-    GM_setValue(kiteWatchAddKey, [listNo, ticker])
+    GM_setValue(kiteWatchToggleKey, [listNo, ticker,Date()])
 }
