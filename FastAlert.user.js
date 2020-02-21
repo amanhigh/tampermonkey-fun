@@ -276,7 +276,7 @@ function autoAlert() {
     waitJEE(".label-1If3beUH:contains(\'Add Alert\')", function (el) {
         let regExp = /\((.*)\)/g;
         let match = regExp.exec(el.text());
-        var altPrice=parseFloat(match[1])
+        var altPrice = parseFloat(match[1])
 
         searchSymbol(getMappedTicker(), function (top) {
             createAlert(top.pair_ID, altPrice);
@@ -361,6 +361,7 @@ function setGtt() {
     }
 
     let ltp = readLtp();
+    let order;
 
     //Delete GTT on ".."
     if (prices.value === "..") {
@@ -372,43 +373,36 @@ function setGtt() {
         return;
     }
 
-    let qty, sl, ent, tp;
-
     if (prices.value === "") {
         //Read from Order Panel
         order = readOrderPanel();
-        qty = order.qty
-        sl = order.sl
-        ent = order.ent
-        tp = order.tp
+        order.symb = symb;
+        order.ltp = ltp;
         closeOrderPanel();
 
         //console.log(`GTT ${qty}- ${sl} - ${ent} - ${tp}`);
     } else {
+        let order = {
+            symb: symb,
+            ltp: ltp,
+        };
         //Order Format: QTY:3-SL:875.45 ENT:907.1 TP:989.9
         let qtyPrices = prices.value.trim().split("-");
-        qty = parseFloat(qtyPrices[0]);
+        order.qty = parseFloat(qtyPrices[0]);
         let nextSplit = qtyPrices[1].split(" ");
         if (nextSplit.length === 3) {
-            sl = parseFloat(nextSplit[0]);
-            ent = parseFloat(nextSplit[1]);
-            tp = parseFloat(nextSplit[2]);
+            order.sl = parseFloat(nextSplit[0]);
+            order.ent = parseFloat(nextSplit[1]);
+            order.tp = parseFloat(nextSplit[2]);
         }
     }
 
     //Build Order and Display
-    let order = {
-        symb: symb,
-        ltp: ltp,
-        qty: qty,
-        sl: sl,
-        ent: ent,
-        tp: tp,
-    };
-    message(`${symb} (${ltp}) Qty: ${qty}, ${sl} - ${ent} - ${tp}`.fontcolor('yellow'));
+
+    message(`${symb} (${order.ltp}) Qty: ${order.qty}, ${order.sl} - ${order.ent} - ${order.tp}`.fontcolor('yellow'));
 
     //If Valid Order Send else Alert
-    if (qty > 0 && sl > 0 && ent > 0 && tp > 0) {
+    if (order.qty > 0 && order.sl > 0 && order.ent > 0 && order.tp > 0) {
         //Send Signal to Kite to place Order.
         GM_setValue(gttKey, order);
     } else {
