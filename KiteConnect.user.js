@@ -198,7 +198,7 @@ function paintAll() {
  */
 function paintTVWatchList() {
     //Reset Color
-    $(`.${watchListSymbolSelector}`).css('color', 'white');
+    $(watchListSymbolSelector).css('color', 'white');
     //Paint Index
     paint(watchListSymbolSelector, indexSymbols, colorList[6]);
     //Paint Kite
@@ -215,7 +215,7 @@ function paintTVWatchList() {
  */
 function paintTVScreener() {
     //Must Run in this Order- Clear, WatchList, Kite
-    $(`.${screenerSymbolSelector}`).css('color', 'white');
+    $(screenerSymbolSelector).css('color', 'white');
 
     paint(screenerSymbolSelector, getWatchListTickers(), colorList[5]);
     paintTickers(screenerSymbolSelector);
