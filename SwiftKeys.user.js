@@ -123,7 +123,7 @@ function doc_keyDown(e) {
         toggleExchange();
     }
 
-    if (isModifierKey(e.shiftKey, 'a', e)) {
+    if (isModifierKey(e.ctrlKey, 'a', e)) {
         // Remove from TV WatchList
         removeFromWatchList()
     }
