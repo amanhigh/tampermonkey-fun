@@ -45,14 +45,16 @@ function kite() {
  * @param symbol
  */
 function kiteWatchAddSymbol(listNo, symbol) {
-    //Remove Symbol from Read List
-    kiteWatchRemoveSymbol(3, symbol);
-
     //Open List
     $(`.marketwatch-selector li:nth-child(${listNo})`).click();
     //Add Symbol
     waitInput('#search-input', symbol);
-    waitClick('.search-result-item');
+    waitClick('.search-result-item', () => {
+        const readyListNo = 3;
+        if (listNo !== readyListNo) {
+            kiteWatchRemoveSymbol(readyListNo, symbol)
+        }
+    });
 }
 
 /**
@@ -65,12 +67,15 @@ function kiteWatchRemoveSymbol(listNo, symbol) {
     $(`.marketwatch-selector li:nth-child(${listNo})`).click();
 
     //Remove Symbol
-    let x = $(`span.nice-name:contains('${symbol}')`).parent().parent().parent().parent();
-    if (x.length) {
-        x[0].dispatchEvent(new Event('mouseenter'));
-        $("span.icon-trash").click();
-    }
+    waitEE('span.nice-name', () => {
+        let x = $(`span.nice-name:contains('${symbol}')`).parent().parent().parent().parent();
+        if (x.length) {
+            x[0].dispatchEvent(new Event('mouseenter'));
+            waitClick("span.icon-trash");
+        }
+    })
 }
+
 
 // -------------------------------- TradingView ---------------------------------------------------------
 function tradingView() {
