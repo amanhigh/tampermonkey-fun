@@ -123,6 +123,11 @@ function doc_keyDown(e) {
         toggleExchange();
     }
 
+    if (isModifierKey(e.shiftKey, 'a', e)) {
+        // Remove from TV WatchList
+        removeFromWatchList()
+    }
+
     if (isModifierKey(e.shiftKey, 'enter', e)) {
         // Textbox Ok
         $('.appearance-default-dMjF_2Hu-').click();
