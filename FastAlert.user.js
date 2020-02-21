@@ -333,6 +333,9 @@ function onTickerChange() {
     //console.log('Ticker Changed');
     updateAlertSummary(GM_getValue(triggerMapKey));
 
+    //TODO: Hack to fix
+    //Select Current Element to ensure WatchList Highlight remains on movement.
+    $("div.active-3yXe9fgP").parent().parent().click()
 }
 
 function updateAlertSummary(m) {
