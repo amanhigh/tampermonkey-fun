@@ -67,8 +67,8 @@ function kiteWatchRemoveSymbol(listNo, symbol) {
     $(`.marketwatch-selector li:nth-child(${listNo})`).click();
 
     //Remove Symbol
-    waitEE('span.nice-name', () => {
-        let x = $(`span.nice-name:contains('${symbol}')`).parent().parent().parent().parent();
+    waitJEE(`span.nice-name:contains('${symbol}')`, (el) => {
+        let x = el.parent().parent().parent().parent();
         if (x.length) {
             x[0].dispatchEvent(new Event('mouseenter'));
             waitClick("span.icon-trash");
