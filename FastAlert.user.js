@@ -272,32 +272,15 @@ function setAlert() {
 }
 
 function autoAlert() {
-    //Click Settings
-    $('.tv-floating-toolbar__content:nth(1) > div:nth-child(5) > div').click()
+    //Wait for Add Alert Context Menu Option
+    waitJEE(".label-1If3beUH:contains(\'Add Alert\')", function (el) {
+        let regExp = /\((.*)\)/g;
+        let match = regExp.exec(el.text());
+        var altPrice=parseFloat(match[1])
 
-    //Select Mapped Ticker
-    let symb = getMappedTicker();
-
-    //Wait for Alert Dialogue
-    waitEE('.intent-primary-1-IOYcbg-', function (e) {
-        //Open Co-ordinates Tab
-        waitClick('.tab-1l4dFt6c:nth-of-type(2)');
-
-        //Read ALert value (Line Co-ordinate)
-        waitEE('.innerInput-29Ku0bwF', function (i) {
-            let altPrice = parseFloat(i.value);
-            //console.log(symb,altPrice,ltp);
-
-            //Close Alert Dialogue
-            $(e).click();
-            //TODO: Remove if many errors
-            waitClick('.close-3NTwKnT_');
-
-            //Search Symbol
-            searchSymbol(symb, function (top) {
-                createAlert(top.pair_ID, altPrice);
-                altRefresh();
-            });
+        searchSymbol(getMappedTicker(), function (top) {
+            createAlert(top.pair_ID, altPrice);
+            altRefresh();
         });
     });
 }
