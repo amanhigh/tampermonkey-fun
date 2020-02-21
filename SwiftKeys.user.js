@@ -184,10 +184,6 @@ function nonModifierKey(e) {
             toolbar(5);
             textBox()
             break;
-        case 'a':
-            // Price Range
-            toolbar(6);
-            break;
 
         case 'j':
             // Demand Zone
