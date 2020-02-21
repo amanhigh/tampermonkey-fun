@@ -48,10 +48,10 @@ function kiteWatchToggleSymbol(listNo, symbol) {
     //Open List
     $(`.marketwatch-selector li:nth-child(${listNo})`).click();
 
-    //Wait for List to be Selected
-    waitJEE(`span.nice-name:contains('${symbol}')`, (el) => {
+    //Wait for List to Open
+    waitJEE(`.marketwatch-selector li:nth-child(${listNo})`, () => {
         /* If Exists Remove */
-        let x = el.parent().parent().parent().parent();
+        let x = $(`span.nice-name:contains('${symbol}')`).parent().parent().parent().parent();
         if (x.length) {
             x[0].dispatchEvent(new Event('mouseenter'));
             waitClick("span.icon-trash");
