@@ -78,7 +78,7 @@ function tradingView() {
     //Wait for Title to Load and Fix to Signal Auto Hotkey
     waitEE("title", (el) => {
         //console.log('Observing Title: ' + el.innerHTML);
-        attributeObserver(el, fixTitle);
+        nodeObserver(el, fixTitle);
     });
 }
 
