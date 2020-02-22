@@ -12,7 +12,7 @@
 // @require      https://code.jquery.com/jquery-3.1.1.min.js
 // @run-at document-idle
 // ==/UserScript==
-const colors = ['red', 'yellow', 'purple', 'green'];
+const colors = ['red', 'yellow', 'purple', 'green', 'all'];
 
 
 // ---------------------------- TRELLO -------------------------------
