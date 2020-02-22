@@ -64,7 +64,7 @@ useTicker.checked = true;
 useTicker.setAttribute('type', 'checkbox');
 useTicker.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 1)) + "px;right:" + (y + 250) + "px;");
 
-var altz = document.createElement("p");
+var altz = document.createElement("div");
 altz.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 3)) + "px;right:" + y + "px;");
 
 //-- Are we on the "interactive" page/site/domain or the "monitoring" one?
@@ -294,6 +294,13 @@ function altRefresh() {
 }
 
 //Fast Alert: Delete
+function onAlertDelete(evt) {
+    let $target = $(evt.currentTarget);
+    let alt = $target.data('alt');
+    deleteAlert(alt);
+    altRefresh();
+}
+
 function resetAlerts() {
     //Search Symbol
     searchSymbol(getMappedTicker(), function (top) {
@@ -343,12 +350,22 @@ function updateAlertSummary(m) {
     //Search Symbol
     searchSymbol(getMappedTicker(), function (top) {
         let ids = m[top.pair_ID];
-        let msg = "No Alertz";
+        altz.innerHTML = ""; //Reset Old Alerts
         if (ids) {
-            //Alert Below Price -> Green, Above -> Red
-            msg = ids.map(alt => alt.price).sort().map(p => p < ltp ? p.toString().fontcolor('green') : p.toString().fontcolor('red')).join('|');
+            ids.forEach((alt) => {
+                let priceString = alt.price.toString();
+                //Alert Below Price -> Green, Above -> Red
+                let coloredPrice = alt.price < ltp ? priceString.fontcolor('green') : priceString.fontcolor('red');
+
+                //Add Deletion Button
+                let btn = $("<button>").html(coloredPrice).data('alt', alt)
+                    .css("background-color", "black").click(onAlertDelete());
+
+                $(altz).append(btn);
+            });
+        } else {
+            altz.innerHTML = "No AlertZ".fontcolor('red');
         }
-        altz.innerHTML = msg;
     });
 }
 
