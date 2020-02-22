@@ -12,7 +12,7 @@
 // @require      https://code.jquery.com/jquery-3.1.1.min.js
 // @run-at document-end
 // ==/UserScript==
-const colors = ['red', 'yellow', 'purple', 'green', 'all'];
+const colors = ['red', 'yellow', 'purple', 'green', 'sky', 'lime'];
 const excludeList = ['Transit', 'Experiment', 'JustGot']
 
 
