@@ -20,7 +20,7 @@ function setupUI() {
 
 // Add Input
     buildInput('aman-input').appendTo('#aman-area');
-    buildInput('aman-output').width(200).hieght(300).appendTo('#aman-area');
+    buildInput('aman-output').width(200).height(300).appendTo('#aman-area');
 
 //Add Buttons
     buildButton('aman-click', 'Run', runCounter()).appendTo('#aman-area');
@@ -34,7 +34,7 @@ function runCounter() {
         let testList = $('div.js-list.list-wrapper:contains("Running")');
         let count = labelCounter(testList, 'yellow');
         console.log(count);
-        ('#aman-output').vaL(JSON.stringify(count));
+        $('#aman-output').val(JSON.stringify(count));
     };
 }
 
