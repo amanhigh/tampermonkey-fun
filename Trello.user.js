@@ -12,6 +12,7 @@
 // @require      https://code.jquery.com/jquery-3.1.1.min.js
 // @run-at document-idle
 // ==/UserScript==
+const colors = ['red', 'yellow'];
 
 
 // ---------------------------- TRELLO -------------------------------
@@ -22,6 +23,11 @@ function setupUI() {
     // Add Input
     buildInput('aman-input').val('Not Taken').appendTo('#aman-area');
 
+    //Add Color Choices
+    buildArea('aman-colors').appendTo('#aman-area');
+    colors.forEach(color => {
+        buildRadio(color, color, 'aman-colors').appendTo('#aman-colors')
+    })
     //Add Buttons
     buildButton('aman-click', 'Run', runCounter()).appendTo('#aman-area');
 
