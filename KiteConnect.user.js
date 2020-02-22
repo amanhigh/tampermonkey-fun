@@ -157,11 +157,6 @@ function tradingView() {
         //Ensure Repaint on any change in WatchList
         nodeObserver(el, paintAll);
 
-        //Onload Details Paint
-        waitEE(nameSelector, (el) => {
-            nodeObserver(el, paintDetails);
-        });
-
         //Ensure Repaint on Screener Changes
         waitEE(screenerSelector, (el) => {
             attributeObserver(el, paintTVScreener);
@@ -226,15 +221,18 @@ function paintTVScreener() {
  * Paints Ticker Name in Detail Section
  */
 function paintDetails() {
+    /* Read Current Symbol Href Link Containing Symbol */
     let ref = $(".dl-header > div:nth-child(1) > a:nth-child(2)").attr('href')
     if (ref) {
+        /* Extract Symbol from Href */
         let symbol = ref.split("-")[1].replace('/', '');
-        let $target = $(nameSelector);
+
+        let $name = $(nameSelector);
         //Check if href contains symbol then paint stock name
         if (getWatchListTickers().includes(symbol)) {
-            $target.css('color', colorList[5]);
+            $name.css('color', colorList[5]);
         } else {
-            $target.css('color', 'white');
+            $name.css('color', 'white');
         }
 
         //console.log("Painting Details");
@@ -253,6 +251,6 @@ function paintTickers(selector) {
 
 function paint(selector, symbols, colour) {
     for (const sym of symbols) {
-        $(`.${selector}:contains("${sym}")`).css('color', colour);
+        $(`${selector}:contains("${sym}")`).css('color', colour);
     }
 }
