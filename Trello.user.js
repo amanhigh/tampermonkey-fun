@@ -10,7 +10,7 @@
 // @require      lib/library.js
 // @require      lib/ui.js
 // @require      https://code.jquery.com/jquery-3.1.1.min.js
-// @run-at document-idle
+// @run-at document-end
 // ==/UserScript==
 const colors = ['red', 'yellow', 'purple', 'green', 'all'];
 
@@ -26,7 +26,7 @@ function setupUI() {
     //Add Color Choices
     buildWrapper('aman-colors').appendTo('#aman-area');
     colors.forEach(color => {
-        buildRadio(color, color, 'aman-colors').appendTo('#aman-colors', color === colors[0])
+        buildRadio(color, color, 'aman-colors', color === colors[0]).appendTo('#aman-colors')
     })
     //Add Buttons
     buildButton('aman-click', 'Run', runCounter()).appendTo('#aman-area');
