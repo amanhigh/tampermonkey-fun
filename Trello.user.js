@@ -26,7 +26,7 @@ function setupUI() {
     //Add Color Choices
     buildWrapper('aman-colors').appendTo('#aman-area');
     colors.forEach(color => {
-        buildRadio(color, color, 'aman-colors').appendTo('#aman-colors')
+        buildRadio(color, color, 'aman-colors').appendTo('#aman-colors', color === colors[0])
     })
     //Add Buttons
     buildButton('aman-click', 'Run', runCounter()).appendTo('#aman-area');
@@ -50,6 +50,7 @@ function runCounter() {
 
         //Empty previous Run
         $('#aman-table').empty();
+        let $header = buildHeader('aman-table-header').append(buildCell('Tags')).appendTo('#aman-table');
 
         //Render New Rows
         sortedMap.forEach((label, count) => {
