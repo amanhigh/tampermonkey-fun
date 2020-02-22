@@ -19,7 +19,7 @@ const excludeList = ['Transit', 'Experiment', 'JustGot']
 // ---------------------------- TRELLO -------------------------------
 function setupUI() {
     //Setup Area
-    buildArea('aman-area').css('left', '80%').appendTo('body');
+    buildArea('aman-area').css('left', '50%').appendTo('body');
 
     // Add Input
     buildInput('aman-input').val('Not Taken').appendTo('#aman-area');
