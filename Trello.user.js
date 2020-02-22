@@ -13,7 +13,7 @@
 // @run-at document-end
 // ==/UserScript==
 const colors = ['red', 'yellow', 'purple', 'green', 'all'];
-const excludeList = ['Transit', 'Experiment','JustGot']
+const excludeList = ['Transit', 'Experiment', 'JustGot']
 
 
 // ---------------------------- TRELLO -------------------------------
@@ -31,6 +31,7 @@ function setupUI() {
     })
     //Add Buttons
     buildButton('aman-run', 'Run', runCounter).appendTo('#aman-area');
+    buildButton('aman-clear', 'Clear', clear).appendTo('#aman-area');
 
     //Add Table
     buildTable('aman-table').appendTo('#aman-area');
@@ -40,6 +41,11 @@ setupUI();
 
 
 //Handlers
+function clear() {
+    $('#aman-input').val("");
+    $('#aman-table').empty();
+}
+
 function runCounter() {
     // let listName = $('#aman-input').val();
     // let testList = $(`div.js-list.list-wrapper:contains(${listName})`);
