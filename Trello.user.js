@@ -14,9 +14,8 @@
 
 // ---------------------------- ALERT FEED -------------------------------
 function labelCounter(target, color) {
-
     //Read only Non Hidden Card Labels
-    $(target).find(`a.list-card:not(.hide)  span.card-label-${color}`).toArray()
+    return $(target).find(`a.list-card:not(.hide)  span.card-label-${color}`).toArray()
         .reduce(function (rv, x) {
             //Extract Title
             let title = $(x).attr('title');
@@ -28,3 +27,7 @@ function labelCounter(target, color) {
         }, {});
 
 }
+
+let testList = $('div.js-list.list-wrapper:contains("Running")');
+let count = labelCounter(testList, 'yellow');
+console.log(count);
