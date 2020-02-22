@@ -175,10 +175,26 @@ function updateSummary() {
     for (let i = 0; i < 5; i++) {
         msg += watchInfo[i].length.toString().fontcolor(colorList[i]) + '|';
     }
-    msg += getWatchListTickers().length.toString().fontcolor(colorList[5]);
-    summary.innerHTML = msg;
-    //console.log(msg);
 
+    //Count Indices
+    var watchTickers=getWatchListTickers();
+    var indexCount=0;
+    //TODO: Simplify to one liner
+    for (const ticker of watchTickers)
+    {
+        if (indexSymbols.includes(ticker)) {
+            indexCount++;
+        }
+    }
+
+    // Total Count without Index
+    msg+=(watchTickers.length-indexCount).toString().fontcolor(colorList[5]);
+
+    //Add Index Count @ End
+    msg+= '|' + indexCount.toString().fontcolor(colorList[6]);
+
+    summary.innerHTML=msg;
+    //console.log(msg);
 }
 
 // TradingView: Painters
