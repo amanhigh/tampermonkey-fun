@@ -359,7 +359,7 @@ function updateAlertSummary(m) {
 
                 //Add Deletion Button
                 let btn = $("<button>").html(coloredPrice).data('alt', alt)
-                    .css("background-color", "black").click(onAlertDelete());
+                    .css("background-color", "black").click(onAlertDelete);
 
                 $(altz).append(btn);
             });
