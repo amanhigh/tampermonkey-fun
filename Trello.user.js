@@ -29,7 +29,7 @@ function setupUI() {
         buildRadio(color, color, 'aman-colors', color === colors[0]).appendTo('#aman-colors')
     })
     //Add Buttons
-    buildButton('aman-click', 'Run', allList).appendTo('#aman-area');
+    buildButton('aman-run', 'Run', runCounter).appendTo('#aman-area');
 
     //Add Table
     buildTable('aman-table').appendTo('#aman-area');
@@ -40,27 +40,36 @@ setupUI();
 
 //Handlers
 function runCounter() {
-    return () => {
-        let listName = $('#aman-input').val();
-        let testList = $(`div.js-list.list-wrapper:contains(${listName})`);
+    // let listName = $('#aman-input').val();
+    // let testList = $(`div.js-list.list-wrapper:contains(${listName})`);
 
-        let selectedColor = $("input[name='aman-colors']:checked").val();
-        let labelMap = labelCounter(testList, selectedColor);
-        let sortedMap = new Map([...labelMap.entries()].sort((a, b) => b[1] - a[1]))
+    let selectedColor = $("input[name='aman-colors']:checked").val();
+    let labelInfo = countAll(selectedColor);
+    // let sortedMap = new Map([...labelMap.entries()].sort((a, b) => b[1] - a[1]))
 
-        //Empty previous Run
-        $('#aman-table').empty();
-        let $header = buildHeader('aman-table-header').append(buildCell('Tags')).appendTo('#aman-table');
+    //Empty previous Run
+    $('#aman-table').empty();
 
-        //Render New Rows
-        sortedMap.forEach((label, count) => {
-            let $row = buildRow().appendTo('#aman-table');
-            $row.prepend(buildCell(label))
+    //Build Header
+    let $header = buildRow('aman-table-header-row').appendTo('#aman-table');
+    $header.append(buildHeader('Tags'));
+
+    //Render List Names in Header
+    labelInfo.listNames.forEach(name => {
+        $header.append(buildHeader(name));
+    })
+
+    //Render All Counts With Labels
+    labelInfo.labels.forEach((list, label) => {
+        let $row = buildRow().appendTo('#aman-table');
+        $row.prepend(buildHeader(label))
+        list.forEach(count => {
             $row.prepend(buildCell(count));
         })
-    };
+    })
 }
 
+//Core
 function countAll(color) {
     let labelInfo = {
         listNames: [],
@@ -100,7 +109,6 @@ function countAll(color) {
     return labelInfo;
 }
 
-//Core
 function labelCounter(target, color) {
     //Read only Non Hidden Card Labels
     return $(target).find(`a.list-card:not(.hide)  span.card-label-${color}`).toArray()
