@@ -355,7 +355,7 @@ function updateAlertSummary(m) {
             ids.forEach((alt) => {
                 let priceString = alt.price.toString();
                 //Alert Below Price -> Green, Above -> Red
-                let coloredPrice = alt.price < ltp ? priceString.fontcolor('green') : priceString.fontcolor('red');
+                let coloredPrice = alt.price < ltp ? priceString.fontcolor('seagreen') : priceString.fontcolor('orangered');
 
                 //Add Deletion Button
                 let btn = $("<button>").html(coloredPrice).data('alt', alt)
