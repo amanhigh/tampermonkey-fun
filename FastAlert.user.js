@@ -349,10 +349,10 @@ function updateAlertSummary(m) {
     let ltp = readLtp();
     //Search Symbol
     searchSymbol(getMappedTicker(), function (top) {
-        let ids = m[top.pair_ID];
+        let alrts = m[top.pair_ID];
         altz.innerHTML = ""; //Reset Old Alerts
-        if (ids) {
-            ids.forEach((alt) => {
+        if (alrts) {
+            alrts.sort(((a, b) => {return a.price > b.price})).forEach((alt) => {
                 let priceString = alt.price.toString();
                 //Alert Below Price -> Green, Above -> Red
                 let coloredPrice = alt.price < ltp ? priceString.fontcolor('seagreen') : priceString.fontcolor('orangered');
