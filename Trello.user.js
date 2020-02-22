@@ -17,7 +17,7 @@
 // ---------------------------- TRELLO -------------------------------
 function setupUI() {
     //Setup Area
-    buildArea('aman-area').appendTo('body');
+    buildArea('aman-area').css('left', '80%').appendTo('body');
 
     // Add Input
     buildInput('aman-input').val('Not Taken').appendTo('#aman-area');
@@ -39,7 +39,7 @@ function runCounter() {
         let testList = $(`div.js-list.list-wrapper:contains(${listName})`);
 
         let labelMap = labelCounter(testList, 'red');
-        let sortedMap = new Map([...labelMap.entries()].sort())
+        let sortedMap = new Map([...labelMap.entries()].sort((a, b) => b[1] - a[1]))
 
         //Empty previous Run
         $('#aman-table').empty();
