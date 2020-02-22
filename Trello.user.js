@@ -24,7 +24,7 @@ function setupUI() {
     buildInput('aman-input').val('Not Taken').appendTo('#aman-area');
 
     //Add Color Choices
-    buildArea('aman-colors').appendTo('#aman-area');
+    buildWrapper('aman-colors').appendTo('#aman-area');
     colors.forEach(color => {
         buildRadio(color, color, 'aman-colors').appendTo('#aman-colors')
     })
