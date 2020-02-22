@@ -29,7 +29,7 @@ function setupUI() {
         buildRadio(color, color, 'aman-colors', color === colors[0]).appendTo('#aman-colors')
     })
     //Add Buttons
-    buildButton('aman-click', 'Run', runCounter()).appendTo('#aman-area');
+    buildButton('aman-click', 'Run', allList).appendTo('#aman-area');
 
     //Add Table
     buildTable('aman-table').appendTo('#aman-area');
@@ -59,6 +59,14 @@ function runCounter() {
             $row.prepend(buildCell(count));
         })
     };
+}
+
+function allList() {
+    $('div.js-list.list-wrapper').each((key,list) => {
+        let listName = $(list).find(".list-header-name").attr('aria-label');
+        let labelMap = labelCounter(list,'yellow');
+        console.log(listName, list,labelMap);
+    })
 }
 
 //Core
