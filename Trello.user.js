@@ -13,6 +13,7 @@
 // @run-at document-idle
 // ==/UserScript==
 
+
 // ---------------------------- TRELLO -------------------------------
 function setupUI() {
     //Setup Area
@@ -23,25 +24,26 @@ function setupUI() {
 
     //Add Buttons
     buildButton('aman-click', 'Run', runCounter()).appendTo('#aman-area');
+
+    //Add Table
+    buildTable('aman-table').appendTo('#aman-area');
 }
 
 setupUI();
+
 
 //Handlers
 function runCounter() {
     return () => {
         let testList = $('div.js-list.list-wrapper:contains("Not Taken")');
-        let labelMap = labelCounter(testList, 'red');
-        console.log(labelMap);
-        let $table = $('<table>').appendTo('#aman-area');
+        let labelMap = labelCounter(testList, 'red').sort();
+        let sortedMap = new Map([...labelMap.entries()].sort())
 
-        labelMap.forEach((label, count) => {
-            let $row = $('<tr>').appendTo($table);
-            $row.prepend($('<td>').html(label))
-            $row.prepend($('<td>').html(count));
+        sortedMap.forEach((label, count) => {
+            let $row = buildRow().appendTo('#aman-table');
+            $row.prepend(buildCell(label))
+            $row.prepend(buildCell(count));
         })
-
-        $('#aman-output').val(JSON.stringify(labelMap));
     };
 }
 
