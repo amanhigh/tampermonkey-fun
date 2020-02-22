@@ -13,6 +13,7 @@
 // @run-at document-end
 // ==/UserScript==
 const colors = ['red', 'yellow', 'purple', 'green', 'all'];
+const excludeList = ['Transit', 'Experiment','JustGot']
 
 
 // ---------------------------- TRELLO -------------------------------
@@ -62,9 +63,9 @@ function runCounter() {
     //Render All Counts With Labels
     labelInfo.labels.forEach((list, label) => {
         let $row = buildRow().appendTo('#aman-table');
-        $row.prepend(buildHeader(label))
+        $row.append(buildHeader(label))
         list.forEach(count => {
-            $row.prepend(buildCell(count));
+            $row.append(buildCell(count));
         })
     })
 }
@@ -80,30 +81,33 @@ function countAll(color) {
         let listName = $(list).find(".list-header-name").attr('aria-label');
         let labelMap = labelCounter(list, color);
 
-        //Add List Name to label info
-        labelInfo.listNames.push(listName);
+        if (!excludeList.includes(listName)) {
 
-        //Copy all Labels already Known
-        labelInfo.labels.forEach((list, label) => {
-            if (labelMap.has(label)) {
-                list.push(labelMap.get(label))
-            } else {
-                list.push(0);
-            }
-        })
+            //Add List Name to label info
+            labelInfo.listNames.push(listName);
 
-        //Copy all undiscovered Labels
-        labelMap.forEach((count, label) => {
-            //Init Array if new Label
-            if (!labelInfo.labels.has(label)) {
-                //Accommodate all lists processed till now
-                let counts = Array(labelInfo.listNames.length - 1).fill(0);
-                counts.push(count);
-                labelInfo.labels.set(label, counts);
-            }
-        })
+            //Copy all Labels already Known
+            labelInfo.labels.forEach((list, label) => {
+                if (labelMap.has(label)) {
+                    list.push(labelMap.get(label))
+                } else {
+                    list.push(0);
+                }
+            })
 
-        // console.log(listName, list, labelMap);
+            //Copy all undiscovered Labels
+            labelMap.forEach((count, label) => {
+                //Init Array if new Label
+                if (!labelInfo.labels.has(label)) {
+                    //Accommodate all lists processed till now
+                    let counts = Array(labelInfo.listNames.length - 1).fill(0);
+                    counts.push(count);
+                    labelInfo.labels.set(label, counts);
+                }
+            })
+
+            // console.log(listName, list, labelMap);
+        }
     })
     // console.log(labelInfo)
     return labelInfo;
