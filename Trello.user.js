@@ -8,11 +8,37 @@
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @require      lib/library.js
+// @require      lib/ui.js
 // @require      https://code.jquery.com/jquery-3.1.1.min.js
 // @run-at document-idle
 // ==/UserScript==
 
-// ---------------------------- ALERT FEED -------------------------------
+// ---------------------------- TRELLO -------------------------------
+function setupUI() {
+//Setup Area
+    buildArea('aman-area').appendTo('body');
+
+// Add Input
+    buildInput('aman-input').appendTo('#aman-area');
+    buildInput('aman-output').width(200).hieght(300).appendTo('#aman-area');
+
+//Add Buttons
+    buildButton('aman-click', 'Run', runCounter()).appendTo('#aman-area');
+}
+
+setupUI();
+
+//Handlers
+function runCounter() {
+    return () => {
+        let testList = $('div.js-list.list-wrapper:contains("Running")');
+        let count = labelCounter(testList, 'yellow');
+        console.log(count);
+        ('#aman-output').vaL(JSON.stringify(count));
+    };
+}
+
+//Core
 function labelCounter(target, color) {
     //Read only Non Hidden Card Labels
     return $(target).find(`a.list-card:not(.hide)  span.card-label-${color}`).toArray()
@@ -28,6 +54,3 @@ function labelCounter(target, color) {
 
 }
 
-let testList = $('div.js-list.list-wrapper:contains("Running")');
-let count = labelCounter(testList, 'yellow');
-console.log(count);
