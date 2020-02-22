@@ -20,7 +20,7 @@ function setupUI() {
     buildArea('aman-area').appendTo('body');
 
     // Add Input
-    buildInput('aman-input').appendTo('#aman-area');
+    buildInput('aman-input').val('Not Taken').appendTo('#aman-area');
 
     //Add Buttons
     buildButton('aman-click', 'Run', runCounter()).appendTo('#aman-area');
@@ -35,8 +35,10 @@ setupUI();
 //Handlers
 function runCounter() {
     return () => {
-        let testList = $('div.js-list.list-wrapper:contains("Not Taken")');
-        let labelMap = labelCounter(testList, 'red').sort();
+        let listName = $('#aman-input').val();
+        let testList = $(`div.js-list.list-wrapper:contains(${listName})`);
+
+        let labelMap = labelCounter(testList, 'red');
         let sortedMap = new Map([...labelMap.entries()].sort())
 
         //Empty previous Run
