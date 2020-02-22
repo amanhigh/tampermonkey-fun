@@ -61,12 +61,43 @@ function runCounter() {
     };
 }
 
-function allList() {
-    $('div.js-list.list-wrapper').each((key,list) => {
+function countAll(color) {
+    let labelInfo = {
+        listNames: [],
+        labels: new Map(),
+    }
+
+    $('div.js-list.list-wrapper').each((key, list) => {
         let listName = $(list).find(".list-header-name").attr('aria-label');
-        let labelMap = labelCounter(list,'yellow');
-        console.log(listName, list,labelMap);
+        let labelMap = labelCounter(list, color);
+
+        //Add List Name to label info
+        labelInfo.listNames.push(listName);
+
+        //Copy all Labels already Known
+        labelInfo.labels.forEach((list, label) => {
+            if (labelMap.has(label)) {
+                list.push(labelMap.get(label))
+            } else {
+                list.push(0);
+            }
+        })
+
+        //Copy all undiscovered Labels
+        labelMap.forEach((count, label) => {
+            //Init Array if new Label
+            if (!labelInfo.labels.has(label)) {
+                //Accommodate all lists processed till now
+                let counts = Array(labelInfo.listNames.length - 1).fill(0);
+                counts.push(count);
+                labelInfo.labels.set(label, counts);
+            }
+        })
+
+        // console.log(listName, list, labelMap);
     })
+    // console.log(labelInfo)
+    return labelInfo;
 }
 
 //Core
