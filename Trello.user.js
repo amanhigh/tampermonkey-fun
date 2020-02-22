@@ -12,7 +12,7 @@
 // @require      https://code.jquery.com/jquery-3.1.1.min.js
 // @run-at document-idle
 // ==/UserScript==
-const colors = ['red', 'yellow'];
+const colors = ['red', 'yellow', 'purple', 'green'];
 
 
 // ---------------------------- TRELLO -------------------------------
@@ -44,7 +44,8 @@ function runCounter() {
         let listName = $('#aman-input').val();
         let testList = $(`div.js-list.list-wrapper:contains(${listName})`);
 
-        let labelMap = labelCounter(testList, 'red');
+        let selectedColor = $("input[name='aman-colors']:checked").val();
+        let labelMap = labelCounter(testList, selectedColor);
         let sortedMap = new Map([...labelMap.entries()].sort((a, b) => b[1] - a[1]))
 
         //Empty previous Run
