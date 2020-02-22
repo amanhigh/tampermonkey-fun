@@ -39,6 +39,10 @@ function runCounter() {
         let labelMap = labelCounter(testList, 'red').sort();
         let sortedMap = new Map([...labelMap.entries()].sort())
 
+        //Empty previous Run
+        $('#aman-table').empty();
+
+        //Render New Rows
         sortedMap.forEach((label, count) => {
             let $row = buildRow().appendTo('#aman-table');
             $row.prepend(buildCell(label))
