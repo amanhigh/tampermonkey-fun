@@ -4,10 +4,10 @@
 // @version      1.0
 // @description  Fix Bad UI of Investing.com
 // @author       Amanpreet Singh
-// @include      https://in.tradingview.com/chart/*
-// @include      https://kite.zerodha.com/*
-// @include      https://in.investing.com/members-admin/alert-center*
-// @include      http://www.example.net/
+// @match       https://in.tradingview.com/chart
+// @match       https://kite.zerodha.com
+// @match       https://in.investing.com/members-admin/alert-center
+// @match       https://in.investing.com/equities
 // @grant        GM.xmlHttpRequest
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -27,6 +27,7 @@ const w = 20;
 const xmssionKey = "fastAlert-event";
 const triggerMapKey = "triggerMapKey";
 const tickerMapKey = "tickerMapKey";
+const tokenKey = "token-key";
 const gttKey = "gtt-event";
 const style = "background-color: black; color: white;font-size: 15px"
 
@@ -70,6 +71,8 @@ altz.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 3)) + "
 //-- Are we on the "interactive" page/site/domain or the "monitoring" one?
 if (location.pathname.includes("alert-center")) {
     alertCenter();
+} else if (location.pathname.includes("equities")) {
+    equities();
 } else if (location.host.includes("tradingview.com")) {
     tradingView();
 } else if (location.host.includes("kite.zerodha.com")) {
@@ -152,6 +155,24 @@ function alertCenter() {
     }, 6);
 
     //console.log("Reload Listner Added")
+}
+
+function equities() {
+    //Wait For Alert Bell
+    waitEE('span.add-alert-bell', () => {
+        captureToken();
+    });
+}
+
+function captureToken() {
+    XMLHttpRequest.prototype.realSetRequest = XMLHttpRequest.prototype.setRequestHeader;
+    XMLHttpRequest.prototype.setRequestHeader = function (k, v) {
+        if (k === 'token') {
+            GM_setValue(tokenKey, v);
+            console.log('Token Captured', k, v);
+        }
+        this.realSetRequest(k, v);
+    };
 }
 
 function loadTriggerMap() {
@@ -352,7 +373,9 @@ function updateAlertSummary(m) {
         let alrts = m[top.pair_ID];
         altz.innerHTML = ""; //Reset Old Alerts
         if (alrts) {
-            alrts.sort(((a, b) => {return a.price > b.price})).forEach((alt) => {
+            alrts.sort(((a, b) => {
+                return a.price > b.price
+            })).forEach((alt) => {
                 let priceString = alt.price.toString();
                 //Alert Below Price -> Green, Above -> Red
                 let coloredPrice = alt.price < ltp ? priceString.fontcolor('seagreen') : priceString.fontcolor('orangered');
