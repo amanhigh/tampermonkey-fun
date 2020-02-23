@@ -157,6 +157,11 @@ function tradingView() {
         //Ensure Repaint on any change in WatchList
         nodeObserver(el, paintAll);
 
+        //Ensure Name Repaint on TickerChange
+        waitEE(nameSelector, (el) => {
+            nodeObserver(el, paintDetails);
+        });
+
         //Ensure Repaint on Screener Changes
         waitEE(screenerSelector, (el) => {
             attributeObserver(el, paintTVScreener);
