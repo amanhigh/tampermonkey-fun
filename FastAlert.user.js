@@ -269,13 +269,14 @@ function setAlert() {
                 createAlert(top.pairId, p);
             }
 
-            waitOn(xmssionKey, 10000, () => {
-                //-- Send message to reload AlertList
-                GM_setValue(xmssionKey, Date());
-
+            //Clear Values
+            setTimeout(() => {
                 symbol.value = "";
                 prices.value = "";
-            });
+            }, 10000);
+
+            //Alert Refresh
+            altRefresh();
         });
     }
 }
@@ -295,6 +296,10 @@ function autoAlert() {
 }
 
 function altRefresh() {
+    //Update Alert Info Locally (Timeout to handle any gap)
+    setTimeout(sendAlertRequest, 500);
+
+    //Refresh Investing Page
     waitOn(xmssionKey, 10000, () => {
         //-- Send message to reload AlertList
         GM_setValue(xmssionKey, Date());
