@@ -4,9 +4,9 @@
 // @version      1.0
 // @description  Fix Bad UI of Investing.com
 // @author       Amanpreet Singh
-// @match       https://in.tradingview.com/chart/*
-// @match       https://kite.zerodha.com/*
-// @match       https://in.investing.com/members-admin/alert-center/*
+// @match       https://in.tradingview.com/chart*
+// @match       https://kite.zerodha.com*
+// @match       https://in.investing.com/members-admin/alert-center*
 // @match       https://in.investing.com/equities/*
 // @grant        GM.xmlHttpRequest
 // @grant        GM_getValue
@@ -149,7 +149,7 @@ function alertCenter() {
     //Listen for Alert Requests
     GM_addValueChangeListener(alertRequestKey, (keyName, oldValue, newValue) => {
         getAlerts(newValue.id, GM_getValue(tokenKey), (alrts) => {
-            GM_setValue(alertResponseKey, alrts);
+            GM_setValue(alertResponseKey, getTriggers(alrts));
         })
     });
 
