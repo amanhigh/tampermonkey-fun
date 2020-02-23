@@ -305,7 +305,7 @@ function altRefresh() {
         // GM_setValue(xmssionKey, Date());
 
         //Locally Refresh Alerts (Further Timeout to Handle Last Event)
-        setTimeout(altRefresh,500);
+        setTimeout(sendAlertRequest,500);
         message('Refreshing Alerts'.fontcolor('skyblue'))
     });
 }
@@ -383,7 +383,7 @@ function renderAlertSummary(alrts) {
             buildButton("",coloredPrice,onAlertDelete).data('alt', alt)
                 .css("background-color", "black").appendTo($(altz));
         });
-        buildButton("aman-refresh-alt","Refresh",sendAlertRequest).appendTo($(altz));
+        buildButton("aman-refresh-alt","R",sendAlertRequest).css("background-color", "black").appendTo($(altz));
     } else {
         altz.innerHTML = "No AlertZ".fontcolor('red');
     }
