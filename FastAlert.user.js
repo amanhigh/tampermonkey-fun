@@ -13,6 +13,7 @@
 // @grant        GM_setValue
 // @grant        GM_addValueChangeListener
 // @require      lib/library.js
+// @require      lib/ui.js
 // @require      lib/client/kite.js
 // @require      lib/client/investing.js
 // @require      lib/sites/tv.js
@@ -378,11 +379,11 @@ function renderAlertSummary(alrts) {
             let coloredPrice = alt.price < ltp ? priceString.fontcolor('seagreen') : priceString.fontcolor('orangered');
 
             //Add Deletion Button
-            let btn = $("<button>").html(coloredPrice).data('alt', alt)
-                .css("background-color", "black").click(onAlertDelete);
-
-            $(altz).append(btn);
+            // TODO: CSS Required ?
+            buildButton("",coloredPrice,onAlertDelete).data('alt', alt)
+                .css("background-color", "black").appendTo($(altz));
         });
+        buildButton("aman-refresh-alt","Refresh",sendAlertRequest).appendTo($(altz));
     } else {
         altz.innerHTML = "No AlertZ".fontcolor('red');
     }
