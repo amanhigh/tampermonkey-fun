@@ -161,7 +161,10 @@ function equities() {
     //Wait For Alert Bell
     waitEE('.add-alert-bell', () => {
         captureToken();
-        console.log(getTriggers(17984));
+
+        getAlerts(top.pair_ID, GM_getVaule(tokenKey), (alrts) => {
+            console.log(getTriggers(alrts));
+        })
     });
 }
 
@@ -349,8 +352,7 @@ function deleteAllAlerts(pairId) {
     $('.tv-dialog__close').click();
 }
 
-function getTriggers(pairId) {
-    getAlerts(pairId, GM_getValue(tokenKey));
+function getTriggers(alrts) {
     return alrts.data.data.price.map(p => {
         return {id: p.alertId, price: parseFloat(p.conditionValue)};
     });
@@ -380,26 +382,26 @@ function updateAlertSummary(m) {
     let ltp = readLtp();
     //Search Symbol
     searchSymbol(getMappedTicker(), function (top) {
-        let alrts = getTriggers(top.pair_ID);
+        getAlerts(top.pair_ID, GM_getVaule(tokenKey), (alrts) => {
+            altz.innerHTML = ""; //Reset Old Alerts
+            if (alrts) {
+                alrts.sort(((a, b) => {
+                    return a.price > b.price
+                })).forEach((alt) => {
+                    let priceString = alt.price.toString();
+                    //Alert Below Price -> Green, Above -> Red
+                    let coloredPrice = alt.price < ltp ? priceString.fontcolor('seagreen') : priceString.fontcolor('orangered');
 
-        altz.innerHTML = ""; //Reset Old Alerts
-        if (alrts) {
-            alrts.sort(((a, b) => {
-                return a.price > b.price
-            })).forEach((alt) => {
-                let priceString = alt.price.toString();
-                //Alert Below Price -> Green, Above -> Red
-                let coloredPrice = alt.price < ltp ? priceString.fontcolor('seagreen') : priceString.fontcolor('orangered');
+                    //Add Deletion Button
+                    let btn = $("<button>").html(coloredPrice).data('alt', alt)
+                        .css("background-color", "black").click(onAlertDelete);
 
-                //Add Deletion Button
-                let btn = $("<button>").html(coloredPrice).data('alt', alt)
-                    .css("background-color", "black").click(onAlertDelete);
-
-                $(altz).append(btn);
-            });
-        } else {
-            altz.innerHTML = "No AlertZ".fontcolor('red');
-        }
+                    $(altz).append(btn);
+                });
+            } else {
+                altz.innerHTML = "No AlertZ".fontcolor('red');
+            }
+        });
     });
 }
 
