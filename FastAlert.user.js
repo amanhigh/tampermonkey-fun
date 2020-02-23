@@ -299,13 +299,13 @@ function autoAlert() {
 }
 
 function altRefresh() {
-    waitOn(xmssionKey, 2000, () => {
+    waitOn(xmssionKey, 1000, () => {
         //Refresh Investing Page
         //-- Send message to reload AlertList
         // GM_setValue(xmssionKey, Date());
 
-        //Locally Refresh Alerts (Further Timeout to Handle Last Event)
-        setTimeout(sendAlertRequest,500);
+        //Locally Refresh Alerts
+        sendAlertRequest();
         message('Refreshing Alerts'.fontcolor('skyblue'))
     });
 }
@@ -380,10 +380,10 @@ function renderAlertSummary(alrts) {
 
             //Add Deletion Button
             // TODO: CSS Required ?
-            buildButton("",coloredPrice,onAlertDelete).data('alt', alt)
+            buildButton("", coloredPrice, onAlertDelete).data('alt', alt)
                 .css("background-color", "black").appendTo($(altz));
         });
-        buildButton("aman-refresh-alt","R",sendAlertRequest).css("background-color", "black").appendTo($(altz));
+        buildButton("aman-refresh-alt", "R", sendAlertRequest).css("background-color", "black").appendTo($(altz));
     } else {
         altz.innerHTML = "No AlertZ".fontcolor('red');
     }
