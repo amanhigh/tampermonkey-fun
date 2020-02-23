@@ -161,7 +161,7 @@ function equities() {
     //Wait For Alert Bell
     waitEE('.add-alert-bell', () => {
         captureToken();
-        getAlerts(17984, GM_getValue(tokenKey))
+        console.log(getTriggers(17984));
     });
 }
 
@@ -349,6 +349,14 @@ function deleteAllAlerts(pairId) {
     $('.tv-dialog__close').click();
 }
 
+function getTriggers(pairId) {
+    getAlerts(pairId, GM_getValue(tokenKey));
+    return alrts.data.data.price.map(p => {
+        return {id: p.alertId, price: parseFloat(p.conditionValue)};
+    });
+
+}
+
 function _getTriggers(pairId) {
     let m = GM_getValue(triggerMapKey);
     return m[pairId];
@@ -372,7 +380,8 @@ function updateAlertSummary(m) {
     let ltp = readLtp();
     //Search Symbol
     searchSymbol(getMappedTicker(), function (top) {
-        let alrts = getAlerts(top.pair_ID, GM_getValue(tokenKey));
+        let alrts = getTriggers(top.pair_ID);
+
         altz.innerHTML = ""; //Reset Old Alerts
         if (alrts) {
             alrts.sort(((a, b) => {
