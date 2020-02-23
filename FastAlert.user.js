@@ -27,6 +27,8 @@ const w = 20;
 const xmssionKey = "fastAlert-event";
 const triggerMapKey = "triggerMapKey";
 const tickerMapKey = "tickerMapKey";
+const alertRequestKey = "alertRequest";
+const alertResponseKey = "alertResponse";
 const tokenKey = "token-key";
 const gttKey = "gtt-event";
 const style = "background-color: black; color: white;font-size: 15px"
@@ -144,6 +146,13 @@ function alertCenter() {
             reloadPage();
         });
 
+    //Listen for Alert Requests
+    GM_addValueChangeListener(alertRequestKey, (keyName, oldValue, newValue) => {
+        getAlerts(newValue.id, GM_getValue(tokenKey), (alrts) => {
+            GM_setValue(alertResponseKey, alrts);
+        })
+    });
+
     //Add Auto Delete Confirmation Handler on all Delete Buttons
     $('.js-delete-btn').click(function () {
         waitClick('.js-delete');
@@ -162,13 +171,16 @@ function equities() {
     waitEE('.add-alert-bell', () => {
         captureToken();
 
-        getAlerts(top.pair_ID, GM_getVaule(tokenKey), (alrts) => {
+        //TODO: Remove , Since for Testing
+        getAlerts(17984, GM_getValue(tokenKey), (alrts) => {
             console.log(getTriggers(alrts));
         })
     });
 }
 
-
+/**
+ * Overrides SetRequestHeader to Capture 'Token' Header
+ */
 function captureToken() {
     XMLHttpRequest.prototype.realSetRequest = XMLHttpRequest.prototype.setRequestHeader;
     XMLHttpRequest.prototype.setRequestHeader = function (k, v) {
@@ -219,6 +231,12 @@ function tradingView() {
         triggerMapKey, (keyName, oldValue, newValue) => {
             //console.log (`Received new GTT Order: ${newValue}`);
             onTriggersChange(newValue);
+        });
+
+    //Register Alert Response Listener
+    GM_addValueChangeListener(
+        alertResponseKey, (keyName, oldValue, newValue) => {
+            renderAlertSummary(newValue);
         });
 }
 
@@ -378,31 +396,33 @@ function onTickerChange() {
     $("div.active-3yXe9fgP").parent().parent().click()
 }
 
-function updateAlertSummary(m) {
-    let ltp = readLtp();
+function updateAlertSummary() {
     //Search Symbol
     searchSymbol(getMappedTicker(), function (top) {
-        getAlerts(top.pair_ID, GM_getVaule(tokenKey), (alrts) => {
-            altz.innerHTML = ""; //Reset Old Alerts
-            if (alrts) {
-                alrts.sort(((a, b) => {
-                    return a.price > b.price
-                })).forEach((alt) => {
-                    let priceString = alt.price.toString();
-                    //Alert Below Price -> Green, Above -> Red
-                    let coloredPrice = alt.price < ltp ? priceString.fontcolor('seagreen') : priceString.fontcolor('orangered');
-
-                    //Add Deletion Button
-                    let btn = $("<button>").html(coloredPrice).data('alt', alt)
-                        .css("background-color", "black").click(onAlertDelete);
-
-                    $(altz).append(btn);
-                });
-            } else {
-                altz.innerHTML = "No AlertZ".fontcolor('red');
-            }
-        });
+        GM_setValue(alertRequestKey,{id: top.pair_ID});
     });
+}
+
+function renderAlertSummary(alrts) {
+    let ltp = readLtp();
+    altz.innerHTML = ""; //Reset Old Alerts
+    if (alrts) {
+        alrts.sort(((a, b) => {
+            return a.price > b.price
+        })).forEach((alt) => {
+            let priceString = alt.price.toString();
+            //Alert Below Price -> Green, Above -> Red
+            let coloredPrice = alt.price < ltp ? priceString.fontcolor('seagreen') : priceString.fontcolor('orangered');
+
+            //Add Deletion Button
+            let btn = $("<button>").html(coloredPrice).data('alt', alt)
+                .css("background-color", "black").click(onAlertDelete);
+
+            $(altz).append(btn);
+        });
+    } else {
+        altz.innerHTML = "No AlertZ".fontcolor('red');
+    }
 }
 
 //Fast Alert: GTT
