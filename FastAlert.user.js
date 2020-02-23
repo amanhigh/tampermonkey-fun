@@ -341,7 +341,7 @@ function deleteAllAlerts(pairId) {
 }
 
 function getTriggers(alrts) {
-    return alrts.data.data.price.map(p => {
+    return alrts.data.data.price && alrts.data.data.price.map(p => {
         return {id: p.alertId, price: parseFloat(p.conditionValue)};
     });
 
