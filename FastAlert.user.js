@@ -25,7 +25,6 @@ const x = 100;
 const y = 460;
 const w = 20;
 const xmssionKey = "fastAlert-event";
-const triggerMapKey = "triggerMapKey";
 const tickerMapKey = "tickerMapKey";
 const alertRequestKey = "alertRequest";
 const alertResponseKey = "alertResponse";
@@ -158,11 +157,6 @@ function alertCenter() {
         waitClick('.js-delete');
     });
 
-    //Map Symbol(PairId) to Trigger(Alerts) Map
-    waitEE('#earningsAlerts', function () {
-        loadTriggerMap();
-    }, 6);
-
     //console.log("Reload Listner Added")
 }
 
@@ -192,28 +186,6 @@ function captureToken() {
     };
 }
 
-function loadTriggerMap() {
-    let m = {};
-    $(".js-alert-item[data-frequency=Once]").each(function () {
-        let id = $(this).attr('data-alert-id');
-        let pair = $(this).attr('data-pair-id');
-        let price = $(this).attr('data-value');
-        if (!m[pair]) {
-            m[pair] = [];
-        }
-        m[pair].push({"id": id, "price": price});
-        //console.log(pair,id);
-    });
-
-    let size = Object.keys(m).length;
-    console.log(`Trigger Map Loaded: ${size}`);
-
-    /* Send Event once alert Map is loaded */
-    if (size > 0) {
-        GM_setValue(triggerMapKey, m);
-    }
-}
-
 //***************TRADING VIEW ********************
 
 function tradingView() {
@@ -225,13 +197,6 @@ function tradingView() {
     waitEE(symbolSelector, function (e) {
         attributeObserver(e, onTickerChange);
     });
-
-    //Register Trigger Change Listener
-    GM_addValueChangeListener(
-        triggerMapKey, (keyName, oldValue, newValue) => {
-            //console.log (`Received new GTT Order: ${newValue}`);
-            onTriggersChange(newValue);
-        });
 
     //Register Alert Response Listener
     GM_addValueChangeListener(
@@ -358,7 +323,7 @@ function resetAlerts() {
 function deleteAllAlerts(pairId) {
     deleteAlertLines();
 
-    let triggers = _getTriggers(pairId);
+    let triggers = GM_getValue(alertResponseKey);
     if (triggers) {
         //console.log(`Deleting all Alerts: ${pairId} -> ${triggers}`);
         for (let trg of triggers) {
@@ -377,30 +342,16 @@ function getTriggers(alrts) {
 
 }
 
-function _getTriggers(pairId) {
-    let m = GM_getValue(triggerMapKey);
-    return m[pairId];
-}
-
 //Fast Alert: Summary
-function onTriggersChange(m) {
-    updateAlertSummary(m);
-}
-
 function onTickerChange() {
     //console.log('Ticker Changed');
-    updateAlertSummary(GM_getValue(triggerMapKey));
+
+    //Fetch Updates for this Ticker
+    sendAlertRequest();
 
     //TODO: Hack to fix
     //Select Current Element to ensure WatchList Highlight remains on movement.
     $("div.active-3yXe9fgP").parent().parent().click()
-}
-
-function updateAlertSummary() {
-    //Search Symbol
-    searchSymbol(getMappedTicker(), function (top) {
-        GM_setValue(alertRequestKey,{id: top.pair_ID});
-    });
 }
 
 function renderAlertSummary(alrts) {
@@ -497,6 +448,13 @@ function getMappedTicker() {
 
     //console.log(symb,investingTicker);
     return symb;
+}
+
+function sendAlertRequest() {
+    //Search Symbol
+    searchSymbol(getMappedTicker(), function (top) {
+        GM_setValue(alertRequestKey, {id: top.pair_ID});
+    });
 }
 
 function mapTicker(tvTicker, investingTicker) {
