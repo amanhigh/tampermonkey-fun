@@ -24,12 +24,12 @@
 const x = 100;
 const y = 460;
 const w = 20;
-const xmssionKey = "fastAlert-event";
-const tickerMapKey = "tickerMapKey";
+const xmssionKey = "reload-event";
+const gttKey = "gtt-event";
 const alertRequestKey = "alertRequest";
 const alertResponseKey = "alertResponse";
+const tickerMapKey = "tickerMapKey";
 const tokenKey = "token-key";
-const gttKey = "gtt-event";
 const style = "background-color: black; color: white;font-size: 15px"
 
 //UI Elements
@@ -266,7 +266,7 @@ function setAlert() {
 
             //Set Alerts
             for (let p of split) {
-                createAlert(top.pair_ID, p);
+                createAlert(top.pairId, p);
             }
 
             waitOn(xmssionKey, 10000, () => {
@@ -288,7 +288,7 @@ function autoAlert() {
         var altPrice = parseFloat(match[1])
 
         searchSymbol(getMappedTicker(), function (top) {
-            createAlert(top.pair_ID, altPrice);
+            createAlert(top.pairId, altPrice);
             altRefresh();
         });
     });
@@ -314,7 +314,7 @@ function resetAlerts() {
     //Search Symbol
     searchSymbol(getMappedTicker(), function (top) {
         //Delete All Alerts
-        deleteAllAlerts(top.pair_ID);
+        deleteAllAlerts(top.pairId);
 
         altRefresh();
     });
@@ -453,7 +453,7 @@ function getMappedTicker() {
 function sendAlertRequest() {
     //Search Symbol
     searchSymbol(getMappedTicker(), function (top) {
-        GM_setValue(alertRequestKey, {id: top.pair_ID});
+        GM_setValue(alertRequestKey, {id: top.pairId});
     });
 }
 
