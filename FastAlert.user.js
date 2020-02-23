@@ -147,7 +147,9 @@ function alertCenter() {
 
     //Listen for Alert Requests
     GM_addValueChangeListener(alertRequestKey, (keyName, oldValue, newValue) => {
+        // console.log('Alert request', newValue);
         getAlerts(newValue.id, GM_getValue(tokenKey), (alrts) => {
+            // console.log('Alert Fetched', alrts);
             GM_setValue(alertResponseKey, getTriggers(alrts));
         })
     });
@@ -296,13 +298,13 @@ function autoAlert() {
 }
 
 function altRefresh() {
-    //Update Alert Info Locally (Timeout to handle any gap)
-    setTimeout(sendAlertRequest, 500);
-
-    //Refresh Investing Page
-    waitOn(xmssionKey, 10000, () => {
+    waitOn(xmssionKey, 2000, () => {
+        //Refresh Investing Page
         //-- Send message to reload AlertList
-        GM_setValue(xmssionKey, Date());
+        // GM_setValue(xmssionKey, Date());
+
+        //Locally Refresh Alerts (Further Timeout to Handle Last Event)
+        setTimeout(altRefresh,500);
         message('Refreshing Alerts'.fontcolor('skyblue'))
     });
 }
@@ -340,8 +342,13 @@ function deleteAllAlerts(pairId) {
     $('.tv-dialog__close').click();
 }
 
+/**
+ * Filters Price Alerts and maps to price,id
+ * @param alrts Alerts Response
+ * @returns {number|{price: number, id: *}[]}
+ */
 function getTriggers(alrts) {
-    return alrts.data.data.price && alrts.data.data.price.map(p => {
+    return alrts.data.data.price && alrts.data.data.price.filter(p => p.alert_trigger === "price").map(p => {
         return {id: p.alertId, price: parseFloat(p.conditionValue)};
     });
 
@@ -458,7 +465,7 @@ function getMappedTicker() {
 function sendAlertRequest() {
     //Search Symbol
     searchSymbol(getMappedTicker(), function (top) {
-        GM_setValue(alertRequestKey, {id: top.pairId});
+        GM_setValue(alertRequestKey, {id: top.pairId, date: new Date()});
     });
 }
 
