@@ -299,7 +299,7 @@ function autoAlert() {
 }
 
 function altRefresh() {
-    waitOn(xmssionKey, 1000, () => {
+    waitOn(xmssionKey, 1500, () => {
         //Refresh Investing Page
         //-- Send message to reload AlertList
         // GM_setValue(xmssionKey, Date());
