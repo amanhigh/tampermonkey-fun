@@ -27,7 +27,7 @@ const storageCurrentList = "__storejs_kite_marketwatch/currentWatchId";
 
 const nameLength = 10;
 const colorList = ['orange', 'red', 'dodgerblue', 'cyan', 'lime', 'greenyellow', 'brown'];
-const indexSymbols = ['CNXMIDCAP', 'CNXSMALLCAP', 'IXIC', 'DXY', 'NIFTY', 'NIFTYJR', 'US10Y', 'USOIL', 'USDINR', 'XAUUSD', 'XAGUSD', 'SHCOMP'];
+const indexSymbols = ['CNXMIDCAP', 'CNXSMALLCAP', 'IXIC', 'DXY', 'NIFTY', 'NIFTYJR', 'US10Y', 'USOIL', 'USDINR', 'XAUUSD', 'XAGUSD', 'SHCOMP', 'BTCUSD', 'GOLDSILVER'];
 
 if (location.host.includes("tradingview")) {
     tradingView();
