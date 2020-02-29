@@ -6,8 +6,7 @@
 // @author       Amanpreet Singh
 // @match       https://in.tradingview.com/chart*
 // @match       https://kite.zerodha.com/*
-// @match       https://in.investing.com/members-admin/alert-center*
-// @match       https://in.investing.com/equities/*
+// @match       https://in.investing.com/*
 // @grant        GM.xmlHttpRequest
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -17,6 +16,8 @@
 // @require      lib/client/kite.js
 // @require      lib/client/investing.js
 // @require      lib/sites/tv.js
+// @require      lib/sites/investing.js
+// @require      lib/sites/kite.js
 // @require      https://code.jquery.com/jquery-3.4.1.min.js
 // @run-at document-end
 // ==/UserScript==
@@ -70,6 +71,19 @@ useTicker.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 1)
 var altz = document.createElement("div");
 altz.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 3)) + "px;right:" + y + "px;");
 
+// Summary UI Elements
+var summary = document.createElement("p");
+summary.setAttribute("style", "font-size: 15px;position:absolute;top:" + 80 + "px;right:" + 460 + "px;");
+summary.innerHTML = "Summary:"
+
+/* SwiftKey Enabled Indication */
+var enabled = document.createElement("input");
+enabled.id = 'enabled'
+enabled.setAttribute('type', 'checkbox');
+enabled.setAttribute("style", "font-size:" + 24 + "px;position:absolute;top:" + 50 + "px;right:" + 580 + "px;");
+enabled.addEventListener('change', fixTitle)
+
+
 //-- Are we on the "interactive" page/site/domain or the "monitoring" one?
 if (location.pathname.includes("alert-center")) {
     alertCenter();
@@ -77,6 +91,8 @@ if (location.pathname.includes("alert-center")) {
     equities();
 } else if (location.host.includes("tradingview.com")) {
     tradingView();
+} else if (location.pathname.includes("alerts-feed")) {
+    alertFeed();
 } else if (location.host.includes("kite.zerodha.com")) {
     kite();
 }
@@ -194,6 +210,7 @@ function captureToken() {
 function tradingView() {
     setupFastAlertUI();
 
+    //TODO: Connect Hotkeys
     document.addEventListener('keydown', doc_keyDown, false);
 
     //Register Ticker Change Listener
@@ -206,6 +223,41 @@ function tradingView() {
         alertResponseKey, (keyName, oldValue, newValue) => {
             renderAlertSummary(newValue);
         });
+
+    //Listen for Alert Clicks in AlertFeed
+    GM_addValueChangeListener(
+        alertClickedKey, (keyName, oldValue, newValue,) => {
+            //Required for proper alert Opening
+            openTicker('DHFL'); // DO NOT REMOVE DHFL Line
+            openTicker(newValue);
+        });
+
+    //Wait for Title to Load and Fix to Signal Auto Hotkey
+    waitEE("title", (el) => {
+        //console.log('Observing Title: ' + el.innerHTML);
+        nodeObserver(el, fixTitle);
+    });
+
+    //Onload TV WatchList Paint
+    waitEE(watchListSelector, (el) => {
+
+        // Paint WatchList Once Loaded
+        paintTVWatchList();
+
+        //Ensure Repaint on any change in WatchList
+        nodeObserver(el, paintAll);
+
+        //Ensure Name Repaint on TickerChange
+        waitEE(nameSelector, (el) => {
+            nodeObserver(el, paintDetails);
+        });
+
+        //Ensure Repaint on Screener Changes
+        waitEE(screenerSelector, (el) => {
+            attributeObserver(el, paintTVScreener);
+        });
+
+    });
 }
 
 function setupFastAlertUI() {
@@ -215,6 +267,8 @@ function setupFastAlertUI() {
     document.body.appendChild(fastGtt);
     document.body.appendChild(useTicker);
     document.body.appendChild(altz);
+    document.body.appendChild(summary);
+    document.body.appendChild(enabled);
 }
 
 // Alert Hotkeys
