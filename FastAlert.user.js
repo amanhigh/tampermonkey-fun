@@ -207,6 +207,12 @@ function tradingView() {
 }
 
 //Fast Alert: Set
+function onPriceKeyPress(e) {
+    if (e.keyCode === 13) {
+        setAlert();
+    }
+}
+
 function setAlert() {
     'use strict';
 
