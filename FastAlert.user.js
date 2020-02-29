@@ -24,66 +24,12 @@
 // ==/UserScript==
 //UI Coordinates
 
-const x = 100;
-const y = 460;
-const w = 20;
 const xmssionKey = "reload-event";
 const gttKey = "gtt-event";
 const alertRequestKey = "alertRequest";
 const alertResponseKey = "alertResponse";
 const tickerMapKey = "tickerMapKey";
 const tokenKey = "token-key";
-const style = "background-color: black; color: white;font-size: 15px"
-
-//UI Elements
-//TODO: Fix Elements
-var symbol = document.createElement("input");
-symbol.type = "text";
-//symbol.value="PNB";
-symbol.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 0)) + "px;right:" + y + "px;");
-
-var prices = document.createElement("input");
-prices.type = "text";
-//prices.value="3-875.45 907.1 989.9";
-prices.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 1)) + "px;right:" + y + "px;");
-prices.onkeypress = function (e) {
-    if (e.keyCode === 13) {
-        setAlert();
-    }
-};
-
-var fastGtt = document.createElement("input");
-fastGtt.type = "button";
-fastGtt.value = "GTT";
-fastGtt.onclick = setGtt;
-fastGtt.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 0)) + "px;right:" + (y + 200) + "px;");
-
-var fastAlert = document.createElement("input");
-fastAlert.type = "button";
-fastAlert.value = "ALT";
-fastAlert.onclick = setAlert;
-fastAlert.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 1)) + "px;right:" + (y + 200) + "px;");
-
-var useTicker = document.createElement("input");
-useTicker.checked = true;
-useTicker.setAttribute('type', 'checkbox');
-useTicker.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 1)) + "px;right:" + (y + 250) + "px;");
-
-var altz = document.createElement("div");
-altz.setAttribute("style", style + ";position:absolute;top:" + (x + (w * 3)) + "px;right:" + y + "px;");
-
-// Summary UI Elements
-var summary = document.createElement("p");
-summary.setAttribute("style", "font-size: 15px;position:absolute;top:" + 80 + "px;right:" + 460 + "px;");
-summary.innerHTML = "Summary:"
-
-/* SwiftKey Enabled Indication */
-var enabled = document.createElement("input");
-enabled.id = 'enabled'
-enabled.setAttribute('type', 'checkbox');
-enabled.setAttribute("style", "font-size:" + 24 + "px;position:absolute;top:" + 50 + "px;right:" + 580 + "px;");
-enabled.addEventListener('change', fixTitle)
-
 
 //-- Are we on the "interactive" page/site/domain or the "monitoring" one?
 if (location.pathname.includes("alert-center")) {
@@ -260,17 +206,6 @@ function tradingView() {
     });
 }
 
-function setupFastAlertUI() {
-    document.body.appendChild(symbol);
-    document.body.appendChild(prices);
-    document.body.appendChild(fastAlert);
-    document.body.appendChild(fastGtt);
-    document.body.appendChild(useTicker);
-    document.body.appendChild(altz);
-    document.body.appendChild(summary);
-    document.body.appendChild(enabled);
-}
-
 //Fast Alert: Set
 function setAlert() {
     'use strict';
@@ -278,21 +213,17 @@ function setAlert() {
     let symb;
 
     //Read Symbol from Textbox or TradingView.
-    if (symbol.value === "") {
-        if (useTicker.checked) {
-            //Use Ticker Symbol Original or Mapped
-            symb = getMappedTicker();
-        } else {
-            //Use Stock Name
-            symb = getName();
-        }
+    let currentSymbol = $(`#${symbolId}`).val();
+    if (currentSymbol === "") {
+        //Use Ticker Symbol Original or Mapped
+        symb = getMappedTicker();
     } else {
         //Use Input Box
-        symb = symbol.value
+        symb = currentSymbol;
         mapTicker(getTicker(), symb);
     }
 
-    let input = prices.value;
+    let input = $(`#${priceId}`).val();
     if (input) {
         //Split Alert Prices
         let split = input.trim().split(" ");
@@ -308,8 +239,8 @@ function setAlert() {
 
             //Clear Values
             setTimeout(() => {
-                symbol.value = "";
-                prices.value = "";
+                $(`#${symbolId}`).val("");
+                $(`#${priceId}`).val("");
             }, 10000);
 
             //Alert Refresh
@@ -403,7 +334,7 @@ function onTickerChange() {
 
 function renderAlertSummary(alrts) {
     let ltp = readLtp();
-    altz.innerHTML = ""; //Reset Old Alerts
+    $(`#${altzId}`).html(""); //Reset Old Alerts
     if (alrts) {
         alrts.sort(((a, b) => {
             return a.price > b.price
@@ -415,11 +346,11 @@ function renderAlertSummary(alrts) {
             //Add Deletion Button
             // TODO: CSS Required ?
             buildButton("", coloredPrice, onAlertDelete).data('alt', alt)
-                .css("background-color", "black").appendTo($(altz));
+                .css("background-color", "black").appendTo(`#${altzId}`);
         });
-        buildButton("aman-refresh-alt", "R", sendAlertRequest).css("background-color", "black").appendTo($(altz));
+        buildButton("aman-refresh-alt", "R", sendAlertRequest).css("background-color", "black").appendTo(`#${altzId}`);
     } else {
-        altz.innerHTML = "No AlertZ".fontcolor('red');
+        $(`#${altzId}`).html("No AlertZ".fontcolor('red'));
     }
 }
 
@@ -428,17 +359,19 @@ function setGtt() {
     let symb;
 
     //Read Symbol from Textbox or TradingView.
-    if (symbol.value === "") {
+    let currentSymbol = $(`#${symbolId}`).val();
+    if (currentSymbol === "") {
         symb = getTicker();
     } else {
-        symb = symbol.value
+        symb = currentSymbol;
     }
 
     let ltp = readLtp();
     let order;
 
     //Delete GTT on ".."
-    if (prices.value === "..") {
+    let prices = $(`#${priceId}`).val();
+    if (prices === "..") {
         message(`GTT Delete: ${symb}`.fontcolor('red'));
 
         //Send Signal to Kite to place Order with Qty: -1
@@ -447,7 +380,7 @@ function setGtt() {
         return;
     }
 
-    if (prices.value === "") {
+    if (prices === "") {
         //Read from Order Panel
         order = readOrderPanel();
         order.symb = symb;
@@ -461,7 +394,7 @@ function setGtt() {
             ltp: ltp,
         };
         //Order Format: QTY:3-SL:875.45 ENT:907.1 TP:989.9
-        let qtyPrices = prices.value.trim().split("-");
+        let qtyPrices = prices.trim().split("-");
         order.qty = parseFloat(qtyPrices[0]);
         let nextSplit = qtyPrices[1].split(" ");
         if (nextSplit.length === 3) {
