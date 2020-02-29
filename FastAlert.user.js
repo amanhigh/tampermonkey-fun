@@ -18,6 +18,7 @@
 // @require      lib/sites/tv.js
 // @require      lib/sites/investing.js
 // @require      lib/sites/kite.js
+// @require      lib/sites/hotkeys.js
 // @require      https://code.jquery.com/jquery-3.4.1.min.js
 // @run-at document-end
 // ==/UserScript==
@@ -210,7 +211,6 @@ function captureToken() {
 function tradingView() {
     setupFastAlertUI();
 
-    //TODO: Connect Hotkeys
     document.addEventListener('keydown', doc_keyDown, false);
 
     //Register Ticker Change Listener
@@ -269,26 +269,6 @@ function setupFastAlertUI() {
     document.body.appendChild(altz);
     document.body.appendChild(summary);
     document.body.appendChild(enabled);
-}
-
-// Alert Hotkeys
-// TODO: Move to Hotkey Library
-function doc_keyDown(e) {
-    //console.log(e);
-    //alert(`S Pressed: ${e.altKey} | ${e.ctrlKey} | ${e.shiftKey}`);
-
-    if (isModifierKey(e.ctrlKey, 'm', e)) {
-        // Auto Alert
-        autoAlert();
-    }
-    if (isModifierKey(e.ctrlKey, ';', e)) {
-        // Alert Reset
-        resetAlerts();
-    }
-    if (isModifierKey(e.shiftKey, ';', e)) {
-        // TODO: GTT Reset
-
-    }
 }
 
 //Fast Alert: Set
