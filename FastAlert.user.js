@@ -340,7 +340,8 @@ function onTickerChange() {
 
 function renderAlertSummary(alrts) {
     let ltp = readLtp();
-    $(`#${altzId}`).html(""); //Reset Old Alerts
+    let $altz = $(`#${altzId}`);
+    $altz.clear(); //Reset Old Alerts
     if (alrts) {
         alrts.sort(((a, b) => {
             return a.price > b.price
@@ -350,13 +351,11 @@ function renderAlertSummary(alrts) {
             let coloredPrice = alt.price < ltp ? priceString.fontcolor('seagreen') : priceString.fontcolor('orangered');
 
             //Add Deletion Button
-            // TODO: CSS Required ?
-            buildButton("", coloredPrice, onAlertDelete).data('alt', alt)
-                .css("background-color", "black").appendTo(`#${altzId}`);
+            buildButton("", coloredPrice, onAlertDelete).data('alt', alt).appendTo($altz);
         });
-        buildButton("aman-refresh-alt", "R", sendAlertRequest).css("background-color", "black").appendTo(`#${altzId}`);
+        buildButton("aman-refresh-alt", "R", sendAlertRequest).css("background-color", "black").appendTo($altz);
     } else {
-        $(`#${altzId}`).html("No AlertZ".fontcolor('red'));
+        $altz.html("No AlertZ".fontcolor('red'));
     }
 }
 
