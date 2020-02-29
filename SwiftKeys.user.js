@@ -21,7 +21,6 @@ const lineMenu = [6, 3, 4, 5];
 const demandMenu = [10, 4, 6, 8];
 const supplyMenu = [11, 5, 7, 9];
 
-const orderInfoKey = 'orderInfo';
 const kiteWatchToggleKey = 'kiteWatchAdd';
 const styleIndexKey = 'styleIndex';
 
@@ -217,19 +216,19 @@ function nonModifierKey(e) {
 
         //Kite WatchList
         case 'F1':
-            recordOrder(1);
+            recordOrder(0);
             break;
         case 'F2':
-            recordOrder(2);
+            recordOrder(1);
             break;
         case 'F3':
-            recordOrder(3);
+            recordOrder(2);
             break;
         case 'F4':
-            recordOrder(4);
+            recordOrder(3);
             break;
         case 'F5':
-            recordOrder(5);
+            recordOrder(4);
             break;
 
         //Misc
@@ -287,23 +286,4 @@ function style(index) {
 
     //Clicks Style based on Index.
     waitClick(`a.item:nth-child(${index})`)
-}
-
-//Hotkeys:: Kite
-function recordOrder(listNo) {
-    let ticker = getTicker();
-
-    /* Store Order Info */
-    let orders = GM_getValue(orderInfoKey, {})
-    //Create Set if first time, Convert Json array to Set as Json can't store sets.
-    let orderSet = new Set(orders[listNo] || []);
-    //Use Set to maintain uniqueness
-    orderSet.has(ticker) ? orderSet.delete(ticker) : orderSet.add(ticker);
-    //Convert to array before Storing.
-    orders[listNo] = Array.from(orderSet);
-    console.log(orders);
-    GM_setValue(orderInfoKey, orders)
-
-    //console.log('Posting WatchList Symbol:',ticker,listNo)
-    // GM_setValue(kiteWatchToggleKey, [listNo, ticker, Date()])
 }
