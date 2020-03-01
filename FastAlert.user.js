@@ -57,6 +57,9 @@ function kite() {
             // console.log (`Received new Order Sync: ${newValue}`);
             sync(newValue);
         });
+
+    //Load GttMap
+    buildGttMap()
 }
 
 //************** Investing *********************
