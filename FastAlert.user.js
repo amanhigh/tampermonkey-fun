@@ -341,7 +341,7 @@ function onTickerChange() {
 function renderAlertSummary(alrts) {
     let ltp = readLtp();
     let $altz = $(`#${altzId}`);
-    $altz.clear(); //Reset Old Alerts
+    $altz.empty(); //Reset Old Alerts
     if (alrts) {
         alrts.sort(((a, b) => {
             return a.price > b.price
