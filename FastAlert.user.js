@@ -50,6 +50,15 @@ function kite() {
                 deleteGTT(newValue.symb);
             }
         });
+
+    //Listen for Order Syncing
+    GM_addValueChangeListener(
+        syncOrderRequest, (keyName, oldValue, newValue) => {
+            console.log (`Received new Order Sync: ${newValue}`);
+            if (newValue.qty > 0) {
+                sync(newValue);
+            }
+        });
 }
 
 //************** Investing *********************
