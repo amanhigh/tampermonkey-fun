@@ -86,7 +86,7 @@ function alertCenter() {
 
 function equities() {
     //Wait For Alert Bell
-    waitEE('.addAlert', () => {
+    waitEE('.add-alert-bell-button', () => {
         captureToken();
 
         // getAlerts(17984, GM_getValue(tokenKey), (alrts) => {
