@@ -41,7 +41,7 @@ if (location.pathname.includes("alert-center")) {
 function kite() {
     //Listen for GTT Orders
     GM_addValueChangeListener(
-        gttKey, (keyName, oldValue, newValue) => {
+        gttRequest, (keyName, oldValue, newValue) => {
             //console.log (`Received new GTT Order: ${newValue}`);
             if (newValue.qty > 0) {
                 createOrder(newValue.symb, newValue.ltp, newValue.sl, newValue.ent, newValue.tp, newValue.qty)
@@ -63,7 +63,7 @@ function alertCenter() {
     //Listen for Request to Get Alert Details
     GM_addValueChangeListener(alertRequestKey, (keyName, oldValue, newValue) => {
         // console.log('Alert request', newValue);
-        getAlerts(newValue.id, GM_getValue(tokenKey), (alrts) => {
+        getAlerts(newValue.id, GM_getValue(tokenChangedEvent), (alrts) => {
             // console.log('Alert Fetched', alrts);
             GM_setValue(alertResponseKey, getTriggers(alrts));
         })
@@ -108,7 +108,7 @@ function tradingView() {
 
     //Listen for Alert Clicks in AlertFeed
     GM_addValueChangeListener(
-        alertClickedKey, (keyName, oldValue, newValue,) => {
+        alertClickedEvent, (keyName, oldValue, newValue,) => {
             //Required for proper alert Opening
             openTicker('DHFL'); // DO NOT REMOVE DHFL Line
             openTicker(newValue);
