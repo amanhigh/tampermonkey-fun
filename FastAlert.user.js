@@ -24,12 +24,7 @@
 // ==/UserScript==
 //UI Coordinates
 
-const xmssionKey = "reload-event";
-const gttKey = "gtt-event";
-const alertRequestKey = "alertRequest";
-const alertResponseKey = "alertResponse";
-const tickerMapKey = "tickerMapKey";
-const tokenKey = "token-key";
+
 
 //-- Are we on the "interactive" page/site/domain or the "monitoring" one?
 if (location.pathname.includes("alert-center")) {
@@ -59,49 +54,7 @@ function kite() {
         });
 }
 
-// FAST GTT
-const margin = 0.005;
-
-function createOrder(pair, ltp, sl, ent, tp, qty) {
-    let d = new Date();
-    let year = d.getFullYear() + 1;
-    let month = d.getMonth();
-    let day = d.getDate();
-    let exp = `${year}-${month}-${day} 00:00:00`;
-    createBuy(pair, ent, qty, ltp, exp);
-    createOco(pair, sl, tp, qty, ltp, exp);
-
-}
-
-// Order Types
-function createBuy(pair, price, qty, ltp, exp) {
-    let buy_trg = generateTick(price + margin * price);
-    let body = `condition={"exchange":"NSE","tradingsymbol":"${pair}","trigger_values":[${buy_trg}],"last_price":${ltp}}&orders=[{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"BUY","quantity":${qty},"price":${price},"order_type":"LIMIT","product":"CNC"}]&type=single&expires_at=${exp}`;
-    //console.log(body);
-    createGTT(body);
-}
-
-function createOco(pair, sl_trg, tp, qty, ltp, exp) {
-    let sl = generateTick(sl_trg - margin * sl_trg);
-
-    let tp_trg = generateTick(tp - margin * tp);
-    let ltp_trg = generateTick(ltp + 0.03 * ltp);
-
-    // Choose LTP Trigger If Price to close to TP.
-    if (tp_trg < ltp_trg) {
-        tp_trg = ltp_trg;
-    }
-
-    let body = `condition={"exchange":"NSE","tradingsymbol":"${pair}","trigger_values":[${sl_trg},${tp_trg}],"last_price":${ltp}}&orders=[{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"SELL","quantity":${qty},"price":${sl},"order_type":"LIMIT","product":"CNC"},{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"SELL","quantity":${qty},"price":${tp},"order_type":"LIMIT","product":"CNC"}]&type=two-leg&expires_at=${exp}`;
-    //console.log(body);
-    createGTT(body);
-}
-
-function generateTick(n) {
-    return (Math.ceil(n * 20) / 20).toFixed(2)
-}
-
-//************** ALERT CENTER*********************
+//************** Investing *********************
 function alertCenter() {
     //Listen for Alert Page Reloads
     GM_addValueChangeListener(
@@ -109,7 +62,7 @@ function alertCenter() {
             reloadPage();
         });
 
-    //Listen for Alert Requests
+    //Listen for Request to Get Alert Details
     GM_addValueChangeListener(alertRequestKey, (keyName, oldValue, newValue) => {
         // console.log('Alert request', newValue);
         getAlerts(newValue.id, GM_getValue(tokenKey), (alrts) => {
@@ -131,25 +84,10 @@ function equities() {
     waitEE('.add-alert-bell', () => {
         captureToken();
 
-        //TODO: Remove , Since for Testing
-        getAlerts(17984, GM_getValue(tokenKey), (alrts) => {
-            console.log(getTriggers(alrts));
-        })
+        // getAlerts(17984, GM_getValue(tokenKey), (alrts) => {
+        //     console.log(getTriggers(alrts));
+        // })
     });
-}
-
-/**
- * Overrides SetRequestHeader to Capture 'Token' Header
- */
-function captureToken() {
-    XMLHttpRequest.prototype.realSetRequest = XMLHttpRequest.prototype.setRequestHeader;
-    XMLHttpRequest.prototype.setRequestHeader = function (k, v) {
-        if (k === 'token') {
-            GM_setValue(tokenKey, v);
-            console.log('Token Captured', k, v);
-        }
-        this.realSetRequest(k, v);
-    };
 }
 
 //***************TRADING VIEW ********************
@@ -164,7 +102,7 @@ function tradingView() {
         attributeObserver(e, onTickerChange);
     });
 
-    //Register Alert Response Listener
+    //Register Alert Response Listener (After Alert Details Fetched)
     GM_addValueChangeListener(
         alertResponseKey, (keyName, oldValue, newValue) => {
             renderAlertSummary(newValue);
@@ -190,6 +128,9 @@ function tradingView() {
         // Paint WatchList Once Loaded
         paintTVWatchList();
 
+        // Load Alerts
+        sendAlertRequest()
+
         //Ensure Repaint on any change in WatchList
         nodeObserver(el, paintAll);
 
@@ -206,251 +147,3 @@ function tradingView() {
     });
 }
 
-//Fast Alert: Set
-function onPriceKeyPress(e) {
-    if (e.keyCode === 13) {
-        setAlert();
-    }
-}
-
-function setAlert() {
-    'use strict';
-
-    let symb;
-
-    //Read Symbol from Textbox or TradingView.
-    let currentSymbol = $(`#${symbolId}`).val();
-    if (currentSymbol === "") {
-        //Use Ticker Symbol Original or Mapped
-        symb = getMappedTicker();
-    } else {
-        //Use Input Box
-        symb = currentSymbol;
-        mapTicker(getTicker(), symb);
-    }
-
-    let input = $(`#${priceId}`).val();
-    if (input) {
-        //Split Alert Prices
-        let split = input.trim().split(" ");
-
-        //Search Symbol
-        searchSymbol(symb, function (top) {
-            message(top.name + ': ');
-
-            //Set Alerts
-            for (let p of split) {
-                createAlert(top.pairId, p);
-            }
-
-            //Clear Values
-            setTimeout(() => {
-                $(`#${symbolId}`).val("");
-                $(`#${priceId}`).val("");
-            }, 10000);
-
-            //Alert Refresh
-            altRefresh();
-        });
-    }
-}
-
-function autoAlert() {
-    //Wait for Add Alert Context Menu Option
-    waitJEE(".label-1If3beUH:contains(\'Add Alert\')", function (el) {
-        let regExp = /\((.*)\)/g;
-        let match = regExp.exec(el.text());
-        var altPrice = parseFloat(match[1])
-
-        searchSymbol(getMappedTicker(), function (top) {
-            createAlert(top.pairId, altPrice);
-            altRefresh();
-        });
-    });
-}
-
-function altRefresh() {
-    waitOn(xmssionKey, 1500, () => {
-        //Refresh Investing Page
-        //-- Send message to reload AlertList
-        // GM_setValue(xmssionKey, Date());
-
-        //Locally Refresh Alerts
-        sendAlertRequest();
-        message('Refreshing Alerts'.fontcolor('skyblue'))
-    });
-}
-
-//Fast Alert: Delete
-function onAlertDelete(evt) {
-    let $target = $(evt.currentTarget);
-    let alt = $target.data('alt');
-    deleteAlert(alt);
-    altRefresh();
-}
-
-function resetAlerts() {
-    //Search Symbol
-    searchSymbol(getMappedTicker(), function (top) {
-        //Delete All Alerts
-        deleteAllAlerts(top.pairId);
-
-        altRefresh();
-    });
-}
-
-function deleteAllAlerts(pairId) {
-    deleteAlertLines();
-
-    let triggers = GM_getValue(alertResponseKey);
-    if (triggers) {
-        //console.log(`Deleting all Alerts: ${pairId} -> ${triggers}`);
-        for (let trg of triggers) {
-            deleteAlert(trg);
-        }
-    }
-
-    //Close Object Tree
-    $('.tv-dialog__close').click();
-}
-
-/**
- * Filters Price Alerts and maps to price,id
- * @param alrts Alerts Response
- * @returns {number|{price: number, id: *}[]}
- */
-function getTriggers(alrts) {
-    return alrts.data.data.price && alrts.data.data.price.filter(p => p.alert_trigger === "price").map(p => {
-        return {id: p.alertId, price: parseFloat(p.conditionValue)};
-    });
-
-}
-
-//Fast Alert: Summary
-function onTickerChange() {
-    //console.log('Ticker Changed');
-
-    //Fetch Updates for this Ticker
-    sendAlertRequest();
-
-    //TODO: Hack to fix
-    //Select Current Element to ensure WatchList Highlight remains on movement.
-    $("div.active-3yXe9fgP").parent().parent().click()
-}
-
-function renderAlertSummary(alrts) {
-    let ltp = readLtp();
-    let $altz = $(`#${altzId}`);
-    $altz.empty(); //Reset Old Alerts
-    if (alrts) {
-        alrts.sort(((a, b) => {
-            return a.price > b.price
-        })).forEach((alt) => {
-            let priceString = alt.price.toString();
-            //Alert Below Price -> Green, Above -> Red
-            let coloredPrice = alt.price < ltp ? priceString.fontcolor('seagreen') : priceString.fontcolor('orangered');
-
-            //Add Deletion Button
-            buildButton("", coloredPrice, onAlertDelete).data('alt', alt).appendTo($altz);
-        });
-        buildButton("aman-refresh-alt", "R", sendAlertRequest).css("background-color", "black").appendTo($altz);
-    } else {
-        $altz.html("No AlertZ".fontcolor('red'));
-    }
-}
-
-//Fast Alert: GTT
-function setGtt() {
-    let symb;
-
-    //Read Symbol from Textbox or TradingView.
-    let currentSymbol = $(`#${symbolId}`).val();
-    if (currentSymbol === "") {
-        symb = getTicker();
-    } else {
-        symb = currentSymbol;
-    }
-
-    let ltp = readLtp();
-    let order;
-
-    //Delete GTT on ".."
-    let prices = $(`#${priceId}`).val();
-    if (prices === "..") {
-        message(`GTT Delete: ${symb}`.fontcolor('red'));
-
-        //Send Signal to Kite to place Order with Qty: -1
-        GM_setValue(gttKey, {symb: symb, qty: -1});
-
-        return;
-    }
-
-    if (prices === "") {
-        //Read from Order Panel
-        order = readOrderPanel();
-        order.symb = symb;
-        order.ltp = ltp;
-        closeOrderPanel();
-
-        //console.log(`GTT ${qty}- ${sl} - ${ent} - ${tp}`);
-    } else {
-        let order = {
-            symb: symb,
-            ltp: ltp,
-        };
-        //Order Format: QTY:3-SL:875.45 ENT:907.1 TP:989.9
-        let qtyPrices = prices.trim().split("-");
-        order.qty = parseFloat(qtyPrices[0]);
-        let nextSplit = qtyPrices[1].split(" ");
-        if (nextSplit.length === 3) {
-            order.sl = parseFloat(nextSplit[0]);
-            order.ent = parseFloat(nextSplit[1]);
-            order.tp = parseFloat(nextSplit[2]);
-        }
-    }
-
-    //Build Order and Display
-
-    message(`${symb} (${order.ltp}) Qty: ${order.qty}, ${order.sl} - ${order.ent} - ${order.tp}`.fontcolor('yellow'));
-
-    //If Valid Order Send else Alert
-    if (order.qty > 0 && order.sl > 0 && order.ent > 0 && order.tp > 0) {
-        //Send Signal to Kite to place Order.
-        GM_setValue(gttKey, order);
-    } else {
-        alert("Invalid GTT Input");
-    }
-}
-
-//Fast Alert: Helpers
-function getMappedTicker() {
-    let symb = getTicker();
-    // Use Investing Ticker if available
-    let investingTicker = resolveInvestingTicker(symb);
-    if (investingTicker) {
-        symb = investingTicker;
-    }
-
-    //console.log(symb,investingTicker);
-    return symb;
-}
-
-function sendAlertRequest() {
-    //Search Symbol
-    searchSymbol(getMappedTicker(), function (top) {
-        GM_setValue(alertRequestKey, {id: top.pairId, date: new Date()});
-    });
-}
-
-function mapTicker(tvTicker, investingTicker) {
-    let tickerMap = GM_getValue(tickerMapKey, {});
-    tickerMap[tvTicker] = investingTicker;
-    GM_setValue(tickerMapKey, tickerMap);
-
-    console.log(`Mapped Ticker: ${tvTicker} to ${investingTicker}`);
-}
-
-function resolveInvestingTicker(tvTicker) {
-    let tickerMap = GM_getValue(tickerMapKey, {});
-    return tickerMap[tvTicker];
-}
