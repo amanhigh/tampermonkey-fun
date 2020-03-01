@@ -54,10 +54,8 @@ function kite() {
     //Listen for Order Syncing
     GM_addValueChangeListener(
         syncOrderRequest, (keyName, oldValue, newValue) => {
-            console.log (`Received new Order Sync: ${newValue}`);
-            if (newValue.qty > 0) {
-                sync(newValue);
-            }
+            // console.log (`Received new Order Sync: ${newValue}`);
+            sync(newValue);
         });
 }
 
@@ -88,7 +86,7 @@ function alertCenter() {
 
 function equities() {
     //Wait For Alert Bell
-    waitEE('.add-alert-bell', () => {
+    waitEE('.addAlert', () => {
         captureToken();
 
         // getAlerts(17984, GM_getValue(tokenKey), (alrts) => {
