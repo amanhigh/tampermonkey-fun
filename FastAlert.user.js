@@ -65,7 +65,7 @@ function kite() {
 function alertCenter() {
     //Listen for Alert Page Reloads
     GM_addValueChangeListener(
-        xmssionKey, () => {
+        reloadEvent, () => {
             reloadPage();
         });
 
