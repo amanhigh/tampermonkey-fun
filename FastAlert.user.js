@@ -45,9 +45,9 @@ function kite() {
             //console.log (`Received new GTT Order: ${newValue}`);
             if (newValue.qty > 0) {
                 createOrder(newValue.symb, newValue.ltp, newValue.sl, newValue.ent, newValue.tp, newValue.qty)
-            } else {
-                //Qty: -1 Signal for Delete GTT
-                deleteGTT(newValue.symb);
+            } else if (newValue.id) {
+                //Qty: Request has Id Signal for Delete GTT
+                deleteGtt(newValue.id);
             }
         });
 
