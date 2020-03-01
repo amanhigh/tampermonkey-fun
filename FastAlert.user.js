@@ -103,7 +103,7 @@ function tradingView() {
     //Register Alert Response Listener (After Alert Details Fetched)
     GM_addValueChangeListener(
         alertResponseKey, (keyName, oldValue, newValue) => {
-            renderAlertSummary(newValue);
+            alertSummary(newValue);
         });
 
     //Listen for Alert Clicks in AlertFeed
