@@ -58,8 +58,10 @@ function kite() {
             sync(newValue);
         });
 
-    //Load GttMap
-    buildGttMap()
+    //Load GttMap && Add Listner on GTT Tab Refresh
+    waitJEE('.router-link-exact-active', ($e) => {
+        $e.click(buildGttMap);
+    })
 }
 
 //************** Investing *********************
