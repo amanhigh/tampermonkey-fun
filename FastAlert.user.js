@@ -60,7 +60,8 @@ function kite() {
 
     //Load GttMap && Add Listner on GTT Tab Refresh
     waitJEE('.router-link-exact-active', ($e) => {
-        $e.click(buildGttMap);
+        //Timeout required for Table To Render after Tab Click
+        $e.click(() => setTimeout(buildGttMap, 1000));
     })
 }
 
