@@ -153,6 +153,9 @@ function tradingView() {
         //Ensure Name Repaint on TickerChange
         waitEE(nameSelector, (el) => {
             nodeObserver(el, paintDetails);
+
+            //Refresh Summary once Name is Ready
+            refreshSummary()
         });
 
         //Ensure Repaint on Screener Changes
