@@ -124,6 +124,12 @@ function tradingView() {
             openTicker(newValue);
         });
 
+    //Listen for Gtt Order Changes
+    GM_addValueChangeListener(
+        gttMapStore, (keyName, oldValue, newValue,) => {
+            gttSummary(newValue);
+        });
+
     //Wait for Title to Load and Fix to Signal Auto Hotkey
     waitEE("title", (el) => {
         //console.log('Observing Title: ' + el.innerHTML);
