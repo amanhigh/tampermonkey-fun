@@ -124,7 +124,14 @@ function tradingView() {
         alertClickedEvent, (keyName, oldValue, newValue,) => {
             //Required for proper alert Opening
             openTicker('DHFL'); // DO NOT REMOVE DHFL Line
-            openTicker(newValue);
+            let m = buildNameMap();
+            let ticker = m[newValue];
+            if (ticker) {
+                openTicker(ticker);
+            } else {
+                //Open Using Name if Ticker Unavailable
+                openTicker(newValue);
+            }
         });
 
     //Listen for Gtt Order Changes
@@ -156,7 +163,7 @@ function tradingView() {
             nodeObserver(el, paintDetails);
 
             //Refresh Summary once Name is Ready
-            refreshSummary()
+            onReferesh()
         });
 
         //Ensure Repaint on Screener Changes
