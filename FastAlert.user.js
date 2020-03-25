@@ -168,6 +168,6 @@ function tradingView() {
             attributeObserver(el, paintTVScreener);
         });
 
-    });
+    },10);
 }
 
