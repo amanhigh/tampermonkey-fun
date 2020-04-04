@@ -151,7 +151,6 @@ function tradingView() {
 
         // Paint WatchList Once Loaded
         paintTVWatchList();
-
         // Load Alerts
         sendAlertRequest()
 
@@ -165,8 +164,12 @@ function tradingView() {
 
         //Ensure Repaint on Screener Changes
         waitEE(screenerSelector, (el) => {
-            attributeObserver(el, paintTVScreener);
-        });
+            //Let Screener Load Properly After Opening
+            setTimeout(()=>{
+                paintTVScreener();
+                nodeObserver(el, paintTVScreener);
+            },10000)
+        },10);
 
     },10);
 }
