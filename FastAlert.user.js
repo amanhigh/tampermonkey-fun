@@ -164,13 +164,15 @@ function tradingView() {
 
         //Ensure Repaint on Screener Changes
         waitEE(screenerSelector, (el) => {
+            message("Trying Screener Hook".fontcolor("yellow"))
             //Let Screener Load Properly After Opening
-            setTimeout(()=>{
+            setTimeout(() => {
                 paintTVScreener();
                 nodeObserver(el, paintTVScreener);
-            },10000)
-        },10);
+                message("Screener Hooked".fontcolor("green"))
+            }, 10000)
+        }, 10);
 
-    },10);
+    }, 10);
 }
 
