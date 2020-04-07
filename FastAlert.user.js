@@ -147,7 +147,7 @@ function tradingView() {
     });
 
     //Onload TV WatchList Paint
-    waitEE(watchListContainer, (el) => {
+    waitEE(`${watchListContainer > div}`, (el) => {
         //Ensure Name Repaint on Change
         waitEE(nameSelector, (el) => {
             nodeObserver(el, paintDetails);
@@ -158,7 +158,6 @@ function tradingView() {
 
         //Ensure Repaint on scroll, add/remove to WatchList
         nodeObserver(el, paintAll);
-        $(watchListContainer).scroll(paintTVWatchList)
 
         //Ensure Repaint on Screener Changes
         message("Trying Screener Hook".fontcolor("yellow"));
