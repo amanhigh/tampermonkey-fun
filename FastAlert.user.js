@@ -147,7 +147,7 @@ function tradingView() {
     });
 
     //Onload TV WatchList Paint
-    waitEE(watchListSelector, (el) => {
+    waitEE(watchListContainer, (el) => {
 
         // Paint WatchList Once Loaded
         paintTVWatchList();
