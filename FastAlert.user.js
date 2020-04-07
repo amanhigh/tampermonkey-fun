@@ -148,32 +148,33 @@ function tradingView() {
 
     //Onload TV WatchList Paint
     waitEE(watchListContainer, (el) => {
-
-        // Paint WatchList Once Loaded
-        paintTVWatchList();
-        // Load Alerts
-        sendAlertRequest()
-
-        //Ensure Repaint on any change in WatchList
-        nodeObserver(el, paintAll);
-
-        //Ensure Name Repaint on TickerChange
+        //Ensure Name Repaint on Change
         waitEE(nameSelector, (el) => {
             nodeObserver(el, paintDetails);
+
+            // Load Alerts
+            sendAlertRequest()
         });
+
+        //Ensure Repaint on scroll, add/remove to WatchList
+        nodeObserver(el, paintAll);
+        $(watchListContainer).scroll(paintTVWatchList)
 
         //Ensure Repaint on Screener Changes
         message("Trying Screener Hook".fontcolor("yellow"));
         waitEE(screenerSelector, (el) => {
+            nodeObserver(el, paintTVScreener); //Watch Screener NodeChanges
+
             //Let Screener Load Properly After Opening
             setTimeout(() => {
                 paintTVScreener();
-                nodeObserver(el, paintTVScreener); //Watch Screener NodeChanges
                 $(screenerHeaderSelector).click(()=> setTimeout(paintTVScreener,500)) //Watch Screener Sort Changes
                 message("Screener Hooked".fontcolor("green"));
-            }, 5000)
+            }, 3000)
         }, 10);
 
+        //PaintWatchList on Load
+        paintTVWatchList();
     }, 10);
 }
 
