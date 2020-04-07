@@ -169,9 +169,9 @@ function tradingView() {
             setTimeout(() => {
                 paintTVScreener();
                 nodeObserver(el, paintTVScreener); //Watch Screener NodeChanges
-                $(screenerHeaderSelector).click(paintTVScreener) //Watch Screener Sort Changes
+                $(screenerHeaderSelector).click(()=> setTimeout(paintTVScreener,500)) //Watch Screener Sort Changes
                 message("Screener Hooked".fontcolor("green"));
-            }, 10000)
+            }, 5000)
         }, 10);
 
     }, 10);
