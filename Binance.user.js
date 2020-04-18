@@ -16,15 +16,7 @@
 // @require      https://code.jquery.com/jquery-3.4.1.min.js
 // @run-at document-end
 // ==/UserScript==
-//UI Coordinates
-
-//-- Are we on the "interactive" page/site/domain or the "monitoring" one?
-if (location.pathname.includes("binance")) {
-    binance();
-}
 
 //***************Binance ********************
-function binance() {
-    SetupBinanceUI();
-}
+SetupBinanceUI();
 
