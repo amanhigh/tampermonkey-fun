@@ -148,14 +148,6 @@ function tradingView() {
 
     //Onload TV WatchList Paint
     waitEE(`${watchListContainer > div}`, (el) => {
-        //Ensure Name Repaint on Change
-        waitEE(nameSelector, (el) => {
-            nodeObserver(el, paintDetails);
-
-            // Load Alerts
-            sendAlertRequest()
-        });
-
         //Ensure Repaint on scroll, add/remove to WatchList
         nodeObserver(el, paintAll);
 
@@ -174,6 +166,9 @@ function tradingView() {
 
         //PaintWatchList on Load
         paintTVWatchList();
+
+        // Load Alerts
+        sendAlertRequest()
     }, 10);
 }
 
