@@ -155,6 +155,7 @@ function tradingView() {
         message("Trying Screener Hook".fontcolor("yellow"));
         waitJEE(screenerSelector, (el) => {
             nodeObserver(el.get(0), paintTVScreener); //Watch Screener NodeChanges
+            paintTVScreener();
             message("Screener Hooked".fontcolor("green"));
         }, 10);
 
