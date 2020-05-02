@@ -21,5 +21,6 @@
 //Don't Inject in TradingView Iframe
 if (!location.pathname.includes("tradingview")) {
     SetupBinanceUI();
+    captureCsrf();
 }
 
