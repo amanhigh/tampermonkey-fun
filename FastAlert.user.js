@@ -165,6 +165,9 @@ function tradingView() {
 
         // Load Alerts
         sendAlertRequest();
+
+        //Missing FNO's Logging
+        logMissingFno();
     }, 10);
 }
 
