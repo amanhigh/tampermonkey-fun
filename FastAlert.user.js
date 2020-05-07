@@ -12,6 +12,7 @@
 // @grant        GM_setValue
 // @grant        GM_addValueChangeListener
 // @require      lib/library.js
+// @require      lib/constants.js
 // @require      lib/ui.js
 // @require      lib/client/kite.js
 // @require      lib/client/investing.js
