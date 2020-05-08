@@ -155,13 +155,13 @@ function tradingView() {
         //Ensure Repaint on Screener Changes
         message("Trying Screener Hook".fontcolor("yellow"));
         waitJEE(screenerSelector, (el) => {
-            nodeObserver(el.get(0), paintScreener); //Watch Screener NodeChanges
-            paintScreener();
+            nodeObserver(el.get(0), onWatchListChange);
+
             message("Screener Hooked".fontcolor("green"));
         }, 10);
 
-        //PaintWatchList on Load
-        paintWatchList();
+        //Paint WatchList, Screener etc
+        onWatchListChange();
 
         // Load Alerts
         sendAlertRequest();
