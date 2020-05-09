@@ -99,6 +99,7 @@ function equities() {
 
 function tradingView() {
     setupFastAlertUI();
+    loadTradingViewVars();
 
     document.addEventListener('keydown', doc_keyDown, false);
 
