@@ -52,13 +52,6 @@ function kite() {
             }
         });
 
-    //Listen for Order Syncing
-    GM_addValueChangeListener(
-        syncOrderRequest, (keyName, oldValue, newValue) => {
-            // console.log (`Received new Order Sync: ${newValue}`);
-            sync(newValue);
-        });
-
     //Load GttMap && Add Listner on GTT Tab Refresh
     waitJEE('.router-link-exact-active', ($e) => {
         //Timeout required for Table To Render after Tab Click
