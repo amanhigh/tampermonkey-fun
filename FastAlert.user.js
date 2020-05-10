@@ -142,7 +142,7 @@ function tradingView() {
     });
 
     //Onload TV WatchList Paint
-    waitEE(`${watchListContainer} > div`, (el) => {
+    waitEE(`${watchListSelector} > div`, (el) => {
         //Ensure Repaint on scroll, add/remove to WatchList
         nodeObserver(el, onWatchListChange);
 
