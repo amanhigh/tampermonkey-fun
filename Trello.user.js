@@ -22,6 +22,7 @@ function setupUI() {
     buildArea('aman-area').css('left', '50%').appendTo('body');
 
     //Add Color Choices
+    buildWrapper('aman-input').appendTo('#aman-area');
     buildWrapper('aman-colors').appendTo('#aman-area');
     colors.forEach(color => {
         buildRadio(color, color, 'aman-colors', color === colors[0]).appendTo('#aman-colors')
@@ -118,6 +119,8 @@ function labelCounter(target, color) {
         .reduce(function (map, labelElement) {
             //Extract Title
             let title = $(labelElement).attr('title');
+            //Add Prefix from Input
+            title+=$("#aman-input").val();
 
             //Count Occurrences
             if (map.has(title)) {
