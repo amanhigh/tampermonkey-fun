@@ -21,9 +21,6 @@ function setupUI() {
     //Setup Area
     buildArea('aman-area').css('left', '50%').appendTo('body');
 
-    // Add Input
-    buildInput('aman-input').val('Not Taken').appendTo('#aman-area');
-
     //Add Color Choices
     buildWrapper('aman-colors').appendTo('#aman-area');
     colors.forEach(color => {
@@ -42,14 +39,10 @@ setupUI();
 
 //Handlers
 function clear() {
-    $('#aman-input').val("");
     $('#aman-table').empty();
 }
 
 function runCounter() {
-    // let listName = $('#aman-input').val();
-    // let testList = $(`div.js-list.list-wrapper:contains(${listName})`);
-
     let selectedColor = $("input[name='aman-colors']:checked").val();
     let labelInfo = countAll(selectedColor);
     // let sortedMap = new Map([...labelMap.entries()].sort((a, b) => b[1] - a[1]))
