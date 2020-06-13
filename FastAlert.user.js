@@ -152,7 +152,7 @@ function tradingView() {
         onWatchListChange();
 
         // Load Alerts
-        altRefresh();
+        sendAlertRequest();
 
         //Missing FNO's Logging
         logMissingFno();
