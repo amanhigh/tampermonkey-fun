@@ -72,7 +72,7 @@ function alertCenter() {
         // console.log('Alert request', newValue);
         getAlerts(newValue.id, GM_getValue(tokenChangedEvent), (alrts) => {
             // console.log('Alert Fetched', alrts);
-            GM_setValue(alertResponseKey, getTriggers(alrts));
+            GM_setValue(alertResponseKey, {data: getTriggers(alrts), date: new Date()});
         })
     });
 
@@ -111,7 +111,7 @@ function tradingView() {
     //Register Alert Response Listener (After Alert Details Fetched)
     GM_addValueChangeListener(
         alertResponseKey, (keyName, oldValue, newValue) => {
-            alertSummary(newValue);
+            alertSummary(newValue.data);
         });
 
     //Listen for Alert Clicks in AlertFeed
