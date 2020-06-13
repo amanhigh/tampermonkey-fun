@@ -61,12 +61,6 @@ function kite() {
 
 //************** Investing *********************
 function alertCenter() {
-    //Listen for Alert Page Reloads
-    GM_addValueChangeListener(
-        reloadEvent, () => {
-            reloadPage();
-        });
-
     //Listen for Request to Get Alert Details
     GM_addValueChangeListener(alertRequestKey, (keyName, oldValue, newValue) => {
         // console.log('Alert request', newValue);
