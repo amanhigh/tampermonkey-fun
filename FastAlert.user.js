@@ -160,5 +160,8 @@ function tradingView() {
         //Missing FNO's Logging
         logMissingFno();
     }, 10);
+
+    //Run AutoSave Cron
+    setInterval(autoSave, 1000);
 }
 
