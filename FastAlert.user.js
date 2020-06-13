@@ -162,6 +162,6 @@ function tradingView() {
     }, 10);
 
     //Run AutoSave Cron
-    setInterval(autoSave, 1000);
+    setInterval(autoSave, 2* 60 * 1000);
 }
 
