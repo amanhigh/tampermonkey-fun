@@ -61,21 +61,23 @@ function kite() {
 
 //************** Investing *********************
 function alertCenter() {
-    //Listen for Request to Get Alert Details
-    GM_addValueChangeListener(alertRequestKey, (keyName, oldValue, newValue) => {
-        // console.log('Alert request', newValue);
-        getAlerts(newValue.id, GM_getValue(tokenChangedEvent), (alrts) => {
-            // console.log('Alert Fetched', alrts);
-            GM_setValue(alertResponseKey, {data: getTriggers(alrts), date: new Date()});
-        })
-    });
+    //To PreventDouble Load in Iframes
+    if (this.tab_id) { //Listen for Request to Get Alert Details
+        GM_addValueChangeListener(alertRequestKey, (keyName, oldValue, newValue) => {
+            // console.log('Alert request', newValue);
+            getAlerts(newValue.id, GM_getValue(tokenChangedEvent), (alrts) => {
+                // console.log('Alert Fetched', alrts);
+                GM_setValue(alertResponseKey, {data: getTriggers(alrts), date: new Date()});
+            })
+        });
 
-    //Add Auto Delete Confirmation Handler on all Delete Buttons
-    $('.js-delete-btn').click(function () {
-        waitClick('.js-delete');
-    });
+        //Add Auto Delete Confirmation Handler on all Delete Buttons
+        $('.js-delete-btn').click(function () {
+            waitClick('.js-delete');
+        });
 
-    //console.log("Reload Listner Added")
+        console.log("AlertCenter Listners Added")
+    }
 }
 
 function equities() {
