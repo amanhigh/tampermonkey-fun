@@ -116,8 +116,7 @@ function tradingView() {
         alertClickedEvent, (keyName, oldValue, newValue,) => {
             //Required for proper alert Opening
             openTicker('DHFL'); // DO NOT REMOVE DHFL Line
-            let m = buildNameMap();
-            let ticker = m[newValue];
+            let ticker = nameTickerMapMem[newValue];
             if (ticker) {
                 openTicker(ticker);
             } else {
