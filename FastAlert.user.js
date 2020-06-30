@@ -38,59 +38,6 @@ if (location.pathname.includes("alert-center")) {
     kite();
 }
 
-//*************** KITE *********************
-function kite() {
-    //Listen for GTT Orders
-    GM_addValueChangeListener(
-        gttRequest, (keyName, oldValue, newValue) => {
-            //console.log (`Received new GTT Order: ${newValue}`);
-            if (newValue.qty > 0) {
-                createOrder(newValue.symb, newValue.ltp, newValue.sl, newValue.ent, newValue.tp, newValue.qty)
-            } else if (newValue.id) {
-                //Qty: Request has Id Signal for Delete GTT
-                deleteGtt(newValue.id);
-            }
-        });
-
-    //Load GttMap && Add Listner on GTT Tab Refresh
-    waitJEE('.router-link-exact-active', ($e) => {
-        //Timeout required for Table To Render after Tab Click
-        $e.click(() => setTimeout(buildGttMap, 1000));
-    })
-}
-
-//************** Investing *********************
-function alertCenter() {
-    //To PreventDouble Load in Iframes
-    if (this.tab_id) { //Listen for Request to Get Alert Details
-        GM_addValueChangeListener(alertRequestKey, (keyName, oldValue, newValue) => {
-            // console.log('Alert request', newValue);
-            getAlerts(newValue.id, GM_getValue(tokenChangedEvent), (alrts) => {
-                // console.log('Alert Fetched', alrts);
-                GM_setValue(alertResponseKey, {data: getTriggers(alrts), date: new Date()});
-            })
-        });
-
-        //Add Auto Delete Confirmation Handler on all Delete Buttons
-        $('.js-delete-btn').click(function () {
-            waitClick('.js-delete');
-        });
-
-        console.log("AlertCenter Listners Added")
-    }
-}
-
-function equities() {
-    //Wait For Alert Bell
-    waitEE('.add-alert-bell-button', () => {
-        captureToken();
-
-        // getAlerts(17984, GM_getValue(tokenKey), (alrts) => {
-        //     console.log(getTriggers(alrts));
-        // })
-    });
-}
-
 //***************TRADING VIEW ********************
 
 function tradingView() {
