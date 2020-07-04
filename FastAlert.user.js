@@ -63,13 +63,7 @@ function tradingView() {
         alertClickedEvent, (keyName, oldValue, newValue,) => {
             //Required for proper alert Opening
             openTicker('DHFL'); // DO NOT REMOVE DHFL Line
-            let ticker = nameTickerMapMem[newValue];
-            if (ticker) {
-                openTicker(ticker);
-            } else {
-                //Open Using Name if Ticker Unavailable
-                openTicker(newValue);
-            }
+            openTicker(newValue);
         });
 
     //Listen for Gtt Order Changes
@@ -108,6 +102,6 @@ function tradingView() {
     }, 10);
 
     //Run AutoSave Cron
-    setInterval(autoSave, 2* 60 * 1000);
+    setInterval(autoSave, 2 * 60 * 1000);
 }
 
