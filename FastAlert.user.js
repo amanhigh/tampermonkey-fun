@@ -68,7 +68,7 @@ function tradingView() {
 
     //Listen for Gtt Order Changes
     GM_addValueChangeListener(
-        gttMapStore, (keyName, oldValue, newValue,) => {
+        gttOrderEvent, (keyName, oldValue, newValue,) => {
             gttSummary(newValue);
         });
 
