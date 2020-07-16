@@ -48,7 +48,7 @@ function tradingView() {
 
     //Register Ticker Change Listener
     //Using Seprate Selector as nameSelector has attribute changes in paint Name.
-    waitEE(".dl-header-symbol-desc", function (e) {
+    waitEE(".description-3nAYicDA", function (e) {
         nodeObserver(e, onTickerChange);
     });
 
