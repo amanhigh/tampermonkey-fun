@@ -81,7 +81,7 @@ function apiTest() {
 function experiment_key(e) {
     //console.log(e);
 
-    if (e.key === 'n' && isDoubleKey(n)) {
+    if (e.key === 'n' && isDoubleKey(e.key)) {
         message("Double Key Detected: " + e.key)
     }
 
