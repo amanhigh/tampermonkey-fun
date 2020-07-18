@@ -42,6 +42,8 @@ function setup() {
     document.body.appendChild(experiment);
     document.body.appendChild(msg);
 
+    document.addEventListener('keydown', experiment_key, false);
+
     message("Script will " + (GM_info ? "" : "not ") + "update.");
 }
 
@@ -74,4 +76,13 @@ function apiTest() {
             console.log('Error Firing: ' + response.statusText);
         }
     });
+}
+
+function experiment_key(e) {
+    //console.log(e);
+
+    if (e.key === 'n' && isDoubleKey(n)) {
+        message("Double Key Detected: " + e.key)
+    }
+
 }
