@@ -20,6 +20,7 @@
 // @require      lib/sites/tv.js
 // @require      lib/sites/investing.js
 // @require      lib/sites/kite.js
+// @require      lib/sites/trello.js
 // @require      lib/sites/hotkeys.js
 // @require      https://code.jquery.com/jquery-3.4.1.min.js
 // @run-at document-end
@@ -37,7 +38,7 @@ if (location.pathname.includes("alert-center")) {
     alertFeed();
 } else if (location.host.includes("kite.zerodha.com")) {
     kite();
-} else if (location.host.includes("trello.com/b/zThIpFBz/set-forget")) {
+} else if (location.host.includes("trello.com")) {
     trello();
 }
 
