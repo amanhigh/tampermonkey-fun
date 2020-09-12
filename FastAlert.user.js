@@ -17,6 +17,7 @@
 // @require      lib/ui.js
 // @require      lib/client/kite.js
 // @require      lib/client/investing.js
+// @require      lib/client/trello.js
 // @require      lib/sites/tv.js
 // @require      lib/sites/investing.js
 // @require      lib/sites/kite.js
