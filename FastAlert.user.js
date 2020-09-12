@@ -7,6 +7,7 @@
 // @match       https://in.tradingview.com/chart*
 // @match       https://kite.zerodha.com*
 // @match       https://in.investing.com/*
+// @match       https://trello.com/*
 // @grant        GM.xmlHttpRequest
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -36,6 +37,8 @@ if (location.pathname.includes("alert-center")) {
     alertFeed();
 } else if (location.host.includes("kite.zerodha.com")) {
     kite();
+} else if (location.host.includes("trello.com/b/zThIpFBz/set-forget")) {
+    trello();
 }
 
 //***************TRADING VIEW ********************
