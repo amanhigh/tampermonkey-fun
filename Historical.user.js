@@ -45,24 +45,22 @@ function download() {
     setTimeout(() => {
 
         //End Date
-        waitClick('.ui-state-active', () => {
+        $('.ui-state-active:last').get(0).click();
 
-            moveBack(() => {
-                //Start Date
-                waitClick('.ui-state-default', () => {
+        moveBack(() => {
+            //Start Date
+            waitClick('.ui-state-default', () => {
 
-                    //Apply
-                    waitClick('#applyBtn', () => {
+                //Apply
+                waitClick('#applyBtn', () => {
 
-                        //Download
-                        setTimeout(() => {
-                            waitClick('.downloadBlueIcon')
-                        }, 4000);
+                    //Download
+                    setTimeout(() => {
+                        waitClick('.downloadBlueIcon')
+                    }, 4000);
 
-                    });
                 });
             });
-
         });
     }, 1000);
 }
