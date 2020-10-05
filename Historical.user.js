@@ -15,20 +15,70 @@
 // @run-at document-end
 // ==/UserScript==
 
+const downloadEvent = "historyDownloadEvent";
+
+function HistoricalData() {
+    SetupHistoricalUI();
+
+    //Add Download Event Listener
+    GM_addValueChangeListener(downloadEvent, download);
+}
+
 function SetupHistoricalUI() {
     buildArea(areaId, '65%', '8%').appendTo('body');
 
     buildWrapper('aman-top').appendTo(`#${areaId}`)
-        .append(buildButton("aman-historical", 'Download', download))
+        .append(buildButton("aman-historical", 'Download', triggerDownload))
+}
+
+function triggerDownload() {
+    //Trigger Event for all Tabs to Start Downloading
+    GM_setValue(downloadEvent, new Date());
 }
 
 function download() {
+    message('Downloading Historical Data'.fontcolor('green'));
+
+    //Open Picker
     $(".calendarDatePicker").click();
-    $('#startDate').val("05/30/2020");
-    waitClick('#applyBtn');
-    waitClick('.downloadBlueIcon');
+
+    setTimeout(() => {
+
+        //End Date
+        waitClick('.ui-state-active', () => {
+
+            moveBack(() => {
+                //Start Date
+                waitClick('.ui-state-default', () => {
+
+                    //Apply
+                    waitClick('#applyBtn', () => {
+
+                        //Download
+                        setTimeout(() => {
+                            waitClick('.downloadBlueIcon')
+                        }, 4000);
+
+                    });
+                });
+            });
+
+        });
+    }, 1000);
 }
 
+//TODO:Extract General Iterate Loop Function to Lib
+function moveBack(callback, count = 3) {
+    waitClick('.ui-datepicker-prev');
 
+    if (count > 0) {
+        console.log(count);
+        setTimeout(() => {
+            moveBack(callback, count - 1)
+        }, 1000);
+    } else {
+        callback();
+    }
+}
 
-
+HistoricalData();
