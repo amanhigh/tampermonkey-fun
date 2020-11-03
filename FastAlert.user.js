@@ -66,8 +66,6 @@ function tradingView() {
     //Listen for Alert Clicks in AlertFeed
     GM_addValueChangeListener(
         alertClickedEvent, (keyName, oldValue, newValue,) => {
-            //Required for proper alert Opening
-            openTicker('DHFL'); // DO NOT REMOVE DHFL Line
             openTicker(newValue);
         });
 
