@@ -53,8 +53,8 @@ function tradingView() {
 
     //Register Ticker Change Listener
     //Using Seprate Selector as nameSelector has attribute changes in paint Name.
-    waitEE(".description-3nAYicDA", function (e) {
-        attributeObserver(e, onTickerChange);
+    waitEE(".main-fu_CcvfP", function (e) {
+        nodeObserver(e, onTickerChange);
     });
 
     //Register Alert Response Listener (After Alert Details Fetched)
