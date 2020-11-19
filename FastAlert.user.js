@@ -5,7 +5,7 @@
 // @description  Fix Bad UI of Investing.com
 // @author       Amanpreet Singh
 // @match       https://in.tradingview.com/chart*
-// @match       https://kite.zerodha.com*
+// @match       https://kite.zerodha.com/*
 // @match       https://in.investing.com/*
 // @match       https://trello.com/*
 // @grant        GM.xmlHttpRequest
