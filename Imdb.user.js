@@ -28,10 +28,21 @@ const languageSelector = 'li[data-testid="title-details-languages"] a';
 const imdbFilterKey = "imdbFilterKey"
 
 //***************IMDB ********************
-GM_registerMenuCommand("Filter", () => {imdbFilterFire("Filter")});
-GM_registerMenuCommand("YSearch", () => {imdbFilterFire("YSearch")});
-GM_registerMenuCommand("XSearch", () => {imdbFilterFire("XSearch")});
-GM_registerMenuCommand("Youtube Full", () => {imdbFilterFire("Youtube Full")});
+GM_registerMenuCommand("List", () => {
+    listMovies();
+});
+GM_registerMenuCommand("Filter", () => {
+    imdbFilterFire("Filter");
+});
+GM_registerMenuCommand("YSearch", () => {
+    imdbFilterFire("YSearch");
+});
+GM_registerMenuCommand("XSearch", () => {
+    imdbFilterFire("XSearch");
+});
+GM_registerMenuCommand("Youtube Full", () => {
+    imdbFilterFire("Youtube Full");
+});
 
 
 GM_addValueChangeListener(
@@ -54,6 +65,11 @@ GM_addValueChangeListener(
         }
     });
 
+function listMovies() {
+    $('span.lister-item-header a').each((i, e) => {
+        GM_openInTab(e.href, {"active": false});
+    })
+}
 
 function imdbFilterFire(cmd) {
     GM_setValue(imdbFilterKey, {command: cmd, date: new Date()});
@@ -66,14 +82,18 @@ function imdbFilter() {
     let myRating = parseFloat($(myImdbRatingSelector).text());
     let cutoff = getCutoff(lang);
 
-    if (rating < cutoff) {
+    //GM_notification(`Debug: ${rating} , ${myRating}, ${lang}`, name);
+
+    if (rating < cutoff || isNaN(rating)) {
         GM_notification(`${rating} < ${cutoff} (${lang}) discarded`, name);
         window.close();
     } else if (myRating > 0) {
         GM_notification(`Movie Watched: ${myRating} discarded`, name);
         window.close();
-    } else
+    } else if (cutoff > 0) {
+        //Trailed if Valid Language
         YoutubeSearch(name + " trailer")
+    }
 }
 
 function getName() {
