@@ -28,11 +28,10 @@ const languageSelector = 'li[data-testid="title-details-languages"] a';
 const imdbFilterKey = "imdbFilterKey"
 
 //***************IMDB ********************
+
+//Commands
 GM_registerMenuCommand("List", () => {
     listMovies();
-});
-GM_registerMenuCommand("Filter", () => {
-    imdbFilterFire("Filter");
 });
 GM_registerMenuCommand("YSearch", () => {
     imdbFilterFire("YSearch");
@@ -45,38 +44,48 @@ GM_registerMenuCommand("Youtube Full", () => {
 });
 
 
-GM_addValueChangeListener(
-    imdbFilterKey, (keyName, oldValue, newValue) => {
-        switch (newValue.command) {
-            case "Filter":
-                imdbFilter();
-                break;
-            case "YSearch":
-                YSearch(getName());
-                break;
-            case "XSearch":
-                XSearch(getName());
-                break;
-            case "Youtube Full":
-                YoutubeSearch(getName() + " Full Movie");
-                break
-            default:
-                alert("Invalid Command: " + newValue.command)
-        }
-    });
+//Init Setup
+function imdbInit() {
+    //Only for Movie Tabs
+    if (name !== "") {
+        //Register Listenr
+        GM_addValueChangeListener(
+            imdbFilterKey, (keyName, oldValue, newValue) => {
+                switch (newValue.command) {
+                    case "YSearch":
+                        YSearch(getName());
+                        break;
+                    case "XSearch":
+                        XSearch(getName());
+                        break;
+                    case "Youtube Full":
+                        YoutubeSearch(getName() + " Full Movie");
+                        break
+                    default:
+                        alert("Invalid Command: " + newValue.command)
+                }
+            });
 
-function listMovies() {
-    $('span.lister-item-header a').each((i, e) => {
-        GM_openInTab(e.href, {"active": false});
-    })
+        //Load, Filter and Trailer (Timeout to let myRating Load)
+        setTimeout(imdbFilter, 3000);
+    }
 }
 
+imdbInit()
+
+/* Commands */
 function imdbFilterFire(cmd) {
     GM_setValue(imdbFilterKey, {command: cmd, date: new Date()});
 }
 
+function listMovies() {
+    let links = $('span.lister-item-header a');
+    openLinkSlowly(0, links);
+}
+
 function imdbFilter() {
     let name = getName();
+    //Leave out List Tab
     let lang = $(languageSelector).text();
     let rating = parseFloat($(movieRatingSelector).text());
     let myRating = parseFloat($(myImdbRatingSelector).text());
@@ -96,18 +105,24 @@ function imdbFilter() {
     }
 }
 
+/* Helpers */
 function getName() {
     return $(movieTitleSelector).text();
 }
 
 function getCutoff(lang) {
-    switch (lang) {
-        case "Punjabi":
-        case "Hindi":
-            return 5;
-        case "English":
-            return 7;
-        default:
-            alert("Unknown Language: " + lang)
+    if (lang.includes("Punjabi") || lang.includes("Hindi")) {
+        return 5
+    } else if (lang.includes("English")) {
+        return 7
+    } else {
+        alert("Unknown Language: " + lang);
     }
+}
+
+function openLinkSlowly(i, links) {
+    setTimeout(() => {
+        GM_openInTab(links[i].href, {"active": false, "insert": false});
+        openLinkSlowly(i + 1, links);
+    }, 1000);
 }
