@@ -94,10 +94,10 @@ function imdbFilter() {
     //GM_notification(`Debug: ${rating} , ${myRating}, ${lang}`, name);
 
     if (rating < cutoff || isNaN(rating)) {
-        GM_notification(`${rating} < ${cutoff} (${lang})`, name);
+        //GM_notification(`${rating} < ${cutoff} (${lang})`, name);
         window.close();
     } else if (myRating > 0) {
-        GM_notification(`Movie Watched: ${myRating}`, name);
+        //GM_notification(`Movie Watched: ${myRating}`, name);
         window.close();
     } else if (cutoff > 0) {
         //Trailed if Valid Language
