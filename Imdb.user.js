@@ -114,7 +114,7 @@ function getCutoff(lang) {
     if (lang.includes("Punjabi") || lang.includes("Hindi")) {
         return 5
     } else if (lang.includes("English")) {
-        return 7
+        return 6.5
     } else {
         alert("Unknown Language: " + lang);
     }
