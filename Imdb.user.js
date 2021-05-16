@@ -47,7 +47,7 @@ GM_registerMenuCommand("Youtube Full", () => {
 //Init Setup
 function imdbInit() {
     //Only for Movie Tabs
-    if (name !== "") {
+    if (getName() !== "") {
         //Register Listenr
         GM_addValueChangeListener(
             imdbFilterKey, (keyName, oldValue, newValue) => {
@@ -94,10 +94,10 @@ function imdbFilter() {
     //GM_notification(`Debug: ${rating} , ${myRating}, ${lang}`, name);
 
     if (rating < cutoff || isNaN(rating)) {
-        GM_notification(`${rating} < ${cutoff} (${lang}) discarded`, name);
+        GM_notification(`${rating} < ${cutoff} (${lang})`, name);
         window.close();
     } else if (myRating > 0) {
-        GM_notification(`Movie Watched: ${myRating} discarded`, name);
+        GM_notification(`Movie Watched: ${myRating}`, name);
         window.close();
     } else if (cutoff > 0) {
         //Trailed if Valid Language
@@ -124,5 +124,5 @@ function openLinkSlowly(i, links) {
     setTimeout(() => {
         GM_openInTab(links[i].href, {"active": false, "insert": false});
         openLinkSlowly(i + 1, links);
-    }, 1000);
+    }, 2000);
 }
