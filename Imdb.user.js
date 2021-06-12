@@ -19,10 +19,10 @@
 // ==/UserScript==
 
 //Selectors
-const movieTitleSelector = '.TitleHeader__TitleText-sc-1wu6n3d-0';
-const movieRatingSelector = 'span.AggregateRatingButton__RatingScore-sc-1il8omz-1';
-const myImdbRatingSelector = 'span.UserRatingButton__RatingScore-sc-15ploje-1';
-const languageSelector = 'li[data-testid="title-details-languages"] a';
+const movieTitleSelector = '.title_wrapper > h1';
+const movieRatingSelector = 'div.ratingValue > strong > span';
+const myImdbRatingSelector = 'span.star-rating-value:first';
+const languageSelector = '#titleDetails > div:contains("Language") > a';
 
 //Events
 const imdbFilterKey = "imdbFilterKey"
@@ -91,7 +91,7 @@ function imdbFilter() {
     let myRating = parseFloat($(myImdbRatingSelector).text());
     let cutoff = getCutoff(lang);
 
-    //GM_notification(`Debug: ${rating} , ${myRating}, ${lang}`, name);
+    //GM_notification(`Rating: ${rating} , MyRating: ${myRating}, Lang: ${lang}`, name);
 
     if (rating < cutoff || isNaN(rating)) {
         //GM_notification(`${rating} < ${cutoff} (${lang})`, name);
@@ -107,7 +107,7 @@ function imdbFilter() {
 
 /* Helpers */
 function getName() {
-    return $(movieTitleSelector).text();
+    return $(movieTitleSelector).text().trim();
 }
 
 function getCutoff(lang) {
