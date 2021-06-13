@@ -23,6 +23,7 @@ const movieTitleSelector = '.title_wrapper > h1';
 const movieRatingSelector = 'div.ratingValue > strong > span';
 const myImdbRatingSelector = 'span.star-rating-value:first';
 const languageSelector = '#titleDetails > div:contains("Language") > a';
+const reviewSelector = 'div.titleReviewbarItemBorder span.subText > a:first';
 
 //Events
 const imdbFilterKey = "imdbFilterKey"
@@ -53,10 +54,10 @@ function imdbInit() {
             imdbFilterKey, (keyName, oldValue, newValue) => {
                 switch (newValue.command) {
                     case "YSearch":
-                        YSearch(getName());
+                        YSearch(getNameWithoutYear());
                         break;
                     case "XSearch":
-                        XSearch(getName());
+                        XSearch(getNameWithoutYear());
                         break;
                     case "Youtube Full":
                         YoutubeSearch(getName() + " Full Movie");
@@ -101,13 +102,19 @@ function imdbFilter() {
         window.close();
     } else if (cutoff > 0) {
         //Trailed if Valid Language
-        YoutubeSearch(name + " trailer")
+        YoutubeSearch(name + " trailer");
+        //Open Reviews
+        GM_openInTab($(reviewSelector)[0].href, {"active": false, "insert": false});
     }
 }
 
 /* Helpers */
 function getName() {
     return $(movieTitleSelector).text().trim();
+}
+
+function getNameWithoutYear(){
+    return getName().split("(")[0].trim();
 }
 
 function getCutoff(lang) {
