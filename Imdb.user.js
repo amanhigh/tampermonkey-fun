@@ -26,7 +26,8 @@ const languageSelector = '#titleDetails > div:contains("Language") > a';
 const reviewSelector = 'div.titleReviewbarItemBorder span.subText > a:first';
 
 //Events
-const imdbFilterKey = "imdbFilterKey"
+const imdbFilterKey = "imdbFilterKey";
+const imdbAutoKey = "imdbAutoKey";
 
 //***************IMDB ********************
 
@@ -42,6 +43,11 @@ GM_registerMenuCommand("XSearch", () => {
 });
 GM_registerMenuCommand("Youtube Full", () => {
     imdbFilterFire("Youtube Full");
+});
+
+GM_registerMenuCommand("Imdb Auto", () => {
+    let auto =isImdbAuto();
+    setImdbAuto(!auto);
 });
 
 
@@ -67,8 +73,12 @@ function imdbInit() {
                 }
             });
 
-        //Load, Filter and Trailer (Timeout to let myRating Load)
-        setTimeout(imdbFilter, 3000);
+        //Check if we are in auto mode
+        if (isImdbAuto())
+        {
+            //Load, Filter and Trailer (Timeout to let myRating Load)
+            setTimeout(imdbFilter, 3000);
+        }
     }
 }
 
@@ -115,6 +125,15 @@ function getName() {
 
 function getNameWithoutYear(){
     return getName().split("(")[0].trim();
+}
+
+function isImdbAuto() {
+    return GM_getValue(imdbAutoKey) || false;
+}
+
+function setImdbAuto(auto) {
+    GM_setValue(imdbAutoKey, auto);
+    GM_notification(`Value: ${auto}`, "Imdb Auto Changed");
 }
 
 function getCutoff(lang) {
