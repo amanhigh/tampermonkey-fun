@@ -54,7 +54,7 @@ GM_registerMenuCommand("Imdb Auto", () => {
 //Init Setup
 function imdbInit() {
     //Only for Movie Tabs
-    if (getName() !== "") {
+    if (isMovieTab()) {
         //Register Listenr
         GM_addValueChangeListener(
             imdbFilterKey, (keyName, oldValue, newValue) => {
@@ -79,8 +79,6 @@ function imdbInit() {
             //Load, Filter and Trailer (Timeout to let myRating Load)
             setTimeout(imdbFilter, 3000);
         }
-    } else {
-        console.log("IMDB No Name Found");
     }
 }
 
@@ -127,6 +125,11 @@ function getName() {
 
 function getNameWithoutYear(){
     return getName().split("(")[0].trim();
+}
+
+function isMovieTab() {
+    const p = window.location.pathname;
+    return !(p.includes('reviews') || p.includes('search'));
 }
 
 function isImdbAuto() {
