@@ -19,10 +19,10 @@
 // ==/UserScript==
 
 //Selectors
-const movieTitleSelector = '.title_wrapper > h1';
-const movieRatingSelector = 'div.ratingValue > strong > span';
-const myImdbRatingSelector = 'span.star-rating-value:first';
-const languageSelector = '#titleDetails > div:contains("Language") > a';
+const movieTitleSelector = 'h1';
+const movieRatingSelector = '[class^=AggregateRatingButton__RatingScore]';
+const myImdbRatingSelector = '[class^=UserRatingButton__RatingScore]';
+const languageSelector = '[data-testid=title-details-languages] a';
 const reviewSelector = 'div.titleReviewbarItemBorder span.subText > a:first';
 
 //Events
@@ -79,6 +79,8 @@ function imdbInit() {
             //Load, Filter and Trailer (Timeout to let myRating Load)
             setTimeout(imdbFilter, 3000);
         }
+    } else {
+        console.log("IMDB No Name Found");
     }
 }
 
