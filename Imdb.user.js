@@ -23,7 +23,7 @@ const movieTitleSelector = 'h1';
 const movieRatingSelector = '[class^=AggregateRatingButton__RatingScore]';
 const myImdbRatingSelector = '[class^=UserRatingButton__RatingScore]';
 const languageSelector = '[data-testid=title-details-languages] a';
-const reviewSelector = 'div.titleReviewbarItemBorder span.subText > a:first';
+const reviewSelector = '[class*=ReviewContent__StyledText]';
 
 //Events
 const imdbFilterKey = "imdbFilterKey";
@@ -101,7 +101,7 @@ function imdbFilter() {
     //Leave out List Tab
     let lang = $(languageSelector).text();
     let rating = parseFloat($(movieRatingSelector).text());
-    let myRating = parseFloat($(myImdbRatingSelector).text());
+    let myRating = parseFloat($(myImdbRatingSelector).html());
     let cutoff = getCutoff(lang);
 
     //GM_notification(`Rating: ${rating} , MyRating: ${myRating}, Lang: ${lang}`, name);
