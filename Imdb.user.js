@@ -22,7 +22,7 @@
 const movieTitleSelector = 'h1';
 const movieRatingSelector = '[class^=AggregateRatingButton__RatingScore]';
 const myImdbRatingSelector = '[class^=UserRatingButton__RatingScore]';
-const languageSelector = '[data-testid=title-details-languages] a';
+const languageSelector = 'li[data-testid=title-details-languages] .ipc-metadata-list-item__list-content-item';
 const reviewSelector = '[class*=ReviewContent__StyledText]';
 
 //Events
@@ -102,7 +102,7 @@ function imdbFilter() {
     let myRating = parseFloat($(myImdbRatingSelector).html());
     let cutoff = getCutoff(lang);
 
-    //GM_notification(`Rating: ${rating} , MyRating: ${myRating}, Lang: ${lang}`, name);
+    console.log(`Rating: ${rating} , MyRating: ${myRating}, Lang: ${lang}, Name: ${name}, Cutoff: ${cutoff} `);
 
     if (rating < cutoff || isNaN(rating)) {
         //GM_notification(`${rating} < ${cutoff} (${lang})`, name);
@@ -129,7 +129,7 @@ function getNameWithoutYear(){
 
 function isMovieTab() {
     const p = window.location.pathname;
-    return !(p.includes('reviews') || p.includes('search'));
+    return !(p.includes('reviews') || p.includes('search')) && p.includes('title');
 }
 
 function isImdbAuto() {
