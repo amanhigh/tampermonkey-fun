@@ -82,9 +82,9 @@ function tradingView() {
     });
 
     //Onload TV WatchList Paint
-    waitEE(`${watchListSelector} > div`, (el) => {
+    waitJEE(`${watchListSelector} > div`, (el) => {
         //Ensure Repaint on scroll, add/remove to WatchList
-        nodeObserver(el, onWatchListChange);
+        nodeObserver(el.get(0), onWatchListChange);
 
         //Ensure Repaint on Screener Changes
         message("Trying Screener Hook".fontcolor("yellow"));
