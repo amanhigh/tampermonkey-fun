@@ -20,8 +20,8 @@
 
 //Selectors
 const movieTitleSelector = 'h1';
-const movieRatingSelector = '[class^=AggregateRatingButton__RatingScore]';
-const myImdbRatingSelector = '[class^=UserRatingButton__RatingScore]';
+const movieRatingSelector = 'div[data-testid*=aggregate-rating__score] > span';
+const myImdbRatingSelector = 'div[data-testid*=user-rating__score] > span';
 const languageSelector = 'li[data-testid=title-details-languages] .ipc-metadata-list-item__list-content-item';
 const reviewSelector = '[class*=ReviewContent__StyledText]';
 
