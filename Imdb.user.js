@@ -155,5 +155,5 @@ function openLinkSlowly(i, links) {
     setTimeout(() => {
         GM_openInTab(links[i].href, {"active": false, "insert": false});
         openLinkSlowly(i + 1, links);
-    }, 2000);
+    }, 4000);
 }
