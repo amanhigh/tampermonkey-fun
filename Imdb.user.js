@@ -22,6 +22,7 @@
 const movieTitleSelector = 'h1';
 const movieRatingSelector = 'div[data-testid*=aggregate-rating__score] > span';
 const myImdbRatingSelector = 'div[data-testid*=user-rating__score] > span';
+const typeSelector = 'ul[data-testid=hero-title-block__metadata] > li:first';
 const languageSelector = 'li[data-testid=title-details-languages] .ipc-metadata-list-item__list-content-item';
 const reviewSelector = '[class*=ReviewContent__StyledText]';
 
@@ -46,7 +47,7 @@ GM_registerMenuCommand("Youtube Full", () => {
 });
 
 GM_registerMenuCommand("Imdb Auto", () => {
-    let auto =isImdbAuto();
+    let auto = isImdbAuto();
     setImdbAuto(!auto);
 });
 
@@ -74,8 +75,7 @@ function imdbInit() {
             });
 
         //Check if we are in auto mode
-        if (isImdbAuto())
-        {
+        if (isImdbAuto()) {
             //Load, Filter and Trailer (Timeout to let myRating Load)
             setTimeout(imdbFilter, 3000);
         }
@@ -86,7 +86,7 @@ imdbInit()
 
 /* Commands */
 function imdbFilterFire(cmd) {
-    GM_setValue(imdbFilterKey, {command: cmd, date: new Date()});
+    GM_setValue(imdbFilterKey, { command: cmd, date: new Date() });
 }
 
 function listMovies() {
@@ -98,11 +98,13 @@ function imdbFilter() {
     let name = getName();
     //Leave out List Tab
     let lang = $(languageSelector).text();
+    let type = $(typeSelector).text();
     let rating = parseFloat($(movieRatingSelector).text());
     let myRating = parseFloat($(myImdbRatingSelector).html());
-    let cutoff = getCutoff(lang);
+    let cutoff = getCutoff(lang, type);
 
-    console.log(`Rating: ${rating} , MyRating: ${myRating}, Lang: ${lang}, Name: ${name}, Cutoff: ${cutoff} `);
+
+    console.log(`Rating: ${rating} , MyRating: ${myRating}, Lang: ${lang}, Name: ${name}, Cutoff: ${cutoff}, Type: ${type} `);
 
     if (rating < cutoff || isNaN(rating)) {
         //GM_notification(`${rating} < ${cutoff} (${lang})`, name);
@@ -114,7 +116,7 @@ function imdbFilter() {
         //Trailed if Valid Language
         YoutubeSearch(name + " trailer");
         //Open Reviews
-        GM_openInTab($(reviewSelector)[0].href, {"active": false, "insert": false});
+        GM_openInTab($(reviewSelector)[0].href, { "active": false, "insert": false });
     }
 }
 
@@ -123,7 +125,7 @@ function getName() {
     return $(movieTitleSelector).text().trim();
 }
 
-function getNameWithoutYear(){
+function getNameWithoutYear() {
     return getName().split("(")[0].trim();
 }
 
@@ -141,8 +143,10 @@ function setImdbAuto(auto) {
     GM_notification(`Value: ${auto}`, "Imdb Auto Changed");
 }
 
-function getCutoff(lang) {
-    if (lang.includes("Punjabi") || lang.includes("Hindi")) {
+function getCutoff(lang, type) {
+    if (type.includes("Video Game")) {
+        return 6
+    } else if (lang.includes("Punjabi") || lang.includes("Hindi")) {
         return 5
     } else if (lang.includes("English")) {
         return 6.5
@@ -153,7 +157,7 @@ function getCutoff(lang) {
 
 function openLinkSlowly(i, links) {
     setTimeout(() => {
-        GM_openInTab(links[i].href, {"active": false, "insert": false});
+        GM_openInTab(links[i].href, { "active": false, "insert": false });
         openLinkSlowly(i + 1, links);
     }, 4000);
 }
