@@ -114,10 +114,15 @@ function imdbFilter() {
         window.close();
     } else if (cutoff > 0) {
         //Trailed if Valid Language
-        YoutubeSearch(name + " trailer");
+        SearchTitle(name, type);
         //Open Reviews
         GM_openInTab($(reviewSelector)[0].href, { "active": false, "insert": false });
     }
+}
+
+function SearchTitle(name, type) {
+    let suffix = type.includes("Video Game") ? " review" : " trailer"
+    YoutubeSearch(name + suffix);
 }
 
 /* Helpers */
