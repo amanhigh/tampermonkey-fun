@@ -26,6 +26,8 @@ const typeSelector = 'ul[data-testid=hero-title-block__metadata] > li:first';
 const languageSelector = 'li[data-testid=title-details-languages] .ipc-metadata-list-item__list-content-item';
 const reviewSelector = '[class*=ReviewContent__StyledText]';
 
+const listLinksSelector = 'span.lister-item-header a';
+
 //Events
 const imdbFilterKey = "imdbFilterKey";
 const imdbAutoKey = "imdbAutoKey";
@@ -90,8 +92,7 @@ function imdbFilterFire(cmd) {
 }
 
 function listMovies() {
-    let links = $('span.lister-item-header a');
-    openLinkSlowly(0, links);
+    openLinkSlowly(0, $(listLinksSelector));
 }
 
 function imdbFilter() {
