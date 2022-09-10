@@ -88,7 +88,7 @@ imdbInit()
 
 /* Commands */
 function imdbFilterFire(cmd) {
-    GM_setValue(imdbFilterKey, { command: cmd, date: new Date() });
+    GM_setValue(imdbFilterKey, { command: cmd, date: Date.now() });
 }
 
 function listMovies() {

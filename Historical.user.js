@@ -33,7 +33,7 @@ function SetupHistoricalUI() {
 
 function triggerDownload() {
     //Trigger Event for all Tabs to Start Downloading
-    GM_setValue(downloadEvent, new Date());
+    GM_setValue(downloadEvent, Date.now());
 }
 
 function download() {
