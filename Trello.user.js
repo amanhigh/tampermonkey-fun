@@ -81,9 +81,12 @@ function countAll(color) {
     }
 
     $('div.js-list.list-wrapper').each((key, list) => {
+        //Get Headings of all Lists
         let listName = $(list).find(".list-header-name").attr('aria-label');
+        //For Selected Color, Get Count by Label Text for each List
         let labelMap = labelCounter(list, color);
 
+        //Exclude Fixed Lists like JustGot
         if (!excludeList.includes(listName)) {
 
             //Add List Name to label info
@@ -117,12 +120,12 @@ function countAll(color) {
 }
 
 function labelCounter(target, color) {
-    //Read only Non Hidden Card Labels
+    //Read only Non Hidden Card Labels having labels of Target Color
     return $(target).find(`a.list-card:not(.hide)  button[data-color="${color}"]`).toArray()
         .reduce(function (map, labelElement) {
-            //Extract Title
+            //Extract Text of Label
             let title = $(labelElement).text();
-            //Add Prefix from Input
+            //Add Prefix from Input (Optional)
             title = $("#aman-input").val() + title;
 
             //Count Occurrences
