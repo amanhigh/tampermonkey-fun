@@ -19,10 +19,10 @@ const excludeList = ['Transit', 'Experiment', 'JustGot']
 // ---------------------------- TRELLO -------------------------------
 function setupUI() {
     //Setup Area
-    buildArea('aman-area').css('left', '50%').appendTo('body');
+    buildArea('aman-area').appendTo('body');
 
     //Add Color Choices
-    buildWrapper('aman-input').appendTo('#aman-area');
+    buildInput('aman-input').appendTo('#aman-area');
     buildWrapper('aman-colors').appendTo('#aman-area');
     colors.forEach(color => {
         buildRadio(color, color, 'aman-colors', color === colors[0]).appendTo('#aman-colors')
@@ -33,6 +33,9 @@ function setupUI() {
 
     //Add Table
     buildTable('aman-table').appendTo('#aman-area');
+
+    $('#aman-area').css('left', '20%')
+
 }
 
 setupUI();
@@ -115,12 +118,12 @@ function countAll(color) {
 
 function labelCounter(target, color) {
     //Read only Non Hidden Card Labels
-    return $(target).find(`a.list-card:not(.hide)  span.card-label-${color}`).toArray()
+    return $(target).find(`a.list-card:not(.hide)  button[data-color="${color}"]`).toArray()
         .reduce(function (map, labelElement) {
             //Extract Title
-            let title = $(labelElement).attr('title');
+            let title = $(labelElement).text();
             //Add Prefix from Input
-            title+=$("#aman-input").val();
+            title = $("#aman-input").val() + title;
 
             //Count Occurrences
             if (map.has(title)) {
@@ -132,4 +135,3 @@ function labelCounter(target, color) {
             return map;
         }, new Map());
 }
-
