@@ -12,6 +12,7 @@
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_addValueChangeListener
+// @grant       GM_setClipboard
 // @require      lib/library.js
 // @require      lib/constants.js
 // @require      lib/ui.js
