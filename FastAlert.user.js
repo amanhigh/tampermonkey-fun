@@ -70,6 +70,9 @@ function tradingView() {
             openTicker(newValue);
         });
 
+    //Listen for Input Value Changes
+    $(`#${inputId}`).on('input', onInputChange);
+
     //Listen for Gtt Order Changes
     GM_addValueChangeListener(
         gttOrderEvent, (keyName, oldValue, newValue,) => {
