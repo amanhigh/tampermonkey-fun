@@ -64,11 +64,12 @@ function apiTest() {
             "Upgrade-Insecure-Requests": "1",
             "Cache-Control": "max-age=0"
         },
-        url: "https://in.investing.com/members-admin/alert-center",
+        url: "https://reqres.in/api/users?page=2",
         method: "GET",
         onload: function (response) {
             if (response.status >= 200 && response.status < 400) {
-                console.log($(response).find('#instrumentAlerts'));
+                console.log(response.status, response.response);
+                message("API Successful");
             } else {
                 alert('Error Firing: (' + this.status + ' ' + this.statusText + '): ' + this.responseText);
             }
