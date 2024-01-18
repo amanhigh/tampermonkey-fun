@@ -2,7 +2,7 @@
 // @name        Experiment
 // @namespace   aman
 // @description Tamper Monkey Experiment Script
-// @include     http://www.example.net/
+// @match     https://example.net/
 // @version     1.0
 // @require     lib/library.js
 // @grant        GM_listValues
@@ -12,10 +12,11 @@
 // @grant        GM.xmlHttpRequest
 // @require      https://code.jquery.com/jquery-3.4.1.min.js
 // @downloadURL https://raw.githubusercontent.com/amanhigh/tampermonkey-fun/master/experiment.user.js
+// @updateURL https://raw.githubusercontent.com/amanhigh/tampermonkey-fun/master/experiment.user.js
 // ==/UserScript==
 
 // Note that in most cases, updateURL and downloadURL
-// is NOT NECESSARY. Greasemonkey will automatically 
+// is NOT NECESSARY. Greasemonkey will automatically
 // use the URL you used to download script
 // Wiki: https://wiki.greasespot.net/Metadata_Block#.40downloadURL
 
