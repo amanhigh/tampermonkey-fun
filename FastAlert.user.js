@@ -66,12 +66,6 @@ function tradingView() {
         attributeObserver(e, onTickerChange);
     });
 
-    //Register Alert Response Listener (After Alert Details Fetched)
-    GM_addValueChangeListener(
-        alertResponseKey, (keyName, oldValue, newValue) => {
-            alertSummary(newValue.data);
-        });
-
     //Listen for Alert Clicks in AlertFeed
     GM_addValueChangeListener(
         alertClickedEvent, (keyName, oldValue, newValue,) => {
