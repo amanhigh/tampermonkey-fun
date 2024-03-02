@@ -2,8 +2,11 @@
 # npx eslint --init
 env:
   browser: true
-  commonjs: true
+  es6: true
+  jquery: true
   es2021: true
+  # FIXME: For Tamper Monkey
+  greasemonkey: true
 extends: eslint:recommended
 parserOptions:
   ecmaVersion: latest
