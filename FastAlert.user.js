@@ -19,6 +19,8 @@
 // @require      lib/client/kite.js
 // @require      lib/client/investing.js
 // @require      lib/client/trello.js
+// @require      lib/sites/tv/alert.js
+// @require      lib/sites/tv/helper.js
 // @require      lib/sites/tv/core.js
 // @require      lib/sites/tv/models.js
 // @require      lib/sites/tv/order.js
@@ -32,6 +34,7 @@
 // ==/UserScript==
 //UI Coordinates
 
+// Reduce Version to 0.8 to force Update Script in Editor.
 //-- Are we on the "interactive" page/site/domain or the "monitoring" one?
 if (location.pathname.includes("alert-center")) {
     alertCenter();
