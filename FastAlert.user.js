@@ -55,7 +55,7 @@ if (location.pathname.includes("alert-center")) {
 //***************TRADING VIEW ********************
 
 function tradingView() {
-    setupFastAlertUI();
+    SetupTvUI();
     loadTradingViewVars();
 
     document.addEventListener('keydown', doc_keyDown, false);
@@ -107,7 +107,7 @@ function tradingView() {
         ForceRefreshAlerts();
 
         //Missing FNO's Logging
-        logMissingFno();
+        LogMissingFno();
     }, 10);
 
     //Run AutoSave Cron
