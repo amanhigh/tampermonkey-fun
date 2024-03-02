@@ -19,7 +19,10 @@
 // @require      lib/client/kite.js
 // @require      lib/client/investing.js
 // @require      lib/client/trello.js
-// @require      lib/sites/tv.js
+// @require      lib/sites/tv/core.js
+// @require      lib/sites/tv/models.js
+// @require      lib/sites/tv/order.js
+// @require      lib/sites/tv/paint.js
 // @require      lib/sites/investing.js
 // @require      lib/sites/kite.js
 // @require      lib/sites/trello.js
