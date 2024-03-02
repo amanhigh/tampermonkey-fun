@@ -20,8 +20,10 @@
 // @require      lib/client/investing.js
 // @require      lib/client/trello.js
 // @require      lib/sites/tv/alert.js
-// @require      lib/sites/tv/helper.js
+// @require      lib/sites/tv/const.js
 // @require      lib/sites/tv/core.js
+// @require      lib/sites/tv/event.js
+// @require      lib/sites/tv/helper.js
 // @require      lib/sites/tv/models.js
 // @require      lib/sites/tv/order.js
 // @require      lib/sites/tv/paint.js
