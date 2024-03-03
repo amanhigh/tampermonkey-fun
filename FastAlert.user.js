@@ -83,7 +83,7 @@ function tradingView() {
     //Wait for Title to Load and Fix to Signal Auto Hotkey
     waitEE("title", (el) => {
         //console.log('Observing Title: ' + el.innerHTML);
-        nodeObserver(el, fixTitle);
+        nodeObserver(el, EnableSwiftKey);
     });
 
     //Onload TV WatchList Paint
