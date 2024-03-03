@@ -68,7 +68,7 @@ function tradingView() {
     //Listen for Alert Clicks in AlertFeed
     GM_addValueChangeListener(
         alertClickedEvent, (keyName, oldValue, newValue,) => {
-            openTicker(newValue);
+            applyTicker(newValue);
         });
 
     //Listen for Input Value Changes
@@ -109,7 +109,7 @@ function tradingView() {
         LogMissingFno();
     }, 10);
 
-    //Run AutoSave Cron
-    setInterval(autoSave, 2 * 60 * 1000);
+    //Run Save Cron
+    setInterval(cronSave, 2 * 60 * 1000);
 }
 
