@@ -68,7 +68,7 @@ function tradingView() {
     //Listen for Alert Clicks in AlertFeed
     GM_addValueChangeListener(
         alertClickedEvent, (keyName, oldValue, newValue,) => {
-            applyTicker(newValue);
+            HandleAlertClick(newValue);
         });
 
     //Listen for Input Value Changes
