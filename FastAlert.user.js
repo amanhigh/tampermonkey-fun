@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FastAlert
 // @namespace    aman
-// @version      1.0
+// @version      1.1
 // @description  Fix Bad UI of Investing.com
 // @author       Amanpreet Singh
 // @match       https://in.tradingview.com/chart*
@@ -17,7 +17,6 @@
 // @require      lib/ui.js
 // @require      lib/client/kite.js
 // @require      lib/client/investing.js
-// @require      lib/client/trello.js
 // @require      lib/sites/tv/alert.js
 // @require      lib/sites/tv/const.js
 // @require      lib/sites/tv/core.js
