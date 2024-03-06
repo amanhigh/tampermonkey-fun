@@ -39,8 +39,6 @@
 //-- Are we on the "interactive" page/site/domain or the "monitoring" one?
 if (location.pathname.includes("alert-center")) {
     alertCenter();
-} else if (location.pathname.includes("equities")) {
-    equities();
 } else if (location.host.includes("tradingview.com")) {
     tradingView();
 } else if (location.pathname.includes("alerts-feed")) {
