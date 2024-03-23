@@ -17,6 +17,7 @@
 // @require      lib/ui.js
 // @require      lib/client/kite.js
 // @require      lib/client/investing.js
+// @require      lib/client/kohan.js
 // @require      lib/sites/tv/action.js
 // @require      lib/sites/tv/alert.js
 // @require      lib/sites/tv/const.js
