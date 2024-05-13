@@ -7,7 +7,6 @@
 // @match       https://in.tradingview.com/chart*
 // @match       https://kite.zerodha.com/*
 // @match       https://in.investing.com/*
-// @match       https://trello.com/*
 // @grant        GM.xmlHttpRequest
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -29,7 +28,6 @@
 // @require      lib/sites/tv/paint.js
 // @require      lib/sites/investing.js
 // @require      lib/sites/kite.js
-// @require      lib/sites/trello.js
 // @require      lib/sites/hotkeys.js
 // @require      https://code.jquery.com/jquery-3.4.1.min.js
 // @run-at document-end
@@ -46,8 +44,6 @@ if (location.pathname.includes("alert-center")) {
     alertFeed();
 } else if (location.host.includes("kite.zerodha.com")) {
     kite();
-} else if (location.host.includes("trello.com")) {
-    trello();
 }
 
 //***************TRADING VIEW ********************
