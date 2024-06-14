@@ -13,18 +13,20 @@
     'use strict';
 
     /**
-     * Token management for API authentication.
-     * Stored in session storage to persist across the session but not beyond.
+     * Token management for API authentication.     
      */
-    let bearerToken = sessionStorage.getItem('bearerToken') || promptForBearerToken();
+    let bearerToken = getBearerToken();
 
     /**
      * Prompt user for bearer token if not already stored and save it to session storage.
      * @returns {string} The bearer token.
      */
-    function promptForBearerToken() {
-        const token = prompt("Please enter your Bearer token:", "");
-        sessionStorage.setItem('bearerToken', token);
+    function getBearerToken() {
+        let token = sessionStorage.getItem('bearerToken');
+        if (!token || token === "null") {
+            token = prompt("Please enter your Bearer token:");
+            sessionStorage.setItem('bearerToken', token);
+        }
         return token;
     }
 
