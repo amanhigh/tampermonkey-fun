@@ -1,55 +1,60 @@
 // ==UserScript==
-// @name         ChatGPT
+// @name         Enhanced ChatGPT Management
 // @namespace    aman
-// @version      1.3
-// @description  Add a delete button with a trash icon to ChatGPT chats for easy removal
+// @version      1.4
+// @description  Manage ChatGPT chats more effectively with title modifications and deletions.
 // @author       You
 // @match        https://chatgpt.com/*
 // @grant        GM_xmlhttpRequest
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js
-// @downloadURL https://raw.githubusercontent.com/amanhigh/tampermonkey-fun/master/Gpt.user.js
-// @updateURL   https://raw.githubusercontent.com/amanhigh/tampermonkey-fun/master/Gpt.user.js
 // ==/UserScript==
 
-'use strict';
+(function () {
+    'use strict';
 
-// Define a variable at the top of the script to hold the token
-var bearerToken = null;
+    /**
+     * Token management for API authentication.
+     * Stored in session storage to persist across the session but not beyond.
+     */
+    let bearerToken = sessionStorage.getItem('bearerToken') || promptForBearerToken();
 
-function getBearerToken() {
-    // Prompt the user for the token if it's not already set
-    if (!bearerToken) {
-        bearerToken = prompt("Please enter your Bearer token:", "");
-    }
-    return bearerToken;
-}
-
-function removeChatFromSidebar(chatId) {
-    // Finding the anchor element that ends with the specific chatId in its href attribute
-    const selector = `a[href$="/c/${chatId}"]`;
-    const chatItem = $(selector).closest('li');  // Select the closest 'li' element to this anchor
-
-    if (chatItem.length) {
-        chatItem.remove();  // Remove the chat item from the DOM
-    } else {
-        console.log(`Chat item with ID: ${chatId} not found.`);
-    }
-}
-
-function modifyChatVisibility(chatId) {
-    const token = getBearerToken();  // Ensure we have a token before making the call
-    if (!token) {
-        console.log("No Bearer token provided.");
-        alert("Operation canceled. No Bearer token provided.");
-        return;  // Exit the function if no token is provided
+    /**
+     * Prompt user for bearer token if not already stored and save it to session storage.
+     * @returns {string} The bearer token.
+     */
+    function promptForBearerToken() {
+        const token = prompt("Please enter your Bearer token:", "");
+        sessionStorage.setItem('bearerToken', token);
+        return token;
     }
 
-    GM_xmlhttpRequest({
-        method: "PATCH",
-        url: `https://chatgpt.com/backend-api/conversation/${chatId}`,
-        headers: {
+
+    /**
+     * Finding the anchor element that ends with the specific chatId in its href attribute
+     *
+     * @param {type} chatId - description of parameter
+     * @return {type} description of return value
+     */
+    function removeChatFromSidebar(chatId) {
+        // Finding the anchor element that ends with the specific chatId in its href attribute
+        const selector = `a[href$="/c/${chatId}"]`;
+        const chatItem = $(selector).closest('li');  // Select the closest 'li' element to this anchor
+
+        if (chatItem.length) {
+            chatItem.remove();  // Remove the chat item from the DOM
+        } else {
+            console.log(`Chat item with ID: ${chatId} not found.`);
+        }
+    }
+
+    /**
+     * Get standard headers for API requests.
+     * @returns {Object} Headers object for HTTP requests.
+     */
+    function apiHeaders() {
+        return {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,  // Use the retrieved or stored token
+            "Authorization": `Bearer ${bearerToken}`,
             "accept": "*/*",
             "accept-language": "en-US,en;q=0.9",
             "sec-ch-ua": "\"Brave\";v=\"125\", \"Chromium\";v=\"125\", \"Not.A/Brand\";v=\"24\"",
@@ -59,34 +64,90 @@ function modifyChatVisibility(chatId) {
             "sec-fetch-mode": "cors",
             "sec-fetch-site": "same-origin",
             "sec-gpc": "1"
-        },
-        data: JSON.stringify({ is_visible: false }),
-        onload: function (response) {
-            if (response.status === 200 || response.status === 204) {
-                removeChatFromSidebar(chatId);  // Adjust based on actual UI needs
+        };
+    }
+
+    /**
+     * Handle API response, processing status and invoking callback on success.
+     * @param {Object} response - The XMLHttpRequest response object.
+     * @param {Function} successCallback - Callback to invoke on successful API response.
+     */
+    function handleApiResponse(response, successCallback) {
+        if (response.status === 200 || response.status === 204) {
+            successCallback();
+        } else {
+            console.error(`API Error: ${response.statusText}`);
+            alert("Failed to perform operation.");
+        }
+    }
+
+    /**
+     * Modify the visibility of a chat.
+     * @param {string} chatId - The ID of the chat to modify.
+     */
+    function modifyChatVisibility(chatId) {
+        if (!bearerToken) {
+            console.error("No Bearer token provided.");
+            alert("Operation canceled. No Bearer token provided.");
+            return;
+        }
+
+        GM_xmlhttpRequest({
+            method: "PATCH",
+            url: `https://chatgpt.com/backend-api/conversation/${chatId}`,
+            headers: apiHeaders(),
+            data: JSON.stringify({ is_visible: false }),
+            onload: response => handleApiResponse(response, () => removeChatFromSidebar(chatId)),
+            onerror: response => console.error('Network Error:', response.statusText)
+        });
+    }
+
+    /**
+     * Modify the title of a chat.
+     * @param {string} chatId - The ID of the chat.
+     * @param {string} newTitle - The new title to set.
+     * @param {HTMLElement} element - DOM element representing the chat title.
+     */
+    function modifyChatTitle(chatId, newTitle, element) {
+        GM_xmlhttpRequest({
+            method: "PATCH",
+            url: `https://chatgpt.com/backend-api/conversation/${chatId}`,
+            headers: apiHeaders(),
+            data: JSON.stringify({ title: newTitle }),
+            onload: response => handleApiResponse(response, () => $(element).text(newTitle)),
+            onerror: response => console.error('Network Error:', response.statusText)
+        });
+    }
+
+    /**
+     * Set up event listeners for modifying chats on user interactions.
+     */
+    function addHooks() {
+        $(document).on('contextmenu', 'li.relative', function (event) {
+            event.preventDefault();
+            const chatId = $(this).find('a').attr('href').split('/').pop();
+
+            if (event.shiftKey) {
+                const currentTitle = $(this).text().trim();
+                const newTitle = '# ' + currentTitle;
+                modifyChatTitle(chatId, newTitle, this);
             } else {
-                console.log(`Failed to modify chat visibility with ID ${chatId}: HTTP status ${response.status}`);
-                alert("Failed to modify chat visibility.");
+                modifyChatVisibility(chatId);
             }
-        },
-        onerror: function (response) {
-            console.log("Error making request:", response.statusText);
-            alert("Error in network request.");
-        },
-        withCredentials: true  // This is important if credentials like cookies are needed for the API call
-    });
-}
 
+            return false;
+        });
 
-function addDeleteHook() {
-    $(document).on('contextmenu', 'li.relative', function (event) {
-        event.preventDefault();
-        const chatId = $(this).find('a').attr('href').split('/').pop();
-        modifyChatVisibility(chatId);
-        return false;
-    });
-}
+        $(document).on('click', 'li.relative a', function (event) {
+            if (event.shiftKey) {
+                event.preventDefault();
+                const chatId = $(this).attr('href').split('/').pop();
+                const currentTitle = $(this).text();
+                const newTitle = `* ${currentTitle}`;
+                modifyChatTitle(chatId, newTitle, this);
+            }
+        });
+    }
 
-$(document).ready(function () {
-    addDeleteHook();
-});
+    $(document).ready(addHooks);
+})();
