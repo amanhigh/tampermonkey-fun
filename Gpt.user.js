@@ -30,7 +30,6 @@ function removeChatFromSidebar(chatId) {
     const chatItem = $(selector).closest('li');  // Select the closest 'li' element to this anchor
 
     if (chatItem.length) {
-        console.log(`Removing chat item with ID: ${chatId}`);
         chatItem.remove();  // Remove the chat item from the DOM
     } else {
         console.log(`Chat item with ID: ${chatId} not found.`);
@@ -79,45 +78,15 @@ function modifyChatVisibility(chatId) {
 }
 
 
-/**
- * Appends a delete button with a trash icon to each chat item if not already present.
- */
-function addDeleteButton() {
-    $('li.relative').each(function () {
+function addDeleteHook() {
+    $(document).on('contextmenu', 'li.relative', function (event) {
+        event.preventDefault();
         const chatId = $(this).find('a').attr('href').split('/').pop();
-        if (!$(this).find('.delete-btn').length) {
-            $(this).find('div.group').append(`
-                    <button class="delete-btn" style="position: absolute; right: 10px; top: 10px; background: none; border: none;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
-                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zM14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1 0-2h4a.5.5 0 0 1 0 1h3a.5.5 0 0 1 0-1h4a1 1 0 0 1 1 1zM12 4H4v9a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4z"/>
-                        </svg>
-                    </button>
-                `);
-            $(this).find('.delete-btn').on('click', function () {
-                modifyChatVisibility(chatId);
-            });
-        }
+        modifyChatVisibility(chatId);
+        return false;
     });
 }
 
-/**
- * Observer to handle dynamic addition of chat items to the DOM.
- */
-function setupMutationObserver() {
-    const observer = new MutationObserver(function (mutations) {
-        mutations.forEach(function (mutation) {
-            if (mutation.addedNodes && mutation.addedNodes.length > 0) {
-                addDeleteButton();
-            }
-        });
-    });
-
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
-}
-
-// Initialize the mutation observer and add buttons to existing chat items.
-setupMutationObserver();
-addDeleteButton();
+$(document).ready(function () {
+    addDeleteHook();
+});
