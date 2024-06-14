@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         ChatGPT Delete Chat Button with Icon
+// @name         ChatGPT
 // @namespace    aman
 // @version      1.3
 // @description  Add a delete button with a trash icon to ChatGPT chats for easy removal
@@ -7,6 +7,8 @@
 // @match        https://chatgpt.com/*
 // @grant        GM_xmlhttpRequest
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js
+// @downloadURL https://raw.githubusercontent.com/amanhigh/tampermonkey-fun/master/Gpt.user.js
+// @updateURL   https://raw.githubusercontent.com/amanhigh/tampermonkey-fun/master/Gpt.user.js
 // ==/UserScript==
 
 'use strict';
