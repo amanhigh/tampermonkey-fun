@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         Enhanced ChatGPT Management
+// @name         ChatGPT
 // @namespace    aman
-// @version      1.4
-// @description  Manage ChatGPT chats more effectively with title modifications and deletions.
-// @author       You
+// @version      1.5
+// @description  Manage ChatGPT chats more effectively.
+// @author       Amanpreet Singh
 // @match        https://chatgpt.com/*
 // @grant        GM_xmlhttpRequest
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js
