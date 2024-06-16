@@ -22,10 +22,10 @@
      * @returns {string} The bearer token.
      */
     function getBearerToken() {
-        let token = sessionStorage.getItem('bearerToken');
+        let token = localStorage.getItem('bearerToken');
         if (!token || token === "null") {
             token = prompt("Please enter your Bearer token:");
-            sessionStorage.setItem('bearerToken', token);
+            localStorage.setItem('bearerToken', token);
         }
         return token;
     }
