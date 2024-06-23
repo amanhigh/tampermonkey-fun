@@ -67,7 +67,7 @@ function tradingView() {
         });
 
     //Listen for Input Value Changes
-    $(`#${inputId}`).on('input', onInputChange);
+    $(`#${displayId}`).on('input', onInputChange);
 
     //Listen for Gtt Order Changes
     GM_addValueChangeListener(
