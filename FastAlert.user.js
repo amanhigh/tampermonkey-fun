@@ -12,6 +12,7 @@
 // @grant        GM_setValue
 // @grant        GM_addValueChangeListener
 // @grant       GM_setClipboard
+// @require      lib/sites/tv/const.js
 // @require      lib/library.js
 // @require      lib/ui.js
 // @require      lib/client/kite.js
@@ -19,7 +20,6 @@
 // @require      lib/client/kohan.js
 // @require      lib/sites/tv/action.js
 // @require      lib/sites/tv/alert.js
-// @require      lib/sites/tv/const.js
 // @require      lib/sites/tv/core.js
 // @require      lib/sites/tv/event.js
 // @require      lib/sites/tv/helper.js
