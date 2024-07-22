@@ -100,8 +100,8 @@ function tradingView() {
         // Load Alerts
         ForceRefreshAlerts();
 
-        //Missing FNO's Logging
-        LogMissingFno();
+        //Missing FNO's Logging        
+        LogMissingData();
     }, 10);
 
     //Run Save Cron
