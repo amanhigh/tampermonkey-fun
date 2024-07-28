@@ -72,7 +72,8 @@ function tradingView() {
     //Listen for Gtt Order Changes
     GM_addValueChangeListener(
         gttOrderEvent, (keyName, oldValue, newValue,) => {
-            gttSummary(newValue);
+            const gttOrderMap = GttOrderMap.loadFromGMValue(gttOrderEvent, newValue);
+            gttSummary(gttOrderMap);
         });
 
     //Wait for Title to Load and Fix to Signal Auto Hotkey
