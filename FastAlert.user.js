@@ -106,6 +106,7 @@ function tradingView() {
     }, 10);
 
     //Run Save Cron
-    setInterval(cronSave, 2 * 60 * 1000);
+    const seconds = 30
+    setInterval(cronSave, seconds * 1000);
 }
 
