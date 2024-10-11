@@ -88,11 +88,11 @@ function tradingView() {
         nodeObserver(el.get(0), onWatchListChange);
 
         //Ensure Repaint on Screener Changes
-        message("Trying Screener Hook".fontcolor("yellow"));
+        message("Trying Screener Hook", "yellow");
         waitJEE(screenerSelector, (el) => {
             nodeObserver(el.get(0), onWatchListChange);
 
-            message("Screener Hooked".fontcolor("green"));
+            message("Screener Hooked", "green");
         }, 10);
 
         //Paint WatchList, Screener etc
@@ -109,4 +109,3 @@ function tradingView() {
     const seconds = 30
     setInterval(cronSave, seconds * 1000);
 }
-
