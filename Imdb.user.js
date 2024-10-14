@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         IMDB
 // @namespace    aman
-// @version      1.0
+// @version      1.1
 // @description  Imdb Fast Movie Scan
 // @author       Amanpreet Singh
 // @match        https://www.imdb.com/*
@@ -44,6 +44,9 @@ GM_registerMenuCommand("YSearch", () => {
 GM_registerMenuCommand("XSearch", () => {
     imdbFilterFire("XSearch");
 });
+GM_registerMenuCommand("Xtreme", () => {
+    imdbFilterFire("Xtreme");
+})
 GM_registerMenuCommand("Youtube Full", () => {
     imdbFilterFire("Youtube Full");
 });
@@ -70,6 +73,9 @@ function imdbInit() {
                         break;
                     case "Youtube Full":
                         YoutubeSearch(getName() + " Full Movie");
+                        break
+                    case "Xtreme":
+                        XtremeSearch(getNameWithoutYear());
                         break
                     default:
                         alert("Invalid Command: " + newValue.command)
