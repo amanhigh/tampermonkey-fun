@@ -24,6 +24,7 @@
 // @require      lib/sites/tv/event.js
 // @require      lib/sites/tv/helper.js
 // @require      lib/sites/tv/models.js
+// @require      lib/sites/tv/silo.js
 // @require      lib/sites/tv/order.js
 // @require      lib/sites/tv/paint.js
 // @require      lib/sites/investing.js
