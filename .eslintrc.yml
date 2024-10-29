@@ -1,5 +1,6 @@
 # npm install eslint --save-dev
 # npx eslint --init
+# npx eslint .
 env:
   browser: true
   es6: true
