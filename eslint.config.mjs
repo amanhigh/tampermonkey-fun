@@ -7,25 +7,24 @@ import globals from "globals";
 
 export default [
   {
-    files: ["**/*.js", "lib/**/*.js"],
+    files: ["**/*.js"],
     languageOptions: {
       sourceType: "script",
       ecmaVersion: 2022,
       globals: {
-        ...globals.browser,
-        ...globals.greasemonkey,
-      },
+        // Only browser and jQuery globals
+        window: true,
+        document: true,
+        $: true,
+        jQuery: true,
+
+        // Only globals that are used in the code
+        "requestAnimationFrame": true,
+      }
     },
     rules: {
-      "no-unused-vars": ["warn", {
-        "vars": "all",
-        "args": "after-used",
-        "ignoreRestSiblings": false,
-        "argsIgnorePattern": "^_",
-        "varsIgnorePattern": "^_"
-      }],
-      "no-undef": "warn",
-      "no-global-assign": "error",
+      "no-unused-vars": "warn",
+      "no-undef": "error"
     }
   }
 ];
