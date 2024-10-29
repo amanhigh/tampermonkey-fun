@@ -8,5 +8,10 @@
 		"editor.quickSuggestions": {
 			"other": "off"
 		}
+	},
+	"extensions": {
+		"recommendations": [
+			"dbaeumer.vscode-eslint"
+		]
 	}
 }
