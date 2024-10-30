@@ -6,7 +6,8 @@
 			"extensions": [
 				"dbaeumer.vscode-eslint",
 				"YuichiNakamura.code-to-clipboard",
-				"Codeium.codeium"
+				"Codeium.codeium",
+				"saoudrizwan.claude-dev"
 			]
 		}
 	}
