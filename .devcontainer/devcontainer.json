@@ -4,7 +4,9 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"dbaeumer.vscode-eslint"
+				"dbaeumer.vscode-eslint",
+				"YuichiNakamura.code-to-clipboard",
+				"Codeium.codeium"
 			]
 		}
 	}
