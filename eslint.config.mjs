@@ -20,6 +20,9 @@ export default [
         AuditManager: true,
         AuditUIManager: true,
 
+        // Misc
+        Constants: true,
+
         // Custom Globals
         alertStore: true,
         AlertState: true,
