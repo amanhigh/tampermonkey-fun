@@ -16,6 +16,10 @@ export default [
         ...globals.greasemonkey,   // TamperMonkey/GreaseMonkey globals
         ...globals.jquery,         // jQuery globals ($, jQuery)
 
+        // Managers
+        AuditManager: true,
+        AuditUIManager: true,
+
         // Custom Globals
         alertStore: true,
         AlertState: true,
