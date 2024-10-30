@@ -36,7 +36,6 @@ export default [
         buildButton: true,
         OpenTicker: true,
         deletePairInfo: true,
-        auditId: true,
         getAllAlertTickers: true,
         waitOn: true,
         AuditCurrentTicker: true,
@@ -56,8 +55,6 @@ export default [
         pinInvestingTicker: true,
         fetchSymbolData: true,
         Alert: true,
-        alertsId: true,
-        inputId: true
       }
     },
     rules: {
