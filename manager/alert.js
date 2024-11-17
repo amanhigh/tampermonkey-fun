@@ -290,3 +290,50 @@ class AlertMapper {
         );
     }
 }
+
+/**
+ * Handles loading alerts from DOM elements
+ */
+class AlertLoader {
+    /**
+     * @private
+     * @type {AlertRepo}
+     */
+    _alertRepo;
+
+    /**
+     * @param {AlertRepo} alertRepo Alert repository
+     */
+    constructor(alertRepo) {
+        this._alertRepo = alertRepo;
+    }
+
+    /**
+     * Load alerts from DOM elements
+     * @param {Object} data jQuery DOM element containing alert items
+     * @returns {number} Number of alerts loaded
+     * @throws {Error} If loading fails
+     */
+    loadFromDOM(data) {
+        try {
+            this._alertRepo.clear();
+            let count = 0;
+
+            $(data).find('.js-alert-item[data-trigger=price]').each((i, alertElement) => {
+                const $alt = $(alertElement);
+                const alert = new Alert(
+                    $alt.attr('data-pair-id'),
+                    parseFloat($alt.attr('data-value'))
+                );
+                alert.Id = $alt.attr('data-alert-id');
+
+                this._alertRepo.addAlert(alert.PairId, alert);
+                count++;
+            });
+
+            return count;
+        } catch (error) {
+            throw new Error(`Failed to load alerts: ${error.message}`);
+        }
+    }
+}
