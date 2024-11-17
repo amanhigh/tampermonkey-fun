@@ -10,7 +10,7 @@ class PairRepo extends MapRepo {
     }
 
     /**
-     * @protected
+     * @override
      * @param {Object} data Raw storage data
      * @returns {Map<string, PairInfo>} Map of pair information
      */
@@ -27,7 +27,7 @@ class PairRepo extends MapRepo {
     }
 
     /**
-     * @protected
+     * @override
      * @returns {Object} Serialized pair information
      */
     _serialize() {

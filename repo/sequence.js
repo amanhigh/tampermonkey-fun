@@ -39,6 +39,7 @@ class SequenceRepo extends MapRepo {
      * @param {string} sequence Sequence type
      */
     pinSequence(tvTicker, sequence) {
+        // TODO: Should validate sequence is either "MWD" or "YR"
         this.set(tvTicker, sequence);
     }
 }
