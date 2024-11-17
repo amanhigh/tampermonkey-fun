@@ -1,21 +1,12 @@
 /**
- * Repository for managing exchange mappings
+ * Maps TradingView tickers to exchange-qualified format
+ * @type {Object<string, string>}
+ * Key: TVTicker (e.g., "HDFC")
+ * Value: ExchangeTicker (e.g., "NSE:HDFC")
  */
-class ExchangeRepo {
-    /**
-     * Maps TradingView tickers to exchange-qualified format
-     * @type {Object<string, string>}
-     * Key: TVTicker (e.g., "HDFC")
-     * Value: ExchangeTicker (e.g., "NSE:HDFC")
-     * @private
-     */
-    _exchangeMap;
-
-    /**
-     * @param {Object<string, string>} exchangeMap Initial exchange mappings
-     */
-    constructor(exchangeMap = {}) {
-        this._exchangeMap = exchangeMap;
+class ExchangeRepo extends MapRepo {
+    constructor() {
+        super(exchangeInfoStore);
     }
 
     /**
@@ -24,7 +15,7 @@ class ExchangeRepo {
      * @returns {string} Exchange qualified ticker or original ticker
      */
     getExchangeTicker(tvTicker) {
-        return this._exchangeMap[tvTicker] || tvTicker;
+        return this.get(tvTicker) || tvTicker;
     }
 
     /**
@@ -33,6 +24,6 @@ class ExchangeRepo {
      * @param {string} exchange Exchange identifier
      */
     pinExchange(tvTicker, exchange) {
-        this._exchangeMap[tvTicker] = `${exchange}:${tvTicker}`;
+        this.set(tvTicker, `${exchange}:${tvTicker}`);
     }
 }

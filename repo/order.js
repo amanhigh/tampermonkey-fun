@@ -1,22 +1,9 @@
 /**
- * Repository for managing order list persistence and cleanup
+ * Repository for managing order lists
  */
-class OrderRepository {
-    /**
-     * @private
-     * @type {string}
-     */
-    _storeId;
-
-    /**
-     * @private
-     * @type {CategoryLists}
-     */
-    _categoryLists;
-
+class OrderRepo extends CategoryRepo {
     constructor() {
-        this._storeId = orderInfoStore;
-        this._categoryLists = this._load();
+        super(orderInfoStore);
     }
 
     /**
@@ -25,33 +12,6 @@ class OrderRepository {
      */
     getOrderCategoryLists() {
         return this._categoryLists;
-    }
-
-    /**
-     * Load order data from storage
-     * @private
-     * @returns {CategoryLists} Category lists containing orders
-     */
-    _load() {
-        const storeData = GM_getValue(this._storeId, {});
-        const orderMap = new Map();
-        
-        Object.entries(storeData).forEach(([key, value]) => {
-            orderMap.set(Number(key), new Set(value));
-        });
-        
-        return new CategoryLists(orderMap);
-    }
-
-    /**
-     * Save current category lists to storage
-     */
-    save() {
-        const storeData = {};
-        this._categoryLists._lists.forEach((value, key) => {
-            storeData[key] = [...value];
-        });
-        GM_setValue(this._storeId, storeData);
     }
 
     /**
@@ -68,33 +28,5 @@ class OrderRepository {
      */
     clean() {
         return this._processCleanup(true);
-    }
-
-    /**
-     * Process cleanup of items not in watchlist
-     * @private
-     * @param {boolean} executeChanges Whether to actually remove items and save
-     * @returns {number} Number of items affected
-     */
-    _processCleanup(executeChanges) {
-        const watchListTickers = getTickersWatchList();
-        let count = 0;
-
-        this._categoryLists._lists.forEach((list, key) => {
-            for (const ticker of [...list]) {
-                if (!watchListTickers.includes(ticker)) {
-                    if (executeChanges) {
-                        this._categoryLists.delete(key, ticker);
-                    }
-                    count++;
-                }
-            }
-        });
-
-        if (executeChanges) {
-            this.save();
-        }
-
-        return count;
     }
 }

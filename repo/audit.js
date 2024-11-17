@@ -1,16 +1,22 @@
 /**
  * Repository for managing alert audit results
  */
-class AuditRepo {
-    /**
-     * Map of audit results indexed by investing tickers
-     * @type {Map<string, AlertAudit>}
-     * @private
-     */
-    _auditMap;
-
+class AuditRepo extends MapRepo {
     constructor() {
-        this._auditMap = new Map();
+        super(auditInfoStore);
+    }
+
+    /**
+     * @protected
+     * @param {Object} data Raw storage data
+     * @returns {Map<string, AlertAudit>} Map of audit results
+     */
+    _deserialize(data) {
+        const auditMap = new Map();
+        Object.entries(data).forEach(([ticker, audit]) => {
+            auditMap.set(ticker, new AlertAudit(audit.ticker, audit.state));
+        });
+        return auditMap;
     }
 
     /**
@@ -23,24 +29,7 @@ class AuditRepo {
         if (!Object.values(AlertState).includes(state)) {
             throw new Error('Invalid alert state');
         }
-        this._auditMap.set(investingTicker, new AlertAudit(investingTicker, state));
-    }
-
-    /**
-     * Get audit result for investing ticker
-     * @param {string} investingTicker Investing.com ticker
-     * @returns {AlertAudit|undefined} Audit result if exists
-     */
-    getAuditResult(investingTicker) {
-        return this._auditMap.get(investingTicker);
-    }
-
-    /**
-     * Get all audit results
-     * @returns {AlertAudit[]} Array of all audit results
-     */
-    getAllAuditResults() {
-        return Array.from(this._auditMap.values());
+        this.set(investingTicker, new AlertAudit(investingTicker, state));
     }
 
     /**
@@ -49,21 +38,7 @@ class AuditRepo {
      * @returns {AlertAudit[]} Filtered audit results
      */
     getFilteredAuditResults(state) {
-        return this.getAllAuditResults().filter(result => result.state === state);
-    }
-
-    /**
-     * Get total number of audit results
-     * @returns {number} Count of audit results
-     */
-    getAuditResultsCount() {
-        return this._auditMap.size;
-    }
-
-    /**
-     * Clear all audit results
-     */
-    clear() {
-        this._auditMap.clear();
+        return Array.from(this._map.values())
+            .filter(result => result.state === state);
     }
 }

@@ -1,22 +1,41 @@
 /**
- * Manages pair information mapping between Investing.com tickers and their pair details
- * Persisted via GM_setValue(pairMapStore, pairMap)
+ * Maps Investing.com tickers to their pair information
+ * @type {Object<string, PairInfo>}
+ * Key: InvestingTicker (e.g., "HDFC-NSE")
+ * Value: PairInfo { name: string, pairId: string, exchange: string }
  */
-class PairRepo {
-    /**
-     * Maps Investing.com tickers to their pair information
-     * @type {Object<string, PairInfo>}
-     * Key: InvestingTicker (e.g., "HDFC-NSE")
-     * Value: PairInfo { name: string, pairId: string, exchange: string }
-     * @private
-     */
-    _pairMap;
+class PairRepo extends MapRepo {
+    constructor() {
+        super(pairMapStore);
+    }
 
     /**
-     * Initialize empty PairSilo
+     * @protected
+     * @param {Object} data Raw storage data
+     * @returns {Map<string, PairInfo>} Map of pair information
      */
-    constructor() {
-        this._pairMap = {};
+    _deserialize(data) {
+        const pairMap = new Map();
+        Object.entries(data).forEach(([ticker, info]) => {
+            pairMap.set(ticker, new PairInfo(
+                info.name,
+                info.pairId,
+                info.exchange
+            ));
+        });
+        return pairMap;
+    }
+
+    /**
+     * @protected
+     * @returns {Object} Serialized pair information
+     */
+    _serialize() {
+        const data = {};
+        this._map.forEach((pairInfo, ticker) => {
+            data[ticker] = pairInfo;
+        });
+        return data;
     }
 
     /**
@@ -25,7 +44,7 @@ class PairRepo {
      * @returns {PairInfo|null} Pair info if mapped, null otherwise
      */
     getPairInfo(investingTicker) {
-        return this._pairMap[investingTicker] || null;
+        return this.get(investingTicker) || null;
     }
 
     /**
@@ -33,16 +52,7 @@ class PairRepo {
      * @returns {string[]} Array of investing tickers
      */
     getAllInvestingTickers() {
-        return Object.keys(this._pairMap);
-    }
-
-    /**
-     * Check if investing ticker has pair mapping
-     * @param {string} investingTicker Investing.com ticker
-     * @returns {boolean} True if ticker is mapped
-     */
-    hasPairInfo(investingTicker) {
-        return investingTicker in this._pairMap;
+        return this.getAllKeys();
     }
 
     /**
@@ -51,47 +61,10 @@ class PairRepo {
      * @param {PairInfo} pairInfo Pair information
      */
     pinPair(investingTicker, pairInfo) {
-        this._pairMap[investingTicker] = new PairInfo(
+        this.set(investingTicker, new PairInfo(
             pairInfo.name,
             pairInfo.pairId,
             pairInfo.exchange
-        );
-    }
-
-    /**
-     * Remove pair information for investing ticker
-     * @param {string} investingTicker Investing.com ticker
-     */
-    removePair(investingTicker) {
-        delete this._pairMap[investingTicker];
-    }
-
-    /**
-     * Load PairSilo instance from GM storage
-     * @returns {PairRepo} Loaded instance
-     */
-    static load() {
-        const data = GM_getValue(pairMapStore, {});
-        const silo = new PairRepo();
-
-        // Convert raw data to PairInfo objects during load
-        for (const [ticker, info] of Object.entries(data)) {
-            silo._pairMap[ticker] = new PairInfo(
-                info.name,
-                info.pairId,
-                info.exchange
-            );
-        }
-
-        return silo;
-    }
-
-    /**
-     * Save current PairSilo instance to GM storage
-     * Converts PairInfo objects to plain objects for storage
-     */
-    save() {
-        // Store the _pairMap directly as PairInfo objects are simple data objects
-        GM_setValue(pairMapStore, this._pairMap);
+        ));
     }
 }

@@ -1,7 +1,7 @@
 /**
  * Base class for repositories managing category lists
  */
-class CategoryListRepository extends BaseRepo {
+class CategoryRepo extends BaseRepo {
     /**
      * @protected
      * @type {CategoryLists}

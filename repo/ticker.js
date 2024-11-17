@@ -1,26 +1,15 @@
 /**
  * Repository for managing TradingView to Investing.com ticker mappings
  */
-class TickerRepo {
+class TickerRepo extends MapRepo {
     /**
-     * Maps TradingView tickers to Investing.com tickers
-     * @type {Object<string, string>}
      * @private
+     * @type {Map<string, string>}
      */
-    _tickerMap;
+    _reverseMap;
 
-    /**
-     * Reverse mapping from Investing.com tickers to TradingView tickers
-     * @type {Object<string, string>}
-     * @private
-     */
-    _reverseTickerMap;
-
-    /**
-     * @param {Object<string, string>} tickerMap Initial ticker mappings
-     */
-    constructor(tickerMap = {}) {
-        this._tickerMap = tickerMap;
+    constructor() {
+        super(tickerInfoStore);
         this._buildReverseMap();
     }
 
@@ -30,7 +19,7 @@ class TickerRepo {
      * @returns {string|undefined} Investing ticker if mapped
      */
     getInvestingTicker(tvTicker) {
-        return this._tickerMap[tvTicker];
+        return this.get(tvTicker);
     }
 
     /**
@@ -39,7 +28,7 @@ class TickerRepo {
      * @returns {string} TV ticker if mapped, otherwise original ticker
      */
     getTvTicker(investingTicker) {
-        return this._reverseTickerMap[investingTicker] || investingTicker;
+        return this._reverseMap.get(investingTicker) || investingTicker;
     }
 
     /**
@@ -48,8 +37,8 @@ class TickerRepo {
      * @param {string} investingTicker Investing.com ticker
      */
     pinInvestingTicker(tvTicker, investingTicker) {
-        this._tickerMap[tvTicker] = investingTicker;
-        this._reverseTickerMap[investingTicker] = tvTicker;
+        this.set(tvTicker, investingTicker);
+        this._reverseMap.set(investingTicker, tvTicker);
     }
 
     /**
@@ -57,9 +46,39 @@ class TickerRepo {
      * @private
      */
     _buildReverseMap() {
-        this._reverseTickerMap = {};
-        for (const [tvTicker, investingTicker] of Object.entries(this._tickerMap)) {
-            this._reverseTickerMap[investingTicker] = tvTicker;
+        this._reverseMap = new Map();
+        this._map.forEach((investingTicker, tvTicker) => {
+            this._reverseMap.set(investingTicker, tvTicker);
+        });
+    }
+
+    /**
+     * Override set to maintain reverse map
+     * @override
+     */
+    set(key, value) {
+        super.set(key, value);
+        this._reverseMap.set(value, key);
+    }
+
+    /**
+     * Override delete to maintain reverse map
+     * @override
+     */
+    delete(key) {
+        const value = this.get(key);
+        if (value) {
+            this._reverseMap.delete(value);
         }
+        return super.delete(key);
+    }
+
+    /**
+     * Override clear to maintain reverse map
+     * @override
+     */
+    clear() {
+        super.clear();
+        this._reverseMap.clear();
     }
 }

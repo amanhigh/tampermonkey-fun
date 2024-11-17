@@ -1,25 +1,26 @@
 /**
- * Repository for managing sequence preferences
+* Repository for managing sequence preferences
+* Stores custom sequence settings for specific tickers
+* Determines timeframe analysis pattern (MWD or YR)
+* @type {Object<string, string>}
+* Key: TVTicker (e.g., "HDFC")
+* Value: SequenceType ("MWD" or "YR")
+* Where:
+* - MWD: Monthly-Weekly-Daily sequence
+* - YR: Yearly-Range sequence
  */
-class SequenceRepo {
-    /**
-     * Stores custom sequence settings for specific tickers
-     * Determines timeframe analysis pattern (MWD or YR)
-     * @type {Object<string, string>}
-     * Key: TVTicker (e.g., "HDFC")
-     * Value: SequenceType ("MWD" or "YR")
-     * Where:
-     * - MWD: Monthly-Weekly-Daily sequence
-     * - YR: Yearly-Range sequence
-     * @private
-     */
-    _sequenceMap;
+class SequenceRepo extends MapRepo {
+    constructor() {
+        super(sequenceInfoStore);
+    }
 
     /**
-     * @param {Object<string, string>} sequenceMap Initial sequence mappings
+     * @protected
+     * @param {Object} data Raw storage data
+     * @returns {Map<string, string>} Map of sequence preferences
      */
-    constructor(sequenceMap = {}) {
-        this._sequenceMap = sequenceMap;
+    _deserialize(data) {
+        return new Map(Object.entries(data));
     }
 
     /**
@@ -29,7 +30,7 @@ class SequenceRepo {
      * @returns {string} Sequence type (MWD or YR)
      */
     getSequence(tvTicker, defaultSequence) {
-        return this._sequenceMap[tvTicker] || defaultSequence;
+        return this.get(tvTicker) || defaultSequence;
     }
 
     /**
@@ -38,6 +39,6 @@ class SequenceRepo {
      * @param {string} sequence Sequence type
      */
     pinSequence(tvTicker, sequence) {
-        this._sequenceMap[tvTicker] = sequence;
+        this.set(tvTicker, sequence);
     }
 }
