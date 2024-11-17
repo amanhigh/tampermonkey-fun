@@ -28,6 +28,20 @@ class PairInfo {
 }
 
 /**
+ * Represents the result of an alert audit for a ticker
+ */
+class AlertAudit {
+    ticker
+    state
+
+    constructor(ticker, state) {
+        this.ticker = ticker;
+        this.state = state;
+    }
+}
+
+
+/**
  * Enum for different alert states
  */
 const AlertState = {
