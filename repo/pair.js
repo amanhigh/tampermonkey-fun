@@ -2,7 +2,7 @@
  * Manages pair information mapping between Investing.com tickers and their pair details
  * Persisted via GM_setValue(pairMapStore, pairMap)
  */
-class PairSilo {
+class PairRepo {
     /**
      * Maps Investing.com tickers to their pair information
      * @type {Object<string, PairInfo>}
@@ -68,11 +68,11 @@ class PairSilo {
 
     /**
      * Load PairSilo instance from GM storage
-     * @returns {PairSilo} Loaded instance
+     * @returns {PairRepo} Loaded instance
      */
     static load() {
         const data = GM_getValue(pairMapStore, {});
-        const silo = new PairSilo();
+        const silo = new PairRepo();
 
         // Convert raw data to PairInfo objects during load
         for (const [ticker, info] of Object.entries(data)) {
