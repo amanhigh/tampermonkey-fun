@@ -2,8 +2,11 @@
  * Repository for managing flag lists
  */
 class FlagRepo extends CategoryRepo {
-    constructor() {
-        super(flagInfoStore);
+    /**
+     * @param {RepoCron} repoCron Repository auto-save manager
+     */
+    constructor(repoCron) {
+        super(repoCron, "flagRepo");
     }
 
     /**

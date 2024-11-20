@@ -8,8 +8,11 @@ class TickerRepo extends MapRepo {
      */
     _reverseMap;
 
-    constructor() {
-        super(tickerInfoStore);
+    /**
+     * @param {RepoCron} repoCron Repository auto-save manager
+     */
+    constructor(repoCron) {
+        super(repoCron, "tickerRepo");
         this._buildReverseMap();
     }
 

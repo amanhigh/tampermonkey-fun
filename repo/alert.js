@@ -2,9 +2,12 @@
  * Repository for managing trading alerts
  */
 class AlertRepo extends MapRepo {
-    constructor() {
-        super(alertInfoStore);
-    }
+     /**
+     * @param {RepoCron} repoCron Repository auto-save manager
+     */
+     constructor(repoCron) {
+        super(repoCron, "alertRepo");
+     }
 
     /**
      * @protected

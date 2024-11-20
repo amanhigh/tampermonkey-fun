@@ -5,8 +5,11 @@
  * Value: ExchangeTicker (e.g., "NSE:HDFC")
  */
 class ExchangeRepo extends MapRepo {
-    constructor() {
-        super(exchangeInfoStore);
+    /**
+     * @param {RepoCron} repoCron Repository auto-save manager
+     */
+    constructor(repoCron) {
+        super(repoCron, "exchangeRepo");
     }
 
     /**

@@ -2,8 +2,11 @@
  * Repository for managing order lists
  */
 class OrderRepo extends CategoryRepo {
-    constructor() {
-        super(orderInfoStore);
+    /**
+     * @param {RepoCron} repoCron Repository auto-save manager
+     */
+    constructor(repoCron) {
+        super(repoCron, "orderRepo");
     }
 
     /**

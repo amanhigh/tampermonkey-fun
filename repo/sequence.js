@@ -10,8 +10,11 @@
 * - YR: Yearly-Range sequence
  */
 class SequenceRepo extends MapRepo {
-    constructor() {
-        super(sequenceInfoStore);
+    /**
+     * @param {RepoCron} repoCron Repository auto-save manager
+     */
+    constructor(repoCron) {
+        super(repoCron, "sequenceRepo");
     }
 
     /**

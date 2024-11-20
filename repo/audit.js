@@ -2,8 +2,11 @@
  * Repository for managing alert audit results
  */
 class AuditRepo extends MapRepo {
-    constructor() {
-        super(auditInfoStore);
+    /**
+     * @param {RepoCron} repoCron Repository auto-save manager
+     */
+    constructor(repoCron) {
+        super(repoCron, "auditRepo");
     }
 
     /**

@@ -8,11 +8,12 @@ class SetRepo extends BaseRepo {
      */
     _set;
 
-    /**
+     /**
+     * @param {RepoCron} repoCron Repository auto-save manager
      * @param {string} storeId Storage identifier
      */
-    constructor(storeId) {
-        super(storeId);
+     constructor(repoCron, storeId) {
+        super(repoCron, storeId);
         this._set = this._load();
     }
 

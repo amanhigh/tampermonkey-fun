@@ -2,7 +2,10 @@
  * Repository for managing recent tickers
  */
 class RecentTickerRepo extends SetRepo {
-    constructor() {
-        super(recentTickerStore);
+    /**
+     * @param {RepoCron} repoCron Repository auto-save manager
+     */
+    constructor(repoCron) {
+        super(repoCron, "recentRepo");
     }
 }

@@ -8,8 +8,12 @@ class CategoryRepo extends BaseRepo {
      */
     _categoryLists;
 
-    constructor(storeId) {
-        super(storeId);
+    /**
+     * @param {RepoCron} repoCron Repository auto-save manager
+     * @param {string} storeId Storage identifier
+     */
+    constructor(repoCron, storeId) {
+        super(repoCron, storeId);
         this._categoryLists = this._load();
     }
 
