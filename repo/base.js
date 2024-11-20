@@ -8,8 +8,20 @@ class BaseRepo {
      */
     _storeId;
 
-    constructor(storeId) {
+    /**
+     * @protected
+     * @type {RepoCron}
+     */
+    _repoCron;
+
+    /**
+     * @param {RepoCron} repoCron Repository auto-save manager
+     * @param {string} storeId Storage identifier
+     */
+    constructor(repoCron, storeId) {
+        this._repoCron = repoCron;
         this._storeId = storeId;
+        this._repoCron.registerRepository(this);
     }
 
     /**

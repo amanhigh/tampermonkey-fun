@@ -5,8 +5,11 @@
  * Value: PairInfo { name: string, pairId: string, exchange: string }
  */
 class PairRepo extends MapRepo {
-    constructor() {
-        super(pairMapStore);
+    /**
+     * @param {RepoCron} repoCron Repository auto-save manager
+     */
+    constructor(repoCron) {
+        super(repoCron, "pairRepo");
     }
 
     /**

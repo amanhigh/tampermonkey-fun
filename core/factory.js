@@ -74,6 +74,25 @@ class Factory {
         return this._getInstance('alertStore', () => new AlertStore()); // Example: creating a new AlertStore
     }
 
+    /**
+     * Creates or retrieves the RepoCron instance
+     * @returns {RepoCron} The RepoCron instance
+     */
+    static repoCron() {
+        return this._getInstance('repoCron', () => new RepoCron());
+    }
+
+    /**
+     * Creates or retrieves the PairRepo instance
+     * @returns {PairRepo} The PairRepo instance
+     */
+    static pairRepo() {
+        return this._getInstance('pairRepo', () => {
+            const repoCron = this.repoCron();
+            return new PairRepo(repoCron);
+        });
+    }
+
     static _getInstance(key, creator) {
         if (!this._instances[key]) {
             try {
