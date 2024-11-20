@@ -20,6 +20,22 @@ export default [
         AuditManager: true,
         AuditUIManager: true,
 
+        // Repositories
+        AlertRepo: true,
+        AuditRepo: true,
+        BaseRepo: true,
+        CategoryRepo: true,
+        ExchangeRepo: true,
+        FlagRepo: true,
+        MapRepo: true,
+        OrderRepo: true,
+        PairRepo: true,
+        RecentTickerRepo: true,
+        RepoCron: true,
+        SequenceRepo: true,
+        SetRepo: true,
+        TickerRepo: true,
+
         // Misc
         Constants: true,
 

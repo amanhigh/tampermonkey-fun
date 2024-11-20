@@ -83,6 +83,61 @@ class Factory {
     }
 
     /**
+     * Creates or retrieves the AlertRepo instance
+     * @returns {AlertRepo} The AlertRepo instance
+     */
+    static alertRepo() {
+        return this._getInstance('alertRepo', () => {
+            const repoCron = this.repoCron();
+            return new AlertRepo(repoCron);
+        });
+    }
+
+    /**
+     * Creates or retrieves the AuditRepo instance
+     * @returns {AuditRepo} The AuditRepo instance
+     */
+    static auditRepo() {
+        return this._getInstance('auditRepo', () => {
+            const repoCron = this.repoCron();
+            return new AuditRepo(repoCron);
+        });
+    }
+
+    /**
+     * Creates or retrieves the ExchangeRepo instance
+     * @returns {ExchangeRepo} The ExchangeRepo instance
+     */
+    static exchangeRepo() {
+        return this._getInstance('exchangeRepo', () => {
+            const repoCron = this.repoCron();
+            return new ExchangeRepo(repoCron);
+        });
+    }
+
+    /**
+     * Creates or retrieves the FlagRepo instance
+     * @returns {FlagRepo} The FlagRepo instance
+     */
+    static flagRepo() {
+        return this._getInstance('flagRepo', () => {
+            const repoCron = this.repoCron();
+            return new FlagRepo(repoCron);
+        });
+    }
+
+    /**
+     * Creates or retrieves the OrderRepo instance
+     * @returns {OrderRepo} The OrderRepo instance
+     */
+    static orderRepo() {
+        return this._getInstance('orderRepo', () => {
+            const repoCron = this.repoCron();
+            return new OrderRepo(repoCron);
+        });
+    }
+
+    /**
      * Creates or retrieves the PairRepo instance
      * @returns {PairRepo} The PairRepo instance
      */
@@ -90,6 +145,39 @@ class Factory {
         return this._getInstance('pairRepo', () => {
             const repoCron = this.repoCron();
             return new PairRepo(repoCron);
+        });
+    }
+
+    /**
+     * Creates or retrieves the RecentTickerRepo instance
+     * @returns {RecentTickerRepo} The RecentTickerRepo instance
+     */
+    static recentTickerRepo() {
+        return this._getInstance('recentTickerRepo', () => {
+            const repoCron = this.repoCron();
+            return new RecentTickerRepo(repoCron);
+        });
+    }
+
+    /**
+     * Creates or retrieves the SequenceRepo instance
+     * @returns {SequenceRepo} The SequenceRepo instance
+     */
+    static sequenceRepo() {
+        return this._getInstance('sequenceRepo', () => {
+            const repoCron = this.repoCron();
+            return new SequenceRepo(repoCron);
+        });
+    }
+
+    /**
+     * Creates or retrieves the TickerRepo instance
+     * @returns {TickerRepo} The TickerRepo instance
+     */
+    static tickerRepo() {
+        return this._getInstance('tickerRepo', () => {
+            const repoCron = this.repoCron();
+            return new TickerRepo(repoCron);
         });
     }
 
