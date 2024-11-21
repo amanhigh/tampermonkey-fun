@@ -38,9 +38,13 @@ export default [
 
         // Clients
         KohanClient: true,
+        KiteClient: true,
 
         // Models
         Constants: true,
+
+        // Functions
+        message: true,
       }
     },
     rules: {
