@@ -37,8 +37,10 @@ export default [
         TickerRepo: true,
 
         // Clients
+        BaseClient: true,
         KohanClient: true,
         KiteClient: true,
+        InvestingClient: true,
 
         // Models
         Constants: true,

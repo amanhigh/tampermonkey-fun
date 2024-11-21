@@ -1,20 +1,9 @@
 /**
  * Client for interacting with Investing.com API
- * @class InvestingClient
  */
-class InvestingClient {
-    /**
-     * Base URL for the Investing.com API
-     * @private
-     */
-    _baseUrl;
-
-    /**
-     * Creates an instance of InvestingClient
-     * @param {string} [baseUrl="https://in.investing.com"] - Base URL for the API
-     */
+class InvestingClient extends BaseClient {
     constructor(baseUrl = "https://in.investing.com") {
-        this._baseUrl = baseUrl;
+        super(baseUrl);
     }
 
     /**
@@ -40,7 +29,7 @@ class InvestingClient {
         });
 
         try {
-            const response = await this._makeRequest('/useralerts/service/create', {
+            await this._makeRequest('/useralerts/service/create', {
                 method: 'POST',
                 data: data.toString()
             });
@@ -117,37 +106,5 @@ class InvestingClient {
         } catch (error) {
             throw new Error(`Failed to get alerts: ${error.message}`);
         }
-    }
-
-    /**
-     * Makes an HTTP request to the Investing.com API
-     * @private
-     * @param {string} endpoint - API endpoint
-     * @param {Object} options - Request options
-     * @returns {Promise<any>} API response
-     */
-    async _makeRequest(endpoint, options) {
-        const headers = {
-            "Accept": "application/json, text/javascript, */*; q=0.01",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Content-Type": "application/x-www-form-urlencoded",
-            "X-Requested-With": "XMLHttpRequest"
-        };
-
-        return new Promise((resolve, reject) => {
-            GM.xmlHttpRequest({
-                ...options,
-                headers,
-                url: this._baseUrl + endpoint,
-                onload: (response) => {
-                    if (response.status >= 200 && response.status < 400) {
-                        resolve(response.response);
-                    } else {
-                        reject(new Error(`${response.status} ${response.statusText}: ${response.responseText}`));
-                    }
-                },
-                onerror: (error) => reject(new Error(error.statusText))
-            });
-        });
     }
 }

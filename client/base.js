@@ -1,14 +1,18 @@
 /**
- * Base client with common HTTP functionality
+ * Base client with common HTTP functionality for making API requests
+ * Provides common request handling, error management, and response parsing
+ * @class BaseClient
  */
 class BaseClient {
     /**
      * Base URL for API requests
      * @private
+     * @type {string}
      */
     _baseUrl;
 
     /**
+     * Creates an instance of BaseClient
      * @param {string} baseUrl - Base URL for API requests
      */
     constructor(baseUrl) {
@@ -18,18 +22,23 @@ class BaseClient {
     /**
      * Get the base URL
      * @protected
-     * @returns {string} Base URL
+     * @returns {string} Base URL for API requests
      */
     _getBaseUrl() {
         return this._baseUrl;
     }
 
     /**
-     * Makes an HTTP request
+     * Makes an HTTP request using GM.xmlHttpRequest
+     * Handles response parsing and error management
      * @protected
      * @param {string} endpoint - API endpoint
-     * @param {Object} options - Request options
-     * @returns {Promise<any>} API response
+     * @param {Object} options - Request configuration
+     * @param {string} [options.method] - HTTP method
+     * @param {Object} [options.headers] - Additional headers
+     * @param {string} [options.data] - Request body data
+     * @returns {Promise<any>} Promise resolving with response data
+     * @throws {Error} When request fails or response parsing fails
      */
     async _makeRequest(endpoint, options = {}) {
         const headers = {
