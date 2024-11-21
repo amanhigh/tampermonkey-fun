@@ -42,6 +42,7 @@ export default [
 
         // Models
         Constants: true,
+        PairInfo: true,
 
         // Functions
         message: true,
