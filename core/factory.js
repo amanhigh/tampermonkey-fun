@@ -5,6 +5,30 @@ class Factory {
     static _instances = {};
 
     /**
+     * Client Layer
+     * Handles external API interactions
+     */
+    static client = {
+        /**
+         * @returns {InvestingClient}
+         */
+        investing: () => Factory._getInstance('investingClient',
+            () => new InvestingClient()),
+
+        /**
+         * @returns {KiteClient}
+         */
+        kite: () => Factory._getInstance('kiteClient',
+            () => new KiteClient()),
+
+        /**
+         * @returns {KohanClient}
+         */
+        kohan: () => Factory._getInstance('kohanClient',
+            () => new KohanClient()),
+    };
+
+    /**
      * Repository Layer
      * Handles data persistence and storage
      */
