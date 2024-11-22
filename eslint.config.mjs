@@ -19,6 +19,7 @@ export default [
         // Managers
         AuditManager: true,
         AuditUIManager: true,
+        SymbolManager: true,
 
         // Repositories
         AlertRepo: true,

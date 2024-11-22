@@ -110,6 +110,12 @@ class Factory {
          */
         alert: () => Factory._getInstance('alertManager', 
             () => new AlertManager(Factory.repo.alert(), Factory.ui.alert())),
+
+        /**
+         * @returns {SymbolManager}
+         */
+        symbol: () => Factory._getInstance('symbolManager',
+            () => new SymbolManager()),
     };
 
     /**
