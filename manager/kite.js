@@ -11,34 +11,12 @@ class KiteManager {
     _margin = 0.005;
 
     /**
-     * GTT tab selector
-     * @private
-     * @type {string}
-     */
-    _gttSelector = '.router-link-exact-active';
-
-    /**
-     * Kite client for GTT operations
-     * @private
-     * @type {KiteClient}
-     */
-    _kiteClient;
-
-    /**
      * @param {SymbolManager} symbolManager
      * @param {KiteClient} kiteClient
      */
     constructor(symbolManager, kiteClient) {
         this._symbolManager = symbolManager;
         this._kiteClient = kiteClient;
-    }
-
-    /**
-     * Initializes Kite manager with GTT listeners
-     */
-    initialize() {
-        this._setupGttOrderListener();
-        this._setupGttTabListener();
     }
 
     /**
@@ -59,29 +37,19 @@ class KiteManager {
     }
 
     /**
-     * Handles GTT request events
-     * @param {Object} request - The GTT request object
-     * @param {string} request.symb - Symbol
-     * @param {number} request.qty - Quantity
-     * @param {number} request.ltp - Last traded price
-     * @param {number} request.sl - Stop loss
-     * @param {number} request.ent - Entry price
-     * @param {number} request.tp - Take profit
-     * @param {string} [request.id] - GTT ID for deletion
+     * Deletes a GTT order by ID
+     * @param {string} gttId - The GTT order ID to delete
      */
-    handleGttRequest(request) {
-        if (request.qty > 0) {
-            this.createOrder(
-                request.symb,
-                request.ltp,
-                request.sl,
-                request.ent,
-                request.tp,
-                request.qty
-            );
-        } else if (request.id) {
-            this._kiteClient.deleteGTT(request.id);
-        }
+    deleteOrder(gttId) {
+        this._kiteClient.deleteGTT(gttId);
+    }
+
+    /**
+     * Loads GTT orders and processes them with the provided callback
+     * @param {Function} callback - Callback to process loaded GTT data
+     */
+    loadOrders(callback) {
+        this._kiteClient.loadGTT(callback);
     }
 
     /**
@@ -119,28 +87,6 @@ class KiteManager {
 
         const body = `condition={"exchange":"NSE","tradingsymbol":"${pair}","trigger_values":[${slTrigger},${tpTrigger}],"last_price":${ltp}}&orders=[{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"SELL","quantity":${qty},"price":${sl},"order_type":"LIMIT","product":"CNC"},{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"SELL","quantity":${qty},"price":${tp},"order_type":"LIMIT","product":"CNC"}]&type=two-leg&expires_at=${expiry}`;
         this._kiteClient.createGTT(body);
-    }
-
-    /**
-     * Sets up GTT order change listener
-     * @private
-     */
-    _setupGttOrderListener() {
-        GM_addValueChangeListener(gttRequest, (keyName, oldValue, newValue) => {
-            this.handleGttRequest(newValue);
-        });
-    }
-
-    /**
-     * Sets up GTT tab refresh listener
-     * @private
-     */
-    _setupGttTabListener() {
-        waitJEE(this._gttSelector, ($e) => {
-            $e.click(() => setTimeout(() => {
-                this._kiteClient.loadGTT(saveMap);
-            }, 1000));
-        });
     }
 
     /**
