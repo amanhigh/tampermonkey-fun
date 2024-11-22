@@ -137,6 +137,42 @@ class Factory {
     };
 
     /**
+     * Utility Layer
+     * Handles utility operations and management
+     */
+    static util = {
+        /**
+         * @returns {DOMManager}
+         */
+        dom: () => Factory._getInstance('domManager',
+            () => new DOMManager()),
+
+        /**
+         * @returns {DOMObserver}
+         */
+        observer: () => Factory._getInstance('domObserver',
+            () => new DOMObserver()),
+
+        /**
+         * @returns {SearchManager}
+         */
+        search: () => Factory._getInstance('searchManager',
+            () => new SearchManager()),
+
+        /**
+         * @returns {SyncManager}
+         */
+        sync: () => Factory._getInstance('syncManager',
+            () => new SyncManager()),
+
+        /**
+         * @returns {KeyManager}
+         */
+        key: () => Factory._getInstance('keyManager',
+            () => new KeyManager(Factory.util.sync()))
+    };
+
+    /**
      * UI Layer
      * Handles user interface components
      */

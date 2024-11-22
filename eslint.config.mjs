@@ -25,6 +25,13 @@ export default [
         SymbolManager: true,
         KiteManager: true,
 
+        // Utils
+        DOMObserver: true,
+        KeyManager: true,
+        SearchManager: true,
+        SyncManager: true,
+        DOMManager: true,
+
         // Repositories
         AlertRepo: true,
         AuditRepo: true,
