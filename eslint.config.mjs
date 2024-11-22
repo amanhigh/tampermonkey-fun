@@ -46,6 +46,8 @@ export default [
         // Models
         Constants: true,
         PairInfo: true,
+        Order: true,
+        GttOrderMap: true,
 
         // Functions
         message: true,

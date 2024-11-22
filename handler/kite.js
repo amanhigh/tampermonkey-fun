@@ -52,6 +52,39 @@ class KiteHandler {
     }
 
     /**
+     * Generates a map of GTT orders based on the response from the GTT API
+     * Generates GTT Order Event in GM Cache
+     * @param {Object} gttResponse - The response object from the GTT API
+     * @private
+     */
+    _saveGttMap(gttResponse) {
+        let gttOrder = new GttOrderMap();
+
+        gttResponse.data.forEach((gtt) => {
+            if (gtt.status === "active") {
+                const symbol = this._symbolManager.kiteToTv(gtt.orders[0].tradingsymbol);
+                const order = new Order(
+                    symbol,
+                    gtt.orders[0].quantity,
+                    gtt.type,
+                    gtt.id,
+                    gtt.condition.trigger_values
+                );
+                gttOrder.addOrder(symbol, order);
+            }
+        });
+
+        const length = gttOrder.getCount();
+        if (length > 0) {
+            // TODO: Move to Repo
+            GM_setValue(gttOrderEvent, gttOrder);
+            message(`GTT Map Built. Count: ${length}`, 'green');
+        } else {
+            message('GttMap Empty Not Storing', 'red');
+        }
+    }
+
+    /**
      * Sets up GTT order change listener
      * @private
      */
@@ -68,7 +101,7 @@ class KiteHandler {
     _setupGttTabListener() {
         waitJEE(this._gttSelector, ($e) => {
             $e.click(() => setTimeout(() => {
-                this._kiteManager.loadOrders(saveMap);
+                this._kiteManager.loadOrders(response => this._saveGttMap(response));
             }, 1000));
         });
     }
