@@ -95,6 +95,18 @@ class Factory {
     };
 
     /**
+     * Handler Layer
+     * Handles specific domain-specific logic and interactions
+     */
+    static handler = {
+        /**
+         * @returns {KiteHandler}
+         */
+        kite: () => Factory._getInstance('kiteHandler',
+            () => new KiteHandler(Factory.manager.kite())),
+    };
+
+    /**
      * Manager Layer
      * Handles business logic and coordination
      */
@@ -116,6 +128,12 @@ class Factory {
          */
         symbol: () => Factory._getInstance('symbolManager',
             () => new SymbolManager()),
+
+        /**
+         * @returns {KiteManager}
+         */
+        kite: () => Factory._getInstance('kiteManager', 
+            () => new KiteManager(Factory.manager.symbol(), Factory.client.kite())),
     };
 
     /**

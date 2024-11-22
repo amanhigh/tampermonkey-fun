@@ -16,10 +16,14 @@ export default [
         ...globals.greasemonkey,   // TamperMonkey/GreaseMonkey globals
         ...globals.jquery,         // jQuery globals ($, jQuery)
 
+        // Handler
+        KiteHandler: true,
+
         // Managers
         AuditManager: true,
         AuditUIManager: true,
         SymbolManager: true,
+        KiteManager: true,
 
         // Repositories
         AlertRepo: true,
