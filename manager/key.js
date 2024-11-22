@@ -2,8 +2,11 @@
  * Manages keyboard input detection and state
  */
 class KeyManager {
-    constructor() {
-        // Private state for double key detection
+    /**
+     * @param {SyncManager} syncManager - Instance of SyncManager for coordination
+     */
+    constructor(syncManager) {
+        this._syncManager = syncManager;
         this._doubleKeyState = {
             init: false,
             begin: false,
@@ -72,12 +75,12 @@ class KeyManager {
                 this._doubleKeyState.begin = this._doubleKeyState.end = false;
 
                 // W1: Enter Begin (Too Fast Keys Filtered)
-                waitOn("fastDoubleKeyInput", 50, () => {
+                this._syncManager.waitOn("fastDoubleKeyInput", 50, () => {
                     this._doubleKeyState.begin = true;
                 });
 
                 // W4: Reached End Reset Process
-                waitOn("doubleKeyInput", 200, () => {
+                this._syncManager.waitOn("doubleKeyInput", 200, () => {
                     this._doubleKeyState.end = true;
                     this._doubleKeyState.init = false;
                 });
