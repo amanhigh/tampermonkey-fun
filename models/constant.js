@@ -75,12 +75,6 @@ const Constants = (function() {
                 ALT_CREATE_BTN_ID:'aman-alert-create',  // Old Name: altCreateBtnId
                 JOURNAL_BTN_ID:'aman-journal-btn'  // Old Name: journalBtnId
             },
-            SILOS:{
-                DATA:'dataSilo',  // Old Name: dataSiloStore
-                ORDER_INFO:'orderSilo',  // Old Name: orderInfoStore
-                FLAG_INFO:'flagSilo',  // Old Name: flagInfoStore
-                PAIR_MAP:'pairSilo'  // Old Name: pairMapStore
-            },
             EVENTS:{
                 GTT_ORDER:"gttOrderEvent",  // Old Name: gttOrderEvent
                 TV_WATCH_CHANGE:"tvWatchChangeEvent",  // Old Name: tvWatchChangeEvent
