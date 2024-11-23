@@ -146,7 +146,7 @@ class Factory {
         /**
          * @returns {RecentTickerRepo}
          */
-        recent: () => Factory._getInstance('recentRepo', 
+        recentTicker: () => Factory._getInstance('recentTickerRepo', 
             () => new RecentTickerRepo(Factory.repo.cron())),
 
         /**
@@ -172,6 +172,35 @@ class Factory {
          */
         kite: () => Factory._getInstance('kiteHandler',
             () => new KiteHandler(Factory.manager.kite())),
+
+        /**
+         * @returns {CommandInputHandler}
+         */
+        commandInput: () => Factory._getInstance('commandInputHandler',
+            () => new CommandInputHandler(
+                Factory.util.event(),
+                Constants.SELECTORS.INPUT_BOX.INPUT_ID
+            )),
+
+        /**
+         * @returns {DisplayInputHandler}
+         */
+        displayInput: () => Factory._getInstance('displayInputHandler',
+            () => new DisplayInputHandler(
+                Factory.util.event(),
+                Constants.SELECTORS.INPUT_BOX.DISPLAY_ID,
+                Factory.manager.sequence(),
+                Factory.manager.tradingView()
+            )),
+
+        /**
+         * @returns {RecentCheckboxHandler}
+         */
+        recentCheckbox: () => Factory._getInstance('recentCheckboxHandler',
+            () => new RecentCheckboxHandler(
+                Constants.SELECTORS.CHECK_BOX.RECENT_ID,
+                Factory.manager.ticker()
+            ))
     };
 
     /**
@@ -195,7 +224,34 @@ class Factory {
          * @returns {SymbolManager}
          */
         symbol: () => Factory._getInstance('symbolManager',
-            () => new SymbolManager()),
+            () => new SymbolManager(
+                Factory.repo.ticker(),
+                Factory.repo.exchange()
+            )),
+
+        /**
+         * @returns {SequenceManager}
+         */
+        sequence: () => Factory._getInstance('sequenceManager',
+            () => new SequenceManager(
+                Factory.repo.sequence()
+            )),
+
+        /**
+         * @returns {TradingViewManager}
+         */
+        tradingView: () => Factory._getInstance('tradingViewManager',
+            () => new TradingViewManager(
+                Factory.manager.symbol()
+            )),
+
+        /**
+         * @returns {TickerManager}
+         */
+        ticker: () => Factory._getInstance('tickerManager',
+            () => new TickerManager(
+                Factory.repo.recentTicker()
+            )),
 
         /**
          * @returns {KiteManager}

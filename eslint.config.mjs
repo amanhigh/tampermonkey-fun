@@ -18,12 +18,18 @@ export default [
 
         // Handler
         KiteHandler: true,
+        CommandInputHandler: true,
+        DisplayInputHandler: true,
+        RecentCheckboxHandler: true,
 
         // Managers
         AuditManager: true,
         AuditUIManager: true,
         SymbolManager: true,
         KiteManager: true,
+        SequenceManager: true,
+        TradingViewManager: true,
+        TickerManager: true,
 
         // Utils
         DOMObserver: true,
