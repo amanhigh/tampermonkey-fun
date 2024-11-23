@@ -28,10 +28,10 @@ class TickerRepo extends MapRepo {
     /**
      * Get TV ticker for given investing ticker
      * @param {string} investingTicker Investing.com ticker
-     * @returns {string} TV ticker if mapped, otherwise original ticker
+     * @returns {string|null} TV ticker if mapped, otherwise null
      */
     getTvTicker(investingTicker) {
-        return this._reverseMap.get(investingTicker) || investingTicker;
+        return this._reverseMap.get(investingTicker) || null;
     }
 
     /**

@@ -83,7 +83,7 @@ class SymbolManager {
      * @returns {string} TV ticker if mapped, otherwise original ticker
      */
     investingToTv(investingTicker) {
-        return this._tickerRepo.getTvTicker(investingTicker);
+        return this._tickerRepo.getTvTicker(investingTicker) || investingTicker;
     }
 
     /**
