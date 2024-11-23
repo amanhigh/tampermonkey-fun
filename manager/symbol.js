@@ -23,10 +23,14 @@ class SymbolManager {
     /**
      * Initializes the SymbolManager with reverse mappings
      * @constructor
+     * @param {TickerRepo} tickerRepo - Repository for ticker mappings
+     * @param {ExchangeRepo} exchangeRepo - Repository for exchange mappings
      */
-    constructor() {
+    constructor(tickerRepo, exchangeRepo) {
         this._tvToKiteSymbolMap = this._generateTvToKiteSymbolMap();
         Object.freeze(this._tvToKiteSymbolMap);
+        this._tickerRepo = tickerRepo;
+        this._exchangeRepo = exchangeRepo;
     }
 
     /**
@@ -62,5 +66,51 @@ class SymbolManager {
                 reverseMap[tvSymbol] = kiteSymbol;
                 return reverseMap;
             }, {});
+    }
+
+    /**
+     * Maps TradingView ticker to Investing ticker
+     * @param {string} tvTicker - TradingView ticker
+     * @returns {string|undefined} Investing ticker if mapped
+     */
+    tvToInvesting(tvTicker) {
+        return this._tickerRepo.getInvestingTicker(tvTicker);
+    }
+
+    /**
+     * Maps Investing ticker to TradingView ticker
+     * @param {string} investingTicker - Investing.com ticker
+     * @returns {string} TV ticker if mapped, otherwise original ticker
+     */
+    investingToTv(investingTicker) {
+        return this._tickerRepo.getTvTicker(investingTicker);
+    }
+
+    /**
+     * Maps TradingView ticker to Exchange ticker
+     * @param {string} tvTicker - TradingView ticker
+     * @returns {string} Exchange qualified ticker or original ticker
+     */
+    tvToExchangeTicker(tvTicker) {
+        return this._exchangeRepo.getExchangeTicker(tvTicker);
+    }
+
+    /**
+     * Creates mapping between TradingView and Investing tickers
+     * @param {string} tvTicker - TradingView ticker
+     * @param {string} investingTicker - Investing.com ticker
+     */
+    createTvToInvestingMapping(tvTicker, investingTicker) {
+        this._tickerRepo.pinInvestingTicker(tvTicker, investingTicker);
+        // TODO: mapAlert(investingTicker, getExchange()); ?
+    }
+
+    /**
+     * Creates mapping between TradingView ticker and Exchange
+     * @param {string} tvTicker - TradingView ticker
+     * @param {string} exchange - Exchange identifier (e.g., "NSE")
+     */
+    createTvToExchangeTickerMapping(tvTicker, exchange) {
+        this._exchangeRepo.pinExchange(tvTicker, exchange);
     }
 }
