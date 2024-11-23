@@ -68,6 +68,14 @@ const MIN_SELECTED_TICKERS = 2;
  * @class TradingViewManager
  */
 class TradingViewManager {
+
+    /**
+     * @param {SymbolManager} symbolManager Manager for symbol operations
+     */
+    constructor(symbolManager) {
+        this._symbolManager = symbolManager;
+    }
+
     /**
      * Retrieves the name from the DOM
      * @returns {string} The name retrieved from the DOM
@@ -82,6 +90,15 @@ class TradingViewManager {
      */
     getTicker() {
         return $(TradingViewDomConfig.BASIC.TICKER).html();
+    }
+
+    /**
+     * Gets current ticker and maps it to Investing ticker
+     * @returns {string} Mapped Investing ticker or original if no mapping exists
+     */
+    getInvestingTicker() {
+        const tvTicker = this.getTicker();
+        return this._symbolManager.tvToInvesting(tvTicker);
     }
 
     /**
