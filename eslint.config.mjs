@@ -59,9 +59,6 @@ export default [
         PairInfo: true,
         Order: true,
         GttOrderMap: true,
-
-        // Functions
-        message: true,
       }
     },
     rules: {

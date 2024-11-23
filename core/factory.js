@@ -1,5 +1,73 @@
 /**
- * Factory for creating and managing singleton instances
+ * Project Architecture Overview
+ * ----------------------------
+ * Greasemonkey Script Architecture
+ * Note: Due to Greasemonkey script constraints, ES6 modules (import/export) are not supported.
+ * All code must be in global scope with proper namespacing through classes and factory pattern.
+ * 
+ * 1. Layer Structure and Dependencies:
+ *    
+ *    Repository/Client ← Manager ← Handler
+ *    
+ *    [Handler Layer]
+ *    - Handles external events (UI, Greasemonkey)
+ *    - Manages user interactions
+ *    - Coordinates UI updates
+ *    - Example: KiteHandler, AlertHandler
+ *    - Cross-talk permitted but not recommended
+ *    
+ *    [Manager Layer]
+ *    - Contains core business logic
+ *    - Coordinates between handlers and repositories/clients
+ *    - Implements business rules and workflows
+ *    - Example: KiteManager, AlertManager
+ *    - Cross-talk allowed and common via constructor injection
+ *    
+ *    [Repository/Client Layer]
+ *    - Repository: Handles data persistence and storage
+ *    - Client: Handles external service integrations
+ *    - Examples: AlertRepo, KiteClient
+ *    - STRICT: No cross-talk allowed, must be independent
+ * 
+ * 2. Dependency and Communication Rules:
+ *    Vertical Dependencies:
+ *    - Handlers can depend on Managers
+ *    - Managers can depend on Repositories and Clients
+ *    - Repositories/Clients must be independent
+ *    - STRICT: No reverse dependencies allowed
+ *      × Repository cannot depend on Manager
+ *      × Manager cannot depend on Handler
+ *    
+ *    Horizontal Communication (Cross-talk):
+ *    - Manager Layer: ✓ Allowed and common
+ *      Example: AlertManager requires AuditManager in constructor
+ *    - Handler Layer: ⚠️ Permitted but not recommended
+ *      Should be coordinated through managers when possible
+ *    - Repository/Client Layer: ✗ Strictly forbidden
+ *      Must remain independent for data integrity
+ * 
+ * 3. Utility Classes:
+ *    - Support classes that can be used across layers
+ *    - Example: DOMManager, SyncManager, KeyManager
+ *    - Generally stateless or with controlled state
+ * 
+ * 4. Factory Pattern:
+ *    - Manages singleton instances
+ *    - Handles dependency injection
+ *    - Organized by layer (client, repo, manager, handler)
+ *    - Ensures proper dependency flow
+ *    - Facilitates allowed cross-talk through constructor injection
+ * 
+ * Usage Examples:
+ * // Cross-talk through constructor injection
+ * // Factory ensures proper injection
+ * static manager = {
+ *     alert: () => Factory._getInstance('alertManager', 
+ *         () => new AlertManager(
+ *             Factory.repo.alert(),
+ *             Factory.manager.audit()  // Cross-talk dependency injected
+ *         ))
+ * };
  */
 class Factory {
     static _instances = {};
