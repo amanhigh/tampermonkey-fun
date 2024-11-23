@@ -4,9 +4,13 @@
 class PaintManager {
     /**
      * Creates a new PaintManager instance
+     * @param {FlagRepo} flagRepo - Repository for managing flags
+     * @param {OrderRepo} orderRepo - Repository for managing orders
      */
-    constructor() {
+    constructor(flagRepo, orderRepo) {
         this.colorList = Constants.SELECTORS.BASIC.COLOR_LIST;
+        this.flagRepo = flagRepo;
+        this.orderRepo = orderRepo;
     }
 
     /**
@@ -44,5 +48,41 @@ class PaintManager {
         ).parents(Constants.SELECTORS.WATCHLIST.ITEM_SELECTOR)
          .find(Constants.SELECTORS.FLAGS.SELECTOR)
          .css('color', color);
+    }
+
+    /**
+     * Paint all tickers and their flags based on data from repositories
+     * @param {string} selector - The selector for ticker elements
+     */
+    paintTickers(selector) {
+        const orderCategoryLists = this.orderRepo.getOrderCategoryLists();
+        const flagCategoryLists = this.flagRepo.getFlagCategoryLists();
+
+        for (let i = 0; i < this.colorList.length; i++) {
+            const color = this.colorList[i];
+            const orderSymbols = orderCategoryLists.get(i);
+            const flagSymbols = flagCategoryLists.get(i);
+
+            // Use applyCss directly for painting element colors
+            this.applyCss(selector, orderSymbols, { 'color': color });
+            this.paintFlags(selector, flagSymbols, color);
+        }
+    }
+
+    /**
+     * Resets the colors of the specified selector to the default color.
+     * @param {string} selector - The selector for the elements to reset the colors
+     * @throws {Error} If selector is missing
+     */
+    resetColors(selector) {
+        if (!selector) {
+            throw new Error('Selector is required');
+        }
+
+        // Reset element colors to default (assumed to be white)
+        this.applyCss(selector, null, { 'color': this.colorList[5] }, true);
+
+        // Reset flag colors
+        this.paintFlags(selector, null, this.colorList[5], true);
     }
 }
