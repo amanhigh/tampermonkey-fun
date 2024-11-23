@@ -63,7 +63,9 @@ export default [
     },
     rules: {
       "no-unused-vars": "warn",
-      "no-undef": "error"
+      "no-undef": "error",
+      "max-lines": ["warn", 200],
+      "max-lines": ["error", 500],
     }
   }
 ];
