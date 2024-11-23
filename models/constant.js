@@ -4,10 +4,6 @@ const Constants = (function() {
         // Selectors
         SELECTORS: {
             BASIC: {
-                NAME_SELECTOR: 'div[class*=mainTitle]', // Old name: nameSelector
-                EXCHANGE_SELECTOR: 'div[class*=exchangeTitle]', // Old name: exchangeSelector
-                TICKER_SELECTOR: `${this.SELECTORS.HEADER.HEADER_SELECTOR} > div`, // Old name: tickerSelector
-                LTP_SELECTOR: 'span[class^="priceWrapper"] > span:first-child', // Old name: ltpSelector
                 COLOR_LIST: ['orange', 'red', 'dodgerblue', 'cyan', 'lime', 'white', 'brown', 'darkkhaki'] // Old name: colorList
             },
             HEADER: {
@@ -18,11 +14,9 @@ const Constants = (function() {
             },
             POPUPS: {
                 SEARCH_POPUP_SELECTOR: 'input[class^=search]', // Old name: searchPopupSelector
-                AUTO_ALERT_SELECTOR: "span:contains(\'Copy price\')",
                 CLOSE_TEXTBOX_SELECTOR: 'button:contains("Ok")', // Old name: closeTextboxSelector
             },
             REPLAY: {
-                ACTIVE_SELECTOR: '#header-toolbar-replay[class*=isActive]', // Old name: replayActiveSelector
                 PLAY_PAUSE_SELECTOR: 'div[class*=replayToolbar] span[class*=icon]:nth(1)' // Old name: replayPlayPauseSelector
             },
             ORDER_PANEL: {
@@ -36,17 +30,12 @@ const Constants = (function() {
             SCREENER: {
                 SELECTOR: "tbody.tv-data-table__tbody:nth(1)", // Old name: screenerSelector
                 LINE_SELECTOR: `tr.tv-screener-table__result-row`, // Old name: screenerLineSelector
-                SYMBOL_SELECTOR: '.tv-_symbol', // Old name: screenerSymbolSelector
-                SELECTED_SELECTOR: '.tv-screener-table__result-row--selected', // Old name: screenerSelectedSelector
-                BUTTON_SELECTOR: 'button[data-name=toggle-visibility-button]'
             },
             WATCHLIST:{
                 WIDGET_SELECTOR : 'div.widgetbar-widgetbody:first' ,  //Old Name : watchListWidgetSelector 
                 SELECTOR : `div[class^=listContainer]`,  //Old Name : watchListSelector 
                 ITEM_SELECTOR : `div[class*=symbol-]`,  //Old Name : watchListItemSelector 
                 LINE_SELECTOR : `${this.SELECTOR} > div > div`,  //Old Name : watchListLineSelector 
-                SYMBOL_SELECTOR : 'span[class*=symbolNameText]',  //Old Name : watchListSymbolSelector 
-                SELECTED_SELECTOR : 'div[class*=selected]' ,  //Old Name : watchListSelectedSelector 
             },
             FLAGS:{
                 SELECTOR : "div[class^=uiMarker]",  //Old Name : flagSelector 
