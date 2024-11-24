@@ -1,4 +1,8 @@
 class ButtonUtil {
+    constructor(uiUtil) {
+        this.uiUtil = uiUtil;
+    }
+
     /**
      * Builds a button element with the specified id, text, and click handler.
      *
@@ -65,7 +69,7 @@ class ButtonUtil {
           $(this).css('background-color', 'white');
         }
       });
-  
-      return $('<label>').append(radio).append(label);
+
+    return this.uiUtil.buildLabel(label).prepend(radio);
     }
   }

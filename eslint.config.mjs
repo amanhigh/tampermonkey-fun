@@ -42,6 +42,7 @@ export default [
         WaitUtil: true,
         ButtonUtil: true,
         SmartPrompt: true,
+        UIUtil: true,
 
         // Repositories
         AlertRepo: true,

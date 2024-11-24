@@ -325,13 +325,19 @@ class Factory {
          * @returns {ButtonUtil}
          */
         button: () => Factory._getInstance('buttonUtil',
-            () => new ButtonUtil()),
+            () => new ButtonUtil(Factory.util.ui())),
 
         /**
          * @returns {SmartPrompt}
          */
         smart: () => Factory._getInstance('smartPrompt',
             () => new SmartPrompt()),
+
+        /**
+         * @returns {UIUtil}
+         */
+        ui: () => Factory._getInstance('uiUtil',
+            () => new UIUtil()),
         
     };
 
