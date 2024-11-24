@@ -248,7 +248,6 @@ class Factory {
          */
         screener: () => Factory._getInstance('tradingViewScreenerManager',
             () => new TradingViewScreenerManager(
-                Factory.manager.tradingView(),
                 Factory.manager.paint(),
                 Factory.repo.recentTicker(),
                 Factory.repo.order()

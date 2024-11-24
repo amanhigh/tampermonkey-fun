@@ -19,7 +19,7 @@ class TradingViewWatchlistManager {
      * @param {boolean} [visible=false] - If true, only returns visible tickers
      * @returns {Array<string>} Array of watchlist tickers
      */
-    getWatchlistTickers(visible = false) {
+    getTickers(visible = false) {
         const selector = Constants.DOM.WATCHLIST.SYMBOL;
         return this._tickerListHelper(selector, visible);
     }
@@ -28,7 +28,7 @@ class TradingViewWatchlistManager {
      * Get selected tickers from watchlist
      * @returns {Array<string>} Array of selected ticker symbols
      */
-    getSelectedWatchlistTickers() {
+    getSelectedTickers() {
         const watchlist = Constants.DOM.WATCHLIST;
         return $(`${watchlist.SELECTED} ${watchlist.SYMBOL}:visible`)
             .toArray()
@@ -126,7 +126,7 @@ class TradingViewWatchlistManager {
      * @private
      */
     paintAlertFeedEvent() {
-        const watchList = this.getWatchlistTickers();
+        const watchList = this.getTickers();
         const recentList = Array.from(this.recentTickerRepo.getAll());
         const watchChangeEvent = new WatchChangeEvent(watchList, recentList);
         GM_setValue(Constants.STORAGE.EVENTS.TV_WATCH_CHANGE, watchChangeEvent);

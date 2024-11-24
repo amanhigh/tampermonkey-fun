@@ -4,21 +4,19 @@
  */
 class TradingViewScreenerManager {
     /**
-     * @param {TradingViewManager} tradingViewManager - TradingViewManager instance
      * @param {PaintManager} paintManager - PaintManager instance
      * @param {RecentTickerRepo} recentTickerRepo - Repository for recent tickers
      * @param {OrderRepo} orderRepo - Repository for orders
      * @constructor
      * @returns {Array<string>} Array of screener tickers
      */
-    constructor(tradingViewManager, paintManager, recentTickerRepo, orderRepo) {
-        this.tradingViewManager = tradingViewManager;
+    constructor(paintManager, recentTickerRepo, orderRepo) {
         this.paintManager = paintManager;
         this.recentTickerRepo = recentTickerRepo;
         this.orderRepo = orderRepo;
     }
 
-    getScreenerTickers(visible = false) {
+    getTickers(visible = false) {
         const selector = Constants.DOM.SCREENER.SYMBOL;
         return this._tickerListHelper(selector, visible);
     }
@@ -27,7 +25,7 @@ class TradingViewScreenerManager {
      * Get selected tickers from screener
      * @returns {Array<string>} Array of selected ticker symbols
      */
-    getSelectedScreenerTickers() {
+    getSelectedTickers() {
         const screener = Constants.DOM.SCREENER;
         return $(`${screener.SELECTED} ${screener.SYMBOL}:visible`)
             .toArray()
@@ -67,7 +65,7 @@ class TradingViewScreenerManager {
         this.paintManager.applyCss(screenerSymbolSelector, recentTickers, { color: colorList[3] });
 
         // Paint Fno
-        this.paintManager.applyCss(screenerSymbolSelector, this.fnoSymbols, Constants.UI.COLORS.FNO_CSS);
+        this.paintManager.applyCss(screenerSymbolSelector, Constants.EXCHANGE.FNO_SYMBOLS, Constants.UI.COLORS.FNO_CSS);
 
         // Paint Name and Flags
         this.paintManager.paintTickers(screenerSymbolSelector);

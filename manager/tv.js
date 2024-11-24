@@ -198,8 +198,8 @@ class TradingViewManager {
      */
     _getVisibleTickers() {
         return this.screenerManager.isScreenerVisible() ? 
-            this.screenerManager.getScreenerTickers(true) : 
-            this.watchlistManager.getWatchlistTickers(true);
+            this.screenerManager.getTickers(true) : 
+            this.watchlistManager.getTickers(true);
     }
 
     /**
