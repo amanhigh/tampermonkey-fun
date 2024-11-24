@@ -61,6 +61,6 @@ class WatchListHandler {
     }
 
     _applyFilters() {
-        filterChain.forEach((f) => FilterWatchList(f));
+        this.watchlistManager.applyFilters();
     }
 }

@@ -12,6 +12,7 @@ class TradingViewWatchlistManager {
         this.paintManager = paintManager;
         this.orderRepo = orderRepo;
         this.recentTickerRepo = recentTickerRepo;
+        this._filterChain = [];
     }
 
     /**
@@ -48,10 +49,10 @@ class TradingViewWatchlistManager {
             .map(s => s.innerHTML);
     }
 
-     /**
+    /**
      * Paints the TradingView watchlist
      */
-     paintWatchList() {
+    paintWatchList() {
         //Reset Color
         this.paintManager.resetColors(Constants.DOM.WATCHLIST.SYMBOL);
 
@@ -93,7 +94,6 @@ class TradingViewWatchlistManager {
      * @private
      */
     displaySetSummary() {
-        // TODO: Move to Handlers ?
         const $watchSummary = $(`#${Constants.UI.IDS.AREAS.SUMMARY}`);
         $watchSummary.empty();
 
@@ -108,7 +108,7 @@ class TradingViewWatchlistManager {
                 .appendTo($watchSummary);
 
             $label.mousedown((e) => {
-                this.filterWatchList({
+                this.addFilter({
                     color: $(e.target).data('color'),
                     index: e.which,
                     ctrl: e.originalEvent.ctrlKey,
@@ -123,7 +123,6 @@ class TradingViewWatchlistManager {
 
     /**
      * Creates and stores the WatchChangeEvent for the alert feed
-     * @private
      */
     paintAlertFeedEvent() {
         const watchList = this.getTickers();
@@ -133,24 +132,45 @@ class TradingViewWatchlistManager {
     }
 
     /**
+     * Adds a new filter to the filter chain
+     * @param {Object} filter - The filter to add
+     * @param {string} filter.color - The color of the filtered symbols
+     * @param {number} filter.index - The mouse button index (1, 2, or 3)
+     * @param {boolean} filter.ctrl - Whether the Ctrl key was pressed
+     * @param {boolean} filter.shift - Whether the Shift key was pressed
+     */
+    addFilter(filter) {
+        if (!filter.ctrl && !filter.shift) {
+            // Reset chain if no modifier keys
+            this._filterChain = [filter];
+        } else {
+            // Add to existing chain
+            this._filterChain.push(filter);
+        }
+        this.applyFilters();
+    }
+
+    /**
+     * Applies all active filters in the filter chain
+     */
+    applyFilters() {
+        this._filterChain.forEach(filter => this._filterWatchList(filter));
+    }
+
+    /**
      * Filters the watchlist symbols based on the provided filter parameters
+     * @private
      * @param {Object} filter - The filter parameters
      * @param {string} filter.color - The color of the filtered symbols
      * @param {number} filter.index - The mouse button index (1, 2, or 3)
      * @param {boolean} filter.ctrl - Whether the Ctrl key was pressed
      * @param {boolean} filter.shift - Whether the Shift key was pressed
      */
-    filterWatchList(filter) {
+    _filterWatchList(filter) {
         if (!filter.ctrl && !filter.shift) {
             // Hide Everything
             $(Constants.DOM.WATCHLIST.LINE_SELECTOR).hide();
             $(Constants.DOM.SCREENER.LINE_SELECTOR).hide();
-
-            // Reset Filter
-            this._filterChain = [filter];
-        } else {
-            // Add to Previous Filter
-            this._filterChain.push(filter);
         }
 
         switch (filter.index) {
