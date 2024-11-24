@@ -80,7 +80,7 @@ const Constants = (function() {
                 LINE: 'div[class^=listContainer] > div > div' // Old Name: watchListLineSelector
             },
             FLAGS: {
-                SYMBOL: "div[class^=uiMarker]", // Old Name: flagSelector
+                SYMBOL: "div[class^=uiMarker]", // Old Name: symbolFlagSelector
                 MARKING: "div[class^=uiMarker] > svg > path:nth(0)" // Old Name: flagMarkingSelector
             },
             TOOLBARS: {
