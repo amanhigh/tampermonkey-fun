@@ -1,7 +1,7 @@
 /**
  * Manages DOM operations and observations
  */
-class DOMManager {
+class WaitUtil {
     /**
      * Waits for element and executes callback
      * @param {string} selector - Element selector

@@ -48,7 +48,7 @@
  * 
  * 3. Utility Classes:
  *    - Support classes that can be used across layers
- *    - Example: DOMManager, SyncManager, KeyManager
+ *    - Example: WaitUtil, SyncManager, KeyManager
  *    - Generally stateless or with controlled state
  * 
  * 4. Factory Pattern:
@@ -293,10 +293,10 @@ class Factory {
      */
     static util = {
         /**
-         * @returns {DOMManager}
+         * @returns {WaitUtil}
          */
-        dom: () => Factory._getInstance('domManager',
-            () => new DOMManager()),
+        dom: () => Factory._getInstance('waitUtil',
+            () => new WaitUtil()),
 
         /**
          * @returns {DOMObserver}

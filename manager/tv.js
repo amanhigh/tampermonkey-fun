@@ -15,16 +15,16 @@ const TV_ERRORS = Object.freeze({
 class TradingViewManager {
     /**
      * @param {SymbolManager} symbolManager - Manager for symbol operations
-     * @param {DOMManager} domManager - Manager for DOM operations
+     * @param {WaitUtil} waitUtil - Manager for DOM operations
      * @param {PaintManager} paintManager - Instance of PaintManager
      * @param {OrderRepo} orderRepo - Instance of OrderRepo
      * @param {FlagRepo} flagRepo - Instance of FlagRepo
      * @param {TradingViewScreenerManager} screenerManager - Manager for screener operations
      * @param {TradingViewWatchlistManager} watchlistManager - Manager for watchlist operations
      */
-    constructor(symbolManager, domManager, paintManager, orderRepo, flagRepo, screenerManager, watchlistManager) {
+    constructor(symbolManager, waitUtil, paintManager, orderRepo, flagRepo, screenerManager, watchlistManager) {
         this.symbolManager = symbolManager;
-        this.domManager = domManager;
+        this.waitUtil = waitUtil;
         this.paintManager = paintManager;
         this.orderRepo = orderRepo;
         this.flagRepo = flagRepo;
@@ -93,7 +93,7 @@ class TradingViewManager {
      * @param {function} callback - Function to be called with the alert price
      */
     getCursorPrice(callback) {
-        this._domManager.waitJEE(Constants.DOM.POPUPS.AUTO_ALERT, (el) => {
+        this.waitUtil.waitJEE(Constants.DOM.POPUPS.AUTO_ALERT, (el) => {
             let match = PRICE_REGEX.exec(el.text());
             let altPrice = parseFloat(match[0].replace(/,/g, ''));
             callback(altPrice);
@@ -129,8 +129,8 @@ class TradingViewManager {
      */
     openTicker(ticker) {
         const exchangeTicker = this.symbolManager.tvToExchangeTicker(ticker);
-        this.domManager.waitClick(Constants.DOM.BASIC.TICKER);
-        this.domManager.waitInput(Constants.DOM.POPUPS.SEARCH, exchangeTicker);
+        this.waitUtil.waitClick(Constants.DOM.BASIC.TICKER);
+        this.waitUtil.waitInput(Constants.DOM.POPUPS.SEARCH, exchangeTicker);
     }
 
     /**

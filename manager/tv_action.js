@@ -3,11 +3,11 @@
  */
 class TradingViewActionManager {
     /**
-     * @param {DOMManager} domManager - DOM operation manager
+     * @param {WaitUtil} waitUtil - DOM operation manager
      * @param {TradingViewManager} tvManager - Trading view manager
      */
-    constructor(domManager, tvManager) {
-        this.domManager = domManager;
+    constructor(waitUtil, tvManager) {
+        this.waitUtil = waitUtil;
         this.tvManager = tvManager;
     }
 
@@ -46,8 +46,8 @@ class TradingViewActionManager {
      * Function to clear all items.
      */
     clearAll() {
-        this.domManager.waitJClick(Constants.DOM.SIDEBAR.DELETE_ARROW, () => {
-            this.domManager.waitJClick(Constants.DOM.SIDEBAR.DELETE_DRAWING);
+        this.waitUtil.waitJClick(Constants.DOM.SIDEBAR.DELETE_ARROW, () => {
+            this.waitUtil.waitJClick(Constants.DOM.SIDEBAR.DELETE_DRAWING);
         });
     }
 
@@ -90,7 +90,7 @@ class TradingViewActionManager {
      * Toggles the flag and updates watchlist
      */
     toggleFlag() {
-        this.domManager.waitJClick(Constants.DOM.FLAGS.SYMBOL);
+        this.waitUtil.waitJClick(Constants.DOM.FLAGS.SYMBOL);
         this.tvManager.onWatchListChange();
     }
 
@@ -98,7 +98,7 @@ class TradingViewActionManager {
      * Closes the text box dialog
      */
     closeTextBox() {
-        this.domManager.waitJClick(Constants.DOM.POPUPS.CLOSE_TEXTBOX);
+        this.waitUtil.waitJClick(Constants.DOM.POPUPS.CLOSE_TEXTBOX);
     }
 
     /**

@@ -39,7 +39,7 @@ export default [
         KeyManager: true,
         SearchManager: true,
         SyncManager: true,
-        DOMManager: true,
+        WaitUtil: true,
 
         // Repositories
         AlertRepo: true,
