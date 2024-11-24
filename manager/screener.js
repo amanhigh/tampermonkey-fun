@@ -9,7 +9,7 @@ class TradingViewScreenerManager {
      * @returns {Array<string>} Array of screener tickers
      */
     getScreenerTickers(visible = false) {
-        const selector = TradingViewDomConfig.SCREENER.SYMBOL;
+        const selector = Constants.DOM.SCREENER.SYMBOL;
         return this._tickerListHelper(selector, visible);
     }
 
@@ -18,7 +18,7 @@ class TradingViewScreenerManager {
      * @returns {Array<string>} Array of selected ticker symbols
      */
     getSelectedScreenerTickers() {
-        const screener = TradingViewDomConfig.SCREENER;
+        const screener = Constants.DOM.SCREENER;
         return $(`${screener.SELECTED} ${screener.SYMBOL}:visible`)
             .toArray()
             .map(s => s.innerHTML);
@@ -29,7 +29,7 @@ class TradingViewScreenerManager {
      * @returns {boolean} True if screener is visible
      */
     isScreenerVisible() {
-        return $(TradingViewDomConfig.SCREENER.BUTTON).attr('data-active') === 'false';
+        return $(Constants.DOM.SCREENER.BUTTON).attr('data-active') === 'false';
     }
 
     /**

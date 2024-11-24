@@ -9,7 +9,7 @@ class TradingViewWatchlistManager {
      * @returns {Array<string>} Array of watchlist tickers
      */
     getWatchlistTickers(visible = false) {
-        const selector = TradingViewDomConfig.WATCHLIST.SYMBOL;
+        const selector = Constants.DOM.WATCHLIST.SYMBOL;
         return this._tickerListHelper(selector, visible);
     }
 
@@ -18,7 +18,7 @@ class TradingViewWatchlistManager {
      * @returns {Array<string>} Array of selected ticker symbols
      */
     getSelectedWatchlistTickers() {
-        const watchlist = TradingViewDomConfig.WATCHLIST;
+        const watchlist = Constants.DOM.WATCHLIST;
         return $(`${watchlist.SELECTED} ${watchlist.SYMBOL}:visible`)
             .toArray()
             .map(s => s.innerHTML);
