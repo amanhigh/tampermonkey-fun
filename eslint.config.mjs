@@ -32,6 +32,7 @@ export default [
         TickerManager: true,
         TradingViewScreenerManager: true,
         TradingViewWatchlistManager: true,
+        PaintManager: true,
 
         // Utils
         DOMObserver: true,

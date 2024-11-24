@@ -4,8 +4,11 @@
  */
 class TradingViewScreenerManager {
     /**
-     * Retrieves screener tickers
-     * @param {boolean} [visible=false] - If true, only returns visible tickers
+     * @param {TradingViewManager} tradingViewManager - TradingViewManager instance
+     * @param {PaintManager} paintManager - PaintManager instance
+     * @param {RecentTickerRepo} recentTickerRepo - Repository for recent tickers
+     * @param {OrderRepo} orderRepo - Repository for orders
+     * @constructor
      * @returns {Array<string>} Array of screener tickers
      */
     constructor(tradingViewManager, paintManager, recentTickerRepo, orderRepo) {

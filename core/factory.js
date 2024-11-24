@@ -247,7 +247,12 @@ class Factory {
          * @returns {TradingViewScreenerManager}
          */
         screener: () => Factory._getInstance('tradingViewScreenerManager',
-            () => new TradingViewScreenerManager()),
+            () => new TradingViewScreenerManager(
+                Factory.manager.tradingView(),
+                Factory.manager.paint(),
+                Factory.repo.recentTicker(),
+                Factory.repo.order()
+            )),
 
 
         /**
@@ -257,6 +262,15 @@ class Factory {
             () => new TradingViewManager(
                 Factory.manager.symbol(),
                 Factory.util.dom()
+            )),
+
+        /**
+         * @returns {PaintManager}
+         */
+        paint: () => Factory._getInstance('paintManager',
+            () => new PaintManager(
+                Factory.repo.flag(),
+                Factory.repo.order()
             )),
 
         /**
