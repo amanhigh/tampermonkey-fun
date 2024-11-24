@@ -1,7 +1,7 @@
 /**
  * Manages keyboard input detection and state
  */
-class KeyManager {
+class KeyUtil {
     /**
      * @param {SyncUtil} syncUtil - Instance of SyncUtil for coordination
      */

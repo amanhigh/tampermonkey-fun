@@ -48,7 +48,7 @@
  * 
  * 3. Utility Classes:
  *    - Support classes that can be used across layers
- *    - Example: WaitUtil, SyncUtil, KeyManager
+ *    - Example: WaitUtil, SyncUtil, KeyUtil
  *    - Generally stateless or with controlled state
  * 
  * 4. Factory Pattern:
@@ -317,10 +317,10 @@ class Factory {
             () => new SyncUtil()),
 
         /**
-         * @returns {KeyManager}
+         * @returns {KeyUtil}
          */
         key: () => Factory._getInstance('keyManager',
-            () => new KeyManager(Factory.util.sync())),
+            () => new KeyUtil(Factory.util.sync())),
         /**
          * @returns {ButtonUtil}
          */
