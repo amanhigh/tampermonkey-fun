@@ -30,6 +30,8 @@ export default [
         SequenceManager: true,
         TradingViewManager: true,
         TickerManager: true,
+        TradingViewScreenerManager: true,
+        TradingViewWatchlistManager: true,
 
         // Utils
         DOMObserver: true,

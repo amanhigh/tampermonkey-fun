@@ -238,6 +238,19 @@ class Factory {
             )),
 
         /**
+         * @returns {TradingViewWatchlistManager}
+         */
+        watchlist: () => Factory._getInstance('tradingViewWatchlistManager',
+            () => new TradingViewWatchlistManager()),
+
+        /**
+         * @returns {TradingViewScreenerManager}
+         */
+        screener: () => Factory._getInstance('tradingViewScreenerManager',
+            () => new TradingViewScreenerManager()),
+
+
+        /**
          * @returns {TradingViewManager}
          */
         tradingView: () => Factory._getInstance('tradingViewManager',
