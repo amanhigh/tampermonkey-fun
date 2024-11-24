@@ -255,7 +255,8 @@ class Factory {
          */
         tradingView: () => Factory._getInstance('tradingViewManager',
             () => new TradingViewManager(
-                Factory.manager.symbol()
+                Factory.manager.symbol(),
+                Factory.util.dom()
             )),
 
         /**

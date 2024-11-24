@@ -13,11 +13,13 @@ const TV_ERRORS = Object.freeze({
  * @class TradingViewManager
  */
 class TradingViewManager {
-    /**
+     /**
      * @param {SymbolManager} symbolManager Manager for symbol operations
+     * @param {DOMManager} domManager Manager for DOM operations
      */
-    constructor(symbolManager) {
+     constructor(symbolManager, domManager) {
         this._symbolManager = symbolManager;
+        this._domManager = domManager;
     }
 
     /**
@@ -81,7 +83,7 @@ class TradingViewManager {
      * @param {function} callback - Function to be called with the alert price
      */
     getCursorPrice(callback) {
-        waitJEE(Constants.DOM.POPUPS.AUTO_ALERT, function (el) {
+        this._domManager.waitJEE(Constants.DOM.POPUPS.AUTO_ALERT, (el) => {
             let match = PRICE_REGEX.exec(el.text());
             let altPrice = parseFloat(match[0].replace(/,/g, ''));
             callback(altPrice);
