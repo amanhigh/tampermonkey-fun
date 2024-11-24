@@ -159,15 +159,6 @@ class TradingViewManager {
     }
 
     /**
-     * Retrieves the tickers from the watch list
-     * @param {boolean} [visible=false] - indicates whether the tickers should be visible
-     * @returns {Array<string>} Array of watch list tickers
-     */
-    getTickersWatchList(visible = false) {
-        return this._tickerListHelper(TradingViewDomConfig.WATCHLIST.SYMBOL, visible);
-    }
-
-    /**
      * Retrieves tickers from the screener
      * @param {boolean} [visible=false] - indicates if the tickers are visible
      * @returns {Array<string>} Array of screener tickers
@@ -176,15 +167,6 @@ class TradingViewManager {
         return this._tickerListHelper(TradingViewDomConfig.SCREENER.SYMBOL, visible);
     }
 
-    /**
-     * Retrieves the selected watch list symbols from the DOM
-     * @returns {Array<string>} An array of selected watch list symbols
-     */
-    getTickersWatchListSelected() {
-        return $(`${TradingViewDomConfig.WATCHLIST.SELECTED} ${TradingViewDomConfig.WATCHLIST.SYMBOL}:visible`)
-            .toArray()
-            .map(s => s.innerHTML);
-    }
 
     /**
      * Retrieves the tickers of the selected items in the screener
