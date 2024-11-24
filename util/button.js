@@ -7,7 +7,7 @@ class ButtonUtil {
      * @param {function} handler - The function to be executed when the button is clicked
      * @return {jQuery} The constructed button element
      */
-    static buildButton(id, text, handler) {
+    buildButton(id, text, handler) {
       return $('<button>')
         .attr({ id: id })
         .html(text)
@@ -23,7 +23,7 @@ class ButtonUtil {
         .click(handler);
     }
   
-    static buildCheckBox(id, checked) {
+    buildCheckBox(id, checked) {
       return $('<input>')
         .attr({ id: id, type: 'checkbox' })
         .css({
@@ -35,7 +35,7 @@ class ButtonUtil {
         .prop('checked', checked);
     }
   
-    static buildRadio(label, value, group, checked = false) {
+    buildRadio(label, value, group, checked = false) {
       const radio = $('<input>')
         .attr({
           id: `aman-${group}-${value}`,
