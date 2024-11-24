@@ -8,12 +8,11 @@ class TradingViewScreenerManager {
      * @param {boolean} [visible=false] - If true, only returns visible tickers
      * @returns {Array<string>} Array of screener tickers
      */
-    constructor(tradingViewManager, paintManager, dataSilo, orderSet, fnoSymbols) {
+    constructor(tradingViewManager, paintManager, recentTickerRepo, orderRepo) {
         this.tradingViewManager = tradingViewManager;
         this.paintManager = paintManager;
-        this.dataSilo = dataSilo;
-        this.orderSet = orderSet;
-        this.fnoSymbols = fnoSymbols;
+        this.recentTickerRepo = recentTickerRepo;
+        this.orderRepo = orderRepo;
     }
 
     getScreenerTickers(visible = false) {
@@ -65,7 +64,8 @@ class TradingViewScreenerManager {
         this.paintManager.resetColors(screenerSymbolSelector);
 
         // Paint Recently Watched
-        this.paintManager.applyCss(screenerSymbolSelector, new Set(this.dataSilo.getRecentTickers()), { color: colorList[3] });
+        const recentTickers = this.recentTickerRepo.getAll();
+        this.paintManager.applyCss(screenerSymbolSelector, recentTickers, { color: colorList[3] });
 
         // Paint Fno
         this.paintManager.applyCss(screenerSymbolSelector, this.fnoSymbols, fnoCss);
@@ -74,6 +74,7 @@ class TradingViewScreenerManager {
         this.paintManager.paintTickers(screenerSymbolSelector);
 
         // Paint Watchlist (Overwrite White)
-        this.paintManager.applyCss(screenerSymbolSelector, this.orderSet.get(5), { color: colorList[6] });
+        const watchlistSet = this.orderRepo.getOrderCategoryLists().get(5);
+        this.paintManager.applyCss(screenerSymbolSelector, watchlistSet, { color: colorList[6] });
     }
 }
