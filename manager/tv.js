@@ -13,13 +13,23 @@ const TV_ERRORS = Object.freeze({
  * @class TradingViewManager
  */
 class TradingViewManager {
-     /**
-     * @param {SymbolManager} symbolManager Manager for symbol operations
-     * @param {DOMManager} domManager Manager for DOM operations
+    /**
+     * @param {SymbolManager} symbolManager - Manager for symbol operations
+     * @param {DOMManager} domManager - Manager for DOM operations
+     * @param {PaintManager} paintManager - Instance of PaintManager
+     * @param {OrderRepo} orderRepo - Instance of OrderRepo
+     * @param {FlagRepo} flagRepo - Instance of FlagRepo
+     * @param {TradingViewScreenerManager} screenerManager - Manager for screener operations
+     * @param {TradingViewWatchlistManager} watchlistManager - Manager for watchlist operations
      */
-     constructor(symbolManager, domManager) {
-        this._symbolManager = symbolManager;
-        this._domManager = domManager;
+    constructor(symbolManager, domManager, paintManager, orderRepo, flagRepo, screenerManager, watchlistManager) {
+        this.symbolManager = symbolManager;
+        this.domManager = domManager;
+        this.paintManager = paintManager;
+        this.orderRepo = orderRepo;
+        this.flagRepo = flagRepo;
+        this.screenerManager = screenerManager;
+        this.watchlistManager = watchlistManager;
     }
 
     /**
@@ -111,5 +121,106 @@ class TradingViewManager {
      */
     isReplayActive() {
         return $(Constants.DOM.REPLAY.ACTIVE).length > 0;
+    }
+
+    /**
+     * Opens the given ticker in the Trading View
+     * @param {string} ticker - The ticker to open
+     */
+    openTicker(ticker) {
+        const exchangeTicker = this.symbolManager.tvToExchangeTicker(ticker);
+        this.domManager.waitClick(Constants.DOM.BASIC.TICKER);
+        this.domManager.waitInput(Constants.DOM.POPUPS.SEARCH, exchangeTicker);
+    }
+
+    /**
+     * Paints the name in the top section if the ticker is in the watchlist
+     */
+    paintName() {
+        let ticker = this.getTicker();
+        let $name = $(Constants.DOM.BASIC.NAME);
+        const colorList = Constants.UI.COLORS.LIST;
+
+        //Reset Name Color
+        $name.css('color', Constants.UI.COLORS.DEFAULT);
+
+        //Find and Paint if found in Watchlist
+        for (let i = 0; i < colorList.length; i++) {
+            //Highlight Non White if in Watchlist or Color respectively
+            let color = i === 5 ? colorList[6] : colorList[i];
+            if (this.orderRepo.getOrderCategoryLists().get(i).has(ticker)) {
+                $name.css('color', color);
+            }
+        }
+
+        //FNO Marking
+        if (Constants.EXCHANGE.FNO_SYMBOLS.has(ticker)) {
+            $name.css(Constants.UI.COLORS.FNO_CSS);
+        } else {
+            $name.css('border-top-style', '');
+            $name.css('border-width', '');
+        }
+
+        //Flag Marking
+        let $flag = $(Constants.DOM.FLAGS.MARKING);
+        $flag.css('color', Constants.UI.COLORS.DEFAULT);
+        $(Constants.DOM.BASIC.EXCHANGE).css('color', Constants.UI.COLORS.DEFAULT);
+        colorList.forEach((c, i) => {
+            if (this.flagRepo.getOrderCategoryLists().get(i).has(ticker)) {
+                $flag.css('color', c)
+                $(Constants.DOM.BASIC.EXCHANGE).css('color', c);
+            }
+        })
+    }
+
+       /**
+     * Navigates through visible tickers in either screener or watchlist
+     * @param {number} step - Number of steps to move (positive for forward, negative for backward)
+     * @throws {Error} When no visible tickers are available
+     * @returns {void}
+     */
+       navigateTickers(step) {
+        const currentTicker = this.getTicker();
+        const visibleTickers = this._getVisibleTickers();
+        
+        if (!visibleTickers.length) {
+            throw new Error('No visible tickers available for navigation');
+        }
+
+        const nextTicker = this._calculateNextTicker(currentTicker, visibleTickers, step);
+        this.openTicker(nextTicker);
+    }
+
+    /**
+     * Gets currently visible tickers based on active view
+     * @private
+     * @returns {string[]} Array of visible ticker symbols
+     */
+    _getVisibleTickers() {
+        return this.screenerManager.isScreenerVisible() ? 
+            this.screenerManager.getScreenerTickers(true) : 
+            this.watchlistManager.getWatchlistTickers(true);
+    }
+
+    /**
+     * Calculates the next ticker based on current position and step
+     * @private
+     * @param {string} currentTicker - Currently selected ticker
+     * @param {string[]} tickers - Array of available tickers
+     * @param {number} step - Number of steps to move
+     * @returns {string} Next ticker symbol
+     */
+    _calculateNextTicker(currentTicker, tickers, step) {
+        const currentIndex = tickers.indexOf(currentTicker);
+        let nextIndex = currentIndex + step;
+
+        // Handle wraparound
+        if (nextIndex < 0) {
+            nextIndex = tickers.length - 1;
+        } else if (nextIndex >= tickers.length) {
+            nextIndex = 0;
+        }
+
+        return tickers[nextIndex];
     }
 }
