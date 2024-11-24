@@ -58,6 +58,7 @@ class SequenceManager {
      */
     constructor(sequenceRepo) {
         this._sequenceRepo = sequenceRepo;
+        this._freezeSequence = null;  
     }
 
     /**
@@ -103,5 +104,29 @@ class SequenceManager {
      */
     sequenceToTimeFrame(sequence, timeFrameIndex) {
         return SequenceConfig.TIME_FRAME_BAR[sequence][timeFrameIndex];
+    }
+
+     /**
+     * Toggles sequence freeze state
+     * Uses current sequence when enabling freeze
+     * @returns {string|null} Current freeze state after toggle
+     */
+     freezeSequence() {
+        if (this._freezeSequence) {
+            this._freezeSequence = null;
+            message("FreezeSequence Disabled", 'red');
+        } else {
+            this._freezeSequence = this.tvTickerToSequence();
+            message(`FreezeSequence: ${this._freezeSequence}`, 'yellow');
+        }
+        return this._freezeSequence;
+    }
+
+    /**
+     * Gets current freeze sequence state
+     * @returns {string|null} Current frozen sequence or null if not frozen
+     */
+    getFreezeSequence() {
+        return this._freezeSequence;
     }
 }
