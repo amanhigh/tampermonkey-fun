@@ -149,6 +149,7 @@ class TradingViewManager {
      * @returns {Array<string>} An array of selected tickers
      */
     getTickersSelected() {
+        // TODO: Fix now Broken functions migrated.
         let selected = this.getTickersWatchListSelected()
             .concat(this.getTickersScreenerSelected());
 
@@ -159,51 +160,10 @@ class TradingViewManager {
     }
 
     /**
-     * Retrieves tickers from the screener
-     * @param {boolean} [visible=false] - indicates if the tickers are visible
-     * @returns {Array<string>} Array of screener tickers
-     */
-    getTickersScreener(visible = false) {
-        return this._tickerListHelper(TradingViewDomConfig.SCREENER.SYMBOL, visible);
-    }
-
-
-    /**
-     * Retrieves the tickers of the selected items in the screener
-     * @returns {Array<string>} An array of selected screener ticker symbols
-     */
-    getTickersScreenerSelected() {
-        return $(`${TradingViewDomConfig.SCREENER.SELECTED} ${TradingViewDomConfig.SCREENER.SYMBOL}:visible`)
-            .toArray()
-            .map(s => s.innerHTML);
-    }
-
-    /**
-     * Helper function to retrieve list of tickers based on selector
-     * @private
-     * @param {string} selector - The CSS selector for identifying the elements
-     * @param {boolean} [visible=false] - Flag indicating whether to consider only visible elements
-     * @returns {Array<string>} An array of ticker strings
-     */
-    _tickerListHelper(selector, visible = false) {
-        return $(visible ? selector + ":visible" : selector)
-            .toArray()
-            .map(s => s.innerHTML);
-    }
-
-    /**
      * Checks if the replay is currently active
      * @returns {boolean} true if the replay is active, false otherwise
      */
     isReplayActive() {
         return $(TradingViewDomConfig.REPLAY.ACTIVE).length > 0;
-    }
-
-    /**
-     * Check if the screener is visible
-     * @returns {boolean} true if the screener is not active, false otherwise
-     */
-    isScreenerVisible() {
-        return $(TradingViewDomConfig.SCREENER.BUTTON).attr('data-active') === 'false';
     }
 }
