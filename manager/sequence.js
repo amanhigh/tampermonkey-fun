@@ -1,54 +1,4 @@
 /**
- * Configuration for sequence operations
- * @class SequenceConfig
- */
-class SequenceConfig {
-    /**
-     * Sequence types
-     * @type {Object}
-     */
-    static SEQUENCE = Object.freeze({
-        // Monthly-Weekly-Daily sequence
-        DEFAULT: 'MWD',
-        // Yearly-Range sequence
-        HIGH: 'YR'
-    });
-
-    /**
-     * Time frame configurations
-     * @type {Object}
-     */
-    static TIME_FRAME = Object.freeze({
-        DAILY: { index: 3, symbol: "D", style: "I" },
-        WEEKLY: { index: 4, symbol: "WK", style: "H" },
-        MONTHLY: { index: 5, symbol: "MN", style: "VH" },
-        THREE_MONTHLY: { index: 6, symbol: "TMN", style: "T" },
-        SIX_MONTHLY: { index: 7, symbol: "SMN", style: "I" }
-    });
-
-    /**
-     * Time frame bar configurations
-     * @type {Object}
-     */
-    static TIME_FRAME_BAR = Object.freeze({
-        // Monthly-Weekly-Daily sequence
-        'MWD': [
-            SequenceConfig.TIME_FRAME.THREE_MONTHLY,
-            SequenceConfig.TIME_FRAME.MONTHLY,
-            SequenceConfig.TIME_FRAME.WEEKLY,
-            SequenceConfig.TIME_FRAME.DAILY
-        ],
-        // Yearly-Range sequence
-        'YR': [
-            SequenceConfig.TIME_FRAME.SIX_MONTHLY,
-            SequenceConfig.TIME_FRAME.THREE_MONTHLY,
-            SequenceConfig.TIME_FRAME.MONTHLY,
-            SequenceConfig.TIME_FRAME.WEEKLY
-        ]
-    });
-}
-
-/**
  * Manages sequence and timeframe operations for TradingView
  * @class SequenceManager
  */
@@ -67,9 +17,9 @@ class SequenceManager {
      * @returns {string} Default sequence (MWD or YR)
      */
     getDefaultSequence(exchange) {
-        return exchange === Constants.SELECTORS.EXCHANGE.NSE 
-            ? SequenceConfig.SEQUENCE.DEFAULT  // MWD
-            : SequenceConfig.SEQUENCE.HIGH;    // YR
+        return exchange === Constants.EXCHANGE.TYPES.NSE 
+            ? Constants.TIME.SEQUENCE_TYPES.DEFAULT  // MWD
+            : Constants.TIME.SEQUENCE_TYPES.HIGH;    // YR
     }
 
     /**
@@ -89,9 +39,9 @@ class SequenceManager {
      */
     flipTvTickerSequence(tvTicker, currentSequence) {
         // Flip between MWD and YR
-        const sequence = currentSequence === SequenceConfig.SEQUENCE.HIGH 
-            ? SequenceConfig.SEQUENCE.DEFAULT  // MWD
-            : SequenceConfig.SEQUENCE.HIGH;    // YR
+        const sequence = currentSequence === Constants.TIME.SEQUENCE_TYPES.HIGH 
+            ? Constants.TIME.SEQUENCE_TYPES.DEFAULT  // MWD
+            : Constants.TIME.SEQUENCE_TYPES.HIGH;    // YR
         
         this._sequenceRepo.pinSequence(tvTicker, sequence);
     }
@@ -103,7 +53,7 @@ class SequenceManager {
      * @returns {Object} Timeframe configuration containing index, symbol, and style
      */
     sequenceToTimeFrame(sequence, timeFrameIndex) {
-        return SequenceConfig.TIME_FRAME_BAR[sequence][timeFrameIndex];
+        return Constants.TIME.SEQUENCES[sequence][timeFrameIndex];
     }
 
      /**
