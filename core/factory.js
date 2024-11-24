@@ -171,7 +171,10 @@ class Factory {
          * @returns {KiteHandler}
          */
         kite: () => Factory._getInstance('kiteHandler',
-            () => new KiteHandler(Factory.manager.kite())),
+            () => new KiteHandler(
+                Factory.manager.kite(),
+                Factory.manager.symbol()
+            )),
 
         /**
          * @returns {CommandInputHandler}

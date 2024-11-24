@@ -184,6 +184,7 @@ class KiteHandler {
      * @returns {Object} Order parameters
      */
     _readOrderPanel() {
+        // TODO: Extract to Constants
         const ent = parseFloat($('input[data-property-id="Risk/RewardlongEntryPrice"]').val());
         const tp = parseFloat($('input[data-property-id="Risk/RewardlongProfitLevelPrice"]').val());
         const sl = parseFloat($('input[data-property-id="Risk/RewardlongStopLevelPrice"]').val());
