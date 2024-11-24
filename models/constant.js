@@ -14,6 +14,7 @@ const Constants = (function() {
             // UI Component IDs
             IDS: {
                 AREAS: {
+                    MAIN: 'aman-area',  // Old Name: areaId
                     SUMMARY: 'aman-summary',  // Old Name: summaryId
                     TOP: 'aman-top',  // Old Name: topId
                     MID: 'aman-mid',  // Old Name: midId
