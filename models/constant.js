@@ -41,6 +41,12 @@ const Constants = (function() {
 
         // DOM Selectors for TradingView components
         DOM: {
+            BASIC: {
+                NAME: 'div[class*=mainTitle]',              // For main title element
+                TICKER: '#header-toolbar-symbol-search > div', // For ticker display
+                EXCHANGE: 'div[class*=exchangeTitle]',      // For exchange name
+                LTP: 'span[class^="priceWrapper"] > span:first-child'  // For last traded price
+            },
             HEADER: {
                 MAIN: '#header-toolbar-symbol-search', // Old name: headerSelector
                 SAVE: '#header-toolbar-save-load', // Old name: saveSelector
