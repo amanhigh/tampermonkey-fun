@@ -1,7 +1,7 @@
 /**
  * Manages DOM observation operations
  */
-class DOMObserver {
+class ObserveUtil {
     /**
      * Observes attribute changes on target
      * @param {Element} target - Target element to observe

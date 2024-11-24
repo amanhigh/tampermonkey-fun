@@ -35,7 +35,7 @@ export default [
         PaintManager: true,
 
         // Utils
-        DOMObserver: true,
+        ObserveUtil: true,
         KeyManager: true,
         SearchManager: true,
         SyncUtil: true,

@@ -299,10 +299,10 @@ class Factory {
             () => new WaitUtil()),
 
         /**
-         * @returns {DOMObserver}
+         * @returns {ObserveUtil}
          */
-        observer: () => Factory._getInstance('domObserver',
-            () => new DOMObserver()),
+        observer: () => Factory._getInstance('observeUtil',
+            () => new ObserveUtil()),
 
         /**
          * @returns {SearchManager}
