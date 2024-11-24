@@ -321,11 +321,6 @@ class Factory {
          */
         key: () => Factory._getInstance('keyManager',
             () => new KeyUtil(Factory.util.sync())),
-        /**
-         * @returns {ButtonUtil}
-         */
-        button: () => Factory._getInstance('buttonUtil',
-            () => new ButtonUtil(Factory.util.ui())),
 
         /**
          * @returns {SmartPrompt}

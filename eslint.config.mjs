@@ -40,9 +40,9 @@ export default [
         SearchManager: true,
         SyncUtil: true,
         WaitUtil: true,
-        ButtonUtil: true,
         SmartPrompt: true,
         UIUtil: true,
+        Styles: true,
 
         // Repositories
         AlertRepo: true,
