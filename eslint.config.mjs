@@ -36,11 +36,12 @@ export default [
 
         // Utils
         ObserveUtil: true,
-        KeyManager: true,
+        KeyUtil: true,
         SearchManager: true,
         SyncUtil: true,
         WaitUtil: true,
         ButtonUtil: true,
+        SmartPrompt: true,
 
         // Repositories
         AlertRepo: true,
