@@ -3,10 +3,10 @@
  */
 class KeyManager {
     /**
-     * @param {SyncManager} syncManager - Instance of SyncManager for coordination
+     * @param {SyncUtil} syncUtil - Instance of SyncUtil for coordination
      */
-    constructor(syncManager) {
-        this._syncManager = syncManager;
+    constructor(syncUtil) {
+        this._syncUtil = syncUtil;
         this._doubleKeyState = {
             init: false,
             begin: false,
@@ -75,12 +75,12 @@ class KeyManager {
                 this._doubleKeyState.begin = this._doubleKeyState.end = false;
 
                 // W1: Enter Begin (Too Fast Keys Filtered)
-                this._syncManager.waitOn("fastDoubleKeyInput", 50, () => {
+                this._syncUtil.waitOn("fastDoubleKeyInput", 50, () => {
                     this._doubleKeyState.begin = true;
                 });
 
                 // W4: Reached End Reset Process
-                this._syncManager.waitOn("doubleKeyInput", 200, () => {
+                this._syncUtil.waitOn("doubleKeyInput", 200, () => {
                     this._doubleKeyState.end = true;
                     this._doubleKeyState.init = false;
                 });

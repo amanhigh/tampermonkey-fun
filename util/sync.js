@@ -1,7 +1,7 @@
 /**
- * Manages synchronization and resource waiting operations
+ * Provides utility functions for synchronization and resource waiting operations
  */
-class SyncManager {
+class SyncUtil {
 
     _waitId = 'aman-wait-on';
 

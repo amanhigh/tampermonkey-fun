@@ -38,8 +38,9 @@ export default [
         DOMObserver: true,
         KeyManager: true,
         SearchManager: true,
-        SyncManager: true,
+        SyncUtil: true,
         WaitUtil: true,
+        ButtonUtil: true,
 
         // Repositories
         AlertRepo: true,
