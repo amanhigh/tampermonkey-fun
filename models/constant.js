@@ -7,6 +7,7 @@ const Constants = (function() {
         UI: {
             COLORS: {
                 LIST: ['orange', 'red', 'dodgerblue', 'cyan', 'lime', 'white', 'brown', 'darkkhaki'], // Old name: colorList
+                FNO_CSS: { 'border-top-style': 'groove', 'border-width': 'medium' }, // Old name: fnoCss
             },
             
             // UI Component IDs
@@ -64,10 +65,14 @@ const Constants = (function() {
                 CLOSE: 'button[data-name="close"]', // Old name: orderPanelCloseSelector
             },
             SCREENER: {
+                // TODO: Fix Symbol
+                SYMBOL: 'div[class*=symbol]', // Old name: screenerSymbolSelector
                 MAIN: "tbody.tv-data-table__tbody:nth(1)", // Old name: screenerSelector
                 LINE: 'tr.tv-screener-table__result-row', // Old name: screenerLineSelector
             },
             WATCHLIST: {
+                // TODO: Fix Symbol
+                SYMBOL: 'div[class*=symbol]', // Old Name: watchListSymbolSelector
                 WIDGET: 'div.widgetbar-widgetbody:first', // Old Name: watchListWidgetSelector
                 CONTAINER: 'div[class^=listContainer]', // Old Name: watchListSelector
                 ITEM: 'div[class*=symbol-]', // Old Name: watchListItemSelector
@@ -147,9 +152,3 @@ const Constants = (function() {
         }
     });
 })();
-
-// Kept separate as in original
-const fnoCss = {
-    'border-top-style': 'groove',
-    'border-width': 'medium'
-};

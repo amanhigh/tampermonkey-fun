@@ -58,10 +58,6 @@ class TradingViewScreenerManager {
     paintScreener() {
         const screenerSymbolSelector = Constants.DOM.SCREENER.SYMBOL;
         const colorList = Constants.SELECTORS.BASIC.COLOR_LIST;
-        const fnoCss = {
-            'border-top-style': 'groove',
-            'border-width': 'medium'
-        };
 
         // Must Run in this Order- Clear, WatchList, Kite
         this.paintManager.resetColors(screenerSymbolSelector);
@@ -71,7 +67,7 @@ class TradingViewScreenerManager {
         this.paintManager.applyCss(screenerSymbolSelector, recentTickers, { color: colorList[3] });
 
         // Paint Fno
-        this.paintManager.applyCss(screenerSymbolSelector, this.fnoSymbols, fnoCss);
+        this.paintManager.applyCss(screenerSymbolSelector, this.fnoSymbols, Constants.UI.COLORS.FNO_CSS);
 
         // Paint Name and Flags
         this.paintManager.paintTickers(screenerSymbolSelector);
