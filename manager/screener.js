@@ -57,7 +57,7 @@ class TradingViewScreenerManager {
 
     paintScreener() {
         const screenerSymbolSelector = Constants.DOM.SCREENER.SYMBOL;
-        const colorList = Constants.SELECTORS.BASIC.COLOR_LIST;
+        const colorList = Constants.UI.COLORS.LIST;
 
         // Must Run in this Order- Clear, WatchList, Kite
         this.paintManager.resetColors(screenerSymbolSelector);

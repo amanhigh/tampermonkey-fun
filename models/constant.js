@@ -7,6 +7,7 @@ const Constants = (function() {
         UI: {
             COLORS: {
                 LIST: ['orange', 'red', 'dodgerblue', 'cyan', 'lime', 'white', 'brown', 'darkkhaki'], // Old name: colorList
+                DEFAULT: 'white',
                 FNO_CSS: { 'border-top-style': 'groove', 'border-width': 'medium' }, // Old name: fnoCss
             },
             
@@ -79,7 +80,7 @@ const Constants = (function() {
                 LINE: 'div[class^=listContainer] > div > div' // Old Name: watchListLineSelector
             },
             FLAGS: {
-                MAIN: "div[class^=uiMarker]", // Old Name: flagSelector
+                SYMBOL: "div[class^=uiMarker]", // Old Name: flagSelector
                 MARKING: "div[class^=uiMarker] > svg > path:nth(0)" // Old Name: flagMarkingSelector
             },
             TOOLBARS: {

@@ -8,7 +8,6 @@ class PaintManager {
      * @param {OrderRepo} orderRepo - Repository for managing orders
      */
     constructor(flagRepo, orderRepo) {
-        this.colorList = Constants.SELECTORS.BASIC.COLOR_LIST;
         this.flagRepo = flagRepo;
         this.orderRepo = orderRepo;
     }
@@ -57,9 +56,10 @@ class PaintManager {
     paintTickers(selector) {
         const orderCategoryLists = this.orderRepo.getOrderCategoryLists();
         const flagCategoryLists = this.flagRepo.getFlagCategoryLists();
+        const colorList = Constants.UI.COLORS.LIST;
 
-        for (let i = 0; i < this.colorList.length; i++) {
-            const color = this.colorList[i];
+        for (let i = 0; i < colorList.length; i++) {
+            const color = colorList[i];
             const orderSymbols = orderCategoryLists.get(i);
             const flagSymbols = flagCategoryLists.get(i);
 
@@ -80,9 +80,9 @@ class PaintManager {
         }
 
         // Reset element colors to default (assumed to be white)
-        this.applyCss(selector, null, { 'color': this.colorList[5] }, true);
+        this.applyCss(selector, null, { 'color': Constants.UI.COLORS.DEFAULT }, true);
 
         // Reset flag colors
-        this.paintFlags(selector, null, this.colorList[5], true);
+        this.paintFlags(selector, null, Constants.UI.COLORS.DEFAULT, true);
     }
 }
