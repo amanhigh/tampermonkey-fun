@@ -71,7 +71,8 @@ export default [
         PairInfo: true,
         Order: true,
         GttOrderMap: true,
-        TimeFrame: true
+        TimeFrame: true,
+        WatchChangeEvent: true
       }
     },
     rules: {

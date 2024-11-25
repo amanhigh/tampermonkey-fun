@@ -15,49 +15,26 @@
 class TimeFrameManager {
     /**
      * Creates a TimeFrameManager instance
+     * @param {SequenceManager} sequenceManager - Sequence manager instance
      */
-    constructor() {
+    constructor(sequenceManager) {
         this._currentTimeFrame = null;
-    }
-
-    /**
-     * Get timeframe configuration based on sequence and position
-     * @param {string} sequence - Sequence type (MWD/YR)
-     * @param {number} position - Position in sequence (0-3)
-     * @returns {TimeFrame|null} Timeframe configuration
-     */
-    getTimeFrame(sequence, position) {
-        try {
-            const timeFrameName = Constants.TIME.SEQUENCES[sequence][position];
-            if (!timeFrameName) return null;
-            return Constants.TIME.FRAMES[timeFrameName];
-        } catch (error) {
-            console.error('Error getting timeframe:', error);
-            return null;
-        }
-    }
-
-    /**
-     * Set current timeframe without applying to chart
-     * @param {TimeFrame} timeFrame - Timeframe to set as current
-     */
-    setTimeFrame(timeFrame) {
-        this._currentTimeFrame = timeFrame;
+        this._sequenceManager = sequenceManager;
     }
 
     /**
      * Apply timeframe to chart and set as current
-     * @param {string} sequence - Sequence type (MWD/YR)
      * @param {number} position - Position in sequence (0-3)
      * @returns {boolean} True if successfully applied
      */
-    applyTimeFrame(sequence, position) {
+    applyTimeFrame(position) {
         try {
-            const timeFrame = this.getTimeFrame(sequence, position);
+            const sequence = this._sequenceManager.getCurrentSequence();
+            const timeFrame = this._sequenceManager.sequenceToTimeFrame(sequence, position);
             if (!timeFrame) {
                 throw new Error(`Invalid timeframe for sequence ${sequence} and position ${position}`);
             }
-            this.setTimeFrame(timeFrame);
+            this._setTimeFrame(timeFrame);
             return this._clickTimeFrameToolbar(timeFrame.toolbarPosition);
         } catch (error) {
             console.error('Error applying timeframe:', error);
@@ -89,5 +66,13 @@ class TimeFrameManager {
             console.error('Error clicking timeframe toolbar:', error);
             return false;
         }
+    }
+
+    /**
+     * Set current timeframe without applying to chart
+     * @param {TimeFrame} timeFrame - Timeframe to set as current
+     */
+    _setTimeFrame(timeFrame) {
+        this._currentTimeFrame = timeFrame;
     }
 }

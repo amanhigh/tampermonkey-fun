@@ -65,6 +65,7 @@ class TradingViewActionManager {
      * Eg. Stock to Nifty, Crypto to Bitcoin etc
      */
     openBenchmarkTicker() {
+        // TODO: Move to Ticker Manager
         const ticker = this.tvManager.getTicker();
         const exchange = this.tvManager.getExchange();
         
@@ -187,6 +188,7 @@ class TradingViewActionManager {
      * @returns {boolean} True if style was applied
      */
     applyStyle(styleName) {
+        // TODO: Move to Style Manager
         try {
             // Select style toolbar
             this.waitUtil.waitJClick(Constants.DOM.TOOLBARS.STYLE, () => {

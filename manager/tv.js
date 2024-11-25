@@ -120,6 +120,7 @@ class TradingViewManager {
      * @param {string} ticker - The ticker to open
      */
     openTicker(ticker) {
+        // TODO: Move to Ticker Manager
         const exchangeTicker = this.symbolManager.tvToExchangeTicker(ticker);
         this.waitUtil.waitClick(Constants.DOM.BASIC.TICKER);
         this.waitUtil.waitInput(Constants.DOM.POPUPS.SEARCH, exchangeTicker);

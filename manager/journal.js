@@ -31,13 +31,11 @@ class JournalManager {
      * @param {string} buttonId Button identifier that triggered the record
      * @param {string} reason User provided reason for the entry
      * @param {string} currentTicker Current trading symbol
-     * @param {string} [exchange] Exchange identifier for default sequence
      * @returns {string} Generated journal tag
      */
-    createEntry(buttonId, reason, currentTicker, exchange) {
+    createEntry(buttonId, reason, currentTicker) {
         // Get sequence preference for current ticker
-        const defaultSequence = this._sequenceManager.getDefaultSequence(exchange);
-        const sequence = this._sequenceManager.tvTickerToSequence(currentTicker, defaultSequence);
+        const sequence = this._sequenceManager.getCurrentSequence();
         
         // Build timeframe tag with sequence
         // TODO: buttonId earlier this.id ?

@@ -43,10 +43,7 @@ class DisplayInputHandler {
      * Displays sequence information in the input
      */
     displaySequence() {
-        const tvTicker = this.tvManager.getTicker();
-        const exchange = this.tvManager.getExchange();
-        const defaultSequence = this.sequenceManager.getDefaultSequence(exchange);
-        const sequence = this.sequenceManager.tvTickerToSequence(tvTicker, defaultSequence);
+        const sequence = this.sequenceManager.getCurrentSequence();
         
         const message = `${tvTicker}:${sequence}`;
         this._setValue(message);

@@ -1,59 +1,64 @@
 /**
- * Manages sequence and timeframe operations for TradingView
- * @class SequenceManager
+ * Manages sequence operations and state for trading view timeframes
  */
 class SequenceManager {
     /**
-     * @param {SequenceRepo} sequenceRepo Repository for sequence operations
+     * @param {SequenceRepo} sequenceRepo - Repository for sequence operations
+     * @param {TradingViewManager} tvManager - Trading view manager
      */
-    constructor(sequenceRepo) {
+    constructor(sequenceRepo, tvManager) {
         this._sequenceRepo = sequenceRepo;
-        this._freezeSequence = null;  
+        this._tvManager = tvManager;
+        this._freezeSequence = null;
     }
 
     /**
-     * Get default sequence based on exchange
-     * @param {string} exchange Exchange identifier
-     * @returns {string} Default sequence (MWD or YR)
-     */
-    getDefaultSequence(exchange) {
-        return exchange === Constants.EXCHANGE.TYPES.NSE 
-            ? Constants.TIME.SEQUENCE_TYPES.DEFAULT  // MWD
-            : Constants.TIME.SEQUENCE_TYPES.HIGH;    // YR
-    }
-
-    /**
-     * Maps TV ticker to sequence preference, falling back to exchange default if not mapped
-     * @param {string} tvTicker TradingView ticker
-     * @param {string} defaultSequence Sequence to use if not mapped (MWD or YR)
+     * Gets current sequence considering freeze state
      * @returns {string} Sequence type (MWD or YR)
      */
-    tvTickerToSequence(tvTicker, defaultSequence) {
-        return this._sequenceRepo.getSequence(tvTicker, defaultSequence);
+    getCurrentSequence() {
+        // Return frozen sequence if exists
+        if (this._freezeSequence) {
+            return this._freezeSequence;
+        }
+
+        const ticker = this._tvManager.getTicker();
+        const exchange = this._tvManager.getExchange();
+        const defaultSequence = this._getDefaultSequence(exchange);
+        
+        return this._sequenceRepo.getSequence(ticker, defaultSequence);
     }
 
     /**
-     * Creates or updates mapping between TV ticker and sequence preference
-     * @param {string} tvTicker TradingView ticker
-     * @param {string} currentSequence Current sequence type (MWD or YR)
+     * Flips current ticker's sequence between MWD and YR
      */
-    flipTvTickerSequence(tvTicker, currentSequence) {
-        // Flip between MWD and YR
+    flipSequence() {
+        const tvTicker = this._tvManager.getTicker();
+        const currentSequence = this.getCurrentSequence();
+        
         const sequence = currentSequence === Constants.TIME.SEQUENCE_TYPES.HIGH 
-            ? Constants.TIME.SEQUENCE_TYPES.DEFAULT  // MWD
-            : Constants.TIME.SEQUENCE_TYPES.HIGH;    // YR
+            ? Constants.TIME.SEQUENCE_TYPES.DEFAULT 
+            : Constants.TIME.SEQUENCE_TYPES.HIGH;
         
         this._sequenceRepo.pinSequence(tvTicker, sequence);
     }
 
     /**
-     * Maps sequence and index to timeframe configuration
-     * @param {string} sequence Sequence type (MWD or YR)
-     * @param {number} timeFrameIndex The index of the time frame (0-3)
-     * @returns {Object} Timeframe configuration containing index, symbol, and style
+     * Get timeframe for given sequence and index
+     * @param {string} sequence - Sequence type (MWD/YR)
+     * @param {number} position - Position in sequence (0-3)
+     * @returns {TimeFrame|null} TimeFrame configuration
      */
-    sequenceToTimeFrame(sequence, timeFrameIndex) {
-        return Constants.TIME.SEQUENCES[sequence][timeFrameIndex];
+    sequenceToTimeFrame(sequence, position) {
+        try {
+            const timeFrameName = Constants.TIME.SEQUENCES[sequence][position];
+            if (!timeFrameName) return null;
+            const config = Constants.TIME.FRAMES[timeFrameName];
+            return new TimeFrame(config.symbol, config.style, config.toolbarPosition);
+        } catch (error) {
+            console.error('Error getting timeframe:', error);
+            return null;
+        }
     }
 
      /**
@@ -73,10 +78,14 @@ class SequenceManager {
     }
 
     /**
-     * Gets current freeze sequence state
-     * @returns {string|null} Current frozen sequence or null if not frozen
+     * Get default sequence based on exchange
+     * @private
+     * @param {string} exchange - Exchange identifier
+     * @returns {string} Default sequence (MWD or YR)
      */
-    getFreezeSequence() {
-        return this._freezeSequence;
+    _getDefaultSequence(exchange) {
+        return exchange === Constants.EXCHANGE.TYPES.NSE
+            ? Constants.TIME.SEQUENCE_TYPES.DEFAULT  // MWD
+            : Constants.TIME.SEQUENCE_TYPES.HIGH;    // YR
     }
 }
