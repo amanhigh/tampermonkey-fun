@@ -14,29 +14,24 @@ class KeyUtil {
         };
     }
 
-    /**
-     * Checks if a modifier key was pressed with another key
-     * @param {boolean} modifier - Modifier key state
-     * @param {string} key - Key to check
-     * @param {KeyboardEvent} event - Keyboard event
-     * @returns {boolean} True if modifier combination detected
-     */
-    isModifierKey(modifier, key, event) {
+    hasModifierKey(event) {
         if (!event || !(event instanceof KeyboardEvent)) {
-            console.error('Invalid keyboard event provided to isModifierKey');
+            console.error('Invalid keyboard event provided to hasModifierKey');
             return false;
         }
-
-        try {
-            if (event.key.toLowerCase() === key && modifier) {
-                event.preventDefault();
-                return true;
-            }
-            return false;
-        } catch (error) {
-            console.error('isModifierKey error:', error);
-            return false;
+        return event.ctrlKey || event.shiftKey || event.altKey;
+    }
+    
+    getModifierType(event) {
+        if (!event || !(event instanceof KeyboardEvent)) {
+            console.error('Invalid keyboard event provided to getModifierType');
+            return null;
         }
+    
+        if (event.ctrlKey) return 'ctrl';
+        if (event.shiftKey) return 'shift';
+        if (event.altKey) return 'alt';
+        return null;
     }
 
     /**

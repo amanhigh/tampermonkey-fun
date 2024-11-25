@@ -31,6 +31,12 @@ class KeyConfig {
             ['k', {
                 description: 'Text with Reason',
                 // TODO: Fix now Broken functions migrated.
+                /**
+                     * ReasonPrompt((reason) => {
+                    ClipboardCopy(timeFrame.symbol + " - " + reason);
+                    SelectToolbar(4);
+                })
+                 */
                 action: () => tvActionManager.handleReasonPrompt()
             }],
             ['j', {

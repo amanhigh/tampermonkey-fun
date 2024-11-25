@@ -157,4 +157,48 @@ class TradingViewActionManager {
             return false;
         }
     }
+
+    /**
+     * Applies zone style based on timeframe and zone type
+     * @param {Object} zoneType Zone type constants from TRADING.ZONES
+     * @returns {boolean} True if style was applied
+     */
+    selectZoneStyle(zoneType) {
+        try {
+            // Get current timeframe style from sequence manager
+            // TODO: Fix the logic
+            const currentStyle = this.tvManager.getCurrentTimeframeStyle();
+            if (!currentStyle) {
+                return false;
+            }
+
+            // Combine timeframe style with zone symbol
+            const styleName = currentStyle + zoneType.symbol;
+            return this.applyStyle(styleName);
+        } catch (error) {
+            console.error('Error selecting zone style:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Applies named style using trading view selectors
+     * @param {string} styleName Name of style to apply
+     * @returns {boolean} True if style was applied
+     */
+    applyStyle(styleName) {
+        try {
+            // Select style toolbar
+            this.waitUtil.waitJClick(Constants.DOM.TOOLBARS.STYLE, () => {
+                // Select specific style by name
+                this.waitUtil.waitJClick(
+                    `${Constants.DOM.TOOLBARS.STYLE_ITEM}:contains(${styleName})`
+                );
+            });
+            return true;
+        } catch (error) {
+            console.error('Error applying style:', error);
+            return false;
+        }
+    }
 }
