@@ -82,14 +82,14 @@ class SequenceManager {
 
     /**
      * Selects a timeframe based on index
-     * @param {number} index - The timeframe index (0-4)
+     * @param {number} index - The timeframe index (0-3)
      * @returns {boolean} True if timeframe selection was successful
      * @throws {Error} If index is invalid
      */
     selectTimeframe(index) {
         try {
             // Validate index range
-            if (index < 0 || index > 4) {
+            if (index < 0 || index > 3) {
                 throw new Error(`Invalid timeframe index: ${index}`);
             }
 
