@@ -79,4 +79,30 @@ class SequenceManager {
     getFreezeSequence() {
         return this._freezeSequence;
     }
+
+    /**
+     * Selects a timeframe based on index
+     * @param {number} index - The timeframe index (0-4)
+     * @returns {boolean} True if timeframe selection was successful
+     * @throws {Error} If index is invalid
+     */
+    selectTimeframe(index) {
+        try {
+            // Validate index range
+            if (index < 0 || index > 4) {
+                throw new Error(`Invalid timeframe index: ${index}`);
+            }
+
+            const timeframe = $(`${Constants.DOM.HEADER.TIMEFRAME}:nth(${index})`);
+            if (timeframe.length === 0) {
+                return false;
+            }
+
+            timeframe.click();
+            return true;
+        } catch (error) {
+            console.error('Error selecting timeframe:', error);
+            return false;
+        }
+    }
 }

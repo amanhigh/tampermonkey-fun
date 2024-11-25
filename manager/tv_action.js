@@ -123,4 +123,30 @@ class TradingViewActionManager {
     message(text, color) {
         console.log(`%c${text}`, `color:${color};`);
     }
+
+    /**
+     * Selects a toolbar item by index
+     * @param {number} index - The toolbar index (0-based)
+     * @returns {boolean} True if selection was successful
+     * @throws {Error} If index is invalid
+     */
+    selectToolbar(index) {
+        try {
+            // Validate index range
+            if (index < 0 || index > 10) {
+                throw new Error(`Invalid toolbar index: ${index}`);
+            }
+
+            const toolbar = $(`${Constants.DOM.TOOLBARS.MAIN}:nth(${index})`);
+            if (toolbar.length === 0) {
+                return false;
+            }
+
+            toolbar.click();
+            return true;
+        } catch (error) {
+            console.error('Error selecting toolbar:', error);
+            return false;
+        }
+    }
 }
