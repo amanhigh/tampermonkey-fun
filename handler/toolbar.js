@@ -2,25 +2,6 @@
  * Handles all toolbar and timeframe related operations
  */
 class ToolbarHandler {
-    constructor(eventManager) {
-        this.eventManager = eventManager;
-        this.setupEventListeners();
-    }
-
-    setupEventListeners() {
-        this.eventManager.registerHandler('timeframeSelect', this.SelectTimeframe.bind(this));
-        this.eventManager.registerHandler('toolbarSelect', this.SelectToolbar.bind(this));
-    }
-
-    /**
-     * Selects timeframe based on the provided index
-     * @param {number} timeFrameIndex - Index of the timeframe to select
-     */
-    SelectTimeframe(timeFrameIndex) {
-        const timeFrame = this._getTimeFrame(timeFrameIndex);
-        this._selectTimeframeElement(timeFrame.index);
-    }
-
     /**
      * Selects toolbar based on the provided index
      * @param {number} index - Index of the toolbar to select
@@ -54,32 +35,4 @@ class ToolbarHandler {
             waitJClick(`${ToolbarConstants.STYLE_ITEM_SELECTOR}:contains(${styleName})`);
         });
     }
-
-    _getTimeFrame(timeFrameIndex) {
-        return getTimeFrame(timeFrameIndex);
-    }
-
-    _selectTimeframeElement(index) {
-        $(`${ToolbarConstants.TIMEFRAME_SELECTOR}:nth-child(${index})`).click();
-    }
-
-    _selectToolbarElement(index) {
-        $(`${ToolbarConstants.TOOLBAR_SELECTOR}:nth(${index})`).click();
-    }
 }
-
-/**
- * Constants for toolbar operations
- */
-// TODO: Inject constants.
-const ToolbarConstants = {
-    TIMEFRAME_SELECTOR: '.timeframe-button',
-    TOOLBAR_SELECTOR: '.toolbar-item',
-    STYLE_SELECTOR: '.floating-toolbar-react-widgets button',
-    STYLE_ITEM_SELECTOR: '.tv-floating-toolbar__popup div',
-    SAVE_SELECTOR: '.header-toolbar-save-load',
-    ZONE_TYPES: {
-        DEMAND: { symbol: 'DZ' },
-        SUPPLY: { symbol: 'SZ' }
-    }
-};

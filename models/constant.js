@@ -133,11 +133,11 @@ const Constants = (function() {
                 HIGH: 'YR' // Old Name: HIGH_SEQUENCE
             },
             FRAMES: { // Old name: TimeFrame
-                DAILY: { index: 3, symbol: "D", style: "I" },
-                WEEKLY: { index: 4, symbol: "WK", style: "H" },
-                MONTHLY: { index: 5, symbol: "MN", style: "VH" },
-                THREE_MONTHLY: { index: 6, symbol: "TMN", style: "T" },
-                SIX_MONTHLY: { index: 7, symbol: "SMN", style: "I" }
+                DAILY: new TimeFrame("D", "I", 3),
+                WEEKLY: new TimeFrame("WK", "H", 4),
+                MONTHLY: new TimeFrame("MN", "VH", 5),
+                THREE_MONTHLY: new TimeFrame("TMN", "T", 6),
+                SIX_MONTHLY: new TimeFrame("SMN", "I", 7)
             },
             SEQUENCES: { // Old name: timeFrameBar
                 MWD: ['THREE_MONTHLY', 'MONTHLY', 'WEEKLY', 'DAILY'],

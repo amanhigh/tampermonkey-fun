@@ -116,14 +116,6 @@ class TradingViewManager {
     }
 
     /**
-     * Checks if the replay is currently active
-     * @returns {boolean} true if the replay is active, false otherwise
-     */
-    isReplayActive() {
-        return $(Constants.DOM.REPLAY.ACTIVE).length > 0;
-    }
-
-    /**
      * Opens the given ticker in the Trading View
      * @param {string} ticker - The ticker to open
      */
