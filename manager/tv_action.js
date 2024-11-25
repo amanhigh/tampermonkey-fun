@@ -102,6 +102,14 @@ class TradingViewActionManager {
     }
 
     /**
+     * Gets current swift key state
+     * @returns {boolean} True if swift keys are enabled
+     */
+    isSwiftEnabled() {
+        return $(`#${Constants.UI.IDS.CHECKBOXES.SWIFT}`).prop('checked');
+    }
+
+    /**
      * Title Change to Bridge witH AHK
      */
     enableSwiftKey() {
