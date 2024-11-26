@@ -69,6 +69,10 @@ export default [
         // Models
         Constants: true,
         PairInfo: true,
+        Alert: true,
+        AlertAudit: true,
+        AlertState: true,
+        CategoryLists: true,
         Order: true,
         GttOrderMap: true,
         TimeFrame: true,
