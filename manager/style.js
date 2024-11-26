@@ -77,4 +77,13 @@ class StyleManager {
             return false;
         }
     }
+
+     /**
+     * Function to clear all items.
+     */
+     clearAll() {
+        this.waitUtil.waitJClick(Constants.DOM.SIDEBAR.DELETE_ARROW, () => {
+            this.waitUtil.waitJClick(Constants.DOM.SIDEBAR.DELETE_DRAWING);
+        });
+    }
 }

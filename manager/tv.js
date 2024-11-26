@@ -39,11 +39,6 @@ class TradingViewManager {
         return $(Constants.DOM.BASIC.NAME)[0].innerHTML;
     }
 
-    getInvestingTicker() {
-        const tvTicker = this.getTicker();
-        return this._symbolManager.tvToInvesting(tvTicker);
-    }
-
     /**
      * Retrieves the last traded price
      * @returns {number|null} The last traded price as a float, or null if parsing fails
@@ -80,57 +75,28 @@ class TradingViewManager {
     }
 
     /**
-     * Retrieves the selected tickers from the watch list and screener
-     * @returns {Array<string>} An array of selected tickers
+     * Copies the given text to the clipboard and displays a message.
+     *
+     * @param {string} text - The text to be copied to the clipboard
+     * @return {undefined} 
      */
-    getTickersSelected() {
-        // TODO: Fix now Broken functions migrated.
-        let selected = this.getTickersWatchListSelected()
-            .concat(this.getTickersScreenerSelected());
-
-        if (selected.length < MIN_SELECTED_TICKERS) {
-            selected = [this.getTicker()];
-        }
-        return selected;
+    clipboardCopy(text) {
+        GM_setClipboard(text);
+        this.message(`ClipCopy: ${text}`, 'yellow');
+    }
+   
+    /**
+     * Toggles the flag and updates watchlist
+     */
+    toggleFlag() {
+        this.waitUtil.waitJClick(Constants.DOM.FLAGS.SYMBOL);
+        this.tvManager.onWatchListChange();
     }
 
     /**
-     * Paints the name in the top section if the ticker is in the watchlist
+     * Closes the text box dialog
      */
-    paintName() {
-        let ticker = this.getTicker();
-        let $name = $(Constants.DOM.BASIC.NAME);
-        const colorList = Constants.UI.COLORS.LIST;
-
-        //Reset Name Color
-        $name.css('color', Constants.UI.COLORS.DEFAULT);
-
-        //Find and Paint if found in Watchlist
-        for (let i = 0; i < colorList.length; i++) {
-            //Highlight Non White if in Watchlist or Color respectively
-            let color = i === 5 ? colorList[6] : colorList[i];
-            if (this.orderRepo.getOrderCategoryLists().get(i).has(ticker)) {
-                $name.css('color', color);
-            }
-        }
-
-        //FNO Marking
-        if (Constants.EXCHANGE.FNO_SYMBOLS.has(ticker)) {
-            $name.css(Constants.UI.COLORS.FNO_CSS);
-        } else {
-            $name.css('border-top-style', '');
-            $name.css('border-width', '');
-        }
-
-        //Flag Marking
-        let $flag = $(Constants.DOM.FLAGS.MARKING);
-        $flag.css('color', Constants.UI.COLORS.DEFAULT);
-        $(Constants.DOM.BASIC.EXCHANGE).css('color', Constants.UI.COLORS.DEFAULT);
-        colorList.forEach((c, i) => {
-            if (this.flagRepo.getOrderCategoryLists().get(i).has(ticker)) {
-                $flag.css('color', c)
-                $(Constants.DOM.BASIC.EXCHANGE).css('color', c);
-            }
-        })
+    closeTextBox() {
+        this.waitUtil.waitJClick(Constants.DOM.POPUPS.CLOSE_TEXTBOX);
     }
 }

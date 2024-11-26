@@ -1,16 +1,8 @@
 /**
- * Manages TradingView UI actions and interactions
+ * Manages TradingView input operations
+ * @class InputManager
  */
-class TradingViewActionManager {
-    /**
-     * @param {WaitUtil} waitUtil - DOM operation manager
-     * @param {TradingViewManager} tvManager - Trading view manager
-     */
-    constructor(waitUtil, tvManager) {
-        this.waitUtil = waitUtil;
-        this.tvManager = tvManager;
-    }
-
+class InputManager {
     /**
      * Execute ReasonPrompt function which disables SwiftKeys, prompts for reasons,
      * and enables SwiftKeys after the prompt.
@@ -41,16 +33,7 @@ class TradingViewActionManager {
         GM_setClipboard(text);
         this.message(`ClipCopy: ${text}`, 'yellow');
     }
-
-    /**
-     * Function to clear all items.
-     */
-    clearAll() {
-        this.waitUtil.waitJClick(Constants.DOM.SIDEBAR.DELETE_ARROW, () => {
-            this.waitUtil.waitJClick(Constants.DOM.SIDEBAR.DELETE_DRAWING);
-        });
-    }
-
+   
     /**
      * Sets focus on the input element with the specified ID.
      *
@@ -58,21 +41,6 @@ class TradingViewActionManager {
      */
     focusCommandInput() {
         $(`#${Constants.UI.IDS.INPUTS.COMMAND}`).focus();
-    }
-
-    /**
-     * Toggles the flag and updates watchlist
-     */
-    toggleFlag() {
-        this.waitUtil.waitJClick(Constants.DOM.FLAGS.SYMBOL);
-        this.tvManager.onWatchListChange();
-    }
-
-    /**
-     * Closes the text box dialog
-     */
-    closeTextBox() {
-        this.waitUtil.waitJClick(Constants.DOM.POPUPS.CLOSE_TEXTBOX);
     }
 
     /**
@@ -88,7 +56,7 @@ class TradingViewActionManager {
      */
     enableSwiftKey() {
         const liner = ' - SwiftKeys';
-        const swiftEnabled = $(`#${Constants.UI.IDS.CHECKBOXES.SWIFT}`).prop('checked');
+        const swiftEnabled = this.isSwiftEnabled();
         
         if (swiftEnabled && !document.title.includes('SwiftKeys')) {
             document.title = document.title + liner;

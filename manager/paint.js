@@ -85,4 +85,44 @@ class PaintManager {
         // Reset flag colors
         this.paintFlags(selector, null, Constants.UI.COLORS.DEFAULT, true);
     }
+
+    /**
+     * Paints the name in the top section if the ticker is in the watchlist
+     */
+    paintName() {
+        let ticker = this.getTicker();
+        let $name = $(Constants.DOM.BASIC.NAME);
+        const colorList = Constants.UI.COLORS.LIST;
+
+        //Reset Name Color
+        $name.css('color', Constants.UI.COLORS.DEFAULT);
+
+        //Find and Paint if found in Watchlist
+        for (let i = 0; i < colorList.length; i++) {
+            //Highlight Non White if in Watchlist or Color respectively
+            let color = i === 5 ? colorList[6] : colorList[i];
+            if (this.orderRepo.getOrderCategoryLists().get(i).has(ticker)) {
+                $name.css('color', color);
+            }
+        }
+
+        //FNO Marking
+        if (Constants.EXCHANGE.FNO_SYMBOLS.has(ticker)) {
+            $name.css(Constants.UI.COLORS.FNO_CSS);
+        } else {
+            $name.css('border-top-style', '');
+            $name.css('border-width', '');
+        }
+
+        //Flag Marking
+        let $flag = $(Constants.DOM.FLAGS.MARKING);
+        $flag.css('color', Constants.UI.COLORS.DEFAULT);
+        $(Constants.DOM.BASIC.EXCHANGE).css('color', Constants.UI.COLORS.DEFAULT);
+        colorList.forEach((c, i) => {
+            if (this.flagRepo.getOrderCategoryLists().get(i).has(ticker)) {
+                $flag.css('color', c)
+                $(Constants.DOM.BASIC.EXCHANGE).css('color', c);
+            }
+        })
+    }
 }
