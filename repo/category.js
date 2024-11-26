@@ -43,32 +43,4 @@ class CategoryRepo extends BaseRepo {
         });
         return storeData;
     }
-
-    /**
-     * Process cleanup of items not in watchlist
-     * @protected
-     * @param {boolean} executeChanges Whether to actually remove items and save
-     * @returns {number} Number of items affected
-     */
-    _processCleanup(executeChanges) {
-        const watchListTickers = getTickersWatchList();
-        let count = 0;
-
-        this._categoryLists._lists.forEach((list, key) => {
-            for (const ticker of [...list]) {
-                if (!watchListTickers.includes(ticker)) {
-                    if (executeChanges) {
-                        this._categoryLists.delete(key, ticker);
-                    }
-                    count++;
-                }
-            }
-        });
-
-        if (executeChanges) {
-            this.save();
-        }
-
-        return count;
-    }
 }

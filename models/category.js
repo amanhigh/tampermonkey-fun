@@ -35,7 +35,6 @@ class CategoryLists {
      */
     add(listNo, item) {
         this._lists.get(listNo).add(item);
-        message(`Item Added: ${item}`, colorList[listNo]);
         this._postAdd(listNo, item);
     }
 
@@ -46,7 +45,6 @@ class CategoryLists {
      */
     delete(listNo, item) {
         this._lists.get(listNo).delete(item);
-        message(`Item Removed: ${item}`, colorList[listNo])
     }
 
     /**

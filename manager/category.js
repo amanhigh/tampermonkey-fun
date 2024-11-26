@@ -3,14 +3,16 @@
  * @class CategoryManager
  */
 class CategoryManager {
+    // TODO: Route CategoryRepo Calls via this Manager
     /**
      * @param {OrderRepo} orderRepo Repository for order categories
      * @param {FlagRepo} flagRepo Repository for flag categories
+     * @param {TradingViewWatchlistManager} watchlistManager Watchlist manager
      */
-    constructor(orderRepo, flagRepo) {
-        // TODO: Route CategoryRepo Calls via this Manager
+    constructor(orderRepo, flagRepo, watchlistManager) {
         this._orderRepo = orderRepo;
         this._flagRepo = flagRepo;
+        this._watchlistManager = watchlistManager;
     }
 
     /**
@@ -64,5 +66,47 @@ class CategoryManager {
         tickers.forEach(ticker => {
             categoryLists.toggle(categoryIndex, ticker);
         });
+    }
+
+    /**
+     * Check how many order items would be removed by cleanup
+     * @returns {number} Number of items that would be removed
+     */
+    dryRunClean() {
+        return this._processCleanup(false);
+    }
+
+    /**
+     * Remove order items not in watchlist and save changes
+     * @returns {number} Number of items removed
+     */
+    clean() {
+        return this._processCleanup(true);
+    }
+
+    /**
+     * Process cleanup of order items not in watchlist
+     * @private
+     * @param {boolean} executeChanges Whether to actually remove items and save
+     * @returns {number} Number of items affected
+     */
+    _processCleanup(executeChanges) {
+        const watchListTickers = this._watchlistManager.getTickers();
+        let count = 0;
+
+        const categoryLists = this._orderRepo.getOrderCategoryLists();
+        
+        categoryLists._lists.forEach((list, key) => {
+            for (const ticker of [...list]) {
+                if (!watchListTickers.includes(ticker)) {
+                    if (executeChanges) {
+                        categoryLists.delete(key, ticker);
+                    }
+                    count++;
+                }
+            }
+        });
+
+        return count;
     }
 }
