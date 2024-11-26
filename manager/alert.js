@@ -34,31 +34,6 @@ class AlertManager {
     }
 
     /**
-     * Deletes all alerts for current ticker.
-     */
-    deleteAllAlerts() {
-        const alerts = this._loadCachedAlerts();
-        alerts.forEach(alert => {
-            this._deleteAlert(alert);
-        });
-    }
-
-    /**
-     * Deletes alerts within tolerance of given price.
-     * @param {number} targetPrice - Price to compare against
-     */
-    deleteAlertsByPrice(targetPrice) {
-        const tolerance = targetPrice * 0.03;
-        const alerts = this._loadCachedAlerts();
-
-        alerts.forEach(alert => {
-            if (Math.abs(alert.Price - targetPrice) <= tolerance) {
-                this._deleteAlert(alert);
-            }
-        });
-    }
-
-    /**
      * Initiates smart delete based on cursor price.
      */
     deleteAlertAtCursor() {
@@ -68,23 +43,6 @@ class AlertManager {
     }
 
     /********** Private Methods **********/
-
-    /**
-     * Loads cached alerts for current ticker.
-     * @returns {Array} Array of alert objects
-     * @private
-     */
-    _loadCachedAlerts() {
-        const symbol = getMappedTicker();
-        const pairInfo = mapInvestingPair(symbol);
-
-        if (!pairInfo) {
-            return [];
-        }
-
-        return this.alertStore.getSortedAlerts(pairInfo.pairId);
-    }
-
     /**
      * Handles force refresh response.
      * @param {Object} data - Alert data from server
@@ -95,35 +53,6 @@ class AlertManager {
         message(`Alerts Loaded: ${count}`);
         this.refreshLocalAlerts();
         // TODO: Audit All
-    }
-
-    /**
-     * Deletes a single alert.
-     * @param {Object} alert - Alert to delete
-     * @private
-     */
-    _deleteAlert(alert) {
-        deleteAlert(alert, (pairId, alertId) => {
-            this.alertStore.removeAlert(pairId, alertId);
-            this.refreshLocalAlerts();
-            //TODO: Extract Hook
-        });
-    }
-
-    /**
-     * Creates an alert for a ticker at specified price.
-     * @param {string} investingTicker - Ticker symbol
-     * @param {number} price - Alert price
-     */
-    async createTickerAlert(investingTicker, price) {
-        let pairInfo = mapInvestingPair(investingTicker);
-
-        if (!pairInfo) {
-            this._handleMissingPairInfo(investingTicker, price);
-            return;
-        }
-
-        this._createAlertForPair(pairInfo, price);
     }
 
     /**
