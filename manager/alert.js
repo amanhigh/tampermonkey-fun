@@ -33,15 +33,6 @@ class AlertManager {
         getAllAlerts(this._onForceRefresh.bind(this));
     }
 
-    /**
-     * Initiates smart delete based on cursor price.
-     */
-    deleteAlertAtCursor() {
-        getCursorPrice(price => {
-            this.deleteAlertsByPrice(price);
-        });
-    }
-
     /********** Private Methods **********/
     /**
      * Handles force refresh response.
@@ -87,49 +78,6 @@ class AlertManager {
         } else {
             message("Mapping failed. Alert creation aborted.", 'red');
         }
-    }
-
-    /**
-     * Creates alerts from textbox input values.
-     * @param {string} inputId - ID of the input element
-     */
-    createAlertsFromTextBox(inputId) {
-        // TODO: Inject InputId
-        const price = $(`#${inputId}`).val();
-
-        if (!price) {
-            return;
-        }
-
-        const prices = price.trim().split(" ");
-        const ticker = getMappedTicker();
-
-        prices.forEach(p => {
-            this.createTickerAlert(ticker, p);
-        });
-
-        setTimeout(() => {
-            // TODO: Integrate clearFields Function
-            $(`#${inputId}`).val('');
-        }, 5000);
-    }
-
-    /**
-     * Creates alert at cursor price position.
-     */
-    createAlertAtCursor() {
-        getCursorPrice(price => {
-            this.createTickerAlert(getMappedTicker(), price);
-        });
-    }
-
-    /**
-     * Creates alert 20% above current price.
-     */
-    createHighAlert() {
-        const currentPrice = getLastTradedPrice();
-        const targetPrice = (currentPrice * 1.2).toFixed(2);
-        this.createTickerAlert(getMappedTicker(), targetPrice);
     }
 
     /**
