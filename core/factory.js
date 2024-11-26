@@ -308,10 +308,10 @@ class Factory {
             () => new ObserveUtil()),
 
         /**
-         * @returns {SearchManager}
+         * @returns {SearchUtil}
          */
         search: () => Factory._getInstance('searchManager',
-            () => new SearchManager()),
+            () => new SearchUtil()),
 
         /**
          * @returns {SyncUtil}
