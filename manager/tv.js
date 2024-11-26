@@ -1,6 +1,5 @@
 // Price and validation related constants
 const PRICE_REGEX = /[+-]?\d{1,3}(?:,\d{3})*(?:\.\d+)?/g;
-const MIN_SELECTED_TICKERS = 2;
 
 // Error messages for LTP operations
 const TV_ERRORS = Object.freeze({
@@ -40,29 +39,9 @@ class TradingViewManager {
         return $(Constants.DOM.BASIC.NAME)[0].innerHTML;
     }
 
-    /**
-     * Retrieves the ticker from the DOM
-     * @returns {string} Current Ticker
-     */
-    getTicker() {
-        return $(Constants.DOM.BASIC.TICKER).html();
-    }
-
-    /**
-     * Gets current ticker and maps it to Investing ticker
-     * @returns {string} Mapped Investing ticker or original if no mapping exists
-     */
     getInvestingTicker() {
         const tvTicker = this.getTicker();
         return this._symbolManager.tvToInvesting(tvTicker);
-    }
-
-    /**
-     * Retrieves the currently selected exchange
-     * @returns {string} Currently Selected Exchange
-     */
-    getExchange() {
-        return $(Constants.DOM.BASIC.EXCHANGE).text();
     }
 
     /**
@@ -116,17 +95,6 @@ class TradingViewManager {
     }
 
     /**
-     * Opens the given ticker in the Trading View
-     * @param {string} ticker - The ticker to open
-     */
-    openTicker(ticker) {
-        // TODO: Move to Ticker Manager
-        const exchangeTicker = this.symbolManager.tvToExchangeTicker(ticker);
-        this.waitUtil.waitClick(Constants.DOM.BASIC.TICKER);
-        this.waitUtil.waitInput(Constants.DOM.POPUPS.SEARCH, exchangeTicker);
-    }
-
-    /**
      * Paints the name in the top section if the ticker is in the watchlist
      */
     paintName() {
@@ -164,56 +132,5 @@ class TradingViewManager {
                 $(Constants.DOM.BASIC.EXCHANGE).css('color', c);
             }
         })
-    }
-
-       /**
-     * Navigates through visible tickers in either screener or watchlist
-     * @param {number} step - Number of steps to move (positive for forward, negative for backward)
-     * @throws {Error} When no visible tickers are available
-     * @returns {void}
-     */
-       navigateTickers(step) {
-        const currentTicker = this.getTicker();
-        const visibleTickers = this._getVisibleTickers();
-        
-        if (!visibleTickers.length) {
-            throw new Error('No visible tickers available for navigation');
-        }
-
-        const nextTicker = this._calculateNextTicker(currentTicker, visibleTickers, step);
-        this.openTicker(nextTicker);
-    }
-
-    /**
-     * Gets currently visible tickers based on active view
-     * @private
-     * @returns {string[]} Array of visible ticker symbols
-     */
-    _getVisibleTickers() {
-        return this.screenerManager.isScreenerVisible() ? 
-            this.screenerManager.getTickers(true) : 
-            this.watchlistManager.getTickers(true);
-    }
-
-    /**
-     * Calculates the next ticker based on current position and step
-     * @private
-     * @param {string} currentTicker - Currently selected ticker
-     * @param {string[]} tickers - Array of available tickers
-     * @param {number} step - Number of steps to move
-     * @returns {string} Next ticker symbol
-     */
-    _calculateNextTicker(currentTicker, tickers, step) {
-        const currentIndex = tickers.indexOf(currentTicker);
-        let nextIndex = currentIndex + step;
-
-        // Handle wraparound
-        if (nextIndex < 0) {
-            nextIndex = tickers.length - 1;
-        } else if (nextIndex >= tickers.length) {
-            nextIndex = 0;
-        }
-
-        return tickers[nextIndex];
     }
 }

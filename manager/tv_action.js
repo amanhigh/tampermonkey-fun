@@ -61,33 +61,6 @@ class TradingViewActionManager {
     }
 
     /**
-     * Opens Current Ticker Relative to Benchmark.
-     * Eg. Stock to Nifty, Crypto to Bitcoin etc
-     */
-    openBenchmarkTicker() {
-        // TODO: Move to Ticker Manager
-        const ticker = this.tvManager.getTicker();
-        const exchange = this.tvManager.getExchange();
-        
-        let benchmark;
-        switch (exchange) {
-            case 'MCX':
-                benchmark = 'MCX:GOLD1!';
-                break;
-            case Constants.EXCHANGE.TYPES.NSE:
-                benchmark = 'NIFTY';
-                break;
-            case 'BINANCE':
-                benchmark = 'BINANCE:BTCUSDT';
-                break;
-            default:
-                benchmark = 'XAUUSD';
-        }
-        
-        this.tvManager.openTicker(`${ticker}/${benchmark}`);
-    }
-
-    /**
      * Toggles the flag and updates watchlist
      */
     toggleFlag() {
