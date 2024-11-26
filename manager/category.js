@@ -16,6 +16,26 @@ class CategoryManager {
     }
 
     /**
+     * Gets order category set by index
+     * @param {number} categoryIndex Category index
+     * @returns {Set<string>} Set of symbols in category
+     */
+    getOrderCategory(categoryIndex) {
+        const categoryLists = this._orderRepo.getOrderCategoryLists();
+        return categoryLists.get(categoryIndex);
+    }
+
+    /**
+     * Gets flag category set by index
+     * @param {number} categoryIndex Category index
+     * @returns {Set<string>} Set of symbols in category
+     */
+    getFlagCategory(categoryIndex) {
+        const categoryLists = this._flagRepo.getFlagCategoryLists();
+        return categoryLists.get(categoryIndex);
+    }
+
+    /**
      * Records selected tickers in order category
      * @param {number} categoryIndex Category index to record into
      * @param {Array<string>} selectedTickers List of selected tickers

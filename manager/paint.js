@@ -4,12 +4,14 @@
 class PaintManager {
     /**
      * Creates a new PaintManager instance
-     * @param {FlagRepo} flagRepo - Repository for managing flags
-     * @param {OrderRepo} orderRepo - Repository for managing orders
+     * @param {CategoryManager} categoryManager - Manager for category operations
+     * @param {TickerManager} tickerManager - Manager for ticker operations
+     * @param {TradingViewManager} tvManager - Manager for TradingView operations
      */
-    constructor(flagRepo, orderRepo) {
-        this.flagRepo = flagRepo;
-        this.orderRepo = orderRepo;
+    constructor(categoryManager, tickerManager, tvManager) {
+        this.categoryManager = categoryManager;
+        this.tickerManager = tickerManager;
+        this.tvManager = tvManager;
     }
 
     /**
@@ -50,21 +52,22 @@ class PaintManager {
     }
 
     /**
-     * Paint all tickers and their flags based on data from repositories
+     * Paint all tickers and their flags based on categories
      * @param {string} selector - The selector for ticker elements
      */
     paintTickers(selector) {
-        const orderCategoryLists = this.orderRepo.getOrderCategoryLists();
-        const flagCategoryLists = this.flagRepo.getFlagCategoryLists();
         const colorList = Constants.UI.COLORS.LIST;
 
+        // Paint based on order categories and flag categories
         for (let i = 0; i < colorList.length; i++) {
             const color = colorList[i];
-            const orderSymbols = orderCategoryLists.get(i);
-            const flagSymbols = flagCategoryLists.get(i);
-
-            // Use applyCss directly for painting element colors
+            
+            // Paint orders
+            const orderSymbols = this.categoryManager.getOrderCategory(i);
             this.applyCss(selector, orderSymbols, { 'color': color });
+            
+            // Paint flags
+            const flagSymbols = this.categoryManager.getFlagCategory(i);
             this.paintFlags(selector, flagSymbols, color);
         }
     }
@@ -79,50 +82,103 @@ class PaintManager {
             throw new Error('Selector is required');
         }
 
-        // Reset element colors to default (assumed to be white)
+        // Reset element colors to default
         this.applyCss(selector, null, { 'color': Constants.UI.COLORS.DEFAULT }, true);
 
         // Reset flag colors
         this.paintFlags(selector, null, Constants.UI.COLORS.DEFAULT, true);
     }
 
+    
     /**
-     * Paints the name in the top section if the ticker is in the watchlist
+     * Paints all aspects of the current ticker display
      */
-    paintName() {
-        let ticker = this.getTicker();
-        let $name = $(Constants.DOM.BASIC.NAME);
-        const colorList = Constants.UI.COLORS.LIST;
+    paintHeader() {
+        const ticker = this.tickerManager.getTicker();
+        const name = this.tvManager.getName();
+        const exchange = this.tickerManager.getCurrentExchange();
 
-        //Reset Name Color
-        $name.css('color', Constants.UI.COLORS.DEFAULT);
-
-        //Find and Paint if found in Watchlist
-        for (let i = 0; i < colorList.length; i++) {
-            //Highlight Non White if in Watchlist or Color respectively
-            let color = i === 5 ? colorList[6] : colorList[i];
-            if (this.orderRepo.getOrderCategoryLists().get(i).has(ticker)) {
-                $name.css('color', color);
-            }
+        if (!ticker || !name || !exchange) {
+            console.error('Missing required data for painting ticker');
+            return;
         }
 
-        //FNO Marking
+        const $name = $(Constants.DOM.BASIC.NAME);
+        
+        // Paint each component
+        this._paintNameElement($name, name, ticker);
+        this._paintFNOMarking($name, ticker);
+        this._paintFlagAndExchange(ticker, exchange);
+    }
+
+    /**
+     * Paints the name element with appropriate category color
+     * @private
+     * @param {jQuery} $name - jQuery element for the name
+     * @param {string} name - Name text to display
+     * @param {string} ticker - Ticker symbol
+     */
+    _paintNameElement($name, name, ticker) {
+        $name.css('color', Constants.UI.COLORS.DEFAULT);
+
+        // Paint based on order categories
+        for (let i = 0; i < Constants.UI.COLORS.LIST.length; i++) {
+            const categorySymbols = this.categoryManager.getOrderCategory(i);
+            if (categorySymbols && categorySymbols.has(ticker)) {
+                $name.css('color', this._getCategoryColor(i));
+                break; // Stop after first matching category
+            }
+        }
+    }
+
+    /**
+     * Gets the appropriate color for a category index
+     * @private
+     * @param {number} index Category index
+     * @returns {string} Color for the category
+     */
+    _getCategoryColor(index) {
+        const colorList = Constants.UI.COLORS.LIST;
+        return index === 5 ? colorList[6] : colorList[index];
+    }
+
+    /**
+     * Paints flag and exchange elements for a ticker
+     * @private
+     * @param {string} ticker - Ticker symbol
+     * @param {string} exchange - Exchange identifier from TickerManager
+     */
+    _paintFlagAndExchange(ticker, exchange) {
+        const $flag = $(Constants.DOM.FLAGS.MARKING);
+        const $exchange = $(Constants.DOM.BASIC.EXCHANGE);
+
+        // Reset colors and set exchange text
+        $flag.css('color', Constants.UI.COLORS.DEFAULT);
+        $exchange.css('color', Constants.UI.COLORS.DEFAULT);
+
+        // Paint flags and exchange based on flag categories
+        Constants.UI.COLORS.LIST.forEach((color, i) => {
+            const flagSymbols = this.categoryManager.getFlagCategory(i);
+            if (flagSymbols && flagSymbols.has(ticker)) {
+                $flag.css('color', color);
+                $exchange.css('color', color);
+                return false; // Break the loop after first match
+            }
+        });
+    }
+
+    /**
+     * Paints FNO marking for a ticker
+     * @private
+     * @param {jQuery} $name - jQuery element for the name
+     * @param {string} ticker - Ticker symbol
+     */
+    _paintFNOMarking($name, ticker) {
         if (Constants.EXCHANGE.FNO_SYMBOLS.has(ticker)) {
             $name.css(Constants.UI.COLORS.FNO_CSS);
         } else {
             $name.css('border-top-style', '');
             $name.css('border-width', '');
         }
-
-        //Flag Marking
-        let $flag = $(Constants.DOM.FLAGS.MARKING);
-        $flag.css('color', Constants.UI.COLORS.DEFAULT);
-        $(Constants.DOM.BASIC.EXCHANGE).css('color', Constants.UI.COLORS.DEFAULT);
-        colorList.forEach((c, i) => {
-            if (this.flagRepo.getOrderCategoryLists().get(i).has(ticker)) {
-                $flag.css('color', c)
-                $(Constants.DOM.BASIC.EXCHANGE).css('color', c);
-            }
-        })
     }
 }
