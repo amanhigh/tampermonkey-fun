@@ -1,8 +1,10 @@
 const path = require("path");
+const { merge } = require("webpack-merge");
 const baseConfig = require("./webpack.config.dev.cjs");
 const baseMetadata = require("./metadata.cjs");
 
 // Override metadata
+// TODO: Not Overriding in dev.user.js
 const metadata = {
   ...baseMetadata,
   name: {
@@ -13,13 +15,11 @@ const metadata = {
 };
 
 // Override webpack config
-const config = {
-  ...baseConfig,
-  entry: "./src/core/test.ts",
-  output: {
-    ...baseConfig.output,
-    filename: "test.[name].js"
-  }
-};
+const cfg = merge(baseConfig, {
+  entry: {
+    debug: "./src/core/test.ts",
+    "dev.user": path.resolve(__dirname, "./empty.cjs"),
+  },
+});
 
-module.exports = config;
+module.exports = cfg;
