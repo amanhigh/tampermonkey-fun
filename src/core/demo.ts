@@ -1,4 +1,4 @@
-import "./style/main.less";
+import "../style/main.less";
 
 //checkout homepage https://github.com/Trim21/gm-fetch for @trim21/gm-fetch
 import GM_fetch from "@trim21/gm-fetch";

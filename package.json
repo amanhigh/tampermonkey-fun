@@ -14,8 +14,9 @@
   "scripts": {
     "lint": "npx eslint .",
     "analyze": "cross-env npm_config_report=true npm run build",
+    "debug": "webpack --config config/webpack.config.dev.cjs",
     "build": "webpack --config config/webpack.config.prod.cjs",
-    "dev": "webpack --config config/webpack.config.dev.cjs"
+    "test": "webpack --config config/test.cjs"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",

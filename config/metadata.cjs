@@ -7,9 +7,9 @@ const {
 
 module.exports = {
   name: {
-    $: "Tampermonkey Fun",
+    $: "Tamper Debug",
   },
-  namespace: "https://trim21.me/",
+  namespace: "aman",
   version: version,
   author: author,
   source: repository.url,
