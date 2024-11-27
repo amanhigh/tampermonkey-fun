@@ -27,30 +27,30 @@ export class Order {
 }
 
 export class GttOrderMap {
-    private orders: Record<string, Order[]>;
+    private _orders: Record<string, Order[]>;
 
     constructor() {
-        this.orders = {};
+        this._orders = {};
     }
 
     addOrder(sym: string, leg: Order): void {
-        if (!this.orders[sym]) {
-            this.orders[sym] = [];
+        if (!this._orders[sym]) {
+            this._orders[sym] = [];
         }
-        this.orders[sym].push(leg);
+        this._orders[sym].push(leg);
     }
 
     getOrdersForTicker(ticker: string): Order[] {
-        return this.orders[ticker] || [];
+        return this._orders[ticker] || [];
     }
 
     getCount(): number {
-        return Object.keys(this.orders).length;
+        return Object.keys(this._orders).length;
     }
 
-    // FIXME: Move to REepository ?
-    static loadFromGMValue(key: string, defaultValue: Record<string, Record<string, Order[]>> = {}): GttOrderMap {
-        const storedValue = GM_getValue(key, defaultValue);
+    // FIXME: Move to Repository?
+    static async loadFromGMValue(key: string, defaultValue = { orders: {} }): Promise<GttOrderMap> {
+        const storedValue = await GM.getValue(key, defaultValue);
         const gttOrderMap = new GttOrderMap();
     
         if (typeof storedValue === 'object' && storedValue !== null) {
@@ -68,7 +68,7 @@ export class GttOrderMap {
 
     toObject(): { orders: Record<string, Order[]> } {
         return {
-            orders: { ...this.orders }
+            orders: { ...this._orders }
         };
     }
 }

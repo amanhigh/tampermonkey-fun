@@ -1,20 +1,24 @@
+import { Alert, PairInfo } from '../models/alert';
+import { BaseClient } from './base';
+
+
+
 /**
  * Client for interacting with Investing.com API
  */
-class InvestingClient extends BaseClient {
-    constructor(baseUrl = "https://in.investing.com") {
+export class InvestingClient extends BaseClient {
+    constructor(baseUrl: string = "https://in.investing.com") {
         super(baseUrl);
     }
 
     /**
      * Creates a new price alert
-     * @param {string} name - Symbol name
-     * @param {string} pairId - Pair ID from Investing.com
-     * @param {number} price - Target price for the alert
-     * @param {number} ltp - Last Traded Price
-     * @returns {Promise<Object>} Alert creation result
      */
-    async createAlert(name, pairId, price, ltp) {
+    async createAlert(name: string, pairId: string, price: number, ltp: number): Promise<{
+        name: string;
+        pairId: string;
+        price: number;
+    }> {
         const threshold = price > ltp ? 'over' : 'under';
         
         const data = new URLSearchParams({
@@ -23,51 +27,47 @@ class InvestingClient extends BaseClient {
             'alertParams[pair_ID]': pairId,
             'alertParams[threshold]': threshold,
             'alertParams[frequency]': 'Once',
-            'alertParams[value]': price,
+            'alertParams[value]': price.toString(),
             'alertParams[platform]': 'desktopAlertsCenter',
             'alertParams[email_alert]': 'Yes'
         });
 
         try {
-            await this._makeRequest('/useralerts/service/create', {
+            await this.makeRequest('/useralerts/service/create', {
                 method: 'POST',
                 data: data.toString()
             });
             return { name, pairId, price };
         } catch (error) {
-            throw new Error(`Failed to create alert: ${error.message}`);
+            throw new Error(`Failed to create alert: ${(error as Error).message}`);
         }
     }
 
     /**
      * Deletes an existing alert
-     * @param {Alert} alert - Alert object to delete
-     * @returns {Promise<Alert>} Deleted alert object
      */
-    async deleteAlert(alert) {
+    async deleteAlert(alert: Alert): Promise<Alert> {
         const data = new URLSearchParams({
             alertType: 'instrument',
-            'alertParams[alert_ID]': alert.Id,
+            'alertParams[alert_ID]': alert.id,
             'alertParams[platform]': 'desktop'
         });
 
         try {
-            await this._makeRequest('/useralerts/service/delete', {
+            await this.makeRequest('/useralerts/service/delete', {
                 method: 'POST',
                 data: data.toString()
             });
             return alert;
         } catch (error) {
-            throw new Error(`Failed to delete alert: ${error.message}`);
+            throw new Error(`Failed to delete alert: ${(error as Error).message}`);
         }
     }
 
     /**
      * Fetch symbol data from the investing.com API
-     * @param {string} symbol - the symbol to search for
-     * @returns {Promise<Array<PairInfo>>} - Promise resolving to an array of PairInfo objects
      */
-    async fetchSymbolData(symbol) {
+    async fetchSymbolData(symbol: string): Promise<PairInfo[]> {
         const data = new URLSearchParams({
             search_text: symbol,
             term: symbol,
@@ -76,7 +76,7 @@ class InvestingClient extends BaseClient {
         });
 
         try {
-            const response = await this._makeRequest('/search/service/search?searchType=alertCenterInstruments', {
+            const response = await this.makeRequest<string>('/search/service/search?searchType=alertCenterInstruments', {
                 method: 'POST',
                 data: data.toString()
             });
@@ -86,25 +86,28 @@ class InvestingClient extends BaseClient {
                 throw new Error(`No results found for symbol: ${symbol}`);
             }
             
-            return result.All.map(item => 
-                new PairInfo(item.name, item.pair_ID, item.exchange_name_short)
+            return result.All.map((item: any) => 
+                new PairInfo(
+                    item.name,
+                    item.pair_ID,
+                    item.exchange_name_short
+                )
             );
         } catch (error) {
-            throw new Error(`Failed to fetch symbol data: ${error.message}`);
+            throw new Error(`Failed to fetch symbol data: ${(error as Error).message}`);
         }
     }
 
     /**
      * Fetch all Alerts for all Pairs
-     * @returns {Promise<string>} Raw response containing all alerts
      */
-    async getAllAlerts() {
+    async getAllAlerts(): Promise<string> {
         try {
-            return await this._makeRequest('/members-admin/alert-center', {
+            return await this.makeRequest('/members-admin/alert-center', {
                 method: 'GET'
             });
         } catch (error) {
-            throw new Error(`Failed to get alerts: ${error.message}`);
+            throw new Error(`Failed to get alerts: ${(error as Error).message}`);
         }
     }
 }
