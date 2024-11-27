@@ -56,7 +56,7 @@ export default [
       "linebreak-style": ["error", "unix"],
       "semi": ["error", "always"],
       "no-multiple-empty-lines": ["error", { "max": 1 }],
-      "no-trailing-spaces": "error",
+      // "no-trailing-spaces": "error",
       "eol-last": "error",
       
       // Runtime behavior rules

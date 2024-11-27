@@ -1,17 +1,17 @@
 /**
  * Represents a collection of categorized lists where items can only exist in one list
  */
-class CategoryLists {
+export class CategoryLists {
     /**
      * Map of categorized lists, where each list is a Set
      * @type {Map<number, Set<string>>}
      */
-    _lists;
+    _lists: Map<number, Set<string>>;
 
     /**
      * @param {Map<number, Set<string>>} lists Initial categorized lists
      */
-    constructor(lists) {
+    constructor(lists: Map<number, Set<string>>) {
         this._lists = lists;
     }
 
@@ -20,8 +20,8 @@ class CategoryLists {
      * @param {number} listNo List number
      * @param {string} item Item to toggle
      */
-    toggle(listNo, item) {
-        if (this._lists.get(listNo).has(item)) {
+    toggle(listNo: number, item: string): void {
+        if (this._lists.get(listNo)?.has(item)) {
             this.delete(listNo, item);
         } else {
             this.add(listNo, item);
@@ -33,8 +33,8 @@ class CategoryLists {
      * @param {number} listNo List number
      * @param {string} item Item to add
      */
-    add(listNo, item) {
-        this._lists.get(listNo).add(item);
+    add(listNo: number, item: string): void {
+        this._lists.get(listNo)?.add(item);
         this._postAdd(listNo, item);
     }
 
@@ -43,8 +43,8 @@ class CategoryLists {
      * @param {number} listNo List number
      * @param {string} item Item to remove
      */
-    delete(listNo, item) {
-        this._lists.get(listNo).delete(item);
+    delete(listNo: number, item: string): void {
+        this._lists.get(listNo)?.delete(item);
     }
 
     /**
@@ -52,7 +52,7 @@ class CategoryLists {
      * @param {number} listNo List number
      * @returns {Set<string>} The requested list
      */
-    getList(listNo) {
+    getList(listNo: number): Set<string> | undefined {
         return this._lists.get(listNo);
     }
 
@@ -61,7 +61,7 @@ class CategoryLists {
      * @param {number} listNo List number
      * @param {Set<string>} list New list to set
      */
-    setList(listNo, list) {
+    setList(listNo: number, list: Set<string>): Map<number, Set<string>> {
         return this._lists.set(listNo, list);
     }
 
@@ -71,8 +71,8 @@ class CategoryLists {
      * @param {string} item Item to check
      * @returns {boolean} True if item exists in list
      */
-    contains(listNo, item) {
-        return this._lists.get(listNo).has(item);
+    contains(listNo: number, item: string): boolean {
+        return this._lists.get(listNo)?.has(item) ?? false;
     }
 
     /**
@@ -80,9 +80,9 @@ class CategoryLists {
      * @param {string} item Item to check
      * @returns {boolean} True if item exists in any list
      */
-    containsInAny(item) {
+    containsInAny(item: string): boolean {
         for (const list of this._lists.values()) {
-            if (list.has(item)) return true;
+            if (list.has(item)) {return true;}
         }
         return false;
     }
@@ -93,7 +93,7 @@ class CategoryLists {
      * @param {string} item Item that was added
      * @protected
      */
-    _postAdd(listNo, item) {
+    _postAdd(listNo: number, item: string): void {
         this._lists.forEach((list, index) => {
             if (index !== listNo && list.has(item)) {
                 this.delete(index, item);

@@ -1,11 +1,11 @@
-class Order {
-    sym
-    qty
-    type
-    id
-    prices
+export class Order {
+    sym: string;
+    qty: number;
+    type: string;
+    id: string;
+    prices: number[];
 
-    constructor(sym, qty, type, id, prices) {
+    constructor(sym: string, qty: number, type: string, id: string, prices: number[]) {
         this.sym = sym;
         this.qty = qty;
         this.type = type;
@@ -14,46 +14,47 @@ class Order {
     }
 }
 
-class GttOrderMap {
-    orders
+export class GttOrderMap {
+    orders: Record<string, Order[]>;
 
     constructor() {
         this.orders = {};
     }
 
-    addOrder(sym, leg) {
+    addOrder(sym: string, leg: Order): void {
         if (!this.orders[sym]) {
             this.orders[sym] = [];
         }
         this.orders[sym].push(leg);
     }
 
-    getOrdersForTicker(ticker) {
+    getOrdersForTicker(ticker: string): Order[] {
         return this.orders[ticker] || [];
     }
 
-    getCount() {
+    getCount(): number {
         return Object.keys(this.orders).length;
     }
 
-    static loadFromGMValue(key, defaultValue = {}) {
+    // FIXME: Move to REepository ?
+    static loadFromGMValue(key: string, defaultValue: Record<string, Record<string, Order[]>> = {}): GttOrderMap {
         const storedValue = GM_getValue(key, defaultValue);
         const gttOrderMap = new GttOrderMap();
-
+    
         if (typeof storedValue === 'object' && storedValue !== null) {
             Object.keys(storedValue.orders || {}).forEach(symbol => {
-                storedValue.orders[symbol].forEach(order => {
+                storedValue.orders[symbol].forEach((order: Order) => {
                     gttOrderMap.addOrder(symbol, order);
                 });
             });
         } else {
             console.warn('Retrieved value is not a valid object. Using empty GttOrderMap.');
         }
-
+    
         return gttOrderMap;
     }
 
-    toObject() {
+    toObject(): { orders: Record<string, Order[]> } {
         return {
             orders: { ...this.orders }
         };
