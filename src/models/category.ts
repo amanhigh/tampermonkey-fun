@@ -6,7 +6,7 @@ export class CategoryLists {
      * Map of categorized lists, where each list is a Set
      * @type {Map<number, Set<string>>}
      */
-    _lists: Map<number, Set<string>>;
+    private readonly _lists: Map<number, Set<string>>;
 
     /**
      * @param {Map<number, Set<string>>} lists Initial categorized lists

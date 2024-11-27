@@ -13,32 +13,21 @@
  * - YR (Yearly): Used for longer-term analysis
  */
 export class TimeFrame {
-    /**
-     * Short symbol representing the timeframe (e.g., "D" for Daily)
-     * Used in UI elements and compact displays
-     */
-    symbol: string;
+    private _symbol: string;
+    private _style: string;
+    private _toolbar: number;
 
-    /**
-     * Style identifier used when applying visual formatting
-     * Determines how chart elements appear for this timeframe
-     */
-    style: string;
-
-    /**
-     * Position of this timeframe's button in the toolbar (ranges from 3-7)
-     * Used for programmatic toolbar interactions
-     */
-    toolbar: number;
-
-    /**
-     * @param symbol - Short display symbol (e.g., "D" for Daily)
-     * @param style - Style identifier for visual formatting
-     * @param toolbarPosition - Position of this timeframe in the toolbar (3-7)
-     */
     constructor(symbol: string, style: string, toolbarPosition: number) {
-        this.symbol = symbol;
-        this.style = style;
-        this.toolbar = toolbarPosition;
+        this._symbol = symbol;
+        this._style = style;
+        this._toolbar = toolbarPosition;
     }
+
+    get symbol(): string { return this._symbol; }
+    get style(): string { return this._style; }
+    get toolbar(): number { return this._toolbar; }
+
+    set symbol(value: string) { this._symbol = value; }
+    set style(value: string) { this._style = value; }
+    set toolbar(value: number) { this._toolbar = value; }
 }

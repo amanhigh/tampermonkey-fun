@@ -1,21 +1,33 @@
 export class Order {
-    sym: string;
-    qty: number;
-    type: string;
-    id: string;
-    prices: number[];
+    private _sym: string;
+    private _qty: number;
+    private _type: string;
+    private _id: string;
+    private _prices: number[];
 
     constructor(sym: string, qty: number, type: string, id: string, prices: number[]) {
-        this.sym = sym;
-        this.qty = qty;
-        this.type = type;
-        this.id = id;
-        this.prices = prices;
+        this._sym = sym;
+        this._qty = qty;
+        this._type = type;
+        this._id = id;
+        this._prices = prices;
     }
+
+    get sym(): string { return this._sym; }
+    get qty(): number { return this._qty; }
+    get type(): string { return this._type; }
+    get id(): string { return this._id; }
+    get prices(): number[] { return [...this._prices]; }
+
+    set sym(value: string) { this._sym = value; }
+    set qty(value: number) { this._qty = value; }
+    set type(value: string) { this._type = value; }
+    set id(value: string) { this._id = value; }
+    set prices(value: number[]) { this._prices = [...value]; }
 }
 
 export class GttOrderMap {
-    orders: Record<string, Order[]>;
+    private orders: Record<string, Order[]>;
 
     constructor() {
         this.orders = {};
