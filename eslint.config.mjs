@@ -1,89 +1,70 @@
 /**
  * npm install --save-dev 
+ * npm install --save-dev @typescript-eslint/parser @typescript-eslint/eslint-plugin
  * npx eslint --init
  * npx eslint .
  */
+// eslint.config.mjs
 import globals from "globals";
+import typescript from "@typescript-eslint/eslint-plugin";
+import typescriptParser from "@typescript-eslint/parser";
 
 export default [
   {
-    files: ["**/*.js"],
+    files: ["src/**/*.ts"],
     languageOptions: {
-      sourceType: "script",
-      ecmaVersion: 2022,
+      parser: typescriptParser,
+      parserOptions: {
+        project: "./tsconfig.json",
+        ecmaVersion: 2022,
+        sourceType: "module",
+      },
       globals: {
-        ...globals.browser,        // Includes setTimeout, setInterval, requestAnimationFrame, etc.
-        ...globals.greasemonkey,   // TamperMonkey/GreaseMonkey globals
-        ...globals.jquery,         // jQuery globals ($, jQuery)
-
-        // Handler
-        KiteHandler: true,
-        CommandInputHandler: true,
-        DisplayInputHandler: true,
-        RecentCheckboxHandler: true,
-
-        // Managers
-        AuditManager: true,
-        AuditUIManager: true,
-        SymbolManager: true,
-        KiteManager: true,
-        SequenceManager: true,
-        TradingViewManager: true,
-        TickerManager: true,
-        TradingViewScreenerManager: true,
-        TradingViewWatchlistManager: true,
-        PaintManager: true,
-
-        // Utils
-        ObserveUtil: true,
-        KeyUtil: true,
-        SearchManager: true,
-        SyncUtil: true,
-        WaitUtil: true,
-        SmartPrompt: true,
-        UIUtil: true,
-        Styles: true,
-
-        // Repositories
-        AlertRepo: true,
-        AuditRepo: true,
-        BaseRepo: true,
-        CategoryRepo: true,
-        ExchangeRepo: true,
-        FlagRepo: true,
-        MapRepo: true,
-        OrderRepo: true,
-        PairRepo: true,
-        RecentTickerRepo: true,
-        RepoCron: true,
-        SequenceRepo: true,
-        SetRepo: true,
-        TickerRepo: true,
-
-        // Clients
-        BaseClient: true,
-        KohanClient: true,
-        KiteClient: true,
-        InvestingClient: true,
-
-        // Models
-        Constants: true,
-        PairInfo: true,
-        Alert: true,
-        AlertAudit: true,
-        AlertState: true,
-        CategoryLists: true,
-        Order: true,
-        GttOrderMap: true,
-        TimeFrame: true,
-        WatchChangeEvent: true
+        ...globals.browser,
+        ...globals.greasemonkey,
+        ...globals.jquery,
       }
     },
+    plugins: {
+      "@typescript-eslint": typescript
+    },
     rules: {
-      "no-unused-vars": "warn",
-      "no-undef": "error",
+      ...typescript.configs["recommended"].rules,
+      
+      // Keep only TypeScript-specific rules that add value beyond tsconfig
+      "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/await-thenable": "error",
+      "@typescript-eslint/no-misused-promises": "error",
+      "@typescript-eslint/prefer-as-const": "warn",
+      "@typescript-eslint/prefer-readonly": "warn",
+      "@typescript-eslint/require-await": "error",
+      "@typescript-eslint/no-explicit-any": ["error", {
+          "fixToUnknown": true
+        }],
+      "@typescript-eslint/promise-function-async": "error",
+      
+      // Code quality rules
       "max-lines": ["warn", 200],
       "max-lines": ["error", 500],
+      "max-lines-per-function": ["warn", 50],
+      "complexity": ["warn", 10],
+      "max-depth": ["warn", 3],
+      "max-nested-callbacks": ["warn", 3],
+      "max-params": ["warn", 4],
+      
+      // Essential style rules
+      "linebreak-style": ["error", "unix"],
+      "semi": ["error", "always"],
+      "no-multiple-empty-lines": ["error", { "max": 1 }],
+      "no-trailing-spaces": "error",
+      "eol-last": "error",
+      
+      // Runtime behavior rules
+      "eqeqeq": "error",
+      "no-var": "error",
+      "prefer-const": "warn",
+      // "no-console": "warn",
+      "curly": "warn"
     }
   }
 ];

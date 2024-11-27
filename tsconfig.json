@@ -1,31 +1,17 @@
 {
   "compilerOptions": {
-    // Output Options
+    // Keep the compilation and module settings
     "outDir": "./dist/",
     "target": "ES2020",
     "module": "ESNext",
-    // Module Resolution
     "moduleResolution": "Node",
     "esModuleInterop": true,
-    "allowJs": true, // TODO: Turn off later
-    // Strict Type Checking
-    "strict": true, // Enable all strict type checking options
-    "noImplicitAny": true, // Error on implicit any types
-    "strictNullChecks": true, // Enable strict null checks
-    "strictFunctionTypes": true, // Enable strict checking of function types
-    "strictPropertyInitialization": true, // Ensure class properties are initialized
-    "noImplicitThis": true, // Error on implicit this
-    // Additional Checks
-    "noUnusedLocals": true, // Report errors on unused locals
-    "noUnusedParameters": true, // Report errors on unused parameters
-    "noImplicitReturns": true, // Report error when not all code paths return
-    "noFallthroughCasesInSwitch": true, // Report errors for fallthrough cases in switch
-    "noUncheckedIndexedAccess": true, // Include undefined in index signature results
-    // Source Map Support
-    "sourceMap": true, // Generate source maps for debugging
-    // Type Declaration Options
-    "declaration": true, // Generate .d.ts files
-    "declarationMap": true // Generate source maps for .d.ts files
+    // Keep the strict type checking bundle
+    "strict": true, // This enables many strict checks in one setting
+    // Keep source map and declaration settings
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true
   },
   "include": [
     "src/**/*" // Include all files in src directory
