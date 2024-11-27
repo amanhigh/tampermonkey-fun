@@ -1,20 +1,20 @@
 /**
  * Utility class for object manipulations
  */
-class ObjectUtils {
+export class ObjectUtils {
     /**
      * Reverses key-value pairs in an object
-     * @param {Object} obj - Object to reverse
-     * @returns {Object} New object with reversed mappings
-     * @throws {Error} If input is not an object or is null
+     * @param obj - Object to reverse
+     * @returns New object with reversed mappings
+     * @throws Error if input is not an object or is null
      */
-    static reverseMap(obj) {
+    static reverseMap<T extends Record<string, unknown>>(obj: T): Record<string, keyof T> {
         if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
             throw new Error('Input must be a non-null object');
         }
 
         try {
-            const reversed = {};
+            const reversed: Record<string, keyof T> = {};
             
             for (const [key, value] of Object.entries(obj)) {
                 if (value === null || value === undefined) {

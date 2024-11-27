@@ -1,9 +1,8 @@
 /**
  * Provides utility functions for synchronization and resource waiting operations
  */
-class SyncUtil {
-
-    _waitId = 'aman-wait-on';
+export class SyncUtil {
+    private readonly _waitId: string = 'aman-wait-on';
 
     constructor() {
         this._initializeSyncElement();
@@ -13,7 +12,7 @@ class SyncUtil {
      * Initializes the sync DOM element if not present
      * @private
      */
-    _initializeSyncElement() {
+    private _initializeSyncElement(): void {
         let $waitOn = $(`#${this._waitId}`);
         if (!$waitOn.length) {
             $waitOn = $('<div>')
@@ -24,21 +23,19 @@ class SyncUtil {
 
     /**
      * Wait on a resource with a timeout, and execute a callback when the resource becomes available.
-     * @param {string} id - The unique identifier of the resource to wait on
-     * @param {number} timeout - The timeout period in milliseconds
-     * @param {Function} callback - The callback function to execute when the resource becomes available
+     * @param id - The unique identifier of the resource to wait on
+     * @param timeout - The timeout period in milliseconds
+     * @param callback - The callback function to execute when the resource becomes available
      */
-    waitOn(id, timeout, callback) {
+    public waitOn(id: string, timeout: number, callback: () => void): void {
         if (!id || typeof id !== 'string') {
             console.error('Invalid id provided to waitOn');
             return;
         }
-
         if (!timeout || typeof timeout !== 'number') {
             console.error('Invalid timeout provided to waitOn');
             return;
         }
-
         if (!callback || typeof callback !== 'function') {
             console.error('Invalid callback provided to waitOn');
             return;
@@ -63,7 +60,7 @@ class SyncUtil {
      * Initiates a new mutex lock
      * @private
      */
-    _initiateMutex($waitOn, mutexId, dataId, timeout, callback) {
+    private _initiateMutex($waitOn: JQuery, mutexId: string, dataId: string, timeout: number, callback: () => void): void {
         $waitOn.toggleClass(mutexId);
         $waitOn.data(dataId, timeout); //Start filling timeout Bucket.
         
@@ -75,11 +72,12 @@ class SyncUtil {
      * Starts monitoring the mutex
      * @private
      */
-    _startMutexMonitor($waitOn, mutexId, dataId, timeout, waitPeriod, callback) {
-        const monitorMutex = () => {
+    private _startMutexMonitor($waitOn: JQuery, mutexId: string, dataId: string, timeout: number, waitPeriod: number, callback: () => void): void {
+        const monitorMutex = (): void => {
             const newTimeout = $waitOn.data(dataId) - waitPeriod; //Remove elapsed Time from timeout Bucket.
             $waitOn.data(dataId, newTimeout);
             // console.log('Mutex Depleted: ', id, newTimeout)
+            
             /* Handles last element grace period to execute */
             if (newTimeout <= -timeout) {
                 $waitOn.toggleClass(mutexId);
@@ -88,7 +86,7 @@ class SyncUtil {
                 setTimeout(monitorMutex, waitPeriod);
             }
         };
-
+        
         setTimeout(monitorMutex, waitPeriod);
     }
 
@@ -96,7 +94,7 @@ class SyncUtil {
      * Extends the timeout for an existing mutex
      * @private
      */
-    _extendTimeout($waitOn, dataId, timeout) {
+    private _extendTimeout($waitOn: JQuery, dataId: string, timeout: number): void {
         const newTimeout = $waitOn.data(dataId) + timeout; //Add to Timeout Bucket
         $waitOn.data(dataId, newTimeout);
         // console.log('Mutex Filled: ', id, newTimeout);

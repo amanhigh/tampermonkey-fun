@@ -1,16 +1,17 @@
 /**
  * Manages DOM observation operations
  */
-class ObserveUtil {
+export class ObserveUtil {
     /**
      * Observes attribute changes on target
-     * @param {Element} target - Target element to observe
-     * @param {Function} callback - Callback for changes
+     * @param target - Target element to observe
+     * @param callback - Callback for changes
+     * @returns MutationObserver instance or undefined if setup fails
      */
-    attributeObserver(target, callback) {
+    public attributeObserver(target: Element, callback: () => void): MutationObserver | undefined {
         if (!target || !(target instanceof Element)) {
             console.error('Invalid target element provided to attributeObserver');
-            return;
+            return undefined;
         }
 
         try {
@@ -28,19 +29,22 @@ class ObserveUtil {
 
             return observer;
         } catch (error) {
+            // TODO: Throw Error instead of logging.
             console.error('attributeObserver error:', error);
+            return undefined;
         }
     }
 
     /**
      * Observes node changes on target
-     * @param {Element} target - Target element to observe
-     * @param {Function} callback - Callback for changes
+     * @param target - Target element to observe
+     * @param callback - Callback for changes
+     * @returns MutationObserver instance or undefined if setup fails
      */
-    nodeObserver(target, callback) {
+    public nodeObserver(target: Element, callback: () => void): MutationObserver | undefined {
         if (!target || !(target instanceof Element)) {
             console.error('Invalid target element provided to nodeObserver');
-            return;
+            return undefined;
         }
 
         try {
@@ -63,6 +67,8 @@ class ObserveUtil {
             return observer;
         } catch (error) {
             console.error('nodeObserver error:', error);
+            // TODO: Throw Error instead of logging.
+            return undefined;
         }
     }
 }

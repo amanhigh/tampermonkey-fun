@@ -1,22 +1,22 @@
 /**
  * Manages DOM operations and observations
  */
-class WaitUtil {
+export class WaitUtil {
     /**
      * Waits for element and executes callback
-     * @param {string} selector - Element selector
-     * @param {Function} callback - Callback function
-     * @param {number} [count=3] - Retry count
-     * @param {number} [timeout=2000] - Timeout in ms
+     * @param selector - Element selector
+     * @param callback - Callback function
+     * @param count - Retry count
+     * @param timeout - Timeout in ms
      */
-    waitEE(selector, callback, count = 3, timeout = 2000) {
+    public waitEE(selector: string, callback: (element: HTMLElement) => void, count = 3, timeout = 2000): void {
         if (!selector || typeof selector !== 'string') {
             console.error('Invalid selector provided to waitEE');
             return;
         }
 
         try {
-            const el = document.querySelector(selector);
+            const el = document.querySelector<HTMLElement>(selector);
 
             if (el) {
                 return callback(el);
@@ -34,12 +34,12 @@ class WaitUtil {
 
     /**
      * Waits for jQuery element and executes callback
-     * @param {string} selector - jQuery selector
-     * @param {Function} callback - Callback function
-     * @param {number} [count=3] - Retry count
-     * @param {number} [timeout=2000] - Timeout in ms
+     * @param selector - jQuery selector
+     * @param callback - Callback function
+     * @param count - Retry count
+     * @param timeout - Timeout in ms
      */
-    waitJEE(selector, callback, count = 3, timeout = 2000) {
+    public waitJEE(selector: string, callback: (element: JQuery) => void, count = 3, timeout = 2000): void {
         if (!selector || typeof selector !== 'string') {
             console.error('Invalid selector provided to waitJEE');
             return;
@@ -64,10 +64,10 @@ class WaitUtil {
 
     /**
      * Waits for element and triggers click
-     * @param {string} selector - Element selector
-     * @param {Function} [callback] - Optional callback after click
+     * @param selector - Element selector
+     * @param callback - Optional callback after click
      */
-    waitClick(selector, callback = () => {}) {
+    public waitClick(selector: string, callback: () => void = () => {}): void {
         this.waitEE(selector, (e) => {
             try {
                 e.click();
@@ -80,10 +80,10 @@ class WaitUtil {
 
     /**
      * Waits for jQuery element and triggers click
-     * @param {string} selector - jQuery selector
-     * @param {Function} [callback] - Optional callback after click
+     * @param selector - jQuery selector
+     * @param callback - Optional callback after click
      */
-    waitJClick(selector, callback = () => {}) {
+    public waitJClick(selector: string, callback: () => void = () => {}): void {
         this.waitJEE(selector, (e) => {
             try {
                 e.click();
@@ -96,10 +96,10 @@ class WaitUtil {
 
     /**
      * Waits for element and sends input with enter key
-     * @param {string} selector - Element selector
-     * @param {string} inputValue - Value to input
+     * @param selector - Element selector
+     * @param inputValue - Value to input
      */
-    waitInput(selector, inputValue) {
+    public waitInput(selector: string, inputValue: string): void {
         if (typeof inputValue === 'undefined') {
             console.error('Input value must be provided to waitInput');
             return;
@@ -108,7 +108,7 @@ class WaitUtil {
         this.waitEE(selector, (e) => {
             try {
                 e.value = inputValue;
-                e.dispatchEvent(new Event('input', { 'bubbles': true }));
+                e.dispatchEvent(new Event('input', { bubbles: true }));
                 e.dispatchEvent(new KeyboardEvent("keydown", { 
                     bubbles: true, 
                     keyCode: 13 
