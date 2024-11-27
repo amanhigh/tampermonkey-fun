@@ -7,9 +7,7 @@ const {
 
 module.exports = {
   name: {
-    $: "webpack-userscript-template",
-    cn: "中文名",
-    en: "english name",
+    $: "Tampermonkey Fun",
   },
   namespace: "https://trim21.me/",
   version: version,
