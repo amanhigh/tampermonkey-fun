@@ -8,6 +8,7 @@ import { SyncUtil } from '../util/sync';
 import { KeyUtil } from '../util/key';
 import { SmartPrompt } from '../util/smart';
 import { WaitUtil } from '../util/wait';
+import { TestApp } from './test';
 
 /**
  * Project Architecture Overview
@@ -18,6 +19,11 @@ import { WaitUtil } from '../util/wait';
  */
 export class Factory {
     private static _instances: Record<string, unknown> = {};
+
+    public static app = {
+        test: (): TestApp => 
+            Factory._getInstance('testApp', () => new TestApp(Factory.util.ui(), Factory.util.key())),
+    };
 
     /**
      * Client Layer

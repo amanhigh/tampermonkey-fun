@@ -11,7 +11,8 @@ const metadata = {
     $: "test-userscript",
     en: "Experimentation UserScript"
   },
-  match: ["*://www.example.com/*"]
+  match: ["*://www.example.com/*"],
+  connect: ["reqres.in"],
 };
 
 // Override webpack config
