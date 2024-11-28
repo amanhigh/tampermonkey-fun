@@ -1,5 +1,27 @@
+import { Constants } from '../models/constant';
+import { TimeFrame } from '../models/trading';
+import { ISequenceManager } from './sequence';
+
 /**
- * Represents a trading timeframe configuration
+ * Interface for managing trading timeframe operations
+ */
+export interface ITimeFrameManager {
+    /**
+     * Apply timeframe to chart and set as current
+     * @param position - Position in sequence (0-3)
+     * @returns True if successfully applied
+     */
+    applyTimeFrame(position: number): boolean;
+
+    /**
+     * Get currently selected timeframe
+     * @returns Current timeframe configuration or null
+     */
+    getCurrentTimeFrame(): TimeFrame | null;
+}
+
+/**
+ * Manages all timeframe operations and state for trading view
  * 
  * A TimeFrame is a specific time period view (like Daily, Weekly, Monthly) used in trading charts.
  * Each timeframe has:
@@ -12,22 +34,22 @@
  * - MWD (Monthly-Weekly-Daily): Used for regular trading analysis
  * - YR (Yearly): Used for longer-term analysis
  */
-class TimeFrameManager {
+export class TimeFrameManager implements ITimeFrameManager {
     /**
-     * Creates a TimeFrameManager instance
-     * @param {SequenceManager} sequenceManager - Sequence manager instance
+     * Currently selected timeframe
+     * @private
      */
-    constructor(sequenceManager) {
-        this._currentTimeFrame = null;
-        this._sequenceManager = sequenceManager;
-    }
+    private _currentTimeFrame: TimeFrame | null = null;
 
     /**
-     * Apply timeframe to chart and set as current
-     * @param {number} position - Position in sequence (0-3)
-     * @returns {boolean} True if successfully applied
+     * @param sequenceManager - Manager for sequence operations
      */
-    applyTimeFrame(position) {
+    constructor(
+        private readonly _sequenceManager: ISequenceManager
+    ) {}
+
+    /** @inheritdoc */
+    applyTimeFrame(position: number): boolean {
         try {
             const sequence = this._sequenceManager.getCurrentSequence();
             const timeFrame = this._sequenceManager.sequenceToTimeFrame(sequence, position);
@@ -35,28 +57,25 @@ class TimeFrameManager {
                 throw new Error(`Invalid timeframe for sequence ${sequence} and position ${position}`);
             }
             this._setTimeFrame(timeFrame);
-            return this._clickTimeFrameToolbar(timeFrame.toolbarPosition);
+            return this._clickTimeFrameToolbar(timeFrame.toolbar);
         } catch (error) {
             console.error('Error applying timeframe:', error);
             return false;
         }
     }
 
-    /**
-     * Get currently selected timeframe
-     * @returns {TimeFrame|null} Current timeframe configuration
-     */
-    getCurrentTimeFrame() {
+    /** @inheritdoc */
+    getCurrentTimeFrame(): TimeFrame | null {
         return this._currentTimeFrame;
     }
 
     /**
      * Click toolbar button for timeframe selection
      * @private
-     * @param {number} toolbarPosition - Position of the timeframe button in toolbar
-     * @returns {boolean} True if click was successful
+     * @param toolbarPosition - Position of the timeframe button in toolbar
+     * @returns True if click was successful
      */
-    _clickTimeFrameToolbar(toolbarPosition) {
+    private _clickTimeFrameToolbar(toolbarPosition: number): boolean {
         try {
             const $timeframe = $(`${Constants.DOM.HEADER.TIMEFRAME}:nth(${toolbarPosition})`);
             if ($timeframe.length === 0) return false;
@@ -70,9 +89,10 @@ class TimeFrameManager {
 
     /**
      * Set current timeframe without applying to chart
-     * @param {TimeFrame} timeFrame - Timeframe to set as current
+     * @private
+     * @param timeFrame - Timeframe to set as current
      */
-    _setTimeFrame(timeFrame) {
+    private _setTimeFrame(timeFrame: TimeFrame): void {
         this._currentTimeFrame = timeFrame;
     }
 }
