@@ -88,6 +88,22 @@ export class CategoryLists {
     }
 
     /**
+     * Get access to the lists map
+     * @returns {Map<number, Set<string>>} The internal lists map
+     */
+    getLists(): Map<number, Set<string>> {
+        return this._lists;
+    }
+
+    /**
+     * Get the total number of lists
+     * @returns {number} Number of lists
+     */
+    getSize(): number {
+        return this._lists.size;
+    }
+
+    /**
      * Post-add processing: Remove item from all other lists
      * @param {number} listNo Current list number
      * @param {string} item Item that was added
