@@ -34,10 +34,14 @@ export class CategoryLists {
      * @param {string} item Item to add
      */
     add(listNo: number, item: string): void {
+        // Initialize list if it doesn't exist
+        if (!this._lists.has(listNo)) {
+            this._lists.set(listNo, new Set<string>());
+        }
         this._lists.get(listNo)?.add(item);
         this._postAdd(listNo, item);
     }
-
+    
     /**
      * Remove item from specified list
      * @param {number} listNo List number
