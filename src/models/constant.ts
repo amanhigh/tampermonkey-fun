@@ -1,4 +1,4 @@
-import { TimeFrame } from "./timeframe";
+import { TimeFrame } from "./trading";
 
 /**
  * Application-wide constants organized by domain and functionality
