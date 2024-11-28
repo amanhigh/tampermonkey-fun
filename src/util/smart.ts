@@ -1,17 +1,25 @@
 type StyleProperties = Partial<CSSStyleDeclaration>;
 
 /**
- * Smart prompt utility for creating interactive modal dialogs
+ * Interface for smart prompt utility operations
  */
-export class SmartPrompt {
-    private modal: HTMLDivElement | null = null;
-
+export interface ISmartPrompt {
     /**
      * Shows a modal dialog with customizable buttons and options
      * @param reasons - Array of reason buttons to display
      * @param overrides - Optional array of override radio buttons
      * @returns Promise that resolves with the selected value
      */
+    showModal(reasons: string[], overrides?: string[]): Promise<string>;
+}
+
+/**
+ * Smart prompt utility for creating interactive modal dialogs
+ */
+export class SmartPrompt implements ISmartPrompt {
+    private modal: HTMLDivElement | null = null;
+
+    /** @inheritdoc */
     public async showModal(reasons: string[], overrides: string[] = []): Promise<string> {
         return new Promise((resolve) => {
             this.modal = this.createModal();

@@ -1,4 +1,4 @@
-import { BaseClient } from './base';
+import { BaseClient, IBaseClient } from './base';
 
 interface GTTOrderDetails {
     [key: string]: any;  // TODO: Define specific GTT order structure when available
@@ -12,7 +12,34 @@ interface GTTResponse {
  * Client for Zerodha GTT (Good Till Triggered) Operations
  * Handles GTT order creation, deletion, and retrieval
  */
-export class KiteClient extends BaseClient {
+export interface IKiteClient extends IBaseClient {
+    /**
+     * Create a new Good Till Triggered (GTT) order
+     * @param body - GTT order details
+     * @throws Error when GTT creation fails
+     */
+    createGTT(body: GTTOrderDetails): Promise<void>;
+
+    /**
+     * Load existing Good Till Triggered (GTT) orders
+     * @param callback - Callback to handle retrieved GTT orders
+     * @throws Error when fetching GTT fails
+     */
+    loadGTT(callback: (data: GTTResponse) => void): Promise<void>;
+
+    /**
+     * Delete a specific Good Till Triggered (GTT) order
+     * @param id - ID of the GTT order to delete
+     * @throws Error when GTT deletion fails
+     */
+    deleteGTT(id: string): Promise<void>;
+}
+
+/**
+ * Client for Zerodha GTT (Good Till Triggered) Operations
+ * Handles GTT order creation, deletion, and retrieval
+ */
+export class KiteClient extends BaseClient implements IKiteClient {
     /**
      * Creates an instance of KiteClient
      * @param baseUrl - Base URL for Kite API

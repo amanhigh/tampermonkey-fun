@@ -1,13 +1,29 @@
 /**
- * Manages DOM observation operations
+ * Interface for DOM observation operations
  */
-export class ObserveUtil {
+export interface IObserveUtil {
     /**
      * Observes attribute changes on target
      * @param target - Target element to observe
      * @param callback - Callback for changes
      * @returns MutationObserver instance or undefined if setup fails
      */
+    attributeObserver(target: Element, callback: () => void): MutationObserver | undefined;
+
+    /**
+     * Observes node changes on target
+     * @param target - Target element to observe
+     * @param callback - Callback for changes
+     * @returns MutationObserver instance or undefined if setup fails
+     */
+    nodeObserver(target: Element, callback: () => void): MutationObserver | undefined;
+}
+
+/**
+ * Manages DOM observation operations
+ */
+export class ObserveUtil implements IObserveUtil {
+    /** @inheritdoc */
     public attributeObserver(target: Element, callback: () => void): MutationObserver | undefined {
         if (!target || !(target instanceof Element)) {
             console.error('Invalid target element provided to attributeObserver');
@@ -35,12 +51,7 @@ export class ObserveUtil {
         }
     }
 
-    /**
-     * Observes node changes on target
-     * @param target - Target element to observe
-     * @param callback - Callback for changes
-     * @returns MutationObserver instance or undefined if setup fails
-     */
+    /** @inheritdoc */
     public nodeObserver(target: Element, callback: () => void): MutationObserver | undefined {
         if (!target || !(target instanceof Element)) {
             console.error('Invalid target element provided to nodeObserver');

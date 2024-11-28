@@ -1,13 +1,13 @@
-import { InvestingClient } from '../client/investing';
-import { KiteClient } from '../client/kite';
-import { KohanClient } from '../client/kohan';
-import { UIUtil } from '../util/ui';
-import { ObserveUtil } from '../util/observer';
-import { SearchUtil } from '../util/search';
-import { SyncUtil } from '../util/sync';
-import { KeyUtil } from '../util/key';
-import { SmartPrompt } from '../util/smart';
-import { WaitUtil } from '../util/wait';
+import { InvestingClient, IInvestingClient } from '../client/investing';
+import { KiteClient, IKiteClient } from '../client/kite';
+import { KohanClient, IKohanClient } from '../client/kohan';
+import { UIUtil, IUIUtil } from '../util/ui';
+import { ObserveUtil, IObserveUtil } from '../util/observer';
+import { SearchUtil, ISearchUtil } from '../util/search';
+import { SyncUtil, ISyncUtil } from '../util/sync';
+import { KeyUtil, IKeyUtil } from '../util/key';
+import { SmartPrompt, ISmartPrompt } from '../util/smart';
+import { WaitUtil, IWaitUtil } from '../util/wait';
 import { TestApp } from './test';
 
 // Repository Imports
@@ -20,7 +20,7 @@ import { ITickerRepo, TickerRepo } from '../repo/ticker';
 import { ISequenceRepo, SequenceRepo } from '../repo/sequence';
 import { IAuditRepo, AuditRepo } from '../repo/audit';
 import { IRecentTickerRepo, RecentTickerRepo } from '../repo/recent';
-import { AlertRepo } from '../repo/alert';
+import { IAlertRepo, AlertRepo } from '../repo/alert';
 
 /**
  * Project Architecture Overview
@@ -50,11 +50,11 @@ export class Factory {
      * Handles external API interactions
      */
     public static client = {
-        investing: (): InvestingClient => 
+        investing: (): IInvestingClient => 
             Factory._getInstance('investingClient', () => new InvestingClient()),
-        kite: (): KiteClient => 
+        kite: (): IKiteClient => 
             Factory._getInstance('kiteClient', () => new KiteClient()),
-        kohan: (): KohanClient => 
+        kohan: (): IKohanClient => 
             Factory._getInstance('kohanClient', () => new KohanClient()),
     };
 
@@ -63,19 +63,19 @@ export class Factory {
      * Handles utility operations and management
      */
     public static util = {
-        dom: (): WaitUtil =>
+        dom: (): IWaitUtil =>
             Factory._getInstance('waitUtil', () => new WaitUtil()),
-        observer: (): ObserveUtil =>
+        observer: (): IObserveUtil =>
             Factory._getInstance('observeUtil', () => new ObserveUtil()),
-        search: (): SearchUtil =>
+        search: (): ISearchUtil =>
             Factory._getInstance('searchUtil', () => new SearchUtil()),
-        sync: (): SyncUtil =>
+        sync: (): ISyncUtil =>
             Factory._getInstance('syncUtil', () => new SyncUtil()),
-        key: (): KeyUtil =>
+        key: (): IKeyUtil =>
             Factory._getInstance('keyUtil', () => new KeyUtil(Factory.util.sync())),
-        smart: (): SmartPrompt =>
+        smart: (): ISmartPrompt =>
             Factory._getInstance('smartPrompt', () => new SmartPrompt()),
-        ui: (): UIUtil =>
+        ui: (): IUIUtil =>
             Factory._getInstance('uiUtil', () => new UIUtil()),
     };
 
@@ -103,7 +103,7 @@ export class Factory {
         /**
          * Map-based Repositories
          */
-        alert: (): AlertRepo =>
+        alert: (): IAlertRepo =>
             Factory._getInstance('alertRepo', () => new AlertRepo(Factory.repo._cron())),
         
         pair: (): IPairRepo =>

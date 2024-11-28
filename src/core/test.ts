@@ -1,7 +1,7 @@
 import "../style/main.less";
 import { Factory } from "./factory";
 import { UIUtil } from "../util/ui";
-import { KeyUtil } from "../util/key";
+import { IKeyUtil } from "../util/key";
 import { Notifier } from "../util/notify";
 
 interface TestComponents {
@@ -12,9 +12,9 @@ interface TestComponents {
 
 export class TestApp {
     private readonly uiUtil: UIUtil;
-    private readonly keyUtil: KeyUtil;
+    private readonly keyUtil: IKeyUtil;
 
-    constructor(uiUtil: UIUtil, keyUtil: KeyUtil) {
+    constructor(uiUtil: UIUtil, keyUtil: IKeyUtil) {
         this.uiUtil = uiUtil;
         this.keyUtil = keyUtil;
     }

@@ -1,12 +1,39 @@
 import { Alert, PairInfo } from '../models/alert';
-import { BaseClient } from './base';
-
-
+import { BaseClient, IBaseClient } from './base';
 
 /**
  * Client for interacting with Investing.com API
  */
-export class InvestingClient extends BaseClient {
+export interface IInvestingClient extends IBaseClient {
+    /**
+     * Creates a new price alert
+     */
+    createAlert(name: string, pairId: string, price: number, ltp: number): Promise<{
+        name: string;
+        pairId: string;
+        price: number;
+    }>;
+
+    /**
+     * Deletes an existing alert
+     */
+    deleteAlert(alert: Alert): Promise<Alert>;
+
+    /**
+     * Fetch symbol data from the investing.com API
+     */
+    fetchSymbolData(symbol: string): Promise<PairInfo[]>;
+
+    /**
+     * Fetch all Alerts for all Pairs
+     */
+    getAllAlerts(): Promise<string>;
+}
+
+/**
+ * Client for interacting with Investing.com API
+ */
+export class InvestingClient extends BaseClient implements IInvestingClient {
     constructor(baseUrl: string = "https://in.investing.com") {
         super(baseUrl);
     }

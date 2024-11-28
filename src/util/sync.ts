@@ -1,7 +1,20 @@
 /**
+ * Interface for synchronization and resource waiting operations
+ */
+export interface ISyncUtil {
+    /** 
+     * Wait on a resource with a timeout, and execute a callback when the resource becomes available.
+     * @param id - The unique identifier of the resource to wait on
+     * @param timeout - The timeout period in milliseconds
+     * @param callback - The callback function to execute when the resource becomes available
+     */
+    waitOn(id: string, timeout: number, callback: () => void): void;
+}
+
+/**
  * Provides utility functions for synchronization and resource waiting operations
  */
-export class SyncUtil {
+export class SyncUtil implements ISyncUtil {
     private readonly _waitId: string = 'aman-wait-on';
 
     constructor() {
@@ -21,12 +34,7 @@ export class SyncUtil {
         }
     }
 
-    /**
-     * Wait on a resource with a timeout, and execute a callback when the resource becomes available.
-     * @param id - The unique identifier of the resource to wait on
-     * @param timeout - The timeout period in milliseconds
-     * @param callback - The callback function to execute when the resource becomes available
-     */
+    /** @inheritdoc */
     public waitOn(id: string, timeout: number, callback: () => void): void {
         if (!id || typeof id !== 'string') {
             console.error('Invalid id provided to waitOn');

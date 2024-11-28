@@ -1,24 +1,53 @@
-import { SyncUtil } from './sync';
+import { ISyncUtil } from './sync';
 
-interface DoubleKeyState {
+export interface IDoubleKeyState {
     init: boolean;
     begin: boolean;
     end: boolean;
 }
 
-// FIXME: Idenitfy all missing Interfaces and Create.
+/**
+ * Interface for keyboard input detection and state management
+ */
+export interface IKeyUtil {
+    /**
+     * Checks if any modifier key is pressed
+     * @param event - Keyboard event to check
+     * @returns True if any modifier key is pressed
+     */
+    hasModifierKey(event: KeyboardEvent): boolean;
+
+    /**
+     * Gets the type of modifier key pressed
+     * @param event - Keyboard event to check
+     * @returns Type of modifier key or null if none
+     */
+    getModifierType(event: KeyboardEvent): 'ctrl' | 'shift' | 'alt' | null;
+
+    /**
+     * Detects double key press within few milliseconds
+     * Timeline NoKey-->Init-->Begin-->End-->
+     * W1: Starts Init
+     * W2: Resets Init
+     * W3: Double Key Recorded
+     * W4: Restart From Init
+     * @param event - Keyboard event
+     * @returns True if double key detected
+     */
+    isDoubleKey(event: KeyboardEvent): boolean;
+}
 
 /**
  * Manages keyboard input detection and state
  */
-export class KeyUtil {
-    private readonly _syncUtil: SyncUtil;
-    private readonly _doubleKeyState: DoubleKeyState;
+export class KeyUtil implements IKeyUtil {
+    private readonly _syncUtil: ISyncUtil;
+    private readonly _doubleKeyState: IDoubleKeyState;
 
     /**
      * @param syncUtil - Instance of SyncUtil for coordination
      */
-    constructor(syncUtil: SyncUtil) {
+    constructor(syncUtil: ISyncUtil) {
         this._syncUtil = syncUtil;
         this._doubleKeyState = {
             init: false,
@@ -27,11 +56,7 @@ export class KeyUtil {
         };
     }
 
-    /**
-     * Checks if any modifier key is pressed
-     * @param event - Keyboard event to check
-     * @returns True if any modifier key is pressed
-     */
+    /** @inheritdoc */
     public hasModifierKey(event: KeyboardEvent): boolean {
         if (!event || !(event instanceof KeyboardEvent)) {
             console.error('Invalid keyboard event provided to hasModifierKey');
@@ -40,11 +65,7 @@ export class KeyUtil {
         return event.ctrlKey || event.shiftKey || event.altKey;
     }
 
-    /**
-     * Gets the type of modifier key pressed
-     * @param event - Keyboard event to check
-     * @returns Type of modifier key or null if none
-     */
+    /** @inheritdoc */
     public getModifierType(event: KeyboardEvent): 'ctrl' | 'shift' | 'alt' | null {
         if (!event || !(event instanceof KeyboardEvent)) {
             console.error('Invalid keyboard event provided to getModifierType');
@@ -57,16 +78,7 @@ export class KeyUtil {
         return null;
     }
 
-    /**
-     * Detects double key press within few milliseconds
-     * Timeline NoKey-->Init-->Begin-->End-->
-     * W1: Starts Init
-     * W2: Resets Init
-     * W3: Double Key Recorded
-     * W4: Restart From Init
-     * @param event - Keyboard event
-     * @returns True if double key detected
-     */
+    /** @inheritdoc */
     public isDoubleKey(event: KeyboardEvent): boolean {
         if (!event || !(event instanceof KeyboardEvent)) {
             console.error('Invalid keyboard event provided to isDoubleKey');

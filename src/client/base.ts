@@ -1,11 +1,15 @@
-export class BaseClient {
+export interface IBaseClient {
+    getBaseUrl(): string;
+}
+
+export class BaseClient implements IBaseClient {
     private readonly _baseUrl: string;
 
     constructor(baseUrl: string) {
         this._baseUrl = baseUrl;
     }
 
-    protected getBaseUrl(): string {
+    public getBaseUrl(): string {
         return this._baseUrl;
     }
 
