@@ -20,6 +20,7 @@ import { ITickerRepo, TickerRepo } from '../repo/ticker';
 import { ISequenceRepo, SequenceRepo } from '../repo/sequence';
 import { IAuditRepo, AuditRepo } from '../repo/audit';
 import { IRecentTickerRepo, RecentTickerRepo } from '../repo/recent';
+import { AlertRepo } from '../repo/alert';
 
 /**
  * Project Architecture Overview
@@ -102,6 +103,9 @@ export class Factory {
         /**
          * Map-based Repositories
          */
+        alert: (): AlertRepo =>
+            Factory._getInstance('alertRepo', () => new AlertRepo(Factory.repo._cron())),
+        
         pair: (): IPairRepo =>
             Factory._getInstance('pairRepo', () => new PairRepo(Factory.repo._cron())),
 
