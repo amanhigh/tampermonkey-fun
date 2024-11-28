@@ -1,35 +1,96 @@
+import { Constants } from '../models/constant';
+import { IPaintManager } from './paint';
+import { IOrderRepo } from '../repo/order';
+import { IRecentTickerRepo } from '../repo/recent';
+import { IUIUtil } from '../util/ui';
+import { WatchChangeEvent } from '../models/events';
+
+/**
+ * Filter options for watchlist manipulation
+ */
+interface WatchlistFilter {
+    color: string;
+    index: number;
+    ctrl: boolean;
+    shift: boolean;
+}
+
+/**
+ * Interface for managing TradingView watchlist operations
+ */
+export interface ITradingViewWatchlistManager {
+    /**
+     * Retrieves watchlist tickers
+     * @param visible - If true, only returns visible tickers
+     * @returns Array of watchlist tickers
+     */
+    getTickers(visible?: boolean): string[];
+
+    /**
+     * Get selected tickers from watchlist
+     * @returns Array of selected ticker symbols
+     */
+    getSelectedTickers(): string[];
+
+    /**
+     * Paints the TradingView watchlist
+     */
+    paintWatchList(): void;
+
+    /**
+     * Remove all watchlist filters
+     */
+    resetWatchList(): void;
+
+    /**
+     * Creates and stores the WatchChangeEvent for the alert feed
+     */
+    paintAlertFeedEvent(): void;
+
+    /**
+     * Adds a new filter to the filter chain
+     * @param filter - The filter to add
+     */
+    addFilter(filter: WatchlistFilter): void;
+
+    /**
+     * Applies all active filters in the filter chain
+     */
+    applyFilters(): void;
+}
+
 /**
  * Manages TradingView watchlist operations
  * @class TradingViewWatchlistManager
  */
-class TradingViewWatchlistManager {
+export class TradingViewWatchlistManager implements ITradingViewWatchlistManager {
     /**
-     * @param {PaintManager} paintManager - Instance of PaintManager
-     * @param {OrderRepo} orderRepo - Instance of OrderRepo
-     * @param {RecentTickerRepo} recentTickerRepo - Instance of RecentTickerRepo
+     * Filter chain for watchlist operations
+     * @private
      */
-    constructor(paintManager, orderRepo, recentTickerRepo) {
-        this.paintManager = paintManager;
-        this.orderRepo = orderRepo;
-        this.recentTickerRepo = recentTickerRepo;
-        this._filterChain = [];
-    }
+    private _filterChain: WatchlistFilter[] = [];
 
     /**
-     * Retrieves watchlist tickers
-     * @param {boolean} [visible=false] - If true, only returns visible tickers
-     * @returns {Array<string>} Array of watchlist tickers
+     * @param paintManager - Instance of PaintManager
+     * @param orderRepo - Instance of OrderRepo
+     * @param recentTickerRepo - Instance of RecentTickerRepo
+     * @param uiUtil - Instance of UIUtil for building UI components
      */
-    getTickers(visible = false) {
+    constructor(
+        private readonly paintManager: IPaintManager,
+        private readonly orderRepo: IOrderRepo,
+        private readonly recentTickerRepo: IRecentTickerRepo,
+        private readonly uiUtil: IUIUtil
+    ) {}
+
+    /** @inheritdoc */
+    getTickers(visible = false): string[] {
         const selector = Constants.DOM.WATCHLIST.SYMBOL;
         return this._tickerListHelper(selector, visible);
     }
 
-    /**
-     * Get selected tickers from watchlist
-     * @returns {Array<string>} Array of selected ticker symbols
-     */
-    getSelectedTickers() {
+    /** @inheritdoc */
+    getSelectedTickers(): string[] {
         const watchlist = Constants.DOM.WATCHLIST;
         return $(`${watchlist.SELECTED} ${watchlist.SYMBOL}:visible`)
             .toArray()
@@ -39,20 +100,18 @@ class TradingViewWatchlistManager {
     /**
      * Helper function for retrieving ticker lists
      * @private
-     * @param {string} selector - The CSS selector for finding elements
-     * @param {boolean} visible - Whether to only get visible elements
-     * @returns {Array<string>} Array of ticker strings
+     * @param selector - The CSS selector for finding elements
+     * @param visible - Whether to only get visible elements
+     * @returns Array of ticker strings
      */
-    _tickerListHelper(selector, visible) {
+    private _tickerListHelper(selector: string, visible: boolean): string[] {
         return $(visible ? selector + ":visible" : selector)
             .toArray()
             .map(s => s.innerHTML);
     }
 
-    /**
-     * Paints the TradingView watchlist
-     */
-    paintWatchList() {
+    /** @inheritdoc */
+    paintWatchList(): void {
         //Reset Color
         this.paintManager.resetColors(Constants.DOM.WATCHLIST.SYMBOL);
 
@@ -60,7 +119,7 @@ class TradingViewWatchlistManager {
         this.paintManager.paintTickers(Constants.DOM.WATCHLIST.SYMBOL);
 
         // Ticker Set Summary Update
-        this.displaySetSummary();
+        this._displaySetSummary();
 
         // Mark FNO
         this.paintManager.applyCss(
@@ -68,15 +127,10 @@ class TradingViewWatchlistManager {
             Constants.EXCHANGE.FNO_SYMBOLS,
             Constants.UI.COLORS.FNO_CSS
         );
-
-        // Paint Recent Tickers
-        this.paintRecentTickers();
     }
 
-    /**
-     * Remove all watchlist filters
-     */
-    resetWatchList() {
+    /** @inheritdoc */
+    resetWatchList(): void {
         // Increase Widget Height to prevent Line Filtering
         $(Constants.DOM.WATCHLIST.WIDGET).css('height', '20000px');
 
@@ -93,7 +147,7 @@ class TradingViewWatchlistManager {
      * Displays the ticker set summary in the UI
      * @private
      */
-    displaySetSummary() {
+    private _displaySetSummary(): void {
         const $watchSummary = $(`#${Constants.UI.IDS.AREAS.SUMMARY}`);
         $watchSummary.empty();
 
@@ -103,16 +157,16 @@ class TradingViewWatchlistManager {
             const count = orderCategoryLists.get(i).size;
             const color = Constants.UI.COLORS.LIST[i];
 
-            const $label = buildLabel(count.toString() + '|', color)
+            const $label = this.uiUtil.buildLabel(count.toString() + '|', color)
                 .data('color', color)
                 .appendTo($watchSummary);
 
-            $label.mousedown((e) => {
+            $label.mousedown((e: JQuery.MouseDownEvent) => {
                 this.addFilter({
                     color: $(e.target).data('color'),
                     index: e.which,
-                    ctrl: e.originalEvent.ctrlKey,
-                    shift: e.originalEvent.shiftKey
+                    ctrl: e.originalEvent?.ctrlKey || false,
+                    shift: e.originalEvent?.shiftKey || false
                 });
             }).contextmenu(e => {
                 e.preventDefault();
@@ -121,25 +175,17 @@ class TradingViewWatchlistManager {
         }
     }
 
-    /**
-     * Creates and stores the WatchChangeEvent for the alert feed
-     */
-    paintAlertFeedEvent() {
+    /** @inheritdoc */
+    paintAlertFeedEvent(): void {
         const watchList = this.getTickers();
         const recentList = Array.from(this.recentTickerRepo.getAll());
-        const watchChangeEvent = new WatchChangeEvent(watchList, recentList);
-        GM_setValue(Constants.STORAGE.EVENTS.TV_WATCH_CHANGE, watchChangeEvent);
+        const event = new WatchChangeEvent(watchList, recentList);
+        // HACK: Move to event repository
+        GM_setValue(Constants.STORAGE.EVENTS.TV_WATCH_CHANGE, event);
     }
 
-    /**
-     * Adds a new filter to the filter chain
-     * @param {Object} filter - The filter to add
-     * @param {string} filter.color - The color of the filtered symbols
-     * @param {number} filter.index - The mouse button index (1, 2, or 3)
-     * @param {boolean} filter.ctrl - Whether the Ctrl key was pressed
-     * @param {boolean} filter.shift - Whether the Shift key was pressed
-     */
-    addFilter(filter) {
+    /** @inheritdoc */
+    addFilter(filter: WatchlistFilter): void {
         if (!filter.ctrl && !filter.shift) {
             // Reset chain if no modifier keys
             this._filterChain = [filter];
@@ -150,23 +196,18 @@ class TradingViewWatchlistManager {
         this.applyFilters();
     }
 
-    /**
-     * Applies all active filters in the filter chain
-     */
-    applyFilters() {
+    /** @inheritdoc */
+    applyFilters(): void {
         this._filterChain.forEach(filter => this._filterWatchList(filter));
     }
 
     /**
      * Filters the watchlist symbols based on the provided filter parameters
      * @private
-     * @param {Object} filter - The filter parameters
-     * @param {string} filter.color - The color of the filtered symbols
-     * @param {number} filter.index - The mouse button index (1, 2, or 3)
-     * @param {boolean} filter.ctrl - Whether the Ctrl key was pressed
-     * @param {boolean} filter.shift - Whether the Shift key was pressed
+     * @param filter - The filter parameters
      */
-    _filterWatchList(filter) {
+    private _filterWatchList(filter: WatchlistFilter): void {
+        // HACK: Breakdown Function
         if (!filter.ctrl && !filter.shift) {
             // Hide Everything
             $(Constants.DOM.WATCHLIST.LINE_SELECTOR).hide();

@@ -22,6 +22,16 @@ import { IAuditRepo, AuditRepo } from '../repo/audit';
 import { IRecentTickerRepo, RecentTickerRepo } from '../repo/recent';
 import { IAlertRepo, AlertRepo } from '../repo/alert';
 
+// Manager Layer Imports
+import { ITimeFrameManager, TimeFrameManager } from '../manager/timeframe';
+import { IAlertManager, AlertManager } from '../manager/alert';
+import { IAuditManager, AuditManager } from '../manager/audit';
+import { ITradingViewWatchlistManager, TradingViewWatchlistManager } from '../manager/watchlist';
+import { ITradingViewScreenerManager, TradingViewScreenerManager } from '../manager/screener';
+import { ISequenceManager, SequenceManager } from '../manager/sequence';
+import { IPaintManager, PaintManager } from '../manager/paint';
+import { ITickerManager, TickerManager } from '../manager/ticker';
+
 /**
  * Project Architecture Overview
  * ----------------------------
@@ -35,6 +45,8 @@ export class Factory {
      * @private
      */
     private static _instances: Record<string, unknown> = {};
+
+    // TODO: Cyclic Dependency Analysis
 
     /**
      * Application Layer
@@ -131,10 +143,78 @@ export class Factory {
     /**
      * Manager Layer
      * Handles business logic and orchestration
-     * TODO: Implement manager layer
      */
     public static manager = {
-        // To be implemented later
+        /**
+         * Get TimeFrame manager singleton instance
+         */
+        timeFrame: (): ITimeFrameManager =>
+            Factory._getInstance('timeframeManager', () => new TimeFrameManager(
+                Factory.manager.sequence()
+            )),
+
+        /**
+         * Get Alert manager singleton instance
+         */
+        alert: (): IAlertManager =>
+            Factory._getInstance('alertManager', () => new AlertManager(
+                Factory.repo.alert(),
+                Factory.repo.pair(),
+                Factory.manager.ticker()
+            )),
+
+        /**
+         * Get Audit manager singleton instance
+         */
+        audit: (): IAuditManager =>
+            Factory._getInstance('auditManager', () => new AuditManager(
+                Factory.repo.alert(),
+                Factory.util.ui(),
+                Factory.client.investing()
+            )),
+
+        /**
+         * Get TradingView watchlist manager singleton instance
+         */
+        watchlist: (): ITradingViewWatchlistManager =>
+            Factory._getInstance('watchlistManager', () => new TradingViewWatchlistManager(
+                Factory.manager.paint(),
+                Factory.repo.order(),
+                Factory.repo.recent(),
+                Factory.util.ui()
+            )),
+
+        /**
+         * Get TradingView screener manager singleton instance
+         */
+        screener: (): ITradingViewScreenerManager =>
+            Factory._getInstance('screenerManager', () => new TradingViewScreenerManager(
+                Factory.manager.paint(),
+                Factory.repo.recent(),
+                Factory.repo.order()
+            )),
+
+        // Keep existing managers here
+        sequence: (): ISequenceManager =>
+            Factory._getInstance('sequenceManager', () => new SequenceManager(
+                Factory.repo.sequence(),
+                Factory.repo.ticker()
+            )),
+
+        paint: (): IPaintManager =>
+            Factory._getInstance('paintManager', () => new PaintManager(
+                Factory.repo.category(),
+                Factory.manager.ticker()
+            )),
+
+        ticker: (): ITickerManager =>
+            Factory._getInstance('tickerManager', () => new TickerManager(
+                Factory.repo.recent(),
+                Factory.util.wait(),
+                Factory.manager.symbol(),
+                Factory.manager.screener(),
+                Factory.manager.watchlist()
+            )),
     };
 
     /**

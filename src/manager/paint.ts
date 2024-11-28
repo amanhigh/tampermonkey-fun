@@ -1,28 +1,72 @@
+import { Constants } from '../models/constant';
+
+/**
+ * Interface for managing painting operations for TradingView elements
+ */
+export interface IPaintManager {
+    /**
+     * Apply CSS to elements matching the given selector based on the symbol set
+     * @param selector The CSS selector for the elements to be styled
+     * @param symbolSet The set of symbols used to filter the elements
+     * @param css The CSS properties to be applied
+     * @param force If true, apply CSS regardless of symbolSet
+     */
+    applyCss(selector: string, symbolSet: Set<string> | null, css: JQuery.PlainObject, force?: boolean): void;
+
+    /**
+     * Apply color to flags for elements matching the selector
+     * @param selector The base selector for finding elements
+     * @param symbols The set of symbols to filter elements
+     * @param color The color to apply
+     * @param force If true, apply color regardless of symbols
+     */
+    paintFlags(selector: string, symbols: Set<string> | null, color: string, force?: boolean): void;
+
+    /**
+     * Paint all tickers and their flags based on categories
+     * @param selector The selector for ticker elements
+     */
+    paintTickers(selector: string): void;
+
+    /**
+     * Resets the colors of the specified selector to the default color
+     * @param selector The selector for the elements to reset the colors
+     */
+    resetColors(selector: string): void;
+
+    /**
+     * Paints all aspects of the current ticker display
+     */
+    paintHeader(): void;
+}
+
+type CategoryManager = {
+    getOrderCategory(index: number): Set<string>;
+    getFlagCategory(index: number): Set<string>;
+};
+
+type TickerManager = {
+    getTicker(): string;
+    getCurrentExchange(): string;
+};
+
 /**
  * Manages painting operations for TradingView elements
  */
-class PaintManager {
+export class PaintManager implements IPaintManager {
     /**
      * Creates a new PaintManager instance
-     * @param {CategoryManager} categoryManager - Manager for category operations
-     * @param {TickerManager} tickerManager - Manager for ticker operations
-     * @param {TradingViewManager} tvManager - Manager for TradingView operations
+     * @param categoryManager Manager for category operations
+     * @param tickerManager Manager for ticker operations
      */
-    constructor(categoryManager, tickerManager, tvManager) {
-        this.categoryManager = categoryManager;
-        this.tickerManager = tickerManager;
-        this.tvManager = tvManager;
-    }
+    constructor(
+        // HACK: Remove Private Types
+        private readonly categoryManager: CategoryManager,
+        private readonly tickerManager: TickerManager
+    ) {}
 
-    /**
-     * Apply CSS to elements matching the given selector based on the symbol set.
-     * @param {string} selector - The CSS selector for the elements to be styled
-     * @param {Set<string>|null} symbolSet - The set of symbols used to filter the elements
-     * @param {Object} css - The CSS properties to be applied
-     * @param {boolean} [force=false] - If true, apply CSS regardless of symbolSet
-     * @throws {Error} If selector or CSS object is missing
-     */
-    applyCss(selector, symbolSet, css, force = false) {
+    /** @inheritdoc */
+    applyCss(selector: string, symbolSet: Set<string> | null, css: JQuery.PlainObject, force = false): void {
         if (!selector || !css) {
             throw new Error('Selector and CSS object are required');
         }
@@ -32,30 +76,21 @@ class PaintManager {
         ).css(css);
     }
 
-    /**
-     * Apply color to flags for elements matching the selector
-     * @param {string} selector - The base selector for finding elements
-     * @param {Set<string>|null} symbols - The set of symbols to filter elements
-     * @param {string} color - The color to apply
-     * @param {boolean} [force=false] - If true, apply color regardless of symbols
-     */
-    paintFlags(selector, symbols, color, force = false) {
+    /** @inheritdoc */
+    paintFlags(selector: string, symbols: Set<string> | null, color: string, force = false): void {
         if (!selector) {
             throw new Error('Selector is required');
         }
 
         $(`${selector}`).filter((_, element) => 
             force || (symbols && symbols.has(element.innerHTML))
-        ).parents(Constants.SELECTORS.WATCHLIST.ITEM_SELECTOR)
-         .find(Constants.SELECTORS.FLAGS.SELECTOR)
+        ).parents(Constants.DOM.WATCHLIST.ITEM)
+         .find(Constants.DOM.FLAGS.SYMBOL)
          .css('color', color);
     }
 
-    /**
-     * Paint all tickers and their flags based on categories
-     * @param {string} selector - The selector for ticker elements
-     */
-    paintTickers(selector) {
+    /** @inheritdoc */
+    paintTickers(selector: string): void {
         const colorList = Constants.UI.COLORS.LIST;
 
         // Paint based on order categories and flag categories
@@ -72,12 +107,8 @@ class PaintManager {
         }
     }
 
-    /**
-     * Resets the colors of the specified selector to the default color.
-     * @param {string} selector - The selector for the elements to reset the colors
-     * @throws {Error} If selector is missing
-     */
-    resetColors(selector) {
+    /** @inheritdoc */
+    resetColors(selector: string): void {
         if (!selector) {
             throw new Error('Selector is required');
         }
@@ -89,16 +120,12 @@ class PaintManager {
         this.paintFlags(selector, null, Constants.UI.COLORS.DEFAULT, true);
     }
 
-    
-    /**
-     * Paints all aspects of the current ticker display
-     */
-    paintHeader() {
+    /** @inheritdoc */
+    paintHeader(): void {
         const ticker = this.tickerManager.getTicker();
-        const name = this.tvManager.getName();
         const exchange = this.tickerManager.getCurrentExchange();
 
-        if (!ticker || !name || !exchange) {
+        if (!ticker || !exchange) {
             console.error('Missing required data for painting ticker');
             return;
         }
@@ -106,19 +133,18 @@ class PaintManager {
         const $name = $(Constants.DOM.BASIC.NAME);
         
         // Paint each component
-        this._paintNameElement($name, name, ticker);
+        this._paintNameElement($name, ticker);
         this._paintFNOMarking($name, ticker);
-        this._paintFlagAndExchange(ticker, exchange);
+        this._paintFlagAndExchange(ticker);
     }
 
     /**
      * Paints the name element with appropriate category color
      * @private
-     * @param {jQuery} $name - jQuery element for the name
-     * @param {string} name - Name text to display
-     * @param {string} ticker - Ticker symbol
+     * @param $name jQuery element for the name
+     * @param ticker Ticker symbol
      */
-    _paintNameElement($name, name, ticker) {
+    private _paintNameElement($name: JQuery<HTMLElement>, ticker: string): void {
         $name.css('color', Constants.UI.COLORS.DEFAULT);
 
         // Paint based on order categories
@@ -134,10 +160,10 @@ class PaintManager {
     /**
      * Gets the appropriate color for a category index
      * @private
-     * @param {number} index Category index
-     * @returns {string} Color for the category
+     * @param index Category index
+     * @returns Color for the category
      */
-    _getCategoryColor(index) {
+    private _getCategoryColor(index: number): string {
         const colorList = Constants.UI.COLORS.LIST;
         return index === 5 ? colorList[6] : colorList[index];
     }
@@ -145,10 +171,9 @@ class PaintManager {
     /**
      * Paints flag and exchange elements for a ticker
      * @private
-     * @param {string} ticker - Ticker symbol
-     * @param {string} exchange - Exchange identifier from TickerManager
+     * @param ticker Ticker symbol
      */
-    _paintFlagAndExchange(ticker, exchange) {
+    private _paintFlagAndExchange(ticker: string): void {
         const $flag = $(Constants.DOM.FLAGS.MARKING);
         const $exchange = $(Constants.DOM.BASIC.EXCHANGE);
 
@@ -170,10 +195,10 @@ class PaintManager {
     /**
      * Paints FNO marking for a ticker
      * @private
-     * @param {jQuery} $name - jQuery element for the name
-     * @param {string} ticker - Ticker symbol
+     * @param $name jQuery element for the name
+     * @param ticker Ticker symbol
      */
-    _paintFNOMarking($name, ticker) {
+    private _paintFNOMarking($name: JQuery<HTMLElement>, ticker: string): void {
         if (Constants.EXCHANGE.FNO_SYMBOLS.has(ticker)) {
             $name.css(Constants.UI.COLORS.FNO_CSS);
         } else {
