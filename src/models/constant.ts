@@ -106,8 +106,8 @@ export const Constants = Object.freeze({
                 OVERRIDES: ['egf', 'int', 'lc', 'loc', 'doji', 'big', 'pn', 'tc', 'cfl', 'acm', 'adv'] // Old name: overrides
             },
             ZONES: { // Old name: ZoneType - Moved from EXCHANGE as suggested
-                DEMAND: { symbol: "DZ" },
-                SUPPLY: { symbol: "SZ" }
+                DEMAND: "DZ",
+                SUPPLY: "SZ"
             }
         },
 
