@@ -1,7 +1,7 @@
 import { IKiteManager } from '../manager/kite';
 import { ISymbolManager } from '../manager/symbol';
 import { Constants } from '../models/constant';
-import { GttOrderMap, Order } from '../models/gtt';
+import { GttOrderMap, Order } from '../models/kite';
 import { Notifier } from '../util/notify';
 
 /**
@@ -119,7 +119,7 @@ export class KiteHandler implements IKiteHandler {
 
         if (this._validateOrder(request)) {
             this._displayOrderMessage(request);
-            GM_setValue(Constants.STORAGE.EVENTS.GTT_REFERSH, request);
+            GM_setValue(Constants.STORAGE.EVENTS.GTT_CREATE, request);
             this._closeOrderPanel();
         } else {
             alert("Invalid GTT Input");
@@ -131,7 +131,7 @@ export class KiteHandler implements IKiteHandler {
         const request: GttRequest = {
             id: $(evt.currentTarget).data('order-id')
         };
-        GM_setValue(Constants.STORAGE.EVENTS.GTT_REFERSH, request);
+        GM_setValue(Constants.STORAGE.EVENTS.GTT_CREATE, request);
         Notifier.message(`GTT Delete: ${request.id}`, 'red');
     }
 
@@ -187,7 +187,7 @@ export class KiteHandler implements IKiteHandler {
         const length = gttOrder.getCount();
         if (length > 0) {
             // TODO: Move to Repo
-            GM_setValue(Constants.STORAGE.EVENTS.GTT_ORDER, gttOrder);
+            GM_setValue(Constants.STORAGE.EVENTS.GTT_REFERSH, gttOrder);
             Notifier.message(`GTT Map Built. Count: ${length}`, 'green');
         } else {
             Notifier.message('GttMap Empty Not Storing', 'red');
@@ -200,7 +200,7 @@ export class KiteHandler implements IKiteHandler {
      */
     private _setupGttOrderListener(): void {
         GM_addValueChangeListener(
-            Constants.STORAGE.EVENTS.GTT_REFERSH,
+            Constants.STORAGE.EVENTS.GTT_CREATE,
             (_keyName: string, _oldValue: unknown, newValue: GttRequest) => {
                 this.handleGttRequest(newValue);
             }
