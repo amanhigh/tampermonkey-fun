@@ -2,6 +2,8 @@ import { Alert } from "../models/alert";
 import { IRepoCron } from "./cron";
 import { MapRepo, IMapRepo } from "./map";
 import { SerializedData } from "./base";
+import { AlertClicked } from "../models/events";
+import { Constants } from "../models/constant";
 
 /**
  * Interface for alert repository operations
@@ -41,6 +43,13 @@ export interface IAlertRepo extends IMapRepo<string, Alert[]> {
      * @returns Total alert count
      */
     getAlertCount(): number;
+
+    /**
+     * Create and store an alert click event
+     * @param event AlertClicked event to store
+     * @returns Promise resolving after event is stored
+     */
+    createAlertClickEvent(event: AlertClicked): Promise<void>;
 }
 
 /**
@@ -124,5 +133,14 @@ export class AlertRepo extends MapRepo<string, Alert[]> implements IAlertRepo {
         let count = 0;
         this._map.forEach(alerts => count += alerts.length);
         return count;
+    }
+
+    /**
+     * Create and store an alert click event
+     * @param event AlertClicked event to store
+     * @returns Promise resolving after event is stored
+     */
+    public async createAlertClickEvent(event: AlertClicked): Promise<void> {
+        await GM.setValue(Constants.STORAGE.EVENTS.ALERT_CLICKED, event.stringify());
     }
 }

@@ -62,15 +62,3 @@ export enum AlertState {
     SINGLE_ALERT = 'SINGLE_ALERT',
     VALID = 'VALID'
 }
-
-// Static helper methods for AlertState
-export const AlertStateUtils = {
-    toString(state: AlertState): string {
-        switch (state) {
-            case AlertState.NO_ALERTS: return 'No Alerts Set';
-            case AlertState.SINGLE_ALERT: return 'Only One Alert Set';
-            case AlertState.VALID: return 'Valid';
-            default: return 'Unknown State';
-        }
-    }
-};

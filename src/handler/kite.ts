@@ -76,7 +76,7 @@ export class KiteHandler implements IKiteHandler {
     constructor(
         private readonly _kiteManager: IKiteManager,
         private readonly _symbolManager: ISymbolManager
-    ) {}
+    ) { }
 
     /** @inheritdoc */
     initialize(): void {
@@ -87,7 +87,7 @@ export class KiteHandler implements IKiteHandler {
 
     /** @inheritdoc */
     handleGttRequest(request: GttRequest): void {
-        if (request.qty && request.qty > 0 && request.symb && request.ltp && 
+        if (request.qty && request.qty > 0 && request.symb && request.ltp &&
             request.sl && request.ent && request.tp) {
             this._kiteManager.createOrder(
                 request.symb,
@@ -105,7 +105,7 @@ export class KiteHandler implements IKiteHandler {
     /** @inheritdoc */
     handleGttOrderButton(): void {
         const order = this._readOrderPanel();
-        
+
         // Build request object in expected format
         // TODO: override order symb, ltp
         const request: GttRequest = {
@@ -119,7 +119,7 @@ export class KiteHandler implements IKiteHandler {
 
         if (this._validateOrder(request)) {
             this._displayOrderMessage(request);
-            GM_setValue(Constants.STORAGE.EVENTS.GTT_REQUEST, request);
+            GM_setValue(Constants.STORAGE.EVENTS.GTT_REFERSH, request);
             this._closeOrderPanel();
         } else {
             alert("Invalid GTT Input");
@@ -131,7 +131,7 @@ export class KiteHandler implements IKiteHandler {
         const request: GttRequest = {
             id: $(evt.currentTarget).data('order-id')
         };
-        GM_setValue(Constants.STORAGE.EVENTS.GTT_REQUEST, request);
+        GM_setValue(Constants.STORAGE.EVENTS.GTT_REFERSH, request);
         Notifier.message(`GTT Delete: ${request.id}`, 'red');
     }
 
@@ -140,9 +140,9 @@ export class KiteHandler implements IKiteHandler {
         const currentTicker = getTicker();
         const ordersForTicker = gttOrderMap.getOrdersForTicker(currentTicker);
         const $ordersContainer = $(`#${Constants.UI.IDS.AREAS.ORDERS}`);
-        
+
         $ordersContainer.empty();
-        
+
         if (ordersForTicker.length === 0) {
             return;
         }
@@ -161,13 +161,15 @@ export class KiteHandler implements IKiteHandler {
      * @private
      * @param gttResponse - The response object from the GTT API
      */
-    private _saveGttMap(gttResponse: { data: Array<{
-        status: string;
-        orders: Array<{ tradingsymbol: string; quantity: number }>;
-        type: string;
-        id: string;
-        condition: { trigger_values: number[] };
-    }> }): void {
+    private _saveGttMap(gttResponse: {
+        data: Array<{
+            status: string;
+            orders: Array<{ tradingsymbol: string; quantity: number; }>;
+            type: string;
+            id: string;
+            condition: { trigger_values: number[]; };
+        }>;
+    }): void {
         const gttOrder = new GttOrderMap();
         gttResponse.data.forEach((gtt) => {
             if (gtt.status === "active") {
@@ -198,7 +200,7 @@ export class KiteHandler implements IKiteHandler {
      */
     private _setupGttOrderListener(): void {
         GM_addValueChangeListener(
-            Constants.STORAGE.EVENTS.GTT_REQUEST, 
+            Constants.STORAGE.EVENTS.GTT_REFERSH,
             (_keyName: string, _oldValue: unknown, newValue: GttRequest) => {
                 this.handleGttRequest(newValue);
             }
@@ -222,7 +224,7 @@ export class KiteHandler implements IKiteHandler {
      * @private
      */
     private _setupOrderPanelListeners(): void {
-        $(Constants.DOM.ORDER_PANEL.GTT_BUTTON).click(() => 
+        $(Constants.DOM.ORDER_PANEL.GTT_BUTTON).click(() =>
             this.handleGttOrderButton());
     }
 
@@ -231,7 +233,7 @@ export class KiteHandler implements IKiteHandler {
      * @private
      * @returns Order parameters
      */
-    private _readOrderPanel(): { qty: number; sl: number; ent: number; tp: number } {
+    private _readOrderPanel(): { qty: number; sl: number; ent: number; tp: number; } {
         // TODO: Extract to Constants
         const ent = parseFloat($('input[data-property-id="Risk/RewardlongEntryPrice"]').val() as string);
         const tp = parseFloat($('input[data-property-id="Risk/RewardlongProfitLevelPrice"]').val() as string);
@@ -242,15 +244,15 @@ export class KiteHandler implements IKiteHandler {
         const doubleQty = Math.round((Constants.TRADING.ORDER.RISK_LIMIT * 2) / parseFloat(risk));
 
         const confirmedQty = prompt(
-            `Qty (2X): ${qty} (${doubleQty}) RiskLimit: ${Constants.TRADING.ORDER.RISK_LIMIT} TradeRisk: ${risk}`, 
+            `Qty (2X): ${qty} (${doubleQty}) RiskLimit: ${Constants.TRADING.ORDER.RISK_LIMIT} TradeRisk: ${risk}`,
             qty.toString()
         );
 
-        return { 
-            qty: parseInt(confirmedQty || '0'), 
-            sl, 
-            ent, 
-            tp 
+        return {
+            qty: parseInt(confirmedQty || '0'),
+            sl,
+            ent,
+            tp
         };
     }
 
@@ -261,10 +263,10 @@ export class KiteHandler implements IKiteHandler {
      * @returns True if valid
      */
     private _validateOrder(order: GttRequest): boolean {
-        return !!(order.qty && order.qty > 0 && 
-                 order.sl && order.sl > 0 && 
-                 order.ent && order.ent > 0 && 
-                 order.tp && order.tp > 0);
+        return !!(order.qty && order.qty > 0 &&
+            order.sl && order.sl > 0 &&
+            order.ent && order.ent > 0 &&
+            order.tp && order.tp > 0);
     }
 
     /**
@@ -315,7 +317,7 @@ export class KiteHandler implements IKiteHandler {
      */
     private _createOrderButton(config: ButtonConfig): JQuery {
         return buildButton(
-            "", 
+            "",
             config.text.fontcolor(config.color),
             (evt: JQuery.ClickEvent) => this.handleDeleteOrderButton(evt)
         );

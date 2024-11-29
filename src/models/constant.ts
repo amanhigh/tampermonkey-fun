@@ -120,10 +120,10 @@ export const Constants = Object.freeze({
                 PAIR_MAP: 'pairSilo' // Old Name: pairMapStore
             },
             EVENTS: {
-                GTT_ORDER: "gttOrderEvent", // Old Name: gttOrderEvent
                 TV_WATCH_CHANGE: "tvWatchChangeEvent", // Old Name: tvWatchChangeEvent
                 ALERT_CLICKED: "alertClickedEvent", // Old Name: alertClickedEvent
-                GTT_REQUEST: "gttRequest" // Old Name: gttRequest
+                GTT_ORDER: "gttOrderEvent", // Old Name: gttOrderEvent
+                GTT_REFERSH: "gttRefreshEvent" // Old Name: gttRequest
             }
         },
 

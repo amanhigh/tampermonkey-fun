@@ -12,8 +12,20 @@ export class AlertClicked {
 
     set tvTicker(value: string) { this._tvTicker = value; }
     set investingTicker(value: string) { this._investingTicker = value; }
+
+    /**
+     * Serialize AlertClicked event to JSON string for storage
+     * @returns JSON string representation of the event
+     */
+    public stringify(): string {
+        return JSON.stringify({
+            tvTicker: this._tvTicker,
+            investingTicker: this._investingTicker
+        });
+    }
 }
 
+// TODO: Create Repository for events
 export class WatchChangeEvent {
     private _tickers: string[];
     private _recent: string[];
