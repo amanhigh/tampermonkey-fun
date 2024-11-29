@@ -45,7 +45,7 @@ export interface ITradingViewWatchlistManager {
     /**
      * Creates and stores the WatchChangeEvent for the alert feed
      */
-    paintAlertFeedEvent(): void;
+    paintAlertFeedEvent(): Promise<void>;
 
     /**
      * Adds a new filter to the filter chain
@@ -176,12 +176,11 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     }
 
     /** @inheritdoc */
-    paintAlertFeedEvent(): void {
+    async paintAlertFeedEvent(): Promise<void> {
         const watchList = this.getTickers();
         const recentList = Array.from(this.recentTickerRepo.getAll());
         const event = new WatchChangeEvent(watchList, recentList);
-        // HACK: Move to event repository
-        GM_setValue(Constants.STORAGE.EVENTS.TV_WATCH_CHANGE, event);
+        await this.watchRepo.createWatchChangeEvent(event);
     }
 
     /** @inheritdoc */
