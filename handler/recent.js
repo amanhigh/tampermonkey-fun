@@ -1,8 +1,8 @@
 /**
  * Handles recent checkbox UI element operations
- * @class RecentCheckboxHandler
+ * @class RecentHandler
  */
-class RecentCheckboxHandler {
+class RecentHandler {
     /**
      * @param {string} recentId DOM id for recent checkbox
      * @param {TickerManager} tickerManager Manager for ticker operations

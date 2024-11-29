@@ -1,7 +1,7 @@
 /**
  * Class handling alert mapping functionality.
  */
-class AlertMapHandler {
+class PairHandler {
     /**
      * Creates an instance of AlertMapper.
      */

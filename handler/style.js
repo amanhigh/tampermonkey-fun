@@ -1,7 +1,7 @@
 /**
- * Handles all toolbar and timeframe related operations
+ * Handles all styling operations
  */
-class ToolbarHandler {
+class StyleHandler {
     /**
      * Selects toolbar based on the provided index
      * @param {number} index - Index of the toolbar to select

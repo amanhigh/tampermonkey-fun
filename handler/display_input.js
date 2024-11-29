@@ -39,16 +39,6 @@ class DisplayInputHandler {
         // Add required event listeners
     }
 
-    /**
-     * Displays sequence information in the input
-     */
-    displaySequence() {
-        const sequence = this.sequenceManager.getCurrentSequence();
-        
-        const message = `${tvTicker}:${sequence}`;
-        this._setValue(message);
-        this._setBackgroundColor(sequence);
-    }
 
     /**
      * Sets the background color based on sequence
