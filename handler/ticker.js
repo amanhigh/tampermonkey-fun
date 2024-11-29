@@ -2,11 +2,6 @@
  * Handles all ticker-related events and state management
  */
 class TickerHandler {
-    constructor(eventManager) {
-        this.eventManager = eventManager;
-        this.setupEventListeners();
-    }
-
     setupEventListeners() {
         this.eventManager.registerHandler('tickerChange', this.onTickerChange.bind(this));
         this.eventManager.registerHandler('recentTickerReset', this.onRecentTickerReset.bind(this));

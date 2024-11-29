@@ -1,24 +1,34 @@
+import { IKeyUtil } from '../util/key';
+import { IModifierKeyConfig } from './modifier_config';
+
+/**
+ * Interface for managing hotkey operations
+ */
+export interface IHotkeyHandler {
+    /**
+     * Core keyboard event handler
+     * @param event Keyboard event
+     */
+    handleKeyDown(event: KeyboardEvent): void;
+}
+
 /**
  * Handles keyboard events and routes them to appropriate actions
  */
-class HotkeyHandler {
+export class HotkeyHandler implements IHotkeyHandler {
     /**
-     * @param {TradingViewActionManager} tvActionManager - Trading view action manager
-     * @param {KeyUtil} keyUtil - Key utility for detection
-     * @param {KeyConfig} keyConfig - Key configuration and actions
+     * @param keyUtil Key utility for detection
+     * @param keyConfig Key configuration and actions
+     * @param modifierKeyConfig Configuration for modifier keys
      */
-    constructor(tvActionManager, keyUtil, keyConfig, modifierKeyConfig) {
-        this._tvActionManager = tvActionManager;
-        this._keyUtil = keyUtil;
-        this._keyConfig = keyConfig;
-        this._modifierKeyConfig = modifierKeyConfig;
-    }
+    constructor(
+        private readonly _keyUtil: IKeyUtil,
+        private readonly _keyConfig: IKeyConfig,
+        private readonly _modifierKeyConfig: IModifierKeyConfig
+    ) {}
 
-    /**
-     * Core keyboard event handler
-     * @param {KeyboardEvent} event - Keyboard event
-     */
-    handleKeyDown(event) {
+    /** @inheritdoc */
+    handleKeyDown(event: KeyboardEvent): void {
         try {
             const swiftEnabled = this._tvActionManager.isSwiftEnabled();
             // Auto-enable swift for timeframe keys (1-4)
@@ -45,9 +55,9 @@ class HotkeyHandler {
     /**
      * Handle keys when swift is enabled
      * @private
-     * @param {KeyboardEvent} event Keyboard event
+     * @param event Keyboard event
      */
-    _handleSwiftEnabled(event) {
+    private _handleSwiftEnabled(event: KeyboardEvent): void {
         if (this._keyUtil.hasModifierKey(event)) {
             this._handleModifierKeys(event);
         } else {
@@ -58,9 +68,9 @@ class HotkeyHandler {
     /**
      * Handle modifier key combinations
      * @private
-     * @param {KeyboardEvent} event Keyboard event
+     * @param event Keyboard event
      */
-    _handleModifierKeys(event) {
+    private _handleModifierKeys(event: KeyboardEvent): void {
         const modifierType = this._keyUtil.getModifierType(event);
         switch(modifierType) {
             case 'ctrl':
@@ -78,9 +88,9 @@ class HotkeyHandler {
     /**
      * Handle non-modifier key presses
      * @private
-     * @param {KeyboardEvent} event Keyboard event
+     * @param event Keyboard event
      */
-    _handleNonModifierKeys(event) {
+    private _handleNonModifierKeys(event: KeyboardEvent): void {
         const handled = this._keyConfig.executeToolbarAction(event.key) ||
                        this._keyConfig.executeTimeframeAction(event.key) ||
                        this._keyConfig.executeOrderAction(event.key) ||
@@ -95,19 +105,19 @@ class HotkeyHandler {
     /**
      * Handle globally active keys (when swift is disabled)
      * @private
-     * @param {KeyboardEvent} event Keyboard event
+     * @param event Keyboard event
      */
-    _handleGlobalKeys(event) {
+    private _handleGlobalKeys(event: KeyboardEvent): void {
         // Flag/Unflag
-        if (this._keyUtil.isModifierKey(event.shiftKey, 'o', event)) {
+        if (this._isModifierKey(event.shiftKey, 'o', event)) {
             this._tvActionManager.toggleFlag();
         }
         // Focus Input
-        if (this._keyUtil.isModifierKey(event.ctrlKey, 'b', event)) {
+        if (this._isModifierKey(event.ctrlKey, 'b', event)) {
             this._tvActionManager.focusCommandInput();
         }
         // Close Text Box and Enable Swift
-        if (this._keyUtil.isModifierKey(event.shiftKey, 'enter', event)) {
+        if (this._isModifierKey(event.shiftKey, 'enter', event)) {
             this._tvActionManager.closeTextBox();
             this._tvActionManager.setSwiftEnabled(true);
         }
@@ -120,7 +130,7 @@ class HotkeyHandler {
             }
         }
         // Disable Swift Keys
-        if (this._keyUtil.isModifierKey(event.altKey, 'b', event)) {
+        if (this._isModifierKey(event.altKey, 'b', event)) {
             this._tvActionManager.setSwiftEnabled(false);
         }
     }
@@ -128,13 +138,26 @@ class HotkeyHandler {
     /**
      * Checks if swift should auto-enable for timeframe keys
      * @private
-     * @param {KeyboardEvent} event Keyboard event
-     * @param {boolean} currentlyEnabled Current swift state
-     * @returns {boolean} True if should auto-enable
+     * @param event Keyboard event
+     * @param currentlyEnabled Current swift state
+     * @returns True if should auto-enable
      */
-    _shouldAutoEnableSwift(event, currentlyEnabled) {
+    private _shouldAutoEnableSwift(event: KeyboardEvent, currentlyEnabled: boolean): boolean {
         return !currentlyEnabled && 
                event.keyCode > 48 && 
                event.keyCode < 53;
+    }
+
+    /**
+     * Helper to check for modifier key combinations
+     * @private
+     * @param modifierActive Whether modifier key is active
+     * @param key Target key to check
+     * @param event Keyboard event
+     * @returns True if combination matches
+     */
+    private _isModifierKey(modifierActive: boolean, key: string, event: KeyboardEvent): boolean {
+        // FIXME: Use from Key Util
+        return modifierActive && event.key.toLowerCase() === key;
     }
 }

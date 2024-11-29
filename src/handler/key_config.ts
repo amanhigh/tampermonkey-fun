@@ -1,82 +1,98 @@
+import { Constants } from '../models/constant';
+
+/**
+ * Type definitions for key bindings and actions
+ */
+type KeyBinding = {
+    description: string;
+    action: () => void;
+};
+
+type KeyMap = Map<string, KeyBinding>;
+
 /**
  * Manages hotkey configuration and actions
  */
-class KeyConfig {
-    /**
-     * @typedef {Object} KeyBinding
-     * @property {string} key - Key identifier
-     * @property {string} description - Action description
-     * @property {Function} action - Function to execute
-     */
+export class KeyConfig {
+    private readonly _toolbarKeys: KeyMap;
+    private readonly _timeframeKeys: KeyMap;
+    private readonly _orderKeys: KeyMap;
+    private readonly _flagKeys: KeyMap;
+    private readonly _utilityKeys: KeyMap;
 
     /**
-     * @param {TradingViewActionManager} tvActionManager
-     * @param {SequenceManager} sequenceManager
-     * @param {CategoryManager} categoryManager
+     * @param tvActionManager Trading view action manager
+     * @param sequenceManager Sequence manager for timeframes
+     * @param categoryManager Category manager for orders and flags
      */
-    constructor(tvActionManager, sequenceManager, categoryManager) {
+    // eslint-disable-next-line max-lines-per-function
+    constructor(
+        private readonly _tvActionManager: ITradingViewActionManager,
+        private readonly _sequenceManager: ISequenceManager,
+        private readonly _categoryManager: ICategoryManager
+    ) {
         this._toolbarKeys = new Map([
             [',', {
                 description: 'TrendLine',
-                action: () => tvActionManager.selectToolbar(1)
+                action: () => _tvActionManager.selectToolbar(1)
             }],
             ['e', {
                 description: 'FibZone',
-                action: () => tvActionManager.selectToolbar(2)
+                action: () => _tvActionManager.selectToolbar(2)
             }],
             ['.', {
                 description: 'Rectangle',
-                action: () => tvActionManager.selectToolbar(3)
+                action: () => _tvActionManager.selectToolbar(3)
             }],
             ['k', {
                 description: 'Text with Reason',
                 // TODO: Fix now Broken functions migrated.
                 /**
-                     * ReasonPrompt((reason) => {
+                 * ReasonPrompt((reason) => {
                     ClipboardCopy(timeFrame.symbol + " - " + reason);
                     SelectToolbar(4);
                 })
                  */
-                action: () => tvActionManager.handleReasonPrompt()
+                action: () => _tvActionManager.handleReasonPrompt()
             }],
             ['j', {
                 description: 'Demand Zone',
-                action: () => tvActionManager.selectZoneStyle(Constants.TRADING.ZONES.DEMAND)
+                action: () => _tvActionManager.selectZoneStyle(Constants.TRADING.ZONES.DEMAND)
             }],
             ['u', {
                 description: 'Supply Zone',
-                action: () => tvActionManager.selectZoneStyle(Constants.TRADING.ZONES.SUPPLY)
+                action: () => _tvActionManager.selectZoneStyle(Constants.TRADING.ZONES.SUPPLY)
             }],
             ['p', {
                 description: 'Clear All',
-                action: () => tvActionManager.clearAll()
+                action: () => _tvActionManager.clearAll()
             }],
             ['t', {
                 description: 'Trade',
-                action: () => tvActionManager.handleGttOrder()
+                action: () => _tvActionManager.handleGttOrder()
             }]
         ]);
 
         this._timeframeKeys = new Map([
             ['0', {
                 description: 'Freeze Sequence',
-                action: () => sequenceManager.freezeSequence()
+                action: () => _sequenceManager.freezeSequence()
             }],
             ['1', {
                 description: 'VHTF (Very High Timeframe)',
-                action: () => sequenceManager.selectTimeframe(0)
+                action: () => _sequenceManager.selectTimeframe(0)
             }],
             ['2', {
                 description: 'HTF (High Timeframe)',
-                action: () => sequenceManager.selectTimeframe(1)
+                action: () => _sequenceManager.selectTimeframe(1)
             }],
             ['3', {
                 description: 'ITF (Intermediate Timeframe)',
-                action: () => sequenceManager.selectTimeframe(2)
+                action: () => _sequenceManager.selectTimeframe(2)
             }],
             ['4', {
                 description: 'TTF (Trading Timeframe)',
-                action: () => sequenceManager.selectTimeframe(3)
+                action: () => _sequenceManager.selectTimeframe(3)
             }]
         ]);
 
@@ -84,54 +100,54 @@ class KeyConfig {
             ['F1', {
                 description: 'Order List - Index 0',
                 // Todo: Requires Selected Ticker
-                action: () => categoryManager.recordOrderCategory(0)
+                action: () => _categoryManager.recordOrderCategory(0)
             }],
             ['F2', {
                 description: 'Order List - Index 1',
-                action: () => categoryManager.recordOrderCategory(1)
+                action: () => _categoryManager.recordOrderCategory(1)
             }],
             ['F3', {
                 description: 'Order List - Index 2',
-                action: () => categoryManager.recordOrderCategory(2)
+                action: () => _categoryManager.recordOrderCategory(2)
             }],
             ['F4', {
                 description: 'Order List - Index 3',
-                action: () => categoryManager.recordOrderCategory(3)
+                action: () => _categoryManager.recordOrderCategory(3)
             }],
             ['F5', {
                 description: 'Order List - Index 4',
-                action: () => categoryManager.recordOrderCategory(4)
+                action: () => _categoryManager.recordOrderCategory(4)
             }]
         ]);
             
         this._flagKeys = new Map([
             ['F6', {
                 description: 'Orange Consolidation Flag - Index 0',
-                action: () => categoryManager.recordFlagCategory(0)
+                action: () => _categoryManager.recordFlagCategory(0)
             }],
             ['F7', {
                 description: 'Red Shorts Flag - Index 1',
-                action: () => categoryManager.recordFlagCategory(1)
+                action: () => _categoryManager.recordFlagCategory(1)
             }],
             ['F8', {
                 description: 'Blue Crypto Flag - Index 2',
-                action: () => categoryManager.recordFlagCategory(2)
+                action: () => _categoryManager.recordFlagCategory(2)
             }],
             ['F9', {
                 description: 'Empty Flag - Index 3',
-                action: () => categoryManager.recordFlagCategory(3)
+                action: () => _categoryManager.recordFlagCategory(3)
             }],
             ['F10', {
                 description: 'Green Longs Flag - Index 4',
-                action: () => categoryManager.recordFlagCategory(4)
+                action: () => _categoryManager.recordFlagCategory(4)
             }],
             ['F11', {
                 description: 'Brown Index Flag - Index 6',
-                action: () => categoryManager.recordFlagCategory(6)
+                action: () => _categoryManager.recordFlagCategory(6)
             }],
             ['F12', {
                 description: 'Golden XAU Flag - Index 7',
-                action: () => categoryManager.recordFlagCategory(7)
+                action: () => _categoryManager.recordFlagCategory(7)
             }]
         ]);
 
@@ -143,27 +159,45 @@ class KeyConfig {
         ]);
     }
 
-    executeToolbarAction(key) {
+    /**
+     * Execute toolbar key action if defined
+     */
+    executeToolbarAction(key: string): boolean {
         return this._executeAction(this._toolbarKeys, key);
     }
 
-    executeTimeframeAction(key) {
+    /**
+     * Execute timeframe key action if defined
+     */
+    executeTimeframeAction(key: string): boolean {
         return this._executeAction(this._timeframeKeys, key);
     }
 
-    executeOrderAction(key) {
+    /**
+     * Execute order key action if defined
+     */
+    executeOrderAction(key: string): boolean {
         return this._executeAction(this._orderKeys, key);
     }
 
-    executeFlagAction(key) {
+    /**
+     * Execute flag key action if defined
+     */
+    executeFlagAction(key: string): boolean {
         return this._executeAction(this._flagKeys, key);
     }
 
-    executeUtilityAction(key) {
+    /**
+     * Execute utility key action if defined
+     */
+    executeUtilityAction(key: string): boolean {
         return this._executeAction(this._utilityKeys, key);
     }
 
-    getDescription(key) {
+    /**
+     * Get description for given key if bound
+     */
+    getDescription(key: string): string | undefined {
         const binding = this._toolbarKeys.get(key) || 
                        this._timeframeKeys.get(key) || 
                        this._orderKeys.get(key) ||
@@ -176,7 +210,7 @@ class KeyConfig {
      * Execute action from map if found
      * @private
      */
-    _executeAction(map, key) {
+    private _executeAction(map: KeyMap, key: string): boolean {
         const binding = map.get(key);
         if (binding) {
             binding.action();
