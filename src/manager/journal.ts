@@ -1,5 +1,5 @@
 import { CategoryLists } from '../models/category';
-import { IOrderRepo } from '../repo/order';
+import { IWatchlistRepo } from '../repo/watch';
 import { ISequenceManager } from './sequence';
 
 /**
@@ -25,13 +25,13 @@ export interface IJournalManager {
  */
 export class JournalManager implements IJournalManager {
     /**
-     * @param orderRepo - Repository for order management
+     * @param watchlistRepo - Repository for watchlist operations
      * @param sequenceManager - Manager for sequence operations
      */
     constructor(
-        private readonly _orderRepo: IOrderRepo,
+        private readonly _watchlistRepo: IWatchlistRepo,
         private readonly _sequenceManager: ISequenceManager
-    ) {}
+    ) { }
 
     // TODO: JournalHandler
     // function RecordJournal() {
@@ -46,17 +46,17 @@ export class JournalManager implements IJournalManager {
     createEntry(buttonId: string, reason: string, currentTicker: string): string {
         // Get sequence preference for current ticker
         const sequence = this._sequenceManager.getCurrentSequence();
-        
+
         // Build timeframe tag with sequence
         // TODO: buttonId earlier this.id ?
         const timeframeTag = `${sequence.toLowerCase()}.${buttonId}`;
-        
+
         // Determine entry type based on order status
         const type = this._determineEntryType(currentTicker);
-        
+
         // Build final tag with reason if provided
         const finalType = this._appendReason(type, reason);
-        
+
         // Construct complete journal tag
         return `${currentTicker}.${timeframeTag}.${finalType}`;
     }
@@ -68,13 +68,13 @@ export class JournalManager implements IJournalManager {
      * @returns Entry type classification
      */
     private _determineEntryType(ticker: string): string {
-        const orderLists = this._orderRepo.getOrderCategoryLists();
+        const watchLists = this._watchlistRepo.getWatchCategoryLists();
 
-        if (orderLists.get(2).has(ticker)) {
+        if (watchLists.get(2).has(ticker)) {
             return "set";
-        } 
-        
-        if (this._isInResultCategories(orderLists, ticker)) {
+        }
+
+        if (this._isInResultCategories(watchLists, ticker)) {
             return "result";
         }
 
@@ -84,14 +84,14 @@ export class JournalManager implements IJournalManager {
     /**
      * Checks if ticker is in result categories (0, 1, or 4)
      * @private
-     * @param orderLists - Lists of categorized orders
+     * @param watchLists - Lists of categorized watchlists
      * @param ticker - Trading symbol to check
      * @returns True if ticker is in result categories
      */
-    private _isInResultCategories(orderLists: CategoryLists, ticker: string): boolean {
-        return orderLists.get(0).has(ticker) || 
-               orderLists.get(1).has(ticker) || 
-               orderLists.get(4).has(ticker);
+    private _isInResultCategories(watchLists: CategoryLists, ticker: string): boolean {
+        return watchLists.get(0).has(ticker) ||
+            watchLists.get(1).has(ticker) ||
+            watchLists.get(4).has(ticker);
     }
 
     /**

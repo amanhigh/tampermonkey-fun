@@ -13,7 +13,7 @@ import { TestApp } from './test';
 // Repository Imports
 import { RepoCron, IRepoCron } from '../repo/cron';
 import { IFlagRepo, FlagRepo } from '../repo/flag';
-import { IOrderRepo, OrderRepo } from '../repo/order';
+import { IWatchlistRepo, Watchlistrepo } from '../repo/watch';
 import { IPairRepo, PairRepo } from '../repo/pair';
 import { IExchangeRepo, ExchangeRepo } from '../repo/exchange';
 import { ITickerRepo, TickerRepo } from '../repo/ticker';
@@ -109,8 +109,8 @@ export class Factory {
         flag: (): IFlagRepo =>
             Factory._getInstance('flagRepo', () => new FlagRepo(Factory.repo._cron())),
 
-        order: (): IOrderRepo =>
-            Factory._getInstance('orderRepo', () => new OrderRepo(Factory.repo._cron())),
+        order: (): IWatchlistRepo =>
+            Factory._getInstance('orderRepo', () => new Watchlistrepo(Factory.repo._cron())),
 
         /**
          * Map-based Repositories

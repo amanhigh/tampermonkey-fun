@@ -3,33 +3,33 @@ import { CategoryRepo, ICategoryRepo } from "./category";
 import { CategoryLists } from "../models/category";
 
 /**
- * Interface for order repository operations
+ * Interface for watchlist operations
  */
-export interface IOrderRepo extends ICategoryRepo {
+export interface IWatchlistRepo extends ICategoryRepo {
     /**
-     * Get the order category lists
+     * Get the watch category lists
      * @returns Category lists containing orders
      */
-    getOrderCategoryLists(): CategoryLists;
+    getWatchCategoryLists(): CategoryLists;
 }
 
 /**
  * Repository for managing order lists
  */
-export class OrderRepo extends CategoryRepo implements IOrderRepo {
+export class Watchlistrepo extends CategoryRepo implements IWatchlistRepo {
     /**
      * Creates a new order repository
      * @param repoCron Repository auto-save manager
      */
     constructor(repoCron: IRepoCron) {
-        super(repoCron, "orderRepo");
+        super(repoCron, "watchlistRepeo");
     }
 
     /**
      * Get the order category lists
      * @returns Category lists containing orders
      */
-    public getOrderCategoryLists(): CategoryLists {
+    public getWatchCategoryLists(): CategoryLists {
         return this._categoryLists;
     }
 }

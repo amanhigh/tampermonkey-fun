@@ -1,6 +1,6 @@
 import { Constants } from '../models/constant';
 import { IPaintManager } from './paint';
-import { IOrderRepo } from '../repo/order';
+import { IWatchlistRepo } from '../repo/watch';
 import { IRecentTickerRepo } from '../repo/recent';
 import { IUIUtil } from '../util/ui';
 import { WatchChangeEvent } from '../models/events';
@@ -72,16 +72,16 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
 
     /**
      * @param paintManager - Instance of PaintManager
-     * @param orderRepo - Instance of OrderRepo
+     * @param watchRepo - Instance of WatchlistRepo
      * @param recentTickerRepo - Instance of RecentTickerRepo
      * @param uiUtil - Instance of UIUtil for building UI components
      */
     constructor(
         private readonly paintManager: IPaintManager,
-        private readonly orderRepo: IOrderRepo,
+        private readonly watchRepo: IWatchlistRepo,
         private readonly recentTickerRepo: IRecentTickerRepo,
         private readonly uiUtil: IUIUtil
-    ) {}
+    ) { }
 
     /** @inheritdoc */
     getTickers(visible = false): string[] {
@@ -151,7 +151,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
         const $watchSummary = $(`#${Constants.UI.IDS.AREAS.SUMMARY}`);
         $watchSummary.empty();
 
-        const orderCategoryLists = this.orderRepo.getOrderCategoryLists();
+        const orderCategoryLists = this.watchRepo.getWatchCategoryLists();
 
         for (let i = 0; i < Constants.UI.COLORS.LIST.length; i++) {
             const count = orderCategoryLists.get(i).size;

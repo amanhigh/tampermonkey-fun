@@ -1,6 +1,6 @@
 import { Constants } from '../models/constant';
 import { CategoryLists } from '../models/category';
-import { IOrderRepo } from '../repo/order';
+import { IWatchlistRepo } from '../repo/watch';
 import { IFlagRepo } from '../repo/flag';
 
 type WatchlistManager = {
@@ -69,14 +69,14 @@ export class CategoryManager implements ICategoryManager {
      * @param watchlistManager Watchlist manager
      */
     constructor(
-        private readonly _orderRepo: IOrderRepo,
+        private readonly _orderRepo: IWatchlistRepo,
         private readonly _flagRepo: IFlagRepo,
         private readonly _watchlistManager: WatchlistManager
-    ) {}
+    ) { }
 
     /** @inheritdoc */
     getOrderCategory(categoryIndex: number): Set<string> {
-        const categoryLists = this._orderRepo.getOrderCategoryLists();
+        const categoryLists = this._orderRepo.getWatchCategoryLists();
         return categoryLists.getList(categoryIndex);
     }
 
@@ -88,7 +88,7 @@ export class CategoryManager implements ICategoryManager {
 
     /** @inheritdoc */
     recordOrderCategory(categoryIndex: number, selectedTickers: string[]): void {
-        const categoryLists = this._orderRepo.getOrderCategoryLists();
+        const categoryLists = this._orderRepo.getWatchCategoryLists();
         this._recordCategory(categoryLists, categoryIndex, selectedTickers);
     }
 
@@ -102,7 +102,7 @@ export class CategoryManager implements ICategoryManager {
     updateWatchlistCategory(watchListTickers: string[]): void {
         //Prep Watchlist Set with all Symbols not in other Order Sets
         const watchSet = new Set(watchListTickers);
-        const orderLists = this._orderRepo.getOrderCategoryLists();
+        const orderLists = this._orderRepo.getWatchCategoryLists();
 
         // Remove tickers from other categories (except index 5 which is watchlist)
         for (let i = 0; i < Constants.UI.COLORS.LIST.length; i++) {
@@ -151,8 +151,8 @@ export class CategoryManager implements ICategoryManager {
         const watchListTickers = this._watchlistManager.getTickers();
         let count = 0;
 
-        const categoryLists = this._orderRepo.getOrderCategoryLists();
-        
+        const categoryLists = this._orderRepo.getWatchCategoryLists();
+
         categoryLists.getLists().forEach((list, key) => {
             for (const ticker of [...list]) {
                 if (!watchListTickers.includes(ticker)) {
