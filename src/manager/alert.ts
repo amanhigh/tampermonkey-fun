@@ -17,6 +17,13 @@ export interface IAlertManager {
   getAlerts(): Alert[];
 
   /**
+   * Get all alerts for Investing.com ticker
+   * @param investingTicker Investing.com ticker
+   * @returns Array of alerts sorted by price
+   */
+  getAlertsForInvestingTicker(investingTicker: string): Alert[];
+
+  /**
    * Create alert for current trading view ticker
    * @param price Alert price
    * @throws Error If pair info not found for current ticker
@@ -56,7 +63,7 @@ export class AlertManager implements IAlertManager {
   /** @inheritdoc */
   getAlerts(): Alert[] {
     const investingTicker = this._tickerManager.getInvestingTicker();
-    return this._getAlertsForInvestingTicker(investingTicker);
+    return this.getAlertsForInvestingTicker(investingTicker);
   }
 
   /**
@@ -186,13 +193,8 @@ export class AlertManager implements IAlertManager {
     }
   }
 
-  /**
-   * Get alerts for an investing ticker
-   * @private
-   * @param investingTicker Investing.com ticker
-   * @returns Array of alerts sorted by price
-   */
-  private _getAlertsForInvestingTicker(investingTicker: string): Alert[] {
+  /** @inheritdoc */
+  public getAlertsForInvestingTicker(investingTicker: string): Alert[] {
     const pairInfo = this._pairManager.investingTickerToPairInfo(investingTicker);
     if (!pairInfo) {
       return [];

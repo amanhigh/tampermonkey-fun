@@ -1,7 +1,10 @@
-import { AlertState, PairInfo } from '../models/alert';
-import { IAlertRepo } from '../repo/alert';
+import { AlertState } from '../models/alert';
 import { ISymbolManager } from './symbol';
 import { Notifier } from '../util/notify';
+import { ITickerManager } from './ticker';
+import { IPairManager } from './pair';
+import { IAlertManager } from './alert';
+import { IAuditRepo } from '../repo/audit';
 
 /**
  * Interface for managing audit UI operations
@@ -18,7 +21,7 @@ export interface IAuditManager {
   /**
    * Initiates the auditing process for all alerts
    */
-  auditAlerts(): void;
+  auditAlerts(): Promise<void>;
 
   /**
    * Audits the current ticker and updates its state
@@ -33,17 +36,13 @@ export class AuditManager implements IAuditManager {
   private _currentIndex: number;
   private readonly _batchSize: number;
 
-  /**
-   * Creates an instance of AuditManager.
-   * @param alertRepo - The repository for managing alerts.
-   * @param uiManager - The instance of UI manager for audit operations.
-   * @param symbolManager - The manager for symbol operations
-   * @param batchSize - Size of processing batch, defaults to 50
-   */
   constructor(
-    private readonly _alertRepo: IAlertRepo,
+    private readonly _auditRepo: IAuditRepo,
     private readonly _uiManager: IAuditUIManager,
     private readonly _symbolManager: ISymbolManager,
+    private readonly _tickerManager: ITickerManager,
+    private readonly _pairManager: IPairManager,
+    private readonly _alertManager: IAlertManager,
     batchSize = 50
   ) {
     this._currentIndex = 0;
@@ -53,80 +52,71 @@ export class AuditManager implements IAuditManager {
   /********** Public Methods **********/
 
   /** @inheritdoc */
-  auditAlerts(): void {
-    this._alertRepo.clearAuditResults();
-    const tickers = this._getAllAlertTickers();
+  async auditAlerts(): Promise<void> {
+    const tickers = this._pairManager.getAllInvestingTickers();
     this._currentIndex = 0;
-    this._processBatch(tickers);
+    Notifier.info(`Starting audit of ${tickers.length} tickers`);
+    this._auditRepo.clear();
+    await this._processBatch(tickers);
   }
 
   /** @inheritdoc */
   auditCurrentTicker(): void {
-    const ticker = this._getMappedTicker();
-    const state = this._auditTickerAlerts(ticker);
-    this._alertRepo.addAuditResult(ticker, state);
-    this._uiManager.refreshAuditButton(ticker, state);
+    const investingTicker = this._tickerManager.getInvestingTicker();
+    const state = this._auditTickerAlerts(investingTicker);
+    this._auditRepo.addAuditResult(investingTicker, state);
+    // this._uiManager.refreshAuditButton(investingTicker, state); TODO: Move to Handler
   }
 
   /********** Private Methods **********/
-
-  /**
-   * Gets all tickers that have alerts
-   * @private
-   * @returns Array of ticker symbols
-   */
-  private _getAllAlertTickers(): string[] {
-    // TODO: Implement this method - missing in original
-    return [];
-  }
-
-  /**
-   * Gets the mapped ticker for the current context
-   * @private
-   * @returns Mapped ticker symbol
-   */
-  private _getMappedTicker(): string {
-    // TODO: Implement this method - missing in original
-    return '';
-  }
 
   /**
    * Processes batches of tickers for auditing.
    * @param tickers - The list of tickers to process.
    * @private
    */
-  private _processBatch(tickers: string[]): void {
-    const endIndex = Math.min(this._currentIndex + this._batchSize, tickers.length);
+  private async _processBatch(tickers: string[]): Promise<void> {
+    while (this._currentIndex < tickers.length) {
+      const endIndex = Math.min(this._currentIndex + this._batchSize, tickers.length);
+      const batchPercent = Math.floor((this._currentIndex / tickers.length) * 100);
 
-    for (let i = this._currentIndex; i < endIndex; i++) {
-      const ticker = tickers[i];
-      const state = this._auditTickerAlerts(ticker);
-      this._alertRepo.addAuditResult(ticker, state);
+      if (batchPercent % 20 === 0) {
+        Notifier.info(`Processed ${batchPercent}% of tickers`);
+      }
+
+      // Process current batch asynchronously
+      await new Promise<void>((resolve) => {
+        setTimeout(() => {
+          for (let i = this._currentIndex; i < endIndex; i++) {
+            const ticker = tickers[i];
+            const state = this._auditTickerAlerts(ticker);
+            this._auditRepo.addAuditResult(ticker, state);
+          }
+          resolve();
+        }, 0);
+      });
+
+      this._currentIndex = endIndex;
     }
 
-    this._currentIndex = endIndex;
-
-    if (this._currentIndex < tickers.length) {
-      requestAnimationFrame(() => this._processBatch(tickers));
-    } else {
-      Notifier.message(`Audited ${this._alertRepo.getAuditResultsCount()} tickers`, 'green');
-      this._uiManager.updateAuditSummary();
-    }
+    const auditCount = this._auditRepo.getCount();
+    Notifier.message(`Completed audit of ${auditCount} tickers`, 'green');
+    // this._uiManager.updateAuditSummary(); TODO: Move to Handler
   }
 
   /**
    * Audits alerts for a single ticker.
-   * @param ticker - The ticker to audit.
+   * @param investingTicker - The ticker to audit.
    * @returns The audit state for the ticker.
    * @private
    */
-  private _auditTickerAlerts(ticker: string): AlertState {
-    const pairInfo = this._symbolManager.mapInvestingPair(ticker);
+  private _auditTickerAlerts(investingTicker: string): AlertState {
+    const pairInfo = this._pairManager.investingTickerToPairInfo(investingTicker);
     if (!pairInfo) {
       return AlertState.NO_ALERTS;
     }
 
-    const alerts = this._alertRepo.getAlerts(pairInfo.pairId);
+    const alerts = this._alertManager.getAlertsForInvestingTicker(investingTicker);
 
     return alerts.length === 0
       ? AlertState.NO_ALERTS

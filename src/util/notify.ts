@@ -40,6 +40,11 @@ export class Notifier {
     this.message(msg, 'orange', timeout);
   }
 
+  // HACK: Replace Green Messages with this
+  public static success(msg: string, timeout = 2000): void {
+    this.message(msg, 'green', timeout);
+  }
+
   public static info(msg: string, timeout = 2000): void {
     this.message(msg, 'white', timeout);
   }
