@@ -111,6 +111,15 @@ export class GttCreateEvent extends BaseEvent {
     set tp(value: number | undefined) { this._tp = value; }
 
     /**
+     * Validates if all required fields are present
+     * @returns true if event has all required fields
+     */
+    public isValid(): boolean {
+        return !!(this._symb && this._qty && this._ltp && 
+                 this._sl && this._ent && this._tp);
+    }
+
+    /**
      * Serialize event to JSON string for storage
      * @returns JSON string with order creation parameters
      */
@@ -130,7 +139,7 @@ export class GttCreateEvent extends BaseEvent {
  * Event for refreshing GTT orders
  * Maintains a map of active GTT orders by symbol
  */
-export class GttRefereshEvent extends BaseEvent {
+export class GttRefreshEvent extends BaseEvent {
     private _orders: Record<string, Order[]>;
 
     /**
@@ -225,6 +234,10 @@ export class CreateGttRequest {
         type: string,
         expiryDate: string
     ) {
+        if (!tradingsymbol || !triggers.length || !orders.length) {
+            throw new Error("Invalid GTT request parameters");
+        }
+        
         this._condition = {
             exchange: "NSE",
             tradingsymbol,
@@ -247,4 +260,37 @@ export class CreateGttRequest {
             expires_at: this._expires_at
         });
     }
+}
+
+/**
+ * GTT API Response order details
+ */
+export interface GttApiOrder {
+    tradingsymbol: string;
+    quantity: number;
+}
+
+/**
+ * GTT API Response condition details
+ */
+export interface GttApiCondition {
+    trigger_values: number[];
+}
+
+/**
+ * Single GTT order entry in API response
+ */
+export interface GttApiData {
+    status: string;
+    orders: GttApiOrder[];
+    type: string;
+    id: string;
+    condition: GttApiCondition;
+}
+
+/**
+ * GTT API Response data format
+ */
+export interface GttApiResponse {
+    data: GttApiData[];
 }

@@ -11,19 +11,14 @@ export interface IKohanClient extends IBaseClient {
      * @returns Promise resolving with the API response
      * @throws Error when recording ticker fails
      */
-    recordTicker(ticker: string): Promise<KohanResponse>;
+    recordTicker(ticker: string): Promise<void>;
 
     /**
      * Retrieve clipboard data from the API
      * @returns Promise resolving with clipboard data
      * @throws Error when retrieving clipboard data fails
      */
-    getClip(): Promise<KohanResponse>;
-}
-
-interface KohanResponse {
-    // TODO: Define specific response structure when available
-    [key: string]: any;
+    getClip(): Promise<string>;
 }
 
 /**
@@ -45,10 +40,9 @@ export class KohanClient extends BaseClient implements IKohanClient {
      * @returns Promise resolving with the API response
      * @throws Error when recording ticker fails
      */
-    async recordTicker(ticker: string): Promise<KohanResponse> {
+    async recordTicker(ticker: string): Promise<void> {
         try {
-            const response = await this.makeRequest<KohanResponse>(`/ticker/${ticker}/record`);
-            return response;
+            await this.makeRequest<void>(`/ticker/${ticker}/record`);
         } catch (error) {
             throw new Error(`Failed to record ticker: ${(error as Error).message}`);
         }
@@ -59,9 +53,9 @@ export class KohanClient extends BaseClient implements IKohanClient {
      * @returns Promise resolving with clipboard data
      * @throws Error when retrieving clipboard data fails
      */
-    async getClip(): Promise<KohanResponse> {
+    async getClip(): Promise<string> {
         try {
-            return await this.makeRequest<KohanResponse>('/clip');
+            return await this.makeRequest<string>('/clip');
         } catch (error) {
             throw new Error(`Failed to get clip: ${(error as Error).message}`);
         }

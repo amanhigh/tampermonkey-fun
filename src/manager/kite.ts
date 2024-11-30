@@ -1,6 +1,6 @@
 import { ISymbolManager } from './symbol';
 import { IKiteClient } from '../client/kite';
-import { GttCreateEvent, CreateGttRequest } from '../models/kite';
+import { GttCreateEvent, CreateGttRequest, GttApiResponse } from '../models/kite';
 
 /**
  * Interface for managing Kite trading platform operations
@@ -22,7 +22,7 @@ export interface IKiteManager {
      * Loads GTT orders and processes them with the provided callback
      * @param callback Callback to process loaded GTT data
      */
-    loadOrders(callback: (data: unknown) => void): void;
+    loadOrders(callback: (data: GttApiResponse) => void): void;
 }
 
 /**
@@ -46,17 +46,18 @@ export class KiteManager implements IKiteManager {
 
     /** @inheritdoc */
     async createOrder(event: GttCreateEvent): Promise<void> {
-        if (!event.symb || !event.qty || !event.ltp || !event.sl || !event.ent || !event.tp) {
+        if (!event.isValid()) {
             throw new Error("Invalid GTT event parameters");
         }
 
         const exp = this._generateExpiryDate();
-        const pair = encodeURIComponent(this._symbolManager.tvToKite(event.symb));
+        const pair = encodeURIComponent(this._symbolManager.tvToKite(event.symb!));
         
-        // Create buy order first
-        await this._kiteClient.createGTT(this._buildBuyOrderRequest(pair, event, exp));
-        // Create OCO order after
-        await this._kiteClient.createGTT(this._buildOcoOrderRequest(pair, event, exp));
+        const buyRequest = this._buildBuyOrderRequest(pair, event, exp);
+        const ocoRequest = this._buildOcoOrderRequest(pair, event, exp);
+        
+        await this._kiteClient.createGTT(buyRequest);
+        await this._kiteClient.createGTT(ocoRequest);
     }
 
     /** @inheritdoc */
@@ -65,8 +66,7 @@ export class KiteManager implements IKiteManager {
     }
 
     /** @inheritdoc */
-    loadOrders(callback: (data: unknown) => void): void {
-        // FIXME: Change Unknown data type
+    loadOrders(callback: (data: GttApiResponse) => void): void {
         void this._kiteClient.loadGTT(callback);
     }
 
@@ -146,12 +146,12 @@ export class KiteManager implements IKiteManager {
 
     /**
      * Generates a tick value based on the input number
+     * @param price Current Price
      * @private
-     * @param value The input number for generating the tick value
      * @returns The generated tick value with two decimal places
      */
-    private _generateTick(value: number): string {
-        return (Math.ceil(value * 20) / 20).toFixed(2);
+    private _generateTick(price: number): string {
+        return (Math.ceil(price * 20) / 20).toFixed(2);
     }
 
     /**

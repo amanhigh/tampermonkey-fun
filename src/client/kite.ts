@@ -1,5 +1,5 @@
 import { BaseClient, IBaseClient } from './base';
-import { CreateGttRequest } from '../models/kite';
+import { CreateGttRequest, GttApiResponse } from '../models/kite';
 
 /**
  * Client for Zerodha GTT (Good Till Triggered) Operations
@@ -18,7 +18,7 @@ export interface IKiteClient extends IBaseClient {
      * @param callback Callback to handle retrieved GTT orders
      * @throws Error when fetching GTT fails
      */
-    loadGTT(callback: (data: unknown) => void): Promise<void>;
+    loadGTT(callback: (data: GttApiResponse) => void): Promise<void>;
 
     /**
      * Delete a specific Good Till Triggered (GTT) order
@@ -94,9 +94,9 @@ export class KiteClient extends BaseClient implements IKiteClient {
      * @param callback Callback to handle retrieved GTT orders
      * @throws Error when fetching GTT fails
      */
-    async loadGTT(callback: (data: unknown) => void): Promise<void> {
+    async loadGTT(callback: (data: GttApiResponse) => void): Promise<void> {
         try {
-            const data = await this.makeRequest<unknown>('/triggers', {
+            const data = await this.makeRequest<GttApiResponse>('/triggers', {
                 method: 'GET',
                 headers: this._getDefaultHeaders()
             });

@@ -1,5 +1,5 @@
 import { Constants } from "../models/constant";
-import { GttCreateEvent, GttRefereshEvent } from "../models/kite";
+import { GttCreateEvent, GttRefreshEvent } from "../models/kite";
 
 /**
  * Interface for Kite repository operations
@@ -17,7 +17,7 @@ export interface IKiteRepo {
      * @param event GTT order refresh event
      * @returns Promise resolving after event is stored
      */
-    createGttRefreshEvent(event: GttRefereshEvent): Promise<void>;
+    createGttRefreshEvent(event: GttRefreshEvent): Promise<void>;
 }
 
 /**
@@ -38,7 +38,7 @@ export class KiteRepo implements IKiteRepo {
      * @param event GTT order refresh event
      * @returns Promise resolving after event is stored
      */
-    public async createGttRefreshEvent(event: GttRefereshEvent): Promise<void> {
+    public async createGttRefreshEvent(event: GttRefreshEvent): Promise<void> {
         await GM.setValue(Constants.STORAGE.EVENTS.GTT_REFERSH, event.stringify());
     }
 }
