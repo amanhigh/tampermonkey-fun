@@ -1,13 +1,7 @@
 import { IRepoCron } from './cron';
 import { MapRepo, IMapRepo } from './map';
 import { SerializedData } from './base';
-
-/**
- * Valid sequence types for timeframe analysis
- * - MWD: Monthly-Weekly-Daily sequence
- * - YR: Yearly-Range sequence
- */
-export type SequenceType = 'MWD' | 'YR';
+import { SequenceType } from '../models/trading';
 
 /**
  * Interface for sequence repository operations
@@ -49,7 +43,7 @@ export class SequenceRepo extends MapRepo<string, SequenceType> implements ISequ
   protected _deserialize(data: SerializedData): Map<string, SequenceType> {
     const sequenceMap = new Map<string, SequenceType>();
     Object.entries(data).forEach(([ticker, sequence]) => {
-      if (this.isValidSequence(sequence as string)) {
+      if (this._isValidSequence(sequence as string)) {
         sequenceMap.set(ticker, sequence as SequenceType);
       }
     });
@@ -59,11 +53,11 @@ export class SequenceRepo extends MapRepo<string, SequenceType> implements ISequ
   /**
    * Validates if the given string is a valid SequenceType
    * @param sequence Sequence to validate
-   * @returns True if sequence is valid
+   * @returns True if sequence matches enum values
    * @private
    */
-  private isValidSequence(sequence: string): sequence is SequenceType {
-    return sequence === 'MWD' || sequence === 'YR';
+  private _isValidSequence(sequence: string): sequence is SequenceType {
+    return sequence === SequenceType.MWD || sequence === SequenceType.YR;
   }
 
   /**

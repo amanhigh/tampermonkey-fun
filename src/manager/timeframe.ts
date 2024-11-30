@@ -1,5 +1,5 @@
 import { Constants } from '../models/constant';
-import { TimeFrame } from '../models/trading';
+import { TimeFrameConfig } from '../models/trading';
 import { ISequenceManager } from './sequence';
 
 /**
@@ -17,7 +17,7 @@ export interface ITimeFrameManager {
    * Get currently selected timeframe
    * @returns Current timeframe configuration or null
    */
-  getCurrentTimeFrame(): TimeFrame | null;
+  getCurrentTimeFrameConfig(): TimeFrameConfig | null;
 }
 
 /**
@@ -39,31 +39,23 @@ export class TimeFrameManager implements ITimeFrameManager {
    * Currently selected timeframe
    * @private
    */
-  private _currentTimeFrame: TimeFrame | null = null;
+  private _currentTimeFrame: TimeFrameConfig | null = null;
 
   /**
    * @param sequenceManager - Manager for sequence operations
    */
-  constructor(private readonly _sequenceManager: ISequenceManager) {}
+  constructor(private readonly sequenceManager: ISequenceManager) {}
 
   /** @inheritdoc */
   applyTimeFrame(position: number): boolean {
-    try {
-      const sequence = this._sequenceManager.getCurrentSequence();
-      const timeFrame = this._sequenceManager.sequenceToTimeFrame(sequence, position);
-      if (!timeFrame) {
-        throw new Error(`Invalid timeframe for sequence ${sequence} and position ${position}`);
-      }
-      this._setTimeFrame(timeFrame);
-      return this._clickTimeFrameToolbar(timeFrame.toolbar);
-    } catch (error) {
-      console.error('Error applying timeframe:', error);
-      return false;
-    }
+    const sequence = this.sequenceManager.getCurrentSequence();
+    const timeFrame = this.sequenceManager.sequenceToTimeFrameConfig(sequence, position);
+    this._setTimeFrame(timeFrame);
+    return this._clickTimeFrameToolbar(timeFrame.toolbar);
   }
 
   /** @inheritdoc */
-  getCurrentTimeFrame(): TimeFrame | null {
+  getCurrentTimeFrameConfig(): TimeFrameConfig | null {
     return this._currentTimeFrame;
   }
 
@@ -76,7 +68,9 @@ export class TimeFrameManager implements ITimeFrameManager {
   private _clickTimeFrameToolbar(toolbarPosition: number): boolean {
     try {
       const $timeframe = $(`${Constants.DOM.HEADER.TIMEFRAME}:nth(${toolbarPosition})`);
-      if ($timeframe.length === 0) return false;
+      if ($timeframe.length === 0) {
+        return false;
+      }
       $timeframe.click();
       return true;
     } catch (error) {
@@ -90,7 +84,7 @@ export class TimeFrameManager implements ITimeFrameManager {
    * @private
    * @param timeFrame - Timeframe to set as current
    */
-  private _setTimeFrame(timeFrame: TimeFrame): void {
+  private _setTimeFrame(timeFrame: TimeFrameConfig): void {
     this._currentTimeFrame = timeFrame;
   }
 }

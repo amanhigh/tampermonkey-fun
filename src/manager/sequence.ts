@@ -1,14 +1,9 @@
 import { Constants } from '../models/constant';
-import { TimeFrame } from '../models/trading';
+import { TimeFrameConfig, SequenceType, TimeFrame } from '../models/trading';
 import { ISequenceRepo } from '../repo/sequence';
-
-/**
- * Interface for trading view manager functionality needed by sequence manager
- */
-type TradingViewManager = {
-  getTicker(): string;
-  getExchange(): string;
-};
+import { Notifier } from '../util/notify';
+import { ITickerManager } from './ticker';
+import { ITradingViewManager } from './tv';
 
 /**
  * Interface for managing sequence operations and state
@@ -18,7 +13,7 @@ export interface ISequenceManager {
    * Gets current sequence considering freeze state
    * @returns Sequence type (MWD or YR)
    */
-  getCurrentSequence(): string;
+  getCurrentSequence(): SequenceType;
 
   /**
    * Flips current ticker's sequence between MWD and YR
@@ -31,14 +26,14 @@ export interface ISequenceManager {
    * @param position Position in sequence (0-3)
    * @returns TimeFrame configuration or null
    */
-  sequenceToTimeFrame(sequence: string, position: number): TimeFrame | null;
+  sequenceToTimeFrameConfig(sequence: SequenceType, position: number): TimeFrameConfig;
 
   /**
    * Toggles sequence freeze state
    * Uses current sequence when enabling freeze
    * @returns Current freeze state after toggle
    */
-  freezeSequence(): string | null;
+  toggleFreezeSequence(): void;
 }
 
 /**
@@ -49,68 +44,63 @@ export class SequenceManager implements ISequenceManager {
    * Current freeze sequence state
    * @private
    */
-  private _freezeSequence: string | null = null;
+  private _frozenSequence: SequenceType | null = null;
 
   /**
    * @param sequenceRepo Repository for sequence operations
    * @param tvManager Trading view manager
+   * @param tickerManager Ticker manager
    */
   constructor(
-    // HACK: Remove Private Types
-    private readonly _sequenceRepo: ISequenceRepo,
-    private readonly _tvManager: TradingViewManager
+    private readonly sequenceRepo: ISequenceRepo,
+    private readonly tvManager: ITradingViewManager,
+    private readonly tickerManager: ITickerManager
   ) {}
 
   /** @inheritdoc */
-  getCurrentSequence(): string {
+  getCurrentSequence(): SequenceType {
     // Return frozen sequence if exists
-    if (this._freezeSequence) {
-      return this._freezeSequence;
+    if (this._frozenSequence) {
+      return this._frozenSequence;
     }
 
-    const ticker = this._tvManager.getTicker();
-    const exchange = this._tvManager.getExchange();
+    const ticker = this.tickerManager.getTicker();
+    const exchange = this.tickerManager.getCurrentExchange();
     const defaultSequence = this._getDefaultSequence(exchange);
 
-    return this._sequenceRepo.getSequence(ticker, defaultSequence);
+    return this.sequenceRepo.getSequence(ticker, defaultSequence);
   }
 
   /** @inheritdoc */
   flipSequence(): void {
-    const tvTicker = this._tvManager.getTicker();
+    const tvTicker = this.tickerManager.getTicker();
     const currentSequence = this.getCurrentSequence();
-
-    const sequence =
-      currentSequence === Constants.TIME.SEQUENCE_TYPES.HIGH
-        ? Constants.TIME.SEQUENCE_TYPES.DEFAULT
-        : Constants.TIME.SEQUENCE_TYPES.HIGH;
-
-    void this._sequenceRepo.pinSequence(tvTicker, sequence);
+    const sequence = currentSequence === SequenceType.YR ? SequenceType.MWD : SequenceType.YR;
+    void this.sequenceRepo.pinSequence(tvTicker, sequence);
   }
 
   /** @inheritdoc */
-  sequenceToTimeFrame(sequence: string, position: number): TimeFrame | null {
-    try {
-      const timeFrameName = Constants.TIME.SEQUENCES[sequence][position];
-      if (!timeFrameName) return null;
-      const config = Constants.TIME.FRAMES[timeFrameName];
-      return new TimeFrame(config.symbol, config.style, config.toolbarPosition);
-    } catch (error) {
-      console.error('Error getting timeframe:', error);
-      return null;
+  sequenceToTimeFrameConfig(sequence: SequenceType, position: number): TimeFrameConfig {
+    const frameName = Constants.TIME.SEQUENCE_TYPES.SEQUENCES[sequence][position];
+    if (!frameName) {
+      throw new Error(`Invalid sequence or position: sequence=${sequence}, position=${position}`);
     }
+    const config = Constants.TIME.SEQUENCE_TYPES.FRAMES[frameName as TimeFrame];
+    if (!config) {
+      throw new Error(`Invalid frame name for Timeframe Config: ${frameName}`);
+    }
+    return config;
   }
 
   /** @inheritdoc */
-  freezeSequence(): string | null {
-    if (this._freezeSequence) {
-      this._freezeSequence = null;
-      message('FreezeSequence Disabled', 'red');
+  toggleFreezeSequence(): void {
+    if (this._frozenSequence) {
+      this._frozenSequence = null;
+      Notifier.error('FreezeSequence Disabled');
     } else {
-      this._freezeSequence = this.getCurrentSequence();
-      message(`FreezeSequence: ${this._freezeSequence}`, 'yellow');
+      this._frozenSequence = this.getCurrentSequence();
+      Notifier.warn(`FreezeSequence: ${this._frozenSequence}`);
     }
-    return this._freezeSequence;
   }
 
   /**
@@ -119,9 +109,7 @@ export class SequenceManager implements ISequenceManager {
    * @param exchange Exchange identifier
    * @returns Default sequence (MWD or YR)
    */
-  private _getDefaultSequence(exchange: string): string {
-    return exchange === Constants.EXCHANGE.TYPES.NSE
-      ? Constants.TIME.SEQUENCE_TYPES.DEFAULT // MWD
-      : Constants.TIME.SEQUENCE_TYPES.HIGH; // YR
+  private _getDefaultSequence(exchange: string): SequenceType {
+    return exchange === Constants.EXCHANGE.TYPES.NSE ? SequenceType.MWD : SequenceType.YR;
   }
 }
