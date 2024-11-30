@@ -1,7 +1,7 @@
 import { Constants } from '../models/constant';
 import { IPaintManager } from './paint';
 import { IRecentTickerRepo } from '../repo/recent';
-import { IWatchlistRepo } from '../repo/watch';
+import { ICategoryManager } from './category';
 
 /**
  * Interface for managing TradingView screener operations
@@ -40,12 +40,12 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
   /**
    * @param paintManager - PaintManager instance
    * @param recentTickerRepo - Repository for recent tickers
-   * @param watchlistRepo - Repository for watchlists
+   * @param categoryManager - Category manager
    */
   constructor(
     private readonly paintManager: IPaintManager,
     private readonly recentTickerRepo: IRecentTickerRepo,
-    private readonly watchlistRepo: IWatchlistRepo
+    private readonly categoryManager: ICategoryManager
   ) {}
 
   /** @inheritdoc */
@@ -99,7 +99,7 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
     this.paintManager.paintTickers(screenerSymbolSelector);
 
     // Paint Watchlist (Overwrite White)
-    const watchlistSet = this.watchlistRepo.getWatchCategoryLists().get(5);
+    const watchlistSet = this.categoryManager.getWatchCategory(5);
     this.paintManager.applyCss(screenerSymbolSelector, watchlistSet, { color: colorList[6] });
   }
 }

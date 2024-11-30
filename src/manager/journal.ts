@@ -1,5 +1,5 @@
 import { CategoryLists } from '../models/category';
-import { IWatchlistRepo } from '../repo/watch';
+import { ICategoryManager } from './category';
 import { ISequenceManager } from './sequence';
 
 /**
@@ -25,12 +25,12 @@ export interface IJournalManager {
  */
 export class JournalManager implements IJournalManager {
   /**
-   * @param watchlistRepo - Repository for watchlist operations
+   * @param categoryManager - Category manager
    * @param sequenceManager - Manager for sequence operations
    */
   constructor(
-    private readonly _watchlistRepo: IWatchlistRepo,
-    private readonly _sequenceManager: ISequenceManager
+    private readonly categoryManager: ICategoryManager,
+    private readonly sequenceManager: ISequenceManager
   ) {}
 
   // TODO: JournalHandler
@@ -45,7 +45,7 @@ export class JournalManager implements IJournalManager {
   /** @inheritdoc */
   createEntry(buttonId: string, reason: string, currentTicker: string): string {
     // Get sequence preference for current ticker
-    const sequence = this._sequenceManager.getCurrentSequence();
+    const sequence = this.sequenceManager.getCurrentSequence();
 
     // Build timeframe tag with sequence
     // TODO: buttonId earlier this.id ?
@@ -68,9 +68,9 @@ export class JournalManager implements IJournalManager {
    * @returns Entry type classification
    */
   private _determineEntryType(ticker: string): string {
-    const watchLists = this._watchlistRepo.getWatchCategoryLists();
+    const watchLists = this.categoryManager.getWatchCategory(2);
 
-    if (watchLists.get(2).has(ticker)) {
+    if (watchLists.has(ticker)) {
       return 'set';
     }
 
@@ -88,8 +88,12 @@ export class JournalManager implements IJournalManager {
    * @param ticker - Trading symbol to check
    * @returns True if ticker is in result categories
    */
-  private _isInResultCategories(watchLists: CategoryLists, ticker: string): boolean {
-    return watchLists.get(0).has(ticker) || watchLists.get(1).has(ticker) || watchLists.get(4).has(ticker);
+  private _isInResultCategories(watchLists: Set<string>, ticker: string): boolean {
+    return (
+      this.categoryManager.getWatchCategory(0).has(ticker) ||
+      this.categoryManager.getWatchCategory(1).has(ticker) ||
+      this.categoryManager.getWatchCategory(4).has(ticker)
+    );
   }
 
   /**

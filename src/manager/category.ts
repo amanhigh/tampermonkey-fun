@@ -16,7 +16,7 @@ export interface ICategoryManager {
    * @param categoryIndex Category index
    * @returns Set of symbols in category
    */
-  getOrderCategory(categoryIndex: number): Set<string>;
+  getWatchCategory(categoryIndex: number): Set<string>;
 
   /**
    * Gets flag category set by index
@@ -30,7 +30,7 @@ export interface ICategoryManager {
    * @param categoryIndex Category index to record into
    * @param selectedTickers List of selected tickers
    */
-  recordOrderCategory(categoryIndex: number, selectedTickers: string[]): void;
+  recordWatchCategory(categoryIndex: number, selectedTickers: string[]): void;
 
   /**
    * Records selected tickers in flag category
@@ -69,14 +69,14 @@ export class CategoryManager implements ICategoryManager {
    * @param watchlistManager Watchlist manager
    */
   constructor(
-    private readonly _orderRepo: IWatchlistRepo,
-    private readonly _flagRepo: IFlagRepo,
-    private readonly _watchlistManager: WatchlistManager
+    private readonly watchRepo: IWatchlistRepo,
+    private readonly flagRepo: IFlagRepo,
+    private readonly watchListManager: WatchlistManager
   ) {}
 
   /** @inheritdoc */
-  getOrderCategory(categoryIndex: number): Set<string> {
-    const categoryLists = this._orderRepo.getWatchCategoryLists();
+  getWatchCategory(categoryIndex: number): Set<string> {
+    const categoryLists = this.watchRepo.getWatchCategoryLists();
     const list = categoryLists.getList(categoryIndex);
     if (!list) {
       throw new Error(`Category list for index ${categoryIndex} not found`);
@@ -86,7 +86,7 @@ export class CategoryManager implements ICategoryManager {
 
   /** @inheritdoc */
   getFlagCategory(categoryIndex: number): Set<string> {
-    const categoryLists = this._flagRepo.getFlagCategoryLists();
+    const categoryLists = this.flagRepo.getFlagCategoryLists();
     const list = categoryLists.getList(categoryIndex);
     if (!list) {
       throw new Error(`Category list for index ${categoryIndex} not found`);
@@ -95,14 +95,14 @@ export class CategoryManager implements ICategoryManager {
   }
 
   /** @inheritdoc */
-  recordOrderCategory(categoryIndex: number, selectedTickers: string[]): void {
-    const categoryLists = this._orderRepo.getWatchCategoryLists();
+  recordWatchCategory(categoryIndex: number, selectedTickers: string[]): void {
+    const categoryLists = this.watchRepo.getWatchCategoryLists();
     this._recordCategory(categoryLists, categoryIndex, selectedTickers);
   }
 
   /** @inheritdoc */
   recordFlagCategory(categoryIndex: number, selectedTickers: string[]): void {
-    const categoryLists = this._flagRepo.getFlagCategoryLists();
+    const categoryLists = this.flagRepo.getFlagCategoryLists();
     this._recordCategory(categoryLists, categoryIndex, selectedTickers);
   }
 
@@ -110,7 +110,7 @@ export class CategoryManager implements ICategoryManager {
   updateWatchlistCategory(watchListTickers: string[]): void {
     //Prep Watchlist Set with all Symbols not in other Order Sets
     const watchSet = new Set(watchListTickers);
-    const orderLists = this._orderRepo.getWatchCategoryLists();
+    const orderLists = this.watchRepo.getWatchCategoryLists();
 
     // Remove tickers from other categories (except index 5 which is watchlist)
     for (let i = 0; i < Constants.UI.COLORS.LIST.length; i++) {
@@ -157,10 +157,10 @@ export class CategoryManager implements ICategoryManager {
    * @returns Number of items affected
    */
   private _processCleanup(executeChanges: boolean): number {
-    const watchListTickers = this._watchlistManager.getTickers();
+    const watchListTickers = this.watchListManager.getTickers();
     let count = 0;
 
-    const categoryLists = this._orderRepo.getWatchCategoryLists();
+    const categoryLists = this.watchRepo.getWatchCategoryLists();
 
     categoryLists.getLists().forEach((list, key) => {
       for (const ticker of [...list]) {

@@ -9,10 +9,10 @@ import { IAuditRepo } from '../repo/audit';
 /**
  * Interface for managing audit UI operations
  */
-interface IAuditUIManager {
-  refreshAuditButton(ticker: string, state: AlertState): void;
-  updateAuditSummary(): void;
-}
+// interface IAuditUIManager {
+// refreshAuditButton(ticker: string, state: AlertState): void;
+// updateAuditSummary(): void;
+// }
 
 /**
  * Interface for Audit management operations
@@ -38,7 +38,6 @@ export class AuditManager implements IAuditManager {
 
   constructor(
     private readonly _auditRepo: IAuditRepo,
-    private readonly _uiManager: IAuditUIManager,
     private readonly _symbolManager: ISymbolManager,
     private readonly _tickerManager: ITickerManager,
     private readonly _pairManager: IPairManager,

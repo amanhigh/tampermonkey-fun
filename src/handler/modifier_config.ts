@@ -92,14 +92,14 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
         'f12',
         {
           description: 'Mark Index',
-          action: () => _categoryManager.recordOrderCategory(6),
+          action: () => _categoryManager.recordWatchCategory(6),
         },
       ],
       [
         'f11',
         {
           description: 'Mark Composite',
-          action: () => _categoryManager.recordOrderCategory(7),
+          action: () => _categoryManager.recordWatchCategory(7),
         },
       ],
     ]);
