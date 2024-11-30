@@ -33,6 +33,12 @@ export interface IAlertManager {
    * @param targetPrice Price to delete alerts around
    */
   deleteAlertsByPrice(targetPrice: number): Promise<void>;
+
+  /**
+   * Reloads alerts from Investing.com
+   * @returns Promise resolving to number of alerts loaded
+   */
+  reloadAlerts(): Promise<number>;
 }
 
 /**
@@ -66,8 +72,8 @@ export class AlertManager implements IAlertManager {
       return;
     }
 
-    const ltp = this._tradingViewManager.getLastTradedPrice();
     try {
+      const ltp = this._tradingViewManager.getLastTradedPrice();
       const response = await this._investingClient.createAlert(pairInfo.name, pairInfo.pairId, price, ltp);
       const alert = new Alert('', response.pairId, response.price);
       this._alertRepo.addAlert(pairInfo.pairId, alert);
@@ -94,11 +100,46 @@ export class AlertManager implements IAlertManager {
     }
   }
 
+  /**
+   * Load alerts from HTML content into repository
+   * @param html HTML content containing alert items
+   * @returns Number of alerts loaded
+   * @private
+   */
+  private _reloadFromHtml(html: string): number {
+    try {
+      let count = 0;
+
+      $(html)
+        .find('.js-alert-item[data-trigger=price]')
+        .each((i, alertElement) => {
+          const $alt = $(alertElement);
+          const pairId = $alt.attr('data-pair-id');
+          const price = parseFloat($alt.attr('data-value'));
+          const id = $alt.attr('data-alert-id');
+
+          if (pairId && price && id) {
+            const alert = new Alert(id, pairId, price);
+            this._alertRepo.addAlert(pairId, alert);
+            count++;
+          }
+        });
+
+      return count;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      Notifier.error(`Failed to parse alerts: ${message}`);
+      return 0;
+    }
+  }
+
+  /** @inheritdoc */
   async createAlertForCurrentTicker(price: number): Promise<void> {
     const investingTicker = this._tickerManager.getInvestingTicker();
     await this._createAlert(investingTicker, price);
   }
 
+  /** @inheritdoc */
   async deleteAllAlerts(): Promise<void> {
     const pairInfo = this._getCurrentPairInfo();
     if (!pairInfo) {
@@ -110,6 +151,7 @@ export class AlertManager implements IAlertManager {
     await Promise.all(alerts.map(async (alert) => this._deleteAlert(alert, pairInfo.pairId)));
   }
 
+  /** @inheritdoc */
   async deleteAlertsByPrice(targetPrice: number): Promise<void> {
     const pairInfo = this._getCurrentPairInfo();
     if (!pairInfo) {
@@ -121,6 +163,26 @@ export class AlertManager implements IAlertManager {
     const alerts = this.getAlerts().filter((alert) => Math.abs(alert.price - targetPrice) <= tolerance);
 
     await Promise.all(alerts.map(async (alert) => this._deleteAlert(alert, pairInfo.pairId)));
+  }
+
+  /** @inheritdoc */
+  async reloadAlerts(): Promise<number> {
+    try {
+      this._alertRepo.clear();
+      const html = await this._investingClient.getAllAlerts();
+      const count = this._reloadFromHtml(html);
+
+      if (count === 0) {
+        Notifier.warn('No alerts found');
+      } else {
+        Notifier.info(`Loaded ${count} alerts`);
+      }
+
+      return count;
+    } catch {
+      Notifier.error('Failed to fetch alerts from Investing.com');
+      return 0;
+    }
   }
 
   /**

@@ -30,7 +30,9 @@ export interface IInvestingClient extends IBaseClient {
   fetchSymbolData(symbol: string): Promise<PairInfo[]>;
 
   /**
-   * Fetch all Alerts for all Pairs
+   * Fetches HTML content from alert center page
+   * @returns Promise resolving to alert center HTML content
+   * @throws Error if request fails or response is invalid
    */
   getAllAlerts(): Promise<string>;
 }
@@ -130,13 +132,22 @@ export class InvestingClient extends BaseClient implements IInvestingClient {
   }
 
   /**
-   * Fetch all Alerts for all Pairs
+   * Fetches HTML content from alert center page
+   * @returns Promise resolving to alert center HTML content
+   * @throws Error if request fails or response is invalid
    */
   async getAllAlerts(): Promise<string> {
     try {
-      return await this.makeRequest('/members-admin/alert-center', {
+      const response = await this.makeRequest<string>('/members-admin/alert-center', {
         method: 'GET',
       });
+
+      // Ensure we got valid HTML response containing alerts
+      if (!response || !response.includes('js-alert-item')) {
+        throw new Error('Invalid alert center response');
+      }
+
+      return response;
     } catch (error) {
       throw new Error(`Failed to get alerts: ${(error as Error).message}`);
     }
