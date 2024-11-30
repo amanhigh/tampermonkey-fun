@@ -77,13 +77,21 @@ export class CategoryManager implements ICategoryManager {
   /** @inheritdoc */
   getOrderCategory(categoryIndex: number): Set<string> {
     const categoryLists = this._orderRepo.getWatchCategoryLists();
-    return categoryLists.getList(categoryIndex);
+    const list = categoryLists.getList(categoryIndex);
+    if (!list) {
+      throw new Error(`Category list for index ${categoryIndex} not found`);
+    }
+    return list;
   }
 
   /** @inheritdoc */
   getFlagCategory(categoryIndex: number): Set<string> {
     const categoryLists = this._flagRepo.getFlagCategoryLists();
-    return categoryLists.getList(categoryIndex);
+    const list = categoryLists.getList(categoryIndex);
+    if (!list) {
+      throw new Error(`Category list for index ${categoryIndex} not found`);
+    }
+    return list;
   }
 
   /** @inheritdoc */
