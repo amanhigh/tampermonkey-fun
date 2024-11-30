@@ -108,17 +108,18 @@ export class AlertManager implements IAlertManager {
    */
   private _reloadFromHtml(html: string): number {
     try {
+      this._alertRepo.clear();
       let count = 0;
 
       $(html)
         .find('.js-alert-item[data-trigger=price]')
         .each((i, alertElement) => {
           const $alt = $(alertElement);
-          const pairId = $alt.attr('data-pair-id');
-          const price = parseFloat($alt.attr('data-value'));
-          const id = $alt.attr('data-alert-id');
+          const pairId = $alt.attr('data-pair-id') || '';
+          const price = parseFloat($alt.attr('data-value') || '0');
+          const id = $alt.attr('data-alert-id') || '';
 
-          if (pairId && price && id) {
+          if (pairId && !isNaN(price) && id) {
             const alert = new Alert(id, pairId, price);
             this._alertRepo.addAlert(pairId, alert);
             count++;
