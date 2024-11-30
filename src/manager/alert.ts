@@ -1,7 +1,10 @@
+import { IInvestingClient } from '../client/investing';
 import { Alert, PairInfo } from '../models/alert';
 import { IAlertRepo } from '../repo/alert';
+import { Notifier } from '../util/notify';
 import { IPairManager } from './pair';
 import { ITickerManager } from './ticker';
+import { ITradingViewManager } from './tv';
 
 /**
  * Interface for managing alert operations
@@ -18,33 +21,30 @@ export interface IAlertManager {
    * @param price Alert price
    * @throws Error If pair info not found for current ticker
    */
-  createAlertForCurrentTicker(price: number): void;
+  createAlertForCurrentTicker(price: number): Promise<void>;
 
   /**
    * Delete all alerts for current ticker
    */
-  deleteAllAlerts(): void;
+  deleteAllAlerts(): Promise<void>;
 
   /**
    * Delete alerts near target price for current ticker
    * @param targetPrice Price to delete alerts around
    */
-  deleteAlertsByPrice(targetPrice: number): void;
+  deleteAlertsByPrice(targetPrice: number): Promise<void>;
 }
 
 /**
  * Manages alert operations for trading
  */
 export class AlertManager implements IAlertManager {
-  /**
-   * @param alertRepo Repository for alert operations
-   * @param pairManager For pair info lookups
-   * @param tickerManager For ticker operations
-   */
   constructor(
     private readonly _alertRepo: IAlertRepo,
     private readonly _pairManager: IPairManager,
-    private readonly _tickerManager: ITickerManager
+    private readonly _tickerManager: ITickerManager,
+    private readonly _investingClient: IInvestingClient,
+    private readonly _tradingViewManager: ITradingViewManager
   ) {}
 
   /** @inheritdoc */
@@ -54,47 +54,73 @@ export class AlertManager implements IAlertManager {
   }
 
   /**
-   * Create alert for given investing ticker and price
+   * Create alert via Investing.com and store in local repo if successful
    * @param investingTicker Investing.com ticker
    * @param price Alert price
-   * @throws Error If pair info not found for ticker
    * @private
    */
-  private _createAlert(investingTicker: string, price: number): void {
+  private async _createAlert(investingTicker: string, price: number): Promise<void> {
     const pairInfo = this._pairManager.investingTickerToPairInfo(investingTicker);
     if (!pairInfo) {
-      throw new Error(`No pair info found for ticker: ${investingTicker}`);
+      Notifier.error(`No pair info found for ticker: ${investingTicker}`);
+      return;
     }
-    const alert = new Alert(pairInfo.pairId, price);
-    this._alertRepo.addAlert(pairInfo.pairId, alert);
+
+    const ltp = this._tradingViewManager.getLastTradedPrice();
+    try {
+      const response = await this._investingClient.createAlert(pairInfo.name, pairInfo.pairId, price, ltp);
+      const alert = new Alert('', response.pairId, response.price);
+      this._alertRepo.addAlert(pairInfo.pairId, alert);
+    } catch {
+      Notifier.error(`Failed to create alert for ${investingTicker} at price ${price}`);
+    }
   }
 
-  /** @inheritdoc */
-  createAlertForCurrentTicker(price: number): void {
+  /**
+   * Delete a single alert both from Investing.com and local repo
+   * @param alert Alert to delete
+   * @param pairId Associated pair ID
+   * @returns true if deletion successful, false otherwise
+   * @private
+   */
+  private async _deleteAlert(alert: Alert, pairId: string): Promise<boolean> {
+    try {
+      await this._investingClient.deleteAlert(alert);
+      this._alertRepo.removeAlert(pairId, alert.id);
+      return true;
+    } catch {
+      Notifier.error(`Failed to delete alert ${alert.id}`);
+      return false;
+    }
+  }
+
+  async createAlertForCurrentTicker(price: number): Promise<void> {
     const investingTicker = this._tickerManager.getInvestingTicker();
-    this._createAlert(investingTicker, price);
+    await this._createAlert(investingTicker, price);
   }
 
-  /** @inheritdoc */
-  deleteAllAlerts(): void {
-    // TODO: Handler Refresh Alerts on Delete
+  async deleteAllAlerts(): Promise<void> {
     const pairInfo = this._getCurrentPairInfo();
+    if (!pairInfo) {
+      Notifier.error('Could not get pair info for current ticker');
+      return;
+    }
+
     const alerts = this.getAlerts();
-    alerts.forEach((alert) => {
-      this._alertRepo.removeAlert(pairInfo.pairId, alert.id);
-    });
+    await Promise.all(alerts.map(async (alert) => this._deleteAlert(alert, pairInfo.pairId)));
   }
 
-  /** @inheritdoc */
-  deleteAlertsByPrice(targetPrice: number): void {
+  async deleteAlertsByPrice(targetPrice: number): Promise<void> {
     const pairInfo = this._getCurrentPairInfo();
+    if (!pairInfo) {
+      Notifier.error('Could not get pair info for current ticker');
+      return;
+    }
+
     const tolerance = targetPrice * 0.03;
-    const alerts = this.getAlerts();
-    alerts.forEach((alert) => {
-      if (Math.abs(alert.price - targetPrice) <= tolerance) {
-        this._alertRepo.removeAlert(pairInfo.pairId, alert.id);
-      }
-    });
+    const alerts = this.getAlerts().filter((alert) => Math.abs(alert.price - targetPrice) <= tolerance);
+
+    await Promise.all(alerts.map(async (alert) => this._deleteAlert(alert, pairInfo.pairId)));
   }
 
   /**
@@ -114,15 +140,10 @@ export class AlertManager implements IAlertManager {
   /**
    * Get pair info for current ticker
    * @private
-   * @throws Error If pair info not found
-   * @returns Pair information
+   * @returns PairInfo or null if not found
    */
-  private _getCurrentPairInfo(): PairInfo {
+  private _getCurrentPairInfo(): PairInfo | null {
     const investingTicker = this._tickerManager.getInvestingTicker();
-    const pairInfo = this._pairManager.investingTickerToPairInfo(investingTicker);
-    if (!pairInfo) {
-      throw new Error(`No pair info found for ticker: ${investingTicker}`);
-    }
-    return pairInfo;
+    return this._pairManager.investingTickerToPairInfo(investingTicker);
   }
 }

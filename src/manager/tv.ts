@@ -24,7 +24,7 @@ export interface ITradingViewManager {
    * Retrieves the last traded price
    * @returns The last traded price as a float, or null if parsing fails
    */
-  getLastTradedPrice(): number | null;
+  getLastTradedPrice(): number;
 
   /**
    * Wait for Add Alert Context Menu Option to Capture Price
@@ -64,11 +64,10 @@ export class TradingViewManager implements ITradingViewManager {
   }
 
   /** @inheritdoc */
-  getLastTradedPrice(): number | null {
+  getLastTradedPrice(): number {
     const ltpElement = $(Constants.DOM.BASIC.LTP);
     if (ltpElement.length === 0) {
-      console.error(TV_ERRORS.LTP_NOT_FOUND);
-      return null;
+      throw new Error(TV_ERRORS.LTP_NOT_FOUND);
     }
 
     const ltpText = ltpElement.text();
@@ -76,8 +75,7 @@ export class TradingViewManager implements ITradingViewManager {
     const price = parseFloat(cleanedText);
 
     if (isNaN(price)) {
-      console.error(TV_ERRORS.LTP_PARSE_FAILED, ltpText);
-      return null;
+      throw new Error(TV_ERRORS.LTP_PARSE_FAILED);
     }
 
     return price;
