@@ -68,10 +68,11 @@ export const Constants = Object.freeze({
       CLOSE: 'button[data-name="close"]', // Old name: orderPanelCloseSelector
     },
     SCREENER: {
-      // TODO: Fix Symbol
       SYMBOL: 'div[class*=symbol]', // Old name: screenerSymbolSelector
       MAIN: 'tbody.tv-data-table__tbody:nth(1)', // Old name: screenerSelector
       LINE: 'tr.tv-screener-table__result-row', // Old name: screenerLineSelector
+      BUTTON: 'button[data-name=toggle-visibility-button]', // Old name: screenerButtonSelector
+      SELECTED: 'tr.tv-screener-table__result-row--selected', // Old name: screenerSelectedSelector
     },
     WATCHLIST: {
       // TODO: Fix Symbol

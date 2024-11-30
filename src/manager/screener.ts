@@ -2,6 +2,7 @@ import { Constants } from '../models/constant';
 import { IPaintManager } from './paint';
 import { IRecentTickerRepo } from '../repo/recent';
 import { ICategoryManager } from './category';
+import { IFnoRepo } from '../repo/fno';
 
 /**
  * Interface for managing TradingView screener operations
@@ -41,11 +42,13 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
    * @param paintManager - PaintManager instance
    * @param recentTickerRepo - Repository for recent tickers
    * @param categoryManager - Category manager
+   * @param fnoRepo - Repository for FNO symbols
    */
   constructor(
     private readonly paintManager: IPaintManager,
     private readonly recentTickerRepo: IRecentTickerRepo,
-    private readonly categoryManager: ICategoryManager
+    private readonly categoryManager: ICategoryManager,
+    private readonly fnoRepo: IFnoRepo
   ) {}
 
   /** @inheritdoc */
@@ -93,7 +96,8 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
     this.paintManager.applyCss(screenerSymbolSelector, recentTickers, { color: colorList[3] });
 
     // Paint Fno
-    this.paintManager.applyCss(screenerSymbolSelector, Constants.EXCHANGE.FNO_SYMBOLS, Constants.UI.COLORS.FNO_CSS);
+    const fnoSymbols = this.fnoRepo.getAll();
+    this.paintManager.applyCss(screenerSymbolSelector, fnoSymbols, Constants.UI.COLORS.FNO_CSS);
 
     // Paint Name and Flags
     this.paintManager.paintTickers(screenerSymbolSelector);
