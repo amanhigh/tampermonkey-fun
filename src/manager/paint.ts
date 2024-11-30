@@ -1,4 +1,7 @@
 import { Constants } from '../models/constant';
+import { ICategoryManager } from './category';
+import { ITickerManager } from './ticker';
+import { IFnoRepo } from '../repo/fno';
 
 /**
  * Interface for managing painting operations for TradingView elements
@@ -40,16 +43,6 @@ export interface IPaintManager {
   paintHeader(): void;
 }
 
-type CategoryManager = {
-  getOrderCategory(index: number): Set<string>;
-  getFlagCategory(index: number): Set<string>;
-};
-
-type TickerManager = {
-  getTicker(): string;
-  getCurrentExchange(): string;
-};
-
 /**
  * Manages painting operations for TradingView elements
  */
@@ -58,11 +51,12 @@ export class PaintManager implements IPaintManager {
    * Creates a new PaintManager instance
    * @param categoryManager Manager for category operations
    * @param tickerManager Manager for ticker operations
+   * @param fnoRepo Repository for FNO symbols
    */
   constructor(
-    // HACK: Remove Private Types
-    private readonly categoryManager: CategoryManager,
-    private readonly tickerManager: TickerManager
+    private readonly categoryManager: ICategoryManager,
+    private readonly tickerManager: ITickerManager,
+    private readonly fnoRepo: IFnoRepo
   ) {}
 
   /** @inheritdoc */
@@ -72,7 +66,12 @@ export class PaintManager implements IPaintManager {
     }
 
     $(selector)
-      .filter((_, element) => force || (symbolSet && symbolSet.has(element.innerHTML)))
+      .filter(function (this: HTMLElement, _: number, element: HTMLElement): boolean {
+        if (force) {
+          return true;
+        }
+        return symbolSet ? symbolSet.has(element.innerHTML) : false;
+      })
       .css(css);
   }
 
@@ -83,7 +82,12 @@ export class PaintManager implements IPaintManager {
     }
 
     $(`${selector}`)
-      .filter((_, element) => force || (symbols && symbols.has(element.innerHTML)))
+      .filter(function (this: HTMLElement, _: number, element: HTMLElement): boolean {
+        if (force) {
+          return true;
+        }
+        return symbols ? symbols.has(element.innerHTML) : false;
+      })
       .parents(Constants.DOM.WATCHLIST.ITEM)
       .find(Constants.DOM.FLAGS.SYMBOL)
       .css('color', color);
@@ -98,7 +102,7 @@ export class PaintManager implements IPaintManager {
       const color = colorList[i];
 
       // Paint orders
-      const orderSymbols = this.categoryManager.getOrderCategory(i);
+      const orderSymbols = this.categoryManager.getWatchCategory(i);
       this.applyCss(selector, orderSymbols, { color: color });
 
       // Paint flags
@@ -149,7 +153,7 @@ export class PaintManager implements IPaintManager {
 
     // Paint based on order categories
     for (let i = 0; i < Constants.UI.COLORS.LIST.length; i++) {
-      const categorySymbols = this.categoryManager.getOrderCategory(i);
+      const categorySymbols = this.categoryManager.getWatchCategory(i);
       if (categorySymbols && categorySymbols.has(ticker)) {
         $name.css('color', this._getCategoryColor(i));
         break; // Stop after first matching category
@@ -199,7 +203,7 @@ export class PaintManager implements IPaintManager {
    * @param ticker Ticker symbol
    */
   private _paintFNOMarking($name: JQuery<HTMLElement>, ticker: string): void {
-    if (Constants.EXCHANGE.FNO_SYMBOLS.has(ticker)) {
+    if (this.fnoRepo.has(ticker)) {
       $name.css(Constants.UI.COLORS.FNO_CSS);
     } else {
       $name.css('border-top-style', '');
