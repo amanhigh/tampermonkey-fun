@@ -18,7 +18,7 @@ export interface ICategoryRepo extends IBaseRepo<CategoryLists> {
  * Repository for managing category lists
  * Implements persistence and CRUD operations for CategoryLists
  */
-export class CategoryRepo extends BaseRepo<CategoryLists> implements ICategoryRepo {
+export abstract class CategoryRepo extends BaseRepo<CategoryLists> implements ICategoryRepo {
   /**
    * The category lists data structure
    * @protected

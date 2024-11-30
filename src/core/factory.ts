@@ -21,7 +21,6 @@ import { ISequenceRepo, SequenceRepo } from '../repo/sequence';
 import { IAuditRepo, AuditRepo } from '../repo/audit';
 import { IRecentTickerRepo, RecentTickerRepo } from '../repo/recent';
 import { IAlertRepo, AlertRepo } from '../repo/alert';
-import { ICategoryRepo, CategoryRepo } from '../repo/category';
 
 // Manager Layer Imports
 import { ITimeFrameManager, TimeFrameManager } from '../manager/timeframe';
@@ -36,6 +35,7 @@ import { ISymbolManager, SymbolManager } from '../manager/symbol';
 import { ITradingViewManager, TradingViewManager } from '../manager/tv';
 import { IPairManager, PairManager } from '../manager/pair';
 import { CategoryManager, ICategoryManager } from '../manager/category';
+import { FnoRepo, IFnoRepo } from '../repo/fno';
 
 /**
  * Project Architecture Overview
@@ -99,9 +99,9 @@ export class Factory {
     ticker: (): ITickerRepo => Factory._getInstance('tickerRepo', () => new TickerRepo(Factory.repo._cron())),
     sequence: (): ISequenceRepo => Factory._getInstance('sequenceRepo', () => new SequenceRepo(Factory.repo._cron())),
     audit: (): IAuditRepo => Factory._getInstance('auditRepo', () => new AuditRepo(Factory.repo._cron())),
+    fno: (): IFnoRepo => Factory._getInstance('fnoRepo', () => new FnoRepo(Factory.repo._cron())),
     recent: (): IRecentTickerRepo =>
       Factory._getInstance('recentRepo', () => new RecentTickerRepo(Factory.repo._cron())),
-    category: (): ICategoryRepo => Factory._getInstance('categoryRepo', () => new CategoryRepo(Factory.repo._cron())),
   };
 
   /**
@@ -146,26 +146,33 @@ export class Factory {
             Factory.manager.paint(),
             Factory.repo.watch(),
             Factory.repo.recent(),
-            Factory.util.ui()
+            Factory.util.ui(),
+            Factory.repo.fno()
           )
       ),
 
     screener: (): ITradingViewScreenerManager =>
       Factory._getInstance(
         'screenerManager',
-        () => new TradingViewScreenerManager(Factory.manager.paint(), Factory.repo.recent(), Factory.repo.watch())
+        () =>
+          new TradingViewScreenerManager(
+            Factory.manager.paint(),
+            Factory.repo.recent(),
+            Factory.manager.category(),
+            Factory.repo.fno()
+          )
       ),
 
     sequence: (): ISequenceManager =>
       Factory._getInstance(
         'sequenceManager',
-        () => new SequenceManager(Factory.repo.sequence(), Factory.repo.ticker())
+        () => new SequenceManager(Factory.repo.sequence(), Factory.manager.tv(), Factory.manager.ticker())
       ),
 
     paint: (): IPaintManager =>
       Factory._getInstance(
         'paintManager',
-        () => new PaintManager(Factory.manager.category(), Factory.manager.ticker())
+        () => new PaintManager(Factory.manager.category(), Factory.manager.ticker(), Factory.repo.fno())
       ),
 
     ticker: (): ITickerManager =>
@@ -184,14 +191,13 @@ export class Factory {
     category: (): ICategoryManager =>
       Factory._getInstance(
         'categoryManager',
-        () => new CategoryManager(Factory.repo.watch(), Factory.repo.category())
-    )
+        () => new CategoryManager(Factory.repo.watch(), Factory.repo.flag(), Factory.manager.watchlist())
+      ),
 
     symbol: (): ISymbolManager =>
       Factory._getInstance('symbolManager', () => new SymbolManager(Factory.repo.ticker(), Factory.repo.exchange())),
 
-    tv: (): ITradingViewManager =>
-      Factory._getInstance('tvManager', () => new TradingViewManager(Factory.util.ui(), Factory.util.wait())),
+    tv: (): ITradingViewManager => Factory._getInstance('tvManager', () => new TradingViewManager(Factory.util.wait())),
 
     pair: (): IPairManager => Factory._getInstance('pairManager', () => new PairManager(Factory.repo.pair())),
   };
