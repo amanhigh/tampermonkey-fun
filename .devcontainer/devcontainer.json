@@ -15,7 +15,8 @@
 				"YuichiNakamura.code-to-clipboard",
 				"Codeium.codeium",
 				"saoudrizwan.claude-dev",
-				"Gruntfuggly.todo-tree"
+				"Gruntfuggly.todo-tree",
+				"esbenp.prettier-vscode"
 			]
 		}
 	},
