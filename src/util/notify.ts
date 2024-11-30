@@ -13,9 +13,13 @@ export class Notifier {
    * @param timeout - Duration to show message in milliseconds
    * @throws Error if message content is empty or container initialization fails
    */
-  public static message(msg: string, color = 'white', timeout = 2000): void {
+  public static message(msg: string, color: string, timeout = 2000): void {
     if (!msg) {
       throw new Error('Message content is required');
+    }
+
+    if (!color) {
+      throw new Error('Message color is required');
     }
 
     try {
@@ -25,6 +29,19 @@ export class Notifier {
     } catch (error) {
       throw new Error(`Failed to show notification: ${error}`);
     }
+  }
+
+  // FIXME: Replace console.log with this.
+  public static error(msg: string, timeout = 2000): void {
+    this.message(msg, 'red', timeout);
+  }
+
+  public static warn(msg: string, timeout = 2000): void {
+    this.message(msg, 'orange', timeout);
+  }
+
+  public static info(msg: string, timeout = 2000): void {
+    this.message(msg, 'white', timeout);
   }
 
   /**
