@@ -1,18 +1,10 @@
-import { AlertState } from '../models/alert';
+import { AlertAudit, AlertState } from '../models/alert';
 import { ISymbolManager } from './symbol';
 import { Notifier } from '../util/notify';
 import { ITickerManager } from './ticker';
 import { IPairManager } from './pair';
 import { IAlertManager } from './alert';
 import { IAuditRepo } from '../repo/audit';
-
-/**
- * Interface for managing audit UI operations
- */
-// interface IAuditUIManager {
-// refreshAuditButton(ticker: string, state: AlertState): void;
-// updateAuditSummary(): void;
-// }
 
 /**
  * Interface for Audit management operations
@@ -26,7 +18,15 @@ export interface IAuditManager {
   /**
    * Audits the current ticker and updates its state
    */
-  auditCurrentTicker(): void;
+  auditCurrentTicker(): AlertAudit;
+
+  /**
+   * Filters audit results by state
+   * @param state Alert state to filter by
+   * @returns Filtered audit results
+   * @private
+   * */
+  filterAuditResults(state: AlertState): AlertAudit[];
 }
 
 /**
@@ -52,32 +52,39 @@ export class AuditManager implements IAuditManager {
 
   /** @inheritdoc */
   async auditAlerts(): Promise<void> {
-    const tickers = this._pairManager.getAllInvestingTickers();
+    const investingTickers = this._pairManager.getAllInvestingTickers();
     this._currentIndex = 0;
-    Notifier.info(`Starting audit of ${tickers.length} tickers`);
+    Notifier.info(`Starting audit of ${investingTickers.length} tickers`);
     this._auditRepo.clear();
-    await this._processBatch(tickers);
+    await this._processBatch(investingTickers);
   }
 
   /** @inheritdoc */
-  auditCurrentTicker(): void {
+  auditCurrentTicker(): AlertAudit {
     const investingTicker = this._tickerManager.getInvestingTicker();
-    const state = this._auditTickerAlerts(investingTicker);
-    this._auditRepo.addAuditResult(investingTicker, state);
+    const state = this.auditAlertState(investingTicker);
+    const audit = new AlertAudit(investingTicker, state);
+    this._auditRepo.set(investingTicker, audit);
+    return audit;
     // this._uiManager.refreshAuditButton(investingTicker, state); TODO: Move to Handler
+  }
+
+  /** @inheritdoc */
+  filterAuditResults(state: AlertState): AlertAudit[] {
+    return this._auditRepo.getFilteredAuditResults(state);
   }
 
   /********** Private Methods **********/
 
   /**
    * Processes batches of tickers for auditing.
-   * @param tickers - The list of tickers to process.
+   * @param investingTickers - The list of tickers to process.
    * @private
    */
-  private async _processBatch(tickers: string[]): Promise<void> {
-    while (this._currentIndex < tickers.length) {
-      const endIndex = Math.min(this._currentIndex + this._batchSize, tickers.length);
-      const batchPercent = Math.floor((this._currentIndex / tickers.length) * 100);
+  private async _processBatch(investingTickers: string[]): Promise<void> {
+    while (this._currentIndex < investingTickers.length) {
+      const endIndex = Math.min(this._currentIndex + this._batchSize, investingTickers.length);
+      const batchPercent = Math.floor((this._currentIndex / investingTickers.length) * 100);
 
       if (batchPercent % 20 === 0) {
         Notifier.info(`Processed ${batchPercent}% of tickers`);
@@ -87,9 +94,9 @@ export class AuditManager implements IAuditManager {
       await new Promise<void>((resolve) => {
         setTimeout(() => {
           for (let i = this._currentIndex; i < endIndex; i++) {
-            const ticker = tickers[i];
-            const state = this._auditTickerAlerts(ticker);
-            this._auditRepo.addAuditResult(ticker, state);
+            const investingTicker = investingTickers[i];
+            const state = this.auditAlertState(investingTicker);
+            this._auditRepo.set(investingTicker, new AlertAudit(investingTicker, state));
           }
           resolve();
         }, 0);
@@ -109,7 +116,7 @@ export class AuditManager implements IAuditManager {
    * @returns The audit state for the ticker.
    * @private
    */
-  private _auditTickerAlerts(investingTicker: string): AlertState {
+  private auditAlertState(investingTicker: string): AlertState {
     const pairInfo = this._pairManager.investingTickerToPairInfo(investingTicker);
     if (!pairInfo) {
       return AlertState.NO_ALERTS;

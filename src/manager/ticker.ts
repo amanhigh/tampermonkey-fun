@@ -30,7 +30,7 @@ export interface ITickerManager {
    * Maps current TradingView ticker to Investing ticker
    * @returns Mapped Investing ticker or original if no mapping exists
    */
-  getInvestingTicker(): string | undefined;
+  getInvestingTicker(): string;
 
   /**
    * Opens specified ticker in TradingView
@@ -94,9 +94,10 @@ export class TickerManager implements ITickerManager {
   }
 
   /** @inheritdoc */
-  getInvestingTicker(): string | undefined {
+  getInvestingTicker(): string {
     const tvTicker = this.getTicker();
-    return this._symbolManager.tvToInvesting(tvTicker);
+    const investingTicker = this._symbolManager.tvToInvesting(tvTicker);
+    return investingTicker || tvTicker;
   }
 
   /** @inheritdoc */
@@ -137,6 +138,12 @@ export class TickerManager implements ITickerManager {
 
     this.openTicker(`${ticker}/${benchmark}`);
   }
+
+  // FIXME: Add isRecent(ticker) method to be used in TickerHandler
+
+  // FIXME: Add Recent Ticker Method
+
+  // FIXME: Should we move all Recent Related Logic to RecentManager ?
 
   /** @inheritdoc */
   hasRecentTickers(): boolean {

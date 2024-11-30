@@ -60,6 +60,14 @@ export interface IUIUtil {
    * @param checked - Initial checked state
    */
   buildRadio(label: string, value: string, group: string, checked?: boolean): JQuery;
+
+  /**
+   * Creates a colored text string using HTML span element
+   * @param text - The text to be colored
+   * @param color - CSS color value (name, hex, rgb, etc.)
+   * @returns HTML string with colored text
+   */
+  colorText(text: string, color: string): string;
 }
 
 export class UIUtil implements IUIUtil {
@@ -127,5 +135,10 @@ export class UIUtil implements IUIUtil {
       .prop('checked', checked);
 
     return $('<label>').addClass(UIUtil.CLASSES.RADIO_LABEL).html(label).prepend(radio);
+  }
+
+  /** @inheritdoc */
+  public colorText(text: string, color: string): string {
+    return `<span style="color: ${color};">${text}</span>`;
   }
 }

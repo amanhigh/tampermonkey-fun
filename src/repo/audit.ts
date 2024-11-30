@@ -8,14 +8,6 @@ import { SerializedData } from './base';
  */
 export interface IAuditRepo extends IMapRepo<string, AlertAudit> {
   /**
-   * Add audit result for investing ticker
-   * @param investingTicker Investing.com ticker
-   * @param state Alert state
-   * @throws Error if state is invalid
-   */
-  addAuditResult(investingTicker: string, state: AlertState): void;
-
-  /**
    * Get filtered audit results by state
    * @param state Alert state to filter by
    * @returns Filtered audit results
@@ -45,16 +37,6 @@ export class AuditRepo extends MapRepo<string, AlertAudit> implements IAuditRepo
       auditMap.set(ticker, new AlertAudit(auditData.ticker, auditData.state));
     });
     return auditMap;
-  }
-
-  /**
-   * @inheritdoc
-   */
-  public addAuditResult(investingTicker: string, state: AlertState): void {
-    if (!Object.values(AlertState).includes(state)) {
-      throw new Error('Invalid alert state');
-    }
-    this.set(investingTicker, new AlertAudit(investingTicker, state));
   }
 
   /**

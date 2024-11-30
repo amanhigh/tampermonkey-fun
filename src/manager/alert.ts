@@ -42,6 +42,13 @@ export interface IAlertManager {
   deleteAlertsByPrice(targetPrice: number): Promise<void>;
 
   /**
+   * Delete specified alert
+   * @param alert Alert to delete
+   * @throws Error if deletion fails
+   */
+  deleteAlert(alert: Alert): Promise<void>;
+
+  /**
    * Reloads alerts from Investing.com
    * @returns Promise resolving to number of alerts loaded
    */
@@ -86,24 +93,6 @@ export class AlertManager implements IAlertManager {
       this._alertRepo.addAlert(pairInfo.pairId, alert);
     } catch {
       Notifier.error(`Failed to create alert for ${investingTicker} at price ${price}`);
-    }
-  }
-
-  /**
-   * Delete a single alert both from Investing.com and local repo
-   * @param alert Alert to delete
-   * @param pairId Associated pair ID
-   * @returns true if deletion successful, false otherwise
-   * @private
-   */
-  private async _deleteAlert(alert: Alert, pairId: string): Promise<boolean> {
-    try {
-      await this._investingClient.deleteAlert(alert);
-      this._alertRepo.removeAlert(pairId, alert.id);
-      return true;
-    } catch {
-      Notifier.error(`Failed to delete alert ${alert.id}`);
-      return false;
     }
   }
 
@@ -156,7 +145,7 @@ export class AlertManager implements IAlertManager {
     }
 
     const alerts = this.getAlerts();
-    await Promise.all(alerts.map(async (alert) => this._deleteAlert(alert, pairInfo.pairId)));
+    await Promise.all(alerts.map(async (alert) => this.deleteAlert(alert)));
   }
 
   /** @inheritdoc */
@@ -170,7 +159,18 @@ export class AlertManager implements IAlertManager {
     const tolerance = targetPrice * 0.03;
     const alerts = this.getAlerts().filter((alert) => Math.abs(alert.price - targetPrice) <= tolerance);
 
-    await Promise.all(alerts.map(async (alert) => this._deleteAlert(alert, pairInfo.pairId)));
+    await Promise.all(alerts.map(async (alert) => this.deleteAlert(alert)));
+  }
+
+  /** @inheritdoc */
+  async deleteAlert(alert: Alert): Promise<void> {
+    try {
+      await this._investingClient.deleteAlert(alert);
+      this._alertRepo.removeAlert(alert.pairId, alert.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to delete alert ${alert.id}: ${message}`);
+    }
   }
 
   /** @inheritdoc */

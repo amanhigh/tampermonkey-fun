@@ -63,23 +63,23 @@ export class PairInfo {
 }
 
 export class AlertAudit {
-  private _ticker: string;
+  private _investingTicker: string;
   private _state: AlertState;
 
-  constructor(ticker: string, state: AlertState) {
-    this._ticker = ticker;
+  constructor(investingTicker: string, state: AlertState) {
+    this._investingTicker = investingTicker;
     this._state = state;
   }
 
-  get ticker(): string {
-    return this._ticker;
+  get investingTicker(): string {
+    return this._investingTicker;
   }
   get state(): AlertState {
     return this._state;
   }
 
-  set ticker(value: string) {
-    this._ticker = value;
+  set investingTicker(value: string) {
+    this._investingTicker = value;
   }
   set state(value: AlertState) {
     this._state = value;

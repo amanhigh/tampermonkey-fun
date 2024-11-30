@@ -28,9 +28,9 @@ export interface ITradingViewManager {
 
   /**
    * Wait for Add Alert Context Menu Option to Capture Price
-   * @param callback Function to be called with the alert price
+   * @returns Promise resolving to the alert price
    */
-  getCursorPrice(callback: (price: number) => void): void;
+  getCursorPrice(): Promise<number>;
 
   /**
    * Copies the given text to the clipboard and displays a message.
@@ -82,11 +82,25 @@ export class TradingViewManager implements ITradingViewManager {
   }
 
   /** @inheritdoc */
-  getCursorPrice(callback: (price: number) => void): void {
-    this.waitUtil.waitJEE(Constants.DOM.POPUPS.AUTO_ALERT, (el) => {
-      const match = PRICE_REGEX.exec(el.text());
-      const altPrice = parseFloat(match![0].replace(/,/g, ''));
-      callback(altPrice);
+  getCursorPrice(): Promise<number> {
+    return new Promise((resolve, reject) => {
+      this.waitUtil.waitJEE(Constants.DOM.POPUPS.AUTO_ALERT, (el) => {
+        try {
+          const match = PRICE_REGEX.exec(el.text());
+          if (!match) {
+            reject(new Error('Failed to extract price from cursor position'));
+            return;
+          }
+          const altPrice = parseFloat(match[0].replace(/,/g, ''));
+          if (isNaN(altPrice)) {
+            reject(new Error('Invalid price format at cursor position'));
+            return;
+          }
+          resolve(altPrice);
+        } catch (error) {
+          reject(error);
+        }
+      });
     });
   }
 
