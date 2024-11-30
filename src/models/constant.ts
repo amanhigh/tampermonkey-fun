@@ -60,6 +60,7 @@ export const Constants = Object.freeze({
     POPUPS: {
       SEARCH: 'input[class^=search]', // Old name: searchPopupSelector
       CLOSE_TEXTBOX: 'button:contains("Ok")', // Old name: closeTextboxSelector
+      AUTO_ALERT: 'createTvToExchangeTickerMapping', // Old name: autoAlertSelector
     },
     REPLAY: {
       PLAY_PAUSE: 'div[class*=replayToolbar] span[class*=icon]:nth(1)', // Old name: replayPlayPauseSelector

@@ -83,7 +83,6 @@ export class TradingViewManager implements ITradingViewManager {
 
   /** @inheritdoc */
   getCursorPrice(callback: (price: number) => void): void {
-    // BUG: Missing Selector
     this.waitUtil.waitJEE(Constants.DOM.POPUPS.AUTO_ALERT, (el) => {
       const match = PRICE_REGEX.exec(el.text());
       const altPrice = parseFloat(match![0].replace(/,/g, ''));

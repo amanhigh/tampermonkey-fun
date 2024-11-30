@@ -30,7 +30,7 @@ export interface ITickerManager {
    * Maps current TradingView ticker to Investing ticker
    * @returns Mapped Investing ticker or original if no mapping exists
    */
-  getInvestingTicker(): string;
+  getInvestingTicker(): string | undefined;
 
   /**
    * Opens specified ticker in TradingView
@@ -94,7 +94,7 @@ export class TickerManager implements ITickerManager {
   }
 
   /** @inheritdoc */
-  getInvestingTicker(): string {
+  getInvestingTicker(): string | undefined {
     const tvTicker = this.getTicker();
     return this._symbolManager.tvToInvesting(tvTicker);
   }
@@ -140,7 +140,7 @@ export class TickerManager implements ITickerManager {
 
   /** @inheritdoc */
   hasRecentTickers(): boolean {
-    return this._recentTickerRepo.getRecentTickers().length > 0;
+    return this._recentTickerRepo.getCount() > 0;
   }
 
   /** @inheritdoc */
