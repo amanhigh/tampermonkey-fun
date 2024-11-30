@@ -11,6 +11,7 @@ interface StyleSet {
     CHECKED?: StyleObject;
 }
 
+// TODO: Move Element Styles to Less File
 interface StyleDefinitions {
     BUTTON: StyleSet;
     CHECKBOX: StyleSet;

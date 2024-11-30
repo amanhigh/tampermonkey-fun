@@ -127,9 +127,10 @@ export class WaitUtil implements IWaitUtil {
 
         this.waitEE(selector, (e) => {
             try {
-                e.value = inputValue;
-                e.dispatchEvent(new Event('input', { bubbles: true }));
-                e.dispatchEvent(new KeyboardEvent("keydown", { 
+                const inputElement = e as HTMLInputElement;
+                inputElement.value = inputValue;
+                inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+                inputElement.dispatchEvent(new KeyboardEvent("keydown", { 
                     bubbles: true, 
                     keyCode: 13 
                 }));

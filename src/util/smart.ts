@@ -171,7 +171,7 @@ export class SmartPrompt implements ISmartPrompt {
             cursor: 'pointer'
         };
         Object.assign(label.style, labelStyles);
-
+    
         const radioButton = document.createElement('input');
         radioButton.id = id;
         radioButton.type = 'radio';
@@ -191,21 +191,21 @@ export class SmartPrompt implements ISmartPrompt {
             position: 'relative'
         };
         Object.assign(radioButton.style, radioStyles);
-
-        radioButton.onchange = function() {
+    
+        radioButton.addEventListener('change', function() {
             document.querySelectorAll('input[name="override"]').forEach((rb) => {
                 if (rb instanceof HTMLInputElement) {
                     rb.style.backgroundColor = 'black';
                 }
             });
-            if (this.checked) {
+            if (this instanceof HTMLInputElement && this.checked) {
                 this.style.backgroundColor = 'white';
             }
-        };
-
+        });
+        
         label.appendChild(radioButton);
         label.appendChild(document.createTextNode(` ${text}`));
-
+    
         return label;
     }
 

@@ -90,10 +90,10 @@ export class UIUtil implements IUIUtil {
         return $('<input>')
             .attr({ id })
             .css(Styles.INPUT.BASE)
-            .focus(function(this: HTMLElement) {
+            .focus(function() {
                 $(this).css(Styles.INPUT.FOCUS || {});
             })
-            .blur(function(this: HTMLElement) {
+            .blur(function() {
                 $(this).css(Styles.INPUT.BLUR || {});
             });
     }
@@ -112,7 +112,11 @@ export class UIUtil implements IUIUtil {
     /** @inheritdoc */
     public toggleUI(selector: string): void {
         const $element = $(selector);
-        $element.is(':visible') ? $element.hide() : $element.show();
+        if ($element.is(':visible')) {
+            $element.hide();
+        } else {
+            $element.show();
+        }
     }
 
     /** @inheritdoc */
@@ -122,17 +126,17 @@ export class UIUtil implements IUIUtil {
             .html(text)
             .css(Styles.BUTTON.BASE)
             .hover(
-                function(this: HTMLElement) {
+                function() {
                     $(this).css(Styles.BUTTON.HOVER || {});
                 },
-                function(this: HTMLElement) {
+                function() {
                     $(this).css(Styles.BUTTON.BASE);
                 }
             )
-            .mousedown(function(this: HTMLElement) {
+            .mousedown(function() {
                 $(this).css(Styles.BUTTON.ACTIVE || {});
             })
-            .mouseup(function(this: HTMLElement) {
+            .mouseup(function() {
                 $(this).css(Styles.BUTTON.HOVER || {});
             })
             .click(handler);
@@ -141,7 +145,6 @@ export class UIUtil implements IUIUtil {
     /** @inheritdoc */
     public buildCheckBox(id: string, checked: boolean): JQuery {
         return $('<input>')
-            // BUG: Should we pass id:id ?
             .attr({ id, type: 'checkbox' })
             .css(Styles.CHECKBOX.BASE)
             .prop('checked', checked);
@@ -159,10 +162,11 @@ export class UIUtil implements IUIUtil {
             .css(Styles.RADIO.BASE)
             .prop('checked', checked);
 
-        radio.on('change', function(this: HTMLElement) {
+        radio.on('change', function() {
             $(`input[name="${group}"]`).css('background-color', 'black');
-            if (this.checked) {
-                $(this).css('background-color', 'white');
+            const $this = $(this);
+            if ($this.prop('checked')) {
+                $this.css('background-color', 'white');
             }
         });
 
