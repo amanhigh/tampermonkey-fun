@@ -1,4 +1,4 @@
-import { TimeFrame } from './trading';
+import { SequenceMap, SequenceType, TimeFrameConfig, TimeFrame, TimeFrameMap } from './trading';
 
 /**
  * Application-wide constants organized by domain and functionality
@@ -150,21 +150,21 @@ export const Constants = Object.freeze({
   // Time frame and sequence configurations
   TIME: {
     SEQUENCE_TYPES: {
-      DEFAULT: 'MWD', // Old Name: DEFAULT_SEQUENCE
-      HIGH: 'YR', // Old Name: HIGH_SEQUENCE
-    },
-    FRAMES: {
-      // Old name: TimeFrame
-      DAILY: new TimeFrame('D', 'I', 3),
-      WEEKLY: new TimeFrame('WK', 'H', 4),
-      MONTHLY: new TimeFrame('MN', 'VH', 5),
-      THREE_MONTHLY: new TimeFrame('TMN', 'T', 6),
-      SIX_MONTHLY: new TimeFrame('SMN', 'I', 7),
-    },
-    SEQUENCES: {
-      // Old name: timeFrameBar
-      MWD: ['THREE_MONTHLY', 'MONTHLY', 'WEEKLY', 'DAILY'],
-      YR: ['SIX_MONTHLY', 'THREE_MONTHLY', 'MONTHLY', 'WEEKLY'],
+      DEFAULT: SequenceType.MWD,
+      HIGH: SequenceType.YR,
+      FRAMES: {
+        // Old name: TimeFrame
+        [TimeFrame.DAILY]: new TimeFrameConfig('D', 'I', 3),
+        [TimeFrame.WEEKLY]: new TimeFrameConfig('WK', 'H', 4),
+        [TimeFrame.MONTHLY]: new TimeFrameConfig('MN', 'VH', 5),
+        [TimeFrame.THREE_MONTHLY]: new TimeFrameConfig('TMN', 'T', 6),
+        [TimeFrame.SIX_MONTHLY]: new TimeFrameConfig('SMN', 'I', 7),
+      } as TimeFrameMap,
+      SEQUENCES: {
+        // Old name: timeFrameBar
+        [SequenceType.MWD]: [TimeFrame.THREE_MONTHLY, TimeFrame.MONTHLY, TimeFrame.WEEKLY, TimeFrame.DAILY],
+        [SequenceType.YR]: [TimeFrame.SIX_MONTHLY, TimeFrame.THREE_MONTHLY, TimeFrame.MONTHLY, TimeFrame.WEEKLY],
+      } as SequenceMap,
     },
   },
 
