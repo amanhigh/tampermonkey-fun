@@ -1,11 +1,11 @@
-import { IRepoCron } from "./cron";
+import { IRepoCron } from './cron';
 
 /**
  * Interface for serialized data structure in storage
  * @interface
  */
 export interface SerializedData {
-    [key: string]: unknown;
+  [key: string]: unknown;
 }
 
 /**
@@ -14,17 +14,17 @@ export interface SerializedData {
  * @interface
  */
 export interface IBaseRepo<T> {
-    /**
-     * Load data from storage
-     * @returns Promise resolving to loaded data
-     */
-    load(): Promise<T>;
+  /**
+   * Load data from storage
+   * @returns Promise resolving to loaded data
+   */
+  load(): Promise<T>;
 
-    /**
-     * Save data to storage
-     * @returns Promise that resolves when save is complete
-     */
-    save(): Promise<void>;
+  /**
+   * Save data to storage
+   * @returns Promise that resolves when save is complete
+   */
+  save(): Promise<void>;
 }
 
 /**
@@ -33,63 +33,63 @@ export interface IBaseRepo<T> {
  * @abstract
  */
 export abstract class BaseRepo<T> implements IBaseRepo<T> {
-    /**
-     * Storage identifier for this repository
-     * @protected
-     */
-    protected readonly _storeId: string;
+  /**
+   * Storage identifier for this repository
+   * @protected
+   */
+  protected readonly _storeId: string;
 
-    /**
-     * Repository auto-save manager
-     * @private
-     */
-    private readonly _repoCron: IRepoCron;
+  /**
+   * Repository auto-save manager
+   * @private
+   */
+  private readonly _repoCron: IRepoCron;
 
-    /**
-     * Creates a new repository instance
-     * @param repoCron Repository auto-save manager
-     * @param storeId Storage identifier
-     */
-    constructor(repoCron: IRepoCron, storeId: string) {
-        this._repoCron = repoCron;
-        this._storeId = storeId;
-        this._repoCron.registerRepository(this);
-    }
+  /**
+   * Creates a new repository instance
+   * @param repoCron Repository auto-save manager
+   * @param storeId Storage identifier
+   */
+  constructor(repoCron: IRepoCron, storeId: string) {
+    this._repoCron = repoCron;
+    this._storeId = storeId;
+    this._repoCron.registerRepository(this);
+  }
 
-    /**
-     * Load data from storage
-     * @public
-     * @returns Promise resolving to loaded data
-     */
-    public async load(): Promise<T> {
-        const data = await GM.getValue(this._storeId, {}) as SerializedData;
-        return this._deserialize(data);
-    }
+  /**
+   * Load data from storage
+   * @public
+   * @returns Promise resolving to loaded data
+   */
+  public async load(): Promise<T> {
+    const data = (await GM.getValue(this._storeId, {})) as SerializedData;
+    return this._deserialize(data);
+  }
 
-    /**
-     * Save data to storage
-     * @public
-     * @returns Promise that resolves when save is complete
-     */
-    public async save(): Promise<void> {
-        const data = this._serialize();
-        await GM.setValue(this._storeId, JSON.stringify(data));
-    }
+  /**
+   * Save data to storage
+   * @public
+   * @returns Promise that resolves when save is complete
+   */
+  public async save(): Promise<void> {
+    const data = this._serialize();
+    await GM.setValue(this._storeId, JSON.stringify(data));
+  }
 
-    /**
-     * Serialize data for storage
-     * @protected
-     * @returns Serialized data object
-     * @abstract
-     */
-    protected abstract _serialize(): SerializedData;
+  /**
+   * Serialize data for storage
+   * @protected
+   * @returns Serialized data object
+   * @abstract
+   */
+  protected abstract _serialize(): SerializedData;
 
-    /**
-     * Deserialize data from storage
-     * @protected
-     * @param data Raw data from storage
-     * @returns Deserialized data instance
-     * @abstract
-     */
-    protected abstract _deserialize(data: SerializedData): T;
+  /**
+   * Deserialize data from storage
+   * @protected
+   * @param data Raw data from storage
+   * @returns Deserialized data instance
+   * @abstract
+   */
+  protected abstract _deserialize(data: SerializedData): T;
 }
