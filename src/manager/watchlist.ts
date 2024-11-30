@@ -4,6 +4,8 @@ import { IWatchlistRepo } from '../repo/watch';
 import { IRecentTickerRepo } from '../repo/recent';
 import { IUIUtil } from '../util/ui';
 import { WatchChangeEvent } from '../models/events';
+import { Notifier } from '../util/notify';
+import { IFnoRepo } from '../repo/fno';
 
 /**
  * Filter options for watchlist manipulation
@@ -75,12 +77,14 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
    * @param watchRepo - Instance of WatchlistRepo
    * @param recentTickerRepo - Instance of RecentTickerRepo
    * @param uiUtil - Instance of UIUtil for building UI components
+   * @param fnoRepo - Instance of FnoRepo for FNO symbols
    */
   constructor(
     private readonly paintManager: IPaintManager,
     private readonly watchRepo: IWatchlistRepo,
     private readonly recentTickerRepo: IRecentTickerRepo,
-    private readonly uiUtil: IUIUtil
+    private readonly uiUtil: IUIUtil,
+    private readonly fnoRepo: IFnoRepo
   ) {}
 
   /** @inheritdoc */
@@ -122,11 +126,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     this._displaySetSummary();
 
     // Mark FNO
-    this.paintManager.applyCss(
-      Constants.DOM.WATCHLIST.SYMBOL,
-      Constants.EXCHANGE.FNO_SYMBOLS,
-      Constants.UI.COLORS.FNO_CSS
-    );
+    this.paintManager.applyCss(Constants.DOM.WATCHLIST.SYMBOL, this.fnoRepo.getAll(), Constants.UI.COLORS.FNO_CSS);
   }
 
   /** @inheritdoc */
@@ -135,11 +135,11 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     $(Constants.DOM.WATCHLIST.WIDGET).css('height', '20000px');
 
     // Show All Items
-    $(Constants.DOM.WATCHLIST.LINE_SELECTOR).show();
-    $(Constants.DOM.SCREENER.LINE_SELECTOR).show();
+    $(Constants.DOM.WATCHLIST.LINE).show();
+    $(Constants.DOM.SCREENER.LINE).show();
 
     // Disable List Transformation
-    $(Constants.DOM.WATCHLIST.LINE_SELECTOR).css('position', '');
+    $(Constants.DOM.WATCHLIST.LINE).css('position', '');
     $(Constants.DOM.WATCHLIST.CONTAINER).css('overflow', '');
   }
 
@@ -154,7 +154,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     const orderCategoryLists = this.watchRepo.getWatchCategoryLists();
 
     for (let i = 0; i < Constants.UI.COLORS.LIST.length; i++) {
-      const count = orderCategoryLists.get(i).size;
+      const count = orderCategoryLists.getList(i)?.size || -1;
       const color = Constants.UI.COLORS.LIST[i];
 
       const $label = this.uiUtil
@@ -212,24 +212,24 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     // HACK: Breakdown Function
     if (!filter.ctrl && !filter.shift) {
       // Hide Everything
-      $(Constants.DOM.WATCHLIST.LINE_SELECTOR).hide();
-      $(Constants.DOM.SCREENER.LINE_SELECTOR).hide();
+      $(Constants.DOM.WATCHLIST.LINE).hide();
+      $(Constants.DOM.SCREENER.LINE).hide();
     }
 
     switch (filter.index) {
       case 1:
         if (filter.shift) {
-          $(Constants.DOM.WATCHLIST.LINE_SELECTOR)
+          $(Constants.DOM.WATCHLIST.LINE)
             .not(`:has(${Constants.DOM.WATCHLIST.SYMBOL}[style*='color: ${filter.color}'])`)
             .hide();
-          $(Constants.DOM.SCREENER.LINE_SELECTOR)
+          $(Constants.DOM.SCREENER.LINE)
             .not(`:has(${Constants.DOM.SCREENER.SYMBOL}[style*='color: ${filter.color}'])`)
             .hide();
         } else {
-          $(Constants.DOM.WATCHLIST.LINE_SELECTOR + `:hidden`)
+          $(Constants.DOM.WATCHLIST.LINE + `:hidden`)
             .has(`${Constants.DOM.WATCHLIST.SYMBOL}[style*='color: ${filter.color}']`)
             .show();
-          $(Constants.DOM.SCREENER.LINE_SELECTOR + `:hidden`)
+          $(Constants.DOM.SCREENER.LINE + `:hidden`)
             .has(`${Constants.DOM.SCREENER.SYMBOL}[style*='color: ${filter.color}']`)
             .show();
         }
@@ -242,23 +242,19 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
         break;
       case 3:
         if (filter.shift) {
-          $(Constants.DOM.WATCHLIST.LINE_SELECTOR)
-            .has(`${Constants.DOM.FLAGS.SYMBOL}[style*='color: ${filter.color}']`)
-            .hide();
-          $(Constants.DOM.SCREENER.LINE_SELECTOR)
-            .has(`${Constants.DOM.FLAGS.SYMBOL}[style*='color: ${filter.color}']`)
-            .hide();
+          $(Constants.DOM.WATCHLIST.LINE).has(`${Constants.DOM.FLAGS.SYMBOL}[style*='color: ${filter.color}']`).hide();
+          $(Constants.DOM.SCREENER.LINE).has(`${Constants.DOM.FLAGS.SYMBOL}[style*='color: ${filter.color}']`).hide();
         } else {
-          $(Constants.DOM.WATCHLIST.LINE_SELECTOR + `:hidden`)
+          $(Constants.DOM.WATCHLIST.LINE + `:hidden`)
             .has(`${Constants.DOM.FLAGS.SYMBOL}[style*='color: ${filter.color}']`)
             .show();
-          $(Constants.DOM.SCREENER.LINE_SELECTOR + `:hidden`)
+          $(Constants.DOM.SCREENER.LINE + `:hidden`)
             .has(`${Constants.DOM.FLAGS.SYMBOL}[style*='color: ${filter.color}']`)
             .show();
         }
         break;
       default:
-        message('You have a strange Mouse!', 'red');
+        Notifier.error('You have a strange Mouse!');
     }
   }
 }

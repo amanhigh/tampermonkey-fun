@@ -76,12 +76,12 @@ export const Constants = Object.freeze({
       SELECTED: 'tr.tv-screener-table__result-row--selected', // Old name: screenerSelectedSelector
     },
     WATCHLIST: {
-      // TODO: Fix Symbol
-      SYMBOL: 'div[class*=symbol]', // Old Name: watchListSymbolSelector
+      SYMBOL: 'span[class*=symbolNameText]', // Old Name: watchListSymbolSelector
       WIDGET: 'div.widgetbar-widgetbody:first', // Old Name: watchListWidgetSelector
       CONTAINER: 'div[class^=listContainer]', // Old Name: watchListSelector
       ITEM: 'div[class*=symbol-]', // Old Name: watchListItemSelector
       LINE: 'div[class^=listContainer] > div > div', // Old Name: watchListLineSelector
+      SELECTED: 'div[class*=selected]', // Old Name: watchListSelectedSelector
     },
     FLAGS: {
       SYMBOL: 'div[class^=uiMarker]', // Old Name: symbolFlagSelector
