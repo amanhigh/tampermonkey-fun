@@ -62,7 +62,6 @@ export interface ICategoryManager {
  * Manages category-based sets of tickers
  */
 export class CategoryManager implements ICategoryManager {
-  // TODO: Route CategoryRepo Calls via this Manager
   /**
    * @param orderRepo Repository for order categories
    * @param flagRepo Repository for flag categories

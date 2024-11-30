@@ -1,4 +1,3 @@
-import { CategoryLists } from '../models/category';
 import { ICategoryManager } from './category';
 import { ISequenceManager } from './sequence';
 
@@ -7,26 +6,35 @@ import { ISequenceManager } from './sequence';
  */
 export interface IJournalManager {
   /**
-   * Records a journal entry based on sequence and current context
-   * @param buttonId - Button identifier that triggered the record
-   * @param reason - User provided reason for the entry
-   * @param currentTicker - Current trading symbol
-   * @returns Generated journal tag
+   * Creates a journal entry tag used for naming trading journal images
+   * Format: TICKER.SEQUENCE.TIMEFRAME.TYPE.REASON
+   * Example: "HGS.yr.trend.rejected.oe"
+   *
+   * Flow:
+   * 1. TICKER: Trading symbol (e.g., "HGS")
+   * 2. SEQUENCE: Lowercased sequence from current sequence (e.g., "YR" -> "yr")
+   * 3. TIMEFRAME: Trading timeframe identifier (e.g., "trend")
+   * 4. TYPE: Based on ticker's category:
+   *    - "set" if ticker in category 2
+   *    - "result" if ticker in categories 0,1,4
+   *    - "rejected" otherwise
+   * 5. REASON: Trading reason code if provided (e.g., "oe")
+   *
+   * @param ticker - Trading symbol to create entry for
+   * @param timeframe - Trading timeframe identifier
+   * @param reason - Optional trading reason code
+   * @returns Formatted journal tag (e.g., "HGS.yr.trend.rejected.oe")
    */
-  createEntry(buttonId: string, reason: string, currentTicker: string): string;
+  createEntry(ticker: string, timeframe: string, reason: string): string;
 }
 
 /**
  * Manages trading journal entries and operations
- *
- * RecordJournal function records the journal entry based on the timeframe and reason provided.
- * It gets the timeframe from the button clicked, prompts the user for the reason,
- * determines the type of entry based on the ticker and order set, and then copies the entry to the clipboard.
  */
 export class JournalManager implements IJournalManager {
   /**
-   * @param categoryManager - Category manager
-   * @param sequenceManager - Manager for sequence operations
+   * @param categoryManager - Category manager for checking ticker status
+   * @param sequenceManager - Manager for getting current sequence
    */
   constructor(
     private readonly categoryManager: ICategoryManager,
@@ -41,72 +49,59 @@ export class JournalManager implements IJournalManager {
   //         RecordTicker(tag);
   //     })
   // }
-
   /** @inheritdoc */
-  createEntry(buttonId: string, reason: string, currentTicker: string): string {
-    // Get sequence preference for current ticker
-    const sequence = this.sequenceManager.getCurrentSequence();
+  createEntry(ticker: string, timeframe: string, reason: string): string {
+    // Get and lowercase current sequence (e.g., "YR" -> "yr")
+    const sequence = this.sequenceManager.getCurrentSequence().toLowerCase();
 
-    // Build timeframe tag with sequence
-    // TODO: buttonId earlier this.id ?
-    const timeframeTag = `${sequence.toLowerCase()}.${buttonId}`;
+    // Determine entry type based on categories
+    const type = this._determineEntryType(ticker);
 
-    // Determine entry type based on order status
-    const type = this._determineEntryType(currentTicker);
+    // Build parts of the tag
+    const parts = [
+      ticker, // TICKER
+      sequence, // SEQUENCE
+      timeframe, // TIMEFRAME
+      type, // TYPE
+    ];
 
-    // Build final tag with reason if provided
-    const finalType = this._appendReason(type, reason);
+    // Add reason if provided and valid
+    if (reason && reason !== '' && reason !== 'Cancel') {
+      parts.push(reason); // REASON
+    }
 
-    // Construct complete journal tag
-    return `${currentTicker}.${timeframeTag}.${finalType}`;
+    // Join with dots to create final tag
+    return parts.join('.');
   }
 
   /**
    * Determines the type of journal entry based on ticker's presence in order sets
    * @private
    * @param ticker - Trading symbol to check
-   * @returns Entry type classification
+   * @returns Entry type classification ('set', 'result', or 'rejected')
    */
   private _determineEntryType(ticker: string): string {
-    const watchLists = this.categoryManager.getWatchCategory(2);
-
-    if (watchLists.has(ticker)) {
+    const setCategory = this.categoryManager.getOrderCategory(2);
+    if (setCategory.has(ticker)) {
       return 'set';
     }
-
-    if (this._isInResultCategories(watchLists, ticker)) {
+    if (this._isInResultCategories(ticker)) {
       return 'result';
     }
-
     return 'rejected';
   }
 
   /**
    * Checks if ticker is in result categories (0, 1, or 4)
    * @private
-   * @param watchLists - Lists of categorized watchlists
    * @param ticker - Trading symbol to check
    * @returns True if ticker is in result categories
    */
-  private _isInResultCategories(watchLists: Set<string>, ticker: string): boolean {
+  private _isInResultCategories(ticker: string): boolean {
     return (
       this.categoryManager.getWatchCategory(0).has(ticker) ||
       this.categoryManager.getWatchCategory(1).has(ticker) ||
       this.categoryManager.getWatchCategory(4).has(ticker)
     );
-  }
-
-  /**
-   * Appends reason to entry type if provided
-   * @private
-   * @param type - Base entry type
-   * @param reason - Optional reason for the entry
-   * @returns Combined type and reason
-   */
-  private _appendReason(type: string, reason: string): string {
-    if (reason && reason !== '' && reason !== 'Cancel') {
-      return `${type}.${reason}`;
-    }
-    return type;
   }
 }
