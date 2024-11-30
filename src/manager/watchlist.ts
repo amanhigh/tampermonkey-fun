@@ -204,54 +204,114 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   }
 
   /**
+   * Helper method to hide all watchlist and screener items
+   * @private
+   */
+  private _hideAllItems(): void {
+    $(Constants.DOM.WATCHLIST.LINE).hide();
+    $(Constants.DOM.SCREENER.LINE).hide();
+  }
+
+  /**
+   * Applies color-based filtering to watchlist and screener
+   * @private
+   * @param color - Target color for filtering
+   * @param shift - If true, hide matching elements instead of showing them
+   */
+  private _filterByColor(color: string, shift: boolean): void {
+    const symbolSelector = `${Constants.DOM.WATCHLIST.SYMBOL}[style*='color: ${color}']`;
+    const screenerSymbolSelector = `${Constants.DOM.SCREENER.SYMBOL}[style*='color: ${color}']`;
+
+    if (shift) {
+      $(Constants.DOM.WATCHLIST.LINE).not(`:has(${symbolSelector})`).hide();
+      $(Constants.DOM.SCREENER.LINE).not(`:has(${screenerSymbolSelector})`).hide();
+    } else {
+      $(Constants.DOM.WATCHLIST.LINE + `:hidden`)
+        .has(symbolSelector)
+        .show();
+      $(Constants.DOM.SCREENER.LINE + `:hidden`)
+        .has(screenerSymbolSelector)
+        .show();
+    }
+  }
+
+  /**
+   * Applies flag-based filtering to watchlist and screener
+   * @private
+   * @param color - Target flag color for filtering
+   * @param shift - If true, hide matching elements instead of showing them
+   */
+  private _filterByFlag(color: string, shift: boolean): void {
+    const flagSelector = `${Constants.DOM.FLAGS.SYMBOL}[style*='color: ${color}']`;
+
+    if (shift) {
+      $(Constants.DOM.WATCHLIST.LINE).has(flagSelector).hide();
+      $(Constants.DOM.SCREENER.LINE).has(flagSelector).hide();
+    } else {
+      $(Constants.DOM.WATCHLIST.LINE + `:hidden`)
+        .has(flagSelector)
+        .show();
+      $(Constants.DOM.SCREENER.LINE + `:hidden`)
+        .has(flagSelector)
+        .show();
+    }
+  }
+
+  /**
+   * Handles initial filter state setup
+   * @private
+   * @param filter - The filter parameters
+   */
+  private _handleFilterInit(filter: WatchlistFilter): void {
+    if (!filter.ctrl && !filter.shift) {
+      this._hideAllItems();
+    }
+  }
+
+  /**
+   * Handles symbol-based filtering (left-click)
+   * @private
+   * @param filter - The filter parameters
+   */
+  private _handleSymbolFilter(filter: WatchlistFilter): void {
+    this._filterByColor(filter.color, filter.shift);
+  }
+
+  /**
+   * Handles filter reset (middle-click)
+   * @private
+   */
+  private _handleResetFilter(): void {
+    this.resetWatchList();
+    this._filterChain = [];
+  }
+
+  /**
+   * Handles flag-based filtering (right-click)
+   * @private
+   * @param filter - The filter parameters
+   */
+  private _handleFlagFilter(filter: WatchlistFilter): void {
+    this._filterByFlag(filter.color, filter.shift);
+  }
+
+  /**
    * Filters the watchlist symbols based on the provided filter parameters
    * @private
    * @param filter - The filter parameters
    */
   private _filterWatchList(filter: WatchlistFilter): void {
-    // HACK: Breakdown Function
-    if (!filter.ctrl && !filter.shift) {
-      // Hide Everything
-      $(Constants.DOM.WATCHLIST.LINE).hide();
-      $(Constants.DOM.SCREENER.LINE).hide();
-    }
+    this._handleFilterInit(filter);
 
     switch (filter.index) {
-      case 1:
-        if (filter.shift) {
-          $(Constants.DOM.WATCHLIST.LINE)
-            .not(`:has(${Constants.DOM.WATCHLIST.SYMBOL}[style*='color: ${filter.color}'])`)
-            .hide();
-          $(Constants.DOM.SCREENER.LINE)
-            .not(`:has(${Constants.DOM.SCREENER.SYMBOL}[style*='color: ${filter.color}'])`)
-            .hide();
-        } else {
-          $(Constants.DOM.WATCHLIST.LINE + `:hidden`)
-            .has(`${Constants.DOM.WATCHLIST.SYMBOL}[style*='color: ${filter.color}']`)
-            .show();
-          $(Constants.DOM.SCREENER.LINE + `:hidden`)
-            .has(`${Constants.DOM.SCREENER.SYMBOL}[style*='color: ${filter.color}']`)
-            .show();
-        }
+      case 1: // Left Click
+        this._handleSymbolFilter(filter);
         break;
-      case 2:
-        // Middle Mouse:
-        this.resetWatchList();
-        // Reset Filter
-        this._filterChain = [];
+      case 2: // Middle Click
+        this._handleResetFilter();
         break;
-      case 3:
-        if (filter.shift) {
-          $(Constants.DOM.WATCHLIST.LINE).has(`${Constants.DOM.FLAGS.SYMBOL}[style*='color: ${filter.color}']`).hide();
-          $(Constants.DOM.SCREENER.LINE).has(`${Constants.DOM.FLAGS.SYMBOL}[style*='color: ${filter.color}']`).hide();
-        } else {
-          $(Constants.DOM.WATCHLIST.LINE + `:hidden`)
-            .has(`${Constants.DOM.FLAGS.SYMBOL}[style*='color: ${filter.color}']`)
-            .show();
-          $(Constants.DOM.SCREENER.LINE + `:hidden`)
-            .has(`${Constants.DOM.FLAGS.SYMBOL}[style*='color: ${filter.color}']`)
-            .show();
-        }
+      case 3: // Right Click
+        this._handleFlagFilter(filter);
         break;
       default:
         Notifier.error('You have a strange Mouse!');
