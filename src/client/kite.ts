@@ -1,12 +1,5 @@
 import { BaseClient, IBaseClient } from './base';
-
-interface GTTOrderDetails {
-    [key: string]: any;  // TODO: Define specific GTT order structure when available
-}
-
-interface GTTResponse {
-    [key: string]: any;  // TODO: Define specific GTT response structure when available
-}
+import { CreateGttRequest } from '../models/kite';
 
 /**
  * Client for Zerodha GTT (Good Till Triggered) Operations
@@ -15,21 +8,21 @@ interface GTTResponse {
 export interface IKiteClient extends IBaseClient {
     /**
      * Create a new Good Till Triggered (GTT) order
-     * @param body - GTT order details
+     * @param request GTT order creation request
      * @throws Error when GTT creation fails
      */
-    createGTT(body: GTTOrderDetails): Promise<void>;
+    createGTT(request: CreateGttRequest): Promise<void>;
 
     /**
      * Load existing Good Till Triggered (GTT) orders
-     * @param callback - Callback to handle retrieved GTT orders
+     * @param callback Callback to handle retrieved GTT orders
      * @throws Error when fetching GTT fails
      */
-    loadGTT(callback: (data: GTTResponse) => void): Promise<void>;
+    loadGTT(callback: (data: unknown) => void): Promise<void>;
 
     /**
      * Delete a specific Good Till Triggered (GTT) order
-     * @param id - ID of the GTT order to delete
+     * @param id ID of the GTT order to delete
      * @throws Error when GTT deletion fails
      */
     deleteGTT(id: string): Promise<void>;
@@ -42,7 +35,7 @@ export interface IKiteClient extends IBaseClient {
 export class KiteClient extends BaseClient implements IKiteClient {
     /**
      * Creates an instance of KiteClient
-     * @param baseUrl - Base URL for Kite API
+     * @param baseUrl Base URL for Kite API
      */
     constructor(baseUrl: string = 'https://kite.zerodha.com/oms/gtt') {
         super(baseUrl);
@@ -50,6 +43,7 @@ export class KiteClient extends BaseClient implements IKiteClient {
 
     /**
      * Get authorization token from local storage
+     * @private
      * @returns Encoded authentication token
      * @throws Error when token is not found in localStorage
      */
@@ -63,6 +57,7 @@ export class KiteClient extends BaseClient implements IKiteClient {
 
     /**
      * Prepare standard headers for Kite API requests
+     * @private
      * @returns Headers for API requests
      */
     private _getDefaultHeaders(): Record<string, string> {
@@ -78,14 +73,14 @@ export class KiteClient extends BaseClient implements IKiteClient {
 
     /**
      * Create a new Good Till Triggered (GTT) order
-     * @param body - GTT order details
+     * @param request GTT order creation request
      * @throws Error when GTT creation fails
      */
-    async createGTT(body: GTTOrderDetails): Promise<void> {
+    async createGTT(request: CreateGttRequest): Promise<void> {
         try {
             await this.makeRequest('/triggers', {
                 method: 'POST',
-                data: body,
+                data: request.toRequestBody(),
                 headers: this._getDefaultHeaders()
             });
             console.log('GTT Created');
@@ -96,12 +91,12 @@ export class KiteClient extends BaseClient implements IKiteClient {
 
     /**
      * Load existing Good Till Triggered (GTT) orders
-     * @param callback - Callback to handle retrieved GTT orders
+     * @param callback Callback to handle retrieved GTT orders
      * @throws Error when fetching GTT fails
      */
-    async loadGTT(callback: (data: GTTResponse) => void): Promise<void> {
+    async loadGTT(callback: (data: unknown) => void): Promise<void> {
         try {
-            const data = await this.makeRequest<GTTResponse>('/triggers', {
+            const data = await this.makeRequest<unknown>('/triggers', {
                 method: 'GET',
                 headers: this._getDefaultHeaders()
             });
@@ -113,7 +108,7 @@ export class KiteClient extends BaseClient implements IKiteClient {
 
     /**
      * Delete a specific Good Till Triggered (GTT) order
-     * @param id - ID of the GTT order to delete
+     * @param id ID of the GTT order to delete
      * @throws Error when GTT deletion fails
      */
     async deleteGTT(id: string): Promise<void> {

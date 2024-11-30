@@ -180,3 +180,71 @@ export class GttRefereshEvent extends BaseEvent {
         });
     }
 }
+
+/**
+ * Order details for creating GTT orders
+ */
+interface GttRequestOrder {
+    exchange: string;
+    tradingsymbol: string;
+    transaction_type: string;
+    quantity: number;
+    price: number;
+    order_type: string;
+    product: string;
+}
+
+/**
+ * GTT order body for API requests
+ */
+export class CreateGttRequest {
+    private readonly _condition: {
+        exchange: string;
+        tradingsymbol: string;
+        trigger_values: number[];
+        last_price: number;
+    };
+    private readonly _orders: GttRequestOrder[];
+    private readonly _type: string;
+    private readonly _expires_at: string;
+
+    /**
+     * Creates a GTT order body with condition and orders
+     * @param tradingsymbol Trading symbol for the order
+     * @param triggers Array of trigger prices
+     * @param lastPrice Last traded price
+     * @param orders Array of order details
+     * @param type Order type (single/two-leg)
+     * @param expiryDate Order expiry date
+     */
+    constructor(
+        tradingsymbol: string,
+        triggers: number[],
+        lastPrice: number,
+        orders: GttRequestOrder[],
+        type: string,
+        expiryDate: string
+    ) {
+        this._condition = {
+            exchange: "NSE",
+            tradingsymbol,
+            trigger_values: triggers,
+            last_price: lastPrice
+        };
+        this._orders = orders;
+        this._type = type;
+        this._expires_at = expiryDate;
+    }
+
+    /**
+     * Gets the complete order body for API request
+     */
+    toRequestBody(): string {
+        return JSON.stringify({
+            condition: this._condition,
+            orders: this._orders,
+            type: this._type,
+            expires_at: this._expires_at
+        });
+    }
+}

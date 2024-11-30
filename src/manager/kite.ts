@@ -1,20 +1,16 @@
 import { ISymbolManager } from './symbol';
 import { IKiteClient } from '../client/kite';
+import { GttCreateEvent, CreateGttRequest } from '../models/kite';
 
 /**
  * Interface for managing Kite trading platform operations
  */
 export interface IKiteManager {
     /**
-     * Creates a GTT order with the given parameters
-     * @param symbol The symbol of the order
-     * @param ltp The last traded price of the order
-     * @param sl The stop loss of the order
-     * @param ent The entry price of the order
-     * @param tp The take profit of the order
-     * @param qty The quantity of the order
+     * Creates a GTT order from the event
+     * @param event GTT order creation event
      */
-    createOrder(symbol: string, ltp: number, sl: number, ent: number, tp: number, qty: number): void;
+    createOrder(event: GttCreateEvent): Promise<void>;
 
     /**
      * Deletes a GTT order by ID
@@ -49,13 +45,18 @@ export class KiteManager implements IKiteManager {
     ) {}
 
     /** @inheritdoc */
-    createOrder(symbol: string, ltp: number, sl: number, ent: number, tp: number, qty: number): void {
-        // HACK: Introduce request order object.
+    async createOrder(event: GttCreateEvent): Promise<void> {
+        if (!event.symb || !event.qty || !event.ltp || !event.sl || !event.ent || !event.tp) {
+            throw new Error("Invalid GTT event parameters");
+        }
+
         const exp = this._generateExpiryDate();
-        const pair = encodeURIComponent(this._symbolManager.tvToKite(symbol));
+        const pair = encodeURIComponent(this._symbolManager.tvToKite(event.symb));
         
-        this._createBuyOrder(pair, ent, qty, ltp, exp);
-        this._createOcoOrder(pair, sl, tp, qty, ltp, exp);
+        // Create buy order first
+        await this._kiteClient.createGTT(this._buildBuyOrderRequest(pair, event, exp));
+        // Create OCO order after
+        await this._kiteClient.createGTT(this._buildOcoOrderRequest(pair, event, exp));
     }
 
     /** @inheritdoc */
@@ -70,41 +71,77 @@ export class KiteManager implements IKiteManager {
     }
 
     /**
-     * Creates a buy order
+     * Builds buy order request
      * @private
-     * @param pair The trading symbol pair
-     * @param buyTrigger The buy trigger value
-     * @param qty The quantity to buy
-     * @param ltp The last traded price
-     * @param expiry The expiration time of the order
      */
-    private _createBuyOrder(pair: string, buyTrigger: number, qty: number, ltp: number, expiry: string): void {
-        const price = this._generateTick(buyTrigger + this._margin * buyTrigger);
-        // HACK: Better Body Creating ?
-        const body = `condition={"exchange":"NSE","tradingsymbol":"${pair}","trigger_values":[${buyTrigger}],"last_price":${ltp}}&orders=[{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"BUY","quantity":${qty},"price":${price},"order_type":"LIMIT","product":"CNC"}]&type=single&expires_at=${expiry}`;
-        void this._kiteClient.createGTT(body);
+    private _buildBuyOrderRequest(pair: string, event: GttCreateEvent, expiry: string): CreateGttRequest {
+        if (!event.ent || !event.qty || !event.ltp) {
+            throw new Error("Invalid event parameters for buy order");
+        }
+
+        const price = this._generateTick(event.ent + this._margin * event.ent);
+        
+        return new CreateGttRequest(
+            pair,
+            [event.ent],
+            event.ltp,
+            [{
+                exchange: "NSE",
+                tradingsymbol: pair,
+                transaction_type: "BUY",
+                quantity: event.qty,
+                price: parseFloat(price),
+                order_type: "LIMIT",
+                product: "CNC"
+            }],
+            "single",
+            expiry
+        );
     }
 
     /**
-     * Creates two legged One Cancels Other Orders
+     * Builds OCO (one-cancels-other) order request
      * @private
-     * @param pair Trading symbol pair
-     * @param slTrigger The stopless trigger parameter
-     * @param tpTrigger The target trigger parameter
-     * @param qty Quantity to buy
-     * @param ltp Last traded price
-     * @param expiry Expiration time of the order
      */
-    private _createOcoOrder(pair: string, slTrigger: number, tpTrigger: number, qty: number, ltp: number, expiry: string): void {
-        const ltpTrigger = this._generateTick(ltp + 0.03 * ltp);
+    private _buildOcoOrderRequest(pair: string, event: GttCreateEvent, expiry: string): CreateGttRequest {
+        if (!event.sl || !event.tp || !event.qty || !event.ltp) {
+            throw new Error("Invalid event parameters for OCO order");
+        }
+
+        const ltpTrigger = this._generateTick(event.ltp + 0.03 * event.ltp);
         // Choose LTP Trigger If Price to close to TP
-        tpTrigger = tpTrigger < ltpTrigger ? ltpTrigger : tpTrigger;
+        const tpTrigger = event.tp < parseFloat(ltpTrigger) ? ltpTrigger : event.tp.toString();
 
-        const sl = this._generateTick(slTrigger - this._margin * slTrigger);
-        const tp = this._generateTick(tpTrigger - this._margin * tpTrigger);
+        const sl = this._generateTick(event.sl - this._margin * event.sl);
+        const tp = this._generateTick(parseFloat(tpTrigger) - this._margin * parseFloat(tpTrigger));
 
-        const body = `condition={"exchange":"NSE","tradingsymbol":"${pair}","trigger_values":[${slTrigger},${tpTrigger}],"last_price":${ltp}}&orders=[{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"SELL","quantity":${qty},"price":${sl},"order_type":"LIMIT","product":"CNC"},{"exchange":"NSE","tradingsymbol":"${pair}","transaction_type":"SELL","quantity":${qty},"price":${tp},"order_type":"LIMIT","product":"CNC"}]&type=two-leg&expires_at=${expiry}`;
-        void this._kiteClient.createGTT(body);
+        return new CreateGttRequest(
+            pair,
+            [event.sl, parseFloat(tpTrigger)],
+            event.ltp,
+            [
+                {
+                    exchange: "NSE",
+                    tradingsymbol: pair,
+                    transaction_type: "SELL",
+                    quantity: event.qty,
+                    price: parseFloat(sl),
+                    order_type: "LIMIT",
+                    product: "CNC"
+                },
+                {
+                    exchange: "NSE",
+                    tradingsymbol: pair,
+                    transaction_type: "SELL",
+                    quantity: event.qty,
+                    price: parseFloat(tp),
+                    order_type: "LIMIT",
+                    product: "CNC"
+                }
+            ],
+            "two-leg",
+            expiry
+        );
     }
 
     /**
