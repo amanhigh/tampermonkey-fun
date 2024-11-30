@@ -1,0 +1,28 @@
+// Input Styles
+@input-bg: black;
+@input-color: white;
+@input-font-size: 15px;
+@input-margin: 4px;
+@input-padding: 6px 8px;
+@input-border: 1px solid #444;
+@input-radius: 4px;
+
+.aman-input {
+    background-color: @input-bg;
+    color: @input-color;
+    font-size: @input-font-size;
+    margin: @input-margin;
+    padding: @input-padding;
+    border: @input-border;
+    border-radius: @input-radius;
+    outline: none;
+    transition: border-color 0.3s;
+
+    &:focus {
+        border-color: #666;
+    }
+
+    &:blur {
+        border-color: #444;
+    }
+}

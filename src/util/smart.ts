@@ -1,5 +1,3 @@
-type StyleProperties = Partial<CSSStyleDeclaration>;
-
 /**
  * Interface for smart prompt utility operations
  */
@@ -19,6 +17,83 @@ export interface ISmartPrompt {
 export class SmartPrompt implements ISmartPrompt {
   private modal: HTMLDivElement | null = null;
 
+  // UI Component Classes
+  private static readonly CLASSES = {
+    MODAL: 'aman-modal',
+    MODAL_CONTENT: 'aman-modal-content',
+    MODAL_BUTTON: 'aman-modal-button',
+    MODAL_INPUT: 'aman-modal-input',
+    MODAL_RADIO_LABEL: 'aman-modal-radio-label',
+  };
+
+  private createModal(): HTMLDivElement {
+    const modal = document.createElement('div');
+    modal.id = 'smart-modal';
+    modal.className = SmartPrompt.CLASSES.MODAL;
+    return modal;
+  }
+
+  private createButton(text: string, id: string, callback: (value: string) => void): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.id = id;
+    button.innerHTML = text;
+    button.className = SmartPrompt.CLASSES.MODAL_BUTTON;
+
+    button.onclick = () => {
+      const selectedOverride = this.getSelectedOverride();
+      callback(selectedOverride ? `${text}-${selectedOverride}` : text);
+      if (this.modal) {
+        this.modal.style.display = 'none';
+      }
+    };
+    return button;
+  }
+
+  private createTextBox(id: string, callback: (value: string) => void): HTMLInputElement {
+    const textBox = document.createElement('input');
+    textBox.id = id;
+    textBox.type = 'text';
+    textBox.placeholder = 'Enter Reason';
+    textBox.className = SmartPrompt.CLASSES.MODAL_INPUT;
+
+    textBox.onkeydown = (event) => {
+      if (event.key === 'Enter') {
+        callback(textBox.value);
+        if (this.modal) {
+          this.modal.style.display = 'none';
+        }
+      }
+    };
+    return textBox;
+  }
+
+  private createRadioButton(text: string, id: string): HTMLLabelElement {
+    const label = document.createElement('label');
+    label.className = SmartPrompt.CLASSES.MODAL_RADIO_LABEL;
+
+    const radioButton = document.createElement('input');
+    radioButton.id = id;
+    radioButton.type = 'radio';
+    radioButton.name = 'override';
+    radioButton.value = text;
+
+    radioButton.addEventListener('change', function () {
+      document.querySelectorAll('input[name="override"]').forEach((rb) => {
+        if (rb instanceof HTMLInputElement) {
+          rb.style.backgroundColor = 'black';
+        }
+      });
+      if (this instanceof HTMLInputElement && this.checked) {
+        this.style.backgroundColor = 'white';
+      }
+    });
+
+    label.appendChild(radioButton);
+    label.appendChild(document.createTextNode(` ${text}`));
+
+    return label;
+  }
+
   /** @inheritdoc */
   public async showModal(reasons: string[], overrides: string[] = []): Promise<string> {
     return new Promise((resolve) => {
@@ -31,11 +106,7 @@ export class SmartPrompt implements ISmartPrompt {
       });
 
       const overrideContainer = document.createElement('div');
-      Object.assign(overrideContainer.style, {
-        display: 'flex',
-        justifyContent: 'center',
-        flexWrap: 'wrap',
-      });
+      overrideContainer.className = SmartPrompt.CLASSES.MODAL_CONTENT;
       this.modal.appendChild(overrideContainer);
 
       overrides.forEach((override, index) => {
@@ -61,152 +132,6 @@ export class SmartPrompt implements ISmartPrompt {
       };
       window.addEventListener('keydown', keydownHandler);
     });
-  }
-
-  private createModal(): HTMLDivElement {
-    const modal = document.createElement('div');
-    modal.id = 'smart-modal';
-    const styles: StyleProperties = {
-      display: 'none',
-      width: '300px',
-      height: 'auto',
-      position: 'fixed',
-      top: '50%',
-      left: '50%',
-      transform: 'translate(-50%, -50%)',
-      background: '#000',
-      color: '#fff',
-      padding: '20px',
-      textAlign: 'center',
-      borderRadius: '8px',
-    };
-    Object.assign(modal.style, styles);
-    return modal;
-  }
-
-  private createButton(text: string, id: string, callback: (value: string) => void): HTMLButtonElement {
-    const button = document.createElement('button');
-    button.id = id;
-    button.innerHTML = text;
-    const styles: StyleProperties = {
-      backgroundColor: '#fff',
-      color: '#000',
-      fontSize: '16px',
-      margin: '4px',
-      padding: '8px 12px',
-      borderRadius: '4px',
-      cursor: 'pointer',
-      border: 'none',
-      outline: 'none',
-      transition: 'background-color 0.3s, transform 0.1s',
-    };
-    Object.assign(button.style, styles);
-
-    button.onmouseover = () => {
-      button.style.backgroundColor = '#f0f0f0';
-    };
-    button.onmouseout = () => {
-      button.style.backgroundColor = '#fff';
-    };
-    button.onmousedown = () => {
-      button.style.transform = 'scale(0.95)';
-    };
-    button.onmouseup = () => {
-      button.style.transform = 'scale(1)';
-    };
-    button.onclick = () => {
-      const selectedOverride = this.getSelectedOverride();
-      callback(selectedOverride ? `${text}-${selectedOverride}` : text);
-      if (this.modal) {
-        this.modal.style.display = 'none';
-      }
-    };
-    return button;
-  }
-
-  private createTextBox(id: string, callback: (value: string) => void): HTMLInputElement {
-    const textBox = document.createElement('input');
-    textBox.id = id;
-    textBox.type = 'text';
-    textBox.placeholder = 'Enter Reason';
-    const styles: StyleProperties = {
-      backgroundColor: '#000',
-      color: '#fff',
-      fontSize: '16px',
-      margin: '4px',
-      padding: '8px 12px',
-      borderRadius: '4px',
-      border: '1px solid #444',
-      outline: 'none',
-      width: 'calc(100% - 24px)',
-      transition: 'border-color 0.3s',
-    };
-    Object.assign(textBox.style, styles);
-
-    textBox.onfocus = () => {
-      textBox.style.borderColor = '#666';
-    };
-    textBox.onblur = () => {
-      textBox.style.borderColor = '#444';
-    };
-    textBox.onkeydown = (event) => {
-      if (event.key === 'Enter') {
-        callback(textBox.value);
-        if (this.modal) {
-          this.modal.style.display = 'none';
-        }
-      }
-    };
-    return textBox;
-  }
-
-  private createRadioButton(text: string, id: string): HTMLLabelElement {
-    const label = document.createElement('label');
-    const labelStyles: StyleProperties = {
-      display: 'inline-flex',
-      alignItems: 'center',
-      color: '#fff',
-      marginRight: '10px',
-      fontSize: '18px',
-      cursor: 'pointer',
-    };
-    Object.assign(label.style, labelStyles);
-
-    const radioButton = document.createElement('input');
-    radioButton.id = id;
-    radioButton.type = 'radio';
-    radioButton.name = 'override';
-    radioButton.value = text;
-    // HACK: Use Less Based Styles
-    const radioStyles: StyleProperties = {
-      appearance: 'none',
-      width: '16px',
-      height: '16px',
-      border: '2px solid white',
-      borderRadius: '50%',
-      backgroundColor: 'black',
-      cursor: 'pointer',
-      marginRight: '8px',
-      verticalAlign: 'middle',
-      position: 'relative',
-    };
-    Object.assign(radioButton.style, radioStyles);
-
-    radioButton.addEventListener('change', function () {
-      document.querySelectorAll('input[name="override"]').forEach((rb) => {
-        if (rb instanceof HTMLInputElement) {
-          rb.style.backgroundColor = 'black';
-        }
-      });
-      if (this instanceof HTMLInputElement && this.checked) {
-        this.style.backgroundColor = 'white';
-      }
-    });
-
-    label.appendChild(radioButton);
-    label.appendChild(document.createTextNode(` ${text}`));
-
-    return label;
   }
 
   private getSelectedOverride(): string | null {

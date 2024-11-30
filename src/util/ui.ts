@@ -1,5 +1,3 @@
-import { Styles } from './styles';
-
 /**
  * Interface for UI building operations
  */
@@ -65,46 +63,35 @@ export interface IUIUtil {
 }
 
 export class UIUtil implements IUIUtil {
+  // UI Component Classes
+  private static readonly CLASSES = {
+    AREA: 'aman-area',
+    BUTTON: 'aman-button',
+    CHECKBOX: 'aman-checkbox',
+    INPUT: 'aman-input',
+    LABEL: 'aman-label',
+    RADIO: 'aman-radio',
+    RADIO_LABEL: 'aman-radio-label',
+  };
+
   /** @inheritdoc */
   public buildArea(id: string, left = '70%', top = '10%'): JQuery {
-    return $('<div>')
-      .attr({ id })
-      .css({
-        ...Styles.AREA.BASE,
-        left,
-        top,
-      });
+    return $('<div>').attr({ id }).addClass(UIUtil.CLASSES.AREA).css({ left, top });
   }
 
   /** @inheritdoc */
   public buildWrapper(id: string, width = '300px'): JQuery {
-    return $('<div>').attr({ id }).css({
-      width,
-    });
+    return $('<div>').attr({ id }).css({ width });
   }
 
   /** @inheritdoc */
   public buildInput(id: string): JQuery {
-    return $('<input>')
-      .attr({ id })
-      .css(Styles.INPUT.BASE)
-      .focus(function () {
-        $(this).css(Styles.INPUT.FOCUS || {});
-      })
-      .blur(function () {
-        $(this).css(Styles.INPUT.BLUR || {});
-      });
+    return $('<input>').attr({ id }).addClass(UIUtil.CLASSES.INPUT);
   }
 
   /** @inheritdoc */
   public buildLabel(text: string, color = 'white', id?: string): JQuery {
-    return $('<label>')
-      .attr({ id })
-      .css({
-        ...Styles.LABEL.BASE,
-        color,
-      })
-      .html(text);
+    return $('<label>').attr({ id }).addClass(UIUtil.CLASSES.LABEL).css({ color }).html(text);
   }
 
   /** @inheritdoc */
@@ -119,30 +106,12 @@ export class UIUtil implements IUIUtil {
 
   /** @inheritdoc */
   public buildButton(id: string, text: string, handler: () => void): JQuery {
-    return $('<button>')
-      .attr({ id })
-      .html(text)
-      .css(Styles.BUTTON.BASE)
-      .hover(
-        function () {
-          $(this).css(Styles.BUTTON.HOVER || {});
-        },
-        function () {
-          $(this).css(Styles.BUTTON.BASE);
-        }
-      )
-      .mousedown(function () {
-        $(this).css(Styles.BUTTON.ACTIVE || {});
-      })
-      .mouseup(function () {
-        $(this).css(Styles.BUTTON.HOVER || {});
-      })
-      .click(handler);
+    return $('<button>').attr({ id }).html(text).addClass(UIUtil.CLASSES.BUTTON).click(handler);
   }
 
   /** @inheritdoc */
   public buildCheckBox(id: string, checked: boolean): JQuery {
-    return $('<input>').attr({ id, type: 'checkbox' }).css(Styles.CHECKBOX.BASE).prop('checked', checked);
+    return $('<input>').attr({ id, type: 'checkbox' }).addClass(UIUtil.CLASSES.CHECKBOX).prop('checked', checked);
   }
 
   /** @inheritdoc */
@@ -154,17 +123,9 @@ export class UIUtil implements IUIUtil {
         name: group,
         value,
       })
-      .css(Styles.RADIO.BASE)
+      .addClass(UIUtil.CLASSES.RADIO)
       .prop('checked', checked);
 
-    radio.on('change', function () {
-      $(`input[name="${group}"]`).css('background-color', 'black');
-      const $this = $(this);
-      if ($this.prop('checked')) {
-        $this.css('background-color', 'white');
-      }
-    });
-
-    return this.buildLabel(label).prepend(radio);
+    return $('<label>').addClass(UIUtil.CLASSES.RADIO_LABEL).html(label).prepend(radio);
   }
 }
