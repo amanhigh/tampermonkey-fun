@@ -26,8 +26,7 @@ export class ObserveUtil implements IObserveUtil {
   /** @inheritdoc */
   public attributeObserver(target: Element, callback: () => void): MutationObserver | undefined {
     if (!target || !(target instanceof Element)) {
-      console.error('Invalid target element provided to attributeObserver');
-      return undefined;
+      throw new Error('Invalid target element provided to attributeObserver');
     }
 
     try {
@@ -45,17 +44,14 @@ export class ObserveUtil implements IObserveUtil {
 
       return observer;
     } catch (error) {
-      // TODO: Throw Error instead of logging.
-      console.error('attributeObserver error:', error);
-      return undefined;
+      throw new Error(`Failed to create attribute observer: ${error}`);
     }
   }
 
   /** @inheritdoc */
   public nodeObserver(target: Element, callback: () => void): MutationObserver | undefined {
     if (!target || !(target instanceof Element)) {
-      console.error('Invalid target element provided to nodeObserver');
-      return undefined;
+      throw new Error('Invalid target element provided to nodeObserver');
     }
 
     try {
@@ -76,9 +72,7 @@ export class ObserveUtil implements IObserveUtil {
 
       return observer;
     } catch (error) {
-      console.error('nodeObserver error:', error);
-      // TODO: Throw Error instead of logging.
-      return undefined;
+      throw new Error(`Failed to create node observer: ${error}`);
     }
   }
 }

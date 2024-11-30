@@ -1,5 +1,6 @@
 /**
- * Utility class for displaying notifications
+ * Utility class for displaying notifications in the UI.
+ * Uses a singleton pattern with static methods for notification management.
  */
 export class Notifier {
   private static readonly _containerId = 'flashId';
@@ -10,27 +11,26 @@ export class Notifier {
    * @param msg - Message to display
    * @param color - Text color of the message
    * @param timeout - Duration to show message in milliseconds
+   * @throws Error if message content is empty or container initialization fails
    */
   public static message(msg: string, color = 'white', timeout = 2000): void {
     if (!msg) {
-      console.error('Message content is required');
-      return;
+      throw new Error('Message content is required');
     }
 
     try {
       this._ensureContainer();
       const messageElement = this._createMessageElement(msg, color);
-      if (messageElement) {
-        this._showWithAnimation(messageElement, timeout);
-      }
+      this._showWithAnimation(messageElement, timeout);
     } catch (error) {
-      console.error('Error showing message:', error);
+      throw new Error(`Failed to show notification: ${error}`);
     }
   }
 
   /**
    * Ensures the container element exists in the DOM
    * @private
+   * @throws Error if container creation fails
    */
   private static _ensureContainer(): void {
     let container = document.getElementById(this._containerId) as HTMLDivElement | null;
@@ -38,7 +38,6 @@ export class Notifier {
     if (!container) {
       container = document.createElement('div');
       container.id = this._containerId;
-      document.body.appendChild(container);
 
       const containerStyles: Partial<CSSStyleDeclaration> = {
         position: 'fixed',
@@ -50,6 +49,7 @@ export class Notifier {
       };
 
       Object.assign(container.style, containerStyles);
+      document.body.appendChild(container);
     }
 
     this._container = container;
@@ -58,12 +58,11 @@ export class Notifier {
   /**
    * Creates a message element with specified text and color
    * @private
+   * @throws Error if container is not initialized
    */
-  private static _createMessageElement(msg: string, color: string): HTMLDivElement | null {
+  private static _createMessageElement(msg: string, color: string): HTMLDivElement {
     if (!this._container) {
-      // FIXME: Throw error ?
-      console.error('Container not initialized');
-      return null;
+      throw new Error('Notification container not initialized');
     }
 
     const messageElement = document.createElement('div');
@@ -81,7 +80,6 @@ export class Notifier {
     };
 
     Object.assign(messageElement.style, messageStyles);
-
     messageElement.innerHTML = msg;
     this._container.appendChild(messageElement);
 
@@ -91,6 +89,7 @@ export class Notifier {
   /**
    * Handles the animation sequence for showing and hiding the message
    * @private
+   * @throws Error if animation fails
    */
   private static _showWithAnimation(element: HTMLDivElement, timeout: number): void {
     // Show animation
@@ -103,12 +102,19 @@ export class Notifier {
       element.style.opacity = '0';
 
       setTimeout(() => {
-        if (this._container && element.parentNode === this._container) {
+        if (!this._container) {
+          throw new Error('Container was unexpectedly removed');
+        }
+
+        if (element.parentNode === this._container) {
           this._container.removeChild(element);
 
           if (this._container.childNodes.length === 0) {
-            this._container.parentNode?.removeChild(this._container);
-            this._container = null;
+            const parent = this._container.parentNode;
+            if (parent) {
+              parent.removeChild(this._container);
+              this._container = null;
+            }
           }
         }
       }, 300);
