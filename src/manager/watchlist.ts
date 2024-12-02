@@ -1,11 +1,9 @@
 import { Constants } from '../models/constant';
 import { IPaintManager } from './paint';
-import { IWatchlistRepo } from '../repo/watch';
-import { IRecentTickerRepo } from '../repo/recent';
 import { IUIUtil } from '../util/ui';
-import { WatchChangeEvent } from '../models/events';
 import { Notifier } from '../util/notify';
 import { IFnoRepo } from '../repo/fno';
+import { IWatchManager } from './watch';
 
 /**
  * Filter options for watchlist manipulation
@@ -40,16 +38,6 @@ export interface ITradingViewWatchlistManager {
   paintWatchList(): void;
 
   /**
-   * Remove all watchlist filters
-   */
-  resetWatchList(): void;
-
-  /**
-   * Creates and stores the WatchChangeEvent for the alert feed
-   */
-  paintAlertFeedEvent(): Promise<void>;
-
-  /**
    * Adds a new filter to the filter chain
    * @param filter - The filter to add
    */
@@ -70,27 +58,19 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
    * Filter chain for watchlist operations
    * @private
    */
-  private _filterChain: WatchlistFilter[] = [];
+  private filterChain: WatchlistFilter[] = [];
 
-  /**
-   * @param paintManager - Instance of PaintManager
-   * @param watchRepo - Instance of WatchlistRepo
-   * @param recentTickerRepo - Instance of RecentTickerRepo
-   * @param uiUtil - Instance of UIUtil for building UI components
-   * @param fnoRepo - Instance of FnoRepo for FNO symbols
-   */
   constructor(
     private readonly paintManager: IPaintManager,
-    private readonly watchRepo: IWatchlistRepo,
-    private readonly recentTickerRepo: IRecentTickerRepo,
     private readonly uiUtil: IUIUtil,
-    private readonly fnoRepo: IFnoRepo
+    private readonly fnoRepo: IFnoRepo,
+    private readonly watchManager: IWatchManager
   ) {}
 
   /** @inheritdoc */
   getTickers(visible = false): string[] {
     const selector = Constants.DOM.WATCHLIST.SYMBOL;
-    return this._tickerListHelper(selector, visible);
+    return this.tickerListHelper(selector, visible);
   }
 
   /** @inheritdoc */
@@ -108,7 +88,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
    * @param visible - Whether to only get visible elements
    * @returns Array of ticker strings
    */
-  private _tickerListHelper(selector: string, visible: boolean): string[] {
+  private tickerListHelper(selector: string, visible: boolean): string[] {
     return $(visible ? selector + ':visible' : selector)
       .toArray()
       .map((s) => s.innerHTML);
@@ -120,17 +100,21 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     this.paintManager.resetColors(Constants.DOM.WATCHLIST.SYMBOL);
 
     // Paint Name and Flags
-    this.paintManager.paintTickers(Constants.DOM.WATCHLIST.SYMBOL);
+    const colorList = Constants.UI.COLORS.LIST;
+    for (let i = 0; i < colorList.length; i++) {
+      const color = colorList[i];
+      const orderSymbols = this.watchManager.getCategory(i);
+      this.paintManager.paintSymbols(Constants.DOM.WATCHLIST.SYMBOL, orderSymbols, { color: color });
+    }
 
     // Ticker Set Summary Update
-    this._displaySetSummary();
+    this.displaySetSummary();
 
     // Mark FNO
-    this.paintManager.applyCss(Constants.DOM.WATCHLIST.SYMBOL, this.fnoRepo.getAll(), Constants.UI.COLORS.FNO_CSS);
+    this.paintManager.paintSymbols(Constants.DOM.WATCHLIST.SYMBOL, this.fnoRepo.getAll(), Constants.UI.COLORS.FNO_CSS);
   }
 
-  /** @inheritdoc */
-  resetWatchList(): void {
+  private resetWatchList(): void {
     // Increase Widget Height to prevent Line Filtering
     $(Constants.DOM.WATCHLIST.WIDGET).css('height', '20000px');
 
@@ -147,14 +131,12 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
    * Displays the ticker set summary in the UI
    * @private
    */
-  private _displaySetSummary(): void {
+  private displaySetSummary(): void {
     const $watchSummary = $(`#${Constants.UI.IDS.AREAS.SUMMARY}`);
     $watchSummary.empty();
 
-    const orderCategoryLists = this.watchRepo.getWatchCategoryLists();
-
     for (let i = 0; i < Constants.UI.COLORS.LIST.length; i++) {
-      const count = orderCategoryLists.getList(i)?.size || -1;
+      const count = this.watchManager.getCategory(i)?.size || -1;
       const color = Constants.UI.COLORS.LIST[i];
 
       const $label = this.uiUtil
@@ -179,35 +161,27 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   }
 
   /** @inheritdoc */
-  async paintAlertFeedEvent(): Promise<void> {
-    const watchList = this.getTickers();
-    const recentList = Array.from(this.recentTickerRepo.getAll());
-    const event = new WatchChangeEvent(watchList, recentList);
-    await this.watchRepo.createWatchChangeEvent(event);
-  }
-
-  /** @inheritdoc */
   addFilter(filter: WatchlistFilter): void {
     if (!filter.ctrl && !filter.shift) {
       // Reset chain if no modifier keys
-      this._filterChain = [filter];
+      this.filterChain = [filter];
     } else {
       // Add to existing chain
-      this._filterChain.push(filter);
+      this.filterChain.push(filter);
     }
     this.applyFilters();
   }
 
   /** @inheritdoc */
   applyFilters(): void {
-    this._filterChain.forEach((filter) => this._filterWatchList(filter));
+    this.filterChain.forEach((filter) => this.filterWatchList(filter));
   }
 
   /**
    * Helper method to hide all watchlist and screener items
    * @private
    */
-  private _hideAllItems(): void {
+  private hideAllItems(): void {
     $(Constants.DOM.WATCHLIST.LINE).hide();
     $(Constants.DOM.SCREENER.LINE).hide();
   }
@@ -218,7 +192,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
    * @param color - Target color for filtering
    * @param shift - If true, hide matching elements instead of showing them
    */
-  private _filterByColor(color: string, shift: boolean): void {
+  private filterByColor(color: string, shift: boolean): void {
     const symbolSelector = `${Constants.DOM.WATCHLIST.SYMBOL}[style*='color: ${color}']`;
     const screenerSymbolSelector = `${Constants.DOM.SCREENER.SYMBOL}[style*='color: ${color}']`;
 
@@ -241,7 +215,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
    * @param color - Target flag color for filtering
    * @param shift - If true, hide matching elements instead of showing them
    */
-  private _filterByFlag(color: string, shift: boolean): void {
+  private filterByFlag(color: string, shift: boolean): void {
     const flagSelector = `${Constants.DOM.FLAGS.SYMBOL}[style*='color: ${color}']`;
 
     if (shift) {
@@ -262,9 +236,9 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
    * @private
    * @param filter - The filter parameters
    */
-  private _handleFilterInit(filter: WatchlistFilter): void {
+  private handleFilterInit(filter: WatchlistFilter): void {
     if (!filter.ctrl && !filter.shift) {
-      this._hideAllItems();
+      this.hideAllItems();
     }
   }
 
@@ -273,17 +247,17 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
    * @private
    * @param filter - The filter parameters
    */
-  private _handleSymbolFilter(filter: WatchlistFilter): void {
-    this._filterByColor(filter.color, filter.shift);
+  private handleSymbolFilter(filter: WatchlistFilter): void {
+    this.filterByColor(filter.color, filter.shift);
   }
 
   /**
    * Handles filter reset (middle-click)
    * @private
    */
-  private _handleResetFilter(): void {
+  private handleResetFilter(): void {
     this.resetWatchList();
-    this._filterChain = [];
+    this.filterChain = [];
   }
 
   /**
@@ -291,8 +265,8 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
    * @private
    * @param filter - The filter parameters
    */
-  private _handleFlagFilter(filter: WatchlistFilter): void {
-    this._filterByFlag(filter.color, filter.shift);
+  private handleFlagFilter(filter: WatchlistFilter): void {
+    this.filterByFlag(filter.color, filter.shift);
   }
 
   /**
@@ -300,18 +274,18 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
    * @private
    * @param filter - The filter parameters
    */
-  private _filterWatchList(filter: WatchlistFilter): void {
-    this._handleFilterInit(filter);
+  private filterWatchList(filter: WatchlistFilter): void {
+    this.handleFilterInit(filter);
 
     switch (filter.index) {
       case 1: // Left Click
-        this._handleSymbolFilter(filter);
+        this.handleSymbolFilter(filter);
         break;
       case 2: // Middle Click
-        this._handleResetFilter();
+        this.handleResetFilter();
         break;
       case 3: // Right Click
-        this._handleFlagFilter(filter);
+        this.handleFlagFilter(filter);
         break;
       default:
         Notifier.error('You have a strange Mouse!');

@@ -35,7 +35,6 @@ import { ITickerManager, TickerManager } from '../manager/ticker';
 import { ISymbolManager, SymbolManager } from '../manager/symbol';
 import { ITradingViewManager, TradingViewManager } from '../manager/tv';
 import { IPairManager, PairManager } from '../manager/pair';
-import { CategoryManager, ICategoryManager } from '../manager/category';
 import { FnoRepo, IFnoRepo } from '../repo/fno';
 
 // Handler Imports
@@ -49,6 +48,7 @@ import { IPairHandler, PairHandler } from '../handler/pair';
 import { ISequenceHandler, SequenceHandler } from '../handler/sequence';
 import { IKiteHandler, KiteHandler } from '../handler/kite';
 import { IKiteManager, KiteManager } from '../manager/kite';
+import { IHeaderManager, HeaderManager } from '../manager/header';
 
 /**
  * Project Architecture Overview
@@ -164,17 +164,22 @@ export class Factory {
             Factory.repo.fno()
           )
       ),
+    header: (): IHeaderManager =>
+      Factory._getInstance(
+        'headerManager',
+        () =>
+          new HeaderManager(
+            Factory.manager.paint(),
+            Factory.manager.category(),
+            Factory.manager.ticker(),
+            Factory.repo.fno()
+          )
+      ),
 
     screener: (): ITradingViewScreenerManager =>
       Factory._getInstance(
         'screenerManager',
-        () =>
-          new TradingViewScreenerManager(
-            Factory.manager.paint(),
-            Factory.repo.recent(),
-            Factory.manager.category(),
-            Factory.repo.fno()
-          )
+        () => new TradingViewScreenerManager(Factory.manager.paint(), Factory.repo.fno())
       ),
 
     sequence: (): ISequenceManager =>
@@ -183,11 +188,7 @@ export class Factory {
         () => new SequenceManager(Factory.repo.sequence(), Factory.manager.tv(), Factory.manager.ticker())
       ),
 
-    paint: (): IPaintManager =>
-      Factory._getInstance(
-        'paintManager',
-        () => new PaintManager(Factory.manager.category(), Factory.manager.ticker(), Factory.repo.fno())
-      ),
+    paint: (): IPaintManager => Factory._getInstance('paintManager', () => new PaintManager()),
 
     ticker: (): ITickerManager =>
       Factory._getInstance(
@@ -202,12 +203,6 @@ export class Factory {
       ),
     kite: (): IKiteManager =>
       Factory._getInstance('kiteManager', () => new KiteManager(Factory.manager.symbol(), Factory.client.kite())),
-
-    category: (): ICategoryManager =>
-      Factory._getInstance(
-        'categoryManager',
-        () => new CategoryManager(Factory.repo.watch(), Factory.repo.flag(), Factory.manager.watchlist())
-      ),
 
     symbol: (): ISymbolManager =>
       Factory._getInstance('symbolManager', () => new SymbolManager(Factory.repo.ticker(), Factory.repo.exchange())),

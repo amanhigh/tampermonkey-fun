@@ -1,8 +1,7 @@
 import { Constants } from '../models/constant';
 import { IPaintManager } from './paint';
-import { IRecentTickerRepo } from '../repo/recent';
-import { ICategoryManager } from './category';
 import { IFnoRepo } from '../repo/fno';
+import { IWatchManager } from './watch';
 
 /**
  * Interface for managing TradingView screener operations
@@ -38,16 +37,9 @@ export interface ITradingViewScreenerManager {
  * @class TradingViewScreenerManager
  */
 export class TradingViewScreenerManager implements ITradingViewScreenerManager {
-  /**
-   * @param paintManager - PaintManager instance
-   * @param recentTickerRepo - Repository for recent tickers
-   * @param categoryManager - Category manager
-   * @param fnoRepo - Repository for FNO symbols
-   */
   constructor(
     private readonly paintManager: IPaintManager,
-    private readonly recentTickerRepo: IRecentTickerRepo,
-    private readonly categoryManager: ICategoryManager,
+    private readonly watchManager: IWatchManager,
     private readonly fnoRepo: IFnoRepo
   ) {}
 
@@ -83,6 +75,7 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
       .map((s) => s.innerHTML);
   }
 
+  // FIXME: Move to Handler Layer
   /** @inheritdoc */
   paintScreener(): void {
     const screenerSymbolSelector = Constants.DOM.SCREENER.SYMBOL;
@@ -92,18 +85,18 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
     this.paintManager.resetColors(screenerSymbolSelector);
 
     // Paint Recently Watched
-    const recentTickers = this.recentTickerRepo.getAll();
-    this.paintManager.applyCss(screenerSymbolSelector, recentTickers, { color: colorList[3] });
+    // FIXME: Call from Recent Manager in Handler.
 
     // Paint Fno
     const fnoSymbols = this.fnoRepo.getAll();
-    this.paintManager.applyCss(screenerSymbolSelector, fnoSymbols, Constants.UI.COLORS.FNO_CSS);
+    this.paintManager.paintSymbols(screenerSymbolSelector, fnoSymbols, Constants.UI.COLORS.FNO_CSS);
 
     // Paint Name and Flags
-    this.paintManager.paintTickers(screenerSymbolSelector);
+    // FIXME: Moved to Header Manager as paintHeader ?
+    // this.paintManager.paintTickers(screenerSymbolSelector);
 
     // Paint Watchlist (Overwrite White)
-    const watchlistSet = this.categoryManager.getWatchCategory(5);
-    this.paintManager.applyCss(screenerSymbolSelector, watchlistSet, { color: colorList[6] });
+    const watchlistSet = this.watchManager.getDefaultWatchlist();
+    this.paintManager.paintSymbols(screenerSymbolSelector, watchlistSet, { color: colorList[6] });
   }
 }

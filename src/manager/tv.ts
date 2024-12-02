@@ -1,4 +1,6 @@
 import { Constants } from '../models/constant';
+import { Notifier } from '../util/notify';
+import { SmartPrompt } from '../util/smart';
 import { IWaitUtil } from '../util/wait';
 
 // Price and validation related constants
@@ -47,6 +49,24 @@ export interface ITradingViewManager {
    * Closes the text box dialog
    */
   closeTextBox(): void;
+
+  /**
+   * Gets current swift key state
+   * @returns True if swift keys are enabled
+   */
+  isSwiftEnabled(): boolean;
+
+  /**
+   * Title Change to Bridge with AHK
+   */
+  toggleSwiftKeys(enabled: boolean): void;
+
+  /**
+   * Execute ReasonPrompt function which disables SwiftKeys, prompts for reasons,
+   * and enables SwiftKeys after the prompt.
+   * @param callback The callback function to be executed with the reason returned from SmartPrompt
+   */
+  reasonPrompt(callback: (reason: string) => void): void;
 }
 
 /**
@@ -56,7 +76,10 @@ export class TradingViewManager implements ITradingViewManager {
   /**
    * @param waitUtil Manager for DOM operations
    */
-  constructor(private readonly waitUtil: IWaitUtil) {}
+  constructor(
+    private readonly waitUtil: IWaitUtil,
+    private readonly smartPrompt: SmartPrompt
+  ) {}
 
   /** @inheritdoc */
   getName(): string {
@@ -107,7 +130,7 @@ export class TradingViewManager implements ITradingViewManager {
   /** @inheritdoc */
   clipboardCopy(text: string): void {
     void GM.setClipboard(text);
-    this.message(`ClipCopy: ${text}`, 'yellow');
+    Notifier.message(`ClipCopy: ${text}`, 'yellow');
   }
 
   /** @inheritdoc */
@@ -120,12 +143,49 @@ export class TradingViewManager implements ITradingViewManager {
     this.waitUtil.waitJClick(Constants.DOM.POPUPS.CLOSE_TEXTBOX);
   }
 
+  /** @inheritdoc */
+  isSwiftEnabled(): boolean {
+    return $(`#${Constants.UI.IDS.CHECKBOXES.SWIFT}`).prop('checked');
+  }
+
+  /** @inheritdoc */
+  private enableSwiftKey(): void {
+    const liner = ' - SwiftKeys';
+    const swiftEnabled = this.isSwiftEnabled();
+
+    if (swiftEnabled && !document.title.includes('SwiftKeys')) {
+      document.title = document.title + liner;
+    } else if (!swiftEnabled && document.title.includes('SwiftKeys')) {
+      document.title = document.title.replace(liner, '');
+    }
+  }
+
   /**
-   * Private helper to display messages
-   * @param text Message text
-   * @param color Message color
+   * Private helper to toggle swift keys
+   * @param enabled Enable/disable swift keys
    */
-  private message(text: string, color: string): void {
-    $(`#${Constants.UI.IDS.INPUTS.DISPLAY}`).css('color', color).val(text);
+  toggleSwiftKeys(enabled: boolean): void {
+    $(`#${Constants.UI.IDS.CHECKBOXES.SWIFT}`).prop('checked', enabled);
+    this.enableSwiftKey();
+  }
+
+  // FIXME: Move to Handler Later ?
+  /** @inheritdoc */
+  reasonPrompt(callback: (reason: string) => void): void {
+    //Disable SwiftKeys
+    this.toggleSwiftKeys(false);
+
+    //Prompt
+    void this.smartPrompt
+      .showModal(Constants.TRADING.PROMPT.REASONS, Constants.TRADING.PROMPT.OVERRIDES)
+      .then((reason) => {
+        callback(reason);
+        //Enable SwiftKeys
+        this.toggleSwiftKeys(true);
+      })
+      .catch((error) => {
+        console.error('Error in reasonPrompt:', error);
+        this.toggleSwiftKeys(true);
+      });
   }
 }

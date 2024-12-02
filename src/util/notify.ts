@@ -31,7 +31,7 @@ export class Notifier {
     }
   }
 
-  // FIXME: Replace console.log with this.
+  // HACK: Replace console.log with this.
   public static error(msg: string, timeout = 2000): void {
     this.message(msg, 'red', timeout);
   }
