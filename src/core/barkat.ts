@@ -34,9 +34,14 @@ export class Barkat {
         })
       )
       .append(
-        this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.ALERT_CREATE, 'A', () => {
-          console.log('Handling alert create button');
-        })
+        this.uiUtil
+          .buildButton(Constants.UI.IDS.BUTTONS.ALERT_CREATE, 'A', () => {
+            console.log('Handling alert create button');
+          })
+          .contextmenu(() => {
+            console.log('Context menu for alert create button');
+            return false; // Disable default right-click menu
+          })
       )
       .append(
         this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.JOURNAL, 'J', () => {
@@ -53,16 +58,8 @@ export class Barkat {
     this.uiUtil
       .buildWrapper(Constants.UI.IDS.AREAS.MID)
       .appendTo($area)
-      .append(
-        this.uiUtil.buildButton(Constants.UI.IDS.INPUTS.DISPLAY, '', () => {
-          console.log('Handling display input');
-        })
-      )
-      .append(
-        this.uiUtil.buildButton(Constants.UI.IDS.INPUTS.COMMAND, '', () => {
-          console.log('Handling command input');
-        })
-      );
+      .append(this.uiUtil.buildInput(Constants.UI.IDS.INPUTS.DISPLAY))
+      .append(this.uiUtil.buildInput(Constants.UI.IDS.INPUTS.COMMAND));
 
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.ALERTS).appendTo($area);
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.ORDERS).appendTo($area);
