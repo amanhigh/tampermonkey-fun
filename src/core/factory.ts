@@ -38,6 +38,18 @@ import { IPairManager, PairManager } from '../manager/pair';
 import { CategoryManager, ICategoryManager } from '../manager/category';
 import { FnoRepo, IFnoRepo } from '../repo/fno';
 
+// Handler Imports
+import { AlertHandler } from '../handler/alert';
+import { AlertSummaryHandler, IAlertSummaryHandler } from '../handler/alert_summary';
+import { AuditHandler, IAuditHandler } from '../handler/audit';
+import { HotkeyHandler, IHotkeyHandler } from '../handler/hotkey';
+import { KeyConfig } from '../handler/key_config';
+import { IModifierKeyConfig, ModifierKeyConfig } from '../handler/modifier_config';
+import { IPairHandler, PairHandler } from '../handler/pair';
+import { ISequenceHandler, SequenceHandler } from '../handler/sequence';
+import { IKiteHandler, KiteHandler } from '../handler/kite';
+import { IKiteManager, KiteManager } from '../manager/kite';
+
 /**
  * Project Architecture Overview
  * ----------------------------
@@ -182,13 +194,14 @@ export class Factory {
         'tickerManager',
         () =>
           new TickerManager(
-            Factory.repo.recent(),
             Factory.util.wait(),
             Factory.manager.symbol(),
             Factory.manager.screener(),
             Factory.manager.watchlist()
           )
       ),
+    kite: (): IKiteManager =>
+      Factory._getInstance('kiteManager', () => new KiteManager(Factory.manager.symbol(), Factory.client.kite())),
 
     category: (): ICategoryManager =>
       Factory._getInstance(
@@ -202,6 +215,59 @@ export class Factory {
     tv: (): ITradingViewManager => Factory._getInstance('tvManager', () => new TradingViewManager(Factory.util.wait())),
 
     pair: (): IPairManager => Factory._getInstance('pairManager', () => new PairManager(Factory.repo.pair())),
+  };
+
+  /**
+   * Handler Layer
+   * Handles specific operations and user interactions
+   */
+  public static handler = {
+    alert: (): AlertHandler =>
+      Factory._getInstance('alertHandler', () => new AlertHandler(Factory.manager.alert(), Factory.manager.tv())),
+    alertSummary: (): IAlertSummaryHandler =>
+      Factory._getInstance(
+        'alertSummaryHandler',
+        () => new AlertSummaryHandler(Factory.manager.alert(), Factory.manager.tv(), Factory.util.ui())
+      ),
+    audit: (): IAuditHandler =>
+      Factory._getInstance(
+        'auditHandler',
+        () => new AuditHandler(Factory.manager.audit(), Factory.manager.pair(), Factory.util.ui())
+      ),
+    hotkey: (): IHotkeyHandler =>
+      Factory._getInstance(
+        'hotkeyHandler',
+        () => new HotkeyHandler(Factory.util.key(), Factory.handler.keyConfig(), Factory.handler.modifierKeyConfig())
+      ),
+    kite: (): IKiteHandler =>
+      Factory._getInstance('kiteHandler', () => new KiteHandler(Factory.manager.kite(), Factory.manager.symbol())),
+    keyConfig: (): KeyConfig =>
+      Factory._getInstance(
+        'keyConfig',
+        () => new KeyConfig(Factory.manager.tv(), Factory.manager.sequence(), Factory.manager.category())
+      ),
+    modifierKeyConfig: (): IModifierKeyConfig =>
+      Factory._getInstance(
+        'modifierKeyConfig',
+        () => new ModifierKeyConfig(Factory.manager.category(), Factory.manager.tv())
+      ),
+    pair: (): IPairHandler =>
+      Factory._getInstance(
+        'pairHandler',
+        () =>
+          new PairHandler(
+            Factory.client.investing(),
+            Factory.manager.pair(),
+            Factory.util.smart(),
+            Factory.manager.alert()
+          )
+      ),
+
+    sequence: (): ISequenceHandler =>
+      Factory._getInstance(
+        'sequenceHandler',
+        () => new SequenceHandler(Factory.manager.sequence(), Factory.manager.ticker())
+      ),
   };
 
   /**
