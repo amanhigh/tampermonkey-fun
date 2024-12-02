@@ -1,12 +1,14 @@
 import { Constants } from '../models/constant';
-import { IRecentTickerRepo } from '../repo/recent';
 import { IWaitUtil } from '../util/wait';
 import { IPaintManager } from '../manager/paint';
 import { ITradingViewScreenerManager } from '../manager/screener';
-import { ISequenceManager } from '../manager/sequence';
 import { ITradingViewWatchlistManager } from '../manager/watchlist';
-import { IKiteHandler } from '../handler/kite';
+import { IKiteHandler } from './kite';
 import { Notifier } from '../util/notify';
+import { ITickerManager } from '../manager/ticker';
+import { IRecentManager } from '../manager/recent';
+import { SyncUtil } from '../util/sync';
+import { ISequenceHandler } from './sequence';
 
 /**
  * Interface for managing ticker operations
@@ -28,13 +30,15 @@ export interface ITickerHandler {
  */
 export class TickerHandler implements ITickerHandler {
   constructor(
-    private readonly recentRepo: IRecentTickerRepo,
+    private readonly recentManager: IRecentManager,
+    private readonly tickerManager: ITickerManager,
     private readonly waitUtil: IWaitUtil,
     private readonly paintManager: IPaintManager,
     private readonly screenerManager: ITradingViewScreenerManager,
-    private readonly sequenceManager: ISequenceManager,
+    private readonly sequenceHandler: ISequenceHandler,
     private readonly watchlistManager: ITradingViewWatchlistManager,
-    private readonly kiteHandler: IKiteHandler
+    private readonly kiteHandler: IKiteHandler,
+    private readonly syncUtil: SyncUtil
   ) {}
 
   /**
@@ -42,17 +46,18 @@ export class TickerHandler implements ITickerHandler {
    */
   public onTickerChange(): void {
     //HACK: Make Event Based when New Ticker Appears
-    this.waitUtil.waitOn('tickerChange', 150, () => {
+    // FIXME: Change with Sync Util which has this func.
+    this.syncUtil.waitOn('tickerChange', 150, () => {
       // TODO: AlertRefreshLocal - Not yet migrated to typescript
       this.alertRefreshLocal();
 
       // Update UI components
       this.paintManager.paintHeader();
       this.recordRecentTicker();
-      // FIXME: Pass GttOrderMap from Kite Manager
-      this.sequenceManager.displaySequence();
+      this.sequenceHandler.displaySequence();
 
       // Handle GTT operations
+      // FIXME: Pass GttOrderMap from Kite Manager
       this.kiteHandler.gttSummary();
     });
   }
@@ -66,11 +71,11 @@ export class TickerHandler implements ITickerHandler {
     if (recentEnabled) {
       Notifier.success('Recent Enabled');
     } else {
-      // FIXME: Interact with Recent Manager ?
-      this.recentRepo.clear();
+      this.recentManager.clearRecent();
       this.screenerManager.paintScreener();
-      // FIXME: Asyc await
-      this.watchlistManager.paintAlertFeedEvent();
+      this.watchlistManager.paintAlertFeedEvent().catch(() => {
+        Notifier.error('Error updating watchlist');
+      });
       Notifier.error('Recent Disabled');
     }
   }
@@ -81,16 +86,14 @@ export class TickerHandler implements ITickerHandler {
    */
   private recordRecentTicker(): void {
     const recentEnabled = $(`#${Constants.UI.IDS.CHECKBOXES.RECENT}`).prop('checked');
-    // FIXME: Use Ticker Manager to get Ticker
-    const ticker = this.paintManager.getName();
+    const ticker = this.tickerManager.getTicker();
 
-    // FIXME: Use isRecent from Ticker Manager
-    if (recentEnabled && !this.recentRepo.has(ticker)) {
-      // FIXME: Use Recent Manager to add
-      this.recentRepo.add(ticker);
+    if (recentEnabled && !this.recentManager.isRecent(ticker)) {
+      this.recentManager.addTicker(ticker);
       this.screenerManager.paintScreener();
-      // FIXME: Handle async
-      this.watchlistManager.paintAlertFeedEvent();
+      this.watchlistManager.paintAlertFeedEvent().catch(() => {
+        Notifier.error('Error updating watchlist');
+      });
     }
   }
 

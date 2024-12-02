@@ -1,5 +1,4 @@
 import { Constants } from '../models/constant';
-import { IRecentTickerRepo } from '../repo/recent';
 import { IWaitUtil } from '../util/wait';
 import { ITradingViewScreenerManager } from './screener';
 import { ISymbolManager } from './symbol';
@@ -50,12 +49,6 @@ export interface ITickerManager {
   openBenchmarkTicker(): void;
 
   /**
-   * Check if there are any recent tickers
-   * @returns True if recent tickers exist
-   */
-  hasRecentTickers(): boolean;
-
-  /**
    * Navigates through visible tickers in either screener or watchlist
    * @param step - Number of steps to move (positive for forward, negative for backward)
    * @throws Error When no visible tickers are available
@@ -76,7 +69,6 @@ export class TickerManager implements ITickerManager {
    * @param watchlistManager Manager for watchlist operations
    */
   constructor(
-    private readonly _recentTickerRepo: IRecentTickerRepo,
     private readonly _waitUtil: IWaitUtil,
     private readonly _symbolManager: ISymbolManager,
     private readonly _screenerManager: ITradingViewScreenerManager,
@@ -137,17 +129,6 @@ export class TickerManager implements ITickerManager {
     }
 
     this.openTicker(`${ticker}/${benchmark}`);
-  }
-
-  // FIXME: Add isRecent(ticker) method to be used in TickerHandler
-
-  // FIXME: Add Recent Ticker Method
-
-  // FIXME: Should we move all Recent Related Logic to RecentManager ?
-
-  /** @inheritdoc */
-  hasRecentTickers(): boolean {
-    return this._recentTickerRepo.getCount() > 0;
   }
 
   /** @inheritdoc */
