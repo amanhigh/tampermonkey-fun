@@ -18,7 +18,8 @@
     "debug": "webpack --config config/webpack.config.dev.cjs",
     "build": "webpack --config config/webpack.config.prod.cjs",
     "test": "webpack --config config/test.cjs",
-    "format": "prettier --write \"src/**/*.ts\""
+    "format": "prettier --write \"src/**/*.ts\"",
+    "barkat": "webpack --config config/barkat.cjs"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",

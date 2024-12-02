@@ -9,6 +9,7 @@ import { KeyUtil, IKeyUtil } from '../util/key';
 import { SmartPrompt, ISmartPrompt } from '../util/smart';
 import { WaitUtil, IWaitUtil } from '../util/wait';
 import { TestApp } from './test';
+import { Barkat } from './barkat';
 
 // Repository Imports
 import { RepoCron, IRepoCron } from '../repo/cron';
@@ -58,6 +59,7 @@ export class Factory {
    */
   public static app = {
     test: (): TestApp => Factory._getInstance('testApp', () => new TestApp(Factory.util.ui(), Factory.util.key())),
+    barkat: (): Barkat => Factory._getInstance('barkat', () => new Barkat(Factory.util.ui())),
   };
 
   /**

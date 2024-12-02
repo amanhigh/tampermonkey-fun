@@ -4,7 +4,7 @@ import '../style/main.less';
 import GM_fetch from '@trim21/gm-fetch';
 
 async function main() {
-  console.log('script start');
+  console.log('Webpack Demo script start');
 
   // cross domain requests
   console.log(`uuid: ${await fetchExample()}`);

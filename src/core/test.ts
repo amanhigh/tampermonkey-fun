@@ -123,9 +123,9 @@ export class TestApp {
 }
 
 function main(): void {
-  console.log('experiment script started');
+  console.log('Tamperfun Experiment started');
   const app = Factory.app.test();
   app.initialize();
 }
 
-main();
+// main();
