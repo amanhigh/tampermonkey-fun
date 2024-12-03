@@ -1,5 +1,5 @@
 import { IRepoCron } from './cron';
-import { BaseRepo, IBaseRepo, SerializedData } from './base';
+import { BaseRepo, IBaseRepo } from './base';
 
 /**
  * Interface for Set-based repository operations
@@ -61,27 +61,27 @@ export abstract class SetRepo<T> extends BaseRepo<Set<T>> implements ISetRepo<T>
   constructor(repoCron: IRepoCron, storeId: string) {
     super(repoCron, storeId);
     this._set = new Set<T>();
+    this.load()
+      .then((data) => {
+        this._set = data;
+      })
+      .catch(() => {
+        console.error(`Failed to load ${this._storeId}`);
+      });
   }
 
   /**
    * @inheritdoc
    */
-  protected _deserialize(data: SerializedData): Set<T> {
-    if (!Array.isArray(data)) {
-      return new Set<T>();
-    }
-    return new Set(data as unknown as T[]);
+  protected _deserialize(data: any): Set<T> {
+    return new Set(data as T[]);
   }
 
   /**
    * @inheritdoc
    */
-  protected _serialize(): SerializedData {
-    const serializedData: SerializedData = {};
-    Array.from(this._set).forEach((item, index) => {
-      serializedData[index.toString()] = item;
-    });
-    return serializedData;
+  protected _serialize(): any {
+    return Array.from(this._set);
   }
 
   /**

@@ -1,5 +1,5 @@
 import { IRepoCron } from './cron';
-import { BaseRepo, IBaseRepo, SerializedData } from './base';
+import { BaseRepo, IBaseRepo } from './base';
 import { CategoryLists } from '../models/category';
 
 /**
@@ -34,6 +34,13 @@ export abstract class CategoryRepo extends BaseRepo<CategoryLists> implements IC
     super(repoCron, storeId);
     // Initialize with empty map until loaded
     this._categoryLists = new CategoryLists(new Map());
+    this.load()
+      .then((data) => {
+        this._categoryLists = data;
+      })
+      .catch(() => {
+        console.error(`Failed to load ${this._storeId}`);
+      });
   }
 
   /**
@@ -41,8 +48,12 @@ export abstract class CategoryRepo extends BaseRepo<CategoryLists> implements IC
    * @protected
    * @returns Serialized category lists data
    */
-  protected _serialize(): string {
-    return JSON.stringify(this._categoryLists);
+  protected _serialize(): any {
+    const obj: { [key: number]: string[] } = {};
+    this._categoryLists.getLists().forEach((value, key) => {
+      obj[key] = Array.from(value);
+    });
+    return obj;
   }
 
   /**
@@ -51,12 +62,11 @@ export abstract class CategoryRepo extends BaseRepo<CategoryLists> implements IC
    * @param data Raw storage data
    * @returns Deserialized CategoryLists instance
    */
-  protected _deserialize(data: SerializedData): CategoryLists {
+  protected _deserialize(data: any): CategoryLists {
     const map = new Map<number, Set<string>>();
     Object.entries(data).forEach(([key, value]) => {
       if (Array.isArray(value)) {
-        const stringSet = new Set(value.map((item) => String(item)));
-        map.set(Number(key), stringSet);
+        map.set(Number(key), new Set(value as string[]));
       }
     });
     return new CategoryLists(map);
