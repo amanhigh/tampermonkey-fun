@@ -1,10 +1,19 @@
+/**
+ * Interface and implementations for alert handling operations
+ */
+
 import { IAlertManager } from '../manager/alert';
+import { IAuditManager } from '../manager/audit';
+import { ISymbolManager } from '../manager/symbol';
+import { ITickerManager } from '../manager/ticker';
 import { ITradingViewManager } from '../manager/tv';
+import { IWatchManager } from '../manager/watch';
 import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
+import { IUIUtil } from '../util/ui';
 
 /**
- * Interface for alert handling operations
+ * Handles alert operations and user interactions
  */
 export interface IAlertHandler {
   /**
@@ -26,6 +35,34 @@ export interface IAlertHandler {
    * Deletes alerts near cursor price
    */
   deleteAlertAtCursor(): Promise<void>;
+
+  /**
+   * Handles refresh button operations
+   * - Forces alert refresh
+   * - Handles order set cleanup
+   */
+  handleRefreshButton(): void;
+
+  /**
+   * Handles alert button actions based on modifiers
+   * - Maps current exchange to TV ticker with Ctrl key
+   * - Creates high alert without modifiers
+   * @param e Mouse event with modifier info
+   */
+  handleAlertButton(e: MouseEvent): void;
+
+  /**
+   * Handles the journal button toggle event
+   * @param e Event object
+   */
+  handleJournalButton(e: Event): void;
+
+  /**
+   * Handles alert context menu event
+   * Prevents default and triggers ticker refresh/audit
+   * @param e Context menu event object
+   */
+  handleAlertContextMenu(e: Event): void;
 }
 
 /**
@@ -34,12 +71,16 @@ export interface IAlertHandler {
 export class AlertHandler implements IAlertHandler {
   constructor(
     private readonly alertManager: IAlertManager,
-    private readonly tradingViewManager: ITradingViewManager
+    private readonly tradingViewManager: ITradingViewManager,
+    private readonly auditManager: IAuditManager,
+    private readonly watchManager: IWatchManager,
+    private readonly tickerManager: ITickerManager,
+    private readonly symbolManager: ISymbolManager,
+    private readonly uiUtil: IUIUtil
   ) {}
 
-  /**
-   * Creates alerts from textbox values
-   */
+  // Keep existing methods
+  /** @inheritdoc */
   public async createAlertsFromTextBox(): Promise<void> {
     const command = $(`#${Constants.UI.IDS.INPUTS.COMMAND}`).val();
     if (!command) {
@@ -63,9 +104,7 @@ export class AlertHandler implements IAlertHandler {
     }, 5000);
   }
 
-  /**
-   * Creates alert at cursor price position
-   */
+  /** @inheritdoc */
   public async createAlertAtCursor(): Promise<void> {
     try {
       const price = await this.tradingViewManager.getCursorPrice();
@@ -77,9 +116,7 @@ export class AlertHandler implements IAlertHandler {
     }
   }
 
-  /**
-   * Creates alert 20% above current price
-   */
+  /** @inheritdoc */
   public async createHighAlert(): Promise<void> {
     const currentPrice = this.tradingViewManager.getLastTradedPrice();
     if (currentPrice === null) {
@@ -97,9 +134,7 @@ export class AlertHandler implements IAlertHandler {
     }
   }
 
-  /**
-   * Deletes alerts near cursor price
-   */
+  /** @inheritdoc */
   public async deleteAlertAtCursor(): Promise<void> {
     try {
       const price = await this.tradingViewManager.getCursorPrice();
@@ -109,5 +144,44 @@ export class AlertHandler implements IAlertHandler {
       const message = error instanceof Error ? error.message : 'Unknown error';
       Notifier.error(message);
     }
+  }
+
+  // Add new methods from alert.js
+  /** @inheritdoc */
+  public handleRefreshButton(): void {
+    // Refresh alerts
+    this.alertManager.reloadAlerts().catch(() => {
+      Notifier.error('Failed to refresh alerts');
+    });
+
+    // Handle order set cleanup
+    this.watchManager.handleWatchlistCleanup();
+  }
+
+  /** @inheritdoc */
+  public handleAlertButton(e: MouseEvent): void {
+    if (e.ctrlKey) {
+      // Map current exchange to current TV ticker
+      const ticker = this.tickerManager.getTicker();
+      const exchange = this.tickerManager.getCurrentExchange();
+      this.symbolManager.createTvToExchangeTickerMapping(ticker, exchange);
+      Notifier.success(`Mapped ${ticker} to ${exchange}`);
+    } else {
+      void this.createHighAlert();
+    }
+  }
+
+  /** @inheritdoc */
+  public handleJournalButton(): void {
+    this.uiUtil.toggleUI(`#${Constants.UI.IDS.AREAS.JOURNAL}`);
+  }
+
+  /** @inheritdoc */
+  public handleAlertContextMenu(e: Event): void {
+    // Prevent default context menu
+    e.preventDefault();
+
+    // Perform audit
+    this.auditManager.auditCurrentTicker();
   }
 }

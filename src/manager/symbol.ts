@@ -53,6 +53,8 @@ export interface ISymbolManager {
    * @param exchange Exchange identifier (e.g., "NSE")
    */
   createTvToExchangeTickerMapping(tvTicker: string, exchange: string): void;
+
+  // TODO: Clean all mappings, eg. Pair, Ticker, Exchange etc.
 }
 
 /**

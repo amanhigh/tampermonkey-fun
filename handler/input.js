@@ -3,15 +3,8 @@
  */
 class InputHandler {
     constructor(eventManager) {
-        this.eventManager = eventManager;
         this.ENTER_KEY_CODE = 13;
         this.TICKER_SUFFIX = "xox";
-        this.setupEventListeners();
-    }
-
-    setupEventListeners() {
-        this.eventManager.registerHandler('inputChange', this.onInputChange.bind(this));
-        this.eventManager.registerHandler('inputSubmit', this.HandleInputSubmit.bind(this));
     }
 
     /**
