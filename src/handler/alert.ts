@@ -19,7 +19,7 @@ export interface IAlertHandler {
   /**
    * Creates alerts from textbox values
    */
-  createAlertsFromTextBox(): Promise<void>;
+  createAlertsFromTextBox(input: string): Promise<void>;
 
   /**
    * Creates alert at cursor price position
@@ -79,15 +79,9 @@ export class AlertHandler implements IAlertHandler {
     private readonly uiUtil: IUIUtil
   ) {}
 
-  // Keep existing methods
   /** @inheritdoc */
-  public async createAlertsFromTextBox(): Promise<void> {
-    const command = $(`#${Constants.UI.IDS.INPUTS.COMMAND}`).val();
-    if (!command) {
-      return;
-    }
-
-    const prices = String(command).trim().split(' ');
+  public async createAlertsFromTextBox(input: string): Promise<void> {
+    const prices = String(input).trim().split(' ');
     for (const p of prices) {
       try {
         await this.alertManager.createAlertForCurrentTicker(parseFloat(p));

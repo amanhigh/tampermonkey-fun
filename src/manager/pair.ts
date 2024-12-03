@@ -23,7 +23,7 @@ export interface IPairManager {
    * @param investingTicker Investing.com ticker
    * @returns The cached pair data or null if not found
    */
-  investingTickerToPairInfo(investingTicker: string): PairInfo | null;
+  investingTickerToPairInfo(investingTicker: string): PairInfo;
 
   /**
    * Deletes a ticker's pair info
@@ -52,8 +52,12 @@ export class PairManager implements IPairManager {
   }
 
   /** @inheritdoc */
-  investingTickerToPairInfo(investingTicker: string): PairInfo | null {
-    return this._pairRepo.getPairInfo(investingTicker);
+  investingTickerToPairInfo(investingTicker: string): PairInfo {
+    const pairInfo = this._pairRepo.getPairInfo(investingTicker);
+    if (!pairInfo) {
+      throw new Error(`No pair info found for ticker: ${investingTicker}`);
+    }
+    return pairInfo;
   }
 
   /** @inheritdoc */

@@ -104,7 +104,6 @@ export class AlertManager implements IAlertManager {
    */
   private _reloadFromHtml(html: string): number {
     try {
-      this._alertRepo.clear();
       let count = 0;
 
       $(html)
@@ -207,7 +206,7 @@ export class AlertManager implements IAlertManager {
    * @private
    * @returns PairInfo or null if not found
    */
-  private _getCurrentPairInfo(): PairInfo | null {
+  private _getCurrentPairInfo(): PairInfo {
     const investingTicker = this._tickerManager.getInvestingTicker();
     return this._pairManager.investingTickerToPairInfo(investingTicker);
   }

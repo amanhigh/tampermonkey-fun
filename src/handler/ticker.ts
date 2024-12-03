@@ -1,5 +1,4 @@
 import { Constants } from '../models/constant';
-import { IWaitUtil } from '../util/wait';
 import { IPaintManager } from '../manager/paint';
 import { ITradingViewScreenerManager } from '../manager/screener';
 import { ITradingViewWatchlistManager } from '../manager/watchlist';
@@ -12,7 +11,7 @@ import { ISequenceHandler } from './sequence';
 import { ISymbolManager } from '../manager/symbol';
 
 /**
- * Interface for managing ticker operations and command processing
+ * Interface for managing ticker operations
  */
 export interface ITickerHandler {
   /**
@@ -23,45 +22,23 @@ export interface ITickerHandler {
   /**
    * Handles recent ticker reset functionality
    */
-  onRencentReset(): void;
+  resetRecent(): void;
 
   /**
-   * Processes command input
-   * Handles commands in format ACTION=VALUE
-   * Available commands:
-   * - E=NSE (Maps current ticker to exchange, auto-picks if no value)
-   * @param input Command string to process
+   * Opens specified ticker symbol
+   * @param ticker Ticker symbol to open
    */
-  processCommand(input: string): Promise<void>;
-
-  /**
-   * Handles command submission on enter key press
-   * @param e Keyboard event to process
-   */
-  handleCommandSubmit(e: KeyboardEvent): void;
-}
-
-interface CommandParts {
-  action: string;
-  value: string;
+  openTicker(ticker: string): void;
 }
 
 /**
  * Handles ticker operations and related UI updates
  */
 export class TickerHandler implements ITickerHandler {
-  private readonly ENTER_KEY_CODE = 13;
-  private readonly HELP_MESSAGE = `
-Command Format: ACTION=VALUE
-Available Commands:
-- E=NSE (Maps current ticker to exchange, auto-picks if no value)
-`;
-
   constructor(
     private readonly recentManager: IRecentManager,
     private readonly tickerManager: ITickerManager,
     private readonly symbolManager: ISymbolManager,
-    private readonly waitUtil: IWaitUtil,
     private readonly paintManager: IPaintManager,
     private readonly screenerManager: ITradingViewScreenerManager,
     private readonly sequenceHandler: ISequenceHandler,
@@ -71,49 +48,26 @@ Available Commands:
   ) {}
 
   /** @inheritdoc */
-  public async processCommand(input: string): Promise<void> {
-    const parts = this.parseCommand(input);
-    if (!parts.action || !parts.value) {
-      this.displayHelpMessage();
-      return;
-    }
-
+  public openTicker(ticker: string): void {
     try {
-      switch (parts.action) {
-        case 'E':
-          await this.handleExchangeCommand(parts.value);
-          break;
-        default:
-          this.displayHelpMessage();
-      }
+      const exchangeTicker = this.symbolManager.tvToExchangeTicker(ticker);
+      this.tickerManager.openTicker(exchangeTicker);
+      Notifier.success(`Opened ${exchangeTicker}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      Notifier.error(message);
-    }
-  }
-
-  /** @inheritdoc */
-  public handleCommandSubmit(e: KeyboardEvent): void {
-    if (!this.isEnterKey(e)) {
-      return;
-    }
-
-    const input = $(`#${Constants.UI.IDS.INPUTS.COMMAND}`).val();
-    if (typeof input === 'string') {
-      void this.processCommand(input);
+      Notifier.error(`Failed to open ticker: ${message}`);
     }
   }
 
   /** @inheritdoc */
   public onTickerChange(): void {
     //HACK: Make Event Based when New Ticker Appears
-    // FIXME: Change with Sync Util which has this func.
     this.syncUtil.waitOn('tickerChange', 150, () => {
       // TODO: AlertRefreshLocal - Not yet migrated to typescript
-      this.alertRefreshLocal();
+      // this.alertRefreshLocal();
 
       // Update UI components
-      this.paintManager.paintHeader();
+      // this.paintManager.paintHeader();
       this.recordRecentTicker();
       this.sequenceHandler.displaySequence();
 
@@ -124,7 +78,7 @@ Available Commands:
   }
 
   /** @inheritdoc */
-  public onRencentReset(): void {
+  public resetRecent(): void {
     const recentEnabled = $(`#${Constants.UI.IDS.CHECKBOXES.RECENT}`).prop('checked');
 
     if (recentEnabled) {
@@ -137,30 +91,6 @@ Available Commands:
       });
       Notifier.error('Recent Disabled');
     }
-  }
-
-  private async handleExchangeCommand(value: string): Promise<void> {
-    const ticker = this.tickerManager.getTicker();
-    const exchange = value || this.tickerManager.getCurrentExchange();
-
-    await this.symbolManager.createTvToExchangeTickerMapping(ticker, exchange);
-    Notifier.success(`Mapped ${ticker} to ${exchange}`);
-  }
-
-  private parseCommand(input: string): CommandParts {
-    const [action, value] = input.split('=');
-    return {
-      action: action?.trim() ?? '',
-      value: value?.trim() ?? '',
-    };
-  }
-
-  private displayHelpMessage(): void {
-    Notifier.info(this.HELP_MESSAGE);
-  }
-
-  private isEnterKey(e: KeyboardEvent): boolean {
-    return e.keyCode === this.ENTER_KEY_CODE;
   }
 
   private recordRecentTicker(): void {
