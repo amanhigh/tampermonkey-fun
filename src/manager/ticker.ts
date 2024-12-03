@@ -77,12 +77,20 @@ export class TickerManager implements ITickerManager {
 
   /** @inheritdoc */
   getTicker(): string {
-    return $(Constants.DOM.BASIC.TICKER).html() || '';
+    const ticker = $(Constants.DOM.BASIC.TICKER).html();
+    if (!ticker) {
+      throw new Error('Ticker not found');
+    }
+    return ticker;
   }
 
   /** @inheritdoc */
   getCurrentExchange(): string {
-    return $(Constants.DOM.BASIC.EXCHANGE).text() || '';
+    const exchange = $(Constants.DOM.BASIC.EXCHANGE).text();
+    if (!exchange) {
+      throw new Error('Exchange not found');
+    }
+    return exchange;
   }
 
   /** @inheritdoc */

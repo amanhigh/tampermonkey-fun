@@ -2,9 +2,13 @@ import '../style/main.less';
 import { Factory } from './factory';
 import { UIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
+import { ISequenceHandler } from '../handler/sequence';
 
 export class Barkat {
-  constructor(private readonly uiUtil: UIUtil) {}
+  constructor(
+    private readonly uiUtil: UIUtil,
+    private readonly sequenceHandler: ISequenceHandler
+  ) {}
   initialize(): void {
     console.log('barkat initialized');
     this.setupUI();
@@ -25,7 +29,7 @@ export class Barkat {
       )
       .append(
         this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.SEQUENCE, 'S', () => {
-          console.log('Handling sequence switch');
+          this.sequenceHandler.handleSequenceSwitch();
         })
       )
       .append(

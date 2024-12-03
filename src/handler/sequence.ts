@@ -16,6 +16,13 @@ export interface ISequenceHandler {
    * Displays sequence information in the input
    */
   displaySequence(): void;
+
+  /**
+   * Toggles sequence freeze state
+   * Uses current sequence when enabling freeze
+   * @returns Current freeze state after toggle
+   */
+  toggleFreezeSequence(): void;
 }
 
 /**
@@ -27,19 +34,15 @@ export class SequenceHandler implements ISequenceHandler {
     private readonly tickerManager: ITickerManager
   ) {}
 
-  /**
-   * Handles the sequence switch operation
-   */
-  public handleSequenceSwitch(): void {
+  /** @inheritdoc */
+  handleSequenceSwitch(): void {
     this.sequenceManager.flipSequence();
     // Update the sequence display
     this.displaySequence();
   }
 
-  /**
-   * Displays sequence information in the input
-   */
-  public displaySequence(): void {
+  /** @inheritdoc */
+  displaySequence(): void {
     const sequence = this.sequenceManager.getCurrentSequence();
     const tvTicker = this.tickerManager.getTicker();
 
@@ -51,5 +54,10 @@ export class SequenceHandler implements ISequenceHandler {
     } else {
       $displayInput.css('background-color', 'black');
     }
+  }
+
+  /** @inheritdoc */
+  toggleFreezeSequence(): void {
+    this.sequenceManager.toggleFreezeSequence();
   }
 }

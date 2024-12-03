@@ -75,7 +75,8 @@ export class Factory {
    */
   public static app = {
     test: (): TestApp => Factory._getInstance('testApp', () => new TestApp(Factory.util.ui(), Factory.util.key())),
-    barkat: (): Barkat => Factory._getInstance('barkat', () => new Barkat(Factory.util.ui())),
+    barkat: (): Barkat =>
+      Factory._getInstance('barkat', () => new Barkat(Factory.util.ui(), Factory.handler.sequence())),
   };
 
   /**

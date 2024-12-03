@@ -1,3 +1,4 @@
+import { Notifier } from '../util/notify';
 import { BaseRepo } from './base';
 
 export interface IRepoCron {
@@ -30,8 +31,9 @@ export class RepoCron implements IRepoCron {
       try {
         await repository.save();
       } catch (error) {
-        console.error(`Failed to save repository: ${error as Error}`);
+        Notifier.error(`Failed to save repository: ${error as Error}`);
       }
     }
+    Notifier.success('Repositories saved');
   }
 }
