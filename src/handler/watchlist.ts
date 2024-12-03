@@ -4,7 +4,6 @@
 
 import { IHeaderManager } from '../manager/header';
 import { ITradingViewScreenerManager } from '../manager/screener';
-import { ITradingViewManager } from '../manager/tv';
 import { IWatchManager } from '../manager/watch';
 import { ITradingViewWatchlistManager } from '../manager/watchlist';
 import { Notifier } from '../util/notify';

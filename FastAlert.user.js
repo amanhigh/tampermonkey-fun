@@ -49,10 +49,7 @@ if (location.pathname.includes("alert-center")) {
 
 //***************TRADING VIEW ********************
 
-function tradingView() {
-    SetupTvUI();
-    loadTradingViewVars();
-
+function tradingView() {        
     document.addEventListener('keydown', doc_keyDown, false);
 
     //Register Ticker Change Listener
@@ -95,18 +92,5 @@ function tradingView() {
 
             message("Screener Hooked", "green");
         }, 10);
-
-        //Paint WatchList, Screener etc
-        onWatchListChange();
-
-        // Load Alerts
-        ForceRefreshAlerts();
-
-        //Missing FNO's Logging        
-        LogMissingData();
     }, 10);
-
-    //Run Save Cron
-    const seconds = 30
-    setInterval(cronSave, seconds * 1000);
 }

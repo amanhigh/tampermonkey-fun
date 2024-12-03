@@ -95,6 +95,7 @@ export class Barkat {
 
   onLoad() {
     console.log('Barkat Onload');
+    // TODO: Create Onload Handler
     this.watchListHandler.onWatchListChange();
   }
 }
