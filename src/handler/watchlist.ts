@@ -93,7 +93,6 @@ export class WatchListHandler implements IWatchListHandler {
   private resetWatchListState(): void {
     // Reset both watchlist and screener views
     this.watchlistManager.resetWatchList();
-    this.updateWatchListSet();
   }
 
   /**
@@ -116,9 +115,5 @@ export class WatchListHandler implements IWatchListHandler {
 
   private applyFilters(): void {
     this.watchlistManager.applyFilters();
-  }
-
-  private updateWatchListSet(): void {
-    // TODO: Migrate from order.js
   }
 }

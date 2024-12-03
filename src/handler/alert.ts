@@ -11,9 +11,10 @@ import { IWatchManager } from '../manager/watch';
 import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 import { IUIUtil } from '../util/ui';
+import { ISyncUtil } from '../util/sync';
 
 /**
- * Handles alert operations and user interactions
+ * Interface for managing alert operations
  */
 export interface IAlertHandler {
   /**
@@ -35,6 +36,16 @@ export interface IAlertHandler {
    * Deletes alerts near cursor price
    */
   deleteAlertAtCursor(): Promise<void>;
+
+  /**
+   * Refreshes local alerts with synchronization
+   */
+  refreshAlerts(): void;
+
+  /**
+   * Forces a refresh of all alerts from server
+   */
+  refershAllAllerts(): Promise<void>;
 
   /**
    * Handles refresh button operations
@@ -76,6 +87,7 @@ export class AlertHandler implements IAlertHandler {
     private readonly watchManager: IWatchManager,
     private readonly tickerManager: ITickerManager,
     private readonly symbolManager: ISymbolManager,
+    private readonly syncUtil: ISyncUtil,
     private readonly uiUtil: IUIUtil
   ) {}
 
@@ -140,13 +152,33 @@ export class AlertHandler implements IAlertHandler {
     }
   }
 
-  // Add new methods from alert.js
+  /** @inheritdoc */
+  public refreshAlerts(): void {
+    this.syncUtil.waitOn('alert-refresh-local', 10, () => {
+      const alerts = this.alertManager.getAlerts();
+      // FIXME: Use AlertSummary Manager
+      this.displayAlerts(alerts);
+      //TODO: Audit Current
+    });
+  }
+
+  /** @inheritdoc */
+  public async refershAllAllerts(): Promise<void> {
+    const count = await this.alertManager.reloadAlerts();
+    if (count > 0) {
+      Notifier.success(`Loaded ${count} alerts`);
+    } else {
+      Notifier.warn('No alerts found');
+    }
+
+    this.refreshAlerts();
+    // TODO: Audit All
+  }
+
   /** @inheritdoc */
   public handleRefreshButton(): void {
     // Refresh alerts
-    this.alertManager.reloadAlerts().catch(() => {
-      Notifier.error('Failed to refresh alerts');
-    });
+    void this.refershAllAllerts();
 
     // Handle order set cleanup
     this.watchManager.handleWatchlistCleanup();

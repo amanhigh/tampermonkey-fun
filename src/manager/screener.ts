@@ -75,7 +75,6 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
       .map((s) => s.innerHTML);
   }
 
-  // FIXME: Move to Handler Layer
   /** @inheritdoc */
   paintScreener(): void {
     const screenerSymbolSelector = Constants.DOM.SCREENER.SYMBOL;
