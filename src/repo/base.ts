@@ -54,6 +54,9 @@ export abstract class BaseRepo<T> implements IBaseRepo<T> {
     this._repoCron = repoCron;
     this._storeId = storeId;
     this._repoCron.registerRepository(this);
+    this.load().catch(() => {
+      console.error(`Failed to load ${this._storeId}`);
+    });
   }
 
   /**
@@ -62,7 +65,7 @@ export abstract class BaseRepo<T> implements IBaseRepo<T> {
    * @returns Promise resolving to loaded data
    */
   public async load(): Promise<T> {
-    const data = (await GM.getValue(this._storeId, {})) as SerializedData;
+    const data = (await GM.getValue(this._storeId, {})) as string;
     return this._deserialize(data);
   }
 
@@ -82,7 +85,7 @@ export abstract class BaseRepo<T> implements IBaseRepo<T> {
    * @returns Serialized data object
    * @abstract
    */
-  protected abstract _serialize(): SerializedData;
+  protected abstract _serialize(): string;
 
   /**
    * Deserialize data from storage
@@ -91,5 +94,5 @@ export abstract class BaseRepo<T> implements IBaseRepo<T> {
    * @returns Deserialized data instance
    * @abstract
    */
-  protected abstract _deserialize(data: SerializedData): T;
+  protected abstract _deserialize(data: string): T;
 }

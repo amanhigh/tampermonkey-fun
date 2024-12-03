@@ -53,6 +53,7 @@ import { IStyleManager, StyleManager } from '../manager/style';
 import { IFlagManager, FlagManager } from '../manager/flag';
 import { IRecentManager, RecentManager } from '../manager/recent';
 import { IWatchManager, WatchManager } from '../manager/watch';
+import { IWatchListHandler, WatchListHandler } from '../handler/watchlist';
 
 /**
  * Project Architecture Overview
@@ -76,7 +77,10 @@ export class Factory {
   public static app = {
     test: (): TestApp => Factory._getInstance('testApp', () => new TestApp(Factory.util.ui(), Factory.util.key())),
     barkat: (): Barkat =>
-      Factory._getInstance('barkat', () => new Barkat(Factory.util.ui(), Factory.handler.sequence())),
+      Factory._getInstance(
+        'barkat',
+        () => new Barkat(Factory.util.ui(), Factory.handler.sequence(), Factory.handler.watchlist())
+      ),
   };
 
   /**
@@ -250,19 +254,43 @@ export class Factory {
     hotkey: (): IHotkeyHandler =>
       Factory._getInstance(
         'hotkeyHandler',
-        () => new HotkeyHandler(Factory.util.key(), Factory.handler.keyConfig(), Factory.handler.modifierKeyConfig())
+        () =>
+          new HotkeyHandler(
+            Factory.util.key(),
+            Factory.handler.keyConfig(),
+            Factory.handler.modifierKeyConfig(),
+            Factory.manager.tv()
+          )
       ),
     kite: (): IKiteHandler =>
       Factory._getInstance('kiteHandler', () => new KiteHandler(Factory.manager.kite(), Factory.manager.symbol())),
     keyConfig: (): KeyConfig =>
       Factory._getInstance(
         'keyConfig',
-        () => new KeyConfig(Factory.manager.tv(), Factory.manager.sequence(), Factory.manager.category())
+        () =>
+          new KeyConfig(
+            Factory.manager.tv(),
+            Factory.manager.sequence(),
+            Factory.manager.category(),
+            Factory.manager.watch()
+          )
       ),
     modifierKeyConfig: (): IModifierKeyConfig =>
       Factory._getInstance(
         'modifierKeyConfig',
         () => new ModifierKeyConfig(Factory.manager.category(), Factory.manager.tv())
+      ),
+    watchlist: (): IWatchListHandler =>
+      Factory._getInstance(
+        'watchlistHandler',
+        () =>
+          new WatchListHandler(
+            Factory.manager.watchlist(),
+            Factory.manager.screener(),
+            Factory.manager.tv(),
+            Factory.util.sync(),
+            Factory.manager.watch()
+          )
       ),
     pair: (): IPairHandler =>
       Factory._getInstance(

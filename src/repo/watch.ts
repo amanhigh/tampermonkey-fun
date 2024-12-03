@@ -31,7 +31,7 @@ export class Watchlistrepo extends CategoryRepo implements IWatchlistRepo {
    * @param repoCron Repository auto-save manager
    */
   constructor(repoCron: IRepoCron) {
-    super(repoCron, 'watchlistRepeo');
+    super(repoCron, 'watchRepo');
   }
 
   /**

@@ -11,7 +11,7 @@ export interface IRepoCron {
 
 export class RepoCron implements IRepoCron {
   private readonly _repositories: Set<BaseRepo<unknown>>;
-  private static readonly SAVE_INTERVAL = 30 * 1000; // 30 seconds
+  private static readonly SAVE_INTERVAL = 10 * 1000; // 30 seconds
 
   constructor() {
     this._repositories = new Set();

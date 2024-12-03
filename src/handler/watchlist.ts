@@ -92,7 +92,7 @@ export class WatchListHandler implements IWatchListHandler {
    */
   private resetWatchListState(): void {
     // Reset both watchlist and screener views
-    this.watchlistManager.resetWatchList();
+    // this.watchlistManager.resetWatchList();
   }
 
   /**
@@ -107,10 +107,10 @@ export class WatchListHandler implements IWatchListHandler {
     this.screenerManager.paintScreener();
 
     // Paint the name in header
-    this.tradingViewManager.paintName();
+    // this.tradingViewManager.paintName();
 
     // Update alert feed with watchlist changes
-    this.watchlistManager.paintAlertFeedEvent();
+    // this.watchlistManager.paintAlertFeedEvent();
   }
 
   private applyFilters(): void {

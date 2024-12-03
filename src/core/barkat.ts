@@ -3,15 +3,19 @@ import { Factory } from './factory';
 import { UIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
 import { ISequenceHandler } from '../handler/sequence';
+import { IWatchListHandler } from '../handler/watchlist';
 
 export class Barkat {
   constructor(
     private readonly uiUtil: UIUtil,
-    private readonly sequenceHandler: ISequenceHandler
+    private readonly sequenceHandler: ISequenceHandler,
+    private readonly watchListHandler: IWatchListHandler
   ) {}
+
   initialize(): void {
     console.log('barkat initialized');
     this.setupUI();
+    this.onLoad();
   }
 
   // eslint-disable-next-line max-lines-per-function
@@ -87,6 +91,11 @@ export class Barkat {
       );
 
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.AUDIT).appendTo(`#${Constants.UI.IDS.AREAS.JOURNAL}`);
+  }
+
+  onLoad() {
+    console.log('Barkat Onload');
+    this.watchListHandler.onWatchListChange();
   }
 }
 

@@ -58,6 +58,7 @@ export class WatchManager implements IWatchManager {
     const categoryLists = this.watchRepo.getWatchCategoryLists();
     const list = categoryLists.getList(categoryIndex);
     if (!list) {
+      categoryLists.setList(categoryIndex, new Set());
       throw new Error(`Category list for index ${categoryIndex} not found`);
     }
     return list;

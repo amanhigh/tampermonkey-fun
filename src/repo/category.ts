@@ -41,12 +41,8 @@ export abstract class CategoryRepo extends BaseRepo<CategoryLists> implements IC
    * @protected
    * @returns Serialized category lists data
    */
-  protected _serialize(): SerializedData {
-    const storeData: SerializedData = {};
-    this._categoryLists.getLists().forEach((value, key) => {
-      storeData[String(key)] = Array.from(value);
-    });
-    return storeData;
+  protected _serialize(): string {
+    return JSON.stringify(this._categoryLists);
   }
 
   /**
