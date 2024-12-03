@@ -49,6 +49,10 @@ import { ISequenceHandler, SequenceHandler } from '../handler/sequence';
 import { IKiteHandler, KiteHandler } from '../handler/kite';
 import { IKiteManager, KiteManager } from '../manager/kite';
 import { IHeaderManager, HeaderManager } from '../manager/header';
+import { IStyleManager, StyleManager } from '../manager/style';
+import { IFlagManager, FlagManager } from '../manager/flag';
+import { IRecentManager, RecentManager } from '../manager/recent';
+import { IWatchManager, WatchManager } from '../manager/watch';
 
 /**
  * Project Architecture Overview
@@ -158,28 +162,31 @@ export class Factory {
         () =>
           new TradingViewWatchlistManager(
             Factory.manager.paint(),
-            Factory.repo.watch(),
-            Factory.repo.recent(),
             Factory.util.ui(),
-            Factory.repo.fno()
+            Factory.repo.fno(),
+            Factory.manager.watch()
           )
       ),
+
     header: (): IHeaderManager =>
       Factory._getInstance(
         'headerManager',
         () =>
           new HeaderManager(
             Factory.manager.paint(),
-            Factory.manager.category(),
+            Factory.manager.watch(),
+            Factory.manager.flag(),
             Factory.manager.ticker(),
             Factory.repo.fno()
           )
       ),
 
+    watch: (): IWatchManager => Factory._getInstance('watchManager', () => new WatchManager(Factory.repo.watch())),
+
     screener: (): ITradingViewScreenerManager =>
       Factory._getInstance(
         'screenerManager',
-        () => new TradingViewScreenerManager(Factory.manager.paint(), Factory.repo.fno())
+        () => new TradingViewScreenerManager(Factory.manager.paint(), Factory.manager.watch(), Factory.repo.fno())
       ),
 
     sequence: (): ISequenceManager =>
@@ -201,15 +208,25 @@ export class Factory {
             Factory.manager.watchlist()
           )
       ),
+
     kite: (): IKiteManager =>
       Factory._getInstance('kiteManager', () => new KiteManager(Factory.manager.symbol(), Factory.client.kite())),
 
     symbol: (): ISymbolManager =>
       Factory._getInstance('symbolManager', () => new SymbolManager(Factory.repo.ticker(), Factory.repo.exchange())),
 
-    tv: (): ITradingViewManager => Factory._getInstance('tvManager', () => new TradingViewManager(Factory.util.wait())),
+    tv: (): ITradingViewManager =>
+      Factory._getInstance('tvManager', () => new TradingViewManager(Factory.util.wait(), Factory.util.smart())),
 
     pair: (): IPairManager => Factory._getInstance('pairManager', () => new PairManager(Factory.repo.pair())),
+
+    style: (): IStyleManager => Factory._getInstance('styleManager', () => new StyleManager(Factory.util.wait())),
+
+    flag: (): IFlagManager =>
+      Factory._getInstance('flagManager', () => new FlagManager(Factory.repo.flag(), Factory.manager.paint())),
+
+    recent: (): IRecentManager =>
+      Factory._getInstance('recentManager', () => new RecentManager(Factory.repo.recent(), Factory.manager.paint())),
   };
 
   /**

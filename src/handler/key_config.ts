@@ -1,4 +1,10 @@
 import { Constants } from '../models/constant';
+import { ITimeFrameManager } from '../manager/timeframe';
+import { ISequenceManager } from '../manager/sequence';
+import { IWatchManager } from '../manager/watch';
+import { IFlagManager } from '../manager/flag';
+import { IStyleManager } from '../manager/style';
+import { ITradingViewManager } from '../manager/tv';
 
 /**
  * Type definitions for key bindings and actions
@@ -21,78 +27,85 @@ export class KeyConfig {
   private readonly _utilityKeys: KeyMap;
 
   /**
-   * @param tvActionManager Trading view action manager
+   * @param tvManager Trading view manager
    * @param sequenceManager Sequence manager for timeframes
-   * @param categoryManager Category manager for orders and flags
+   * @param timeFrameManager Timeframe operations manager
+   * @param watchManager Watch category manager
+   * @param flagManager Flag category manager
+   * @param styleManager Style operations manager
    */
   // eslint-disable-next-line max-lines-per-function
   constructor(
-    private readonly _tvActionManager: ITradingViewActionManager,
-    private readonly _sequenceManager: ISequenceManager,
-    private readonly _categoryManager: ICategoryManager
+    private readonly tvManager: ITradingViewManager,
+    private readonly sequenceManager: ISequenceManager,
+    private readonly timeFrameManager: ITimeFrameManager,
+    private readonly watchManager: IWatchManager,
+    private readonly flagManager: IFlagManager,
+    private readonly styleManager: IStyleManager
   ) {
     this._toolbarKeys = new Map([
       [
         ',',
         {
           description: 'TrendLine',
-          action: () => _tvActionManager.selectToolbar(1),
+          action: () => styleManager.selectToolbar(1),
         },
       ],
       [
         'e',
         {
           description: 'FibZone',
-          action: () => _tvActionManager.selectToolbar(2),
+          action: () => styleManager.selectToolbar(2),
         },
       ],
       [
         '.',
         {
           description: 'Rectangle',
-          action: () => _tvActionManager.selectToolbar(3),
+          action: () => styleManager.selectToolbar(3),
         },
       ],
       [
         'k',
         {
           description: 'Text with Reason',
-          // TODO: Fix now Broken functions migrated.
+          // TODO: Fix ReasonPrompt Integration. Legacy code for reference:
           /**
-                 * ReasonPrompt((reason) => {
-                    ClipboardCopy(timeFrame.symbol + " - " + reason);
-                    SelectToolbar(4);
-                })
-                 */
-          action: () => _tvActionManager.handleReasonPrompt(),
+           * ReasonPrompt((reason) => {
+           *   ClipboardCopy(timeFrame.symbol + " - " + reason);
+           *   SelectToolbar(4);
+           * })
+           */
+          action: () => console.warn('TODO: Integrate ReasonPrompt with clipboard and toolbar selection'),
         },
       ],
       [
         'j',
         {
           description: 'Demand Zone',
-          action: () => _tvActionManager.selectZoneStyle(Constants.TRADING.ZONES.DEMAND),
+          action: () => styleManager.selectZoneStyle(Constants.TRADING.ZONES.DEMAND, ''), // TODO: Get current style
         },
       ],
       [
         'u',
         {
           description: 'Supply Zone',
-          action: () => _tvActionManager.selectZoneStyle(Constants.TRADING.ZONES.SUPPLY),
+          action: () => styleManager.selectZoneStyle(Constants.TRADING.ZONES.SUPPLY, ''), // TODO: Get current style
         },
       ],
       [
         'p',
         {
           description: 'Clear All',
-          action: () => _tvActionManager.clearAll(),
+          action: () => styleManager.clearAll(),
         },
       ],
       [
         't',
         {
           description: 'Trade',
-          action: () => _tvActionManager.handleGttOrder(),
+          // TODO: Fix GTT Order Integration
+          action: () => console.warn('TODO: Integrate GTT Order handling'),
         },
       ],
     ]);
@@ -102,35 +115,35 @@ export class KeyConfig {
         '0',
         {
           description: 'Freeze Sequence',
-          action: () => _sequenceManager.freezeSequence(),
+          action: () => sequenceManager.toggleFreezeSequence(),
         },
       ],
       [
         '1',
         {
           description: 'VHTF (Very High Timeframe)',
-          action: () => _sequenceManager.selectTimeframe(0),
+          action: () => timeFrameManager.applyTimeFrame(0),
         },
       ],
       [
         '2',
         {
           description: 'HTF (High Timeframe)',
-          action: () => _sequenceManager.selectTimeframe(1),
+          action: () => timeFrameManager.applyTimeFrame(1),
         },
       ],
       [
         '3',
         {
           description: 'ITF (Intermediate Timeframe)',
-          action: () => _sequenceManager.selectTimeframe(2),
+          action: () => timeFrameManager.applyTimeFrame(2),
         },
       ],
       [
         '4',
         {
           description: 'TTF (Trading Timeframe)',
-          action: () => _sequenceManager.selectTimeframe(3),
+          action: () => timeFrameManager.applyTimeFrame(3),
         },
       ],
     ]);
@@ -140,36 +153,35 @@ export class KeyConfig {
         'F1',
         {
           description: 'Order List - Index 0',
-          // Todo: Requires Selected Ticker
-          action: () => _categoryManager.recordOrderCategory(0),
+          action: () => watchManager.recordCategory(0),
         },
       ],
       [
         'F2',
         {
           description: 'Order List - Index 1',
-          action: () => _categoryManager.recordOrderCategory(1),
+          action: () => watchManager.recordCategory(1),
         },
       ],
       [
         'F3',
         {
           description: 'Order List - Index 2',
-          action: () => _categoryManager.recordOrderCategory(2),
+          action: () => watchManager.recordCategory(2),
         },
       ],
       [
         'F4',
         {
           description: 'Order List - Index 3',
-          action: () => _categoryManager.recordOrderCategory(3),
+          action: () => watchManager.recordCategory(3),
         },
       ],
       [
         'F5',
         {
           description: 'Order List - Index 4',
-          action: () => _categoryManager.recordOrderCategory(4),
+          action: () => watchManager.recordCategory(4),
         },
       ],
     ]);
@@ -179,49 +191,49 @@ export class KeyConfig {
         'F6',
         {
           description: 'Orange Consolidation Flag - Index 0',
-          action: () => _categoryManager.recordFlagCategory(0),
+          action: () => flagManager.recordCategory(0),
         },
       ],
       [
         'F7',
         {
           description: 'Red Shorts Flag - Index 1',
-          action: () => _categoryManager.recordFlagCategory(1),
+          action: () => flagManager.recordCategory(1),
         },
       ],
       [
         'F8',
         {
           description: 'Blue Crypto Flag - Index 2',
-          action: () => _categoryManager.recordFlagCategory(2),
+          action: () => flagManager.recordCategory(2),
         },
       ],
       [
         'F9',
         {
           description: 'Empty Flag - Index 3',
-          action: () => _categoryManager.recordFlagCategory(3),
+          action: () => flagManager.recordCategory(3),
         },
       ],
       [
         'F10',
         {
           description: 'Green Longs Flag - Index 4',
-          action: () => _categoryManager.recordFlagCategory(4),
+          action: () => flagManager.recordCategory(4),
         },
       ],
       [
         'F11',
         {
           description: 'Brown Index Flag - Index 6',
-          action: () => _categoryManager.recordFlagCategory(6),
+          action: () => flagManager.recordCategory(6),
         },
       ],
       [
         'F12',
         {
           description: 'Golden XAU Flag - Index 7',
-          action: () => _categoryManager.recordFlagCategory(7),
+          action: () => flagManager.recordCategory(7),
         },
       ],
     ]);

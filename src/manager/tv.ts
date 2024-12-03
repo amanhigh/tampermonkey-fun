@@ -1,6 +1,6 @@
 import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
-import { SmartPrompt } from '../util/smart';
+import { ISmartPrompt } from '../util/smart';
 import { IWaitUtil } from '../util/wait';
 
 // Price and validation related constants
@@ -78,7 +78,7 @@ export class TradingViewManager implements ITradingViewManager {
    */
   constructor(
     private readonly waitUtil: IWaitUtil,
-    private readonly smartPrompt: SmartPrompt
+    private readonly smartPrompt: ISmartPrompt
   ) {}
 
   /** @inheritdoc */
