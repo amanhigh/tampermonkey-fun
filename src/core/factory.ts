@@ -169,7 +169,8 @@ export class Factory {
             Factory.manager.paint(),
             Factory.util.ui(),
             Factory.repo.fno(),
-            Factory.manager.watch()
+            Factory.manager.watch(),
+            Factory.manager.flag()
           )
       ),
 
@@ -287,7 +288,7 @@ export class Factory {
           new WatchListHandler(
             Factory.manager.watchlist(),
             Factory.manager.screener(),
-            Factory.manager.tv(),
+            Factory.manager.header(),
             Factory.util.sync(),
             Factory.manager.watch()
           )

@@ -4,6 +4,7 @@ import { IUIUtil } from '../util/ui';
 import { Notifier } from '../util/notify';
 import { IFnoRepo } from '../repo/fno';
 import { IWatchManager } from './watch';
+import { IFlagManager } from './flag';
 
 /**
  * Filter options for watchlist manipulation
@@ -36,17 +37,6 @@ export interface ITradingViewWatchlistManager {
    * Paints the TradingView watchlist
    */
   paintWatchList(): void;
-
-  /**
-   * Adds a new filter to the filter chain
-   * @param filter - The filter to add
-   */
-  addFilter(filter: WatchlistFilter): void;
-
-  /**
-   * Applies all active filters in the filter chain
-   */
-  applyFilters(): void;
 }
 
 /**
@@ -64,7 +54,8 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     private readonly paintManager: IPaintManager,
     private readonly uiUtil: IUIUtil,
     private readonly fnoRepo: IFnoRepo,
-    private readonly watchManager: IWatchManager
+    private readonly watchManager: IWatchManager,
+    private readonly flagManager: IFlagManager
   ) {}
 
   /** @inheritdoc */
@@ -96,16 +87,18 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
 
   /** @inheritdoc */
   paintWatchList(): void {
-    //Reset Color
-    this.paintManager.resetColors(Constants.DOM.WATCHLIST.SYMBOL);
+    this.resetWatchList();
 
-    // Paint Name and Flags
+    // Paint Symbols
     const colorList = Constants.UI.COLORS.LIST;
     for (let i = 0; i < colorList.length; i++) {
       const color = colorList[i];
-      const orderSymbols = this.watchManager.getCategory(i);
-      this.paintManager.paintSymbols(Constants.DOM.WATCHLIST.SYMBOL, orderSymbols, { color: color });
+      const symbols = this.watchManager.getCategory(i);
+      this.paintManager.paintSymbols(Constants.DOM.WATCHLIST.SYMBOL, symbols, { color: color });
     }
+
+    // Paint Flags
+    this.flagManager.paint(Constants.DOM.WATCHLIST.SYMBOL);
 
     // Ticker Set Summary Update
     this.displaySetSummary();
@@ -125,6 +118,9 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     // Disable List Transformation
     $(Constants.DOM.WATCHLIST.LINE).css('position', '');
     $(Constants.DOM.WATCHLIST.CONTAINER).css('overflow', '');
+
+    //Reset Color
+    this.paintManager.resetColors(Constants.DOM.WATCHLIST.SYMBOL);
   }
 
   /**

@@ -81,18 +81,18 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
     const colorList = Constants.UI.COLORS.LIST;
 
     // Must Run in this Order- Clear, WatchList, Kite
-    this.paintManager.resetColors(screenerSymbolSelector);
+    // FIXME: Need Reset or Handled in WatchListHandler ?
+    // this.paintManager.resetColors(screenerSymbolSelector);
 
     // Paint Recently Watched
     // FIXME: Call from Recent Manager in Handler.
 
-    // Paint Fno
+    // Paint Symbols
     const fnoSymbols = this.fnoRepo.getAll();
     this.paintManager.paintSymbols(screenerSymbolSelector, fnoSymbols, Constants.UI.COLORS.FNO_CSS);
 
-    // Paint Name and Flags
-    // FIXME: Moved to Header Manager as paintHeader ?
-    // this.paintManager.paintTickers(screenerSymbolSelector);
+    // Paint Flags
+    // FIXME: Flag Painting in Screener
 
     // Paint Watchlist (Overwrite White)
     const watchlistSet = this.watchManager.getDefaultWatchlist();

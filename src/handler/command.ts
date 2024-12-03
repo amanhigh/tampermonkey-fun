@@ -53,6 +53,7 @@ export class CommandInputHandler implements ICommandInputHandler {
       }
     }
 
+    // FIXME: Add FNO Repo Update
     const processor = this.determineInputType(input);
     try {
       switch (processor.type) {

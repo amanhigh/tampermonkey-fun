@@ -38,7 +38,7 @@ export class Barkat {
       )
       .append(
         this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.REFRESH, 'R', () => {
-          console.log('Handling refresh button');
+          this.onLoad();
         })
       )
       .append(

@@ -2,6 +2,7 @@
  * Interface and implementation for handling watchlist-related events and updates
  */
 
+import { IHeaderManager } from '../manager/header';
 import { ITradingViewScreenerManager } from '../manager/screener';
 import { ITradingViewManager } from '../manager/tv';
 import { IWatchManager } from '../manager/watch';
@@ -39,22 +40,31 @@ export class WatchListHandler implements IWatchListHandler {
   constructor(
     private readonly watchlistManager: ITradingViewWatchlistManager,
     private readonly screenerManager: ITradingViewScreenerManager,
-    private readonly tradingViewManager: ITradingViewManager,
+    private readonly headerManager: IHeaderManager,
     private readonly syncUtil: ISyncUtil,
     private readonly watchManager: IWatchManager
   ) {}
 
   /** @inheritdoc */
   public onWatchListChange(): void {
-    this.syncUtil.waitOn('watchListChangeEvent', 2, () => {
-      // Reset and update watchlist state
-      this.resetWatchListState();
+    this.syncUtil.waitOn('watchListChangeEvent', 200, () => {
+      // Paint watchlist items
+      this.watchlistManager.paintWatchList();
 
-      // Update UI components
-      this.updateUIComponents();
+      // Paint screener items if visible
+      this.screenerManager.paintScreener();
+
+      // Paint header items
+      this.headerManager.paintHeader();
+
+      // Paint the name in header
+      // this.tradingViewManager.paintName();
+
+      // Update alert feed with watchlist changes
+      // this.watchlistManager.paintAlertFeedEvent();
 
       // Apply filters
-      this.applyFilters();
+      // this.applyFilters();
     });
   }
 
@@ -84,36 +94,5 @@ export class WatchListHandler implements IWatchListHandler {
         resolve();
       }, 1000);
     });
-  }
-
-  /**
-   * Resets the watchlist state
-   * @private
-   */
-  private resetWatchListState(): void {
-    // Reset both watchlist and screener views
-    // this.watchlistManager.resetWatchList();
-  }
-
-  /**
-   * Updates all UI components related to watchlist
-   * @private
-   */
-  private updateUIComponents(): void {
-    // Paint watchlist items
-    this.watchlistManager.paintWatchList();
-
-    // Paint screener items if visible
-    this.screenerManager.paintScreener();
-
-    // Paint the name in header
-    // this.tradingViewManager.paintName();
-
-    // Update alert feed with watchlist changes
-    // this.watchlistManager.paintAlertFeedEvent();
-  }
-
-  private applyFilters(): void {
-    this.watchlistManager.applyFilters();
   }
 }
