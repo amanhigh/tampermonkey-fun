@@ -8,7 +8,7 @@ export interface IObserveUtil {
    * @param callback - Callback for changes
    * @returns MutationObserver instance or undefined if setup fails
    */
-  attributeObserver(target: Element, callback: () => void): MutationObserver | undefined;
+  attributeObserver(target: Element, callback: () => void): MutationObserver;
 
   /**
    * Observes node changes on target
@@ -16,7 +16,7 @@ export interface IObserveUtil {
    * @param callback - Callback for changes
    * @returns MutationObserver instance or undefined if setup fails
    */
-  nodeObserver(target: Element, callback: () => void): MutationObserver | undefined;
+  nodeObserver(target: Element, callback: () => void): MutationObserver;
 }
 
 /**
@@ -24,7 +24,7 @@ export interface IObserveUtil {
  */
 export class ObserveUtil implements IObserveUtil {
   /** @inheritdoc */
-  public attributeObserver(target: Element, callback: () => void): MutationObserver | undefined {
+  public attributeObserver(target: Element, callback: () => void): MutationObserver {
     if (!target || !(target instanceof Element)) {
       throw new Error('Invalid target element provided to attributeObserver');
     }
@@ -49,7 +49,7 @@ export class ObserveUtil implements IObserveUtil {
   }
 
   /** @inheritdoc */
-  public nodeObserver(target: Element, callback: () => void): MutationObserver | undefined {
+  public nodeObserver(target: Element, callback: () => void): MutationObserver {
     if (!target || !(target instanceof Element)) {
       throw new Error('Invalid target element provided to nodeObserver');
     }

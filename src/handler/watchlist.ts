@@ -46,7 +46,7 @@ export class WatchListHandler implements IWatchListHandler {
 
   /** @inheritdoc */
   public onWatchListChange(): void {
-    this.syncUtil.waitOn('watchListChangeEvent', 200, () => {
+    this.syncUtil.waitOn('watchListChangeEvent', 20, () => {
       // Paint watchlist items
       this.watchlistManager.paintWatchList();
 

@@ -54,6 +54,7 @@ import { IFlagManager, FlagManager } from '../manager/flag';
 import { IRecentManager, RecentManager } from '../manager/recent';
 import { IWatchManager, WatchManager } from '../manager/watch';
 import { IWatchListHandler, WatchListHandler } from '../handler/watchlist';
+import { IOnLoadHandler, OnLoadHandler } from '../handler/onload';
 
 /**
  * Project Architecture Overview
@@ -79,7 +80,7 @@ export class Factory {
     barkat: (): Barkat =>
       Factory._getInstance(
         'barkat',
-        () => new Barkat(Factory.util.ui(), Factory.handler.sequence(), Factory.handler.watchlist())
+        () => new Barkat(Factory.util.ui(), Factory.handler.sequence(), Factory.handler.onload())
       ),
   };
 
@@ -251,6 +252,11 @@ export class Factory {
       Factory._getInstance(
         'auditHandler',
         () => new AuditHandler(Factory.manager.audit(), Factory.manager.pair(), Factory.util.ui())
+      ),
+    onload: (): IOnLoadHandler =>
+      Factory._getInstance(
+        'onloadHandler',
+        () => new OnLoadHandler(Factory.util.wait(), Factory.util.observer(), Factory.handler.watchlist())
       ),
     hotkey: (): IHotkeyHandler =>
       Factory._getInstance(

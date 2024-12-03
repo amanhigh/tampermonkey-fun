@@ -15,20 +15,20 @@ export interface ISyncUtil {
  * Provides utility functions for synchronization and resource waiting operations
  */
 export class SyncUtil implements ISyncUtil {
-  private readonly _waitId: string = 'aman-wait-on';
+  private readonly waitId: string = 'aman-wait-on';
 
   constructor() {
-    this._initializeSyncElement();
+    this.initSyncElement();
   }
 
   /**
    * Initializes the sync DOM element if not present
    * @private
    */
-  private _initializeSyncElement(): void {
-    let $waitOn = $(`#${this._waitId}`);
+  private initSyncElement(): void {
+    let $waitOn = $(`#${this.waitId}`);
     if (!$waitOn.length) {
-      $waitOn = $('<div>').attr('id', this._waitId).appendTo('body');
+      $waitOn = $('<div>').attr('id', this.waitId).appendTo('body');
     }
   }
 
@@ -50,7 +50,7 @@ export class SyncUtil implements ISyncUtil {
     try {
       const mutexId = `wait-${id}`;
       const dataId = `aman-data-${id}`;
-      const $waitOn = $(`#${this._waitId}`);
+      const $waitOn = $(`#${this.waitId}`);
 
       if (!$waitOn.hasClass(mutexId)) {
         this._initiateMutex($waitOn, mutexId, dataId, timeout, callback);

@@ -3,13 +3,13 @@ import { Factory } from './factory';
 import { UIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
 import { ISequenceHandler } from '../handler/sequence';
-import { IWatchListHandler } from '../handler/watchlist';
+import { IOnLoadHandler } from '../handler/onload';
 
 export class Barkat {
   constructor(
     private readonly uiUtil: UIUtil,
     private readonly sequenceHandler: ISequenceHandler,
-    private readonly watchListHandler: IWatchListHandler
+    private readonly onloadHandler: IOnLoadHandler
   ) {}
 
   initialize(): void {
@@ -95,8 +95,7 @@ export class Barkat {
 
   onLoad() {
     console.log('Barkat Onload');
-    // TODO: Create Onload Handler
-    this.watchListHandler.onWatchListChange();
+    this.onloadHandler.init();
   }
 }
 

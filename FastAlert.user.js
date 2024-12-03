@@ -79,18 +79,4 @@ function tradingView() {
         //console.log('Observing Title: ' + el.innerHTML);
         nodeObserver(el, EnableSwiftKey);
     });
-
-    //Onload TV WatchList Paint
-    waitJEE(`${watchListSelector} > div`, (el) => {
-        //Ensure Repaint on scroll, add/remove to WatchList
-        nodeObserver(el.get(0), onWatchListChange);
-
-        //Ensure Repaint on Screener Changes
-        message("Trying Screener Hook", "yellow");
-        waitJEE(screenerSelector, (el) => {
-            nodeObserver(el.get(0), onWatchListChange);
-
-            message("Screener Hooked", "green");
-        }, 10);
-    }, 10);
 }
