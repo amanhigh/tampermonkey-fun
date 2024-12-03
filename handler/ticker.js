@@ -2,39 +2,9 @@
  * Handles all operations related to command input text box
  * @class CommandInputHandler
  */
-class CommandInputHandler {
-    /**
-     * Creates command input handler instance
-     * @param {EventManager} eventManager Event management system
-     * @param {string} inputId DOM id for command input element
-     */
-    constructor(eventManager, inputId) {
-        this.eventManager = eventManager;
-        this.inputId = inputId;
+class TickerHandler {
+    constructor(eventManager) {
         this.ENTER_KEY_CODE = 13;
-        
-        this._setupInputElement();
-        this._setupEventListeners();
-    }
-
-    /**
-     * Sets up the command input DOM element
-     * @private
-     */
-    _setupInputElement() {
-        // TODO: Setup input element
-        // - Create/configure input element
-        // - Set initial state
-        // - Apply any required styling
-    }
-
-    /**
-     * Sets up event listeners for the input
-     * @private
-     */
-    _setupEventListeners() {
-        this.eventManager.registerHandler('inputSubmit', this._handleSubmit.bind(this));
-        // Add any other required event listeners
     }
 
     /**
@@ -105,21 +75,5 @@ class CommandInputHandler {
      */
     _isEnterKey(e) {
         return e.keyCode === this.ENTER_KEY_CODE;
-    }
-
-    /**
-     * Gets current input value
-     * @private
-     * @returns {string} Current input value
-     */
-    _getValue() {
-        return $(`#${this.inputId}`).val();
-    }
-
-    /**
-     * Clears the input value
-     */
-    clearValue() {
-        $(`#${this.inputId}`).val("");
     }
 }

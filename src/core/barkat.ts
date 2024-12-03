@@ -54,6 +54,7 @@ export class Barkat {
       )
       .append(
         this.uiUtil.buildCheckBox(Constants.UI.IDS.CHECKBOXES.RECENT, false).change(() => {
+          // FIXME: Change to Button ?
           console.log('Handling recent ticker reset');
         })
       )

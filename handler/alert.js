@@ -1,11 +1,8 @@
 /**
  * Handles button-related events and actions
  */
-class ButtonHandler {
+class AlertHandler {
     HandleRefreshButton() {
-        // Refersh Ticker
-        this.eventManager.emit('tickerChange');
-
         // Refresh alerts
         ForceRefreshAlerts();
 
@@ -45,9 +42,6 @@ class ButtonHandler {
     // Private helper methods
 
     _refreshAndAuditTicker() {
-        // Emit ticker change event
-        this.eventManager.emit('tickerChange');
-
         // Perform audit
         AuditCurrentTicker();
     }

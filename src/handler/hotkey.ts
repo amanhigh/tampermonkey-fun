@@ -1,4 +1,6 @@
+import { ITradingViewManager } from '../manager/tv';
 import { IKeyUtil } from '../util/key';
+import { Notifier } from '../util/notify';
 import { IModifierKeyConfig } from './modifier_config';
 
 /**
@@ -24,18 +26,19 @@ export class HotkeyHandler implements IHotkeyHandler {
   constructor(
     private readonly _keyUtil: IKeyUtil,
     private readonly _keyConfig: IKeyConfig,
-    private readonly _modifierKeyConfig: IModifierKeyConfig
+    private readonly _modifierKeyConfig: IModifierKeyConfig,
+    private readonly tvManager: ITradingViewManager
   ) {}
 
   /** @inheritdoc */
   handleKeyDown(event: KeyboardEvent): void {
     try {
-      const swiftEnabled = this._tvActionManager.isSwiftEnabled();
+      const swiftEnabled = this.tvManager.isSwiftEnabled();
       // Auto-enable swift for timeframe keys (1-4)
 
       if (this._shouldAutoEnableSwift(event, swiftEnabled)) {
-        this._tvActionManager.setSwiftEnabled(true);
-        // TODO: Add Message Display
+        this.tvManager.toggleSwiftKeys(true);
+        Notifier.success('Swift Enabled');
         return;
       }
       // Main key handling based on swift state
@@ -111,26 +114,26 @@ export class HotkeyHandler implements IHotkeyHandler {
   private _handleGlobalKeys(event: KeyboardEvent): void {
     // Flag/Unflag
     if (this._isModifierKey(event.shiftKey, 'o', event)) {
-      this._tvActionManager.toggleFlag();
+      this.tvManager.toggleFlag();
     }
     // Focus Input
     if (this._isModifierKey(event.ctrlKey, 'b', event)) {
-      this._tvActionManager.focusCommandInput();
+      this.tvManager.focusCommandInput();
     }
     // Close Text Box and Enable Swift
     if (this._isModifierKey(event.shiftKey, 'enter', event)) {
-      this._tvActionManager.closeTextBox();
-      this._tvActionManager.setSwiftEnabled(true);
+      this.tvManager.closeTextBox();
+      this.tvManager.setSwiftEnabled(true);
     }
     // Double Shift for Swift Toggle
     if (event.key === 'Shift') {
       if (this._keyUtil.isDoubleKey(event)) {
-        this._tvActionManager.setSwiftEnabled(!this._tvActionManager.isSwiftEnabled());
+        this.tvManager.setSwiftEnabled(!this.tvManager.isSwiftEnabled());
       }
     }
     // Disable Swift Keys
     if (this._isModifierKey(event.altKey, 'b', event)) {
-      this._tvActionManager.setSwiftEnabled(false);
+      this.tvManager.setSwiftEnabled(false);
     }
   }
 
