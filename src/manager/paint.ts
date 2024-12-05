@@ -88,14 +88,11 @@ export class PaintManager implements IPaintManager {
 
   /** @inheritdoc */
   resetColors(selector: string): void {
-    if (!selector) {
-      throw new Error('Selector is required');
-    }
-
     // Reset element colors to default
     this.paintSymbols(selector, null, { color: Constants.UI.COLORS.DEFAULT }, true);
 
     // Reset flag colors
+    // FIXME: Unusable Paint Flags overwrites both watchlist and screener.
     this.paintFlags(selector, null, Constants.UI.COLORS.DEFAULT, true);
   }
 }

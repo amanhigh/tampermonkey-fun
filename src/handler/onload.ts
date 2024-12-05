@@ -45,7 +45,11 @@ export class OnLoadHandler implements IOnLoadHandler {
           return;
         }
         // Watch for watchlist DOM changes
-        this.observeUtil.nodeObserver(targetElement, this.watchListHandler.onWatchListChange);
+        this.observeUtil.nodeObserver(targetElement, () => {
+          this.watchListHandler.onWatchListChange();
+        });
+
+        this.watchListHandler.onWatchListChange();
 
         // Set up screener observer if exists
         Notifier.info('Waiting for Screener');
@@ -57,7 +61,9 @@ export class OnLoadHandler implements IOnLoadHandler {
               Notifier.error('Failed to get screener element');
               return;
             }
-            this.observeUtil.nodeObserver(targetElement, this.watchListHandler.onWatchListChange);
+            this.observeUtil.nodeObserver(targetElement, () => {
+              this.watchListHandler.onWatchListChange();
+            });
             Notifier.success('Screener Hooked');
           },
           10

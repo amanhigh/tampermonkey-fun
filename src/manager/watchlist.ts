@@ -89,6 +89,9 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   paintWatchList(): void {
     this.resetWatchList();
 
+    // HACK: Optimize Further only on Ticker Movement ?
+    this.watchManager.computeDefaultList(this.getTickers());
+
     // Paint Symbols
     const colorList = Constants.UI.COLORS.LIST;
     for (let i = 0; i < colorList.length; i++) {
@@ -105,6 +108,9 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
 
     // Mark FNO
     this.paintManager.paintSymbols(Constants.DOM.WATCHLIST.SYMBOL, this.fnoRepo.getAll(), Constants.UI.COLORS.FNO_CSS);
+
+    // Apply Filters
+    this.applyFilters();
   }
 
   private resetWatchList(): void {

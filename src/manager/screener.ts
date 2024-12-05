@@ -2,6 +2,7 @@ import { Constants } from '../models/constant';
 import { IPaintManager } from './paint';
 import { IFnoRepo } from '../repo/fno';
 import { IWatchManager } from './watch';
+import { IFlagManager } from './flag';
 
 /**
  * Interface for managing TradingView screener operations
@@ -40,6 +41,7 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
   constructor(
     private readonly paintManager: IPaintManager,
     private readonly watchManager: IWatchManager,
+    private readonly flagManager: IFlagManager,
     private readonly fnoRepo: IFnoRepo
   ) {}
 
@@ -81,18 +83,21 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
     const colorList = Constants.UI.COLORS.LIST;
 
     // Must Run in this Order- Clear, WatchList, Kite
-    // FIXME: Need Reset or Handled in WatchListHandler ?
-    // this.paintManager.resetColors(screenerSymbolSelector);
+    this.paintManager.paintSymbols(screenerSymbolSelector, null, { color: Constants.UI.COLORS.DEFAULT }, true);
 
     // Paint Recently Watched
     // FIXME: Call from Recent Manager in Handler.
 
     // Paint Symbols
-    const fnoSymbols = this.fnoRepo.getAll();
-    this.paintManager.paintSymbols(screenerSymbolSelector, fnoSymbols, Constants.UI.COLORS.FNO_CSS);
+    // HACK: Extract common painting logic ?
+    for (let i = 0; i < colorList.length; i++) {
+      const color = colorList[i];
+      const symbols = this.watchManager.getCategory(i);
+      this.paintManager.paintSymbols(screenerSymbolSelector, symbols, { color: color });
+    }
 
     // Paint Flags
-    // FIXME: Flag Painting in Screener
+    this.flagManager.paint(screenerSymbolSelector);
 
     // Paint Watchlist (Overwrite White)
     const watchlistSet = this.watchManager.getDefaultWatchlist();

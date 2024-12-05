@@ -193,7 +193,13 @@ export class Factory {
     screener: (): ITradingViewScreenerManager =>
       Factory._getInstance(
         'screenerManager',
-        () => new TradingViewScreenerManager(Factory.manager.paint(), Factory.manager.watch(), Factory.repo.fno())
+        () =>
+          new TradingViewScreenerManager(
+            Factory.manager.paint(),
+            Factory.manager.watch(),
+            Factory.manager.flag(),
+            Factory.repo.fno()
+          )
       ),
 
     sequence: (): ISequenceManager =>

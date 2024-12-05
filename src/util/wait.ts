@@ -72,11 +72,6 @@ export class WaitUtil implements IWaitUtil {
 
   /** @inheritdoc */
   public waitJEE(selector: string, callback: (element: JQuery) => void, count = 3, timeout = 2000): void {
-    if (!selector || typeof selector !== 'string') {
-      console.error('Invalid selector provided to waitJEE');
-      return;
-    }
-
     try {
       const el = $(selector);
 
@@ -87,7 +82,7 @@ export class WaitUtil implements IWaitUtil {
       if (count > 0) {
         setTimeout(() => this.waitJEE(selector, callback, count - 1, timeout), timeout);
       } else {
-        console.log('Jquery Wait Element Failed, exiting Recursion: ' + selector);
+        console.warn('Jquery Wait Element Failed, exiting Recursion: ' + selector);
       }
     } catch (error) {
       console.error(`waitJEE error for selector ${selector}:`, error);
