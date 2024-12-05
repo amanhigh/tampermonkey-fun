@@ -35,6 +35,15 @@ export interface IKeyUtil {
    * @returns True if double key detected
    */
   isDoubleKey(event: KeyboardEvent): boolean;
+
+  /**
+   * Check if modifier key combination matches
+   * @param modifierActive Whether modifier key is active
+   * @param key Target key to check
+   * @param event Keyboard event
+   * @returns True if combination matches
+   */
+  isModifierKeyPressed(modifierActive: boolean, key: string, event: KeyboardEvent): boolean;
 }
 
 /**
@@ -121,5 +130,10 @@ export class KeyUtil implements IKeyUtil {
       console.error('isDoubleKey error:', error);
       return false;
     }
+  }
+
+  /** @inheritdoc */
+  public isModifierKeyPressed(modifierActive: boolean, key: string, event: KeyboardEvent): boolean {
+    return modifierActive && event.key.toLowerCase() === key;
   }
 }

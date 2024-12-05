@@ -1,48 +1,25 @@
-import { ICategoryManager } from '../manager/category';
-import { ITradingViewManager } from '../manager/tv';
+import { IStyleManager } from '../manager/style';
+import { ITickerManager } from '../manager/ticker';
+import { ITradingViewWatchlistManager } from '../manager/watchlist';
+import { IAlertHandler } from './alert';
 
 /**
- * Type definition for key bindings
+ * Type definitions for key bindings and actions
  */
 type KeyBinding = {
   description: string;
   action: () => void;
 };
 
-// HACK: Duplicate with key_config
 type KeyMap = Map<string, KeyBinding>;
 
 /**
  * Interface for modifier key configuration operations
  */
 export interface IModifierKeyConfig {
-  /**
-   * Execute ctrl key action
-   * @param key Key pressed
-   * @returns True if action executed
-   */
   executeCtrlAction(key: string): boolean;
-
-  /**
-   * Execute shift key action
-   * @param key Key pressed
-   * @returns True if action executed
-   */
   executeShiftAction(key: string): boolean;
-
-  /**
-   * Execute alt key action
-   * @param key Key pressed
-   * @returns True if action executed
-   */
   executeAltAction(key: string): boolean;
-
-  /**
-   * Get description for a key combination
-   * @param modifier Modifier type (ctrl, shift, alt)
-   * @param key Key
-   * @returns Action description
-   */
   getDescription(modifier: 'ctrl' | 'shift' | 'alt', key: string): string | undefined;
 }
 
@@ -54,14 +31,13 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
   private readonly _shiftKeys: KeyMap;
   private readonly _altKeys: KeyMap;
 
-  /**
-   * @param categoryManager Manager for category operations
-   * @param tvManager Manager for trading view operations
-   */
+  // TODO: Break Lines later for all eslint-disables
   // eslint-disable-next-line max-lines-per-function
   constructor(
-    private readonly _categoryManager: ICategoryManager,
-    private readonly _tvManager: ITradingViewManager
+    private readonly tickerManager: ITickerManager,
+    private readonly styleManager: IStyleManager,
+    private readonly alertHandler: IAlertHandler,
+    private readonly watchlistManager: ITradingViewWatchlistManager
   ) {
     // CTRL modifier actions
     this._ctrlKeys = new Map([
@@ -69,37 +45,36 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
         'e',
         {
           description: 'Long Position',
-          action: () => _tvActionManager.selectToolbar(6),
+          action: () => this.styleManager.selectToolbar(6),
         },
       ],
       [
         'm',
         {
           description: 'Auto Alert Create',
-          // TODO: Fix AlertCreateSmart()
-          action: () => _tvActionManager.createAlert(),
+          action: () => void this.alertHandler.createAlertAtCursor(),
         },
       ],
       [
         'r',
         {
-          // TODO: Fix AlertSmartDelete()
           description: 'Auto Alert Delete',
-          action: () => _tvActionManager.deleteAlert(),
+          action: () => void this.alertHandler.deleteAlertAtCursor(),
         },
       ],
       [
         'f12',
         {
           description: 'Mark Index',
-          action: () => _categoryManager.recordWatchCategory(6),
+          // FIXME: Move to WatchlistHandler by using getSelectedTicker.
+          action: () => this.watchlistManager.recordCategory(6),
         },
       ],
       [
         'f11',
         {
           description: 'Mark Composite',
-          action: () => _categoryManager.recordWatchCategory(7),
+          action: () => this.watchlistManager.recordCategory(7),
         },
       ],
     ]);
@@ -110,22 +85,22 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
         'e',
         {
           description: 'Short Position',
-          action: () => _tvActionManager.selectToolbar(7),
+          action: () => this.styleManager.selectToolbar(7),
         },
       ],
       [
         'q',
         {
           description: 'Relative Chart',
-          action: () => _tvActionManager.openBenchmarkTicker(),
+          action: () => this.tickerManager.openBenchmarkTicker(),
         },
       ],
       [
         'p',
         {
           description: 'Alert Reset (without Lines)',
-          // TODO: Fix broken function
-          action: () => _tvActionManager.resetAlerts(),
+          // FIXME: Implement resetAlerts in AlertHandler
+          action: () => console.warn('Alert Reset not implemented'),
         },
       ],
     ]);
@@ -136,35 +111,31 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
         't',
         {
           description: 'Navigate Previous',
-          action: () => _tvManager.navigateTickers(-1),
+          action: () => this.tickerManager.navigateTickers(-1),
         },
       ],
       [
         'd',
         {
           description: 'Navigate Next',
-          action: () => _tvManager.navigateTickers(1),
+          action: () => this.tickerManager.navigateTickers(1),
         },
       ],
     ]);
   }
 
-  /** @inheritdoc */
   executeCtrlAction(key: string): boolean {
     return this._executeAction(this._ctrlKeys, key);
   }
 
-  /** @inheritdoc */
   executeShiftAction(key: string): boolean {
     return this._executeAction(this._shiftKeys, key);
   }
 
-  /** @inheritdoc */
   executeAltAction(key: string): boolean {
     return this._executeAction(this._altKeys, key);
   }
 
-  /** @inheritdoc */
   getDescription(modifier: 'ctrl' | 'shift' | 'alt', key: string): string | undefined {
     let map: KeyMap;
     switch (modifier) {

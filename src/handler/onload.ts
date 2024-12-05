@@ -3,6 +3,7 @@ import { IObserveUtil } from '../util/observer';
 import { IWaitUtil } from '../util/wait';
 import { IWatchListHandler } from './watchlist';
 import { Notifier } from '../util/notify';
+import { IHotkeyHandler } from './hotkey';
 
 /**
  * Interface for application initialization handling
@@ -23,12 +24,20 @@ export class OnLoadHandler implements IOnLoadHandler {
   constructor(
     private readonly waitUtil: IWaitUtil,
     private readonly observeUtil: IObserveUtil,
-    private readonly watchListHandler: IWatchListHandler
+    private readonly watchListHandler: IWatchListHandler,
+    private readonly hotkeyHandler: IHotkeyHandler
   ) {}
 
   /** @inheritdoc */
   public init(): void {
     this.setupWatchlistObserver();
+    this.setupKeydownEventListener();
+  }
+
+  private setupKeydownEventListener(): void {
+    document.addEventListener('keydown', (event) => {
+      this.hotkeyHandler.handleKeyDown(event);
+    });
   }
 
   /**

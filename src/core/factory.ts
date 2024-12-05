@@ -233,7 +233,8 @@ export class Factory {
 
     pair: (): IPairManager => Factory._getInstance('pairManager', () => new PairManager(Factory.repo.pair())),
 
-    style: (): IStyleManager => Factory._getInstance('styleManager', () => new StyleManager(Factory.util.wait())),
+    style: (): IStyleManager =>
+      Factory._getInstance('styleManager', () => new StyleManager(Factory.util.wait(), Factory.manager.timeFrame())),
 
     flag: (): IFlagManager =>
       Factory._getInstance('flagManager', () => new FlagManager(Factory.repo.flag(), Factory.manager.paint())),
@@ -248,7 +249,20 @@ export class Factory {
    */
   public static handler = {
     alert: (): AlertHandler =>
-      Factory._getInstance('alertHandler', () => new AlertHandler(Factory.manager.alert(), Factory.manager.tv())),
+      Factory._getInstance(
+        'alertHandler',
+        () =>
+          new AlertHandler(
+            Factory.manager.alert(),
+            Factory.manager.tv(),
+            Factory.manager.audit(),
+            Factory.manager.watch(),
+            Factory.manager.ticker(),
+            Factory.manager.symbol(),
+            Factory.util.sync(),
+            Factory.util.ui()
+          )
+      ),
     alertSummary: (): IAlertSummaryHandler =>
       Factory._getInstance(
         'alertSummaryHandler',
@@ -262,7 +276,13 @@ export class Factory {
     onload: (): IOnLoadHandler =>
       Factory._getInstance(
         'onloadHandler',
-        () => new OnLoadHandler(Factory.util.wait(), Factory.util.observer(), Factory.handler.watchlist())
+        () =>
+          new OnLoadHandler(
+            Factory.util.wait(),
+            Factory.util.observer(),
+            Factory.handler.watchlist(),
+            Factory.handler.hotkey()
+          )
       ),
     hotkey: (): IHotkeyHandler =>
       Factory._getInstance(
@@ -284,14 +304,22 @@ export class Factory {
           new KeyConfig(
             Factory.manager.tv(),
             Factory.manager.sequence(),
-            Factory.manager.category(),
-            Factory.manager.watch()
+            Factory.manager.timeFrame(),
+            Factory.manager.watch(),
+            Factory.manager.flag(),
+            Factory.manager.style()
           )
       ),
     modifierKeyConfig: (): IModifierKeyConfig =>
       Factory._getInstance(
         'modifierKeyConfig',
-        () => new ModifierKeyConfig(Factory.manager.category(), Factory.manager.tv())
+        () =>
+          new ModifierKeyConfig(
+            Factory.manager.ticker(),
+            Factory.manager.style(),
+            Factory.handler.alert(),
+            Factory.manager.watchlist()
+          )
       ),
     watchlist: (): IWatchListHandler =>
       Factory._getInstance(

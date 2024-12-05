@@ -1,5 +1,6 @@
 import { Constants } from '../models/constant';
 import { WaitUtil } from '../util/wait';
+import { ITimeFrameManager } from './timeframe';
 
 /**
  * Interface for managing TradingView styles and toolbar operations
@@ -15,10 +16,9 @@ export interface IStyleManager {
   /**
    * Applies zone style based on timeframe and zone type
    * @param zoneType Zone type constants from TRADING.ZONES
-   * @param currentStyle Current timeframe style
    * @returns True if style was applied
    */
-  selectZoneStyle(zoneType: string, currentStyle: string): boolean;
+  applyZoneStyle(zoneType: string): boolean;
 
   /**
    * Applies named style using trading view selectors
@@ -39,8 +39,12 @@ export interface IStyleManager {
 export class StyleManager implements IStyleManager {
   /**
    * @param waitUtil Manager for DOM operations
+   * @param timeFrameManager Timeframe operations manager
    */
-  constructor(private readonly waitUtil: WaitUtil) {}
+  constructor(
+    private readonly waitUtil: WaitUtil,
+    private readonly timeFrameManager: ITimeFrameManager
+  ) {}
 
   /** @inheritdoc */
   selectToolbar(index: number): boolean {
@@ -64,15 +68,20 @@ export class StyleManager implements IStyleManager {
   }
 
   /** @inheritdoc */
-  selectZoneStyle(zoneType: string, currentStyle: string): boolean {
+  applyZoneStyle(zoneType: string): boolean {
     try {
-      // TODO: Fix the logic
-      if (!currentStyle) {
+      const currentTimeFrame = this.timeFrameManager.getCurrentTimeFrameConfig();
+      if (!currentTimeFrame) {
+        console.warn('Could not determine current timeframe');
         return false;
       }
 
-      // Combine timeframe style with zone symbol
-      const styleName = currentStyle + zoneType;
+      // Get style ID (e.g. 'I', 'H', 'VH') from timeframe config
+      const styleId = currentTimeFrame.style;
+
+      // Combine style with zone (e.g. 'IDZ', 'HDZ', 'VHDZ')
+      const styleName = styleId + zoneType;
+
       return this.applyStyle(styleName);
     } catch (error) {
       console.error('Error selecting zone style:', error);

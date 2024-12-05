@@ -51,15 +51,22 @@ export interface ITradingViewManager {
   closeTextBox(): void;
 
   /**
-   * Gets current swift key state
-   * @returns True if swift keys are enabled
+   * Get current state of swift keys
+   * @returns true if swift keys are enabled, false otherwise
    */
-  isSwiftEnabled(): boolean;
+  isSwiftKeysEnabled(): boolean;
 
   /**
-   * Title Change to Bridge with AHK
+   * Set swift keys state
+   * @param enabled true to enable swift keys, false to disable
    */
-  toggleSwiftKeys(enabled: boolean): void;
+  setSwiftKeysState(enabled: boolean): void;
+
+  /**
+   * Focus the command input
+   * @returns void
+   */
+  focusCommandInput(): void;
 
   /**
    * Execute ReasonPrompt function which disables SwiftKeys, prompts for reasons,
@@ -105,7 +112,7 @@ export class TradingViewManager implements ITradingViewManager {
   }
 
   /** @inheritdoc */
-  getCursorPrice(): Promise<number> {
+  async getCursorPrice(): Promise<number> {
     return new Promise((resolve, reject) => {
       this.waitUtil.waitJEE(Constants.DOM.POPUPS.AUTO_ALERT, (el) => {
         try {
@@ -143,37 +150,49 @@ export class TradingViewManager implements ITradingViewManager {
     this.waitUtil.waitJClick(Constants.DOM.POPUPS.CLOSE_TEXTBOX);
   }
 
+  private static readonly SWIFT_KEYS_TITLE_SUFFIX = ' - SwiftKeys';
+
   /** @inheritdoc */
-  isSwiftEnabled(): boolean {
+  isSwiftKeysEnabled(): boolean {
     return $(`#${Constants.UI.IDS.CHECKBOXES.SWIFT}`).prop('checked');
   }
 
   /** @inheritdoc */
-  private enableSwiftKey(): void {
-    const liner = ' - SwiftKeys';
-    const swiftEnabled = this.isSwiftEnabled();
+  setSwiftKeysState(enabled: boolean): void {
+    this.updateSwiftKeysCheckbox(enabled);
+    this.updateSwiftKeysTitle(enabled);
+  }
 
-    if (swiftEnabled && !document.title.includes('SwiftKeys')) {
-      document.title = document.title + liner;
-    } else if (!swiftEnabled && document.title.includes('SwiftKeys')) {
-      document.title = document.title.replace(liner, '');
-    }
+  /** @inheritdoc */
+  focusCommandInput(): void {
+    $(`#${Constants.UI.IDS.INPUTS.COMMAND}`).focus();
   }
 
   /**
-   * Private helper to toggle swift keys
-   * @param enabled Enable/disable swift keys
+   * Update checkbox state in DOM
+   * @param enabled true to check, false to uncheck swift keys checkbox
    */
-  toggleSwiftKeys(enabled: boolean): void {
+  private updateSwiftKeysCheckbox(enabled: boolean): void {
     $(`#${Constants.UI.IDS.CHECKBOXES.SWIFT}`).prop('checked', enabled);
-    this.enableSwiftKey();
+  }
+
+  /**
+   * Update document title based on swift keys state
+   * @param enabled true to add suffix, false to remove suffix
+   */
+  private updateSwiftKeysTitle(enabled: boolean): void {
+    if (enabled && !document.title.includes(TradingViewManager.SWIFT_KEYS_TITLE_SUFFIX)) {
+      document.title += TradingViewManager.SWIFT_KEYS_TITLE_SUFFIX;
+    } else if (!enabled && document.title.includes(TradingViewManager.SWIFT_KEYS_TITLE_SUFFIX)) {
+      document.title = document.title.replace(TradingViewManager.SWIFT_KEYS_TITLE_SUFFIX, '');
+    }
   }
 
   // FIXME: Move to Handler Later ?
   /** @inheritdoc */
   reasonPrompt(callback: (reason: string) => void): void {
     //Disable SwiftKeys
-    this.toggleSwiftKeys(false);
+    this.setSwiftKeysState(false);
 
     //Prompt
     void this.smartPrompt
@@ -181,11 +200,11 @@ export class TradingViewManager implements ITradingViewManager {
       .then((reason) => {
         callback(reason);
         //Enable SwiftKeys
-        this.toggleSwiftKeys(true);
+        this.setSwiftKeysState(true);
       })
       .catch((error) => {
         console.error('Error in reasonPrompt:', error);
-        this.toggleSwiftKeys(true);
+        this.setSwiftKeysState(true);
       });
   }
 }

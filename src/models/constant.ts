@@ -89,7 +89,7 @@ export const Constants = Object.freeze({
     },
     TOOLBARS: {
       MAIN: 'span.tv-favorited-drawings-toolbar__widget', // Old Name: toolbarSelector
-      STYLE: 'div.floating-toolbar-react-widgets__button', // Old Name: styleSelector
+      STYLE: 'div.floating-toolbar-react-widgets__button:first', // Old Name: styleSelector
       STYLE_ITEM: 'span[class^=label]', // Old Name: styleItemSelector
     },
     SIDEBAR: {
@@ -154,11 +154,11 @@ export const Constants = Object.freeze({
       DEFAULT: SequenceType.MWD,
       HIGH: SequenceType.YR,
       FRAMES: {
-        [TimeFrame.DAILY]: new TimeFrameConfig('D', 'I', 3),
-        [TimeFrame.WEEKLY]: new TimeFrameConfig('WK', 'H', 4),
-        [TimeFrame.MONTHLY]: new TimeFrameConfig('MN', 'VH', 5),
-        [TimeFrame.THREE_MONTHLY]: new TimeFrameConfig('TMN', 'T', 6),
-        [TimeFrame.SIX_MONTHLY]: new TimeFrameConfig('SMN', 'I', 7),
+        [TimeFrame.DAILY]: new TimeFrameConfig('D', 'I', 1),
+        [TimeFrame.WEEKLY]: new TimeFrameConfig('WK', 'H', 2),
+        [TimeFrame.MONTHLY]: new TimeFrameConfig('MN', 'VH', 3),
+        [TimeFrame.THREE_MONTHLY]: new TimeFrameConfig('TMN', 'T', 4),
+        [TimeFrame.SIX_MONTHLY]: new TimeFrameConfig('SMN', 'I', 5),
       } as TimeFrameMap,
       SEQUENCES: {
         // Old name: timeFrameBar

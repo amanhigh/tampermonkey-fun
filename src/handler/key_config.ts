@@ -19,7 +19,54 @@ type KeyMap = Map<string, KeyBinding>;
 /**
  * Manages hotkey configuration and actions
  */
-export class KeyConfig {
+/**
+ * Interface for managing hotkey configurations and actions
+ */
+export interface IKeyConfig {
+  /**
+   * Execute toolbar key action if defined
+   * @param key Key pressed
+   * @returns True if action was executed
+   */
+  executeToolbarAction(key: string): boolean;
+
+  /**
+   * Execute timeframe key action if defined
+   * @param key Key pressed
+   * @returns True if action was executed
+   */
+  executeTimeframeAction(key: string): boolean;
+
+  /**
+   * Execute order key action if defined
+   * @param key Key pressed
+   * @returns True if action was executed
+   */
+  executeOrderAction(key: string): boolean;
+
+  /**
+   * Execute flag key action if defined
+   * @param key Key pressed
+   * @returns True if action was executed
+   */
+  executeFlagAction(key: string): boolean;
+
+  /**
+   * Execute utility key action if defined
+   * @param key Key pressed
+   * @returns True if action was executed
+   */
+  executeUtilityAction(key: string): boolean;
+
+  /**
+   * Get description for given key if bound
+   * @param key Key to get description for
+   * @returns Description string if found
+   */
+  getDescription(key: string): string | undefined;
+}
+
+export class KeyConfig implements IKeyConfig {
   private readonly _toolbarKeys: KeyMap;
   private readonly _timeframeKeys: KeyMap;
   private readonly _orderKeys: KeyMap;
@@ -83,14 +130,14 @@ export class KeyConfig {
         'j',
         {
           description: 'Demand Zone',
-          action: () => styleManager.selectZoneStyle(Constants.TRADING.ZONES.DEMAND, ''), // TODO: Get current style
+          action: () => styleManager.applyZoneStyle(Constants.TRADING.ZONES.DEMAND),
         },
       ],
       [
         'u',
         {
           description: 'Supply Zone',
-          action: () => styleManager.selectZoneStyle(Constants.TRADING.ZONES.SUPPLY, ''), // TODO: Get current style
+          action: () => styleManager.applyZoneStyle(Constants.TRADING.ZONES.SUPPLY),
         },
       ],
       [
