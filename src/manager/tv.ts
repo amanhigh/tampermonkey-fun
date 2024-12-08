@@ -67,13 +67,6 @@ export interface ITradingViewManager {
    * @returns void
    */
   focusCommandInput(): void;
-
-  /**
-   * Execute ReasonPrompt function which disables SwiftKeys, prompts for reasons,
-   * and enables SwiftKeys after the prompt.
-   * @param callback The callback function to be executed with the reason returned from SmartPrompt
-   */
-  reasonPrompt(callback: (reason: string) => void): void;
 }
 
 /**
@@ -186,25 +179,5 @@ export class TradingViewManager implements ITradingViewManager {
     } else if (!enabled && document.title.includes(TradingViewManager.SWIFT_KEYS_TITLE_SUFFIX)) {
       document.title = document.title.replace(TradingViewManager.SWIFT_KEYS_TITLE_SUFFIX, '');
     }
-  }
-
-  // FIXME: Move to Handler Later ?
-  /** @inheritdoc */
-  reasonPrompt(callback: (reason: string) => void): void {
-    //Disable SwiftKeys
-    this.setSwiftKeysState(false);
-
-    //Prompt
-    void this.smartPrompt
-      .showModal(Constants.TRADING.PROMPT.REASONS, Constants.TRADING.PROMPT.OVERRIDES)
-      .then((reason) => {
-        callback(reason);
-        //Enable SwiftKeys
-        this.setSwiftKeysState(true);
-      })
-      .catch((error) => {
-        console.error('Error in reasonPrompt:', error);
-        this.setSwiftKeysState(true);
-      });
   }
 }

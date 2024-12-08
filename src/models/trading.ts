@@ -9,6 +9,16 @@ export enum SequenceType {
 }
 
 /**
+ * Available trend types for journal entries
+ */
+export enum Trend {
+  /** Normal trend movement */
+  TREND = 'trend',
+  /** Counter trend movement */
+  COUNTER_TREND = 'ctrend'
+}
+
+/**
  * Available timeframe keys
  */
 export enum TimeFrame {
