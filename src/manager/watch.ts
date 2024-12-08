@@ -1,7 +1,6 @@
 import { CategoryLists } from '../models/category';
 import { Constants } from '../models/constant';
 import { IWatchlistRepo } from '../repo/watch';
-import { WatchChangeEvent } from '../models/events';
 
 /**
  * Interface for managing watch category operations
@@ -88,6 +87,7 @@ export class WatchManager implements IWatchManager {
 
     // Update watchlist category
     categoryLists.setList(this.DEFAULT_LIST_INDEX, tvWatchSet);
+    this.signalWatchChange().catch(console.error);
   }
 
   /** @inheritdoc */
@@ -106,10 +106,8 @@ export class WatchManager implements IWatchManager {
   }
 
   /** @inheritdoc */
-  async recordWatchChangeEvent(watchListTickers: string[], recentTickers: string[]): Promise<void> {
-    // FIXME: Change event only to indicate what changed without Values.
-    const event = new WatchChangeEvent(watchListTickers, recentTickers);
-    await this.watchRepo.createWatchChangeEvent(event);
+  private async signalWatchChange(): Promise<void> {
+    await this.watchRepo.createWatchChangeEvent();
   }
 
   /**

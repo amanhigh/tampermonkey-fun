@@ -45,39 +45,3 @@ export class AlertClicked extends BaseEvent {
     });
   }
 }
-
-export class WatchChangeEvent extends BaseEvent {
-  private _tickers: string[];
-  private _recent: string[];
-
-  constructor(watchList: string[], recentList: string[]) {
-    super();
-    this._tickers = [...watchList];
-    this._recent = [...recentList];
-  }
-
-  get tickers(): string[] {
-    return [...this._tickers];
-  }
-  get recent(): string[] {
-    return [...this._recent];
-  }
-
-  set tickers(value: string[]) {
-    this._tickers = [...value];
-  }
-  set recent(value: string[]) {
-    this._recent = [...value];
-  }
-
-  /**
-   * Serialize WatchChangeEvent to JSON string for storage
-   * @returns JSON string representation of the event
-   */
-  public stringify(): string {
-    return JSON.stringify({
-      tickers: this._tickers,
-      recent: this._recent,
-    });
-  }
-}

@@ -86,7 +86,7 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
     this.paintManager.paintSymbols(screenerSymbolSelector, null, { color: Constants.UI.COLORS.DEFAULT }, true);
 
     // Paint Recently Watched
-    // FIXME: Call from Recent Manager in Handler.
+    // BUG: Call from Recent Manager in Handler.
 
     // Paint Symbols
     // HACK: Extract common painting logic ?
