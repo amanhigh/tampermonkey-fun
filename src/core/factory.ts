@@ -306,8 +306,8 @@ export class Factory {
             Factory.manager.tv(),
             Factory.manager.sequence(),
             Factory.manager.timeFrame(),
-            Factory.manager.watch(),
-            Factory.manager.flag(),
+            Factory.handler.watchlist(),
+            Factory.handler.flag(),
             Factory.manager.style()
           )
       ),

@@ -290,7 +290,7 @@ export class KeyConfig implements IKeyConfig {
         "'",
         {
           description: 'Undo',
-          action: () => document.execCommand('undo', false, null),
+          action: () => document.execCommand('undo', false),
         },
       ],
     ]);
