@@ -1,7 +1,8 @@
 import { IStyleManager } from '../manager/style';
 import { ITickerManager } from '../manager/ticker';
-import { ITradingViewWatchlistManager } from '../manager/watchlist';
 import { IAlertHandler } from './alert';
+import { IFlagHandler } from './flag';
+import { IWatchListHandler } from './watchlist';
 
 /**
  * Type definitions for key bindings and actions
@@ -37,7 +38,8 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
     private readonly tickerManager: ITickerManager,
     private readonly styleManager: IStyleManager,
     private readonly alertHandler: IAlertHandler,
-    private readonly watchlistManager: ITradingViewWatchlistManager
+    private readonly watchlistHandler: IWatchListHandler,
+    private readonly flagHandler: IFlagHandler
   ) {
     // CTRL modifier actions
     this._ctrlKeys = new Map([
@@ -66,15 +68,49 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
         'f12',
         {
           description: 'Mark Index',
-          // FIXME: Move to WatchlistHandler by using getSelectedTicker.
-          action: () => this.watchlistManager.recordCategory(6),
+          action: () => this.watchlistHandler.recordSelectedTicker(6),
         },
       ],
       [
         'f11',
         {
           description: 'Mark Composite',
-          action: () => this.watchlistManager.recordCategory(7),
+          action: () => this.watchlistHandler.recordSelectedTicker(7),
+        },
+      ],
+      [
+        'f7',
+        {
+          description: 'Flag Red Shorts',
+          action: () => this.flagHandler.recordSelectedTicker(1),
+        },
+      ],
+      [
+        'f8',
+        {
+          description: 'Flag Blue Crypto',
+          action: () => this.flagHandler.recordSelectedTicker(2),
+        },
+      ],
+      [
+        'f10',
+        {
+          description: 'Flag Green Longs',
+          action: () => this.flagHandler.recordSelectedTicker(4),
+        },
+      ],
+      [
+        'f11',
+        {
+          description: 'Flag Brown Index',
+          action: () => this.flagHandler.recordSelectedTicker(6),
+        },
+      ],
+      [
+        'f12',
+        {
+          description: 'Flag Golden XAU',
+          action: () => this.flagHandler.recordSelectedTicker(7),
         },
       ],
     ]);

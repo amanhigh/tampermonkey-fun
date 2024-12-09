@@ -55,6 +55,7 @@ import { IRecentManager, RecentManager } from '../manager/recent';
 import { IWatchManager, WatchManager } from '../manager/watch';
 import { IWatchListHandler, WatchListHandler } from '../handler/watchlist';
 import { IOnLoadHandler, OnLoadHandler } from '../handler/onload';
+import { IFlagHandler, FlagHandler } from '../handler/flag';
 
 /**
  * Project Architecture Overview
@@ -318,7 +319,8 @@ export class Factory {
             Factory.manager.ticker(),
             Factory.manager.style(),
             Factory.handler.alert(),
-            Factory.manager.watchlist()
+            Factory.handler.watchlist(),
+            Factory.handler.flag()
           )
       ),
     watchlist: (): IWatchListHandler =>
@@ -330,7 +332,8 @@ export class Factory {
             Factory.manager.screener(),
             Factory.manager.header(),
             Factory.util.sync(),
-            Factory.manager.watch()
+            Factory.manager.watch(),
+            Factory.manager.tv()
           )
       ),
     pair: (): IPairHandler =>
@@ -344,7 +347,8 @@ export class Factory {
             Factory.manager.alert()
           )
       ),
-
+    flag: (): IFlagHandler =>
+      Factory._getInstance('flagHandler', () => new FlagHandler(Factory.manager.flag(), Factory.manager.tv())),
     sequence: (): ISequenceHandler =>
       Factory._getInstance(
         'sequenceHandler',

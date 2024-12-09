@@ -8,6 +8,7 @@ import { IWatchManager } from '../manager/watch';
 import { ITradingViewWatchlistManager } from '../manager/watchlist';
 import { Notifier } from '../util/notify';
 import { ISyncUtil } from '../util/sync';
+import { ITradingViewManager } from '../manager/tv';
 
 /**
  * Handles watchlist-related events and UI updates
@@ -30,6 +31,12 @@ export interface IWatchListHandler {
    * - Saves changes after cleanup
    */
   handleWatchlistCleanup(): Promise<void>;
+
+  /**
+   * Records the selected ticker for a given category index.
+   * @param categoryIndex The index of the category.
+   */
+  recordSelectedTicker(categoryIndex: number): void;
 }
 
 /**
@@ -41,7 +48,8 @@ export class WatchListHandler implements IWatchListHandler {
     private readonly screenerManager: ITradingViewScreenerManager,
     private readonly headerManager: IHeaderManager,
     private readonly syncUtil: ISyncUtil,
-    private readonly watchManager: IWatchManager
+    private readonly watchManager: IWatchManager,
+    private readonly tvManager: ITradingViewManager
   ) {}
 
   /** @inheritdoc */
@@ -93,5 +101,12 @@ export class WatchListHandler implements IWatchListHandler {
         resolve();
       }, 1000);
     });
+  }
+
+  /** @inheritdoc */
+  public recordSelectedTicker(categoryIndex: number): void {
+    const symbol = this.tvManager.getName();
+    this.watchManager.recordCategory(categoryIndex, [symbol]);
+    this.onWatchListChange();
   }
 }

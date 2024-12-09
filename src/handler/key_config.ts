@@ -1,10 +1,10 @@
 import { Constants } from '../models/constant';
 import { ITimeFrameManager } from '../manager/timeframe';
 import { ISequenceManager } from '../manager/sequence';
-import { IWatchManager } from '../manager/watch';
-import { IFlagManager } from '../manager/flag';
 import { IStyleManager } from '../manager/style';
 import { ITradingViewManager } from '../manager/tv';
+import { IWatchListHandler } from '../handler/watchlist';
+import { IFlagHandler } from '../handler/flag';
 
 /**
  * Type definitions for key bindings and actions
@@ -77,8 +77,8 @@ export class KeyConfig implements IKeyConfig {
    * @param tvManager Trading view manager
    * @param sequenceManager Sequence manager for timeframes
    * @param timeFrameManager Timeframe operations manager
-   * @param watchManager Watch category manager
-   * @param flagManager Flag category manager
+   * @param watchlistHandler Watchlist handler
+   * @param flagHandler Flag handler
    * @param styleManager Style operations manager
    */
   // eslint-disable-next-line max-lines-per-function
@@ -86,8 +86,8 @@ export class KeyConfig implements IKeyConfig {
     private readonly tvManager: ITradingViewManager,
     private readonly sequenceManager: ISequenceManager,
     private readonly timeFrameManager: ITimeFrameManager,
-    private readonly watchManager: IWatchManager,
-    private readonly flagManager: IFlagManager,
+    private readonly watchlistHandler: IWatchListHandler,
+    private readonly flagHandler: IFlagHandler,
     private readonly styleManager: IStyleManager
   ) {
     this._toolbarKeys = new Map([
@@ -200,35 +200,35 @@ export class KeyConfig implements IKeyConfig {
         'F1',
         {
           description: 'Order List - Index 0',
-          action: () => watchManager.recordCategory(0),
+          action: () => this.watchlistHandler.recordSelectedTicker(0),
         },
       ],
       [
         'F2',
         {
           description: 'Order List - Index 1',
-          action: () => watchManager.recordCategory(1),
+          action: () => this.watchlistHandler.recordSelectedTicker(1),
         },
       ],
       [
         'F3',
         {
           description: 'Order List - Index 2',
-          action: () => watchManager.recordCategory(2),
+          action: () => this.watchlistHandler.recordSelectedTicker(2),
         },
       ],
       [
         'F4',
         {
           description: 'Order List - Index 3',
-          action: () => watchManager.recordCategory(3),
+          action: () => this.watchlistHandler.recordSelectedTicker(3),
         },
       ],
       [
         'F5',
         {
           description: 'Order List - Index 4',
-          action: () => watchManager.recordCategory(4),
+          action: () => this.watchlistHandler.recordSelectedTicker(4),
         },
       ],
     ]);
@@ -238,49 +238,49 @@ export class KeyConfig implements IKeyConfig {
         'F6',
         {
           description: 'Orange Consolidation Flag - Index 0',
-          action: () => flagManager.recordCategory(0),
+          action: () => this.flagHandler.recordSelectedTicker(0),
         },
       ],
       [
         'F7',
         {
           description: 'Red Shorts Flag - Index 1',
-          action: () => flagManager.recordCategory(1),
+          action: () => this.flagHandler.recordSelectedTicker(1),
         },
       ],
       [
         'F8',
         {
           description: 'Blue Crypto Flag - Index 2',
-          action: () => flagManager.recordCategory(2),
+          action: () => this.flagHandler.recordSelectedTicker(2),
         },
       ],
       [
         'F9',
         {
           description: 'Empty Flag - Index 3',
-          action: () => flagManager.recordCategory(3),
+          action: () => this.flagHandler.recordSelectedTicker(3),
         },
       ],
       [
         'F10',
         {
           description: 'Green Longs Flag - Index 4',
-          action: () => flagManager.recordCategory(4),
+          action: () => this.flagHandler.recordSelectedTicker(4),
         },
       ],
       [
         'F11',
         {
           description: 'Brown Index Flag - Index 6',
-          action: () => flagManager.recordCategory(6),
+          action: () => this.flagHandler.recordSelectedTicker(6),
         },
       ],
       [
         'F12',
         {
           description: 'Golden XAU Flag - Index 7',
-          action: () => flagManager.recordCategory(7),
+          action: () => this.flagHandler.recordSelectedTicker(7),
         },
       ],
     ]);
