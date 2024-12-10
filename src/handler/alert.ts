@@ -12,6 +12,8 @@ import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 import { IUIUtil } from '../util/ui';
 import { ISyncUtil } from '../util/sync';
+import { IAlertSummaryHandler } from './alert_summary';
+import { IWatchListHandler } from './watchlist';
 
 /**
  * Interface for managing alert operations
@@ -88,7 +90,9 @@ export class AlertHandler implements IAlertHandler {
     private readonly tickerManager: ITickerManager,
     private readonly symbolManager: ISymbolManager,
     private readonly syncUtil: ISyncUtil,
-    private readonly uiUtil: IUIUtil
+    private readonly uiUtil: IUIUtil,
+    private readonly alertSummaryHandler: IAlertSummaryHandler,
+    private readonly watchListHandler: IWatchListHandler
   ) {}
 
   /** @inheritdoc */
@@ -156,8 +160,7 @@ export class AlertHandler implements IAlertHandler {
   public refreshAlerts(): void {
     this.syncUtil.waitOn('alert-refresh-local', 10, () => {
       const alerts = this.alertManager.getAlerts();
-      // FIXME: Use AlertSummary Manager
-      this.displayAlerts(alerts);
+      this.alertSummaryHandler.displayAlerts(alerts);
       //TODO: Audit Current
     });
   }
@@ -180,8 +183,8 @@ export class AlertHandler implements IAlertHandler {
     // Refresh alerts
     void this.refershAllAllerts();
 
-    // Handle order set cleanup
-    this.watchManager.handleWatchlistCleanup();
+    // Use WatchlistHandler for cleanup
+    void this.watchListHandler.handleWatchlistCleanup();
   }
 
   /** @inheritdoc */

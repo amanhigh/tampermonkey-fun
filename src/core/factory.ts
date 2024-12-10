@@ -261,7 +261,9 @@ export class Factory {
             Factory.manager.ticker(),
             Factory.manager.symbol(),
             Factory.util.sync(),
-            Factory.util.ui()
+            Factory.util.ui(),
+            Factory.handler.alertSummary(),
+            Factory.handler.watchlist()
           )
       ),
     alertSummary: (): IAlertSummaryHandler =>
