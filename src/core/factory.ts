@@ -56,6 +56,8 @@ import { IWatchManager, WatchManager } from '../manager/watch';
 import { IWatchListHandler, WatchListHandler } from '../handler/watchlist';
 import { IOnLoadHandler, OnLoadHandler } from '../handler/onload';
 import { IFlagHandler, FlagHandler } from '../handler/flag';
+import { IKiteRepo, KiteRepo } from '../repo/kite';
+import { ITickerHandler, TickerHandler } from '../handler/ticker';
 
 /**
  * Project Architecture Overview
@@ -125,6 +127,7 @@ export class Factory {
     sequence: (): ISequenceRepo => Factory._getInstance('sequenceRepo', () => new SequenceRepo(Factory.repo._cron())),
     audit: (): IAuditRepo => Factory._getInstance('auditRepo', () => new AuditRepo(Factory.repo._cron())),
     fno: (): IFnoRepo => Factory._getInstance('fnoRepo', () => new FnoRepo(Factory.repo._cron())),
+    kite: (): IKiteRepo => Factory._getInstance('kiteRepo', () => new KiteRepo()),
     recent: (): IRecentTickerRepo =>
       Factory._getInstance('recentRepo', () => new RecentTickerRepo(Factory.repo._cron())),
   };
@@ -224,7 +227,10 @@ export class Factory {
       ),
 
     kite: (): IKiteManager =>
-      Factory._getInstance('kiteManager', () => new KiteManager(Factory.manager.symbol(), Factory.client.kite())),
+      Factory._getInstance(
+        'kiteManager',
+        () => new KiteManager(Factory.manager.symbol(), Factory.client.kite(), Factory.repo.kite())
+      ),
 
     symbol: (): ISymbolManager =>
       Factory._getInstance('symbolManager', () => new SymbolManager(Factory.repo.ticker(), Factory.repo.exchange())),
@@ -274,7 +280,8 @@ export class Factory {
     audit: (): IAuditHandler =>
       Factory._getInstance(
         'auditHandler',
-        () => new AuditHandler(Factory.manager.audit(), Factory.manager.pair(), Factory.util.ui())
+        () =>
+          new AuditHandler(Factory.manager.audit(), Factory.manager.pair(), Factory.util.ui(), Factory.handler.ticker())
       ),
     onload: (): IOnLoadHandler =>
       Factory._getInstance(
@@ -299,7 +306,35 @@ export class Factory {
           )
       ),
     kite: (): IKiteHandler =>
-      Factory._getInstance('kiteHandler', () => new KiteHandler(Factory.manager.kite(), Factory.manager.symbol())),
+      Factory._getInstance(
+        'kiteHandler',
+        () =>
+          new KiteHandler(
+            Factory.manager.kite(),
+            Factory.manager.symbol(),
+            Factory.util.wait(),
+            Factory.manager.ticker(),
+            Factory.manager.tv(),
+            Factory.util.ui()
+          )
+      ),
+    ticker: (): ITickerHandler =>
+      Factory._getInstance(
+        'tickerHandler',
+        () =>
+          new TickerHandler(
+            Factory.manager.recent(),
+            Factory.manager.ticker(),
+            Factory.manager.symbol(),
+            Factory.manager.paint(),
+            Factory.manager.screener(),
+            Factory.handler.sequence(),
+            Factory.manager.watchlist(),
+            Factory.handler.kite(),
+            Factory.util.sync()
+          )
+      ),
+
     keyConfig: (): KeyConfig =>
       Factory._getInstance(
         'keyConfig',

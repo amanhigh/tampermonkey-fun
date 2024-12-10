@@ -4,6 +4,7 @@ import { IAuditManager } from '../manager/audit';
 import { IPairManager } from '../manager/pair';
 import { IUIUtil } from '../util/ui';
 import { Notifier } from '../util/notify';
+import { ITickerHandler } from './ticker';
 
 /**
  * Interface for managing audit UI operations
@@ -27,7 +28,8 @@ export class AuditHandler implements IAuditHandler {
   constructor(
     private readonly auditManager: IAuditManager,
     private readonly pairManager: IPairManager,
-    private readonly uiUtil: IUIUtil
+    private readonly uiUtil: IUIUtil,
+    private readonly tickerHandler: ITickerHandler
   ) {}
 
   /**
@@ -101,8 +103,8 @@ export class AuditHandler implements IAuditHandler {
     const backgroundColor = this.getButtonColor(state);
 
     const button = this.uiUtil
-      // BUG: Open Ticker using tvTicker
-      .buildButton(buttonId, investingTicker, () => this.pairManager.openTicker(investingTicker))
+      // FIXME: Open Ticker using TickerHandler
+      .buildButton(buttonId, investingTicker, () => this.tickerHandler.openTicker(investingTicker))
       .css({
         'background-color': backgroundColor,
         margin: '2px',

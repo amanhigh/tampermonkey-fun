@@ -6,7 +6,7 @@ import { IKiteHandler } from './kite';
 import { Notifier } from '../util/notify';
 import { ITickerManager } from '../manager/ticker';
 import { IRecentManager } from '../manager/recent';
-import { SyncUtil } from '../util/sync';
+import { ISyncUtil } from '../util/sync';
 import { ISequenceHandler } from './sequence';
 import { ISymbolManager } from '../manager/symbol';
 
@@ -44,7 +44,7 @@ export class TickerHandler implements ITickerHandler {
     private readonly sequenceHandler: ISequenceHandler,
     private readonly watchlistManager: ITradingViewWatchlistManager,
     private readonly kiteHandler: IKiteHandler,
-    private readonly syncUtil: SyncUtil
+    private readonly syncUtil: ISyncUtil
   ) {}
 
   /** @inheritdoc */
@@ -72,8 +72,9 @@ export class TickerHandler implements ITickerHandler {
       this.sequenceHandler.displaySequence();
 
       // Handle GTT operations
-      // FIXME: Pass GttOrderMap from Kite Manager
-      this.kiteHandler.gttSummary();
+      this.kiteHandler
+        .refreshGttOrders()
+        .catch((error) => Notifier.error(`Failed to refresh GTT orders: ${error.message}`));
     });
   }
 
@@ -86,9 +87,7 @@ export class TickerHandler implements ITickerHandler {
     } else {
       this.recentManager.clearRecent();
       this.screenerManager.paintScreener();
-      this.watchlistManager.paintAlertFeedEvent().catch(() => {
-        Notifier.error('Error updating watchlist');
-      });
+      // TODO: Add Paint Alert Feed Event.
       Notifier.error('Recent Disabled');
     }
   }
@@ -100,9 +99,7 @@ export class TickerHandler implements ITickerHandler {
     if (recentEnabled && !this.recentManager.isRecent(ticker)) {
       this.recentManager.addTicker(ticker);
       this.screenerManager.paintScreener();
-      this.watchlistManager.paintAlertFeedEvent().catch(() => {
-        Notifier.error('Error updating watchlist');
-      });
+      // TODO: this.watchlistManager.paintAlertFeedEvent()
     }
   }
 }

@@ -67,6 +67,12 @@ export const Constants = Object.freeze({
     },
     ORDER_PANEL: {
       CLOSE: 'button[data-name="close"]', // Old name: orderPanelCloseSelector
+      GTT_BUTTON: '[data-role="gtt-button"]',
+      INPUTS: {
+        ENTRY_PRICE: 'input[data-property-id="Risk/RewardlongEntryPrice"]',
+        PROFIT_PRICE: 'input[data-property-id="Risk/RewardlongProfitLevelPrice"]',
+        STOP_PRICE: 'input[data-property-id="Risk/RewardlongStopLevelPrice"]',
+      },
     },
     SCREENER: {
       SYMBOL: 'div[class*=symbol]', // Old name: screenerSymbolSelector
@@ -145,6 +151,7 @@ export const Constants = Object.freeze({
       ALERT_CLICKED: 'alertClickedEvent', // Old Name: alertClickedEvent
       GTT_REFERSH: 'gttRefereshEvent', // Old Name: gttOrderEvent
       GTT_CREATE: 'gttCreateEvent', // Old Name: gttRequest
+      GTT_DELETE: 'gttDeleteEvent',
     },
   },
 

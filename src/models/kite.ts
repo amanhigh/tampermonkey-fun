@@ -327,6 +327,32 @@ export interface GttApiData {
 /**
  * GTT API Response data format
  */
+export class GttDeleteEvent extends BaseEvent {
+  private readonly _orderId: string;
+  private readonly _symbol: string;
+
+  constructor(orderId: string, symbol: string) {
+    super();
+    this._orderId = orderId;
+    this._symbol = symbol;
+  }
+
+  get orderId(): string {
+    return this._orderId;
+  }
+
+  get symbol(): string {
+    return this._symbol;
+  }
+
+  public stringify(): string {
+    return JSON.stringify({
+      orderId: this._orderId,
+      symbol: this._symbol
+    });
+  }
+}
+
 export interface GttApiResponse {
   data: GttApiData[];
 }

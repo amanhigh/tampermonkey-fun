@@ -1,6 +1,7 @@
 import { ISymbolManager } from './symbol';
 import { IKiteClient } from '../client/kite';
-import { GttCreateEvent, CreateGttRequest, GttApiResponse } from '../models/kite';
+import { GttCreateEvent, CreateGttRequest, GttApiResponse, GttRefreshEvent, GttDeleteEvent } from '../models/kite';
+import { IKiteRepo } from '../repo/kite';
 
 /**
  * Interface for managing Kite trading platform operations
@@ -13,6 +14,13 @@ export interface IKiteManager {
   createOrder(event: GttCreateEvent): Promise<void>;
 
   /**
+   * Creates GTT delete event and stores in repo
+   * @param orderId Order ID to delete
+   * @param symbol Trading symbol for the order
+   */
+  createGttDeleteEvent(orderId: string, symbol: string): Promise<void>;
+
+  /**
    * Deletes a GTT order by ID
    * @param gttId The GTT order ID to delete
    */
@@ -23,12 +31,25 @@ export interface IKiteManager {
    * @param callback Callback to process loaded GTT data
    */
   loadOrders(callback: (data: GttApiResponse) => void): void;
+
+  createGttOrderEvent(event: GttCreateEvent): Promise<void>;
+  createGttRefreshEvent(event: GttRefreshEvent): Promise<void>;
+  getGttRefereshEvent(): Promise<GttRefreshEvent>;
 }
 
 /**
  * Manages Kite trading platform operations
  */
 export class KiteManager implements IKiteManager {
+  async getGttRefereshEvent(): Promise<GttRefreshEvent> {
+    return await this._kiteRepo.getGttRefereshEvent();
+  }
+
+  public async createGttDeleteEvent(orderId: string, symbol: string): Promise<void> {
+    const deleteEvent = new GttDeleteEvent(orderId, symbol);
+    await this._kiteRepo.createGttDeleteEvent(deleteEvent);
+  }
+
   /**
    * Trading price margin
    * @private
@@ -38,10 +59,12 @@ export class KiteManager implements IKiteManager {
   /**
    * @param symbolManager Manager for symbol operations
    * @param kiteClient Client for Kite API operations
+   * @param kiteRepo Repository for Kite data persistence
    */
   constructor(
     private readonly _symbolManager: ISymbolManager,
-    private readonly _kiteClient: IKiteClient
+    private readonly _kiteClient: IKiteClient,
+    private readonly _kiteRepo: IKiteRepo
   ) {}
 
   /** @inheritdoc */
@@ -68,6 +91,14 @@ export class KiteManager implements IKiteManager {
   /** @inheritdoc */
   loadOrders(callback: (data: GttApiResponse) => void): void {
     void this._kiteClient.loadGTT(callback);
+  }
+
+  async createGttOrderEvent(event: GttCreateEvent): Promise<void> {
+    await this._kiteRepo.createGttOrderEvent(event);
+  }
+
+  async createGttRefreshEvent(event: GttRefreshEvent): Promise<void> {
+    await this._kiteRepo.createGttRefreshEvent(event);
   }
 
   /**

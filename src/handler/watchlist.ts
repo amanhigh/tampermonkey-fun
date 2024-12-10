@@ -77,30 +77,45 @@ export class WatchListHandler implements IWatchListHandler {
 
   /** @inheritdoc */
   public async handleWatchlistCleanup(): Promise<void> {
-    // Perform dry run to get potential deletion count
-    const dryRunCount = this.watchManager.dryRunClean();
+    try {
+      // Perform dry run to get potential deletion count
+      const dryRunCount = this.watchManager.dryRunClean();
 
-    //Clean Order Set after unfilter completes
-    await new Promise<void>((resolve) => {
-      setTimeout(async () => {
-        if (dryRunCount < 5) {
-          // Auto update if deletion count is less than 5
-          const cleanCount = this.watchManager.clean();
-          await this.watchManager.save();
-        } else {
-          // Prompt user for confirmation if deletion count is 5 or more
-          const confirmDeletion = confirm(`Potential Deletions: ${dryRunCount}. Proceed with cleanup?`);
+      // Wait for unfilter to complete
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-          if (confirmDeletion) {
-            const cleanCount = this.watchManager.clean();
-            await this.watchManager.save();
-          } else {
-            Notifier.message('Cleanup aborted by user.', 'red');
-          }
-        }
-        resolve();
-      }, 1000);
-    });
+      // Handle cleanup based on deletion count
+      if (dryRunCount < 5) {
+        this.executeCleanup();
+      } else {
+        this.executeCleanupWithConfirmation(dryRunCount);
+      }
+    } catch (error) {
+      Notifier.error('Failed to cleanup watchlist');
+      console.error('Watchlist cleanup failed:', error);
+    }
+  }
+
+  /**
+   * Executes cleanup for small number of deletions
+   * @private
+   */
+  private executeCleanup(): void {
+    const cleanCount = this.watchManager.clean();
+    Notifier.success(`Cleaned ${cleanCount} items`);
+  }
+
+  /**
+   * Executes cleanup with user confirmation for larger deletions
+   * @private
+   */
+  private executeCleanupWithConfirmation(count: number): void {
+    const confirmDeletion = confirm(`Potential Deletions: ${count}. Proceed with cleanup?`);
+    if (confirmDeletion) {
+      this.executeCleanup();
+    } else {
+      Notifier.message('Cleanup aborted by user.', 'red');
+    }
   }
 
   /** @inheritdoc */
