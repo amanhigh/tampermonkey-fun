@@ -12,13 +12,9 @@
     "url": "https://github.com/amanhigh/tampermonkey-fun"
   },
   "scripts": {
-    "lint": "npx eslint .",
-    "compile": "npx tsc --noEmit",
     "analyze": "cross-env npm_config_report=true npm run build",
-    "debug": "webpack --config config/webpack.config.dev.cjs",
     "build": "webpack --config config/webpack.config.prod.cjs",
     "test": "webpack --config config/test.cjs",
-    "format": "prettier --write \"src/**/*.ts\"",
     "barkat": "webpack --config config/barkat.cjs"
   },
   "devDependencies": {

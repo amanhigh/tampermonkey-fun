@@ -117,7 +117,7 @@ export class SymbolManager implements ISymbolManager {
   /** @inheritdoc */
   createTvToInvestingMapping(tvTicker: string, investingTicker: string): void {
     this._tickerRepo.pinInvestingTicker(tvTicker, investingTicker);
-    // TODO: mapAlert(investingTicker, getExchange()); Move to Handler createTvToExchangeTickerMapping
+    // FIXME: mapAlert(investingTicker, getExchange()); Move to Handler createTvToExchangeTickerMapping
   }
 
   /** @inheritdoc */

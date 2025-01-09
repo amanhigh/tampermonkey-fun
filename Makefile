@@ -2,7 +2,35 @@
 .DEFAULT_GOAL := help
 OUT := /dev/null
 
-// FIXME: Link make File to npm scripts
+### Build Tools
+ESLINT := npx eslint
+TSC := npx tsc
+WEBPACK := webpack
+PRETTIER := npx prettier
+NPM := npm
+
+### Build Commands
+lint: ## Run ESLint on all files
+	@printf $(_TITLE) "Lint" "TypeScript"
+	$(ESLINT) .
+
+compile: ## Run TypeScript compilation with optional directory (usage: make compile [DIR=manager])
+	@printf $(_TITLE) "Compile" "TypeScript"
+	@if [ "$(DIR)" ]; then \
+		$(TSC) --noEmit "src/$(DIR)/**/*.ts"; \
+	else \
+		$(TSC) --noEmit; \
+	fi
+
+debug: ## Debug bundle using webpack
+	@printf $(_TITLE) "Bundle" "Debug"
+	$(WEBPACK) --config config/webpack.config.dev.cjs
+
+format: ## Format TypeScript files using prettier
+	@printf $(_TITLE) "Format" "TypeScript"
+	$(PRETTIER) --write "src/**/*.ts"
+
+## Misc
 .PHONY: pack
 pack: ## Repomix Packing
 	@printf $(_TITLE) "Pack" "Repository"
@@ -18,7 +46,7 @@ help: ## Show this help
 info: ## Info
 infos: info ## Extended Info
 prepare: ## Onetime Setup
-setup: ## Setup
+setup: compile lint format ## Setup
 clean: ## Clean
 reset: clean setup info ## Reset
 all:prepare reset ## Run All Targets

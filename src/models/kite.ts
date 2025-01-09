@@ -216,6 +216,33 @@ export class GttRefreshEvent extends BaseEvent {
   }
 
   /**
+   * Create GttRefreshEvent from serialized string
+   * @param data Serialized event data
+   * @returns New GttRefreshEvent instance
+   */
+  public static fromString(data: string | undefined): GttRefreshEvent {
+    if (!data) {
+      return new GttRefreshEvent();
+    }
+    try {
+      const parsed = JSON.parse(data);
+      const event = new GttRefreshEvent();
+      if (parsed.orders && typeof parsed.orders === 'object') {
+        // Reconstruct orders from parsed data
+        Object.entries(parsed.orders).forEach(([sym, orders]) => {
+          (orders as Array<any>).forEach((order) => {
+            event.addOrder(sym, new Order(order.sym, order.qty, order.type, order.id, order.prices));
+          });
+        });
+      }
+      return event;
+    } catch (error) {
+      console.error('Failed to parse GttRefreshEvent:', error);
+      return new GttRefreshEvent();
+    }
+  }
+
+  /**
    * Serialize event to JSON string for storage
    * @returns JSON string with orders map
    */
@@ -348,7 +375,7 @@ export class GttDeleteEvent extends BaseEvent {
   public stringify(): string {
     return JSON.stringify({
       orderId: this._orderId,
-      symbol: this._symbol
+      symbol: this._symbol,
     });
   }
 }

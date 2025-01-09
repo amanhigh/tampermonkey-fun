@@ -3,6 +3,7 @@
     // Keep the compilation and module settings
     "outDir": "./dist/",
     "target": "ES2020",
+    "downlevelIteration": true,
     "module": "ESNext",
     "moduleResolution": "Node",
     "esModuleInterop": true,

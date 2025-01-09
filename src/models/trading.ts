@@ -15,7 +15,7 @@ export enum Trend {
   /** Normal trend movement */
   TREND = 'trend',
   /** Counter trend movement */
-  COUNTER_TREND = 'ctrend'
+  COUNTER_TREND = 'ctrend',
 }
 
 /**
