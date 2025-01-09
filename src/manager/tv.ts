@@ -158,6 +158,7 @@ export class TradingViewManager implements ITradingViewManager {
 
   /** @inheritdoc */
   focusCommandInput(): void {
+    // FIXME: Should move to Handler
     $(`#${Constants.UI.IDS.INPUTS.COMMAND}`).focus();
   }
 

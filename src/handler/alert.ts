@@ -110,6 +110,7 @@ export class AlertHandler implements IAlertHandler {
     }
 
     setTimeout(() => {
+      // FIXME: Should move to Command Handler
       $(`#${Constants.UI.IDS.INPUTS.COMMAND}`).val('');
     }, 5000);
   }
