@@ -2,3 +2,5 @@ node_modules
 .aider*
 /dist
 .env
+Instructions.md
+Plan.md
