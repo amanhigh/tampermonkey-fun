@@ -10,7 +10,7 @@ interface TestComponents {
   messageArea: JQuery;
 }
 
-export class TestApp {
+export class ExperimentApp {
   private readonly uiUtil: UIUtil;
   private readonly keyUtil: IKeyUtil;
 
@@ -122,6 +122,7 @@ export class TestApp {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function main(): void {
   console.log('Tamperfun Experiment started');
   const app = Factory.app.test();

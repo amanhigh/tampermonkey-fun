@@ -7,7 +7,6 @@ import { IAuditManager } from '../manager/audit';
 import { ISymbolManager } from '../manager/symbol';
 import { ITickerManager } from '../manager/ticker';
 import { ITradingViewManager } from '../manager/tv';
-import { IWatchManager } from '../manager/watch';
 import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 import { IUIUtil } from '../util/ui';
@@ -82,11 +81,11 @@ export interface IAlertHandler {
  * Handles alert operations and user interactions
  */
 export class AlertHandler implements IAlertHandler {
+  // eslint-disable-next-line max-params
   constructor(
     private readonly alertManager: IAlertManager,
     private readonly tradingViewManager: ITradingViewManager,
     private readonly auditManager: IAuditManager,
-    private readonly watchManager: IWatchManager,
     private readonly tickerManager: ITickerManager,
     private readonly symbolManager: ISymbolManager,
     private readonly syncUtil: ISyncUtil,

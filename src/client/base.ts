@@ -3,6 +3,7 @@ export interface IBaseClient {
 }
 
 export class BaseClient implements IBaseClient {
+  // HACK: Find Replace fix all underscore private Types
   private readonly _baseUrl: string;
 
   constructor(baseUrl: string) {
@@ -28,11 +29,11 @@ export class BaseClient implements IBaseClient {
         url: `${this._baseUrl}${endpoint}`,
         headers,
         data: options.data,
-        onload: (response: GM.Response<any>) => {
+        onload: (response: GM.Response<T>) => {
           if (response.status >= 200 && response.status < 400) {
             try {
               const data = response.responseText ? JSON.parse(response.responseText) : null;
-              resolve(data as T);
+              resolve(data);
             } catch (error) {
               reject(new Error(`Failed to parse response: ${(error as Error).message}`));
             }
@@ -40,7 +41,7 @@ export class BaseClient implements IBaseClient {
             reject(new Error(`${response.status} ${response.statusText}: ${response.responseText}`));
           }
         },
-        onerror: (error: GM.Response<any>) => reject(new Error(`Network error: ${error.statusText}`)),
+        onerror: (error: GM.Response<T>) => reject(new Error(`Network error: ${error.statusText}`)),
       });
     });
   }

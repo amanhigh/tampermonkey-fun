@@ -59,7 +59,10 @@ export interface IMapRepo<K, V> extends IBaseRepo<Map<K, V>> {
  * @template K Key type (restricted to string or number)
  * @template V Value type
  */
-export class MapRepo<K extends string | number, V> extends BaseRepo<Map<K, V>> implements IMapRepo<K, V> {
+export class MapRepo<K extends string | number, V>
+  extends BaseRepo<Map<K, V>, SerializedData>
+  implements IMapRepo<K, V>
+{
   /**
    * Internal map storage
    * @protected

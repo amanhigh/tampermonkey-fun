@@ -13,8 +13,7 @@
   },
   "scripts": {
     "analyze": "cross-env npm_config_report=true npm run build",
-    "build": "webpack --config config/webpack.config.prod.cjs",
-    "test": "webpack --config config/test.cjs",
+    "experiment": "webpack --config config/experiment.cjs",
     "barkat": "webpack --config config/barkat.cjs"
   },
   "devDependencies": {

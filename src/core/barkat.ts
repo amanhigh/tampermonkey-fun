@@ -18,6 +18,7 @@ export class Barkat {
     this.onLoad();
   }
 
+  // HACK: Remove suppressed Errors for eslint
   // eslint-disable-next-line max-lines-per-function
   setupUI() {
     const $area = this.uiUtil.buildArea(Constants.UI.IDS.AREAS.MAIN, '76%', '6%');

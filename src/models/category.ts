@@ -123,3 +123,11 @@ export class CategoryLists {
     });
   }
 }
+
+/**
+ * Interface for serialized category data structure
+ * Keys are category indices, values are arrays of items in that category
+ */
+export interface SerializedCategoryData {
+  [key: number]: string[];
+}

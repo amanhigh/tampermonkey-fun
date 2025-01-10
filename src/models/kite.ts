@@ -230,8 +230,8 @@ export class GttRefreshEvent extends BaseEvent {
       if (parsed.orders && typeof parsed.orders === 'object') {
         // Reconstruct orders from parsed data
         Object.entries(parsed.orders).forEach(([sym, orders]) => {
-          (orders as Array<any>).forEach((order) => {
-            event.addOrder(sym, new Order(order.sym, order.qty, order.type, order.id, order.prices));
+          (orders as Order[]).forEach((order) => {
+            event.addOrder(sym, order);
           });
         });
       }

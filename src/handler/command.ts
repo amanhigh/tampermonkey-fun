@@ -58,13 +58,13 @@ export class CommandInputHandler implements ICommandInputHandler {
     try {
       switch (processor.type) {
         case 'TICKER':
-          await this.processTickerInput(processor.value);
+          this.processTickerInput(processor.value);
           break;
         case 'PRICES':
           await this.processPriceInput(processor.value);
           break;
         case 'COMMAND':
-          await this.tickerHandler.processCommand(processor.value);
+          this.tickerHandler.processCommand(processor.value);
           break;
         default:
           this.displayHelpMessage();
@@ -106,8 +106,8 @@ export class CommandInputHandler implements ICommandInputHandler {
     };
   }
 
-  private async processTickerInput(ticker: string): Promise<void> {
-    await this.tickerHandler.openTicker(ticker);
+  private processTickerInput(ticker: string): void {
+    this.tickerHandler.openTicker(ticker);
     this.clearInputField();
   }
 

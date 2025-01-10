@@ -32,7 +32,7 @@ export interface IBaseRepo<T> {
  * @template T Type of data managed by the repository
  * @abstract
  */
-export abstract class BaseRepo<T> implements IBaseRepo<T> {
+export abstract class BaseRepo<T, S = unknown> implements IBaseRepo<T> {
   /**
    * Storage identifier for this repository
    * @protected
@@ -62,9 +62,9 @@ export abstract class BaseRepo<T> implements IBaseRepo<T> {
    * @returns Promise resolving to loaded data
    */
   public async load(): Promise<T> {
-    const data = (await GM.getValue(this._storeId, {})) as string;
+    const data = await GM.getValue<S>(this._storeId, {} as S);
     console.log(`Loaded ${this._storeId}`, data);
-    return this._deserialize(data);
+    return this._deserialize(data!);
   }
 
   /**
@@ -74,7 +74,7 @@ export abstract class BaseRepo<T> implements IBaseRepo<T> {
    */
   public async save(): Promise<void> {
     const data = this._serialize();
-    await GM.setValue(this._storeId, data);
+    await GM.setValue(this._storeId, data as GM.Value);
   }
 
   /**
@@ -83,7 +83,7 @@ export abstract class BaseRepo<T> implements IBaseRepo<T> {
    * @returns Serialized data object
    * @abstract
    */
-  protected abstract _serialize(): any;
+  protected abstract _serialize(): S;
 
   /**
    * Deserialize data from storage
@@ -92,5 +92,5 @@ export abstract class BaseRepo<T> implements IBaseRepo<T> {
    * @returns Deserialized data instance
    * @abstract
    */
-  protected abstract _deserialize(data: any): T;
+  protected abstract _deserialize(data: S): T;
 }

@@ -50,9 +50,9 @@ export interface IKiteHandler {
 
   /**
    * Handles delete order button click events
-   * @param evt Click event object
+   * @param $button The button element that was clicked
    */
-  handleDeleteOrderButton(evt: JQuery.ClickEvent): void;
+  handleDeleteOrderButton($button: JQuery): void;
 
   /**
    * Generates a summary of GTT orders in the Info Area
@@ -128,8 +128,8 @@ export class KiteHandler implements IKiteHandler {
   }
 
   /** @inheritdoc */
-  handleDeleteOrderButton(evt: JQuery.ClickEvent): void {
-    const orderId = $(evt.currentTarget).data('order-id');
+  handleDeleteOrderButton($button: JQuery): void {
+    const orderId = $button.data('order-id');
     const symbol = this.tickerManager.getTicker();
     void this.kiteManager.createGttDeleteEvent(orderId, symbol);
     Notifier.message(`GTT Delete: ${orderId}`, 'red');
@@ -155,7 +155,8 @@ export class KiteHandler implements IKiteHandler {
 
     ordersForTicker.reverse().forEach((order) => {
       const buttonConfig = this._getOrderButtonConfig(order);
-      this._createOrderButton(buttonConfig).data('order-id', order.id).appendTo($ordersContainer);
+      const $button = this._createOrderButton(buttonConfig).data('order-id', order.id);
+      $button.appendTo($ordersContainer);
     });
   }
 
@@ -206,8 +207,8 @@ export class KiteHandler implements IKiteHandler {
     // TODO: Use GM. Namespace
     GM_addValueChangeListener(
       Constants.STORAGE.EVENTS.GTT_CREATE,
-      (_keyName: string, _oldValue: unknown, newValue: GttCreateEvent) => {
-        this.handleGttCreateRequest(newValue);
+      (_keyName: string, _oldValue: unknown, newValue: unknown) => {
+        void this.handleGttCreateRequest(newValue as GttCreateEvent);
       }
     );
   }
@@ -329,8 +330,11 @@ export class KiteHandler implements IKiteHandler {
    * @returns Button element
    */
   private _createOrderButton(config: ButtonConfig): JQuery {
-    return this.uiUtil
-      .buildButton('', config.text, (evt: JQuery.ClickEvent) => this.handleDeleteOrderButton(evt))
+    const $button = this.uiUtil
+      .buildButton('', config.text, () => {
+        this.handleDeleteOrderButton($button);
+      })
       .css('color', config.color);
+    return $button;
   }
 }

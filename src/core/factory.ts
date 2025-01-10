@@ -8,7 +8,7 @@ import { SyncUtil, ISyncUtil } from '../util/sync';
 import { KeyUtil, IKeyUtil } from '../util/key';
 import { SmartPrompt, ISmartPrompt } from '../util/smart';
 import { WaitUtil, IWaitUtil } from '../util/wait';
-import { TestApp } from './test';
+import { ExperimentApp } from './experiment';
 import { Barkat } from './barkat';
 
 // Repository Imports
@@ -79,7 +79,8 @@ export class Factory {
    * Core application functionality
    */
   public static app = {
-    test: (): TestApp => Factory._getInstance('testApp', () => new TestApp(Factory.util.ui(), Factory.util.key())),
+    test: (): ExperimentApp =>
+      Factory._getInstance('testApp', () => new ExperimentApp(Factory.util.ui(), Factory.util.key())),
     barkat: (): Barkat =>
       Factory._getInstance(
         'barkat',
@@ -263,7 +264,6 @@ export class Factory {
             Factory.manager.alert(),
             Factory.manager.tv(),
             Factory.manager.audit(),
-            Factory.manager.watch(),
             Factory.manager.ticker(),
             Factory.manager.symbol(),
             Factory.util.sync(),
@@ -326,10 +326,8 @@ export class Factory {
             Factory.manager.recent(),
             Factory.manager.ticker(),
             Factory.manager.symbol(),
-            Factory.manager.paint(),
             Factory.manager.screener(),
             Factory.handler.sequence(),
-            Factory.manager.watchlist(),
             Factory.handler.kite(),
             Factory.util.sync()
           )

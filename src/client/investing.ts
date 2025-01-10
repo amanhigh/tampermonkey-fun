@@ -1,4 +1,5 @@
 import { Alert, PairInfo } from '../models/alert';
+import { SearchResponse, SearchResultItem } from '../models/investing';
 import { BaseClient, IBaseClient } from './base';
 
 /**
@@ -120,12 +121,15 @@ export class InvestingClient extends BaseClient implements IInvestingClient {
         data: data.toString(),
       });
 
-      const result = JSON.parse(response);
+      const result = JSON.parse(response) as SearchResponse;
+
       if (!result.All?.length) {
         throw new Error(`No results found for symbol: ${symbol}`);
       }
 
-      return result.All.map((item: any) => new PairInfo(item.name, item.pair_ID, item.exchange_name_short));
+      return result.All.map(
+        (item: SearchResultItem) => new PairInfo(item.name, item.pair_ID, item.exchange_name_short)
+      );
     } catch (error) {
       throw new Error(`Failed to fetch symbol data: ${(error as Error).message}`);
     }

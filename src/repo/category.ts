@@ -1,6 +1,6 @@
 import { IRepoCron } from './cron';
 import { BaseRepo, IBaseRepo } from './base';
-import { CategoryLists } from '../models/category';
+import { CategoryLists, SerializedCategoryData } from '../models/category';
 
 /**
  * Interface for category repository operations
@@ -18,7 +18,7 @@ export interface ICategoryRepo extends IBaseRepo<CategoryLists> {
  * Repository for managing category lists
  * Implements persistence and CRUD operations for CategoryLists
  */
-export abstract class CategoryRepo extends BaseRepo<CategoryLists> implements ICategoryRepo {
+export abstract class CategoryRepo extends BaseRepo<CategoryLists, SerializedCategoryData> implements ICategoryRepo {
   /**
    * The category lists data structure
    * @protected
@@ -48,7 +48,7 @@ export abstract class CategoryRepo extends BaseRepo<CategoryLists> implements IC
    * @protected
    * @returns Serialized category lists data
    */
-  protected _serialize(): any {
+  protected _serialize(): SerializedCategoryData {
     const obj: { [key: number]: string[] } = {};
     this._categoryLists.getLists().forEach((value, key) => {
       obj[key] = Array.from(value);
@@ -62,7 +62,7 @@ export abstract class CategoryRepo extends BaseRepo<CategoryLists> implements IC
    * @param data Raw storage data
    * @returns Deserialized CategoryLists instance
    */
-  protected _deserialize(data: any): CategoryLists {
+  protected _deserialize(data: SerializedCategoryData): CategoryLists {
     const map = new Map<number, Set<string>>();
     Object.entries(data).forEach(([key, value]) => {
       if (Array.isArray(value)) {

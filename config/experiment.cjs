@@ -7,11 +7,11 @@ const { UserScriptMetaDataPlugin } = require("userscript-metadata-webpack-plugin
 const metadata = {
   ...baseMetadata,
   name: {
-    $: "barkat",
-    en: "Barkat"
+    $: "experiment-script",
+    en: "Experiment"
   },
-  match: ["https://in.tradingview.com/chart*", "https://kite.zerodha.com/*", "https://in.investing.com/*"],
-  connect: ["investing.com", "kite.zerodha.com"],
+  match: ["*example.com/*"],
+  connect: ["reqres.in"],
   grant: ["GM.xmlHttpRequest","GM.setValue","GM.getValue"],
 };
 

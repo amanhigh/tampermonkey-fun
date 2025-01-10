@@ -5,7 +5,6 @@ OUT := /dev/null
 ### Build Tools
 ESLINT := npx eslint
 TSC := npx tsc
-WEBPACK := webpack
 PRETTIER := npx prettier
 NPM := npm
 
@@ -22,20 +21,44 @@ compile: ## Run TypeScript compilation with optional directory (usage: make comp
 		$(TSC) --noEmit; \
 	fi
 
-debug: ## Debug bundle using webpack
-	@printf $(_TITLE) "Bundle" "Debug"
-	$(WEBPACK) --config config/webpack.config.dev.cjs
+build: format compile lint ## Build all files
+	@printf $(_TITLE) "Build" "TypeScript"
+
+test: ## Run tests
+	@printf $(_TITLE) "Test" "TypeScript"
 
 format: ## Format TypeScript files using prettier
 	@printf $(_TITLE) "Format" "TypeScript"
-	$(PRETTIER) --write "src/**/*.ts"
+	$(PRETTIER) --write "src/**/*.ts" > $(OUT)
+
+## Run
+experiment: ## Run Experiment
+	@printf $(_TITLE) "Run" "Experiment"
+	@printf $(_INFO) "Disable CSP" "https://chromewebstore.google.com/detail/disable-content-security/ieelmcmcagommplceebfedjlakkhpden?pli=1"
+	@printf $(_INFO) "Main Switch" "src/core/experiment.ts (Keep only one)"
+	@printf $(_DETAIL) "Debug Script" "dist/index.dev.user.js"
+	@printf $(_DETAIL) "Prod Script" "dist/index.prod.user.js"
+	$(NPM) run experiment
+
+barkat: ## Run Barkat
+	@printf $(_TITLE) "Run" "Barkat"
+	$(NPM) run barkat
+
+## Setup
+setup-npm:
+	@printf $(_TITLE) "Setup" "NPM"
+	$(NPM) install
+
+## Clean
+clean-node:
+	@printf $(_TITLE) "Clean" "Build"
+	rm -rf dist node_modules
 
 ## Misc
 .PHONY: pack
 pack: ## Repomix Packing
 	@printf $(_TITLE) "Pack" "Repository"
-	@repomix --style markdown . --ignore "LICENSE,gradlew,app/src/test"
-
+	@repomix --style markdown . --ignore "LICENSE"
 
 ### Basic
 help: ## Show this help
@@ -45,9 +68,9 @@ help: ## Show this help
 ### Workflows
 info: ## Info
 infos: info ## Extended Info
-prepare: ## Onetime Setup
-setup: compile lint format ## Setup
-clean: ## Clean
+prepare: setup-npm ## Onetime Setup
+setup: build barkat ## Setup
+clean: clean-node ## Clean
 reset: clean setup info ## Reset
 all:prepare reset ## Run All Targets
 

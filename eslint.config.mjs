@@ -50,7 +50,7 @@ export default [
       "complexity": ["warn", 10],
       "max-depth": ["warn", 3],
       "max-nested-callbacks": ["warn", 3],
-      "max-params": ["warn", 4],
+      "max-params": ["warn", 6],
       
       // Essential style rules
       "linebreak-style": ["error", "unix"],

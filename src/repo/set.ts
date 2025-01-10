@@ -46,7 +46,7 @@ export interface ISetRepo<T> extends IBaseRepo<Set<T>> {
 /**
  * Base repository for Set-based storage
  */
-export abstract class SetRepo<T> extends BaseRepo<Set<T>> implements ISetRepo<T> {
+export abstract class SetRepo<T> extends BaseRepo<Set<T>, T[]> implements ISetRepo<T> {
   /**
    * Internal set storage
    * @protected
@@ -73,14 +73,14 @@ export abstract class SetRepo<T> extends BaseRepo<Set<T>> implements ISetRepo<T>
   /**
    * @inheritdoc
    */
-  protected _deserialize(data: any): Set<T> {
+  protected _deserialize(data: T[]): Set<T> {
     return new Set(data as T[]);
   }
 
   /**
    * @inheritdoc
    */
-  protected _serialize(): any {
+  protected _serialize(): T[] {
     return Array.from(this._set);
   }
 
