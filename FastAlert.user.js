@@ -50,8 +50,6 @@ if (location.pathname.includes("alert-center")) {
 //***************TRADING VIEW ********************
 
 function tradingView() {        
-    document.addEventListener('keydown', doc_keyDown, false);
-
     //Register Ticker Change Listener
     //Using Seprate Selector as nameSelector has attribute changes in paint Name.
     waitEE(headerSelector, function (e) {
@@ -73,10 +71,4 @@ function tradingView() {
             const gttOrderMap = GttOrderMap.loadFromGMValue(gttOrderEvent, newValue);
             gttSummary(gttOrderMap);
         });
-
-    //Wait for Title to Load and Fix to Signal Auto Hotkey
-    waitEE("title", (el) => {
-        //console.log('Observing Title: ' + el.innerHTML);
-        nodeObserver(el, EnableSwiftKey);
-    });
 }

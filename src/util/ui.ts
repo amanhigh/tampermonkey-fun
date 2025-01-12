@@ -43,7 +43,7 @@ export interface IUIUtil {
    * @param text - The text to display on the button
    * @param handler - The function to be executed when the button is clicked
    */
-  buildButton(id: string, text: string, handler: () => void): JQuery;
+  buildButton(id: string, text: string, handler?: () => void): JQuery;
 
   /**
    * Builds a checkbox with specified state
@@ -113,8 +113,14 @@ export class UIUtil implements IUIUtil {
   }
 
   /** @inheritdoc */
-  public buildButton(id: string, text: string, handler: () => void): JQuery {
-    return $('<button>').attr({ id }).html(text).addClass(UIUtil.CLASSES.BUTTON).click(handler);
+  public buildButton(id: string, text: string, handler?: () => void): JQuery {
+    const button = $('<button>').attr({ id }).html(text).addClass(UIUtil.CLASSES.BUTTON);
+
+    if (handler) {
+      button.click(handler);
+    }
+
+    return button;
   }
 
   /** @inheritdoc */

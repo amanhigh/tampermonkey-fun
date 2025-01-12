@@ -1,4 +1,5 @@
 const path = require("path");
+const { merge } = require("webpack-merge");
 const baseConfig = require("./webpack.config.dev.cjs");
 const baseMetadata = require("./metadata.cjs");
 const { UserScriptMetaDataPlugin } = require("userscript-metadata-webpack-plugin");
@@ -16,8 +17,8 @@ const metadata = {
 };
 
 // Override webpack config
-const cfg = {
-  ...baseConfig,
+// TODO: Fix Double Header Generation due to Medata Plugin in dev.cjs
+const cfg = merge(baseConfig, {
   entry: {
     debug: "./src/core/experiment.ts",
     "dev.user": path.resolve(__dirname, "./empty.cjs"),
@@ -27,6 +28,6 @@ const cfg = {
       metadata
     })
   ]
-};
+});
 
 module.exports = cfg;

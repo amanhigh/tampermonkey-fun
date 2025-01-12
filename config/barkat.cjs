@@ -1,4 +1,5 @@
 const path = require("path");
+const { merge } = require("webpack-merge");
 const baseConfig = require("./webpack.config.dev.cjs");
 const baseMetadata = require("./metadata.cjs");
 const { UserScriptMetaDataPlugin } = require("userscript-metadata-webpack-plugin");
@@ -16,17 +17,16 @@ const metadata = {
 };
 
 // Override webpack config
-const cfg = {
-  ...baseConfig,
+const cfg = merge(baseConfig, {
   entry: {
-    debug: "./src/core/experiment.ts",
+    debug: "./src/core/barkat.ts",
     "dev.user": path.resolve(__dirname, "./empty.cjs"),
   },
-  plugins: [
+   plugins: [
     new UserScriptMetaDataPlugin({
       metadata
     })
   ]
-};
+});
 
 module.exports = cfg;

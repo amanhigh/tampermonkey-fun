@@ -138,7 +138,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     $watchSummary.empty();
 
     for (let i = 0; i < Constants.UI.COLORS.LIST.length; i++) {
-      const count = this.watchManager.getCategory(i)?.size || -1;
+      const count = this.watchManager.getCategory(i)?.size || 0;
       const color = Constants.UI.COLORS.LIST[i];
 
       const $label = this.uiUtil

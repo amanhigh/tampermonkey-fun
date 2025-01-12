@@ -29,9 +29,16 @@ export class BaseClient implements IBaseClient {
         url: `${this._baseUrl}${endpoint}`,
         headers,
         data: options.data,
+        responseType: options.responseType,
         onload: (response: GM.Response<T>) => {
           if (response.status >= 200 && response.status < 400) {
             try {
+              // Return response text directly if responseType is 'text'
+              if (options.responseType === 'text') {
+                resolve(response.responseText as T);
+                return;
+              }
+              // Default JSON parsing for backward compatibility
               const data = response.responseText ? JSON.parse(response.responseText) : null;
               resolve(data);
             } catch (error) {

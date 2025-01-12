@@ -4,12 +4,19 @@ import { UIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
 import { ISequenceHandler } from '../handler/sequence';
 import { IOnLoadHandler } from '../handler/onload';
+import { IAlertHandler } from '../handler/alert';
+import { IAuditHandler } from '../handler/audit';
+import { IJournalHandler } from '../handler/journal';
+import { Trend } from '../models/trading';
 
 export class Barkat {
   constructor(
     private readonly uiUtil: UIUtil,
     private readonly sequenceHandler: ISequenceHandler,
-    private readonly onloadHandler: IOnLoadHandler
+    private readonly onloadHandler: IOnLoadHandler,
+    private readonly alertHandler: IAlertHandler,
+    private readonly auditHandler: IAuditHandler,
+    private readonly journalHandler: IJournalHandler
   ) {}
 
   initialize(): void {
@@ -38,23 +45,19 @@ export class Barkat {
         })
       )
       .append(
-        this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.REFRESH, 'R', () => {
-          this.onLoad();
-        })
+        this.uiUtil
+          .buildButton(Constants.UI.IDS.BUTTONS.ALERT_CREATE, 'A')
+          .on('click', (e) => this.alertHandler.handleAlertButton(e.originalEvent as MouseEvent))
+          .on('contextmenu', (e) => {
+            this.alertHandler.handleAlertContextMenu(e.originalEvent as MouseEvent);
+          })
       )
       .append(
-        this.uiUtil
-          .buildButton(Constants.UI.IDS.BUTTONS.ALERT_CREATE, 'A', () => {
-            console.log('Handling alert create button');
-          })
-          .contextmenu(() => {
-            console.log('Context menu for alert create button');
-            return false; // Disable default right-click menu
-          })
+        this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.REFRESH, 'R', () => this.alertHandler.handleRefreshButton())
       )
       .append(
         this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.JOURNAL, 'J', () => {
-          console.log('Handling journal button');
+          this.auditHandler.handleJournalButton();
         })
       )
       .append(
@@ -82,12 +85,12 @@ export class Barkat {
       .appendTo(`#${Constants.UI.IDS.AREAS.JOURNAL}`)
       .append(
         this.uiUtil.buildButton('trend', 'TR', () => {
-          console.log('Recording journal trend');
+          this.journalHandler.handleRecordJournal(Trend.TREND);
         })
       )
       .append(
         this.uiUtil.buildButton('ctrend', 'CT', () => {
-          console.log('Recording journal counter-trend');
+          this.journalHandler.handleRecordJournal(Trend.COUNTER_TREND);
         })
       );
 

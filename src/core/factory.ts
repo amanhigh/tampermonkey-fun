@@ -25,6 +25,7 @@ import { IAlertRepo, AlertRepo } from '../repo/alert';
 
 // Manager Layer Imports
 import { ITimeFrameManager, TimeFrameManager } from '../manager/timeframe';
+import { IJournalManager, JournalManager } from '../manager/journal';
 import { IAlertManager, AlertManager } from '../manager/alert';
 import { IAuditManager, AuditManager } from '../manager/audit';
 import { ITradingViewWatchlistManager, TradingViewWatchlistManager } from '../manager/watchlist';
@@ -41,6 +42,7 @@ import { FnoRepo, IFnoRepo } from '../repo/fno';
 import { AlertHandler } from '../handler/alert';
 import { AlertSummaryHandler, IAlertSummaryHandler } from '../handler/alert_summary';
 import { AuditHandler, IAuditHandler } from '../handler/audit';
+import { JournalHandler, IJournalHandler } from '../handler/journal';
 import { HotkeyHandler, IHotkeyHandler } from '../handler/hotkey';
 import { KeyConfig } from '../handler/key_config';
 import { IModifierKeyConfig, ModifierKeyConfig } from '../handler/modifier_config';
@@ -58,6 +60,7 @@ import { IOnLoadHandler, OnLoadHandler } from '../handler/onload';
 import { IFlagHandler, FlagHandler } from '../handler/flag';
 import { IKiteRepo, KiteRepo } from '../repo/kite';
 import { ITickerHandler, TickerHandler } from '../handler/ticker';
+import { ITickerChangeHandler, TickerChangeHandler } from '../handler/ticker_change';
 
 /**
  * Project Architecture Overview
@@ -73,7 +76,6 @@ export class Factory {
    */
   private static _instances: Record<string, unknown> = {};
 
-  // TODO: Cyclic Dependency Analysis
   /**
    * Application Layer
    * Core application functionality
@@ -84,7 +86,15 @@ export class Factory {
     barkat: (): Barkat =>
       Factory._getInstance(
         'barkat',
-        () => new Barkat(Factory.util.ui(), Factory.handler.sequence(), Factory.handler.onload())
+        () =>
+          new Barkat(
+            Factory.util.ui(),
+            Factory.handler.sequence(),
+            Factory.handler.onload(),
+            Factory.handler.alert(),
+            Factory.handler.audit(),
+            Factory.handler.journal()
+          )
       ),
   };
 
@@ -249,6 +259,11 @@ export class Factory {
 
     recent: (): IRecentManager =>
       Factory._getInstance('recentManager', () => new RecentManager(Factory.repo.recent(), Factory.manager.paint())),
+    journal: (): IJournalManager =>
+      Factory._getInstance(
+        'journalManager',
+        () => new JournalManager(Factory.manager.watch(), Factory.manager.sequence())
+      ),
   };
 
   /**
@@ -269,7 +284,7 @@ export class Factory {
             Factory.util.sync(),
             Factory.util.ui(),
             Factory.handler.alertSummary(),
-            Factory.handler.watchlist()
+            Factory.handler.ticker()
           )
       ),
     alertSummary: (): IAlertSummaryHandler =>
@@ -291,7 +306,9 @@ export class Factory {
             Factory.util.wait(),
             Factory.util.observer(),
             Factory.handler.watchlist(),
-            Factory.handler.hotkey()
+            Factory.handler.hotkey(),
+            Factory.handler.alert(),
+            Factory.handler.tickerChange()
           )
       ),
     hotkey: (): IHotkeyHandler =>
@@ -326,7 +343,19 @@ export class Factory {
             Factory.manager.recent(),
             Factory.manager.ticker(),
             Factory.manager.symbol(),
-            Factory.manager.screener(),
+            Factory.manager.screener()
+          )
+      ),
+
+    tickerChange: (): ITickerChangeHandler =>
+      Factory._getInstance(
+        'tickerChangeHandler',
+        () =>
+          new TickerChangeHandler(
+            Factory.manager.ticker(),
+            Factory.handler.alert(),
+            Factory.manager.header(),
+            Factory.manager.recent(),
             Factory.handler.sequence(),
             Factory.handler.kite(),
             Factory.util.sync()
@@ -388,6 +417,18 @@ export class Factory {
       Factory._getInstance(
         'sequenceHandler',
         () => new SequenceHandler(Factory.manager.sequence(), Factory.manager.ticker())
+      ),
+    journal: (): IJournalHandler =>
+      Factory._getInstance(
+        'journalHandler',
+        () =>
+          new JournalHandler(
+            Factory.manager.ticker() as TickerManager,
+            Factory.manager.journal(),
+            Factory.manager.timeFrame(),
+            Factory.util.smart(),
+            Factory.util.ui()
+          )
       ),
   };
 

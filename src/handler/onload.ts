@@ -2,8 +2,10 @@ import { Constants } from '../models/constant';
 import { IObserveUtil } from '../util/observer';
 import { IWaitUtil } from '../util/wait';
 import { IWatchListHandler } from './watchlist';
+import { ITickerChangeHandler } from './ticker_change';
 import { Notifier } from '../util/notify';
 import { IHotkeyHandler } from './hotkey';
+import { IAlertHandler } from './alert';
 
 /**
  * Interface for application initialization handling
@@ -25,13 +27,59 @@ export class OnLoadHandler implements IOnLoadHandler {
     private readonly waitUtil: IWaitUtil,
     private readonly observeUtil: IObserveUtil,
     private readonly watchListHandler: IWatchListHandler,
-    private readonly hotkeyHandler: IHotkeyHandler
+    private readonly hotkeyHandler: IHotkeyHandler,
+    private readonly alertHandler: IAlertHandler,
+    private readonly tickerChangeHandler: ITickerChangeHandler
   ) {}
 
   /** @inheritdoc */
   public init(): void {
+    this.setupTickerObserver();
     this.setupWatchlistObserver();
     this.setupKeydownEventListener();
+    this.setupAlertClickListener();
+  }
+
+  /**
+   * Sets up ticker change observation using header element
+   * @private
+   */
+  private setupTickerObserver(): void {
+    this.waitUtil.waitJEE(
+      Constants.DOM.HEADER.MAIN,
+      ($element) => {
+        const targetElement = $element.get(0);
+        if (!targetElement) {
+          Notifier.error('Unable to setup ticker observer');
+          return;
+        }
+        this.observeUtil.attributeObserver(targetElement, () => {
+          this.tickerChangeHandler.onTickerChange();
+        });
+      },
+      10
+    );
+  }
+
+  /**
+   * Sets up alert click event listener
+   * @private
+   */
+  private setupAlertClickListener(): void {
+    GM_addValueChangeListener(
+      Constants.STORAGE.EVENTS.ALERT_CLICKED,
+      (_keyName: string, _oldValue: unknown, newValue: unknown) => {
+        if (newValue && typeof newValue === 'string') {
+          try {
+            const alertClickData = JSON.parse(newValue);
+            this.alertHandler.handleAlertClick(alertClickData);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Invalid alert click data';
+            Notifier.error(message);
+          }
+        }
+      }
+    );
   }
 
   private setupKeydownEventListener(): void {

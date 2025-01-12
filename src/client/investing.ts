@@ -6,6 +6,7 @@ import { BaseClient, IBaseClient } from './base';
  * Client for interacting with Investing.com API
  */
 export interface IInvestingClient extends IBaseClient {
+  // FIXME: #C All flows here should work.
   /**
    * Creates a new price alert
    */
@@ -144,6 +145,7 @@ export class InvestingClient extends BaseClient implements IInvestingClient {
     try {
       const response = await this.makeRequest<string>('/members-admin/alert-center', {
         method: 'GET',
+        responseType: 'text',
       });
 
       // Ensure we got valid HTML response containing alerts
@@ -153,6 +155,7 @@ export class InvestingClient extends BaseClient implements IInvestingClient {
 
       return response;
     } catch (error) {
+      console.error(error);
       throw new Error(`Failed to get alerts: ${(error as Error).message}`);
     }
   }

@@ -161,11 +161,11 @@ export const Constants = Object.freeze({
       DEFAULT: SequenceType.MWD,
       HIGH: SequenceType.YR,
       FRAMES: {
-        [TimeFrame.DAILY]: new TimeFrameConfig('D', 'I', 1),
-        [TimeFrame.WEEKLY]: new TimeFrameConfig('WK', 'H', 2),
-        [TimeFrame.MONTHLY]: new TimeFrameConfig('MN', 'VH', 3),
-        [TimeFrame.THREE_MONTHLY]: new TimeFrameConfig('TMN', 'T', 4),
-        [TimeFrame.SIX_MONTHLY]: new TimeFrameConfig('SMN', 'I', 5),
+        [TimeFrame.DAILY]: new TimeFrameConfig('D', 'I', 2),
+        [TimeFrame.WEEKLY]: new TimeFrameConfig('WK', 'H', 3),
+        [TimeFrame.MONTHLY]: new TimeFrameConfig('MN', 'VH', 4),
+        [TimeFrame.THREE_MONTHLY]: new TimeFrameConfig('TMN', 'T', 5),
+        [TimeFrame.SIX_MONTHLY]: new TimeFrameConfig('SMN', 'I', 6),
       } as TimeFrameMap,
       SEQUENCES: {
         // Old name: timeFrameBar

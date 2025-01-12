@@ -50,10 +50,27 @@ export interface IWatchManager {
  */
 export class WatchManager implements IWatchManager {
   DEFAULT_LIST_INDEX = 5;
-  constructor(private readonly watchRepo: IWatchlistRepo) {}
+  private readonly TOTAL_CATEGORIES = 8; // Based on UI.COLORS.LIST length
 
+  constructor(private readonly watchRepo: IWatchlistRepo) {
+    const categoryLists = this.watchRepo.getWatchCategoryLists();
+    this.initializeCategoryLists(categoryLists);
+  }
+
+  private initializeCategoryLists(categoryLists: CategoryLists): void {
+    // Initialize empty sets for all required categories (0-7)
+    for (let i = 0; i < this.TOTAL_CATEGORIES; i++) {
+      if (!categoryLists.getList(i)) {
+        categoryLists.setList(i, new Set());
+      }
+    }
+  }
   /** @inheritdoc */
-  getCategory(categoryIndex: number): Set<string> {
+  public getCategory(categoryIndex: number): Set<string> {
+    if (categoryIndex < 0 || categoryIndex >= this.TOTAL_CATEGORIES) {
+      throw new Error(`Invalid category index: ${categoryIndex}. Must be between 0 and ${this.TOTAL_CATEGORIES - 1}`);
+    }
+
     const categoryLists = this.watchRepo.getWatchCategoryLists();
     const list = categoryLists.getList(categoryIndex);
     if (!list) {

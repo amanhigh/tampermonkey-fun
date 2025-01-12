@@ -19,6 +19,11 @@ export interface IAuditHandler {
    * Refreshes audit button for current ticker
    */
   refreshAuditForCurrentTicker(): void;
+
+  /**
+   * Handles the journal button click
+   */
+  handleJournalButton(): void;
 }
 
 /**
@@ -141,5 +146,12 @@ export class AuditHandler implements IAuditHandler {
    */
   private getAuditButtonId(investingTicker: string): string {
     return `audit-${investingTicker}`.replace('/', '-');
+  }
+
+  /**
+   * Handles the journal button click
+   */
+  public handleJournalButton(): void {
+    this.uiUtil.toggleUI(`#${Constants.UI.IDS.AREAS.JOURNAL}`);
   }
 }

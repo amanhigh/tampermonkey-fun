@@ -11,8 +11,9 @@ import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 import { IUIUtil } from '../util/ui';
 import { ISyncUtil } from '../util/sync';
+import { AlertClicked } from '../models/events';
 import { IAlertSummaryHandler } from './alert_summary';
-import { IWatchListHandler } from './watchlist';
+import { ITickerHandler } from './ticker';
 
 /**
  * Interface for managing alert operations
@@ -75,6 +76,13 @@ export interface IAlertHandler {
    * @param e Context menu event object
    */
   handleAlertContextMenu(e: Event): void;
+
+  /**
+   * Handles alert click events from feed
+   * Opens appropriate ticker using TickerHandler
+   * @param event AlertClicked event containing ticker info
+   */
+  handleAlertClick(event: AlertClicked): void;
 }
 
 /**
@@ -91,11 +99,12 @@ export class AlertHandler implements IAlertHandler {
     private readonly syncUtil: ISyncUtil,
     private readonly uiUtil: IUIUtil,
     private readonly alertSummaryHandler: IAlertSummaryHandler,
-    private readonly watchListHandler: IWatchListHandler
+    private readonly tickerHandler: ITickerHandler
   ) {}
 
   /** @inheritdoc */
   public async createAlertsFromTextBox(input: string): Promise<void> {
+    // FIXME: #B Make Alert Functions Work
     const prices = String(input).trim().split(' ');
     for (const p of prices) {
       try {
@@ -184,7 +193,7 @@ export class AlertHandler implements IAlertHandler {
     void this.refershAllAllerts();
 
     // Use WatchlistHandler for cleanup
-    void this.watchListHandler.handleWatchlistCleanup();
+    // void this.watchListHandler.handleWatchlistCleanup();
   }
 
   /** @inheritdoc */
@@ -212,5 +221,17 @@ export class AlertHandler implements IAlertHandler {
 
     // Perform audit
     this.auditManager.auditCurrentTicker();
+  }
+
+  /** @inheritdoc */
+  public handleAlertClick(event: AlertClicked): void {
+    // Prefer TV ticker if available, fallback to investing ticker
+    const ticker = event.tvTicker || event.investingTicker;
+    if (!ticker) {
+      Notifier.error('No valid ticker in alert click event');
+      return;
+    }
+
+    this.tickerHandler.openTicker(ticker);
   }
 }
