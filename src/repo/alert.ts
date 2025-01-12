@@ -65,23 +65,6 @@ export class AlertRepo extends MapRepo<string, Alert[]> implements IAlertRepo {
   }
 
   /**
-   * @protected
-   * @param data Raw storage data
-   * @returns Map of alerts
-   */
-  protected _deserialize(data: SerializedData): Map<string, Alert[]> {
-    const alertMap = new Map<string, Alert[]>();
-    Object.entries(data).forEach(([pairId, alerts]) => {
-      const alertArray = alerts as Array<{ pairId: string; price: number; id: string }>;
-      alertMap.set(
-        pairId,
-        alertArray.map((alert) => new Alert(alert.id, alert.pairId, alert.price))
-      );
-    });
-    return alertMap;
-  }
-
-  /**
    * Add alert for pair ID
    * @param pairId Pair identifier
    * @param alert Alert object

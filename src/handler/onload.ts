@@ -56,6 +56,9 @@ export class OnLoadHandler implements IOnLoadHandler {
         this.observeUtil.attributeObserver(targetElement, () => {
           this.tickerChangeHandler.onTickerChange();
         });
+
+        // Fire now to load Display
+        this.tickerChangeHandler.onTickerChange();
       },
       10
     );

@@ -13,7 +13,7 @@ const metadata = {
   },
   match: ["https://in.tradingview.com/chart*", "https://kite.zerodha.com/*", "https://in.investing.com/*"],
   connect: ["investing.com", "kite.zerodha.com"],
-  grant: ["GM.xmlHttpRequest","GM.setValue","GM.getValue"],
+  grant: ["GM.xmlHttpRequest","GM.setValue","GM.getValue","GM_addValueChangeListener","GM.setClipboard"],
 };
 
 // Override webpack config

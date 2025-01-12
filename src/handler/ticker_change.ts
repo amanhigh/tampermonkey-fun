@@ -25,7 +25,6 @@ export class TickerChangeHandler implements ITickerChangeHandler {
   ) {}
 
   public onTickerChange(): void {
-    console.log('Ticker Changed');
     this.syncUtil.waitOn('tickerChange', 150, () => {
       // Refresh alerts for current ticker
       this.alertHandler.refreshAlerts();

@@ -1,32 +1,12 @@
 export class Alert {
-  private _id: string;
-  private _price: number;
-  private _pairId: string;
+  id: string;
+  price: number;
+  pairId: string;
 
   constructor(id: string, pairId: string, price: number) {
-    this._id = id;
-    this._pairId = pairId;
-    this._price = price;
-  }
-
-  get id(): string {
-    return this._id;
-  }
-  get price(): number {
-    return this._price;
-  }
-  get pairId(): string {
-    return this._pairId;
-  }
-
-  set id(value: string) {
-    this._id = value;
-  }
-  set price(value: number) {
-    this._price = value;
-  }
-  set pairId(value: string) {
-    this._pairId = value;
+    this.id = id;
+    this.pairId = pairId;
+    this.price = price;
   }
 }
 

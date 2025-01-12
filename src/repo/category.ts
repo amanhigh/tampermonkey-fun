@@ -32,15 +32,23 @@ export abstract class CategoryRepo extends BaseRepo<CategoryLists, SerializedCat
    */
   constructor(repoCron: IRepoCron, storeId: string) {
     super(repoCron, storeId);
-    // Initialize with empty map until loaded
-    this._categoryLists = new CategoryLists(new Map());
+    this._categoryLists = this.createEmptyData();
     this.load()
       .then((data) => {
         this._categoryLists = data;
       })
       .catch(() => {
-        console.error(`Failed to load ${this._storeId}`);
+        this._categoryLists = this.createEmptyData();
       });
+  }
+
+  protected getLoadedLogMessage(data: SerializedCategoryData): string {
+    const count = Object.keys(data).length;
+    return `Loaded Category: ${this._storeId} - ${count}`;
+  }
+
+  protected createEmptyData(): CategoryLists {
+    return new CategoryLists(new Map());
   }
 
   /**

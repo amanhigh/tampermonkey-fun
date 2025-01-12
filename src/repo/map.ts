@@ -76,7 +76,23 @@ export class MapRepo<K extends string | number, V>
    */
   constructor(repoCron: IRepoCron, storeId: string) {
     super(repoCron, storeId);
-    this._map = new Map<K, V>();
+    this._map = this.createEmptyData();
+    this.load()
+      .then((data) => {
+        this._map = data;
+      })
+      .catch(() => {
+        this._map = this.createEmptyData();
+      });
+  }
+
+  protected getLoadedLogMessage(data: SerializedData): string {
+    const count = Object.keys(data).length;
+    return `Loaded Map: ${this._storeId} - ${count}`;
+  }
+
+  protected createEmptyData(): Map<K, V> {
+    return new Map<K, V>();
   }
 
   /**

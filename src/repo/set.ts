@@ -60,28 +60,66 @@ export abstract class SetRepo<T> extends BaseRepo<Set<T>, T[]> implements ISetRe
    */
   constructor(repoCron: IRepoCron, storeId: string) {
     super(repoCron, storeId);
-    this._set = new Set<T>();
+    this._set = this.createEmptyData();
     this.load()
       .then((data) => {
         this._set = data;
       })
       .catch(() => {
-        console.error(`Failed to load ${this._storeId}`);
+        this._set = this.createEmptyData();
       });
   }
 
   /**
-   * @inheritdoc
+   * Create an empty Set
+   * @protected
+   * @returns Empty Set instance
    */
-  protected _deserialize(data: T[]): Set<T> {
-    return new Set(data as T[]);
+  protected createEmptyData(): Set<T> {
+    return new Set();
   }
 
   /**
-   * @inheritdoc
+   * Serialize Set into an array for storage
+   * @protected
+   * @returns Array representation of the Set
    */
-  protected _serialize(): T[] {
-    return Array.from(this._set);
+  protected _serialize(): Array<T> {
+    return Array.from(this._set); // Convert Set to array
+  }
+
+  /**
+   * Deserialize array back into a Set
+   * @protected
+   * @param data Array of items to deserialize
+   * @returns Set instance
+   * @throws Error if data is invalid or not an array
+   */
+  protected _deserialize(data: Array<T>): Set<T> {
+    // Validate input data
+    if (!Array.isArray(data)) {
+      console.warn(`Expected an array for deserialization, but got ${typeof data}. Returning empty Set.`);
+      return new Set();
+    }
+
+    // Protect against empty or invalid data
+    if (data.length === 0) {
+      console.warn('Deserialized data is empty. Returning empty Set.');
+      return new Set();
+    }
+
+    // Convert array back to Set
+    return new Set(data);
+  }
+
+  /**
+   * Generate a log message for loaded data
+   * @protected
+   * @param data Array of loaded data
+   * @returns Log message
+   */
+  protected getLoadedLogMessage(data: Array<T>): string {
+    return `Loaded Set: (${this._storeId}) - ${data.length}`;
   }
 
   /**

@@ -34,8 +34,6 @@ export class AlertSummaryHandler implements IAlertSummaryHandler {
     const $container = $(`#${Constants.UI.IDS.AREAS.ALERTS}`);
     $container.empty();
 
-    console.log(`Displaying ${alerts.length} alerts`);
-
     if (!alerts || alerts.length === 0) {
       this.showEmptyState($container);
       return;

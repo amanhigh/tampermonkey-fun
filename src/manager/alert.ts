@@ -195,6 +195,7 @@ export class AlertManager implements IAlertManager {
   /** @inheritdoc */
   public getAlertsForInvestingTicker(investingTicker: string): Alert[] {
     const pairInfo = this._pairManager.investingTickerToPairInfo(investingTicker);
+    // FIXME: Unmapped Pair Message when No Pair found
     if (!pairInfo) {
       return [];
     }

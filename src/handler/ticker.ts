@@ -1,14 +1,9 @@
 import { Constants } from '../models/constant';
 import { ITradingViewScreenerManager } from '../manager/screener';
-import { IKiteHandler } from './kite';
 import { Notifier } from '../util/notify';
 import { ITickerManager } from '../manager/ticker';
 import { IRecentManager } from '../manager/recent';
-import { ISyncUtil } from '../util/sync';
-import { ISequenceHandler } from './sequence';
 import { ISymbolManager } from '../manager/symbol';
-import { IHeaderManager } from '../manager/header';
-import { IAlertHandler } from './alert';
 
 /**
  * Interface for managing ticker operations

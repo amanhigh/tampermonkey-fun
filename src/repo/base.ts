@@ -61,10 +61,20 @@ export abstract class BaseRepo<T, S = unknown> implements IBaseRepo<T> {
    * @public
    * @returns Promise resolving to loaded data
    */
+  protected abstract getLoadedLogMessage(data: S): string;
+  protected abstract createEmptyData(): T;
+
   public async load(): Promise<T> {
-    const data = await GM.getValue<S>(this._storeId, {} as S);
-    console.log(`Loaded ${this._storeId}`, data);
-    return this._deserialize(data!);
+    try {
+      const data = await GM.getValue<S>(this._storeId, {} as S);
+      const deserialized = this._deserialize(data!);
+      console.log(this.getLoadedLogMessage(data));
+      return deserialized;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`Failed to load ${this._storeId}: ${message}`);
+      throw error;
+    }
   }
 
   /**
