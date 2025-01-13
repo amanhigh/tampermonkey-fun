@@ -135,8 +135,7 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
         'p',
         {
           description: 'Alert Reset (without Lines)',
-          // FIXME: Implement resetAlerts in AlertHandler
-          action: () => console.warn('Alert Reset not implemented'),
+          action: () => void this.alertHandler.handleResetAlerts(),
         },
       ],
     ]);
@@ -197,6 +196,7 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
   private _executeAction(map: KeyMap, key: string): boolean {
     const binding = map.get(key.toLowerCase());
     if (binding) {
+      // FIXME: Get Access to event and prevent default on succesful execution
       binding.action();
       return true;
     }

@@ -6,7 +6,6 @@ import { BaseClient, IBaseClient } from './base';
  * Client for interacting with Investing.com API
  */
 export interface IInvestingClient extends IBaseClient {
-  // FIXME: #C All flows here should work.
   /**
    * Creates a new price alert
    */
@@ -24,7 +23,7 @@ export interface IInvestingClient extends IBaseClient {
   /**
    * Deletes an existing alert
    */
-  deleteAlert(alert: Alert): Promise<Alert>;
+  deleteAlert(alert: Alert): Promise<void>;
 
   /**
    * Fetch symbol data from the investing.com API
@@ -87,7 +86,7 @@ export class InvestingClient extends BaseClient implements IInvestingClient {
   /**
    * Deletes an existing alert
    */
-  async deleteAlert(alert: Alert): Promise<Alert> {
+  async deleteAlert(alert: Alert): Promise<void> {
     const data = new URLSearchParams({
       alertType: 'instrument',
       'alertParams[alert_ID]': alert.id,
@@ -98,8 +97,8 @@ export class InvestingClient extends BaseClient implements IInvestingClient {
       await this.makeRequest('/useralerts/service/delete', {
         method: 'POST',
         data: data.toString(),
+        responseType: 'text',
       });
-      return alert;
     } catch (error) {
       throw new Error(`Failed to delete alert: ${(error as Error).message}`);
     }

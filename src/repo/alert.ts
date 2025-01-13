@@ -1,7 +1,6 @@
 import { Alert } from '../models/alert';
 import { IRepoCron } from './cron';
 import { MapRepo, IMapRepo } from './map';
-import { SerializedData } from './base';
 import { AlertClicked } from '../models/events';
 import { Constants } from '../models/constant';
 

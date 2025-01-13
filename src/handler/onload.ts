@@ -22,15 +22,27 @@ export interface IOnLoadHandler {
 /**
  * Manages application initialization and observers
  */
+import { ISwiftKeyHandler } from './swiftkey';
+
 export class OnLoadHandler implements IOnLoadHandler {
+  // eslint-disable-next-line max-params
   constructor(
     private readonly waitUtil: IWaitUtil,
     private readonly observeUtil: IObserveUtil,
     private readonly watchListHandler: IWatchListHandler,
     private readonly hotkeyHandler: IHotkeyHandler,
     private readonly alertHandler: IAlertHandler,
-    private readonly tickerChangeHandler: ITickerChangeHandler
+    private readonly tickerChangeHandler: ITickerChangeHandler,
+    private readonly swiftKeyHandler: ISwiftKeyHandler
   ) {}
+
+  private setupTitleListener(): void {
+    this.waitUtil.waitJEE('title', ($element) => {
+      this.observeUtil.nodeObserver($element[0], () => {
+        this.swiftKeyHandler.syncTitle();
+      });
+    });
+  }
 
   /** @inheritdoc */
   public init(): void {
@@ -38,6 +50,7 @@ export class OnLoadHandler implements IOnLoadHandler {
     this.setupWatchlistObserver();
     this.setupKeydownEventListener();
     this.setupAlertClickListener();
+    this.setupTitleListener();
   }
 
   /**

@@ -61,6 +61,8 @@ import { IFlagHandler, FlagHandler } from '../handler/flag';
 import { IKiteRepo, KiteRepo } from '../repo/kite';
 import { ITickerHandler, TickerHandler } from '../handler/ticker';
 import { ITickerChangeHandler, TickerChangeHandler } from '../handler/ticker_change';
+import { ISwiftKeyHandler, SwiftKeyHandler } from '../handler/swiftkey';
+import { ICommandInputHandler, CommandInputHandler } from '../handler/command';
 
 /**
  * Project Architecture Overview
@@ -93,7 +95,8 @@ export class Factory {
             Factory.handler.onload(),
             Factory.handler.alert(),
             Factory.handler.audit(),
-            Factory.handler.journal()
+            Factory.handler.journal(),
+            Factory.handler.command()
           )
       ),
   };
@@ -308,7 +311,8 @@ export class Factory {
             Factory.handler.watchlist(),
             Factory.handler.hotkey(),
             Factory.handler.alert(),
-            Factory.handler.tickerChange()
+            Factory.handler.tickerChange(),
+            Factory.handler.swiftKey()
           )
       ),
     hotkey: (): IHotkeyHandler =>
@@ -429,6 +433,13 @@ export class Factory {
             Factory.util.smart(),
             Factory.util.ui()
           )
+      ),
+    swiftKey: (): ISwiftKeyHandler =>
+      Factory._getInstance('swiftKeyHandler', () => new SwiftKeyHandler(Factory.manager.tv())),
+    command: (): ICommandInputHandler =>
+      Factory._getInstance(
+        'commandHandler',
+        () => new CommandInputHandler(Factory.handler.ticker(), Factory.handler.alert(), Factory.util.ui())
       ),
   };
 

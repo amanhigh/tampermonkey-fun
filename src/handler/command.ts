@@ -45,19 +45,20 @@ export class CommandInputHandler implements ICommandInputHandler {
       return;
     }
 
-    // On Enter Key for Command Processing
-    if (e.type === 'keydown') {
+    const processor = this.determineInputType(input);
+
+    // Only require Enter key for non-ticker inputs
+    if (processor.type !== 'TICKER') {
       const keyEvent = e as JQuery.KeyDownEvent;
       if (!this.isEnterKey(keyEvent)) {
         return;
       }
     }
-
-    // FIXME: Add FNO Repo Update
-    const processor = this.determineInputType(input);
+    // FIXME: #C Add FNO Repo Update
     try {
       switch (processor.type) {
         case 'TICKER':
+          // FIXME: Should work without enter.
           this.processTickerInput(processor.value);
           break;
         case 'PRICES':
@@ -136,6 +137,7 @@ export class CommandInputHandler implements ICommandInputHandler {
   }
 
   private displayHelpMessage(): void {
+    // BUG: Update and Beautify Help Message
     const help = `
 Input Formats:
 - Quick Ticker: TICKER${this.TICKER_SUFFIX}

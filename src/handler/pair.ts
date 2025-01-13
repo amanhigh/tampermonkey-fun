@@ -25,6 +25,7 @@ export class PairHandler implements IPairHandler {
     private readonly investingClient: IInvestingClient,
     private readonly pairManager: IPairManager,
     private readonly smartPrompt: ISmartPrompt,
+    // BUG: Unused Variables below not appearing in lint
     private readonly alertManager: IAlertManager
   ) {}
 
@@ -34,6 +35,7 @@ export class PairHandler implements IPairHandler {
    * @param exchange Optional exchange name
    */
   public async mapInvestingTicker(investingTicker: string, exchange = ''): Promise<void> {
+    // FIXME: #A Implement Map & Remap of Pair Mapping
     Notifier.info(`Searching for ${investingTicker} on ${exchange}`);
 
     try {

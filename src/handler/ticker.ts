@@ -73,6 +73,7 @@ export class TickerHandler implements ITickerHandler {
       case 'E': {
         const ticker = this.tickerManager.getTicker();
         this.symbolManager.createTvToExchangeTickerMapping(ticker, value);
+        Notifier.success(`Mapped ${ticker} to Exchange ${value}`);
         break;
       }
       default:

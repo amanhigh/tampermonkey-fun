@@ -83,6 +83,12 @@ export interface IAlertHandler {
    * @param event AlertClicked event containing ticker info
    */
   handleAlertClick(event: AlertClicked): void;
+
+  /**
+   * Reset alerts by deleting all alerts for current ticker
+   * Ensures UI is refreshed after operation
+   */
+  handleResetAlerts(): Promise<void>;
 }
 
 /**
@@ -110,6 +116,7 @@ export class AlertHandler implements IAlertHandler {
       try {
         await this.alertManager.createAlertForCurrentTicker(parseFloat(p));
         // TODO: Alert Coloring based on Above or Below
+        this.refreshAlerts();
         Notifier.success(`Alert created at ${p}`);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
@@ -118,7 +125,7 @@ export class AlertHandler implements IAlertHandler {
     }
 
     setTimeout(() => {
-      // FIXME: Should move to Command Handler
+      // HACK: Should move to Command Handler
       $(`#${Constants.UI.IDS.INPUTS.COMMAND}`).val('');
     }, 5000);
   }
@@ -128,6 +135,7 @@ export class AlertHandler implements IAlertHandler {
     try {
       const price = await this.tradingViewManager.getCursorPrice();
       await this.alertManager.createAlertForCurrentTicker(price);
+      this.refreshAlerts();
       Notifier.success(`Alert created at cursor price: ${price}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -146,6 +154,7 @@ export class AlertHandler implements IAlertHandler {
     const targetPrice = (currentPrice * 1.2).toFixed(2);
     try {
       await this.alertManager.createAlertForCurrentTicker(parseFloat(targetPrice));
+      this.refreshAlerts();
       Notifier.success(`High alert created at ${targetPrice}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -158,7 +167,8 @@ export class AlertHandler implements IAlertHandler {
     try {
       const price = await this.tradingViewManager.getCursorPrice();
       await this.alertManager.deleteAlertsByPrice(price);
-      Notifier.success(`Alerts deleted around price: ${price}`);
+      this.refreshAlerts();
+      Notifier.warn(`Alerts deleted around price: ${price}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       Notifier.error(message);
@@ -193,6 +203,7 @@ export class AlertHandler implements IAlertHandler {
     void this.refershAllAllerts();
 
     // Use WatchlistHandler for cleanup
+    // TODO: Enable Back Cleanup
     // void this.watchListHandler.handleWatchlistCleanup();
   }
 
@@ -233,5 +244,17 @@ export class AlertHandler implements IAlertHandler {
     }
 
     this.tickerHandler.openTicker(ticker);
+  }
+
+  /** @inheritdoc */
+  public async handleResetAlerts(): Promise<void> {
+    try {
+      await this.alertManager.deleteAllAlerts();
+      this.refreshAlerts();
+      Notifier.success('All alerts deleted');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      Notifier.error(message);
+    }
   }
 }

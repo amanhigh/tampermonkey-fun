@@ -38,6 +38,7 @@
 // Reduce Version to 0.8 to force Update Script in Editor.
 //-- Are we on the "interactive" page/site/domain or the "monitoring" one?
 if (location.pathname.includes("alert-center")) {
+    // FIXME: #C Build Alert Center UI
     alertCenter();
 } else if (location.host.includes("tradingview.com")) {
     tradingView();
@@ -50,12 +51,6 @@ if (location.pathname.includes("alert-center")) {
 //***************TRADING VIEW ********************
 
 function tradingView() {        
-    //Register Ticker Change Listener
-    //Using Seprate Selector as nameSelector has attribute changes in paint Name.
-    waitEE(headerSelector, function (e) {
-        attributeObserver(e, onTickerChange);
-    });
-
     //Listen for Alert Clicks in AlertFeed
     GM_addValueChangeListener(
         alertClickedEvent, (keyName, oldValue, newValue,) => {

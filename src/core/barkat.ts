@@ -7,20 +7,24 @@ import { IOnLoadHandler } from '../handler/onload';
 import { IAlertHandler } from '../handler/alert';
 import { IAuditHandler } from '../handler/audit';
 import { IJournalHandler } from '../handler/journal';
+import { ICommandInputHandler } from '../handler/command';
 import { Trend } from '../models/trading';
 
 export class Barkat {
+  // eslint-disable-next-line max-params
   constructor(
     private readonly uiUtil: UIUtil,
     private readonly sequenceHandler: ISequenceHandler,
     private readonly onloadHandler: IOnLoadHandler,
     private readonly alertHandler: IAlertHandler,
     private readonly auditHandler: IAuditHandler,
-    private readonly journalHandler: IJournalHandler
+    private readonly journalHandler: IJournalHandler,
+    private readonly commandHandler: ICommandInputHandler
   ) {}
 
   initialize(): void {
     console.log('barkat initialized');
+    // FIXME: #B Split UI Setup for Trading View vs Investing.
     this.setupUI();
     this.onLoad();
   }
@@ -72,7 +76,11 @@ export class Barkat {
       .buildWrapper(Constants.UI.IDS.AREAS.MID)
       .appendTo($area)
       .append(this.uiUtil.buildInput(Constants.UI.IDS.INPUTS.DISPLAY))
-      .append(this.uiUtil.buildInput(Constants.UI.IDS.INPUTS.COMMAND));
+      .append(
+        this.uiUtil.buildInput(Constants.UI.IDS.INPUTS.COMMAND).on('keydown', (e) => {
+          void this.commandHandler.handleInput(e);
+        })
+      );
 
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.ALERTS).appendTo($area);
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.ORDERS).appendTo($area);

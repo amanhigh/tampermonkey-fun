@@ -11,27 +11,13 @@ export abstract class BaseEvent {
 }
 
 export class AlertClicked extends BaseEvent {
-  private _tvTicker: string;
-  private _investingTicker: string;
+  tvTicker: string;
+  investingTicker: string;
 
   constructor(tvTicker: string, invTicker: string) {
     super();
-    this._tvTicker = tvTicker;
-    this._investingTicker = invTicker;
-  }
-
-  get tvTicker(): string {
-    return this._tvTicker;
-  }
-  get investingTicker(): string {
-    return this._investingTicker;
-  }
-
-  set tvTicker(value: string) {
-    this._tvTicker = value;
-  }
-  set investingTicker(value: string) {
-    this._investingTicker = value;
+    this.tvTicker = tvTicker;
+    this.investingTicker = invTicker;
   }
 
   /**
@@ -40,8 +26,8 @@ export class AlertClicked extends BaseEvent {
    */
   public stringify(): string {
     return JSON.stringify({
-      tvTicker: this._tvTicker,
-      investingTicker: this._investingTicker,
+      tvTicker: this.tvTicker,
+      investingTicker: this.investingTicker,
     });
   }
 }

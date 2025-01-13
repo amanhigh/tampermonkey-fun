@@ -40,7 +40,9 @@ export class AlertSummaryHandler implements IAlertSummaryHandler {
     }
 
     alerts.forEach((alert) => {
-      this.createAlertButton(alert).appendTo($container);
+      const $button = this.createAlertButton(alert);
+      $button.appendTo($container);
+      this.attachDeleteHandler($button, alert);
     });
   }
 
@@ -52,11 +54,26 @@ export class AlertSummaryHandler implements IAlertSummaryHandler {
    */
   private createAlertButton(alert: Alert): JQuery {
     const displayText = this.formatAlertDisplay(alert);
-    return this.uiUtil.buildButton('', displayText, () => {
+    return this.uiUtil.buildButton('', displayText);
+  }
+
+  /**
+   * Attaches delete handler to the alert button
+   * @private
+   * @param $button Button element
+   * @param alert Alert associated with the button
+   */
+  private attachDeleteHandler($button: JQuery, alert: Alert): void {
+    $button.on('click', () => {
+      if (alert.id === '') {
+        Notifier.warn('Pending alerts cannot be deleted');
+        return;
+      }
       this.alertManager
         .deleteAlert(alert)
         .then(() => {
           Notifier.success(`Alert deleted: ${alert.price}`);
+          $button.remove();
         })
         .catch((error) => {
           const message = error instanceof Error ? error.message : 'Unknown error';
@@ -76,7 +93,7 @@ export class AlertSummaryHandler implements IAlertSummaryHandler {
     const priceString = alert.price.toString();
 
     // Pending alerts are orange, others colored based on price comparison
-    const color = alert.id === undefined ? 'orange' : alert.price < ltp ? 'seagreen' : 'orangered';
+    const color = alert.id === '' ? 'orange' : alert.price < ltp ? 'seagreen' : 'orangered';
 
     return this.uiUtil.colorText(priceString, color);
   }

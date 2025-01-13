@@ -108,7 +108,6 @@ export class AuditHandler implements IAuditHandler {
     const backgroundColor = this.getButtonColor(state);
 
     const button = this.uiUtil
-      // FIXME: Open Ticker using TickerHandler
       .buildButton(buttonId, investingTicker, () => this.tickerHandler.openTicker(investingTicker))
       .css({
         'background-color': backgroundColor,

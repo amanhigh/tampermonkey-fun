@@ -11,58 +11,24 @@ export class Alert {
 }
 
 export class PairInfo {
-  private _name: string;
-  private _pairId: string;
-  private _exchange: string;
+  name: string;
+  pairId: string;
+  exchange: string;
 
   constructor(name: string, pairId: string, exchange: string) {
-    this._name = name;
-    this._pairId = pairId;
-    this._exchange = exchange;
-  }
-
-  get name(): string {
-    return this._name;
-  }
-  get pairId(): string {
-    return this._pairId;
-  }
-  get exchange(): string {
-    return this._exchange;
-  }
-
-  set name(value: string) {
-    this._name = value;
-  }
-  set pairId(value: string) {
-    this._pairId = value;
-  }
-  set exchange(value: string) {
-    this._exchange = value;
+    this.name = name;
+    this.pairId = pairId;
+    this.exchange = exchange;
   }
 }
 
 export class AlertAudit {
-  private _investingTicker: string;
-  private _state: AlertState;
+  investingTicker: string;
+  state: AlertState;
 
   constructor(investingTicker: string, state: AlertState) {
-    this._investingTicker = investingTicker;
-    this._state = state;
-  }
-
-  get investingTicker(): string {
-    return this._investingTicker;
-  }
-  get state(): AlertState {
-    return this._state;
-  }
-
-  set investingTicker(value: string) {
-    this._investingTicker = value;
-  }
-  set state(value: AlertState) {
-    this._state = value;
+    this.investingTicker = investingTicker;
+    this.state = state;
   }
 }
 

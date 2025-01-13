@@ -60,7 +60,7 @@ export interface IAlertManager {
  */
 export class AlertManager implements IAlertManager {
   constructor(
-    private readonly _alertRepo: IAlertRepo,
+    private readonly alertRepo: IAlertRepo,
     private readonly _pairManager: IPairManager,
     private readonly _tickerManager: ITickerManager,
     private readonly _investingClient: IInvestingClient,
@@ -90,7 +90,7 @@ export class AlertManager implements IAlertManager {
       const ltp = this._tradingViewManager.getLastTradedPrice();
       const response = await this._investingClient.createAlert(pairInfo.name, pairInfo.pairId, price, ltp);
       const alert = new Alert('', response.pairId, response.price);
-      this._alertRepo.addAlert(pairInfo.pairId, alert);
+      this.alertRepo.addAlert(pairInfo.pairId, alert);
     } catch {
       Notifier.error(`Failed to create alert for ${investingTicker} at price ${price}`);
     }
@@ -116,7 +116,7 @@ export class AlertManager implements IAlertManager {
 
           if (pairId && !isNaN(price) && id) {
             const alert = new Alert(id, pairId, price);
-            this._alertRepo.addAlert(pairId, alert);
+            this.alertRepo.addAlert(pairId, alert);
             count++;
           }
         });
@@ -165,7 +165,7 @@ export class AlertManager implements IAlertManager {
   async deleteAlert(alert: Alert): Promise<void> {
     try {
       await this._investingClient.deleteAlert(alert);
-      this._alertRepo.removeAlert(alert.pairId, alert.id);
+      this.alertRepo.removeAlert(alert.pairId, alert.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(`Failed to delete alert ${alert.id}: ${message}`);
@@ -175,7 +175,7 @@ export class AlertManager implements IAlertManager {
   /** @inheritdoc */
   async reloadAlerts(): Promise<number> {
     try {
-      this._alertRepo.clear();
+      this.alertRepo.clear();
       const html = await this._investingClient.getAllAlerts();
       const count = this._reloadFromHtml(html);
 
@@ -195,11 +195,11 @@ export class AlertManager implements IAlertManager {
   /** @inheritdoc */
   public getAlertsForInvestingTicker(investingTicker: string): Alert[] {
     const pairInfo = this._pairManager.investingTickerToPairInfo(investingTicker);
-    // FIXME: Unmapped Pair Message when No Pair found
+    // FIXME: #C Unmapped Pair Message when No Pair found
     if (!pairInfo) {
       return [];
     }
-    return this._alertRepo.getSortedAlerts(pairInfo.pairId);
+    return this.alertRepo.getSortedAlerts(pairInfo.pairId);
   }
 
   /**
