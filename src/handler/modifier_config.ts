@@ -32,7 +32,7 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
   private readonly _shiftKeys: KeyMap;
   private readonly _altKeys: KeyMap;
 
-  // HACK: Break Lines later for all eslint-disables
+  // XXX: Break Lines later for all eslint-disables
   // eslint-disable-next-line max-lines-per-function
   constructor(
     private readonly tickerManager: ITickerManager,

@@ -52,7 +52,7 @@ export class AuditManager implements IAuditManager {
   async auditAlerts(): Promise<void> {
     const investingTickers = this._pairManager.getAllInvestingTickers();
     this._currentIndex = 0;
-    Notifier.info(`Starting audit of ${investingTickers.length} tickers`);
+    Notifier.info(`Starting Audit: ${investingTickers.length} tickers`, 10000);
     this._auditRepo.clear();
     await this._processBatch(investingTickers);
   }
@@ -64,7 +64,6 @@ export class AuditManager implements IAuditManager {
     const audit = new AlertAudit(investingTicker, state);
     this._auditRepo.set(investingTicker, audit);
     return audit;
-    // this._uiManager.refreshAuditButton(investingTicker, state); TODO: Move to Handler
   }
 
   /** @inheritdoc */
@@ -85,7 +84,7 @@ export class AuditManager implements IAuditManager {
       const batchPercent = Math.floor((this._currentIndex / investingTickers.length) * 100);
 
       if (batchPercent % 20 === 0) {
-        Notifier.info(`Processed ${batchPercent}% of tickers`);
+        Notifier.info(`Processed ${batchPercent}% of tickers`, 5000);
       }
 
       // Process current batch asynchronously
@@ -105,7 +104,6 @@ export class AuditManager implements IAuditManager {
 
     const auditCount = this._auditRepo.getCount();
     Notifier.message(`Completed audit of ${auditCount} tickers`, 'green');
-    // this._uiManager.updateAuditSummary(); TODO: Move to Handler
   }
 
   /**

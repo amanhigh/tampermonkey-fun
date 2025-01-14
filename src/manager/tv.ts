@@ -60,12 +60,6 @@ export interface ITradingViewManager {
    * @param enabled true to enable swift keys, false to disable
    */
   setSwiftKeysState(enabled: boolean): void;
-
-  /**
-   * Focus the command input
-   * @returns void
-   */
-  focusCommandInput(): void;
 }
 
 /**
@@ -150,12 +144,6 @@ export class TradingViewManager implements ITradingViewManager {
   setSwiftKeysState(enabled: boolean): void {
     this.updateSwiftKeysCheckbox(enabled);
     this.updateSwiftKeysTitle(enabled);
-  }
-
-  /** @inheritdoc */
-  focusCommandInput(): void {
-    // HACK: Should move to Handler
-    $(`#${Constants.UI.IDS.INPUTS.COMMAND}`).focus();
   }
 
   /**

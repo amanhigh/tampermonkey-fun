@@ -10,20 +10,16 @@ import { ITickerHandler } from './ticker';
  * Interface for managing audit UI operations
  */
 export interface IAuditHandler {
+  // FIXME: #A Integrate all Functions
   /**
    * Updates the audit summary in the UI based on current results
    */
-  updateAuditSummary(): void;
+  auditAll(): Promise<void>;
 
   /**
    * Refreshes audit button for current ticker
    */
-  refreshAuditForCurrentTicker(): void;
-
-  /**
-   * Handles the journal button click
-   */
-  handleJournalButton(): void;
+  auditCurrent(): void;
 }
 
 /**
@@ -40,7 +36,8 @@ export class AuditHandler implements IAuditHandler {
   /**
    * Updates the audit summary in the UI based on current results
    */
-  public updateAuditSummary(): void {
+  public async auditAll(): Promise<void> {
+    await this.auditManager.auditAlerts();
     const singleAlerts = this.auditManager.filterAuditResults(AlertState.SINGLE_ALERT);
     const noAlerts = this.auditManager.filterAuditResults(AlertState.NO_ALERTS);
 
@@ -63,13 +60,14 @@ export class AuditHandler implements IAuditHandler {
       this.createAuditButton(audit.investingTicker, audit.state).appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
     });
 
-    Notifier.success(`Audit Refreshed: ${singleAlerts.length} Single Alerts, ${noAlerts.length} No Alerts`);
+    // FIXME: Add all states eg Pair auto build msg
+    Notifier.success(`Audit All: ${singleAlerts.length} Single Alerts, ${noAlerts.length} No Alerts`, 5000);
   }
 
   /**
    * Refreshes audit button for current ticker
    */
-  public refreshAuditForCurrentTicker(): void {
+  public auditCurrent(): void {
     const auditResult = this.auditManager.auditCurrentTicker();
 
     // Find existing button for this ticker
@@ -91,7 +89,7 @@ export class AuditHandler implements IAuditHandler {
       newButton.appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
     }
 
-    Notifier.success(`Audit Refreshed: ${auditResult.investingTicker} ${auditResult.state}`);
+    Notifier.success(`Audit: ${auditResult.state}`);
   }
 
   /**
@@ -145,12 +143,5 @@ export class AuditHandler implements IAuditHandler {
    */
   private getAuditButtonId(investingTicker: string): string {
     return `audit-${investingTicker}`.replace('/', '-');
-  }
-
-  /**
-   * Handles the journal button click
-   */
-  public handleJournalButton(): void {
-    this.uiUtil.toggleUI(`#${Constants.UI.IDS.AREAS.JOURNAL}`);
   }
 }

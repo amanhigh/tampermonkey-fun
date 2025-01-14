@@ -16,6 +16,16 @@ export interface ICommandInputHandler {
    * @param e Input event (keyboard/change)
    */
   handleInput(e: JQuery.TriggeredEvent): Promise<void>;
+
+  /**
+   * Focus the command input field
+   */
+  focusCommandInput(): void;
+
+  /**
+   * Clear the command input field
+   */
+  clearInput(): void;
 }
 
 type InputType = 'TICKER' | 'PRICES' | 'COMMAND' | 'UNKNOWN';
@@ -80,7 +90,7 @@ export class CommandInputHandler implements ICommandInputHandler {
   }
 
   private determineInputType(value: string): InputProcessor {
-    // HACK: Improved Ends With Symbol
+    // XXX: Improved Ends With Symbol
     if (this.hasTickerSuffix(value)) {
       return {
         type: 'TICKER',
@@ -154,6 +164,16 @@ export class CommandInputHandler implements ICommandInputHandler {
       this.fnoManager.remove(tickers);
       Notifier.success(`Removed FNO tickers. Total: ${this.fnoManager.getCount()}`);
     }
+  }
+
+  /** @inheritdoc */
+  public focusCommandInput(): void {
+    $(`#${Constants.UI.IDS.INPUTS.COMMAND}`).focus();
+  }
+
+  /** @inheritdoc */
+  public clearInput(): void {
+    $(`#${Constants.UI.IDS.INPUTS.COMMAND}`).val('');
   }
 
   private displayHelpMessage(): void {

@@ -3,6 +3,7 @@ import { IKeyUtil } from '../util/key';
 import { Notifier } from '../util/notify';
 import { IKeyConfig } from './key_config';
 import { IModifierKeyConfig } from './modifier_config';
+import { ICommandInputHandler } from './command';
 
 /**
  * Interface for managing hotkey operations
@@ -28,7 +29,8 @@ export class HotkeyHandler implements IHotkeyHandler {
     private readonly keyUtil: IKeyUtil,
     private readonly keyConfig: IKeyConfig,
     private readonly modifierKeyConfig: IModifierKeyConfig,
-    private readonly tvManager: ITradingViewManager
+    private readonly tvManager: ITradingViewManager,
+    private readonly commandInputHandler: ICommandInputHandler
   ) {}
 
   /* @inheritdoc */
@@ -71,7 +73,7 @@ export class HotkeyHandler implements IHotkeyHandler {
 
     // Focus Input
     if (this.keyUtil.isModifierKeyPressed(event.ctrlKey, 'b', event)) {
-      this.tvManager.focusCommandInput();
+      this.commandInputHandler.focusCommandInput();
       return true;
     }
 

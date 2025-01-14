@@ -3,7 +3,6 @@
  */
 
 import { IAlertManager } from '../manager/alert';
-import { IAuditManager } from '../manager/audit';
 import { ISymbolManager } from '../manager/symbol';
 import { ITickerManager } from '../manager/ticker';
 import { ITradingViewManager } from '../manager/tv';
@@ -15,6 +14,8 @@ import { AlertClicked } from '../models/events';
 import { IAlertSummaryHandler } from './alert_summary';
 import { ITickerHandler } from './ticker';
 import { IPairHandler } from './pair';
+import { IAuditHandler } from './audit';
+import { ICommandInputHandler } from './command';
 
 /**
  * Interface for managing alert operations
@@ -48,7 +49,7 @@ export interface IAlertHandler {
   /**
    * Forces a refresh of all alerts from server
    */
-  refershAllAllerts(): Promise<void>;
+  refreshAllAlerts(): Promise<void>;
 
   /**
    * Handles refresh button operations
@@ -100,11 +101,12 @@ export class AlertHandler implements IAlertHandler {
   constructor(
     private readonly alertManager: IAlertManager,
     private readonly tradingViewManager: ITradingViewManager,
-    private readonly auditManager: IAuditManager,
+    private readonly auditHandler: IAuditHandler,
     private readonly tickerManager: ITickerManager,
     private readonly symbolManager: ISymbolManager,
     private readonly syncUtil: ISyncUtil,
     private readonly uiUtil: IUIUtil,
+    private readonly commandInputHandler: ICommandInputHandler,
     private readonly alertSummaryHandler: IAlertSummaryHandler,
     private readonly tickerHandler: ITickerHandler,
     private readonly pairHandler: IPairHandler
@@ -126,8 +128,7 @@ export class AlertHandler implements IAlertHandler {
     }
 
     setTimeout(() => {
-      // HACK: Should move to Command Handler
-      $(`#${Constants.UI.IDS.INPUTS.COMMAND}`).val('');
+      this.commandInputHandler.clearInput();
     }, 5000);
   }
 
@@ -154,7 +155,6 @@ export class AlertHandler implements IAlertHandler {
 
     const targetPrice = (currentPrice * 1.2).toFixed(2);
     try {
-      // BUG: Only Show Success if alert Created.
       await this.alertManager.createAlertForCurrentTicker(parseFloat(targetPrice));
       this.refreshAlerts();
       Notifier.success(`High alert created at ${targetPrice}`);
@@ -182,12 +182,12 @@ export class AlertHandler implements IAlertHandler {
     this.syncUtil.waitOn('alert-refresh-local', 10, () => {
       const alerts = this.alertManager.getAlerts();
       this.alertSummaryHandler.displayAlerts(alerts);
-      //TODO: Audit Current
+      this.auditHandler.auditCurrent();
     });
   }
 
   /** @inheritdoc */
-  public async refershAllAllerts(): Promise<void> {
+  public async refreshAllAlerts(): Promise<void> {
     const count = await this.alertManager.reloadAlerts();
     if (count > 0) {
       Notifier.success(`Loaded ${count} alerts`);
@@ -196,13 +196,13 @@ export class AlertHandler implements IAlertHandler {
     }
 
     this.refreshAlerts();
-    // TODO: Audit All
+    await this.auditHandler.auditAll();
   }
 
   /** @inheritdoc */
   public handleRefreshButton(): void {
     // Refresh alerts
-    void this.refershAllAllerts();
+    void this.refreshAllAlerts();
 
     // Use WatchlistHandler for cleanup
     // TODO: Enable Back Cleanup
@@ -239,21 +239,20 @@ export class AlertHandler implements IAlertHandler {
       this.pairHandler.deletePairInfo(this.tickerManager.getInvestingTicker());
     } else {
       // Regular audit operation
-      this.auditManager.auditCurrentTicker();
+      this.auditHandler.auditCurrent();
     }
     this.refreshAlerts();
   }
 
   /** @inheritdoc */
   public handleAlertClick(event: AlertClicked): void {
-    // Prefer TV ticker if available, fallback to investing ticker
-    const ticker = event.tvTicker || event.investingTicker;
-    if (!ticker) {
-      Notifier.error('No valid ticker in alert click event');
-      return;
+    if (event.investingTicker) {
+      // Map TV Ticker to Investing Ticker
+      this.symbolManager.createTvToInvestingMapping(this.tickerManager.getTicker(), event.investingTicker);
+      void this.pairHandler.mapInvestingTicker(event.investingTicker, this.tickerManager.getCurrentExchange());
+    } else {
+      this.tickerHandler.openTicker(event.tvTicker);
     }
-
-    this.tickerHandler.openTicker(ticker);
   }
 
   /** @inheritdoc */

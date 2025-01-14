@@ -5,7 +5,6 @@ import { Constants } from '../models/constant';
 import { ISequenceHandler } from '../handler/sequence';
 import { IOnLoadHandler } from '../handler/onload';
 import { IAlertHandler } from '../handler/alert';
-import { IAuditHandler } from '../handler/audit';
 import { IJournalHandler } from '../handler/journal';
 import { ICommandInputHandler } from '../handler/command';
 import { IKiteHandler } from '../handler/kite';
@@ -19,7 +18,6 @@ export class Barkat {
     private readonly sequenceHandler: ISequenceHandler,
     private readonly onloadHandler: IOnLoadHandler,
     private readonly alertHandler: IAlertHandler,
-    private readonly auditHandler: IAuditHandler,
     private readonly journalHandler: IJournalHandler,
     private readonly commandHandler: ICommandInputHandler,
     private readonly kiteHandler: IKiteHandler,
@@ -93,7 +91,7 @@ export class Barkat {
       )
       .append(
         this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.JOURNAL, 'J', () => {
-          this.auditHandler.handleJournalButton();
+          this.journalHandler.handleJournalButton();
         })
       )
       .append(

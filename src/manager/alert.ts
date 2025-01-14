@@ -82,7 +82,7 @@ export class AlertManager implements IAlertManager {
   private async _createAlert(investingTicker: string, price: number): Promise<void> {
     const pairInfo = this._pairManager.investingTickerToPairInfo(investingTicker);
     if (!pairInfo) {
-      Notifier.error(`No pair info found for ticker: ${investingTicker}`);
+      throw new Error(`No pair info found for ticker: ${investingTicker}`);
       return;
     }
 
@@ -92,7 +92,7 @@ export class AlertManager implements IAlertManager {
       const alert = new Alert('', response.pairId, response.price);
       this.alertRepo.addAlert(pairInfo.pairId, alert);
     } catch {
-      Notifier.error(`Failed to create alert for ${investingTicker} at price ${price}`);
+      throw new Error(`Failed to create alert for ${investingTicker} at price ${price}`);
     }
   }
 
@@ -192,12 +192,6 @@ export class AlertManager implements IAlertManager {
       this.alertRepo.clear();
       const html = await this._investingClient.getAllAlerts();
       const count = this._reloadFromHtml(html);
-
-      if (count === 0) {
-        Notifier.warn('No Alerts (Pair) found');
-      } else {
-        Notifier.info(`Loaded ${count} alerts`);
-      }
 
       return count;
     } catch {

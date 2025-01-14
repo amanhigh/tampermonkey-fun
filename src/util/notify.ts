@@ -4,6 +4,7 @@
  */
 export class Notifier {
   private static readonly _containerId = 'flashId';
+  private static readonly DEFAULT_TIMEOUT = 2000;
   private static _container: HTMLDivElement | null = null;
 
   /**
@@ -32,20 +33,20 @@ export class Notifier {
   }
 
   // XXX: Replace console.log with this.
-  public static error(msg: string, timeout = 2000): void {
+  public static error(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
     this.message(msg, 'red', timeout);
   }
 
-  public static warn(msg: string, timeout = 2000): void {
+  public static warn(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
     this.message(msg, 'orange', timeout);
   }
 
   // XXX: Replace Green Messages with this
-  public static success(msg: string, timeout = 2000): void {
+  public static success(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
     this.message(msg, 'green', timeout);
   }
 
-  public static info(msg: string, timeout = 2000): void {
+  public static info(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
     this.message(msg, 'white', timeout);
   }
 

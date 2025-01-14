@@ -95,7 +95,6 @@ export class Factory {
             Factory.handler.sequence(),
             Factory.handler.onload(),
             Factory.handler.alert(),
-            Factory.handler.audit(),
             Factory.handler.journal(),
             Factory.handler.command(),
             Factory.handler.kite(),
@@ -277,11 +276,12 @@ export class Factory {
           new AlertHandler(
             Factory.manager.alert(),
             Factory.manager.tv(),
-            Factory.manager.audit(),
+            Factory.handler.audit(),
             Factory.manager.ticker(),
             Factory.manager.symbol(),
             Factory.util.sync(),
             Factory.util.ui(),
+            Factory.handler.command(),
             Factory.handler.alertSummary(),
             Factory.handler.ticker(),
             Factory.handler.pair()
@@ -320,7 +320,8 @@ export class Factory {
             Factory.util.key(),
             Factory.handler.keyConfig(),
             Factory.handler.modifierKeyConfig(),
-            Factory.manager.tv()
+            Factory.manager.tv(),
+            Factory.handler.command()
           )
       ),
     kite: (): IKiteHandler =>
