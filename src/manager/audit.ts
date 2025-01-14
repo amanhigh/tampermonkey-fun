@@ -123,6 +123,9 @@ export class AuditManager implements IAuditManager {
     }
 
     const alerts = this._alertManager.getAlertsForInvestingTicker(investingTicker);
+    if (!alerts) {
+      return AlertState.NO_PAIR;
+    }
 
     return alerts.length === 0
       ? AlertState.NO_ALERTS

@@ -110,7 +110,6 @@ export class AlertHandler implements IAlertHandler {
 
   /** @inheritdoc */
   public async createAlertsFromTextBox(input: string): Promise<void> {
-    // FIXME: #B Make Alert Functions Work
     const prices = String(input).trim().split(' ');
     for (const p of prices) {
       try {

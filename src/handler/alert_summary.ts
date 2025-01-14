@@ -13,7 +13,7 @@ export interface IAlertSummaryHandler {
    * Display alerts in summary area
    * @param alerts Array of alerts to display
    */
-  displayAlerts(alerts: Alert[]): void;
+  displayAlerts(alerts: Alert[] | null): void;
 }
 
 /**
@@ -30,9 +30,14 @@ export class AlertSummaryHandler implements IAlertSummaryHandler {
    * Display alerts in summary area
    * @param alerts Array of alerts to display
    */
-  public displayAlerts(alerts: Alert[]): void {
+  public displayAlerts(alerts: Alert[] | null): void {
     const $container = $(`#${Constants.UI.IDS.AREAS.ALERTS}`);
     $container.empty();
+
+    if (alerts === null) {
+      this.showNoPairState($container);
+      return;
+    }
 
     if (!alerts || alerts.length === 0) {
       this.showEmptyState($container);
@@ -105,5 +110,14 @@ export class AlertSummaryHandler implements IAlertSummaryHandler {
    */
   private showEmptyState($container: JQuery): void {
     this.uiUtil.buildLabel('No Alerts', 'red').appendTo($container);
+  }
+
+  /**
+   * Shows no pair info state in container
+   * @private
+   * @param $container Container element
+   */
+  private showNoPairState($container: JQuery): void {
+    this.uiUtil.buildLabel('NO PAIR', 'orange').appendTo($container);
   }
 }

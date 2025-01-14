@@ -37,6 +37,7 @@ import { ISymbolManager, SymbolManager } from '../manager/symbol';
 import { ITradingViewManager, TradingViewManager } from '../manager/tv';
 import { IPairManager, PairManager } from '../manager/pair';
 import { FnoRepo, IFnoRepo } from '../repo/fno';
+import { IFnoManager, FnoManager } from '../manager/fno';
 
 // Handler Imports
 import { AlertHandler } from '../handler/alert';
@@ -96,7 +97,9 @@ export class Factory {
             Factory.handler.alert(),
             Factory.handler.audit(),
             Factory.handler.journal(),
-            Factory.handler.command()
+            Factory.handler.command(),
+            Factory.handler.kite(),
+            Factory.handler.ticker()
           )
       ),
   };
@@ -267,6 +270,7 @@ export class Factory {
         'journalManager',
         () => new JournalManager(Factory.manager.watch(), Factory.manager.sequence())
       ),
+    fno: (): IFnoManager => Factory._getInstance('fnoManager', () => new FnoManager(Factory.repo.fno())),
   };
 
   /**
@@ -439,7 +443,13 @@ export class Factory {
     command: (): ICommandInputHandler =>
       Factory._getInstance(
         'commandHandler',
-        () => new CommandInputHandler(Factory.handler.ticker(), Factory.handler.alert(), Factory.util.ui())
+        () =>
+          new CommandInputHandler(
+            Factory.handler.ticker(),
+            Factory.handler.alert(),
+            Factory.util.ui(),
+            Factory.manager.fno()
+          )
       ),
   };
 

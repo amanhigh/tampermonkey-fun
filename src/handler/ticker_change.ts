@@ -1,4 +1,3 @@
-import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 import { ITickerManager } from '../manager/ticker';
 import { IAlertHandler } from './alert';
@@ -42,10 +41,8 @@ export class TickerChangeHandler implements ITickerChangeHandler {
   }
 
   private recordRecentTicker(): void {
-    const recentEnabled = $(`#${Constants.UI.IDS.CHECKBOXES.RECENT}`).prop('checked');
     const ticker = this.tickerManager.getTicker();
-
-    if (recentEnabled && !this.recentManager.isRecent(ticker)) {
+    if (!this.recentManager.isRecent(ticker)) {
       this.recentManager.addTicker(ticker);
       // TODO: this.watchlistManager.paintAlertFeedEvent()
     }

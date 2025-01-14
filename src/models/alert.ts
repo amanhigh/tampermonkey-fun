@@ -39,4 +39,5 @@ export enum AlertState {
   NO_ALERTS = 'NO_ALERTS',
   SINGLE_ALERT = 'SINGLE_ALERT',
   VALID = 'VALID',
+  NO_PAIR = 'NO_PAIR',
 }

@@ -14,14 +14,14 @@ export interface IAlertManager {
    * Get all alerts for current trading view ticker
    * @returns Array of alerts sorted by price
    */
-  getAlerts(): Alert[];
+  getAlerts(): Alert[] | null;
 
   /**
    * Get all alerts for Investing.com ticker
    * @param investingTicker Investing.com ticker
-   * @returns Array of alerts sorted by price
+   * @returns Array of alerts sorted by price, or null if no pair info found
    */
-  getAlertsForInvestingTicker(investingTicker: string): Alert[];
+  getAlertsForInvestingTicker(investingTicker: string): Alert[] | null;
 
   /**
    * Create alert for current trading view ticker
@@ -68,7 +68,7 @@ export class AlertManager implements IAlertManager {
   ) {}
 
   /** @inheritdoc */
-  getAlerts(): Alert[] {
+  getAlerts(): Alert[] | null {
     const investingTicker = this._tickerManager.getInvestingTicker();
     return this.getAlertsForInvestingTicker(investingTicker);
   }
@@ -144,6 +144,10 @@ export class AlertManager implements IAlertManager {
     }
 
     const alerts = this.getAlerts();
+    if (!alerts) {
+      Notifier.warn('No alerts (Pair) found to delete');
+      return;
+    }
     await Promise.all(alerts.map(async (alert) => this.deleteAlert(alert)));
   }
 
@@ -156,9 +160,19 @@ export class AlertManager implements IAlertManager {
     }
 
     const tolerance = targetPrice * 0.03;
-    const alerts = this.getAlerts().filter((alert) => Math.abs(alert.price - targetPrice) <= tolerance);
+    const alerts = this.getAlerts();
+    if (!alerts) {
+      Notifier.warn('No alerts (Pair) found to delete');
+      return;
+    }
 
-    await Promise.all(alerts.map(async (alert) => this.deleteAlert(alert)));
+    const filteredAlerts = alerts.filter((alert) => Math.abs(alert.price - targetPrice) <= tolerance);
+    if (filteredAlerts.length === 0) {
+      Notifier.warn('No alerts found within price tolerance');
+      return;
+    }
+
+    await Promise.all(filteredAlerts.map(async (alert) => this.deleteAlert(alert)));
   }
 
   /** @inheritdoc */
@@ -180,7 +194,7 @@ export class AlertManager implements IAlertManager {
       const count = this._reloadFromHtml(html);
 
       if (count === 0) {
-        Notifier.warn('No alerts found');
+        Notifier.warn('No Alerts (Pair) found');
       } else {
         Notifier.info(`Loaded ${count} alerts`);
       }
@@ -193,11 +207,11 @@ export class AlertManager implements IAlertManager {
   }
 
   /** @inheritdoc */
-  public getAlertsForInvestingTicker(investingTicker: string): Alert[] {
+  public getAlertsForInvestingTicker(investingTicker: string): Alert[] | null {
     const pairInfo = this._pairManager.investingTickerToPairInfo(investingTicker);
     // FIXME: #C Unmapped Pair Message when No Pair found
     if (!pairInfo) {
-      return [];
+      return null;
     }
     return this.alertRepo.getSortedAlerts(pairInfo.pairId);
   }

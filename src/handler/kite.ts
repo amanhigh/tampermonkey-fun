@@ -32,12 +32,6 @@ export interface IKiteHandler {
   handleGttDeleteEvent(event: GttDeleteEvent): void;
 
   /**
-   * Sets up GTT tab refresh listener
-   * Triggers order refresh when GTT tab is activated
-   */
-  setupGttTabListener(): void;
-
-  /**
    * Processes GTT order creation requests
    * @param request The GTT request parameters
    */
@@ -204,7 +198,6 @@ export class KiteHandler implements IKiteHandler {
    * @private
    */
   private _setupGttOrderListener(): void {
-    // TODO: Use GM. Namespace
     GM_addValueChangeListener(
       Constants.STORAGE.EVENTS.GTT_CREATE,
       (_keyName: string, _oldValue: unknown, newValue: unknown) => {
@@ -214,9 +207,11 @@ export class KiteHandler implements IKiteHandler {
   }
 
   /**
-   * @inheritdoc
+   * Sets up GTT tab refresh listener
+   * Triggers order refresh when GTT tab is activated
+   * @private
    */
-  setupGttTabListener(): void {
+  private setupGttTabListener(): void {
     this.waitUtil.waitJEE(this.gttSelector, ($element) => {
       $element.click(() => void this.reloadGttOrders());
     });

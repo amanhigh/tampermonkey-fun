@@ -1,6 +1,7 @@
 import { ITickerHandler } from './ticker';
 import { IAlertHandler } from './alert';
 import { IUIUtil } from '../util/ui';
+import { IFnoManager } from '../manager/fno';
 import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 
@@ -35,7 +36,8 @@ export class CommandInputHandler implements ICommandInputHandler {
   constructor(
     private readonly tickerHandler: ITickerHandler,
     private readonly alertHandler: IAlertHandler,
-    private readonly uiUtil: IUIUtil
+    private readonly uiUtil: IUIUtil,
+    private readonly fnoManager: IFnoManager
   ) {}
 
   /** @inheritdoc */
@@ -54,18 +56,21 @@ export class CommandInputHandler implements ICommandInputHandler {
         return;
       }
     }
-    // FIXME: #C Add FNO Repo Update
     try {
       switch (processor.type) {
         case 'TICKER':
-          // FIXME: Should work without enter.
           this.processTickerInput(processor.value);
           break;
         case 'PRICES':
           await this.processPriceInput(processor.value);
           break;
         case 'COMMAND':
-          this.tickerHandler.processCommand(processor.value);
+          const [action, value] = processor.value.split('=');
+          if (['FNO', 'FNO!', 'FNO-'].includes(action.toUpperCase())) {
+            this.processFnoCommand(action.toUpperCase(), value);
+          } else {
+            this.tickerHandler.processCommand(processor.value);
+          }
           break;
         default:
           this.displayHelpMessage();
@@ -136,13 +141,34 @@ export class CommandInputHandler implements ICommandInputHandler {
     return e.keyCode === this.ENTER_KEY_CODE;
   }
 
+  private processFnoCommand(command: string, value: string): void {
+    // Convert comma-separated tickers to Set
+    const tickers = new Set(value.split(',').map((t) => t.trim()));
+
+    if (command === 'FNO') {
+      this.fnoManager.add(tickers);
+      Notifier.success(`Added FNO tickers. Total: ${this.fnoManager.getCount()}`);
+    } else if (command === 'FNO!') {
+      this.fnoManager.clear();
+      this.fnoManager.add(tickers);
+      Notifier.success(`Replaced FNO tickers. Total: ${this.fnoManager.getCount()}`);
+    } else if (command === 'FNO-') {
+      this.fnoManager.remove(tickers);
+      Notifier.success(`Removed FNO tickers. Total: ${this.fnoManager.getCount()}`);
+    }
+  }
+
   private displayHelpMessage(): void {
     // BUG: Update and Beautify Help Message
     const help = `
 Input Formats:
 - Quick Ticker: TICKER${this.TICKER_SUFFIX}
 - Price Alerts: 100.5 102.3
-- Commands: E=NSE
+- Commands:
+  * E=NSE (Exchange)
+  * FNO=TICKER1,TICKER2 (Add FNO)
+  * FNO!=TICKER1,TICKER2 (Replace FNO)
+  * FNO-=TICKER1,TICKER2 (Remove FNO)
 `;
     Notifier.info(help);
   }

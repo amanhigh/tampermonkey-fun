@@ -1,4 +1,3 @@
-import { Constants } from '../models/constant';
 import { ITradingViewScreenerManager } from '../manager/screener';
 import { Notifier } from '../util/notify';
 import { ITickerManager } from '../manager/ticker';
@@ -54,16 +53,10 @@ export class TickerHandler implements ITickerHandler {
   /** @inheritdoc */
   /** @inheritdoc */
   public resetRecent(): void {
-    const recentEnabled = $(`#${Constants.UI.IDS.CHECKBOXES.RECENT}`).prop('checked');
-
-    if (recentEnabled) {
-      Notifier.success('Recent Enabled');
-    } else {
-      this.recentManager.clearRecent();
-      this.screenerManager.paintScreener();
-      // TODO: Add Paint Alert Feed Event.
-      Notifier.error('Recent Disabled');
-    }
+    // TODO: Add Paint Alert Feed Event.
+    this.recentManager.clearRecent();
+    this.screenerManager.paintScreener();
+    Notifier.warn('Recent Reset');
   }
 
   processCommand(command: string): void {

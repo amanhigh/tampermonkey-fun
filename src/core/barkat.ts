@@ -8,6 +8,8 @@ import { IAlertHandler } from '../handler/alert';
 import { IAuditHandler } from '../handler/audit';
 import { IJournalHandler } from '../handler/journal';
 import { ICommandInputHandler } from '../handler/command';
+import { IKiteHandler } from '../handler/kite';
+import { ITickerHandler } from '../handler/ticker';
 import { Trend } from '../models/trading';
 
 export class Barkat {
@@ -19,19 +21,49 @@ export class Barkat {
     private readonly alertHandler: IAlertHandler,
     private readonly auditHandler: IAuditHandler,
     private readonly journalHandler: IJournalHandler,
-    private readonly commandHandler: ICommandInputHandler
+    private readonly commandHandler: ICommandInputHandler,
+    private readonly kiteHandler: IKiteHandler,
+    private readonly tickerHandler: ITickerHandler
   ) {}
+
+  private isInvestingSite(): boolean {
+    return window.location.host.includes('investing.com');
+  }
+
+  private isTradingViewSite(): boolean {
+    return window.location.host.includes('tradingview.com');
+  }
+
+  private isKiteSite(): boolean {
+    return window.location.host.includes('kite.zerodha.com');
+  }
+
+  private setupInvestingUI(): void {
+    const $area = this.uiUtil.buildArea(Constants.UI.IDS.AREAS.MAIN);
+    $area.appendTo('body');
+
+    this.uiUtil
+      .buildButton(Constants.UI.IDS.BUTTONS.HOOK, 'Hook', () => {
+        console.log('Hook button clicked - Implementation pending');
+      })
+      .appendTo($area);
+  }
 
   initialize(): void {
     console.log('barkat initialized');
-    // FIXME: #B Split UI Setup for Trading View vs Investing.
-    this.setupUI();
+    if (this.isInvestingSite()) {
+      this.setupInvestingUI();
+    } else if (this.isTradingViewSite()) {
+      this.setupTradingViewUI();
+    } else if (this.isKiteSite()) {
+      this.kiteHandler.initialize();
+    }
     this.onLoad();
   }
 
   // HACK: Remove suppressed Errors for eslint
   // eslint-disable-next-line max-lines-per-function
-  setupUI() {
+  private setupTradingViewUI() {
     const $area = this.uiUtil.buildArea(Constants.UI.IDS.AREAS.MAIN, '76%', '6%');
     $area.appendTo('body');
 
@@ -65,9 +97,8 @@ export class Barkat {
         })
       )
       .append(
-        this.uiUtil.buildCheckBox(Constants.UI.IDS.CHECKBOXES.RECENT, false).change(() => {
-          // FIXME: Change to Button ?
-          console.log('Handling recent ticker reset');
+        this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.RECENT, 'T', () => {
+          this.tickerHandler.resetRecent();
         })
       )
       .append(this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.SUMMARY));

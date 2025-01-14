@@ -19,12 +19,6 @@ export interface IRecentManager {
   isRecent(ticker: string): boolean;
 
   /**
-   * Check if any recent tickers exist
-   * @returns True if recent tickers exist
-   */
-  hasRecent(): boolean;
-
-  /**
    * Clear all recent tickers
    */
   clearRecent(): void;
@@ -52,11 +46,6 @@ export class RecentManager implements IRecentManager {
   /** @inheritdoc */
   public isRecent(ticker: string): boolean {
     return this.recentRepo.has(ticker);
-  }
-
-  /** @inheritdoc */
-  public hasRecent(): boolean {
-    return this.recentRepo.getCount() > 0;
   }
 
   /** @inheritdoc */

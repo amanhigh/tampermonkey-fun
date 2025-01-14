@@ -35,10 +35,11 @@ export const Constants = Object.freeze({
         REFRESH: 'aman-refresh', // Old Name: refreshBtnId
         ALERT_CREATE: 'aman-alert-create', // Old Name: altCreateBtnId
         JOURNAL: 'aman-journal-btn', // Old Name: journalBtnId
+        HOOK: 'aman-hook', // Add this line
+        RECENT: 'aman-recent', // Old Name: recentId
       },
       CHECKBOXES: {
         SWIFT: 'aman-swift', // Old Name: swiftId
-        RECENT: 'aman-recent', // Old Name: recentId
       },
     },
   },
