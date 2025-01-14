@@ -24,14 +24,15 @@ export interface ISymbolManager {
    * @param tvTicker TradingView ticker
    * @returns Investing ticker if mapped, undefined otherwise
    */
+  // BUG: Undefined vs Null return type ?
   tvToInvesting(tvTicker: string): string | undefined;
 
   /**
    * Maps Investing ticker to TradingView ticker
    * @param investingTicker Investing.com ticker
-   * @returns TV ticker if mapped, otherwise original ticker
+   * @returns TV ticker if mapped, undefined otherwise
    */
-  investingToTv(investingTicker: string): string;
+  investingToTv(investingTicker: string): string | undefined;
 
   /**
    * Maps TradingView ticker to Exchange ticker
@@ -65,7 +66,7 @@ export class SymbolManager implements ISymbolManager {
    * Maps Kite symbols to TradingView symbols
    * @private
    */
-  private readonly _kiteToTvSymbolMap: Readonly<Record<string, string>> = Object.freeze({
+  private readonly kiteToTvSymbolMap: Readonly<Record<string, string>> = Object.freeze({
     M_M: 'M&M',
     M_MFIN: 'M&MFIN',
   });
@@ -74,7 +75,7 @@ export class SymbolManager implements ISymbolManager {
    * Maps TradingView symbols to Kite symbols
    * @private
    */
-  private readonly _tvToKiteSymbolMap: Readonly<Record<string, string>>;
+  private readonly tvToKiteSymbolMap: Readonly<Record<string, string>>;
 
   /**
    * Initializes the SymbolManager with reverse mappings
@@ -82,49 +83,47 @@ export class SymbolManager implements ISymbolManager {
    * @param exchangeRepo Repository for exchange mappings
    */
   constructor(
-    private readonly _tickerRepo: ITickerRepo,
-    private readonly _exchangeRepo: IExchangeRepo
+    private readonly tickerRepo: ITickerRepo,
+    private readonly exchangeRepo: IExchangeRepo
   ) {
-    this._tvToKiteSymbolMap = this._generateTvToKiteSymbolMap();
-    Object.freeze(this._tvToKiteSymbolMap);
+    this.tvToKiteSymbolMap = this.generateTvToKiteSymbolMap();
+    Object.freeze(this.tvToKiteSymbolMap);
   }
 
   /** @inheritdoc */
   kiteToTv(kiteSymbol: string): string {
-    return this._kiteToTvSymbolMap[kiteSymbol] || kiteSymbol;
+    return this.kiteToTvSymbolMap[kiteSymbol] || kiteSymbol;
   }
 
   /** @inheritdoc */
   tvToKite(tvSymbol: string): string {
-    return this._tvToKiteSymbolMap[tvSymbol] || tvSymbol;
+    return this.tvToKiteSymbolMap[tvSymbol] || tvSymbol;
   }
 
   /** @inheritdoc */
   tvToInvesting(tvTicker: string): string | undefined {
-    return this._tickerRepo.getInvestingTicker(tvTicker);
+    return this.tickerRepo.getInvestingTicker(tvTicker);
   }
 
   /** @inheritdoc */
-  investingToTv(investingTicker: string): string {
-    return this._tickerRepo.getTvTicker(investingTicker) || investingTicker;
+  investingToTv(investingTicker: string): string | undefined {
+    const result = this.tickerRepo.getTvTicker(investingTicker);
+    return result === null ? undefined : result;
   }
 
   /** @inheritdoc */
   tvToExchangeTicker(tvTicker: string): string {
-    return this._exchangeRepo.getExchangeTicker(tvTicker);
+    return this.exchangeRepo.getExchangeTicker(tvTicker);
   }
 
   /** @inheritdoc */
   createTvToInvestingMapping(tvTicker: string, investingTicker: string): void {
-    // Save Mapping only if different
-    if (tvTicker !== investingTicker) {
-      this._tickerRepo.pinInvestingTicker(tvTicker, investingTicker);
-    }
+    this.tickerRepo.pinInvestingTicker(tvTicker, investingTicker);
   }
 
   /** @inheritdoc */
   createTvToExchangeTickerMapping(tvTicker: string, exchange: string): void {
-    this._exchangeRepo.pinExchange(tvTicker, exchange);
+    this.exchangeRepo.pinExchange(tvTicker, exchange);
   }
 
   /**
@@ -132,8 +131,8 @@ export class SymbolManager implements ISymbolManager {
    * @private
    * @returns TradingView to Kite symbol map
    */
-  private _generateTvToKiteSymbolMap(): Record<string, string> {
-    return Object.entries(this._kiteToTvSymbolMap).reduce(
+  private generateTvToKiteSymbolMap(): Record<string, string> {
+    return Object.entries(this.kiteToTvSymbolMap).reduce(
       (reverseMap, [kiteSymbol, tvSymbol]) => {
         reverseMap[tvSymbol] = kiteSymbol;
         return reverseMap;

@@ -15,6 +15,7 @@ export class RepoCron implements IRepoCron {
 
   constructor() {
     this._repositories = new Set();
+    // TODO: #A Start Cron method in Interface only done in TradingViewUI
     this._setupCron();
   }
 

@@ -4,6 +4,7 @@ import { ISequenceManager } from '../manager/sequence';
 import { IStyleManager } from '../manager/style';
 import { IWatchListHandler } from '../handler/watchlist';
 import { IFlagHandler } from '../handler/flag';
+import { IJournalHandler } from './journal';
 
 /**
  * Type definitions for key bindings and actions
@@ -85,7 +86,8 @@ export class KeyConfig implements IKeyConfig {
     private readonly timeFrameManager: ITimeFrameManager,
     private readonly watchlistHandler: IWatchListHandler,
     private readonly flagHandler: IFlagHandler,
-    private readonly styleManager: IStyleManager
+    private readonly styleManager: IStyleManager,
+    private readonly journalHandler: IJournalHandler
   ) {
     this._toolbarKeys = new Map([
       [
@@ -113,14 +115,9 @@ export class KeyConfig implements IKeyConfig {
         'k',
         {
           description: 'Text with Reason',
-          // FIXME: #B Journal ReasonPrompt Integration. Legacy code for reference:
-          /**
-           * ReasonPrompt((reason) => {
-           *   ClipboardCopy(timeFrame.symbol + " - " + reason);
-           *   SelectToolbar(4);
-           * })
-           */
-          action: () => console.warn('TODO: Integrate ReasonPrompt with clipboard and toolbar selection'),
+          action: () => {
+            void this.journalHandler.handleJournalReasonPrompt();
+          },
         },
       ],
       [
@@ -148,7 +145,7 @@ export class KeyConfig implements IKeyConfig {
         't',
         {
           description: 'Trade',
-          // FIXME: #A Fix GTT Order Integration
+          // FIXME: #C Fix GTT Order with Hotkey and Button
           action: () => console.warn('TODO: Integrate GTT Order handling'),
         },
       ],
@@ -211,6 +208,7 @@ export class KeyConfig implements IKeyConfig {
         'F3',
         {
           description: 'Order List - Index 2',
+          // FIXME: #B Make Order Set Work
           action: () => this.watchlistHandler.recordSelectedTicker(2),
         },
       ],

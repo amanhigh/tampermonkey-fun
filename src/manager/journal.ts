@@ -1,6 +1,8 @@
 import { Trend } from '../models/trading';
 import { IWatchManager } from './watch';
 import { ISequenceManager } from './sequence';
+import { Notifier } from '../util/notify';
+import { IKohanClient } from '../client/kohan';
 
 /**
  * Interface for managing trading journal operations
@@ -26,7 +28,15 @@ export interface IJournalManager {
    * @param reason - Optional trading reason code
    * @returns Formatted journal tag (e.g., "HGS.yr.trend.rejected.oe")
    */
-  createEntry(ticker: string, trend: Trend, reason: string): string;
+  createEntry(ticker: string, trend: Trend, reason: string): Promise<void>;
+
+  /**
+   * Creates formatted text combining symbol and reason for clipboard copying
+   * @param symbol - Trading symbol
+   * @param reason - Trading reason code
+   * @returns Formatted text (e.g., "HGS - oe")
+   */
+  createReasonText(symbol: string, reason: string): string;
 }
 
 /**
@@ -39,32 +49,42 @@ export class JournalManager implements IJournalManager {
    */
   constructor(
     private readonly watchManager: IWatchManager,
-    private readonly sequenceManager: ISequenceManager
+    private readonly sequenceManager: ISequenceManager,
+    private readonly kohanClient: IKohanClient
   ) {}
 
   /** @inheritdoc */
-  createEntry(ticker: string, trend: Trend, reason: string): string {
-    // Get and lowercase current sequence (e.g., "YR" -> "yr")
-    const sequence = this.sequenceManager.getCurrentSequence().toLowerCase();
+  public async createEntry(ticker: string, trend: Trend, reason: string): Promise<void> {
+    try {
+      const journalTag = this.createJournalTag(ticker, trend, reason);
+      await this.kohanClient.recordTicker(journalTag);
+      Notifier.success(`Journal entry created: ${journalTag}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      Notifier.error(`Failed to create journal entry: ${message}`);
+    }
+  }
 
-    // Determine entry type based on categories
+  /**
+   * Creates a journal entry tag used for naming trading journal images
+   * @private
+   */
+  private createJournalTag(ticker: string, trend: Trend, reason: string): string {
+    const sequence = this.sequenceManager.getCurrentSequence().toLowerCase();
     const type = this.determineEntryType(ticker);
 
-    // Build parts of the tag
-    const parts = [
-      ticker, // TICKER
-      sequence, // SEQUENCE
-      trend, // TREND
-      type, // TYPE
-    ];
+    const parts = [ticker, sequence, trend, type];
 
-    // Add reason if provided and valid
     if (reason && reason !== '' && reason !== 'Cancel') {
-      parts.push(reason); // REASON
+      parts.push(reason);
     }
 
-    // Join with dots to create final tag
     return parts.join('.');
+  }
+
+  /** @inheritdoc */
+  createReasonText(symbol: string, reason: string): string {
+    return `${symbol} - ${reason}`;
   }
 
   /**

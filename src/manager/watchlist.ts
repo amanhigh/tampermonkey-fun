@@ -89,7 +89,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   paintWatchList(): void {
     this.resetWatchList();
 
-    // HACK: Optimize Further only on Ticker Movement ?
+    // XXX: Optimize Further only on Ticker Movement ?
     this.watchManager.computeDefaultList(this.getTickers());
 
     // Paint Symbols

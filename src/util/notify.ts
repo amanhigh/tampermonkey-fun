@@ -34,6 +34,7 @@ export class Notifier {
 
   // XXX: Replace console.log with this.
   public static error(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
+    // TODO: Log Console error and get full error.
     this.message(msg, 'red', timeout);
   }
 

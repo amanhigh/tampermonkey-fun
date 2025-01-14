@@ -7,11 +7,11 @@ import { BaseClient, IBaseClient } from './base';
 export interface IKohanClient extends IBaseClient {
   /**
    * Record a ticker via the API
-   * @param ticker - Ticker symbol to record
+   * @param journalTag - Ticker symbol to record
    * @returns Promise resolving with the API response
    * @throws Error when recording ticker fails
    */
-  recordTicker(ticker: string): Promise<void>;
+  recordTicker(journalTag: string): Promise<void>;
 
   /**
    * Retrieve clipboard data from the API
@@ -36,13 +36,13 @@ export class KohanClient extends BaseClient implements IKohanClient {
 
   /**
    * Record a ticker via the API
-   * @param ticker - Ticker symbol to record
+   * @param journalTag - Ticker symbol to record
    * @returns Promise resolving with the API response
    * @throws Error when recording ticker fails
    */
-  async recordTicker(ticker: string): Promise<void> {
+  async recordTicker(journalTag: string): Promise<void> {
     try {
-      await this.makeRequest<void>(`/ticker/${ticker}/record`);
+      await this.makeRequest<void>(`/ticker/${journalTag}/record`);
     } catch (error) {
       throw new Error(`Failed to record ticker: ${(error as Error).message}`);
     }

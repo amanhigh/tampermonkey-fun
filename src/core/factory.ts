@@ -64,6 +64,7 @@ import { ITickerHandler, TickerHandler } from '../handler/ticker';
 import { ITickerChangeHandler, TickerChangeHandler } from '../handler/ticker_change';
 import { ISwiftKeyHandler, SwiftKeyHandler } from '../handler/swiftkey';
 import { ICommandInputHandler, CommandInputHandler } from '../handler/command';
+import { AlertFeedHandler, IAlertFeedHandler } from '../handler/alertfeed';
 
 /**
  * Project Architecture Overview
@@ -98,7 +99,8 @@ export class Factory {
             Factory.handler.journal(),
             Factory.handler.command(),
             Factory.handler.kite(),
-            Factory.handler.ticker()
+            Factory.handler.ticker(),
+            Factory.handler.alertFeed()
           )
       ),
   };
@@ -259,7 +261,7 @@ export class Factory {
     journal: (): IJournalManager =>
       Factory._getInstance(
         'journalManager',
-        () => new JournalManager(Factory.manager.watch(), Factory.manager.sequence())
+        () => new JournalManager(Factory.manager.watch(), Factory.manager.sequence(), Factory.client.kohan())
       ),
     fno: (): IFnoManager => Factory._getInstance('fnoManager', () => new FnoManager(Factory.repo.fno())),
   };
@@ -281,7 +283,6 @@ export class Factory {
             Factory.manager.symbol(),
             Factory.util.sync(),
             Factory.util.ui(),
-            Factory.handler.command(),
             Factory.handler.alertSummary(),
             Factory.handler.ticker(),
             Factory.handler.pair()
@@ -373,7 +374,8 @@ export class Factory {
             Factory.manager.timeFrame(),
             Factory.handler.watchlist(),
             Factory.handler.flag(),
-            Factory.manager.style()
+            Factory.manager.style(),
+            Factory.handler.journal()
           )
       ),
     modifierKeyConfig: (): IModifierKeyConfig =>
@@ -421,7 +423,9 @@ export class Factory {
             Factory.manager.ticker() as TickerManager,
             Factory.manager.journal(),
             Factory.util.smart(),
-            Factory.util.ui()
+            Factory.util.ui(),
+            Factory.manager.tv(),
+            Factory.manager.style()
           )
       ),
     swiftKey: (): ISwiftKeyHandler =>
@@ -430,6 +434,18 @@ export class Factory {
       Factory._getInstance(
         'commandHandler',
         () => new CommandInputHandler(Factory.handler.ticker(), Factory.handler.alert(), Factory.manager.fno())
+      ),
+    alertFeed: (): IAlertFeedHandler =>
+      Factory._getInstance(
+        'alertFeedHandler',
+        () =>
+          new AlertFeedHandler(
+            Factory.util.ui(),
+            Factory.util.sync(),
+            Factory.manager.watch(),
+            Factory.manager.symbol(),
+            Factory.manager.recent()
+          )
       ),
   };
 

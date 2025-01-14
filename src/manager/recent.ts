@@ -8,15 +8,15 @@ import { IPaintManager } from './paint';
 export interface IRecentManager {
   /**
    * Add ticker to recent list
-   * @param ticker Ticker to record
+   * @param tvTicker Ticker to record
    */
-  addTicker(ticker: string): void;
+  addTicker(tvTicker: string): void;
 
   /**
    * Check if ticker exists in recent list
-   * @param ticker Ticker to check
+   * @param tvTicker Ticker to check
    */
-  isRecent(ticker: string): boolean;
+  isRecent(tvTicker: string): boolean;
 
   /**
    * Clear all recent tickers
@@ -39,13 +39,13 @@ export class RecentManager implements IRecentManager {
   ) {}
 
   /** @inheritdoc */
-  public addTicker(ticker: string): void {
-    this.recentRepo.add(ticker);
+  public addTicker(tvTicker: string): void {
+    this.recentRepo.add(tvTicker);
   }
 
   /** @inheritdoc */
-  public isRecent(ticker: string): boolean {
-    return this.recentRepo.has(ticker);
+  public isRecent(tvTicker: string): boolean {
+    return this.recentRepo.has(tvTicker);
   }
 
   /** @inheritdoc */

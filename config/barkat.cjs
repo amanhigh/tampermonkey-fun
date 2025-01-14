@@ -12,7 +12,7 @@ const metadata = {
     en: "Barkat"
   },
   match: ["https://in.tradingview.com/chart*", "https://kite.zerodha.com/*", "https://in.investing.com/*"],
-  connect: ["investing.com", "kite.zerodha.com"],
+  connect: ["investing.com", "kite.zerodha.com","localhost"],
   grant: ["GM.xmlHttpRequest","GM.setValue","GM.getValue","GM_addValueChangeListener","GM.setClipboard"],
 };
 

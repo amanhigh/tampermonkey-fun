@@ -21,11 +21,6 @@ export interface ICommandInputHandler {
    * Focus the command input field
    */
   focusCommandInput(): void;
-
-  /**
-   * Clear the command input field
-   */
-  clearInput(): void;
 }
 
 type InputType = 'TICKER' | 'PRICES' | 'COMMAND' | 'UNKNOWN';
@@ -169,11 +164,6 @@ export class CommandInputHandler implements ICommandInputHandler {
   /** @inheritdoc */
   public focusCommandInput(): void {
     $(`#${Constants.UI.IDS.INPUTS.COMMAND}`).focus();
-  }
-
-  /** @inheritdoc */
-  public clearInput(): void {
-    $(`#${Constants.UI.IDS.INPUTS.COMMAND}`).val('');
   }
 
   private displayHelpMessage(): void {

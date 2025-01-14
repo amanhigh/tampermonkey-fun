@@ -54,6 +54,7 @@ export class AuditManager implements IAuditManager {
     this._currentIndex = 0;
     Notifier.info(`Starting Audit: ${investingTickers.length} tickers`, 10000);
     this._auditRepo.clear();
+    // FIXME: #B Batch Processing
     await this._processBatch(investingTickers);
   }
 

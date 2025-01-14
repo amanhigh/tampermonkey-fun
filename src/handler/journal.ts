@@ -9,6 +9,8 @@ import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 import { Trend } from '../models/trading';
 import { TickerManager } from '../manager/ticker';
+import { ITradingViewManager } from '../manager/tv';
+import { IStyleManager } from '../manager/style';
 
 /**
  * Interface for managing journal entry operations at UI/Event level
@@ -18,7 +20,6 @@ export interface IJournalHandler {
    * Handles click on Journal Button in UI
    * Toggles visibility of journal area in UI
    */
-  // FIXME: #B Journal Funcs should Integrate
   handleJournalButton(): void;
 
   /**
@@ -26,6 +27,12 @@ export interface IJournalHandler {
    * Shows reason prompt modal and creates journal entry
    */
   handleRecordJournal(trend: Trend): void;
+
+  /**
+   * Handles journal reason prompt operation
+   * Shows reason prompt modal and copies formatted text to clipboard
+   */
+  handleJournalReasonPrompt(): Promise<void>;
 }
 
 /**
@@ -36,7 +43,9 @@ export class JournalHandler implements IJournalHandler {
     private readonly tickerManager: TickerManager,
     private readonly journalManager: IJournalManager,
     private readonly smartPrompt: ISmartPrompt,
-    private readonly uiUtil: IUIUtil
+    private readonly uiUtil: IUIUtil,
+    private readonly tvManager: ITradingViewManager,
+    private readonly styleManager: IStyleManager
   ) {}
 
   /** @inheritdoc */
@@ -51,15 +60,28 @@ export class JournalHandler implements IJournalHandler {
     void this.smartPrompt
       .showModal(Constants.TRADING.PROMPT.REASONS, Constants.TRADING.PROMPT.OVERRIDES)
       .then((reason) => {
-        if (!reason || reason === 'Cancel') {
-          return;
-        }
-
-        const tag = this.journalManager.createEntry(ticker, trend, reason);
-        Notifier.success(`Journal entry created: ${tag}`);
+        void this.journalManager.createEntry(ticker, trend, reason);
       })
       .catch((error) => {
-        Notifier.error(`Failed to create journal entry: ${error}`);
+        Notifier.error(`Failed to select journal tag: ${error}`);
       });
+  }
+
+  /** @inheritdoc */
+  public async handleJournalReasonPrompt(): Promise<void> {
+    const symbol = this.tickerManager.getTicker();
+
+    try {
+      const reason = await this.smartPrompt.showModal(Constants.TRADING.PROMPT.REASONS);
+      if (!reason || reason === 'Cancel') {
+        return;
+      }
+
+      const text = this.journalManager.createReasonText(symbol, reason);
+      this.tvManager.clipboardCopy(text);
+      this.styleManager.selectToolbar(Constants.DOM.TOOLBARS.TEXT);
+    } catch (error) {
+      Notifier.error('Failed to handle reason prompt: ' + error);
+    }
   }
 }

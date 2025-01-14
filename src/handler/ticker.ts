@@ -53,7 +53,7 @@ export class TickerHandler implements ITickerHandler {
   /** @inheritdoc */
   /** @inheritdoc */
   public resetRecent(): void {
-    // TODO: Add Paint Alert Feed Event.
+    // TODO: #A Add Paint Alert Feed Event.
     this.recentManager.clearRecent();
     this.screenerManager.paintScreener();
     Notifier.warn('Recent Reset');

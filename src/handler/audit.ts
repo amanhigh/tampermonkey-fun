@@ -10,7 +10,6 @@ import { ITickerHandler } from './ticker';
  * Interface for managing audit UI operations
  */
 export interface IAuditHandler {
-  // FIXME: #A Integrate all Functions
   /**
    * Updates the audit summary in the UI based on current results
    */
@@ -42,7 +41,7 @@ export class AuditHandler implements IAuditHandler {
     const noAlerts = this.auditManager.filterAuditResults(AlertState.NO_ALERTS);
 
     if (singleAlerts.length === 0 && noAlerts.length === 0) {
-      // TODO: Handle case when audit results are empty - determine if this means
+      // FIXME: #B Handle case when audit results are empty - determine if this means
       // no alerts exist or audit hasn't run
       return;
     }
@@ -60,7 +59,7 @@ export class AuditHandler implements IAuditHandler {
       this.createAuditButton(audit.investingTicker, audit.state).appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
     });
 
-    // FIXME: Add all states eg Pair auto build msg
+    // FIXME: #B Add all states eg Pair auto build msg
     Notifier.success(`Audit All: ${singleAlerts.length} Single Alerts, ${noAlerts.length} No Alerts`, 5000);
   }
 

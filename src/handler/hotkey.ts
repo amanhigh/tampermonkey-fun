@@ -67,6 +67,7 @@ export class HotkeyHandler implements IHotkeyHandler {
   private handleGlobalKeys(event: KeyboardEvent): boolean {
     // Flag/Unflag
     if (this.keyUtil.isModifierKeyPressed(event.shiftKey, 'o', event)) {
+      // FIXME: #B Make Toggle Flag Work
       this.tvManager.toggleFlag();
       return true;
     }

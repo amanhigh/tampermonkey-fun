@@ -1,4 +1,3 @@
-import { Notifier } from '../util/notify';
 import { ITickerManager } from '../manager/ticker';
 import { IAlertHandler } from './alert';
 import { IHeaderManager } from '../manager/header';
@@ -34,17 +33,15 @@ export class TickerChangeHandler implements ITickerChangeHandler {
       this.sequenceHandler.displaySequence();
 
       // Handle GTT operations
-      this.kiteHandler
-        .refreshGttOrders()
-        .catch((error) => Notifier.error(`Failed to refresh GTT orders: ${error.message}`));
+      this.kiteHandler.refreshGttOrders().catch((error) => console.error('Failed to refresh GTT orders:', error));
     });
   }
 
   private recordRecentTicker(): void {
-    const ticker = this.tickerManager.getTicker();
-    if (!this.recentManager.isRecent(ticker)) {
-      this.recentManager.addTicker(ticker);
-      // TODO: this.watchlistManager.paintAlertFeedEvent()
+    const tvTicker = this.tickerManager.getTicker();
+    if (!this.recentManager.isRecent(tvTicker)) {
+      this.recentManager.addTicker(tvTicker);
+      // TODO: #A this.watchlistManager.paintAlertFeedEvent()
     }
   }
 }

@@ -89,6 +89,7 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
         'f8',
         {
           description: 'Flag Blue Crypto',
+          // FIXME: #B Make Flag Set Work
           action: () => this.flagHandler.recordSelectedTicker(2),
         },
       ],

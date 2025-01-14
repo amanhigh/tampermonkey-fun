@@ -87,7 +87,7 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
     // TODO: Call from Recent Manager in Handler.
 
     // Paint Symbols
-    // HACK: Extract common painting logic ?
+    // HACK: #B Extract common painting logic ?
     for (let i = 0; i < colorList.length; i++) {
       const color = colorList[i];
       const symbols = this.watchManager.getCategory(i);

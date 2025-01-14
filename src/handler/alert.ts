@@ -15,7 +15,6 @@ import { IAlertSummaryHandler } from './alert_summary';
 import { ITickerHandler } from './ticker';
 import { IPairHandler } from './pair';
 import { IAuditHandler } from './audit';
-import { ICommandInputHandler } from './command';
 
 /**
  * Interface for managing alert operations
@@ -30,6 +29,7 @@ export interface IAlertHandler {
    * Creates alert at cursor price position
    */
   createAlertAtCursor(): Promise<void>;
+  // TODO: #C Linter to find unused Public Methods
 
   /**
    * Creates alert 20% above current price
@@ -106,7 +106,6 @@ export class AlertHandler implements IAlertHandler {
     private readonly symbolManager: ISymbolManager,
     private readonly syncUtil: ISyncUtil,
     private readonly uiUtil: IUIUtil,
-    private readonly commandInputHandler: ICommandInputHandler,
     private readonly alertSummaryHandler: IAlertSummaryHandler,
     private readonly tickerHandler: ITickerHandler,
     private readonly pairHandler: IPairHandler
@@ -117,10 +116,10 @@ export class AlertHandler implements IAlertHandler {
     const prices = String(input).trim().split(' ');
     for (const p of prices) {
       try {
-        await this.alertManager.createAlertForCurrentTicker(parseFloat(p));
-        // FIXME: #C Alert Coloring based on Above or Below
+        const price = parseFloat(p);
+        await this.alertManager.createAlertForCurrentTicker(price);
         this.refreshAlerts();
-        Notifier.success(`Alert created at ${p}`);
+        this.notifyAlertCreation(price);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
         Notifier.error(message);
@@ -128,8 +127,23 @@ export class AlertHandler implements IAlertHandler {
     }
 
     setTimeout(() => {
-      this.commandInputHandler.clearInput();
+      // Can't move to Command Handler due to Cyclic Dependency
+      $(`#${Constants.UI.IDS.INPUTS.COMMAND}`).val('');
     }, 5000);
+  }
+
+  /**
+   * Displays appropriate notification for alert creation based on price comparison with LTP
+   * @param alertPrice Price at which alert was created
+   * @private
+   */
+  private notifyAlertCreation(alertPrice: number): void {
+    const ltp = this.tradingViewManager.getLastTradedPrice();
+    if (alertPrice > ltp) {
+      Notifier.success(`Alert ${alertPrice} > LTP ${ltp}`);
+    } else {
+      Notifier.error(`Alert ${alertPrice} < LTP ${ltp}`);
+    }
   }
 
   /** @inheritdoc */
@@ -138,7 +152,7 @@ export class AlertHandler implements IAlertHandler {
       const price = await this.tradingViewManager.getCursorPrice();
       await this.alertManager.createAlertForCurrentTicker(price);
       this.refreshAlerts();
-      Notifier.success(`Alert created at cursor price: ${price}`);
+      this.notifyAlertCreation(price);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       Notifier.error(message);
@@ -155,9 +169,10 @@ export class AlertHandler implements IAlertHandler {
 
     const targetPrice = (currentPrice * 1.2).toFixed(2);
     try {
-      await this.alertManager.createAlertForCurrentTicker(parseFloat(targetPrice));
+      const price = parseFloat(targetPrice);
+      await this.alertManager.createAlertForCurrentTicker(price);
       this.refreshAlerts();
-      Notifier.success(`High alert created at ${targetPrice}`);
+      this.notifyAlertCreation(price);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       Notifier.error(message);

@@ -98,6 +98,12 @@ export const Constants = Object.freeze({
       MAIN: 'span.tv-favorited-drawings-toolbar__widget', // Old Name: toolbarSelector
       STYLE: 'div.floating-toolbar-react-widgets__button:first', // Old Name: styleSelector
       STYLE_ITEM: 'span[class^=label]', // Old Name: styleItemSelector
+      TEXT: 4, // Toolbar index for text input
+    },
+    ALERT_FEED: {
+      WRAPPER: 'div.alertWrapper',
+      FLOATING_WRAPPER: 'div.floatingAlertWrapper',
+      ALERT_DATA: 'div.alertNotifData > a',
     },
     SIDEBAR: {
       DELETE_ARROW: 'div [data-name="removeAllDrawingTools"] button[class^=arrow]', // Old Name: deleteArrowSelector

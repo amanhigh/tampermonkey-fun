@@ -210,7 +210,7 @@ export class KiteHandler implements IKiteHandler {
    * Triggers order refresh when GTT tab is activated
    * @private
    */
-  // FIXME: #A Make this Flow Work on kite and tv side.
+  // FIXME: #C Make this Flow Work on kite and tv side.
   private setupGttTabListener(): void {
     this.waitUtil.waitJEE(this.gttSelector, ($element) => {
       $element.click(() => void this.reloadGttOrders());

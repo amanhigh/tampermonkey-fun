@@ -9,6 +9,7 @@ import { IJournalHandler } from '../handler/journal';
 import { ICommandInputHandler } from '../handler/command';
 import { IKiteHandler } from '../handler/kite';
 import { ITickerHandler } from '../handler/ticker';
+import { IAlertFeedHandler } from '../handler/alertfeed';
 import { Trend } from '../models/trading';
 
 export class Barkat {
@@ -21,7 +22,8 @@ export class Barkat {
     private readonly journalHandler: IJournalHandler,
     private readonly commandHandler: ICommandInputHandler,
     private readonly kiteHandler: IKiteHandler,
-    private readonly tickerHandler: ITickerHandler
+    private readonly tickerHandler: ITickerHandler,
+    private readonly alertFeedHandler: IAlertFeedHandler
   ) {}
 
   private isInvestingSite(): boolean {
@@ -37,14 +39,13 @@ export class Barkat {
   }
 
   private setupInvestingUI(): void {
-    const $area = this.uiUtil.buildArea(Constants.UI.IDS.AREAS.MAIN);
-    $area.appendTo('body');
+    this.alertFeedHandler.initialize();
+    console.log('Investing UI setup');
+  }
 
-    this.uiUtil
-      .buildButton(Constants.UI.IDS.BUTTONS.HOOK, 'Hook', () => {
-        console.log('Hook button clicked - Implementation pending');
-      })
-      .appendTo($area);
+  private setupKiteUI(): void {
+    this.kiteHandler.setUpListners();
+    console.log('Kite UI setup');
   }
 
   initialize(): void {
@@ -54,7 +55,7 @@ export class Barkat {
     } else if (this.isTradingViewSite()) {
       this.setupTradingViewUI();
     } else if (this.isKiteSite()) {
-      this.kiteHandler.setUpListners();
+      this.setupKiteUI();
     }
     this.onLoad();
   }
@@ -62,9 +63,11 @@ export class Barkat {
   // XXX: Remove suppressed Errors for eslint
   // eslint-disable-next-line max-lines-per-function
   private setupTradingViewUI() {
+    // TODO: #B Layout and Color Improvements
     const $area = this.uiUtil.buildArea(Constants.UI.IDS.AREAS.MAIN, '76%', '6%');
     $area.appendTo('body');
 
+    // TODO: #C Move UI Build Logic to Handlers
     this.uiUtil
       .buildWrapper(Constants.UI.IDS.AREAS.TOP)
       .appendTo($area)
@@ -114,6 +117,8 @@ export class Barkat {
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.ALERTS).appendTo($area);
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.ORDERS).appendTo($area);
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.JOURNAL).hide().appendTo($area);
+    this.journalUI();
+    console.log('TradingView UI setup');
   }
 
   journalUI() {
