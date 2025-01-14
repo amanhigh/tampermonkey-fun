@@ -3,7 +3,6 @@ import { ISmartPrompt } from '../util/smart';
 import { IPairManager } from '../manager/pair';
 import { Notifier } from '../util/notify';
 import { IInvestingClient } from '../client/investing';
-import { IAlertManager } from '../manager/alert';
 
 /**
  * Interface for managing alert mapping operations
@@ -15,6 +14,12 @@ export interface IPairHandler {
    * @param exchange Optional exchange name
    */
   mapInvestingTicker(investingTicker: string, exchange?: string): Promise<void>;
+
+  /**
+   * Deletes pair mapping information
+   * @param investingTicker The investing.com ticker symbol to unmap
+   */
+  deletePairInfo(investingTicker: string): void;
 }
 
 /**
@@ -24,9 +29,7 @@ export class PairHandler implements IPairHandler {
   constructor(
     private readonly investingClient: IInvestingClient,
     private readonly pairManager: IPairManager,
-    private readonly smartPrompt: ISmartPrompt,
-    // BUG: Unused Variables below not appearing in lint
-    private readonly alertManager: IAlertManager
+    private readonly smartPrompt: ISmartPrompt
   ) {}
 
   /**
@@ -35,7 +38,6 @@ export class PairHandler implements IPairHandler {
    * @param exchange Optional exchange name
    */
   public async mapInvestingTicker(investingTicker: string, exchange = ''): Promise<void> {
-    // FIXME: #A Implement Map & Remap of Pair Mapping
     Notifier.info(`Searching for ${investingTicker} on ${exchange}`);
 
     try {
@@ -74,7 +76,7 @@ export class PairHandler implements IPairHandler {
   }
 
   private formatPair(pair: PairInfo): string {
-    // BUG: pair.symbol is needed ?
+    // XXX: pair.symbol is needed ?
     return `${pair.name} (ID: ${pair.pairId}, Exchange: ${pair.exchange})`;
   }
 
@@ -87,5 +89,14 @@ export class PairHandler implements IPairHandler {
    */
   private findSelectedPair(pairs: PairInfo[], selected: string): PairInfo | undefined {
     return pairs.find((pair) => this.formatPair(pair) === selected);
+  }
+
+  /**
+   * Deletes pair mapping information
+   * @param investingTicker The investing.com ticker symbol to unmap
+   */
+  public deletePairInfo(investingTicker: string): void {
+    this.pairManager.deletePairInfo(investingTicker);
+    Notifier.success(`Unmapped ${investingTicker}`);
   }
 }

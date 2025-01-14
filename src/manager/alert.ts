@@ -108,7 +108,7 @@ export class AlertManager implements IAlertManager {
 
       $(html)
         .find('.js-alert-item[data-trigger=price]')
-        .each((i, alertElement) => {
+        .each((_, alertElement) => {
           const $alt = $(alertElement);
           const pairId = $alt.attr('data-pair-id') || '';
           const price = parseFloat($alt.attr('data-value') || '0');
@@ -143,7 +143,7 @@ export class AlertManager implements IAlertManager {
       return;
     }
 
-    const alerts = this.getAlerts();
+    const alerts = this.alertRepo.getSortedAlerts(pairInfo.pairId);
     if (!alerts) {
       Notifier.warn('No alerts (Pair) found to delete');
       return;
@@ -160,7 +160,7 @@ export class AlertManager implements IAlertManager {
     }
 
     const tolerance = targetPrice * 0.03;
-    const alerts = this.getAlerts();
+    const alerts = this.alertRepo.getSortedAlerts(pairInfo.pairId);
     if (!alerts) {
       Notifier.warn('No alerts (Pair) found to delete');
       return;
@@ -209,7 +209,6 @@ export class AlertManager implements IAlertManager {
   /** @inheritdoc */
   public getAlertsForInvestingTicker(investingTicker: string): Alert[] | null {
     const pairInfo = this._pairManager.investingTickerToPairInfo(investingTicker);
-    // FIXME: #C Unmapped Pair Message when No Pair found
     if (!pairInfo) {
       return null;
     }
@@ -221,7 +220,7 @@ export class AlertManager implements IAlertManager {
    * @private
    * @returns PairInfo or null if not found
    */
-  private _getCurrentPairInfo(): PairInfo {
+  private _getCurrentPairInfo(): PairInfo | null {
     const investingTicker = this._tickerManager.getInvestingTicker();
     return this._pairManager.investingTickerToPairInfo(investingTicker);
   }

@@ -32,6 +32,11 @@ export default [
       ...typescript.configs["recommended"].rules,
       
       // Keep only TypeScript-specific rules that add value beyond tsconfig
+      "@typescript-eslint/no-unused-vars": ["error", {
+          "argsIgnorePattern": "^_",
+          "varsIgnorePattern": "^_"
+      }],
+      "no-unused-private-class-members": "error",
       "@typescript-eslint/no-floating-promises": "error",
       "@typescript-eslint/await-thenable": "error",
       "@typescript-eslint/no-misused-promises": "error",

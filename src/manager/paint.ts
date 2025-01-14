@@ -92,7 +92,7 @@ export class PaintManager implements IPaintManager {
     this.paintSymbols(selector, null, { color: Constants.UI.COLORS.DEFAULT }, true);
 
     // Reset flag colors
-    // BUG: Unusable Paint Flags overwrites both watchlist and screener.
+    // HACK: Unusable Paint Flags overwrites both watchlist and screener.
     this.paintFlags(selector, null, Constants.UI.COLORS.DEFAULT, true);
   }
 }

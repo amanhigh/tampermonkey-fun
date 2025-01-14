@@ -3,7 +3,6 @@ import { TimeFrameConfig, SequenceType, TimeFrame } from '../models/trading';
 import { ISequenceRepo } from '../repo/sequence';
 import { Notifier } from '../util/notify';
 import { ITickerManager } from './ticker';
-import { ITradingViewManager } from './tv';
 
 /**
  * Interface for managing sequence operations and state
@@ -53,7 +52,6 @@ export class SequenceManager implements ISequenceManager {
    */
   constructor(
     private readonly sequenceRepo: ISequenceRepo,
-    private readonly tvManager: ITradingViewManager,
     private readonly tickerManager: ITickerManager
   ) {}
 

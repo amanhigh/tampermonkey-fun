@@ -56,12 +56,12 @@ export class Barkat {
     } else if (this.isTradingViewSite()) {
       this.setupTradingViewUI();
     } else if (this.isKiteSite()) {
-      this.kiteHandler.initialize();
+      this.kiteHandler.setUpListners();
     }
     this.onLoad();
   }
 
-  // HACK: Remove suppressed Errors for eslint
+  // XXX: Remove suppressed Errors for eslint
   // eslint-disable-next-line max-lines-per-function
   private setupTradingViewUI() {
     const $area = this.uiUtil.buildArea(Constants.UI.IDS.AREAS.MAIN, '76%', '6%');

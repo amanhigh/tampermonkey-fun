@@ -19,6 +19,7 @@ export interface IFlagManager {
    * @param categoryIndex Category index to record into
    * @param selectedTickers List of selected tickers
    */
+  // FIXME: #B Flags Should Work
   recordCategory(categoryIndex: number, selectedTickers: string[]): void;
 
   /**

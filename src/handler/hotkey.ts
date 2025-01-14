@@ -118,13 +118,13 @@ export class HotkeyHandler implements IHotkeyHandler {
     const modifierType = this.keyUtil.getModifierType(event);
     switch (modifierType) {
       case 'ctrl':
-        this.modifierKeyConfig.executeCtrlAction(event.key);
+        this.modifierKeyConfig.executeCtrlAction(event.key, event);
         break;
       case 'shift':
-        this.modifierKeyConfig.executeShiftAction(event.key);
+        this.modifierKeyConfig.executeShiftAction(event.key, event);
         break;
       case 'alt':
-        this.modifierKeyConfig.executeAltAction(event.key);
+        this.modifierKeyConfig.executeAltAction(event.key, event);
         break;
     }
   }

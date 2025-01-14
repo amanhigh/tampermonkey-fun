@@ -14,6 +14,7 @@ import { ISyncUtil } from '../util/sync';
 import { AlertClicked } from '../models/events';
 import { IAlertSummaryHandler } from './alert_summary';
 import { ITickerHandler } from './ticker';
+import { IPairHandler } from './pair';
 
 /**
  * Interface for managing alert operations
@@ -105,7 +106,8 @@ export class AlertHandler implements IAlertHandler {
     private readonly syncUtil: ISyncUtil,
     private readonly uiUtil: IUIUtil,
     private readonly alertSummaryHandler: IAlertSummaryHandler,
-    private readonly tickerHandler: ITickerHandler
+    private readonly tickerHandler: ITickerHandler,
+    private readonly pairHandler: IPairHandler
   ) {}
 
   /** @inheritdoc */
@@ -114,7 +116,7 @@ export class AlertHandler implements IAlertHandler {
     for (const p of prices) {
       try {
         await this.alertManager.createAlertForCurrentTicker(parseFloat(p));
-        // TODO: Alert Coloring based on Above or Below
+        // FIXME: #C Alert Coloring based on Above or Below
         this.refreshAlerts();
         Notifier.success(`Alert created at ${p}`);
       } catch (error) {
@@ -152,6 +154,7 @@ export class AlertHandler implements IAlertHandler {
 
     const targetPrice = (currentPrice * 1.2).toFixed(2);
     try {
+      // BUG: Only Show Success if alert Created.
       await this.alertManager.createAlertForCurrentTicker(parseFloat(targetPrice));
       this.refreshAlerts();
       Notifier.success(`High alert created at ${targetPrice}`);
@@ -229,8 +232,16 @@ export class AlertHandler implements IAlertHandler {
     // Prevent default context menu
     e.preventDefault();
 
-    // Perform audit
-    this.auditManager.auditCurrentTicker();
+    const event = e as MouseEvent; // Cast to access modifier keys
+    if (event.ctrlKey) {
+      void this.pairHandler.mapInvestingTicker(this.tickerManager.getInvestingTicker());
+    } else if (event.shiftKey) {
+      this.pairHandler.deletePairInfo(this.tickerManager.getInvestingTicker());
+    } else {
+      // Regular audit operation
+      this.auditManager.auditCurrentTicker();
+    }
+    this.refreshAlerts();
   }
 
   /** @inheritdoc */

@@ -1,6 +1,5 @@
 import { ITickerHandler } from './ticker';
 import { IAlertHandler } from './alert';
-import { IUIUtil } from '../util/ui';
 import { IFnoManager } from '../manager/fno';
 import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
@@ -36,7 +35,6 @@ export class CommandInputHandler implements ICommandInputHandler {
   constructor(
     private readonly tickerHandler: ITickerHandler,
     private readonly alertHandler: IAlertHandler,
-    private readonly uiUtil: IUIUtil,
     private readonly fnoManager: IFnoManager
   ) {}
 
@@ -159,7 +157,7 @@ export class CommandInputHandler implements ICommandInputHandler {
   }
 
   private displayHelpMessage(): void {
-    // BUG: Update and Beautify Help Message
+    // XXX: Update and Beautify Help Message
     const help = `
 Input Formats:
 - Quick Ticker: TICKER${this.TICKER_SUFFIX}

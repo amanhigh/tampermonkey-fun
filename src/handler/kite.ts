@@ -23,7 +23,7 @@ export interface IKiteHandler {
   /**
    * Initializes Kite event handlers and listeners
    */
-  initialize(): void;
+  setUpListners(): void;
 
   /**
    * Processes GTT delete events from listener
@@ -83,10 +83,9 @@ export class KiteHandler implements IKiteHandler {
   ) {}
 
   /** @inheritdoc */
-  initialize(): void {
+  setUpListners(): void {
     this.setupGttTabListener();
-    // TODO: Move to Investing Onload.
-    this._setupGttOrderListener();
+    this.setupGttOrderListener();
   }
 
   /** @inheritdoc */
@@ -197,7 +196,7 @@ export class KiteHandler implements IKiteHandler {
    * Sets up GTT order change listener
    * @private
    */
-  private _setupGttOrderListener(): void {
+  private setupGttOrderListener(): void {
     GM_addValueChangeListener(
       Constants.STORAGE.EVENTS.GTT_CREATE,
       (_keyName: string, _oldValue: unknown, newValue: unknown) => {
@@ -211,6 +210,7 @@ export class KiteHandler implements IKiteHandler {
    * Triggers order refresh when GTT tab is activated
    * @private
    */
+  // FIXME: #A Make this Flow Work on kite and tv side.
   private setupGttTabListener(): void {
     this.waitUtil.waitJEE(this.gttSelector, ($element) => {
       $element.click(() => void this.reloadGttOrders());

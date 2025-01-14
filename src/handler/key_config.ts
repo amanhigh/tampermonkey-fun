@@ -2,7 +2,6 @@ import { Constants } from '../models/constant';
 import { ITimeFrameManager } from '../manager/timeframe';
 import { ISequenceManager } from '../manager/sequence';
 import { IStyleManager } from '../manager/style';
-import { ITradingViewManager } from '../manager/tv';
 import { IWatchListHandler } from '../handler/watchlist';
 import { IFlagHandler } from '../handler/flag';
 
@@ -74,7 +73,6 @@ export class KeyConfig implements IKeyConfig {
   private readonly _utilityKeys: KeyMap;
 
   /**
-   * @param tvManager Trading view manager
    * @param sequenceManager Sequence manager for timeframes
    * @param timeFrameManager Timeframe operations manager
    * @param watchlistHandler Watchlist handler
@@ -83,7 +81,6 @@ export class KeyConfig implements IKeyConfig {
    */
   // eslint-disable-next-line max-lines-per-function
   constructor(
-    private readonly tvManager: ITradingViewManager,
     private readonly sequenceManager: ISequenceManager,
     private readonly timeFrameManager: ITimeFrameManager,
     private readonly watchlistHandler: IWatchListHandler,
@@ -95,28 +92,28 @@ export class KeyConfig implements IKeyConfig {
         ',',
         {
           description: 'TrendLine',
-          action: () => styleManager.selectToolbar(1),
+          action: () => this.styleManager.selectToolbar(1),
         },
       ],
       [
         'e',
         {
           description: 'FibZone',
-          action: () => styleManager.selectToolbar(2),
+          action: () => this.styleManager.selectToolbar(2),
         },
       ],
       [
         '.',
         {
           description: 'Rectangle',
-          action: () => styleManager.selectToolbar(3),
+          action: () => this.styleManager.selectToolbar(3),
         },
       ],
       [
         'k',
         {
           description: 'Text with Reason',
-          // TODO: Fix ReasonPrompt Integration. Legacy code for reference:
+          // FIXME: #B Journal ReasonPrompt Integration. Legacy code for reference:
           /**
            * ReasonPrompt((reason) => {
            *   ClipboardCopy(timeFrame.symbol + " - " + reason);
@@ -130,28 +127,28 @@ export class KeyConfig implements IKeyConfig {
         'j',
         {
           description: 'Demand Zone',
-          action: () => styleManager.applyZoneStyle(Constants.TRADING.ZONES.DEMAND),
+          action: () => this.styleManager.applyZoneStyle(Constants.TRADING.ZONES.DEMAND),
         },
       ],
       [
         'u',
         {
           description: 'Supply Zone',
-          action: () => styleManager.applyZoneStyle(Constants.TRADING.ZONES.SUPPLY),
+          action: () => this.styleManager.applyZoneStyle(Constants.TRADING.ZONES.SUPPLY),
         },
       ],
       [
         'p',
         {
           description: 'Clear All',
-          action: () => styleManager.clearAll(),
+          action: () => this.styleManager.clearAll(),
         },
       ],
       [
         't',
         {
           description: 'Trade',
-          // TODO: Fix GTT Order Integration
+          // FIXME: #A Fix GTT Order Integration
           action: () => console.warn('TODO: Integrate GTT Order handling'),
         },
       ],
@@ -162,35 +159,35 @@ export class KeyConfig implements IKeyConfig {
         '0',
         {
           description: 'Freeze Sequence',
-          action: () => sequenceManager.toggleFreezeSequence(),
+          action: () => this.sequenceManager.toggleFreezeSequence(),
         },
       ],
       [
         '1',
         {
           description: 'VHTF (Very High Timeframe)',
-          action: () => timeFrameManager.applyTimeFrame(0),
+          action: () => this.timeFrameManager.applyTimeFrame(0),
         },
       ],
       [
         '2',
         {
           description: 'HTF (High Timeframe)',
-          action: () => timeFrameManager.applyTimeFrame(1),
+          action: () => this.timeFrameManager.applyTimeFrame(1),
         },
       ],
       [
         '3',
         {
           description: 'ITF (Intermediate Timeframe)',
-          action: () => timeFrameManager.applyTimeFrame(2),
+          action: () => this.timeFrameManager.applyTimeFrame(2),
         },
       ],
       [
         '4',
         {
           description: 'TTF (Trading Timeframe)',
-          action: () => timeFrameManager.applyTimeFrame(3),
+          action: () => this.timeFrameManager.applyTimeFrame(3),
         },
       ],
     ]);

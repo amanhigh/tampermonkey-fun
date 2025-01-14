@@ -17,7 +17,7 @@ const metadata = {
 };
 
 // Override webpack config
-// TODO: Fix Double Header Generation due to Medata Plugin in dev.cjs
+// XXX: Fix Double Header Generation due to Medata Plugin in dev.cjs
 const cfg = merge(baseConfig, {
   entry: {
     debug: "./src/core/experiment.ts",

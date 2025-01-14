@@ -1,6 +1,5 @@
 import { Constants } from '../models/constant';
 import { IPaintManager } from './paint';
-import { IFnoRepo } from '../repo/fno';
 import { IWatchManager } from './watch';
 import { IFlagManager } from './flag';
 
@@ -41,8 +40,7 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
   constructor(
     private readonly paintManager: IPaintManager,
     private readonly watchManager: IWatchManager,
-    private readonly flagManager: IFlagManager,
-    private readonly fnoRepo: IFnoRepo
+    private readonly flagManager: IFlagManager
   ) {}
 
   /** @inheritdoc */
@@ -86,7 +84,7 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
     this.paintManager.paintSymbols(screenerSymbolSelector, null, { color: Constants.UI.COLORS.DEFAULT }, true);
 
     // Paint Recently Watched
-    // BUG: Call from Recent Manager in Handler.
+    // TODO: Call from Recent Manager in Handler.
 
     // Paint Symbols
     // HACK: Extract common painting logic ?

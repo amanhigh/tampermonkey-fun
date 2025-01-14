@@ -116,18 +116,19 @@ export class InvestingClient extends BaseClient implements IInvestingClient {
     });
 
     try {
-      const response = await this.makeRequest<string>('/search/service/search?searchType=alertCenterInstruments', {
-        method: 'POST',
-        data: data.toString(),
-      });
+      const response = await this.makeRequest<SearchResponse>(
+        '/search/service/search?searchType=alertCenterInstruments',
+        {
+          method: 'POST',
+          data: data.toString(),
+        }
+      );
 
-      const result = JSON.parse(response) as SearchResponse;
-
-      if (!result.All?.length) {
+      if (!response.All?.length) {
         throw new Error(`No results found for symbol: ${symbol}`);
       }
 
-      return result.All.map(
+      return response.All.map(
         (item: SearchResultItem) => new PairInfo(item.name, item.pair_ID, item.exchange_name_short)
       );
     } catch (error) {

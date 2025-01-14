@@ -7,7 +7,6 @@ import { ISmartPrompt } from '../util/smart';
 import { IUIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
-import { ITimeFrameManager } from '../manager/timeframe';
 import { Trend } from '../models/trading';
 import { TickerManager } from '../manager/ticker';
 
@@ -19,6 +18,7 @@ export interface IJournalHandler {
    * Handles click on Journal Button in UI
    * Toggles visibility of journal area in UI
    */
+  // FIXME: #B Journal Funcs should Integrate
   handleJournalButton(): void;
 
   /**
@@ -35,7 +35,6 @@ export class JournalHandler implements IJournalHandler {
   constructor(
     private readonly tickerManager: TickerManager,
     private readonly journalManager: IJournalManager,
-    private readonly timeframeManager: ITimeFrameManager,
     private readonly smartPrompt: ISmartPrompt,
     private readonly uiUtil: IUIUtil
   ) {}

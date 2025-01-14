@@ -1,5 +1,4 @@
 import { AlertAudit, AlertState } from '../models/alert';
-import { ISymbolManager } from './symbol';
 import { Notifier } from '../util/notify';
 import { ITickerManager } from './ticker';
 import { IPairManager } from './pair';
@@ -38,7 +37,6 @@ export class AuditManager implements IAuditManager {
 
   constructor(
     private readonly _auditRepo: IAuditRepo,
-    private readonly _symbolManager: ISymbolManager,
     private readonly _tickerManager: ITickerManager,
     private readonly _pairManager: IPairManager,
     private readonly _alertManager: IAlertManager,

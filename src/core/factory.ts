@@ -176,7 +176,6 @@ export class Factory {
         () =>
           new AuditManager(
             Factory.repo.audit(),
-            Factory.manager.symbol(),
             Factory.manager.ticker(),
             Factory.manager.pair(),
             Factory.manager.alert()
@@ -214,19 +213,13 @@ export class Factory {
     screener: (): ITradingViewScreenerManager =>
       Factory._getInstance(
         'screenerManager',
-        () =>
-          new TradingViewScreenerManager(
-            Factory.manager.paint(),
-            Factory.manager.watch(),
-            Factory.manager.flag(),
-            Factory.repo.fno()
-          )
+        () => new TradingViewScreenerManager(Factory.manager.paint(), Factory.manager.watch(), Factory.manager.flag())
       ),
 
     sequence: (): ISequenceManager =>
       Factory._getInstance(
         'sequenceManager',
-        () => new SequenceManager(Factory.repo.sequence(), Factory.manager.tv(), Factory.manager.ticker())
+        () => new SequenceManager(Factory.repo.sequence(), Factory.manager.ticker())
       ),
 
     paint: (): IPaintManager => Factory._getInstance('paintManager', () => new PaintManager()),
@@ -252,8 +245,7 @@ export class Factory {
     symbol: (): ISymbolManager =>
       Factory._getInstance('symbolManager', () => new SymbolManager(Factory.repo.ticker(), Factory.repo.exchange())),
 
-    tv: (): ITradingViewManager =>
-      Factory._getInstance('tvManager', () => new TradingViewManager(Factory.util.wait(), Factory.util.smart())),
+    tv: (): ITradingViewManager => Factory._getInstance('tvManager', () => new TradingViewManager(Factory.util.wait())),
 
     pair: (): IPairManager => Factory._getInstance('pairManager', () => new PairManager(Factory.repo.pair())),
 
@@ -291,7 +283,8 @@ export class Factory {
             Factory.util.sync(),
             Factory.util.ui(),
             Factory.handler.alertSummary(),
-            Factory.handler.ticker()
+            Factory.handler.ticker(),
+            Factory.handler.pair()
           )
       ),
     alertSummary: (): IAlertSummaryHandler =>
@@ -375,7 +368,6 @@ export class Factory {
         'keyConfig',
         () =>
           new KeyConfig(
-            Factory.manager.tv(),
             Factory.manager.sequence(),
             Factory.manager.timeFrame(),
             Factory.handler.watchlist(),
@@ -411,13 +403,7 @@ export class Factory {
     pair: (): IPairHandler =>
       Factory._getInstance(
         'pairHandler',
-        () =>
-          new PairHandler(
-            Factory.client.investing(),
-            Factory.manager.pair(),
-            Factory.util.smart(),
-            Factory.manager.alert()
-          )
+        () => new PairHandler(Factory.client.investing(), Factory.manager.pair(), Factory.util.smart())
       ),
     flag: (): IFlagHandler =>
       Factory._getInstance('flagHandler', () => new FlagHandler(Factory.manager.flag(), Factory.manager.tv())),
@@ -433,7 +419,6 @@ export class Factory {
           new JournalHandler(
             Factory.manager.ticker() as TickerManager,
             Factory.manager.journal(),
-            Factory.manager.timeFrame(),
             Factory.util.smart(),
             Factory.util.ui()
           )
@@ -443,13 +428,7 @@ export class Factory {
     command: (): ICommandInputHandler =>
       Factory._getInstance(
         'commandHandler',
-        () =>
-          new CommandInputHandler(
-            Factory.handler.ticker(),
-            Factory.handler.alert(),
-            Factory.util.ui(),
-            Factory.manager.fno()
-          )
+        () => new CommandInputHandler(Factory.handler.ticker(), Factory.handler.alert(), Factory.manager.fno())
       ),
   };
 

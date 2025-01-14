@@ -18,9 +18,9 @@ type KeyMap = Map<string, KeyBinding>;
  * Interface for modifier key configuration operations
  */
 export interface IModifierKeyConfig {
-  executeCtrlAction(key: string): boolean;
-  executeShiftAction(key: string): boolean;
-  executeAltAction(key: string): boolean;
+  executeCtrlAction(key: string, event: KeyboardEvent): boolean;
+  executeShiftAction(key: string, event: KeyboardEvent): boolean;
+  executeAltAction(key: string, event: KeyboardEvent): boolean;
   getDescription(modifier: 'ctrl' | 'shift' | 'alt', key: string): string | undefined;
 }
 
@@ -32,7 +32,7 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
   private readonly _shiftKeys: KeyMap;
   private readonly _altKeys: KeyMap;
 
-  // TODO: Break Lines later for all eslint-disables
+  // HACK: Break Lines later for all eslint-disables
   // eslint-disable-next-line max-lines-per-function
   constructor(
     private readonly tickerManager: ITickerManager,
@@ -159,16 +159,16 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
     ]);
   }
 
-  executeCtrlAction(key: string): boolean {
-    return this._executeAction(this._ctrlKeys, key);
+  executeCtrlAction(key: string, event: KeyboardEvent): boolean {
+    return this._executeAction(this._ctrlKeys, key, event);
   }
 
-  executeShiftAction(key: string): boolean {
-    return this._executeAction(this._shiftKeys, key);
+  executeShiftAction(key: string, event: KeyboardEvent): boolean {
+    return this._executeAction(this._shiftKeys, key, event);
   }
 
-  executeAltAction(key: string): boolean {
-    return this._executeAction(this._altKeys, key);
+  executeAltAction(key: string, event: KeyboardEvent): boolean {
+    return this._executeAction(this._altKeys, key, event);
   }
 
   getDescription(modifier: 'ctrl' | 'shift' | 'alt', key: string): string | undefined {
@@ -193,10 +193,10 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
    * Execute action from map if found
    * @private
    */
-  private _executeAction(map: KeyMap, key: string): boolean {
+  private _executeAction(map: KeyMap, key: string, event: KeyboardEvent): boolean {
     const binding = map.get(key.toLowerCase());
     if (binding) {
-      // FIXME: Get Access to event and prevent default on succesful execution
+      event.preventDefault();
       binding.action();
       return true;
     }
