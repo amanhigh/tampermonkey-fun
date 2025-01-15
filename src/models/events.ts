@@ -11,10 +11,10 @@ export abstract class BaseEvent {
 }
 
 export class AlertClicked extends BaseEvent {
-  tvTicker: string;
-  investingTicker: string;
+  tvTicker: string | null;
+  investingTicker: string | null;
 
-  constructor(tvTicker: string, invTicker: string) {
+  constructor(tvTicker: string | null, invTicker: string | null) {
     super();
     this.tvTicker = tvTicker;
     this.investingTicker = invTicker;

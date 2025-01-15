@@ -4,6 +4,7 @@ import { UIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
 import { ISequenceHandler } from '../handler/sequence';
 import { IOnLoadHandler } from '../handler/onload';
+import { IRepoCron } from '../repo/cron';
 import { IAlertHandler } from '../handler/alert';
 import { IJournalHandler } from '../handler/journal';
 import { ICommandInputHandler } from '../handler/command';
@@ -16,6 +17,7 @@ export class Barkat {
   // eslint-disable-next-line max-params
   constructor(
     private readonly uiUtil: UIUtil,
+    private readonly repoCron: IRepoCron,
     private readonly sequenceHandler: ISequenceHandler,
     private readonly onloadHandler: IOnLoadHandler,
     private readonly alertHandler: IAlertHandler,
@@ -118,6 +120,7 @@ export class Barkat {
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.ORDERS).appendTo($area);
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.JOURNAL).hide().appendTo($area);
     this.journalUI();
+    this.repoCron.start();
     console.log('TradingView UI setup');
   }
 

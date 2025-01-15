@@ -93,6 +93,7 @@ export class Factory {
         () =>
           new Barkat(
             Factory.util.ui(),
+            Factory.repo.cron(),
             Factory.handler.sequence(),
             Factory.handler.onload(),
             Factory.handler.alert(),
@@ -134,20 +135,20 @@ export class Factory {
    * Handles data persistence for various entities
    */
   public static repo = {
-    _cron: (): IRepoCron => Factory._getInstance('repoCron', () => new RepoCron()),
+    cron: (): IRepoCron => Factory._getInstance('repoCron', () => new RepoCron()),
 
-    flag: (): IFlagRepo => Factory._getInstance('flagRepo', () => new FlagRepo(Factory.repo._cron())),
-    watch: (): IWatchlistRepo => Factory._getInstance('watchRepo', () => new Watchlistrepo(Factory.repo._cron())),
-    alert: (): IAlertRepo => Factory._getInstance('alertRepo', () => new AlertRepo(Factory.repo._cron())),
-    pair: (): IPairRepo => Factory._getInstance('pairRepo', () => new PairRepo(Factory.repo._cron())),
-    exchange: (): IExchangeRepo => Factory._getInstance('exchangeRepo', () => new ExchangeRepo(Factory.repo._cron())),
-    ticker: (): ITickerRepo => Factory._getInstance('tickerRepo', () => new TickerRepo(Factory.repo._cron())),
-    sequence: (): ISequenceRepo => Factory._getInstance('sequenceRepo', () => new SequenceRepo(Factory.repo._cron())),
-    audit: (): IAuditRepo => Factory._getInstance('auditRepo', () => new AuditRepo(Factory.repo._cron())),
-    fno: (): IFnoRepo => Factory._getInstance('fnoRepo', () => new FnoRepo(Factory.repo._cron())),
+    flag: (): IFlagRepo => Factory._getInstance('flagRepo', () => new FlagRepo(Factory.repo.cron())),
+    watch: (): IWatchlistRepo => Factory._getInstance('watchRepo', () => new Watchlistrepo(Factory.repo.cron())),
+    alert: (): IAlertRepo => Factory._getInstance('alertRepo', () => new AlertRepo(Factory.repo.cron())),
+    pair: (): IPairRepo => Factory._getInstance('pairRepo', () => new PairRepo(Factory.repo.cron())),
+    exchange: (): IExchangeRepo => Factory._getInstance('exchangeRepo', () => new ExchangeRepo(Factory.repo.cron())),
+    ticker: (): ITickerRepo => Factory._getInstance('tickerRepo', () => new TickerRepo(Factory.repo.cron())),
+    sequence: (): ISequenceRepo => Factory._getInstance('sequenceRepo', () => new SequenceRepo(Factory.repo.cron())),
+    audit: (): IAuditRepo => Factory._getInstance('auditRepo', () => new AuditRepo(Factory.repo.cron())),
+    fno: (): IFnoRepo => Factory._getInstance('fnoRepo', () => new FnoRepo(Factory.repo.cron())),
     kite: (): IKiteRepo => Factory._getInstance('kiteRepo', () => new KiteRepo()),
     recent: (): IRecentTickerRepo =>
-      Factory._getInstance('recentRepo', () => new RecentTickerRepo(Factory.repo._cron())),
+      Factory._getInstance('recentRepo', () => new RecentTickerRepo(Factory.repo.cron())),
   };
 
   /**
@@ -375,7 +376,8 @@ export class Factory {
             Factory.handler.watchlist(),
             Factory.handler.flag(),
             Factory.manager.style(),
-            Factory.handler.journal()
+            Factory.handler.journal(),
+            Factory.handler.kite()
           )
       ),
     modifierKeyConfig: (): IModifierKeyConfig =>
@@ -400,7 +402,7 @@ export class Factory {
             Factory.manager.header(),
             Factory.util.sync(),
             Factory.manager.watch(),
-            Factory.manager.tv()
+            Factory.manager.ticker()
           )
       ),
     pair: (): IPairHandler =>
@@ -409,7 +411,10 @@ export class Factory {
         () => new PairHandler(Factory.client.investing(), Factory.manager.pair(), Factory.util.smart())
       ),
     flag: (): IFlagHandler =>
-      Factory._getInstance('flagHandler', () => new FlagHandler(Factory.manager.flag(), Factory.manager.tv())),
+      Factory._getInstance(
+        'flagHandler',
+        () => new FlagHandler(Factory.manager.flag(), Factory.manager.ticker(), Factory.handler.watchlist())
+      ),
     sequence: (): ISequenceHandler =>
       Factory._getInstance(
         'sequenceHandler',
@@ -444,7 +449,8 @@ export class Factory {
             Factory.util.sync(),
             Factory.manager.watch(),
             Factory.manager.symbol(),
-            Factory.manager.recent()
+            Factory.manager.recent(),
+            Factory.manager.alert()
           )
       ),
   };

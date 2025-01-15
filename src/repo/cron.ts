@@ -7,6 +7,11 @@ export interface IRepoCron {
    * @param repository Repository to register
    */
   registerRepository(repository: BaseRepo<unknown>): void;
+
+  /**
+   * Starts the cron job for automatic saving
+   */
+  start(): void;
 }
 
 export class RepoCron implements IRepoCron {
@@ -15,7 +20,9 @@ export class RepoCron implements IRepoCron {
 
   constructor() {
     this._repositories = new Set();
-    // TODO: #A Start Cron method in Interface only done in TradingViewUI
+  }
+
+  public start(): void {
     this._setupCron();
   }
 

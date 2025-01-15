@@ -8,7 +8,7 @@ import { IWatchManager } from '../manager/watch';
 import { ITradingViewWatchlistManager } from '../manager/watchlist';
 import { Notifier } from '../util/notify';
 import { ISyncUtil } from '../util/sync';
-import { ITradingViewManager } from '../manager/tv';
+import { ITickerManager } from '../manager/ticker';
 
 /**
  * Handles watchlist-related events and UI updates
@@ -49,7 +49,7 @@ export class WatchListHandler implements IWatchListHandler {
     private readonly headerManager: IHeaderManager,
     private readonly syncUtil: ISyncUtil,
     private readonly watchManager: IWatchManager,
-    private readonly tvManager: ITradingViewManager
+    private readonly tickerManager: ITickerManager
   ) {}
 
   /** @inheritdoc */
@@ -64,14 +64,8 @@ export class WatchListHandler implements IWatchListHandler {
       // Paint header items
       this.headerManager.paintHeader();
 
-      // Paint the name in header
-      // this.tradingViewManager.paintName();
-
       // Update alert feed with watchlist changes
       // this.watchlistManager.paintAlertFeedEvent();
-
-      // Apply filters
-      // this.applyFilters();
     });
   }
 
@@ -120,8 +114,8 @@ export class WatchListHandler implements IWatchListHandler {
 
   /** @inheritdoc */
   public recordSelectedTicker(categoryIndex: number): void {
-    const symbol = this.tvManager.getName();
-    this.watchManager.recordCategory(categoryIndex, [symbol]);
+    const tvTicker = this.tickerManager.getTicker();
+    this.watchManager.recordCategory(categoryIndex, [tvTicker]);
     this.onWatchListChange();
   }
 }

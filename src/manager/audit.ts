@@ -32,7 +32,6 @@ export interface IAuditManager {
  * Class representing the Audit Manager.
  */
 export class AuditManager implements IAuditManager {
-  private _currentIndex: number;
   private readonly _batchSize: number;
 
   constructor(
@@ -42,7 +41,6 @@ export class AuditManager implements IAuditManager {
     private readonly _alertManager: IAlertManager,
     batchSize = 50
   ) {
-    this._currentIndex = 0;
     this._batchSize = batchSize;
   }
 
@@ -51,10 +49,7 @@ export class AuditManager implements IAuditManager {
   /** @inheritdoc */
   async auditAlerts(): Promise<void> {
     const investingTickers = this._pairManager.getAllInvestingTickers();
-    this._currentIndex = 0;
-    Notifier.info(`Starting Audit: ${investingTickers.length} tickers`, 10000);
     this._auditRepo.clear();
-    // FIXME: #B Batch Processing
     await this._processBatch(investingTickers);
   }
 
@@ -80,31 +75,33 @@ export class AuditManager implements IAuditManager {
    * @private
    */
   private async _processBatch(investingTickers: string[]): Promise<void> {
-    while (this._currentIndex < investingTickers.length) {
-      const endIndex = Math.min(this._currentIndex + this._batchSize, investingTickers.length);
-      const batchPercent = Math.floor((this._currentIndex / investingTickers.length) * 100);
+    let processedCount = 0;
 
-      if (batchPercent % 20 === 0) {
-        Notifier.info(`Processed ${batchPercent}% of tickers`, 5000);
+    // Process in batches
+    while (processedCount < investingTickers.length) {
+      // Calculate batch bounds
+      const endIndex = Math.min(processedCount + this._batchSize, investingTickers.length);
+
+      // Process current batch
+      for (let i = processedCount; i < endIndex; i++) {
+        const investingTicker = investingTickers[i];
+        const state = this.auditAlertState(investingTicker);
+        this._auditRepo.set(investingTicker, new AlertAudit(investingTicker, state));
       }
 
-      // Process current batch asynchronously
-      await new Promise<void>((resolve) => {
-        setTimeout(() => {
-          for (let i = this._currentIndex; i < endIndex; i++) {
-            const investingTicker = investingTickers[i];
-            const state = this.auditAlertState(investingTicker);
-            this._auditRepo.set(investingTicker, new AlertAudit(investingTicker, state));
-          }
-          resolve();
-        }, 0);
-      });
+      processedCount = endIndex;
+      const progress = Math.floor((processedCount / investingTickers.length) * 100);
+      if (progress % 20 === 0) {
+        // BUG: Show progress at 20% intervals
+      }
 
-      this._currentIndex = endIndex;
+      // Yield to prevent UI blocking
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
 
+    // Final status
     const auditCount = this._auditRepo.getCount();
-    Notifier.message(`Completed audit of ${auditCount} tickers`, 'green');
+    Notifier.message(`Audited ${auditCount} out of ${investingTickers.length}`, 'purple', 5000);
   }
 
   /**

@@ -17,9 +17,9 @@ export interface IFlagManager {
   /**
    * Records selected tickers in flag category
    * @param categoryIndex Category index to record into
-   * @param selectedTickers List of selected tickers
+   * @param tvTickers List of selected tickers
    */
-  recordCategory(categoryIndex: number, selectedTickers: string[]): void;
+  recordCategory(categoryIndex: number, tvTickers: string[]): void;
 
   /**
    * Paint flag indicators based on category colors
@@ -48,9 +48,9 @@ export class FlagManager implements IFlagManager {
   }
 
   /** @inheritdoc */
-  recordCategory(categoryIndex: number, selectedTickers: string[]): void {
+  recordCategory(categoryIndex: number, tvTickers: string[]): void {
     const categoryLists = this.flagRepo.getFlagCategoryLists();
-    this._recordCategory(categoryLists, categoryIndex, selectedTickers);
+    this._recordCategory(categoryLists, categoryIndex, tvTickers);
   }
 
   /** @inheritdoc */

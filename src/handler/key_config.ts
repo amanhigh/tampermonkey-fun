@@ -5,6 +5,7 @@ import { IStyleManager } from '../manager/style';
 import { IWatchListHandler } from '../handler/watchlist';
 import { IFlagHandler } from '../handler/flag';
 import { IJournalHandler } from './journal';
+import { IKiteHandler } from './kite';
 
 /**
  * Type definitions for key bindings and actions
@@ -80,14 +81,15 @@ export class KeyConfig implements IKeyConfig {
    * @param flagHandler Flag handler
    * @param styleManager Style operations manager
    */
-  // eslint-disable-next-line max-lines-per-function
+  // eslint-disable-next-line max-lines-per-function, max-params
   constructor(
     private readonly sequenceManager: ISequenceManager,
     private readonly timeFrameManager: ITimeFrameManager,
     private readonly watchlistHandler: IWatchListHandler,
     private readonly flagHandler: IFlagHandler,
     private readonly styleManager: IStyleManager,
-    private readonly journalHandler: IJournalHandler
+    private readonly journalHandler: IJournalHandler,
+    private readonly kiteHandler: IKiteHandler
   ) {
     this._toolbarKeys = new Map([
       [
@@ -145,8 +147,7 @@ export class KeyConfig implements IKeyConfig {
         't',
         {
           description: 'Trade',
-          // FIXME: #C Fix GTT Order with Hotkey and Button
-          action: () => console.warn('TODO: Integrate GTT Order handling'),
+          action: () => void this.kiteHandler.handleGttOrderButton(),
         },
       ],
     ]);
@@ -208,7 +209,6 @@ export class KeyConfig implements IKeyConfig {
         'F3',
         {
           description: 'Order List - Index 2',
-          // FIXME: #B Make Order Set Work
           action: () => this.watchlistHandler.recordSelectedTicker(2),
         },
       ],

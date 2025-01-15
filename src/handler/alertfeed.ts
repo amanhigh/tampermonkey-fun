@@ -5,6 +5,8 @@ import { IWatchManager } from '../manager/watch';
 import { ISymbolManager } from '../manager/symbol';
 import { IRecentManager } from '../manager/recent';
 import { Notifier } from '../util/notify';
+import { AlertClicked } from '../models/events';
+import { IAlertManager } from '../manager/alert';
 
 export interface IAlertFeedHandler {
   /**
@@ -29,14 +31,17 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     private readonly syncUtil: ISyncUtil,
     private readonly watchManager: IWatchManager,
     private readonly symbolManager: ISymbolManager,
-    private readonly recentManager: IRecentManager
+    private readonly recentManager: IRecentManager,
+    private readonly alertManager: IAlertManager
   ) {}
 
   public initialize(): void {
     void this.syncUtil; // Will be used in handleHookButton
     void this.watchManager; // Will be used in paintAlertFeed
 
-    const $area = this.uiUtil.buildArea(Constants.UI.IDS.AREAS.MAIN);
+    const $area = this.uiUtil.buildArea(Constants.UI.IDS.AREAS.MAIN, '20px', '20px').css({
+      position: 'fixed',
+    });
     $area.appendTo('body');
 
     this.uiUtil
@@ -55,9 +60,35 @@ export class AlertFeedHandler implements IAlertFeedHandler {
   }
 
   public handleHookButton(): void {
-    // FIXME: #B Implement legacy hook button handler
+    // Setup alert click handlers
+    this.setupAlertClickHandler();
+    // Paint feed with current state
     this.paintAlertFeed();
-    console.log('Hook button clicked - Implementation pending');
+  }
+
+  private setupAlertClickHandler(): void {
+    $(Constants.DOM.ALERT_FEED.ALERT_TITLE).click((e) => {
+      this.handleAlertClick(e);
+    });
+  }
+
+  private handleAlertClick(event: JQuery.ClickEvent): void {
+    event.preventDefault();
+
+    const $element = $(event.currentTarget);
+    const alertName = $element.text();
+    const investingTicker = this.extractTickerFromAlertName(alertName);
+    const tvTicker = this.symbolManager.investingToTv(investingTicker);
+
+    if (event.ctrlKey) {
+      // Ctrl+click for mapping
+      // FIXME: Use Action with ticker instead of Null Values
+      void this.alertManager.createAlertClickEvent(null, investingTicker);
+    } else {
+      // Normal click for opening ticker
+      new AlertClicked(tvTicker || alertName, null);
+      void this.alertManager.createAlertClickEvent(tvTicker || alertName, null);
+    }
   }
 
   public paintAlertFeed(): void {

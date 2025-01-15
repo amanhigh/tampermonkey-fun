@@ -135,6 +135,7 @@ export class OnLoadHandler implements IOnLoadHandler {
               return;
             }
             this.observeUtil.nodeObserver(targetElement, () => {
+              // HACK: Is this requred when Screener Changes?
               this.watchListHandler.onWatchListChange();
             });
             Notifier.success('Screener Hooked');

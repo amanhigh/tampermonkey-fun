@@ -1,6 +1,7 @@
 import { IInvestingClient } from '../client/investing';
 import { Alert, PairInfo } from '../models/alert';
 import { IAlertRepo } from '../repo/alert';
+import { AlertClicked } from '../models/events';
 import { Notifier } from '../util/notify';
 import { IPairManager } from './pair';
 import { ITickerManager } from './ticker';
@@ -53,6 +54,14 @@ export interface IAlertManager {
    * @returns Promise resolving to number of alerts loaded
    */
   reloadAlerts(): Promise<number>;
+
+  /**
+   * Creates alert click event for ticker operations
+   * @param tvTicker TradingView ticker or null for mapping
+   * @param investingTicker Investing ticker or null for direct open
+   * @returns Promise resolving when event is created
+   */
+  createAlertClickEvent(tvTicker: string | null, investingTicker: string | null): Promise<void>;
 }
 
 /**
@@ -207,6 +216,12 @@ export class AlertManager implements IAlertManager {
       return null;
     }
     return this.alertRepo.getSortedAlerts(pairInfo.pairId);
+  }
+
+  /** @inheritdoc */
+  public async createAlertClickEvent(tvTicker: string | null, investingTicker: string | null): Promise<void> {
+    const event = new AlertClicked(tvTicker, investingTicker);
+    await this.alertRepo.createAlertClickEvent(event);
   }
 
   /**

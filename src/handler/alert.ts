@@ -265,8 +265,10 @@ export class AlertHandler implements IAlertHandler {
       // Map TV Ticker to Investing Ticker
       this.symbolManager.createTvToInvestingMapping(this.tickerManager.getTicker(), event.investingTicker);
       void this.pairHandler.mapInvestingTicker(event.investingTicker, this.tickerManager.getCurrentExchange());
-    } else {
+    } else if (event.tvTicker) {
       this.tickerHandler.openTicker(event.tvTicker);
+    } else {
+      Notifier.error('No valid ticker found in alert click event');
     }
   }
 

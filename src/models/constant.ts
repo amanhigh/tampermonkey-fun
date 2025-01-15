@@ -104,6 +104,7 @@ export const Constants = Object.freeze({
       WRAPPER: 'div.alertWrapper',
       FLOATING_WRAPPER: 'div.floatingAlertWrapper',
       ALERT_DATA: 'div.alertNotifData > a',
+      ALERT_TITLE: '.alertDataTitle',
     },
     SIDEBAR: {
       DELETE_ARROW: 'div [data-name="removeAllDrawingTools"] button[class^=arrow]', // Old Name: deleteArrowSelector

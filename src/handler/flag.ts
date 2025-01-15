@@ -1,6 +1,7 @@
 // CREATE NEW FILE: src/handler/flag.ts
 import { IFlagManager } from '../manager/flag';
-import { ITradingViewManager } from '../manager/tv';
+import { ITickerManager } from '../manager/ticker';
+import { IWatchListHandler } from './watchlist';
 
 /**
  * Handles flag-related operations and UI updates
@@ -19,12 +20,14 @@ export interface IFlagHandler {
 export class FlagHandler implements IFlagHandler {
   constructor(
     private readonly flagManager: IFlagManager,
-    private readonly tvManager: ITradingViewManager
+    private readonly tickerManager: ITickerManager,
+    private readonly watchHandler: IWatchListHandler
   ) {}
 
   /** @inheritdoc */
   public recordSelectedTicker(categoryIndex: number): void {
-    const symbol = this.tvManager.getName();
-    this.flagManager.recordCategory(categoryIndex, [symbol]);
+    const tvTicker = this.tickerManager.getTicker();
+    this.flagManager.recordCategory(categoryIndex, [tvTicker]);
+    this.watchHandler.onWatchListChange();
   }
 }

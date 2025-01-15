@@ -28,9 +28,9 @@ export interface IWatchManager {
   /**
    * Records selected tickers in order category
    * @param categoryIndex Category index to record into
-   * @param selectedTickers List of selected tickers
+   * @param tvTickers List of selected tickers
    */
-  recordCategory(categoryIndex: number, selectedTickers: string[]): void;
+  recordCategory(categoryIndex: number, tvTickers: string[]): void;
 
   /**
    * Check how many order items would be removed by cleanup
@@ -81,9 +81,9 @@ export class WatchManager implements IWatchManager {
   }
 
   /** @inheritdoc */
-  recordCategory(categoryIndex: number, selectedTickers: string[]): void {
+  recordCategory(categoryIndex: number, tvTickers: string[]): void {
     const categoryLists = this.watchRepo.getWatchCategoryLists();
-    this.recordCategoryInternal(categoryLists, categoryIndex, selectedTickers);
+    this.recordCategoryInternal(categoryLists, categoryIndex, tvTickers);
   }
 
   /** @inheritdoc */
