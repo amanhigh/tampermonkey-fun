@@ -59,17 +59,16 @@ export class Barkat {
     } else if (this.isKiteSite()) {
       this.setupKiteUI();
     }
-    this.onLoad();
   }
 
   // XXX: Remove suppressed Errors for eslint
   // eslint-disable-next-line max-lines-per-function
   private setupTradingViewUI() {
-    // TODO: #B Layout and Color Improvements
+    // FIXME: #B Layout and Color Improvements
     const $area = this.uiUtil.buildArea(Constants.UI.IDS.AREAS.MAIN, '76%', '6%');
     $area.appendTo('body');
 
-    // TODO: #C Move UI Build Logic to Handlers
+    // XXX: Move UI Build Logic to Handlers
     this.uiUtil
       .buildWrapper(Constants.UI.IDS.AREAS.TOP)
       .appendTo($area)
@@ -100,9 +99,14 @@ export class Barkat {
         })
       )
       .append(
-        this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.RECENT, 'T', () => {
-          this.tickerHandler.resetRecent();
-        })
+        this.uiUtil
+          .buildButton(Constants.UI.IDS.BUTTONS.RECENT, 'X', () => {
+            this.tickerHandler.resetRecent();
+          })
+          .on('contextmenu', (e: JQuery.ContextMenuEvent) => {
+            e.preventDefault();
+            this.uiUtil.toggleUI(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+          })
       )
       .append(this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.SUMMARY));
 
@@ -119,8 +123,11 @@ export class Barkat {
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.ALERTS).appendTo($area);
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.ORDERS).appendTo($area);
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.JOURNAL).hide().appendTo($area);
+    this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.AUDIT).hide().appendTo($area);
     this.journalUI();
+    this.kiteHandler.setupGttRefreshListener();
     this.repoCron.start();
+    this.onloadHandler.init();
     console.log('TradingView UI setup');
   }
 
@@ -138,13 +145,6 @@ export class Barkat {
           this.journalHandler.handleRecordJournal(Trend.COUNTER_TREND);
         })
       );
-
-    this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.AUDIT).appendTo(`#${Constants.UI.IDS.AREAS.JOURNAL}`);
-  }
-
-  onLoad() {
-    console.log('Barkat Onload');
-    this.onloadHandler.init();
   }
 }
 

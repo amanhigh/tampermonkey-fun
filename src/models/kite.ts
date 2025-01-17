@@ -6,8 +6,8 @@ import { BaseEvent } from './events';
  * Encapsulates common order attributes
  */
 export abstract class BaseKiteOrder {
-  protected _sym: string;
-  protected _qty: number;
+  sym: string;
+  qty: number;
 
   /**
    * Creates a new BaseKiteOrder instance
@@ -15,22 +15,8 @@ export abstract class BaseKiteOrder {
    * @param qty Order quantity
    */
   constructor(sym: string, qty: number) {
-    this._sym = sym;
-    this._qty = qty;
-  }
-
-  get sym(): string {
-    return this._sym;
-  }
-  get qty(): number {
-    return this._qty;
-  }
-
-  set sym(value: string) {
-    this._sym = value;
-  }
-  set qty(value: number) {
-    this._qty = value;
+    this.sym = sym;
+    this.qty = qty;
   }
 }
 
@@ -38,9 +24,9 @@ export abstract class BaseKiteOrder {
  * Represents a GTT order with symbol, quantity, type, and price information
  */
 export class Order extends BaseKiteOrder {
-  private _type: string;
-  private _id: string;
-  private _prices: number[];
+  type: string;
+  id: string;
+  prices: number[];
 
   /**
    * Creates a new Order instance
@@ -52,29 +38,9 @@ export class Order extends BaseKiteOrder {
    */
   constructor(sym: string, qty: number, type: string, id: string, prices: number[]) {
     super(sym, qty);
-    this._type = type;
-    this._id = id;
-    this._prices = prices;
-  }
-
-  get type(): string {
-    return this._type;
-  }
-  get id(): string {
-    return this._id;
-  }
-  get prices(): number[] {
-    return [...this._prices];
-  }
-
-  set type(value: string) {
-    this._type = value;
-  }
-  set id(value: string) {
-    this._id = value;
-  }
-  set prices(value: number[]) {
-    this._prices = [...value];
+    this.type = type;
+    this.id = id;
+    this.prices = prices;
   }
 }
 
@@ -83,12 +49,12 @@ export class Order extends BaseKiteOrder {
  * Handles order creation parameters including symbol, quantity, and price levels
  */
 export class GttCreateEvent extends BaseEvent {
-  private _symb?: string;
-  private _qty?: number;
-  private _ltp?: number;
-  private _sl?: number;
-  private _ent?: number;
-  private _tp?: number;
+  symb: string;
+  qty: number;
+  ltp: number;
+  sl: number;
+  ent: number;
+  tp: number;
 
   /**
    * Creates a new GTT Create Event
@@ -99,52 +65,14 @@ export class GttCreateEvent extends BaseEvent {
    * @param ent Entry price
    * @param tp Target price
    */
-  constructor(symb?: string, qty?: number, ltp?: number, sl?: number, ent?: number, tp?: number) {
+  constructor(symb: string, qty: number, ltp: number, sl: number, ent: number, tp: number) {
     super();
-    this._symb = symb;
-    this._qty = qty;
-    this._ltp = ltp;
-    this._sl = sl;
-    this._ent = ent;
-    this._tp = tp;
-  }
-
-  get symb(): string | undefined {
-    return this._symb;
-  }
-  get qty(): number | undefined {
-    return this._qty;
-  }
-  get ltp(): number | undefined {
-    return this._ltp;
-  }
-  get sl(): number | undefined {
-    return this._sl;
-  }
-  get ent(): number | undefined {
-    return this._ent;
-  }
-  get tp(): number | undefined {
-    return this._tp;
-  }
-
-  set symb(value: string | undefined) {
-    this._symb = value;
-  }
-  set qty(value: number | undefined) {
-    this._qty = value;
-  }
-  set ltp(value: number | undefined) {
-    this._ltp = value;
-  }
-  set sl(value: number | undefined) {
-    this._sl = value;
-  }
-  set ent(value: number | undefined) {
-    this._ent = value;
-  }
-  set tp(value: number | undefined) {
-    this._tp = value;
+    this.symb = symb;
+    this.qty = qty;
+    this.ltp = ltp;
+    this.sl = sl;
+    this.ent = ent;
+    this.tp = tp;
   }
 
   /**
@@ -152,7 +80,7 @@ export class GttCreateEvent extends BaseEvent {
    * @returns true if event has all required fields
    */
   public isValid(): boolean {
-    return !!(this._symb && this._qty && this._ltp && this._sl && this._ent && this._tp);
+    return !!(this.symb && this.qty && this.ltp && this.sl && this.ent && this.tp);
   }
 
   /**
@@ -161,13 +89,23 @@ export class GttCreateEvent extends BaseEvent {
    */
   public stringify(): string {
     return JSON.stringify({
-      symb: this._symb,
-      qty: this._qty,
-      ltp: this._ltp,
-      sl: this._sl,
-      ent: this._ent,
-      tp: this._tp,
+      symb: this.symb,
+      qty: this.qty,
+      ltp: this.ltp,
+      sl: this.sl,
+      ent: this.ent,
+      tp: this.tp,
     });
+  }
+
+  /**
+   * Create GttCreateEvent from serialized string
+   * @param data Serialized event data
+   * @returns New GttCreateEvent instance
+   */
+  public static fromString(data: string): GttCreateEvent {
+    const parsed = JSON.parse(data);
+    return new GttCreateEvent(parsed.symb, parsed.qty, parsed.ltp, parsed.sl, parsed.ent, parsed.tp);
   }
 }
 

@@ -12,6 +12,12 @@ export interface ICategoryRepo extends IBaseRepo<CategoryLists> {
    * @returns Number of category lists
    */
   getCount(): number;
+
+  /**
+   * Get all items across all category lists
+   * @returns Set containing all unique items
+   */
+  getAllItems(): Set<string>;
 }
 
 /**
@@ -86,5 +92,17 @@ export abstract class CategoryRepo extends BaseRepo<CategoryLists, SerializedCat
    */
   public getCount(): number {
     return this._categoryLists.getSize();
+  }
+
+  /**
+   * Get all items across all category lists
+   * @returns Set containing all unique items
+   */
+  public getAllItems(): Set<string> {
+    const allItems = new Set<string>();
+    this._categoryLists.getLists().forEach((list) => {
+      list.forEach((item) => allItems.add(item));
+    });
+    return allItems;
   }
 }

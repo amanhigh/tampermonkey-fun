@@ -58,6 +58,7 @@ GM_registerMenuCommand("Imdb Auto", () => {
 
 
 //Init Setup
+// TODO: #C Plan Migration to typescript
 function imdbInit() {
     //Only for Movie Tabs
     if (isMovieTab()) {

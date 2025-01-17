@@ -32,6 +32,29 @@ export class AlertAudit {
   }
 }
 
+export class AuditStateCounts {
+  private readonly counts: Map<AlertState, number>;
+
+  constructor() {
+    this.counts = new Map();
+    Object.values(AlertState).forEach((state) => this.counts.set(state, 0));
+  }
+
+  increment(state: AlertState): void {
+    const current = this.counts.get(state) || 0;
+    this.counts.set(state, current + 1);
+  }
+
+  getCount(state: AlertState): number {
+    return this.counts.get(state) || 0;
+  }
+
+  getFormattedSummary(): string {
+    const summaries = Object.values(AlertState).map((state) => `${state}: ${this.getCount(state)}`);
+    return summaries.join(', ');
+  }
+}
+
 /**
  * Enum for different alert states
  */

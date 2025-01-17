@@ -22,17 +22,16 @@ export interface ISymbolManager {
   /**
    * Maps TradingView ticker to Investing ticker
    * @param tvTicker TradingView ticker
-   * @returns Investing ticker if mapped, undefined otherwise
+   * @returns Investing ticker if mapped, null if no mapping exists
    */
-  // BUG: Undefined vs Null return type ?
-  tvToInvesting(tvTicker: string): string | undefined;
+  tvToInvesting(tvTicker: string): string | null;
 
   /**
    * Maps Investing ticker to TradingView ticker
    * @param investingTicker Investing.com ticker
-   * @returns TV ticker if mapped, undefined otherwise
+   * @returns TV ticker if mapped, null if no mapping exists
    */
-  investingToTv(investingTicker: string): string | undefined;
+  investingToTv(investingTicker: string): string | null;
 
   /**
    * Maps TradingView ticker to Exchange ticker
@@ -101,14 +100,13 @@ export class SymbolManager implements ISymbolManager {
   }
 
   /** @inheritdoc */
-  tvToInvesting(tvTicker: string): string | undefined {
+  tvToInvesting(tvTicker: string): string | null {
     return this.tickerRepo.getInvestingTicker(tvTicker);
   }
 
   /** @inheritdoc */
-  investingToTv(investingTicker: string): string | undefined {
-    const result = this.tickerRepo.getTvTicker(investingTicker);
-    return result === null ? undefined : result;
+  investingToTv(investingTicker: string): string | null {
+    return this.tickerRepo.getTvTicker(investingTicker);
   }
 
   /** @inheritdoc */

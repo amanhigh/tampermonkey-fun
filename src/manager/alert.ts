@@ -1,7 +1,7 @@
 import { IInvestingClient } from '../client/investing';
 import { Alert, PairInfo } from '../models/alert';
 import { IAlertRepo } from '../repo/alert';
-import { AlertClicked } from '../models/events';
+import { AlertClicked, AlertClickAction } from '../models/events';
 import { Notifier } from '../util/notify';
 import { IPairManager } from './pair';
 import { ITickerManager } from './ticker';
@@ -219,8 +219,8 @@ export class AlertManager implements IAlertManager {
   }
 
   /** @inheritdoc */
-  public async createAlertClickEvent(tvTicker: string | null, investingTicker: string | null): Promise<void> {
-    const event = new AlertClicked(tvTicker, investingTicker);
+  public async createAlertClickEvent(ticker: string, action: AlertClickAction): Promise<void> {
+    const event = new AlertClicked(ticker, action);
     await this.alertRepo.createAlertClickEvent(event);
   }
 

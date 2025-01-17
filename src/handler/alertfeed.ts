@@ -1,12 +1,11 @@
 import { Constants } from '../models/constant';
 import { IUIUtil } from '../util/ui';
 import { ISyncUtil } from '../util/sync';
-import { IWatchManager } from '../manager/watch';
-import { ISymbolManager } from '../manager/symbol';
-import { IRecentManager } from '../manager/recent';
 import { Notifier } from '../util/notify';
-import { AlertClicked } from '../models/events';
+import { AlertClickAction } from '../models/events';
 import { IAlertManager } from '../manager/alert';
+import { AlertFeedManager } from '../manager/alertfeed';
+import { AlertFeedEvent, FeedInfo } from '../models/alertfeed';
 
 export interface IAlertFeedHandler {
   /**
@@ -29,15 +28,12 @@ export class AlertFeedHandler implements IAlertFeedHandler {
   constructor(
     private readonly uiUtil: IUIUtil,
     private readonly syncUtil: ISyncUtil,
-    private readonly watchManager: IWatchManager,
-    private readonly symbolManager: ISymbolManager,
-    private readonly recentManager: IRecentManager,
-    private readonly alertManager: IAlertManager
+    private readonly alertManager: IAlertManager,
+    private readonly alertFeedManager: AlertFeedManager
   ) {}
 
   public initialize(): void {
     void this.syncUtil; // Will be used in handleHookButton
-    void this.watchManager; // Will be used in paintAlertFeed
 
     const $area = this.uiUtil.buildArea(Constants.UI.IDS.AREAS.MAIN, '20px', '20px').css({
       position: 'fixed',
@@ -50,13 +46,28 @@ export class AlertFeedHandler implements IAlertFeedHandler {
       })
       .appendTo($area);
 
-    // Listen to watch list changes
+    // Listen to alert feed updates
     GM_addValueChangeListener(
-      Constants.STORAGE.EVENTS.TV_WATCH_CHANGE,
-      (_keyName: string, _oldValue: unknown, _newValue: unknown) => {
-        this.paintAlertFeed();
+      Constants.STORAGE.EVENTS.ALERT_FEED_UPDATE,
+      (_keyName: string, _oldValue: unknown, newValue: unknown) => {
+        if (newValue) {
+          const event = AlertFeedEvent.fromString(newValue as string);
+          if (event.investingTicker === Constants.MISC.RESET_FEED) {
+            // BUG: Trigger Reload of Page ?
+            this.paintAlertFeed();
+          } else {
+            this.updateTicker(event.investingTicker, event.feedInfo);
+          }
+        }
       }
     );
+
+    // Run Handle Hook Button with Delay
+    setTimeout(() => {
+      this.handleHookButton();
+    }, 2000);
+
+    console.log('Alert Feed initialized');
   }
 
   public handleHookButton(): void {
@@ -78,54 +89,23 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     const $element = $(event.currentTarget);
     const alertName = $element.text();
     const investingTicker = this.extractTickerFromAlertName(alertName);
-    const tvTicker = this.symbolManager.investingToTv(investingTicker);
 
-    if (event.ctrlKey) {
-      // Ctrl+click for mapping
-      // FIXME: Use Action with ticker instead of Null Values
-      void this.alertManager.createAlertClickEvent(null, investingTicker);
-    } else {
-      // Normal click for opening ticker
-      new AlertClicked(tvTicker || alertName, null);
-      void this.alertManager.createAlertClickEvent(tvTicker || alertName, null);
-    }
+    const action = event.ctrlKey ? AlertClickAction.MAP : AlertClickAction.OPEN;
+    void this.alertManager.createAlertClickEvent(investingTicker, action);
   }
 
   public paintAlertFeed(): void {
-    console.log('Painting alert feed');
-
-    console.log(Constants.DOM.ALERT_FEED.ALERT_DATA);
-    console.log($(Constants.DOM.ALERT_FEED.ALERT_DATA));
+    Notifier.message('Painting alert feed', 'yellow');
     $(Constants.DOM.ALERT_FEED.ALERT_DATA).each((_, element) => {
       const $element = $(element);
       const alertName = $element.text();
       const investingTicker = this.extractTickerFromAlertName(alertName);
-      const tvTicker = this.symbolManager.investingToTv(investingTicker);
 
-      if (!tvTicker) {
-        Notifier.warn(`Unmapped: ${alertName}`);
-        return;
-      }
+      // Get feed info from manager
+      const feedInfo = this.alertFeedManager.getAlertFeedState(investingTicker);
 
-      // Debug Logs for RITS
-      if (investingTicker === 'RITS') {
-        console.log('RITS Alert:', alertName, investingTicker, tvTicker);
-        console.log('Watchlist:', this.watchManager.getDefaultWatchlist());
-        console.log('Watchlist:', this.watchManager.getDefaultWatchlist().has(tvTicker));
-        console.log('Recent:', this.recentManager.isRecent(tvTicker));
-      }
-
-      // Color based on watchlist and recent status
-      if (this.watchManager.getDefaultWatchlist().has(tvTicker)) {
-        // Watchlist symbols
-        $element.css('color', 'orangered');
-      } else if (this.recentManager.isRecent(tvTicker)) {
-        // Recent symbols
-        $element.css('color', 'lime');
-      } else {
-        // Default color
-        $element.css('color', 'red');
-      }
+      // Apply appropriate color based on state
+      $element.css('color', feedInfo.color);
     });
 
     this.applyBlackTheme();
@@ -139,6 +119,18 @@ export class AlertFeedHandler implements IAlertFeedHandler {
 
     // Alert List Theme
     $(Constants.DOM.ALERT_FEED.FLOATING_WRAPPER).css('background-color', 'black');
+  }
+
+  private updateTicker(investingTicker: string, feedInfo: FeedInfo): void {
+    $(Constants.DOM.ALERT_FEED.ALERT_DATA).each((_, element) => {
+      const $element = $(element);
+      const alertName = $element.text();
+      const ticker = this.extractTickerFromAlertName(alertName);
+
+      if (ticker === investingTicker) {
+        $element.css('color', feedInfo.color);
+      }
+    });
   }
 
   private extractTickerFromAlertName(alertName: string): string {

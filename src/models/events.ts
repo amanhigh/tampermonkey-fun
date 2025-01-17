@@ -10,14 +10,17 @@ export abstract class BaseEvent {
   abstract stringify(): string;
 }
 
-export class AlertClicked extends BaseEvent {
-  tvTicker: string | null;
-  investingTicker: string | null;
+export enum AlertClickAction {
+  OPEN = 'OPEN',
+  MAP = 'MAP',
+}
 
-  constructor(tvTicker: string | null, invTicker: string | null) {
+export class AlertClicked extends BaseEvent {
+  constructor(
+    readonly ticker: string,
+    readonly action: AlertClickAction
+  ) {
     super();
-    this.tvTicker = tvTicker;
-    this.investingTicker = invTicker;
   }
 
   /**
@@ -26,8 +29,13 @@ export class AlertClicked extends BaseEvent {
    */
   public stringify(): string {
     return JSON.stringify({
-      tvTicker: this.tvTicker,
-      investingTicker: this.investingTicker,
+      ticker: this.ticker,
+      action: this.action,
     });
+  }
+
+  public static fromString(data: string): AlertClicked {
+    const parsed = JSON.parse(data);
+    return new AlertClicked(parsed.ticker, parsed.action);
   }
 }

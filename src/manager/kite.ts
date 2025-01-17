@@ -42,19 +42,19 @@ export interface IKiteManager {
  */
 export class KiteManager implements IKiteManager {
   async getGttRefereshEvent(): Promise<GttRefreshEvent> {
-    return await this._kiteRepo.getGttRefereshEvent();
+    return await this.kiteRepo.getGttRefereshEvent();
   }
 
   public async createGttDeleteEvent(orderId: string, symbol: string): Promise<void> {
     const deleteEvent = new GttDeleteEvent(orderId, symbol);
-    await this._kiteRepo.createGttDeleteEvent(deleteEvent);
+    await this.kiteRepo.createGttDeleteEvent(deleteEvent);
   }
 
   /**
    * Trading price margin
    * @private
    */
-  private readonly _margin = 0.005;
+  private readonly margin = 0.005;
 
   /**
    * @param symbolManager Manager for symbol operations
@@ -62,55 +62,55 @@ export class KiteManager implements IKiteManager {
    * @param kiteRepo Repository for Kite data persistence
    */
   constructor(
-    private readonly _symbolManager: ISymbolManager,
-    private readonly _kiteClient: IKiteClient,
-    private readonly _kiteRepo: IKiteRepo
+    private readonly symbolManager: ISymbolManager,
+    private readonly kiteClient: IKiteClient,
+    private readonly kiteRepo: IKiteRepo
   ) {}
 
   /** @inheritdoc */
-  async createOrder(event: GttCreateEvent): Promise<void> {
-    if (!event.isValid()) {
+  async createOrder(evt: GttCreateEvent): Promise<void> {
+    if (!evt.isValid()) {
       throw new Error('Invalid GTT event parameters');
     }
 
-    const exp = this._generateExpiryDate();
-    const pair = encodeURIComponent(this._symbolManager.tvToKite(event.symb!));
+    const exp = this.generateExpiryDate();
+    const pair = encodeURIComponent(this.symbolManager.tvToKite(evt.symb!));
 
-    const buyRequest = this._buildBuyOrderRequest(pair, event, exp);
-    const ocoRequest = this._buildOcoOrderRequest(pair, event, exp);
+    const buyRequest = this.buildBuyOrderRequest(pair, evt, exp);
+    const ocoRequest = this.buildOcoOrderRequest(pair, evt, exp);
 
-    await this._kiteClient.createGTT(buyRequest);
-    await this._kiteClient.createGTT(ocoRequest);
+    await this.kiteClient.createGTT(buyRequest);
+    await this.kiteClient.createGTT(ocoRequest);
   }
 
   /** @inheritdoc */
   deleteOrder(gttId: string): void {
-    void this._kiteClient.deleteGTT(gttId);
+    void this.kiteClient.deleteGTT(gttId);
   }
 
   /** @inheritdoc */
   loadOrders(callback: (data: GttApiResponse) => void): void {
-    void this._kiteClient.loadGTT(callback);
+    void this.kiteClient.loadGTT(callback);
   }
 
   async createGttOrderEvent(event: GttCreateEvent): Promise<void> {
-    await this._kiteRepo.createGttOrderEvent(event);
+    await this.kiteRepo.createGttOrderEvent(event);
   }
 
   async createGttRefreshEvent(event: GttRefreshEvent): Promise<void> {
-    await this._kiteRepo.createGttRefreshEvent(event);
+    await this.kiteRepo.createGttRefreshEvent(event);
   }
 
   /**
    * Builds buy order request
    * @private
    */
-  private _buildBuyOrderRequest(pair: string, event: GttCreateEvent, expiry: string): CreateGttRequest {
+  private buildBuyOrderRequest(pair: string, event: GttCreateEvent, expiry: string): CreateGttRequest {
     if (!event.ent || !event.qty || !event.ltp) {
       throw new Error('Invalid event parameters for buy order');
     }
 
-    const price = this._generateTick(event.ent + this._margin * event.ent);
+    const price = this.generateTick(event.ent + this.margin * event.ent);
 
     return new CreateGttRequest(
       pair,
@@ -136,17 +136,17 @@ export class KiteManager implements IKiteManager {
    * Builds OCO (one-cancels-other) order request
    * @private
    */
-  private _buildOcoOrderRequest(pair: string, event: GttCreateEvent, expiry: string): CreateGttRequest {
+  private buildOcoOrderRequest(pair: string, event: GttCreateEvent, expiry: string): CreateGttRequest {
     if (!event.sl || !event.tp || !event.qty || !event.ltp) {
       throw new Error('Invalid event parameters for OCO order');
     }
 
-    const ltpTrigger = this._generateTick(event.ltp + 0.03 * event.ltp);
+    const ltpTrigger = this.generateTick(event.ltp + 0.03 * event.ltp);
     // Choose LTP Trigger If Price to close to TP
     const tpTrigger = event.tp < parseFloat(ltpTrigger) ? ltpTrigger : event.tp.toString();
 
-    const sl = this._generateTick(event.sl - this._margin * event.sl);
-    const tp = this._generateTick(parseFloat(tpTrigger) - this._margin * parseFloat(tpTrigger));
+    const sl = this.generateTick(event.sl - this.margin * event.sl);
+    const tp = this.generateTick(parseFloat(tpTrigger) - this.margin * parseFloat(tpTrigger));
 
     return new CreateGttRequest(
       pair,
@@ -183,7 +183,7 @@ export class KiteManager implements IKiteManager {
    * @private
    * @returns The generated tick value with two decimal places
    */
-  private _generateTick(price: number): string {
+  private generateTick(price: number): string {
     return (Math.ceil(price * 20) / 20).toFixed(2);
   }
 
@@ -192,7 +192,7 @@ export class KiteManager implements IKiteManager {
    * @private
    * @returns Formatted expiry date
    */
-  private _generateExpiryDate(): string {
+  private generateExpiryDate(): string {
     const date = new Date();
     const year = date.getFullYear() + 1;
     const month = date.getMonth();

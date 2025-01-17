@@ -89,14 +89,15 @@ export class HeaderManager implements IHeaderManager {
     $exchange.css('color', Constants.UI.COLORS.DEFAULT);
 
     // Paint flags based on flag categories
-    Constants.UI.COLORS.LIST.forEach((color, i) => {
+    for (let i = 0; i < Constants.UI.COLORS.LIST.length; i++) {
+      const color = Constants.UI.COLORS.LIST[i];
       const flagSymbols = this.flagManager.getCategory(i);
       if (flagSymbols && flagSymbols.has(ticker)) {
         $flag.css('color', color);
         $exchange.css('color', color);
-        return false; // Break the loop after first match
+        break; // Break the loop after first match
       }
-    });
+    }
   }
 
   private paintFNOMarking($name: JQuery<HTMLElement>, ticker: string): void {

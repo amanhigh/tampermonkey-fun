@@ -10,7 +10,7 @@ import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 import { IUIUtil } from '../util/ui';
 import { ISyncUtil } from '../util/sync';
-import { AlertClicked } from '../models/events';
+import { AlertClicked, AlertClickAction } from '../models/events';
 import { IAlertSummaryHandler } from './alert_summary';
 import { ITickerHandler } from './ticker';
 import { IPairHandler } from './pair';
@@ -261,14 +261,23 @@ export class AlertHandler implements IAlertHandler {
 
   /** @inheritdoc */
   public handleAlertClick(event: AlertClicked): void {
-    if (event.investingTicker) {
-      // Map TV Ticker to Investing Ticker
-      this.symbolManager.createTvToInvestingMapping(this.tickerManager.getTicker(), event.investingTicker);
-      void this.pairHandler.mapInvestingTicker(event.investingTicker, this.tickerManager.getCurrentExchange());
-    } else if (event.tvTicker) {
-      this.tickerHandler.openTicker(event.tvTicker);
-    } else {
-      Notifier.error('No valid ticker found in alert click event');
+    switch (event.action) {
+      case AlertClickAction.MAP:
+        // Map TV Ticker to Investing Ticker
+        this.symbolManager.createTvToInvestingMapping(this.tickerManager.getTicker(), event.ticker);
+        void this.pairHandler.mapInvestingTicker(event.ticker);
+        Notifier.success(`Mapped ${this.tickerManager.getTicker()} to ${event.ticker}`);
+        break;
+      case AlertClickAction.OPEN:
+        const tvTicker = this.symbolManager.investingToTv(event.ticker);
+        if (!tvTicker) {
+          Notifier.error(`Unmapped: ${event.ticker}`);
+          return;
+        }
+        this.tickerHandler.openTicker(tvTicker);
+        break;
+      default:
+        Notifier.error('No valid action found in alert click event');
     }
   }
 

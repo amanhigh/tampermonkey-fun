@@ -43,6 +43,13 @@ export interface IWatchManager {
    * @returns Number of items removed
    */
   clean(): number;
+
+  /**
+   * Check if a ticker is in any watch category
+   * @param tvTicker TradingView ticker symbol
+   * @returns True if ticker is in any watch category
+   */
+  isWatched(tvTicker: string): boolean;
 }
 
 /**
@@ -104,7 +111,6 @@ export class WatchManager implements IWatchManager {
 
     // Update watchlist category
     categoryLists.setList(this.DEFAULT_LIST_INDEX, tvWatchSet);
-    this.signalWatchChange().catch(console.error);
   }
 
   /** @inheritdoc */
@@ -123,8 +129,9 @@ export class WatchManager implements IWatchManager {
   }
 
   /** @inheritdoc */
-  private async signalWatchChange(): Promise<void> {
-    await this.watchRepo.createWatchChangeEvent();
+  public isWatched(tvTicker: string): boolean {
+    const allWatchedItems = this.watchRepo.getAllItems();
+    return allWatchedItems.has(tvTicker);
   }
 
   /**

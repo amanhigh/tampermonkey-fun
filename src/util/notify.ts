@@ -34,7 +34,7 @@ export class Notifier {
 
   // XXX: Replace console.log with this.
   public static error(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
-    // TODO: Log Console error and get full error.
+    // TODO: #C Log Console error and get full error.
     this.message(msg, 'red', timeout);
   }
 
@@ -42,7 +42,6 @@ export class Notifier {
     this.message(msg, 'orange', timeout);
   }
 
-  // XXX: Replace Green Messages with this
   public static success(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
     this.message(msg, 'green', timeout);
   }

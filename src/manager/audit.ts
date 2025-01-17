@@ -1,4 +1,4 @@
-import { AlertAudit, AlertState } from '../models/alert';
+import { AlertAudit, AlertState, AuditStateCounts } from '../models/alert';
 import { Notifier } from '../util/notify';
 import { ITickerManager } from './ticker';
 import { IPairManager } from './pair';
@@ -34,6 +34,8 @@ export interface IAuditManager {
 export class AuditManager implements IAuditManager {
   private readonly _batchSize: number;
 
+  private stateCounts: AuditStateCounts;
+
   constructor(
     private readonly _auditRepo: IAuditRepo,
     private readonly _tickerManager: ITickerManager,
@@ -42,6 +44,7 @@ export class AuditManager implements IAuditManager {
     batchSize = 50
   ) {
     this._batchSize = batchSize;
+    this.stateCounts = new AuditStateCounts();
   }
 
   /********** Public Methods **********/
@@ -50,7 +53,13 @@ export class AuditManager implements IAuditManager {
   async auditAlerts(): Promise<void> {
     const investingTickers = this._pairManager.getAllInvestingTickers();
     this._auditRepo.clear();
+    this.stateCounts = new AuditStateCounts();
     await this._processBatch(investingTickers);
+    Notifier.message(this.getAuditSummary(), 'purple', 10000);
+  }
+
+  getAuditSummary(): string {
+    return this.stateCounts.getFormattedSummary();
   }
 
   /** @inheritdoc */
@@ -86,13 +95,14 @@ export class AuditManager implements IAuditManager {
       for (let i = processedCount; i < endIndex; i++) {
         const investingTicker = investingTickers[i];
         const state = this.auditAlertState(investingTicker);
+        this.stateCounts.increment(state);
         this._auditRepo.set(investingTicker, new AlertAudit(investingTicker, state));
       }
 
       processedCount = endIndex;
       const progress = Math.floor((processedCount / investingTickers.length) * 100);
       if (progress % 20 === 0) {
-        // BUG: Show progress at 20% intervals
+        // XXX: Show progress at 20% intervals
       }
 
       // Yield to prevent UI blocking

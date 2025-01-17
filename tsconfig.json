@@ -14,7 +14,8 @@
     // Keep source map and declaration settings
     "sourceMap": true,
     "declaration": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "noImplicitReturns": true
   },
   "include": [
     "src/**/*" // Include all files in src directory

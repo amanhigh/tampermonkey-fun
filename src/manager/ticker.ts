@@ -71,8 +71,8 @@ export class TickerManager implements ITickerManager {
   constructor(
     private readonly _waitUtil: IWaitUtil,
     private readonly _symbolManager: ISymbolManager,
-    private readonly _screenerManager: ITradingViewScreenerManager,
-    private readonly _watchlistManager: ITradingViewWatchlistManager
+    private readonly screenerManager: ITradingViewScreenerManager,
+    private readonly watchlistManager: ITradingViewWatchlistManager
   ) {}
 
   /** @inheritdoc */
@@ -109,7 +109,7 @@ export class TickerManager implements ITickerManager {
 
   /** @inheritdoc */
   getSelectedTickers(): string[] {
-    let selected = this._getVisibleSelectedTickers();
+    let selected = this.getVisibleSelectedTickers();
     if (selected.length < MIN_SELECTED_TICKERS) {
       selected = [this.getTicker()];
     }
@@ -142,13 +142,16 @@ export class TickerManager implements ITickerManager {
   /** @inheritdoc */
   navigateTickers(step: number): void {
     const currentTicker = this.getTicker();
-    const visibleTickers = this._getVisibleTickers();
+    const visibleTickers = this.getVisibleTickers();
 
     if (!visibleTickers.length) {
       throw new Error('No visible tickers available for navigation');
     }
 
-    const nextTicker = this._calculateNextTicker(currentTicker, visibleTickers, step);
+    const nextTicker = this.calculateNextTicker(currentTicker, visibleTickers, step);
+    console.log(currentTicker, nextTicker, step);
+    console.log(visibleTickers);
+
     this.openTicker(nextTicker);
   }
 
@@ -157,10 +160,10 @@ export class TickerManager implements ITickerManager {
    * @private
    * @returns {string[]} Array of visible ticker symbols
    */
-  private _getVisibleSelectedTickers(): string[] {
-    return this._screenerManager.isScreenerVisible()
-      ? this._screenerManager.getTickers(true)
-      : this._watchlistManager.getTickers(true);
+  private getVisibleSelectedTickers(): string[] {
+    return this.screenerManager.isScreenerVisible()
+      ? this.screenerManager.getTickers(true)
+      : this.watchlistManager.getTickers(true);
   }
 
   /**
@@ -168,10 +171,10 @@ export class TickerManager implements ITickerManager {
    * @private
    * @returns Array of visible ticker symbols
    */
-  private _getVisibleTickers(): string[] {
-    return this._screenerManager.isScreenerVisible()
-      ? this._screenerManager.getTickers(true)
-      : this._watchlistManager.getTickers(true);
+  private getVisibleTickers(): string[] {
+    return this.screenerManager.isScreenerVisible()
+      ? this.screenerManager.getTickers(true)
+      : this.watchlistManager.getTickers(true);
   }
 
   /**
@@ -182,7 +185,7 @@ export class TickerManager implements ITickerManager {
    * @param step - Number of steps to move
    * @returns Next ticker symbol
    */
-  private _calculateNextTicker(currentTicker: string, tickers: string[], step: number): string {
+  private calculateNextTicker(currentTicker: string, tickers: string[], step: number): string {
     const currentIndex = tickers.indexOf(currentTicker);
     let nextIndex = currentIndex + step;
 

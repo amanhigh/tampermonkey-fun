@@ -53,6 +53,11 @@ export interface IKiteHandler {
    * @param gttOrderMap Object containing GTT orders
    */
   refreshGttOrders(): Promise<void>;
+
+  /**
+   * Sets up GTT refresh event listener
+   */
+  setupGttRefreshListener(): void;
 }
 
 /**
@@ -83,6 +88,17 @@ export class KiteHandler implements IKiteHandler {
   ) {}
 
   /** @inheritdoc */
+  public setupGttRefreshListener(): void {
+    GM_addValueChangeListener(
+      Constants.STORAGE.EVENTS.GTT_REFERSH,
+      (_keyName: string, _oldValue: unknown, _newValue: unknown) => {
+        // Update order summary when GTT refresh event is received
+        void this.refreshGttOrders();
+      }
+    );
+  }
+
+  /** @inheritdoc */
   setUpListners(): void {
     this.setupGttTabListener();
     this.setupGttOrderListener();
@@ -90,14 +106,12 @@ export class KiteHandler implements IKiteHandler {
 
   /** @inheritdoc */
   async handleGttCreateRequest(request: GttCreateEvent): Promise<void> {
-    if (request.qty && request.qty > 0 && request.symb && request.ltp && request.sl && request.ent && request.tp) {
-      await this.kiteManager.createOrder(request);
-    }
+    await this.kiteManager.createOrder(request);
   }
 
   /** @inheritdoc */
   async handleGttOrderButton(): Promise<void> {
-    const order = this._readOrderPanel();
+    const order = this.readOrderPanel();
 
     // Build request object in expected format
     const tvTicker = this.tickerManager.getTicker();
@@ -111,10 +125,10 @@ export class KiteHandler implements IKiteHandler {
       order.tp
     );
 
-    if (this._validateOrder(event)) {
-      this._displayOrderMessage(event);
+    if (this.validateOrder(event)) {
+      this.displayOrderMessage(event);
       await this.kiteManager.createGttOrderEvent(event);
-      this._closeOrderPanel();
+      this.closeOrderPanel();
     } else {
       alert('Invalid GTT Input');
     }
@@ -147,8 +161,8 @@ export class KiteHandler implements IKiteHandler {
     }
 
     ordersForTicker.reverse().forEach((order) => {
-      const buttonConfig = this._getOrderButtonConfig(order);
-      const $button = this._createOrderButton(buttonConfig).data('order-id', order.id);
+      const buttonConfig = this.getOrderButtonConfig(order);
+      const $button = this.createOrderButton(buttonConfig).data('order-id', order.id);
       $button.appendTo($ordersContainer);
     });
   }
@@ -164,7 +178,7 @@ export class KiteHandler implements IKiteHandler {
    * @private
    * @param gttResponse API response containing GTT orders
    */
-  private async _saveGttMap(gttResponse: GttApiResponse): Promise<void> {
+  private async saveGttMap(gttResponse: GttApiResponse): Promise<void> {
     // Only process if we have valid data
     if (!gttResponse?.data) {
       Notifier.message('Invalid GTT Response', 'red');
@@ -186,9 +200,9 @@ export class KiteHandler implements IKiteHandler {
     const length = refreshEvent.getCount();
     if (length > 0) {
       await this.kiteManager.createGttRefreshEvent(refreshEvent);
-      Notifier.message(`GTT Map Built. Count: ${length}`, 'green');
+      Notifier.success(`GTT Map Built. Count: ${length}`);
     } else {
-      Notifier.message('No Active GTT Orders Found', 'red');
+      Notifier.error('No Active GTT Orders Found');
     }
   }
 
@@ -200,7 +214,9 @@ export class KiteHandler implements IKiteHandler {
     GM_addValueChangeListener(
       Constants.STORAGE.EVENTS.GTT_CREATE,
       (_keyName: string, _oldValue: unknown, newValue: unknown) => {
-        void this.handleGttCreateRequest(newValue as GttCreateEvent);
+        // Convert string to GttCreateEvent before passing to handler
+        const event = GttCreateEvent.fromString(newValue as string);
+        void this.handleGttCreateRequest(event);
       }
     );
   }
@@ -210,7 +226,7 @@ export class KiteHandler implements IKiteHandler {
    * Triggers order refresh when GTT tab is activated
    * @private
    */
-  // FIXME: #C Make this Flow Work on kite and tv side.
+  // FIXME: #B Make this Flow Work on kite and tv side.
   private setupGttTabListener(): void {
     this.waitUtil.waitJEE(this.gttSelector, ($element) => {
       $element.click(() => void this.reloadGttOrders());
@@ -226,7 +242,7 @@ export class KiteHandler implements IKiteHandler {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       await new Promise<GttApiResponse>((resolve) => {
         this.kiteManager.loadOrders(resolve);
-      }).then(async (response) => this._saveGttMap(response));
+      }).then(async (response) => this.saveGttMap(response));
     } catch (error) {
       console.error('Failed to refresh GTT orders:', error);
     }
@@ -237,7 +253,7 @@ export class KiteHandler implements IKiteHandler {
    * @private
    * @returns Order parameters
    */
-  private _readOrderPanel(): { qty: number; sl: number; ent: number; tp: number } {
+  private readOrderPanel(): { qty: number; sl: number; ent: number; tp: number } {
     const ent = parseFloat($(Constants.DOM.ORDER_PANEL.INPUTS.ENTRY_PRICE).val() as string);
     const tp = parseFloat($(Constants.DOM.ORDER_PANEL.INPUTS.PROFIT_PRICE).val() as string);
     const sl = parseFloat($(Constants.DOM.ORDER_PANEL.INPUTS.STOP_PRICE).val() as string);
@@ -265,7 +281,7 @@ export class KiteHandler implements IKiteHandler {
    * @param order - Order parameters
    * @returns True if valid
    */
-  private _validateOrder(order: GttCreateEvent): boolean {
+  private validateOrder(order: GttCreateEvent): boolean {
     return !!(
       order.qty &&
       order.qty > 0 &&
@@ -282,7 +298,7 @@ export class KiteHandler implements IKiteHandler {
    * Closes the order panel
    * @private
    */
-  private _closeOrderPanel(): void {
+  private closeOrderPanel(): void {
     $(Constants.DOM.ORDER_PANEL.CLOSE).click();
   }
 
@@ -291,7 +307,7 @@ export class KiteHandler implements IKiteHandler {
    * @private
    * @param order - Order details
    */
-  private _displayOrderMessage(order: GttCreateEvent): void {
+  private displayOrderMessage(order: GttCreateEvent): void {
     Notifier.message(
       `${order.symb} (${order.ltp}), Qty ${order.qty}, SL:ENT:TP: ${order.sl} - ${order.ent} - ${order.tp}`,
       'yellow'
@@ -304,7 +320,7 @@ export class KiteHandler implements IKiteHandler {
    * @param order - Order details
    * @returns Button configuration
    */
-  private _getOrderButtonConfig(order: Order): ButtonConfig {
+  private getOrderButtonConfig(order: Order): ButtonConfig {
     const orderTypeShort = order.type.includes('single') ? 'B' : 'SL';
     //Extract Buy Price for Single order and Target for Two Legged
     const triggerPrice = order.type.includes('single') ? order.prices[0] : order.prices[1];
@@ -324,7 +340,7 @@ export class KiteHandler implements IKiteHandler {
    * @param config - Button configuration
    * @returns Button element
    */
-  private _createOrderButton(config: ButtonConfig): JQuery {
+  private createOrderButton(config: ButtonConfig): JQuery {
     const $button = this.uiUtil
       .buildButton('', config.text, () => {
         this.handleDeleteOrderButton($button);

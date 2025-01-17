@@ -5,6 +5,8 @@ import { IRecentManager } from '../manager/recent';
 import { ISequenceHandler } from './sequence';
 import { IKiteHandler } from './kite';
 import { ISyncUtil } from '../util/sync';
+import { IWatchManager } from '../manager/watch';
+import { AlertFeedManager } from '../manager/alertfeed';
 
 export interface ITickerChangeHandler {
   onTickerChange(): void;
@@ -19,7 +21,9 @@ export class TickerChangeHandler implements ITickerChangeHandler {
     private readonly recentManager: IRecentManager,
     private readonly sequenceHandler: ISequenceHandler,
     private readonly kiteHandler: IKiteHandler,
-    private readonly syncUtil: ISyncUtil
+    private readonly syncUtil: ISyncUtil,
+    private readonly watchManager: IWatchManager,
+    private readonly alertFeedManager: AlertFeedManager
   ) {}
 
   public onTickerChange(): void {
@@ -41,7 +45,11 @@ export class TickerChangeHandler implements ITickerChangeHandler {
     const tvTicker = this.tickerManager.getTicker();
     if (!this.recentManager.isRecent(tvTicker)) {
       this.recentManager.addTicker(tvTicker);
-      // TODO: #A this.watchlistManager.paintAlertFeedEvent()
+
+      // Paint if TV ticker is not in watchlist
+      if (!this.watchManager.isWatched(tvTicker)) {
+        void this.alertFeedManager.createAlertFeedEvent(tvTicker);
+      }
     }
   }
 }

@@ -9,6 +9,7 @@ import { ITradingViewWatchlistManager } from '../manager/watchlist';
 import { Notifier } from '../util/notify';
 import { ISyncUtil } from '../util/sync';
 import { ITickerManager } from '../manager/ticker';
+import { AlertFeedManager } from '../manager/alertfeed';
 
 /**
  * Handles watchlist-related events and UI updates
@@ -43,13 +44,15 @@ export interface IWatchListHandler {
  * Handles all watchlist-related events and updates
  */
 export class WatchListHandler implements IWatchListHandler {
+  // eslint-disable-next-line max-params
   constructor(
     private readonly watchlistManager: ITradingViewWatchlistManager,
     private readonly screenerManager: ITradingViewScreenerManager,
     private readonly headerManager: IHeaderManager,
     private readonly syncUtil: ISyncUtil,
     private readonly watchManager: IWatchManager,
-    private readonly tickerManager: ITickerManager
+    private readonly tickerManager: ITickerManager,
+    private readonly alertFeedManager: AlertFeedManager
   ) {}
 
   /** @inheritdoc */
@@ -65,7 +68,7 @@ export class WatchListHandler implements IWatchListHandler {
       this.headerManager.paintHeader();
 
       // Update alert feed with watchlist changes
-      // this.watchlistManager.paintAlertFeedEvent();
+      void this.alertFeedManager.createAlertFeedEvent(this.tickerManager.getTicker());
     });
   }
 

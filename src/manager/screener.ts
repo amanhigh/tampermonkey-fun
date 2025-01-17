@@ -46,7 +46,7 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
   /** @inheritdoc */
   getTickers(visible = false): string[] {
     const selector = Constants.DOM.SCREENER.SYMBOL;
-    return this._tickerListHelper(selector, visible);
+    return this.tickerListHelper(selector, visible);
   }
 
   /** @inheritdoc */
@@ -69,7 +69,7 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
    * @param visible - Whether to only get visible elements
    * @returns Array of ticker strings
    */
-  private _tickerListHelper(selector: string, visible: boolean): string[] {
+  private tickerListHelper(selector: string, visible: boolean): string[] {
     return $(visible ? selector + ':visible' : selector)
       .toArray()
       .map((s) => s.innerHTML);

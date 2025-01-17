@@ -76,11 +76,11 @@ export const Constants = Object.freeze({
       },
     },
     SCREENER: {
-      SYMBOL: 'div[class*=symbol]', // Old name: screenerSymbolSelector
+      SYMBOL: '.tv-screener__symbol', // Old name: screenerSymbolSelector
       MAIN: 'tbody.tv-data-table__tbody:nth(1)', // Old name: screenerSelector
       LINE: 'tr.tv-screener-table__result-row', // Old name: screenerLineSelector
       BUTTON: 'button[data-name=toggle-visibility-button]', // Old name: screenerButtonSelector
-      SELECTED: 'tr.tv-screener-table__result-row--selected', // Old name: screenerSelectedSelector
+      SELECTED: '.tv-screener-table__result-row--selected', // Old name: screenerSelectedSelector
     },
     WATCHLIST: {
       SYMBOL: 'span[class*=symbolNameText]', // Old Name: watchListSymbolSelector
@@ -91,7 +91,7 @@ export const Constants = Object.freeze({
       SELECTED: 'div[class*=selected]', // Old Name: watchListSelectedSelector
     },
     FLAGS: {
-      SYMBOL: 'div[class^=uiMarker]', // Old Name: symbolFlagSelector
+      SYMBOL: 'div[class*=flagWrapper]', // Old Name: symbolFlagSelector
       MARKING: 'div[class^=uiMarker] > svg > path:nth(0)', // Old Name: flagMarkingSelector
     },
     TOOLBARS: {
@@ -155,7 +155,7 @@ export const Constants = Object.freeze({
       PAIR_MAP: 'pairSilo', // Old Name: pairMapStore
     },
     EVENTS: {
-      TV_WATCH_CHANGE: 'tvWatchChangeEvent', // Old Name: tvWatchChangeEvent
+      ALERT_FEED_UPDATE: 'alertFeedEvent', // Old Name: tvWatchChangeEvent
       ALERT_CLICKED: 'alertClickedEvent', // Old Name: alertClickedEvent
       GTT_REFERSH: 'gttRefereshEvent', // Old Name: gttOrderEvent
       GTT_CREATE: 'gttCreateEvent', // Old Name: gttRequest
@@ -181,6 +181,10 @@ export const Constants = Object.freeze({
         [SequenceType.YR]: [TimeFrame.SIX_MONTHLY, TimeFrame.THREE_MONTHLY, TimeFrame.MONTHLY, TimeFrame.WEEKLY],
       } as SequenceMap,
     },
+  },
+
+  MISC: {
+    RESET_FEED: 'Reset',
   },
 
   // Exchange and market related constants

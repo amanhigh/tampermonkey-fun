@@ -9,9 +9,9 @@ export interface ITickerRepo extends IMapRepo<string, string> {
   /**
    * Get investing ticker for given TV ticker
    * @param tvTicker TradingView ticker
-   * @returns Investing ticker if mapped, undefined otherwise
+   * @returns Investing ticker if mapped, null if no mapping exists
    */
-  getInvestingTicker(tvTicker: string): string | undefined;
+  getInvestingTicker(tvTicker: string): string | null;
 
   /**
    * Get TV ticker for given investing ticker
@@ -36,7 +36,7 @@ export class TickerRepo extends MapRepo<string, string> implements ITickerRepo {
    * Reverse mapping from investing tickers to TV tickers
    * @private
    */
-  private readonly _reverseMap: Map<string, string>;
+  private readonly reverseMap: Map<string, string>;
 
   /**
    * Creates a new ticker repository
@@ -44,8 +44,7 @@ export class TickerRepo extends MapRepo<string, string> implements ITickerRepo {
    */
   constructor(repoCron: IRepoCron) {
     super(repoCron, 'tickerRepo');
-    this._reverseMap = new Map<string, string>();
-    void this._buildReverseMap();
+    this.reverseMap = new Map<string, string>();
   }
 
   /**
@@ -58,21 +57,22 @@ export class TickerRepo extends MapRepo<string, string> implements ITickerRepo {
         tickerMap.set(tvTicker, investingTicker);
       }
     });
+    this.buildReverseMap(tickerMap);
     return tickerMap;
   }
 
   /**
    * @inheritdoc
    */
-  public getInvestingTicker(tvTicker: string): string | undefined {
-    return this.get(tvTicker);
+  public getInvestingTicker(tvTicker: string): string | null {
+    return this.get(tvTicker) || null;
   }
 
   /**
    * @inheritdoc
    */
   public getTvTicker(investingTicker: string): string | null {
-    return this._reverseMap.get(investingTicker) || null;
+    return this.reverseMap.get(investingTicker) || null;
   }
 
   /**
@@ -86,10 +86,10 @@ export class TickerRepo extends MapRepo<string, string> implements ITickerRepo {
    * Rebuilds the reverse ticker map
    * @private
    */
-  private _buildReverseMap(): void {
-    this._reverseMap.clear();
-    this._map.forEach((investingTicker, tvTicker) => {
-      this._reverseMap.set(investingTicker, tvTicker);
+  private buildReverseMap(tickerMap: Map<string, string>): void {
+    this.reverseMap.clear();
+    tickerMap.forEach((investingTicker, tvTicker) => {
+      this.reverseMap.set(investingTicker, tvTicker);
     });
   }
 
@@ -99,7 +99,7 @@ export class TickerRepo extends MapRepo<string, string> implements ITickerRepo {
    */
   public override set(key: string, value: string): void {
     super.set(key, value);
-    this._reverseMap.set(value, key);
+    this.reverseMap.set(value, key);
   }
 
   /**
@@ -109,7 +109,7 @@ export class TickerRepo extends MapRepo<string, string> implements ITickerRepo {
   public override delete(key: string): boolean {
     const value = this.get(key);
     if (value) {
-      this._reverseMap.delete(value);
+      this.reverseMap.delete(value);
     }
     return super.delete(key);
   }
@@ -120,6 +120,6 @@ export class TickerRepo extends MapRepo<string, string> implements ITickerRepo {
    */
   public override clear(): void {
     super.clear();
-    this._reverseMap.clear();
+    this.reverseMap.clear();
   }
 }

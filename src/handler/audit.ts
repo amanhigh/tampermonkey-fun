@@ -40,12 +40,6 @@ export class AuditHandler implements IAuditHandler {
     const singleAlerts = this.auditManager.filterAuditResults(AlertState.SINGLE_ALERT);
     const noAlerts = this.auditManager.filterAuditResults(AlertState.NO_ALERTS);
 
-    if (singleAlerts.length === 0 && noAlerts.length === 0) {
-      // FIXME: #B Handle case when audit results are empty - determine if this means
-      // no alerts exist or audit hasn't run
-      return;
-    }
-
     // Clear existing audit area
     $(`#${Constants.UI.IDS.AREAS.AUDIT}`).empty();
 
@@ -58,9 +52,6 @@ export class AuditHandler implements IAuditHandler {
     noAlerts.forEach((audit) => {
       this.createAuditButton(audit.investingTicker, audit.state).appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
     });
-
-    // FIXME: #B Add all states eg Pair auto build msg
-    Notifier.success(`Audit All: ${singleAlerts.length} Single Alerts, ${noAlerts.length} No Alerts`, 5000);
   }
 
   /**
@@ -87,8 +78,6 @@ export class AuditHandler implements IAuditHandler {
     } else {
       newButton.appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
     }
-
-    Notifier.success(`Audit: ${auditResult.state}`);
   }
 
   /**

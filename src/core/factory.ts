@@ -65,6 +65,9 @@ import { ITickerChangeHandler, TickerChangeHandler } from '../handler/ticker_cha
 import { ISwiftKeyHandler, SwiftKeyHandler } from '../handler/swiftkey';
 import { ICommandInputHandler, CommandInputHandler } from '../handler/command';
 import { AlertFeedHandler, IAlertFeedHandler } from '../handler/alertfeed';
+import { AlertFeedManager, AlertFeedManagerImpl } from '../manager/alertfeed';
+import { ImdbRepo, ImdbRepoImpl } from '../repo/imdb';
+import { ImdbManager as ImdbManager, ImdbManagerImpl } from '../manager/imdb';
 
 /**
  * Project Architecture Overview
@@ -149,6 +152,7 @@ export class Factory {
     kite: (): IKiteRepo => Factory._getInstance('kiteRepo', () => new KiteRepo()),
     recent: (): IRecentTickerRepo =>
       Factory._getInstance('recentRepo', () => new RecentTickerRepo(Factory.repo.cron())),
+    imdb: (): ImdbRepo => Factory._getInstance('imdbRepo', () => new ImdbRepoImpl()),
   };
 
   /**
@@ -171,6 +175,8 @@ export class Factory {
             Factory.manager.tv()
           )
       ),
+
+    imdb: (): ImdbManager => Factory._getInstance('imdbManager', () => new ImdbManagerImpl(Factory.repo.imdb())),
 
     audit: (): IAuditManager =>
       Factory._getInstance(
@@ -265,6 +271,11 @@ export class Factory {
         () => new JournalManager(Factory.manager.watch(), Factory.manager.sequence(), Factory.client.kohan())
       ),
     fno: (): IFnoManager => Factory._getInstance('fnoManager', () => new FnoManager(Factory.repo.fno())),
+    alertFeed: (): AlertFeedManager =>
+      Factory._getInstance(
+        'alertFeedManager',
+        () => new AlertFeedManagerImpl(Factory.manager.symbol(), Factory.manager.watch(), Factory.manager.recent())
+      ),
   };
 
   /**
@@ -347,7 +358,8 @@ export class Factory {
             Factory.manager.recent(),
             Factory.manager.ticker(),
             Factory.manager.symbol(),
-            Factory.manager.screener()
+            Factory.manager.screener(),
+            Factory.manager.alertFeed()
           )
       ),
 
@@ -362,7 +374,9 @@ export class Factory {
             Factory.manager.recent(),
             Factory.handler.sequence(),
             Factory.handler.kite(),
-            Factory.util.sync()
+            Factory.util.sync(),
+            Factory.manager.watch(), // Add dependency
+            Factory.manager.alertFeed()
           )
       ),
 
@@ -402,7 +416,8 @@ export class Factory {
             Factory.manager.header(),
             Factory.util.sync(),
             Factory.manager.watch(),
-            Factory.manager.ticker()
+            Factory.manager.ticker(),
+            Factory.manager.alertFeed()
           )
       ),
     pair: (): IPairHandler =>
@@ -447,10 +462,8 @@ export class Factory {
           new AlertFeedHandler(
             Factory.util.ui(),
             Factory.util.sync(),
-            Factory.manager.watch(),
-            Factory.manager.symbol(),
-            Factory.manager.recent(),
-            Factory.manager.alert()
+            Factory.manager.alert(),
+            Factory.manager.alertFeed()
           )
       ),
   };

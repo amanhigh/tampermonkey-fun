@@ -3,15 +3,14 @@ export interface IBaseClient {
 }
 
 export class BaseClient implements IBaseClient {
-  // HACK: Find Replace fix all underscore private Types
-  private readonly _baseUrl: string;
+  private readonly baseUrl: string;
 
   constructor(baseUrl: string) {
-    this._baseUrl = baseUrl;
+    this.baseUrl = baseUrl;
   }
 
   public getBaseUrl(): string {
-    return this._baseUrl;
+    return this.baseUrl;
   }
 
   protected async makeRequest<T>(endpoint: string, options: Partial<GM.Request> = {}): Promise<T> {
@@ -26,7 +25,7 @@ export class BaseClient implements IBaseClient {
     return new Promise((resolve, reject) => {
       GM.xmlHttpRequest({
         method: options.method || 'GET',
-        url: `${this._baseUrl}${endpoint}`,
+        url: `${this.baseUrl}${endpoint}`,
         headers,
         data: options.data,
         responseType: options.responseType,
