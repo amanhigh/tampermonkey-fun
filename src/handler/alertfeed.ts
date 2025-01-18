@@ -95,7 +95,7 @@ export class AlertFeedHandler implements IAlertFeedHandler {
   }
 
   public paintAlertFeed(): void {
-    Notifier.message('Painting alert feed', 'yellow');
+    Notifier.yellow('Painting alert feed');
     $(Constants.DOM.ALERT_FEED.ALERT_DATA).each((_, element) => {
       const $element = $(element);
       const alertName = $element.text();

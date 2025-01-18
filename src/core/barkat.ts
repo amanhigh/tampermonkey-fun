@@ -12,10 +12,12 @@ import { IKiteHandler } from '../handler/kite';
 import { ITickerHandler } from '../handler/ticker';
 import { IAlertFeedHandler } from '../handler/alertfeed';
 import { Trend } from '../models/trading';
+import { IGlobalErrorHandler } from '../handler/error';
 
 export class Barkat {
   // eslint-disable-next-line max-params
   constructor(
+    private readonly errorHandler: IGlobalErrorHandler,
     private readonly uiUtil: UIUtil,
     private readonly repoCron: IRepoCron,
     private readonly sequenceHandler: ISequenceHandler,
@@ -51,7 +53,7 @@ export class Barkat {
   }
 
   initialize(): void {
-    // FIXME: Add Catchall Error Handler
+    this.errorHandler.registerGlobalErrorHandlers();
     if (this.isInvestingSite()) {
       this.setupInvestingUI();
     } else if (this.isTradingViewSite()) {

@@ -6,7 +6,6 @@ import { IJournalManager } from '../manager/journal';
 import { ISmartPrompt } from '../util/smart';
 import { IUIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
-import { Notifier } from '../util/notify';
 import { Trend } from '../models/trading';
 import { TickerManager } from '../manager/ticker';
 import { ITradingViewManager } from '../manager/tv';
@@ -63,7 +62,7 @@ export class JournalHandler implements IJournalHandler {
         void this.journalManager.createEntry(ticker, trend, reason);
       })
       .catch((error) => {
-        Notifier.error(`Failed to select journal tag: ${error}`);
+        throw new Error(`Failed to select journal tag: ${error}`);
       });
   }
 
@@ -81,7 +80,7 @@ export class JournalHandler implements IJournalHandler {
       this.tvManager.clipboardCopy(text);
       this.styleManager.selectToolbar(Constants.DOM.TOOLBARS.TEXT);
     } catch (error) {
-      Notifier.error('Failed to handle reason prompt: ' + error);
+      throw new Error(`Failed to handle reason prompt: ${error}`);
     }
   }
 }

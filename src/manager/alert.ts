@@ -112,30 +112,24 @@ export class AlertManager implements IAlertManager {
    * @private
    */
   private reloadFromHtml(html: string): number {
-    try {
-      let count = 0;
+    let count = 0;
 
-      $(html)
-        .find('.js-alert-item[data-trigger=price]')
-        .each((_, alertElement) => {
-          const $alt = $(alertElement);
-          const pairId = $alt.attr('data-pair-id') || '';
-          const price = parseFloat($alt.attr('data-value') || '0');
-          const id = $alt.attr('data-alert-id') || '';
+    $(html)
+      .find('.js-alert-item[data-trigger=price]')
+      .each((_, alertElement) => {
+        const $alt = $(alertElement);
+        const pairId = $alt.attr('data-pair-id') || '';
+        const price = parseFloat($alt.attr('data-value') || '0');
+        const id = $alt.attr('data-alert-id') || '';
 
-          if (pairId && !isNaN(price) && id) {
-            const alert = new Alert(id, pairId, price);
-            this.alertRepo.addAlert(pairId, alert);
-            count++;
-          }
-        });
+        if (pairId && !isNaN(price) && id) {
+          const alert = new Alert(id, pairId, price);
+          this.alertRepo.addAlert(pairId, alert);
+          count++;
+        }
+      });
 
-      return count;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      Notifier.error(`Failed to parse alerts: ${message}`);
-      return 0;
-    }
+    return count;
   }
 
   /** @inheritdoc */
@@ -147,11 +141,6 @@ export class AlertManager implements IAlertManager {
   /** @inheritdoc */
   async deleteAllAlerts(): Promise<void> {
     const pairInfo = this.getCurrentPairInfo();
-    if (!pairInfo) {
-      Notifier.error('Could not get pair info for current ticker');
-      return;
-    }
-
     const alerts = this.alertRepo.getSortedAlerts(pairInfo.pairId);
     if (!alerts) {
       Notifier.warn('No alerts (Pair) found to delete');
@@ -163,11 +152,6 @@ export class AlertManager implements IAlertManager {
   /** @inheritdoc */
   async deleteAlertsByPrice(targetPrice: number): Promise<void> {
     const pairInfo = this.getCurrentPairInfo();
-    if (!pairInfo) {
-      Notifier.error('Could not get pair info for current ticker');
-      return;
-    }
-
     const tolerance = targetPrice * 0.03;
     const alerts = this.alertRepo.getSortedAlerts(pairInfo.pairId);
     if (!alerts) {
@@ -197,16 +181,11 @@ export class AlertManager implements IAlertManager {
 
   /** @inheritdoc */
   async reloadAlerts(): Promise<number> {
-    try {
-      this.alertRepo.clear();
-      const html = await this.investingClient.getAllAlerts();
-      const count = this.reloadFromHtml(html);
+    this.alertRepo.clear();
+    const html = await this.investingClient.getAllAlerts();
+    const count = this.reloadFromHtml(html);
 
-      return count;
-    } catch {
-      Notifier.error('Failed to fetch alerts from Investing.com');
-      return 0;
-    }
+    return count;
   }
 
   /** @inheritdoc */
@@ -229,8 +208,12 @@ export class AlertManager implements IAlertManager {
    * @private
    * @returns PairInfo or null if not found
    */
-  private getCurrentPairInfo(): PairInfo | null {
+  private getCurrentPairInfo(): PairInfo {
     const investingTicker = this.tickerManager.getInvestingTicker();
-    return this.pairManager.investingTickerToPairInfo(investingTicker);
+    const pairInfo = this.pairManager.investingTickerToPairInfo(investingTicker);
+    if (!pairInfo) {
+      throw new Error(`No Pair Info found for ${investingTicker}`);
+    }
+    return pairInfo;
   }
 }

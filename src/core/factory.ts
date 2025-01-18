@@ -65,6 +65,7 @@ import { ITickerChangeHandler, TickerChangeHandler } from '../handler/ticker_cha
 import { ISwiftKeyHandler, SwiftKeyHandler } from '../handler/swiftkey';
 import { ICommandInputHandler, CommandInputHandler } from '../handler/command';
 import { AlertFeedHandler, IAlertFeedHandler } from '../handler/alertfeed';
+import { IGlobalErrorHandler, GlobalErrorHandler } from '../handler/error';
 import { IAlertFeedManager, AlertFeedManager } from '../manager/alertfeed';
 import { IImdbRepo, ImdbRepo } from '../repo/imdb';
 import { IImdbManager as IImdbManager, ImdbManager } from '../manager/imdb';
@@ -95,6 +96,7 @@ export class Factory {
         'barkat',
         () =>
           new Barkat(
+            Factory.handler.global(),
             Factory.util.ui(),
             Factory.repo.cron(),
             Factory.handler.sequence(),
@@ -283,6 +285,7 @@ export class Factory {
    * Handles specific operations and user interactions
    */
   public static handler = {
+    global: (): IGlobalErrorHandler => Factory._getInstance('globalErrorHandler', () => new GlobalErrorHandler()),
     alert: (): AlertHandler =>
       Factory._getInstance(
         'alertHandler',

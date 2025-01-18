@@ -37,11 +37,7 @@ export class RepoCron implements IRepoCron {
 
   private async _saveRepositories(): Promise<void> {
     for (const repository of this._repositories) {
-      try {
-        await repository.save();
-      } catch (error) {
-        Notifier.error(`Failed to save repository: ${error as Error}`);
-      }
+      await repository.save();
     }
     Notifier.success('Repositories saved');
   }

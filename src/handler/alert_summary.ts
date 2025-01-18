@@ -74,16 +74,10 @@ export class AlertSummaryHandler implements IAlertSummaryHandler {
         Notifier.warn('Pending alerts cannot be deleted');
         return;
       }
-      this.alertManager
-        .deleteAlert(alert)
-        .then(() => {
-          Notifier.success(`Alert deleted: ${alert.price}`);
-          $button.remove();
-        })
-        .catch((error) => {
-          const message = error instanceof Error ? error.message : 'Unknown error';
-          Notifier.error(message);
-        });
+      void this.alertManager.deleteAlert(alert).then(() => {
+        Notifier.success(`Alert deleted: ${alert.price}`);
+        $button.remove();
+      });
     });
   }
 

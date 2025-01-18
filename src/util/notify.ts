@@ -5,7 +5,7 @@
 export class Notifier {
   private static readonly _containerId = 'flashId';
   private static readonly DEFAULT_TIMEOUT = 2000;
-  private static _container: HTMLDivElement | null = null;
+  private static container: HTMLDivElement | null = null;
 
   /**
    * Displays a flash message in the UI
@@ -15,6 +15,7 @@ export class Notifier {
    * @throws Error if message content is empty or container initialization fails
    */
   public static message(msg: string, color: string, timeout = 2000): void {
+    // TODO: Take Color Enum if Possible
     if (!msg) {
       throw new Error('Message content is required');
     }
@@ -24,30 +25,41 @@ export class Notifier {
     }
 
     try {
-      this._ensureContainer();
-      const messageElement = this._createMessageElement(msg, color);
-      this._showWithAnimation(messageElement, timeout);
+      this.ensureContainer();
+      const messageElement = this.createMessageElement(msg, color);
+      this.showWithAnimation(messageElement, timeout);
     } catch (error) {
       throw new Error(`Failed to show notification: ${error}`);
     }
   }
 
-  // XXX: Replace console.log with this.
+  /**
+   * Displays and logs an error notification
+   * @param error - Error object containing message and stack trace
+   * @param timeout - Optional display duration in ms
+   */
   public static error(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
-    // TODO: #C Log Console error and get full error.
-    this.message(msg, 'red', timeout);
+    this.message(`❌ ${msg}`, 'red', timeout);
   }
 
   public static warn(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
-    this.message(msg, 'orange', timeout);
+    this.message(`⚠️ ${msg}`, 'orange', timeout);
   }
 
   public static success(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
-    this.message(msg, 'green', timeout);
+    this.message(`✅ ${msg}`, 'green', timeout);
   }
 
   public static info(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
-    this.message(msg, 'white', timeout);
+    this.message(`ℹ️ ${msg}`, 'white', timeout);
+  }
+
+  public static red(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
+    this.message(`❌ ${msg}`, 'red', timeout);
+  }
+
+  public static yellow(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
+    this.message(`${msg}`, 'yellow', timeout);
   }
 
   /**
@@ -55,7 +67,7 @@ export class Notifier {
    * @private
    * @throws Error if container creation fails
    */
-  private static _ensureContainer(): void {
+  private static ensureContainer(): void {
     let container = document.getElementById(this._containerId) as HTMLDivElement | null;
 
     if (!container) {
@@ -75,7 +87,7 @@ export class Notifier {
       document.body.appendChild(container);
     }
 
-    this._container = container;
+    this.container = container;
   }
 
   /**
@@ -83,8 +95,8 @@ export class Notifier {
    * @private
    * @throws Error if container is not initialized
    */
-  private static _createMessageElement(msg: string, color: string): HTMLDivElement {
-    if (!this._container) {
+  private static createMessageElement(msg: string, color: string): HTMLDivElement {
+    if (!this.container) {
       throw new Error('Notification container not initialized');
     }
 
@@ -104,7 +116,7 @@ export class Notifier {
 
     Object.assign(messageElement.style, messageStyles);
     messageElement.innerHTML = msg;
-    this._container.appendChild(messageElement);
+    this.container.appendChild(messageElement);
 
     return messageElement;
   }
@@ -114,7 +126,7 @@ export class Notifier {
    * @private
    * @throws Error if animation fails
    */
-  private static _showWithAnimation(element: HTMLDivElement, timeout: number): void {
+  private static showWithAnimation(element: HTMLDivElement, timeout: number): void {
     // Show animation
     setTimeout(() => {
       element.style.opacity = '1';
@@ -125,18 +137,18 @@ export class Notifier {
       element.style.opacity = '0';
 
       setTimeout(() => {
-        if (!this._container) {
+        if (!this.container) {
           throw new Error('Container was unexpectedly removed');
         }
 
-        if (element.parentNode === this._container) {
-          this._container.removeChild(element);
+        if (element.parentNode === this.container) {
+          this.container.removeChild(element);
 
-          if (this._container.childNodes.length === 0) {
-            const parent = this._container.parentNode;
+          if (this.container.childNodes.length === 0) {
+            const parent = this.container.parentNode;
             if (parent) {
-              parent.removeChild(this._container);
-              this._container = null;
+              parent.removeChild(this.container);
+              this.container = null;
             }
           }
         }

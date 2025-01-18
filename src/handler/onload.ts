@@ -63,8 +63,7 @@ export class OnLoadHandler implements IOnLoadHandler {
       ($element) => {
         const targetElement = $element.get(0);
         if (!targetElement) {
-          Notifier.error('Unable to setup ticker observer');
-          return;
+          throw new Error('Unable to setup ticker observer');
         }
         this.observeUtil.attributeObserver(targetElement, () => {
           this.tickerChangeHandler.onTickerChange();
@@ -86,13 +85,8 @@ export class OnLoadHandler implements IOnLoadHandler {
       Constants.STORAGE.EVENTS.ALERT_CLICKED,
       (_keyName: string, _oldValue: unknown, newValue: unknown) => {
         if (newValue && typeof newValue === 'string') {
-          try {
-            const alertClickData = JSON.parse(newValue);
-            this.alertHandler.handleAlertClick(alertClickData);
-          } catch (error) {
-            const message = error instanceof Error ? error.message : 'Invalid alert click data';
-            Notifier.error(message);
-          }
+          const alertClickData = JSON.parse(newValue);
+          this.alertHandler.handleAlertClick(alertClickData);
         }
       }
     );
@@ -114,8 +108,7 @@ export class OnLoadHandler implements IOnLoadHandler {
       (element) => {
         const targetElement = element.get(0);
         if (!targetElement) {
-          Notifier.error('Failed to get watchlist element');
-          return;
+          throw new Error('Unable to setup watchlist observer');
         }
         // Watch for watchlist DOM changes
         this.observeUtil.nodeObserver(targetElement, () => {
@@ -131,8 +124,7 @@ export class OnLoadHandler implements IOnLoadHandler {
           (screenerElement) => {
             const targetElement = screenerElement.get(0);
             if (!targetElement) {
-              Notifier.error('Failed to get screener element');
-              return;
+              throw new Error('Unable to setup screener observer');
             }
             this.observeUtil.nodeObserver(targetElement, () => {
               // HACK: Is this requred when Screener Changes?

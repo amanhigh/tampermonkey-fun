@@ -117,15 +117,10 @@ export class AlertHandler implements IAlertHandler {
   public async createAlertsFromTextBox(input: string): Promise<void> {
     const prices = String(input).trim().split(' ');
     for (const p of prices) {
-      try {
-        const price = parseFloat(p);
-        await this.alertManager.createAlertForCurrentTicker(price);
-        this.refreshAlerts();
-        this.notifyAlertCreation(price);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        Notifier.error(message);
-      }
+      const price = parseFloat(p);
+      await this.alertManager.createAlertForCurrentTicker(price);
+      this.refreshAlerts();
+      this.notifyAlertCreation(price);
     }
 
     setTimeout(() => {
@@ -144,54 +139,34 @@ export class AlertHandler implements IAlertHandler {
     if (alertPrice > ltp) {
       Notifier.success(`Alert ${alertPrice} > LTP ${ltp}`);
     } else {
-      Notifier.error(`Alert ${alertPrice} < LTP ${ltp}`);
+      Notifier.red(`Alert ${alertPrice} < LTP ${ltp}`);
     }
   }
 
   /** @inheritdoc */
   public async createAlertAtCursor(): Promise<void> {
-    try {
-      const price = await this.tradingViewManager.getCursorPrice();
-      await this.alertManager.createAlertForCurrentTicker(price);
-      this.refreshAlerts();
-      this.notifyAlertCreation(price);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      Notifier.error(message);
-    }
+    const price = await this.tradingViewManager.getCursorPrice();
+    await this.alertManager.createAlertForCurrentTicker(price);
+    this.refreshAlerts();
+    this.notifyAlertCreation(price);
   }
 
   /** @inheritdoc */
   public async createHighAlert(): Promise<void> {
     const currentPrice = this.tradingViewManager.getLastTradedPrice();
-    if (currentPrice === null) {
-      Notifier.error('Could not get current price');
-      return;
-    }
-
     const targetPrice = (currentPrice * 1.2).toFixed(2);
-    try {
-      const price = parseFloat(targetPrice);
-      await this.alertManager.createAlertForCurrentTicker(price);
-      this.refreshAlerts();
-      this.notifyAlertCreation(price);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      Notifier.error(message);
-    }
+    const price = parseFloat(targetPrice);
+    await this.alertManager.createAlertForCurrentTicker(price);
+    this.refreshAlerts();
+    this.notifyAlertCreation(price);
   }
 
   /** @inheritdoc */
   public async deleteAlertAtCursor(): Promise<void> {
-    try {
-      const price = await this.tradingViewManager.getCursorPrice();
-      await this.alertManager.deleteAlertsByPrice(price);
-      this.refreshAlerts();
-      Notifier.warn(`Alerts deleted around price: ${price}`);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      Notifier.error(message);
-    }
+    const price = await this.tradingViewManager.getCursorPrice();
+    await this.alertManager.deleteAlertsByPrice(price);
+    this.refreshAlerts();
+    Notifier.success(`Alerts deleted around price: ${price}`);
   }
 
   /** @inheritdoc */
@@ -252,7 +227,10 @@ export class AlertHandler implements IAlertHandler {
 
     const event = e as MouseEvent; // Cast to access modifier keys
     if (event.ctrlKey) {
-      void this.pairHandler.mapInvestingTicker(this.tickerManager.getInvestingTicker(), this.tickerManager.getCurrentExchange());
+      void this.pairHandler.mapInvestingTicker(
+        this.tickerManager.getInvestingTicker(),
+        this.tickerManager.getCurrentExchange()
+      );
     } else if (event.shiftKey) {
       this.pairHandler.deletePairInfo(this.tickerManager.getInvestingTicker());
     } else {
@@ -278,26 +256,21 @@ export class AlertHandler implements IAlertHandler {
       case AlertClickAction.OPEN:
         const tvTicker = this.symbolManager.investingToTv(event.investingTicker);
         if (!tvTicker) {
-          Notifier.error(`Unmapped: ${event.investingTicker}`);
+          Notifier.warn(`Unmapped: ${event.investingTicker}`);
           this.tickerHandler.openTicker(event.investingTicker);
-        }else {
+        } else {
           this.tickerHandler.openTicker(tvTicker);
         }
         break;
       default:
-        Notifier.error('No valid action found in alert click event');
+        throw new Error(`Unknown alert action: ${event.action}`);
     }
   }
 
   /** @inheritdoc */
   public async handleResetAlerts(): Promise<void> {
-    try {
-      await this.alertManager.deleteAllAlerts();
-      this.refreshAlerts();
-      Notifier.success('All alerts deleted');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      Notifier.error(message);
-    }
+    await this.alertManager.deleteAllAlerts();
+    this.refreshAlerts();
+    Notifier.success('All alerts deleted');
   }
 }

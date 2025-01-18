@@ -42,14 +42,9 @@ export class TickerHandler implements ITickerHandler {
 
   /** @inheritdoc */
   public openTicker(ticker: string): void {
-    try {
-      const exchangeTicker = this.symbolManager.tvToExchangeTicker(ticker);
-      this.tickerManager.openTicker(exchangeTicker);
-      Notifier.success(`Opened ${exchangeTicker}`);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      Notifier.error(`Failed to open ticker: ${message}`);
-    }
+    const exchangeTicker = this.symbolManager.tvToExchangeTicker(ticker);
+    this.tickerManager.openTicker(exchangeTicker);
+    Notifier.success(`Opened ${exchangeTicker}`);
   }
 
   /** @inheritdoc */

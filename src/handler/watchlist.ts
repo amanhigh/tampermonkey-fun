@@ -74,22 +74,17 @@ export class WatchListHandler implements IWatchListHandler {
 
   /** @inheritdoc */
   public async handleWatchlistCleanup(): Promise<void> {
-    try {
-      // Perform dry run to get potential deletion count
-      const dryRunCount = this.watchManager.dryRunClean();
+    // Perform dry run to get potential deletion count
+    const dryRunCount = this.watchManager.dryRunClean();
 
-      // Wait for unfilter to complete
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+    // Wait for unfilter to complete
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // Handle cleanup based on deletion count
-      if (dryRunCount < 5) {
-        this.executeCleanup();
-      } else {
-        this.executeCleanupWithConfirmation(dryRunCount);
-      }
-    } catch (error) {
-      Notifier.error('Failed to cleanup watchlist');
-      console.error('Watchlist cleanup failed:', error);
+    // Handle cleanup based on deletion count
+    if (dryRunCount < 5) {
+      this.executeCleanup();
+    } else {
+      this.executeCleanupWithConfirmation(dryRunCount);
     }
   }
 
@@ -111,7 +106,7 @@ export class WatchListHandler implements IWatchListHandler {
     if (confirmDeletion) {
       this.executeCleanup();
     } else {
-      Notifier.message('Cleanup aborted by user.', 'red');
+      Notifier.warn('Cleanup aborted by user.');
     }
   }
 

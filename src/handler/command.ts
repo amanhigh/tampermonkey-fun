@@ -59,7 +59,6 @@ export class CommandInputHandler implements ICommandInputHandler {
         return;
       }
     }
-    try {
       switch (processor.type) {
         case 'TICKER':
           this.processTickerInput(processor.value);
@@ -78,10 +77,6 @@ export class CommandInputHandler implements ICommandInputHandler {
         default:
           this.displayHelpMessage();
       }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      Notifier.error(message);
-    }
   }
 
   private determineInputType(value: string): InputProcessor {

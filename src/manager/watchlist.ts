@@ -1,7 +1,6 @@
 import { Constants } from '../models/constant';
 import { IPaintManager } from './paint';
 import { IUIUtil } from '../util/ui';
-import { Notifier } from '../util/notify';
 import { IFnoRepo } from '../repo/fno';
 import { IWatchManager } from './watch';
 import { IFlagManager } from './flag';
@@ -290,7 +289,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
         this.handleFlagFilter(filter);
         break;
       default:
-        Notifier.error('You have a strange Mouse!');
+        throw new Error('You have a strange Mouse!');
     }
   }
 }

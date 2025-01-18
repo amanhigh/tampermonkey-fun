@@ -1,4 +1,4 @@
-import { BaseEvent } from "./events";
+import { BaseEvent } from './events';
 
 /**
  * Enum representing the different states an alert feed item can have:

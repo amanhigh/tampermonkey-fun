@@ -8,7 +8,7 @@ const PRICE_REGEX = /[+-]?\d{1,3}(?:,\d{3})*(?:\.\d+)?/g;
 // Error messages for LTP operations
 const TV_ERRORS = Object.freeze({
   LTP_NOT_FOUND: 'LTP element not found',
-  LTP_PARSE_FAILED: 'Failed to parse LTP:',
+  LTP_PARSE_FAILED: 'LTP Parse Failed',
 } as const);
 
 /**
@@ -120,7 +120,7 @@ export class TradingViewManager implements ITradingViewManager {
   /** @inheritdoc */
   clipboardCopy(text: string): void {
     void GM.setClipboard(text);
-    Notifier.message(`ClipCopy: ${text}`, 'yellow');
+    Notifier.yellow(`ClipCopy: ${text}`);
   }
 
   /** @inheritdoc */

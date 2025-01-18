@@ -139,7 +139,7 @@ export class KiteHandler implements IKiteHandler {
     const orderId = $button.data('order-id');
     const symbol = this.tickerManager.getTicker();
     void this.kiteManager.createGttDeleteEvent(orderId, symbol);
-    Notifier.message(`GTT Delete: ${orderId}`, 'red');
+    Notifier.red(`GTT Delete: ${orderId}`);
   }
 
   /** @inheritdoc */
@@ -181,7 +181,7 @@ export class KiteHandler implements IKiteHandler {
   private async saveGttMap(gttResponse: GttApiResponse): Promise<void> {
     // Only process if we have valid data
     if (!gttResponse?.data) {
-      Notifier.message('Invalid GTT Response', 'red');
+      throw new Error(`Invalid GTT Response: ${JSON.stringify(gttResponse)}`);
       return;
     }
 
@@ -202,7 +202,7 @@ export class KiteHandler implements IKiteHandler {
       await this.kiteManager.createGttRefreshEvent(refreshEvent);
       Notifier.success(`GTT Map Built. Count: ${length}`);
     } else {
-      Notifier.error('No Active GTT Orders Found');
+      Notifier.warn('No Active GTT Orders Found');
     }
   }
 
@@ -308,10 +308,8 @@ export class KiteHandler implements IKiteHandler {
    * @param order - Order details
    */
   private displayOrderMessage(order: GttCreateEvent): void {
-    Notifier.message(
-      `${order.symb} (${order.ltp}), Qty ${order.qty}, SL:ENT:TP: ${order.sl} - ${order.ent} - ${order.tp}`,
-      'yellow'
-    );
+    Notifier.yellow(
+      `${order.symb} (${order.ltp}), Qty ${order.qty}, SL:ENT:TP: ${order.sl} - ${order.ent} - ${order.tp}`    );
   }
 
   /**

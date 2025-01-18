@@ -55,14 +55,9 @@ export class JournalManager implements IJournalManager {
 
   /** @inheritdoc */
   public async createEntry(ticker: string, trend: Trend, reason: string): Promise<void> {
-    try {
-      const journalTag = this.createJournalTag(ticker, trend, reason);
-      await this.kohanClient.recordTicker(journalTag);
-      Notifier.success(`Journal entry created: ${journalTag}`);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      Notifier.error(`Failed to create journal entry: ${message}`);
-    }
+    const journalTag = this.createJournalTag(ticker, trend, reason);
+    await this.kohanClient.recordTicker(journalTag);
+    Notifier.success(`Journal entry created: ${journalTag}`);
   }
 
   /**

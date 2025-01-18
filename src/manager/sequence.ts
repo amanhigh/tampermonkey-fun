@@ -94,10 +94,10 @@ export class SequenceManager implements ISequenceManager {
   toggleFreezeSequence(): void {
     if (this._frozenSequence) {
       this._frozenSequence = null;
-      Notifier.error('FreezeSequence Disabled');
+      Notifier.red('FreezeSequence Disabled');
     } else {
       this._frozenSequence = this.getCurrentSequence();
-      Notifier.warn(`FreezeSequence: ${this._frozenSequence}`);
+      Notifier.message(`FreezeSequence: ${this._frozenSequence}`, 'royalblue');
     }
   }
 

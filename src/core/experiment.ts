@@ -118,7 +118,7 @@ export class ExperimentApp {
   }
 
   private showMessage(text: string): void {
-    Notifier.message(text, 'white');
+    Notifier.info(text);
   }
 }
 
