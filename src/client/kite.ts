@@ -81,7 +81,7 @@ export class KiteClient extends BaseClient implements IKiteClient {
     try {
       await this.makeRequest('/triggers', {
         method: 'POST',
-        data: request.toRequestBody(),
+        data: request.stringify(),
         headers: this.getDefaultHeaders(),
       });
     } catch (error) {

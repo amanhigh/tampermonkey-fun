@@ -3,8 +3,7 @@ import { Notifier } from '../util/notify';
 import { ITickerManager } from '../manager/ticker';
 import { IRecentManager } from '../manager/recent';
 import { ISymbolManager } from '../manager/symbol';
-import { AlertFeedManager } from '../manager/alertfeed';
-import { Constants } from '../models/constant';
+import { IAlertFeedManager } from '../manager/alertfeed';
 
 /**
  * Interface for managing ticker operations
@@ -38,7 +37,7 @@ export class TickerHandler implements ITickerHandler {
     private readonly tickerManager: ITickerManager,
     private readonly symbolManager: ISymbolManager,
     private readonly screenerManager: ITradingViewScreenerManager,
-    private readonly alertFeedManager: AlertFeedManager
+    private readonly alertFeedManager: IAlertFeedManager
   ) {}
 
   /** @inheritdoc */
@@ -58,8 +57,7 @@ export class TickerHandler implements ITickerHandler {
   public resetRecent(): void {
     this.recentManager.clearRecent();
     this.screenerManager.paintScreener();
-    // Special values to Paint all tickers during Reset
-    void this.alertFeedManager.createAlertFeedEvent(Constants.MISC.RESET_FEED);
+    void this.alertFeedManager.createResetFeedEvent();
     Notifier.warn('Recent Reset');
   }
 

@@ -4,8 +4,8 @@ import { ISyncUtil } from '../util/sync';
 import { Notifier } from '../util/notify';
 import { AlertClickAction } from '../models/events';
 import { IAlertManager } from '../manager/alert';
-import { AlertFeedManager } from '../manager/alertfeed';
-import { AlertFeedEvent, FeedInfo } from '../models/alertfeed';
+import { IAlertFeedManager } from '../manager/alertfeed';
+import { AlertFeedEvent, FeedInfo, FeedState } from '../models/alertfeed';
 
 export interface IAlertFeedHandler {
   /**
@@ -29,7 +29,7 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     private readonly uiUtil: IUIUtil,
     private readonly syncUtil: ISyncUtil,
     private readonly alertManager: IAlertManager,
-    private readonly alertFeedManager: AlertFeedManager
+    private readonly alertFeedManager: IAlertFeedManager
   ) {}
 
   public initialize(): void {
@@ -53,8 +53,8 @@ export class AlertFeedHandler implements IAlertFeedHandler {
         if (newValue) {
           const event = AlertFeedEvent.fromString(newValue as string);
           if (event.investingTicker === Constants.MISC.RESET_FEED) {
-            // BUG: Trigger Reload of Page ?
-            this.paintAlertFeed();
+            // Reload the page
+            window.location.reload();
           } else {
             this.updateTicker(event.investingTicker, event.feedInfo);
           }
@@ -67,7 +67,7 @@ export class AlertFeedHandler implements IAlertFeedHandler {
       this.handleHookButton();
     }, 2000);
 
-    console.log('Alert Feed initialized');
+    console.info('Alert Feed initialized');
   }
 
   public handleHookButton(): void {
@@ -103,6 +103,10 @@ export class AlertFeedHandler implements IAlertFeedHandler {
 
       // Get feed info from manager
       const feedInfo = this.alertFeedManager.getAlertFeedState(investingTicker);
+
+      if (feedInfo.state === FeedState.UNMAPPED) {
+        Notifier.warn(`Unmapped: ${investingTicker}`);
+      }
 
       // Apply appropriate color based on state
       $element.css('color', feedInfo.color);

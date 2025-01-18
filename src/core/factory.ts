@@ -65,9 +65,9 @@ import { ITickerChangeHandler, TickerChangeHandler } from '../handler/ticker_cha
 import { ISwiftKeyHandler, SwiftKeyHandler } from '../handler/swiftkey';
 import { ICommandInputHandler, CommandInputHandler } from '../handler/command';
 import { AlertFeedHandler, IAlertFeedHandler } from '../handler/alertfeed';
-import { AlertFeedManager, AlertFeedManagerImpl } from '../manager/alertfeed';
-import { ImdbRepo, ImdbRepoImpl } from '../repo/imdb';
-import { ImdbManager as ImdbManager, ImdbManagerImpl } from '../manager/imdb';
+import { IAlertFeedManager, AlertFeedManager } from '../manager/alertfeed';
+import { IImdbRepo, ImdbRepo } from '../repo/imdb';
+import { IImdbManager as IImdbManager, ImdbManager } from '../manager/imdb';
 
 /**
  * Project Architecture Overview
@@ -152,7 +152,7 @@ export class Factory {
     kite: (): IKiteRepo => Factory._getInstance('kiteRepo', () => new KiteRepo()),
     recent: (): IRecentTickerRepo =>
       Factory._getInstance('recentRepo', () => new RecentTickerRepo(Factory.repo.cron())),
-    imdb: (): ImdbRepo => Factory._getInstance('imdbRepo', () => new ImdbRepoImpl()),
+    imdb: (): IImdbRepo => Factory._getInstance('imdbRepo', () => new ImdbRepo()),
   };
 
   /**
@@ -176,7 +176,7 @@ export class Factory {
           )
       ),
 
-    imdb: (): ImdbManager => Factory._getInstance('imdbManager', () => new ImdbManagerImpl(Factory.repo.imdb())),
+    imdb: (): IImdbManager => Factory._getInstance('imdbManager', () => new ImdbManager(Factory.repo.imdb())),
 
     audit: (): IAuditManager =>
       Factory._getInstance(
@@ -271,10 +271,10 @@ export class Factory {
         () => new JournalManager(Factory.manager.watch(), Factory.manager.sequence(), Factory.client.kohan())
       ),
     fno: (): IFnoManager => Factory._getInstance('fnoManager', () => new FnoManager(Factory.repo.fno())),
-    alertFeed: (): AlertFeedManager =>
+    alertFeed: (): IAlertFeedManager =>
       Factory._getInstance(
         'alertFeedManager',
-        () => new AlertFeedManagerImpl(Factory.manager.symbol(), Factory.manager.watch(), Factory.manager.recent())
+        () => new AlertFeedManager(Factory.manager.symbol(), Factory.manager.watch(), Factory.manager.recent())
       ),
   };
 
@@ -297,7 +297,8 @@ export class Factory {
             Factory.util.ui(),
             Factory.handler.alertSummary(),
             Factory.handler.ticker(),
-            Factory.handler.pair()
+            Factory.handler.pair(),
+            Factory.manager.alertFeed()
           )
       ),
     alertSummary: (): IAlertSummaryHandler =>

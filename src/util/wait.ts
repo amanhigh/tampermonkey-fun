@@ -63,7 +63,7 @@ export class WaitUtil implements IWaitUtil {
       if (count > 0) {
         setTimeout(() => this.waitEE(selector, callback, count - 1, timeout), timeout);
       } else {
-        console.log('Wait Element Failed, exiting Recursion: ' + selector);
+        console.error('Wait Element Failed, exiting Recursion: ' + selector);
       }
     } catch (error) {
       console.error(`waitEE error for selector ${selector}:`, error);

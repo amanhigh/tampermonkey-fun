@@ -76,7 +76,7 @@ export abstract class CategoryRepo extends BaseRepo<CategoryLists, SerializedCat
    * @param data Raw storage data
    * @returns Deserialized CategoryLists instance
    */
-  protected _deserialize(data: SerializedCategoryData): CategoryLists {
+  protected deserialize(data: SerializedCategoryData): CategoryLists {
     const map = new Map<number, Set<string>>();
     Object.entries(data).forEach(([key, value]) => {
       if (Array.isArray(value)) {

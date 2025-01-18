@@ -15,6 +15,7 @@ import { IAlertSummaryHandler } from './alert_summary';
 import { ITickerHandler } from './ticker';
 import { IPairHandler } from './pair';
 import { IAuditHandler } from './audit';
+import { IAlertFeedManager } from '../manager/alertfeed';
 
 /**
  * Interface for managing alert operations
@@ -108,7 +109,8 @@ export class AlertHandler implements IAlertHandler {
     private readonly uiUtil: IUIUtil,
     private readonly alertSummaryHandler: IAlertSummaryHandler,
     private readonly tickerHandler: ITickerHandler,
-    private readonly pairHandler: IPairHandler
+    private readonly pairHandler: IPairHandler,
+    private readonly alertFeedManager: IAlertFeedManager
   ) {}
 
   /** @inheritdoc */
@@ -195,6 +197,7 @@ export class AlertHandler implements IAlertHandler {
   /** @inheritdoc */
   public refreshAlerts(): void {
     this.syncUtil.waitOn('alert-refresh-local', 10, () => {
+      // FIXME: Should not do for Composite Symbols eg. N100/XAUEUR*1000
       const alerts = this.alertManager.getAlerts();
       this.alertSummaryHandler.displayAlerts(alerts);
       this.auditHandler.auditCurrent();
@@ -249,7 +252,7 @@ export class AlertHandler implements IAlertHandler {
 
     const event = e as MouseEvent; // Cast to access modifier keys
     if (event.ctrlKey) {
-      void this.pairHandler.mapInvestingTicker(this.tickerManager.getInvestingTicker());
+      void this.pairHandler.mapInvestingTicker(this.tickerManager.getInvestingTicker(), this.tickerManager.getCurrentExchange());
     } else if (event.shiftKey) {
       this.pairHandler.deletePairInfo(this.tickerManager.getInvestingTicker());
     } else {
@@ -264,17 +267,22 @@ export class AlertHandler implements IAlertHandler {
     switch (event.action) {
       case AlertClickAction.MAP:
         // Map TV Ticker to Investing Ticker
-        this.symbolManager.createTvToInvestingMapping(this.tickerManager.getTicker(), event.ticker);
-        void this.pairHandler.mapInvestingTicker(event.ticker);
-        Notifier.success(`Mapped ${this.tickerManager.getTicker()} to ${event.ticker}`);
+        const tvTickerNow = this.tickerManager.getTicker();
+        this.symbolManager.createTvToInvestingMapping(tvTickerNow, event.investingTicker);
+        void this.alertFeedManager.createAlertFeedEvent(tvTickerNow);
+        void this.pairHandler.mapInvestingTicker(event.investingTicker).then(() => {
+          this.refreshAlerts();
+        });
+        Notifier.success(`Mapped ${this.tickerManager.getTicker()} to ${event.investingTicker}`);
         break;
       case AlertClickAction.OPEN:
-        const tvTicker = this.symbolManager.investingToTv(event.ticker);
+        const tvTicker = this.symbolManager.investingToTv(event.investingTicker);
         if (!tvTicker) {
-          Notifier.error(`Unmapped: ${event.ticker}`);
-          return;
+          Notifier.error(`Unmapped: ${event.investingTicker}`);
+          this.tickerHandler.openTicker(event.investingTicker);
+        }else {
+          this.tickerHandler.openTicker(tvTicker);
         }
-        this.tickerHandler.openTicker(tvTicker);
         break;
       default:
         Notifier.error('No valid action found in alert click event');

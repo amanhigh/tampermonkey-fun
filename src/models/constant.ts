@@ -91,7 +91,7 @@ export const Constants = Object.freeze({
       SELECTED: 'div[class*=selected]', // Old Name: watchListSelectedSelector
     },
     FLAGS: {
-      SYMBOL: 'div[class*=flagWrapper]', // Old Name: symbolFlagSelector
+      SYMBOL: 'div[class^=uiMarker]', // Old Name: symbolFlagSelector
       MARKING: 'div[class^=uiMarker] > svg > path:nth(0)', // Old Name: flagMarkingSelector
     },
     TOOLBARS: {

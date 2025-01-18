@@ -16,6 +16,10 @@ export class PairInfo {
   exchange: string;
 
   constructor(name: string, pairId: string, exchange: string) {
+    const type = typeof(pairId);
+    if (type !== 'string') {
+      throw new Error(`Expected ${name}, pairID - ${pairId} to be a string, got ${type}`);
+    }
     this.name = name;
     this.pairId = pairId;
     this.exchange = exchange;

@@ -95,7 +95,7 @@ export abstract class SetRepo<T> extends BaseRepo<Set<T>, T[]> implements ISetRe
    * @returns Set instance
    * @throws Error if data is invalid or not an array
    */
-  protected _deserialize(data: Array<T>): Set<T> {
+  protected deserialize(data: Array<T>): Set<T> {
     // Validate input data
     if (!Array.isArray(data)) {
       console.warn(`Expected an array for deserialization, but got ${typeof data}. Returning empty Set.`);

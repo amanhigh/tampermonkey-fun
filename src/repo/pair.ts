@@ -44,7 +44,7 @@ export class PairRepo extends MapRepo<string, PairInfo> implements IPairRepo {
   /**
    * @inheritdoc
    */
-  protected _deserialize(data: SerializedData): Map<string, PairInfo> {
+  protected deserialize(data: SerializedData): Map<string, PairInfo> {
     const pairMap = new Map<string, PairInfo>();
     Object.entries(data).forEach(([ticker, info]) => {
       const pairData = info as { name: string; pairId: string; exchange: string };
@@ -58,7 +58,7 @@ export class PairRepo extends MapRepo<string, PairInfo> implements IPairRepo {
    */
   protected _serialize(): SerializedData {
     const data: SerializedData = {};
-    this._map.forEach((pairInfo, ticker) => {
+    this.map.forEach((pairInfo, ticker) => {
       data[ticker] = {
         name: pairInfo.name,
         pairId: pairInfo.pairId,

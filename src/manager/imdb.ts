@@ -1,7 +1,7 @@
 import { MovieDetails, IMDB_CONSTANTS } from '../models/imdb';
-import { ImdbRepo } from '../repo/imdb';
+import { IImdbRepo } from '../repo/imdb';
 
-export interface ImdbManager {
+export interface IImdbManager {
   isMovieTab(): boolean;
   getMovieDetails(): MovieDetails;
   isAutoModeEnabled(): Promise<boolean>;
@@ -11,8 +11,8 @@ export interface ImdbManager {
 /**
  * Manages IMDB page operations and business logic
  */
-export class ImdbManagerImpl implements ImdbManager {
-  constructor(private readonly imdbRepo: ImdbRepo) {}
+export class ImdbManager implements IImdbManager {
+  constructor(private readonly imdbRepo: IImdbRepo) {}
 
   /**
    * Checks if current path is a valid movie page

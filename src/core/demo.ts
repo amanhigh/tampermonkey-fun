@@ -4,10 +4,10 @@ import '../style/main.less';
 import GM_fetch from '@trim21/gm-fetch';
 
 async function main() {
-  console.log('Webpack Demo script start');
+  console.info('Webpack Demo script start');
 
   // cross domain requests
-  console.log(`uuid: ${await fetchExample()}`);
+  console.info(`uuid: ${await fetchExample()}`);
 }
 
 async function fetchExample(): Promise<string> {
@@ -17,5 +17,5 @@ async function fetchExample(): Promise<string> {
 }
 
 main().catch((e) => {
-  console.log(e);
+  console.info(e);
 });

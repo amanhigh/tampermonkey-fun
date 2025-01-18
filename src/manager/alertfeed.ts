@@ -7,7 +7,7 @@ import { IRecentManager } from './recent';
 /**
  * Interface for managing alert feed state
  */
-export interface AlertFeedManager {
+export interface IAlertFeedManager {
   /**
    * Get the alert feed state for a specific investing ticker
    * @param investingTicker The investing ticker to retrieve state for
@@ -21,12 +21,18 @@ export interface AlertFeedManager {
    * @returns Promise that resolves when event is created
    */
   createAlertFeedEvent(tvTicker: string): Promise<void>;
+
+  /**
+   * Create a reset feed event
+   * @returns Promise that resolves when event is created
+   */
+  createResetFeedEvent(): Promise<void>;
 }
 
 /**
  * Implementation of IAlertFeedManager
  */
-export class AlertFeedManagerImpl implements AlertFeedManager {
+export class AlertFeedManager implements IAlertFeedManager {
   constructor(
     private readonly symbolManager: ISymbolManager,
     private readonly watchManager: IWatchManager,
@@ -55,6 +61,12 @@ export class AlertFeedManagerImpl implements AlertFeedManager {
     const investingTicker = this.symbolManager.tvToInvesting(tvTicker);
     const feedInfo = this.getAlertFeedState(investingTicker!);
     const event = new AlertFeedEvent(investingTicker!, feedInfo);
+    await GM.setValue(Constants.STORAGE.EVENTS.ALERT_FEED_UPDATE, event.stringify());
+  }
+
+  public async createResetFeedEvent(): Promise<void> {
+    // Special values to Paint all tickers during Reset
+    const event = new AlertFeedEvent(Constants.MISC.RESET_FEED, { state: FeedState.UNMAPPED, color: 'red' });
     await GM.setValue(Constants.STORAGE.EVENTS.ALERT_FEED_UPDATE, event.stringify());
   }
 }

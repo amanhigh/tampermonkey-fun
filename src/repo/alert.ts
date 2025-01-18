@@ -114,7 +114,7 @@ export class AlertRepo extends MapRepo<string, Alert[]> implements IAlertRepo {
    */
   public getAlertCount(): number {
     let count = 0;
-    this._map.forEach((alerts) => (count += alerts.length));
+    this.map.forEach((alerts) => (count += alerts.length));
     return count;
   }
 

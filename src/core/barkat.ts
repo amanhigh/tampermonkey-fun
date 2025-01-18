@@ -42,16 +42,16 @@ export class Barkat {
 
   private setupInvestingUI(): void {
     this.alertFeedHandler.initialize();
-    console.log('Investing UI setup');
+    console.info('Investing UI setup');
   }
 
   private setupKiteUI(): void {
     this.kiteHandler.setUpListners();
-    console.log('Kite UI setup');
+    console.info('Kite UI setup');
   }
 
   initialize(): void {
-    console.log('barkat initialized');
+    // FIXME: Add Catchall Error Handler
     if (this.isInvestingSite()) {
       this.setupInvestingUI();
     } else if (this.isTradingViewSite()) {
@@ -74,7 +74,7 @@ export class Barkat {
       .appendTo($area)
       .append(
         this.uiUtil.buildCheckBox(Constants.UI.IDS.CHECKBOXES.SWIFT, false).change(() => {
-          console.log('Enabling swift key');
+          console.info('Enabling swift key');
         })
       )
       .append(
@@ -128,7 +128,7 @@ export class Barkat {
     this.kiteHandler.setupGttRefreshListener();
     this.repoCron.start();
     this.onloadHandler.init();
-    console.log('TradingView UI setup');
+    console.info('TradingView UI setup');
   }
 
   journalUI() {
@@ -149,7 +149,7 @@ export class Barkat {
 }
 
 function main(): void {
-  console.log('Barkat started');
+  console.info('Barkat started');
   const barkat = Factory.app.barkat();
   barkat.initialize();
 }

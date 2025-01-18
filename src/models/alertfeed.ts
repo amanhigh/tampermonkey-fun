@@ -1,3 +1,5 @@
+import { BaseEvent } from "./events";
+
 /**
  * Enum representing the different states an alert feed item can have:
  * - UNMAPPED: Default starting state, ticker is not mapped to any information
@@ -27,20 +29,14 @@ export interface FeedInfo {
 /**
  * Class representing an alert feed event
  */
-export class AlertFeedEvent {
+export class AlertFeedEvent extends BaseEvent {
   investingTicker: string;
   feedInfo: FeedInfo;
 
   constructor(investingTicker: string, feedInfo: FeedInfo) {
+    super();
     this.investingTicker = investingTicker;
     this.feedInfo = feedInfo;
-  }
-
-  stringify(): string {
-    return JSON.stringify({
-      investingTicker: this.investingTicker,
-      feedInfo: this.feedInfo,
-    });
   }
 
   /**

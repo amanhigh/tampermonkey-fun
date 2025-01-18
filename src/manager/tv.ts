@@ -125,7 +125,7 @@ export class TradingViewManager implements ITradingViewManager {
 
   /** @inheritdoc */
   toggleFlag(): void {
-    this.waitUtil.waitJClick(Constants.DOM.FLAGS.SYMBOL);
+    this.waitUtil.waitJClick(Constants.DOM.HEADER.SYMBOL_FLAG);
   }
 
   /** @inheritdoc */

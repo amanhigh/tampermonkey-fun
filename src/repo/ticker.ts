@@ -50,7 +50,7 @@ export class TickerRepo extends MapRepo<string, string> implements ITickerRepo {
   /**
    * @inheritdoc
    */
-  protected _deserialize(data: SerializedData): Map<string, string> {
+  protected deserialize(data: SerializedData): Map<string, string> {
     const tickerMap = new Map<string, string>();
     Object.entries(data).forEach(([tvTicker, investingTicker]) => {
       if (typeof investingTicker === 'string') {

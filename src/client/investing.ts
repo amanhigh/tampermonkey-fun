@@ -129,7 +129,7 @@ export class InvestingClient extends BaseClient implements IInvestingClient {
       }
 
       return response.All.map(
-        (item: SearchResultItem) => new PairInfo(item.name, item.pair_ID, item.exchange_name_short)
+        (item: SearchResultItem) => new PairInfo(item.name, item.pair_ID.toString(), item.exchange_name_short)
       );
     } catch (error) {
       throw new Error(`Failed to fetch symbol data: ${(error as Error).message}`);

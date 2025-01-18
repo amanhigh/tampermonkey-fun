@@ -42,7 +42,7 @@ export class ExperimentApp {
         url: 'https://reqres.in/api/users?page=2',
         method: 'GET',
       });
-      console.log(response);
+      console.info(response);
       this.showMessage('API Successful');
     } catch (error) {
       console.error('API Error:', error);
@@ -125,7 +125,7 @@ export class ExperimentApp {
 // @ts-expect-error Kept main for Testing
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function main(): void {
-  console.log('Tamperfun Experiment started');
+  console.info('Tamperfun Experiment started');
   const app = Factory.app.test();
   app.initialize();
 }

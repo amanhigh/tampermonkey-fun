@@ -95,7 +95,7 @@ export class SyncUtil implements ISyncUtil {
     const monitorMutex = (): void => {
       const newTimeout = $waitOn.data(dataId) - waitPeriod; //Remove elapsed Time from timeout Bucket.
       $waitOn.data(dataId, newTimeout);
-      // console.log('Mutex Depleted: ', id, newTimeout)
+      // console.debug('Mutex Depleted: ', id, newTimeout)
 
       /* Handles last element grace period to execute */
       if (newTimeout <= -timeout) {
@@ -116,6 +116,6 @@ export class SyncUtil implements ISyncUtil {
   private _extendTimeout($waitOn: JQuery, dataId: string, timeout: number): void {
     const newTimeout = $waitOn.data(dataId) + timeout; //Add to Timeout Bucket
     $waitOn.data(dataId, newTimeout);
-    // console.log('Mutex Filled: ', id, newTimeout);
+    // console.debug('Mutex Filled: ', id, newTimeout);
   }
 }

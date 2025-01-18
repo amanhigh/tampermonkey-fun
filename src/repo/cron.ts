@@ -27,6 +27,7 @@ export class RepoCron implements IRepoCron {
   }
 
   private _setupCron(): void {
+    // FIXME: Save Trading view as well.
     setInterval(() => void this._saveRepositories(), RepoCron.SAVE_INTERVAL);
   }
 

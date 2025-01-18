@@ -67,7 +67,7 @@ export class MapRepo<K extends string | number, V>
    * Internal map storage
    * @protected
    */
-  protected _map: Map<K, V>;
+  protected map: Map<K, V>;
 
   /**
    * Creates a new map repository
@@ -76,13 +76,13 @@ export class MapRepo<K extends string | number, V>
    */
   constructor(repoCron: IRepoCron, storeId: string) {
     super(repoCron, storeId);
-    this._map = this.createEmptyData();
+    this.map = this.createEmptyData();
     this.load()
       .then((data) => {
-        this._map = data;
+        this.map = data;
       })
       .catch(() => {
-        this._map = this.createEmptyData();
+        this.map = this.createEmptyData();
       });
   }
 
@@ -102,7 +102,7 @@ export class MapRepo<K extends string | number, V>
    */
   protected _serialize(): SerializedData {
     const storeData: SerializedData = {};
-    this._map.forEach((value, key) => {
+    this.map.forEach((value, key) => {
       storeData[String(key)] = value;
     });
     return storeData;
@@ -114,7 +114,7 @@ export class MapRepo<K extends string | number, V>
    * @param data Raw storage data
    * @returns Deserialized Map instance
    */
-  protected _deserialize(data: SerializedData): Map<K, V> {
+  protected deserialize(data: SerializedData): Map<K, V> {
     return new Map(Object.entries(data).map(([key, value]) => [key as K, value as V]));
   }
 
@@ -123,7 +123,7 @@ export class MapRepo<K extends string | number, V>
    * @public
    */
   public clear(): void {
-    this._map.clear();
+    this.map.clear();
   }
 
   /**
@@ -132,7 +132,7 @@ export class MapRepo<K extends string | number, V>
    * @returns Number of entries in map
    */
   public getCount(): number {
-    return this._map.size;
+    return this.map.size;
   }
 
   /**
@@ -141,7 +141,7 @@ export class MapRepo<K extends string | number, V>
    * @returns Array of all keys in map
    */
   public getAllKeys(): K[] {
-    return Array.from(this._map.keys());
+    return Array.from(this.map.keys());
   }
 
   /**
@@ -151,7 +151,7 @@ export class MapRepo<K extends string | number, V>
    * @returns True if key exists
    */
   public has(key: K): boolean {
-    return this._map.has(key);
+    return this.map.has(key);
   }
 
   /**
@@ -161,7 +161,7 @@ export class MapRepo<K extends string | number, V>
    * @returns Value if found, undefined otherwise
    */
   public get(key: K): V | undefined {
-    return this._map.get(key);
+    return this.map.get(key);
   }
 
   /**
@@ -171,7 +171,7 @@ export class MapRepo<K extends string | number, V>
    * @param value Value to set
    */
   public set(key: K, value: V): void {
-    this._map.set(key, value);
+    this.map.set(key, value);
   }
 
   /**
@@ -181,6 +181,6 @@ export class MapRepo<K extends string | number, V>
    * @returns True if entry was deleted
    */
   public delete(key: K): boolean {
-    return this._map.delete(key);
+    return this.map.delete(key);
   }
 }

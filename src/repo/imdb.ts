@@ -3,7 +3,7 @@ import { IMDB_CONSTANTS } from '../models/imdb';
 /**
  * Interface for IMDB storage operations
  */
-export interface ImdbRepo {
+export interface IImdbRepo {
   /**
    * Gets auto mode setting from GM storage
    * @returns Current auto mode state
@@ -20,7 +20,7 @@ export interface ImdbRepo {
 /**
  * Repository for managing IMDB settings
  */
-export class ImdbRepoImpl implements ImdbRepo {
+export class ImdbRepo implements IImdbRepo {
   /**
    * Gets auto mode setting from GM storage
    * Default is false if not set

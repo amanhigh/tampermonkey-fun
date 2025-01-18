@@ -7,7 +7,9 @@ export abstract class BaseEvent {
    * Serialize event to JSON string for storage
    * @returns JSON string representation of the event
    */
-  abstract stringify(): string;
+  public stringify(): string {
+    return JSON.stringify(this);
+  }
 }
 
 export enum AlertClickAction {
@@ -17,21 +19,11 @@ export enum AlertClickAction {
 
 export class AlertClicked extends BaseEvent {
   constructor(
-    readonly ticker: string,
-    readonly action: AlertClickAction
+    readonly investingTicker: string,
+    readonly action: AlertClickAction,
+    readonly timestamp: number = Date.now()
   ) {
     super();
-  }
-
-  /**
-   * Serialize AlertClicked event to JSON string for storage
-   * @returns JSON string representation of the event
-   */
-  public stringify(): string {
-    return JSON.stringify({
-      ticker: this.ticker,
-      action: this.action,
-    });
   }
 
   public static fromString(data: string): AlertClicked {

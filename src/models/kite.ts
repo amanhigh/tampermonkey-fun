@@ -84,21 +84,6 @@ export class GttCreateEvent extends BaseEvent {
   }
 
   /**
-   * Serialize event to JSON string for storage
-   * @returns JSON string with order creation parameters
-   */
-  public stringify(): string {
-    return JSON.stringify({
-      symb: this.symb,
-      qty: this.qty,
-      ltp: this.ltp,
-      sl: this.sl,
-      ent: this.ent,
-      tp: this.tp,
-    });
-  }
-
-  /**
    * Create GttCreateEvent from serialized string
    * @param data Serialized event data
    * @returns New GttCreateEvent instance
@@ -114,14 +99,14 @@ export class GttCreateEvent extends BaseEvent {
  * Maintains a map of active GTT orders by symbol
  */
 export class GttRefreshEvent extends BaseEvent {
-  private _orders: Record<string, Order[]>;
+  orders: Record<string, Order[]>;
 
   /**
    * Creates a new GTT Refresh Event
    */
   constructor() {
     super();
-    this._orders = {};
+    this.orders = {};
   }
 
   /**
@@ -130,10 +115,10 @@ export class GttRefreshEvent extends BaseEvent {
    * @param leg Order to add
    */
   addOrder(sym: string, leg: Order): void {
-    if (!this._orders[sym]) {
-      this._orders[sym] = [];
+    if (!this.orders[sym]) {
+      this.orders[sym] = [];
     }
-    this._orders[sym].push(leg);
+    this.orders[sym].push(leg);
   }
 
   /**
@@ -142,7 +127,7 @@ export class GttRefreshEvent extends BaseEvent {
    * @returns Array of orders for the symbol
    */
   getOrdersForTicker(ticker: string): Order[] {
-    return this._orders[ticker] || [];
+    return this.orders[ticker] || [];
   }
 
   /**
@@ -150,7 +135,7 @@ export class GttRefreshEvent extends BaseEvent {
    * @returns Number of symbols that have orders
    */
   getCount(): number {
-    return Object.keys(this._orders).length;
+    return Object.keys(this.orders).length;
   }
 
   /**
@@ -179,16 +164,6 @@ export class GttRefreshEvent extends BaseEvent {
       return new GttRefreshEvent();
     }
   }
-
-  /**
-   * Serialize event to JSON string for storage
-   * @returns JSON string with orders map
-   */
-  public stringify(): string {
-    return JSON.stringify({
-      orders: this._orders,
-    });
-  }
 }
 
 /**
@@ -207,16 +182,16 @@ interface GttRequestOrder {
 /**
  * GTT order body for API requests
  */
-export class CreateGttRequest {
-  private readonly _condition: {
+export class CreateGttRequest extends BaseEvent {
+  readonly condition: {
     exchange: string;
     tradingsymbol: string;
     trigger_values: number[];
     last_price: number;
   };
-  private readonly _orders: GttRequestOrder[];
-  private readonly _type: string;
-  private readonly _expires_at: string;
+  readonly orders: GttRequestOrder[];
+  readonly type: string;
+  readonly expires_at: string;
 
   /**
    * Creates a GTT order body with condition and orders
@@ -235,31 +210,20 @@ export class CreateGttRequest {
     type: string,
     expiryDate: string
   ) {
+    super();
     if (!tradingsymbol || !triggers.length || !orders.length) {
       throw new Error('Invalid GTT request parameters');
     }
 
-    this._condition = {
+    this.condition = {
       exchange: 'NSE',
       tradingsymbol,
       trigger_values: triggers,
       last_price: lastPrice,
     };
-    this._orders = orders;
-    this._type = type;
-    this._expires_at = expiryDate;
-  }
-
-  /**
-   * Gets the complete order body for API request
-   */
-  toRequestBody(): string {
-    return JSON.stringify({
-      condition: this._condition,
-      orders: this._orders,
-      type: this._type,
-      expires_at: this._expires_at,
-    });
+    this.orders = orders;
+    this.type = type;
+    this.expires_at = expiryDate;
   }
 }
 
@@ -293,28 +257,13 @@ export interface GttApiData {
  * GTT API Response data format
  */
 export class GttDeleteEvent extends BaseEvent {
-  private readonly _orderId: string;
-  private readonly _symbol: string;
+  readonly orderId: string;
+  readonly symbol: string;
 
   constructor(orderId: string, symbol: string) {
     super();
-    this._orderId = orderId;
-    this._symbol = symbol;
-  }
-
-  get orderId(): string {
-    return this._orderId;
-  }
-
-  get symbol(): string {
-    return this._symbol;
-  }
-
-  public stringify(): string {
-    return JSON.stringify({
-      orderId: this._orderId,
-      symbol: this._symbol,
-    });
+    this.orderId = orderId;
+    this.symbol = symbol;
   }
 }
 

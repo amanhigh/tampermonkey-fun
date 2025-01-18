@@ -6,7 +6,7 @@ import { ISequenceHandler } from './sequence';
 import { IKiteHandler } from './kite';
 import { ISyncUtil } from '../util/sync';
 import { IWatchManager } from '../manager/watch';
-import { AlertFeedManager } from '../manager/alertfeed';
+import { IAlertFeedManager } from '../manager/alertfeed';
 
 export interface ITickerChangeHandler {
   onTickerChange(): void;
@@ -23,7 +23,7 @@ export class TickerChangeHandler implements ITickerChangeHandler {
     private readonly kiteHandler: IKiteHandler,
     private readonly syncUtil: ISyncUtil,
     private readonly watchManager: IWatchManager,
-    private readonly alertFeedManager: AlertFeedManager
+    private readonly alertFeedManager: IAlertFeedManager
   ) {}
 
   public onTickerChange(): void {

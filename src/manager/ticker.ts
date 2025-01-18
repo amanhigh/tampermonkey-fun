@@ -69,8 +69,8 @@ export class TickerManager implements ITickerManager {
    * @param watchlistManager Manager for watchlist operations
    */
   constructor(
-    private readonly _waitUtil: IWaitUtil,
-    private readonly _symbolManager: ISymbolManager,
+    private readonly waitUtil: IWaitUtil,
+    private readonly symbolManager: ISymbolManager,
     private readonly screenerManager: ITradingViewScreenerManager,
     private readonly watchlistManager: ITradingViewWatchlistManager
   ) {}
@@ -96,15 +96,18 @@ export class TickerManager implements ITickerManager {
   /** @inheritdoc */
   getInvestingTicker(): string {
     const tvTicker = this.getTicker();
-    const investingTicker = this._symbolManager.tvToInvesting(tvTicker);
-    return investingTicker || tvTicker;
+    const investingTicker = this.symbolManager.tvToInvesting(tvTicker);
+    if (!investingTicker) {
+      throw new Error(`Investing ticker not found for ${tvTicker}`);
+    }
+    return investingTicker;
   }
 
   /** @inheritdoc */
   openTicker(ticker: string): void {
-    const exchangeTicker = this._symbolManager.tvToExchangeTicker(ticker);
-    this._waitUtil.waitClick(Constants.DOM.BASIC.TICKER);
-    this._waitUtil.waitInput(Constants.DOM.POPUPS.SEARCH, exchangeTicker);
+    const exchangeTicker = this.symbolManager.tvToExchangeTicker(ticker);
+    this.waitUtil.waitClick(Constants.DOM.BASIC.TICKER);
+    this.waitUtil.waitInput(Constants.DOM.POPUPS.SEARCH, exchangeTicker);
   }
 
   /** @inheritdoc */
@@ -149,8 +152,6 @@ export class TickerManager implements ITickerManager {
     }
 
     const nextTicker = this.calculateNextTicker(currentTicker, visibleTickers, step);
-    console.log(currentTicker, nextTicker, step);
-    console.log(visibleTickers);
 
     this.openTicker(nextTicker);
   }

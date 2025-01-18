@@ -70,15 +70,15 @@ export interface IAlertManager {
 export class AlertManager implements IAlertManager {
   constructor(
     private readonly alertRepo: IAlertRepo,
-    private readonly _pairManager: IPairManager,
-    private readonly _tickerManager: ITickerManager,
-    private readonly _investingClient: IInvestingClient,
-    private readonly _tradingViewManager: ITradingViewManager
+    private readonly pairManager: IPairManager,
+    private readonly tickerManager: ITickerManager,
+    private readonly investingClient: IInvestingClient,
+    private readonly tradingViewManager: ITradingViewManager
   ) {}
 
   /** @inheritdoc */
   getAlerts(): Alert[] | null {
-    const investingTicker = this._tickerManager.getInvestingTicker();
+    const investingTicker = this.tickerManager.getInvestingTicker();
     return this.getAlertsForInvestingTicker(investingTicker);
   }
 
@@ -88,16 +88,16 @@ export class AlertManager implements IAlertManager {
    * @param price Alert price
    * @private
    */
-  private async _createAlert(investingTicker: string, price: number): Promise<void> {
-    const pairInfo = this._pairManager.investingTickerToPairInfo(investingTicker);
+  private async createAlert(investingTicker: string, price: number): Promise<void> {
+    const pairInfo = this.pairManager.investingTickerToPairInfo(investingTicker);
     if (!pairInfo) {
       throw new Error(`No pair info found for ticker: ${investingTicker}`);
       return;
     }
 
     try {
-      const ltp = this._tradingViewManager.getLastTradedPrice();
-      const response = await this._investingClient.createAlert(pairInfo.name, pairInfo.pairId, price, ltp);
+      const ltp = this.tradingViewManager.getLastTradedPrice();
+      const response = await this.investingClient.createAlert(pairInfo.name, pairInfo.pairId, price, ltp);
       const alert = new Alert('', response.pairId, response.price);
       this.alertRepo.addAlert(pairInfo.pairId, alert);
     } catch {
@@ -111,7 +111,7 @@ export class AlertManager implements IAlertManager {
    * @returns Number of alerts loaded
    * @private
    */
-  private _reloadFromHtml(html: string): number {
+  private reloadFromHtml(html: string): number {
     try {
       let count = 0;
 
@@ -140,13 +140,13 @@ export class AlertManager implements IAlertManager {
 
   /** @inheritdoc */
   async createAlertForCurrentTicker(price: number): Promise<void> {
-    const investingTicker = this._tickerManager.getInvestingTicker();
-    await this._createAlert(investingTicker, price);
+    const investingTicker = this.tickerManager.getInvestingTicker();
+    await this.createAlert(investingTicker, price);
   }
 
   /** @inheritdoc */
   async deleteAllAlerts(): Promise<void> {
-    const pairInfo = this._getCurrentPairInfo();
+    const pairInfo = this.getCurrentPairInfo();
     if (!pairInfo) {
       Notifier.error('Could not get pair info for current ticker');
       return;
@@ -162,7 +162,7 @@ export class AlertManager implements IAlertManager {
 
   /** @inheritdoc */
   async deleteAlertsByPrice(targetPrice: number): Promise<void> {
-    const pairInfo = this._getCurrentPairInfo();
+    const pairInfo = this.getCurrentPairInfo();
     if (!pairInfo) {
       Notifier.error('Could not get pair info for current ticker');
       return;
@@ -187,7 +187,7 @@ export class AlertManager implements IAlertManager {
   /** @inheritdoc */
   async deleteAlert(alert: Alert): Promise<void> {
     try {
-      await this._investingClient.deleteAlert(alert);
+      await this.investingClient.deleteAlert(alert);
       this.alertRepo.removeAlert(alert.pairId, alert.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -199,8 +199,8 @@ export class AlertManager implements IAlertManager {
   async reloadAlerts(): Promise<number> {
     try {
       this.alertRepo.clear();
-      const html = await this._investingClient.getAllAlerts();
-      const count = this._reloadFromHtml(html);
+      const html = await this.investingClient.getAllAlerts();
+      const count = this.reloadFromHtml(html);
 
       return count;
     } catch {
@@ -211,7 +211,7 @@ export class AlertManager implements IAlertManager {
 
   /** @inheritdoc */
   public getAlertsForInvestingTicker(investingTicker: string): Alert[] | null {
-    const pairInfo = this._pairManager.investingTickerToPairInfo(investingTicker);
+    const pairInfo = this.pairManager.investingTickerToPairInfo(investingTicker);
     if (!pairInfo) {
       return null;
     }
@@ -219,8 +219,8 @@ export class AlertManager implements IAlertManager {
   }
 
   /** @inheritdoc */
-  public async createAlertClickEvent(ticker: string, action: AlertClickAction): Promise<void> {
-    const event = new AlertClicked(ticker, action);
+  public async createAlertClickEvent(investingTicker: string, action: AlertClickAction): Promise<void> {
+    const event = new AlertClicked(investingTicker, action);
     await this.alertRepo.createAlertClickEvent(event);
   }
 
@@ -229,8 +229,8 @@ export class AlertManager implements IAlertManager {
    * @private
    * @returns PairInfo or null if not found
    */
-  private _getCurrentPairInfo(): PairInfo | null {
-    const investingTicker = this._tickerManager.getInvestingTicker();
-    return this._pairManager.investingTickerToPairInfo(investingTicker);
+  private getCurrentPairInfo(): PairInfo | null {
+    const investingTicker = this.tickerManager.getInvestingTicker();
+    return this.pairManager.investingTickerToPairInfo(investingTicker);
   }
 }

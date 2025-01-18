@@ -30,7 +30,7 @@ export class AuditRepo extends MapRepo<string, AlertAudit> implements IAuditRepo
   /**
    * @inheritdoc
    */
-  protected _deserialize(data: SerializedData): Map<string, AlertAudit> {
+  protected deserialize(data: SerializedData): Map<string, AlertAudit> {
     const auditMap = new Map<string, AlertAudit>();
     Object.entries(data).forEach(([ticker, audit]) => {
       const auditData = audit as { ticker: string; state: AlertState };
@@ -43,6 +43,6 @@ export class AuditRepo extends MapRepo<string, AlertAudit> implements IAuditRepo
    * @inheritdoc
    */
   public getFilteredAuditResults(state: AlertState): AlertAudit[] {
-    return Array.from(this._map.values()).filter((result) => result.state === state);
+    return Array.from(this.map.values()).filter((result) => result.state === state);
   }
 }

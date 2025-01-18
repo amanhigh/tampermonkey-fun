@@ -40,7 +40,7 @@ export class SequenceRepo extends MapRepo<string, SequenceType> implements ISequ
   /**
    * @inheritdoc
    */
-  protected _deserialize(data: SerializedData): Map<string, SequenceType> {
+  protected deserialize(data: SerializedData): Map<string, SequenceType> {
     const sequenceMap = new Map<string, SequenceType>();
     Object.entries(data).forEach(([ticker, sequence]) => {
       if (this._isValidSequence(sequence as string)) {
