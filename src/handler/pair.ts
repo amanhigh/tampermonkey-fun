@@ -40,21 +40,21 @@ export class PairHandler implements IPairHandler {
   public async mapInvestingTicker(investingTicker: string, exchange = ''): Promise<void> {
     Notifier.info(`Searching for ${investingTicker} on ${exchange}`);
 
-      const pairs = await this.investingClient.fetchSymbolData(investingTicker);
-      const options = this.formatPairOptions(pairs);
-      const selected = await this.smartPrompt.showModal(options.slice(0, 10));
+    const pairs = await this.investingClient.fetchSymbolData(investingTicker);
+    const options = this.formatPairOptions(pairs);
+    const selected = await this.smartPrompt.showModal(options.slice(0, 10));
 
-      if (!selected) {
-        Notifier.warn(`Invalid selection for ${investingTicker} on ${exchange}, cant map Pair.`);
-        return;
-      }
+    if (!selected) {
+      Notifier.warn(`Invalid selection for ${investingTicker} on ${exchange}, cant map Pair.`);
+      return;
+    }
 
-      const selectedPair = this.findSelectedPair(pairs, selected);
-      if (selectedPair) {
-        Notifier.info(`Selected: ${this.formatPair(selectedPair)}`);
-        this.pairManager.createInvestingToPairMapping(investingTicker, selectedPair);
-        return;
-      }
+    const selectedPair = this.findSelectedPair(pairs, selected);
+    if (selectedPair) {
+      Notifier.info(`Selected: ${this.formatPair(selectedPair)}`);
+      this.pairManager.createInvestingToPairMapping(investingTicker, selectedPair);
+      return;
+    }
   }
 
   /**

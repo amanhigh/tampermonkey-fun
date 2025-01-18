@@ -44,6 +44,10 @@ barkat: ## Run Barkat
 	@printf $(_TITLE) "Run" "Barkat"
 	$(NPM) run barkat
 
+imdb: ## Run IMDB Script
+	@printf $(_TITLE) "Run" "IMDB"
+	$(NPM) run imdb
+
 ## Setup
 setup-npm:
 	@printf $(_TITLE) "Setup" "NPM"

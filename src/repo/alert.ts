@@ -71,7 +71,7 @@ export class AlertRepo extends MapRepo<string, Alert[]> implements IAlertRepo {
    */
   public addAlert(pairId: string, alert: Alert): void {
     if (!alert || !alert.price || !alert.pairId) {
-      throw new Error('Invalid alert object');
+      throw new Error(`Invalid alert object: ${alert.price} ${alert.pairId}`);
     }
     const alerts = this.get(pairId) || [];
     alerts.push(alert);

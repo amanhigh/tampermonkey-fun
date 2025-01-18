@@ -104,7 +104,7 @@ export class AuditHandler implements IAuditHandler {
       e.preventDefault();
       this.pairManager.deletePairInfo(investingTicker);
       button.remove();
-      Notifier.warn(`Removed mapping for ${investingTicker}`);
+      Notifier.red(`❌ Removed mapping for ${investingTicker}`);
     });
 
     return button;

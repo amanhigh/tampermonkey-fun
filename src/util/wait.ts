@@ -53,51 +53,39 @@ export class WaitUtil implements IWaitUtil {
       return;
     }
 
-    try {
-      const el = document.querySelector<HTMLElement>(selector);
+    const el = document.querySelector<HTMLElement>(selector);
 
-      if (el) {
-        return callback(el);
-      }
+    if (el) {
+      return callback(el);
+    }
 
-      if (count > 0) {
-        setTimeout(() => this.waitEE(selector, callback, count - 1, timeout), timeout);
-      } else {
-        console.error('Wait Element Failed, exiting Recursion: ' + selector);
-      }
-    } catch (error) {
-      console.error(`waitEE error for selector ${selector}:`, error);
+    if (count > 0) {
+      setTimeout(() => this.waitEE(selector, callback, count - 1, timeout), timeout);
+    } else {
+      console.error('Wait Element Failed, exiting Recursion: ' + selector);
     }
   }
 
   /** @inheritdoc */
   public waitJEE(selector: string, callback: (element: JQuery) => void, count = 3, timeout = 2000): void {
-    try {
-      const el = $(selector);
+    const el = $(selector);
 
-      if (el.length) {
-        return callback(el);
-      }
+    if (el.length) {
+      return callback(el);
+    }
 
-      if (count > 0) {
-        setTimeout(() => this.waitJEE(selector, callback, count - 1, timeout), timeout);
-      } else {
-        console.warn('Jquery Wait Element Failed, exiting Recursion: ' + selector);
-      }
-    } catch (error) {
-      console.error(`waitJEE error for selector ${selector}:`, error);
+    if (count > 0) {
+      setTimeout(() => this.waitJEE(selector, callback, count - 1, timeout), timeout);
+    } else {
+      console.warn('Jquery Wait Element Failed, exiting Recursion: ' + selector);
     }
   }
 
   /** @inheritdoc */
   public waitClick(selector: string, callback: () => void = () => {}): void {
     this.waitEE(selector, (e) => {
-      try {
-        e.click();
-        callback();
-      } catch (error) {
-        console.error(`waitClick error for selector ${selector}:`, error);
-      }
+      e.click();
+      callback();
     });
   }
 
@@ -106,12 +94,8 @@ export class WaitUtil implements IWaitUtil {
     this.waitJEE(
       selector,
       (e) => {
-        try {
-          e.click();
-          callback();
-        } catch (error) {
-          console.error(`waitJClick error for selector ${selector}:`, error);
-        }
+        e.click();
+        callback();
       },
       3,
       20
@@ -128,19 +112,15 @@ export class WaitUtil implements IWaitUtil {
     this.waitEE(
       selector,
       (e) => {
-        try {
-          const inputElement = e as HTMLInputElement;
-          inputElement.value = inputValue;
-          inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-          inputElement.dispatchEvent(
-            new KeyboardEvent('keydown', {
-              bubbles: true,
-              keyCode: 13,
-            })
-          );
-        } catch (error) {
-          console.error(`waitInput error for selector ${selector}:`, error);
-        }
+        const inputElement = e as HTMLInputElement;
+        inputElement.value = inputValue;
+        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+        inputElement.dispatchEvent(
+          new KeyboardEvent('keydown', {
+            bubbles: true,
+            keyCode: 13,
+          })
+        );
       },
       6,
       5

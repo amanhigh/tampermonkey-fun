@@ -238,14 +238,10 @@ export class KiteHandler implements IKiteHandler {
    * Delay allows UI to update after tab change
    */
   private async reloadGttOrders(): Promise<void> {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      await new Promise<GttApiResponse>((resolve) => {
-        this.kiteManager.loadOrders(resolve);
-      }).then(async (response) => this.saveGttMap(response));
-    } catch (error) {
-      console.error('Failed to refresh GTT orders:', error);
-    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise<GttApiResponse>((resolve) => {
+      this.kiteManager.loadOrders(resolve);
+    }).then(async (response) => this.saveGttMap(response));
   }
 
   /**
@@ -309,7 +305,8 @@ export class KiteHandler implements IKiteHandler {
    */
   private displayOrderMessage(order: GttCreateEvent): void {
     Notifier.yellow(
-      `${order.symb} (${order.ltp}), Qty ${order.qty}, SL:ENT:TP: ${order.sl} - ${order.ent} - ${order.tp}`    );
+      `🚀 ${order.symb} (${order.ltp}), Qty ${order.qty}, SL:ENT:TP: ${order.sl} - ${order.ent} - ${order.tp}`
+    );
   }
 
   /**

@@ -1,4 +1,6 @@
+/* eslint-disable max-lines */
 import { InvestingClient, IInvestingClient } from '../client/investing';
+import { IImdbHandler, ImdbHandler } from '../handler/imdb';
 import { KiteClient, IKiteClient } from '../client/kite';
 import { KohanClient, IKohanClient } from '../client/kohan';
 import { UIUtil, IUIUtil } from '../util/ui';
@@ -9,6 +11,7 @@ import { KeyUtil, IKeyUtil } from '../util/key';
 import { SmartPrompt, ISmartPrompt } from '../util/smart';
 import { WaitUtil, IWaitUtil } from '../util/wait';
 import { ExperimentApp } from './experiment';
+import { ImdbApp } from './imdb';
 import { Barkat } from './barkat';
 
 // Repository Imports
@@ -82,7 +85,7 @@ export class Factory {
    * Instance cache for singletons
    * @private
    */
-  private static _instances: Record<string, unknown> = {};
+  private static instances: Record<string, unknown> = {};
 
   /**
    * Application Layer
@@ -90,9 +93,9 @@ export class Factory {
    */
   public static app = {
     test: (): ExperimentApp =>
-      Factory._getInstance('testApp', () => new ExperimentApp(Factory.util.ui(), Factory.util.key())),
+      Factory.getInstance('testApp', () => new ExperimentApp(Factory.util.ui(), Factory.util.key())),
     barkat: (): Barkat =>
-      Factory._getInstance(
+      Factory.getInstance(
         'barkat',
         () =>
           new Barkat(
@@ -109,6 +112,8 @@ export class Factory {
             Factory.handler.alertFeed()
           )
       ),
+    imdb: (): ImdbApp =>
+      Factory.getInstance('imdbApp', () => new ImdbApp(Factory.handler.imdb(), Factory.manager.imdb())),
   };
 
   /**
@@ -116,9 +121,9 @@ export class Factory {
    * Handles external API interactions
    */
   public static client = {
-    investing: (): IInvestingClient => Factory._getInstance('investingClient', () => new InvestingClient()),
-    kite: (): IKiteClient => Factory._getInstance('kiteClient', () => new KiteClient()),
-    kohan: (): IKohanClient => Factory._getInstance('kohanClient', () => new KohanClient()),
+    investing: (): IInvestingClient => Factory.getInstance('investingClient', () => new InvestingClient()),
+    kite: (): IKiteClient => Factory.getInstance('kiteClient', () => new KiteClient()),
+    kohan: (): IKohanClient => Factory.getInstance('kohanClient', () => new KohanClient()),
   };
 
   /**
@@ -126,13 +131,13 @@ export class Factory {
    * Handles utility operations and management
    */
   public static util = {
-    wait: (): IWaitUtil => Factory._getInstance('waitUtil', () => new WaitUtil()),
-    observer: (): IObserveUtil => Factory._getInstance('observeUtil', () => new ObserveUtil()),
-    search: (): ISearchUtil => Factory._getInstance('searchUtil', () => new SearchUtil()),
-    sync: (): ISyncUtil => Factory._getInstance('syncUtil', () => new SyncUtil()),
-    key: (): IKeyUtil => Factory._getInstance('keyUtil', () => new KeyUtil(Factory.util.sync())),
-    smart: (): ISmartPrompt => Factory._getInstance('smartPrompt', () => new SmartPrompt()),
-    ui: (): IUIUtil => Factory._getInstance('uiUtil', () => new UIUtil()),
+    wait: (): IWaitUtil => Factory.getInstance('waitUtil', () => new WaitUtil()),
+    observer: (): IObserveUtil => Factory.getInstance('observeUtil', () => new ObserveUtil()),
+    search: (): ISearchUtil => Factory.getInstance('searchUtil', () => new SearchUtil()),
+    sync: (): ISyncUtil => Factory.getInstance('syncUtil', () => new SyncUtil()),
+    key: (): IKeyUtil => Factory.getInstance('keyUtil', () => new KeyUtil(Factory.util.sync())),
+    smart: (): ISmartPrompt => Factory.getInstance('smartPrompt', () => new SmartPrompt()),
+    ui: (): IUIUtil => Factory.getInstance('uiUtil', () => new UIUtil()),
   };
 
   /**
@@ -140,21 +145,20 @@ export class Factory {
    * Handles data persistence for various entities
    */
   public static repo = {
-    cron: (): IRepoCron => Factory._getInstance('repoCron', () => new RepoCron()),
+    cron: (): IRepoCron => Factory.getInstance('repoCron', () => new RepoCron()),
 
-    flag: (): IFlagRepo => Factory._getInstance('flagRepo', () => new FlagRepo(Factory.repo.cron())),
-    watch: (): IWatchlistRepo => Factory._getInstance('watchRepo', () => new Watchlistrepo(Factory.repo.cron())),
-    alert: (): IAlertRepo => Factory._getInstance('alertRepo', () => new AlertRepo(Factory.repo.cron())),
-    pair: (): IPairRepo => Factory._getInstance('pairRepo', () => new PairRepo(Factory.repo.cron())),
-    exchange: (): IExchangeRepo => Factory._getInstance('exchangeRepo', () => new ExchangeRepo(Factory.repo.cron())),
-    ticker: (): ITickerRepo => Factory._getInstance('tickerRepo', () => new TickerRepo(Factory.repo.cron())),
-    sequence: (): ISequenceRepo => Factory._getInstance('sequenceRepo', () => new SequenceRepo(Factory.repo.cron())),
-    audit: (): IAuditRepo => Factory._getInstance('auditRepo', () => new AuditRepo(Factory.repo.cron())),
-    fno: (): IFnoRepo => Factory._getInstance('fnoRepo', () => new FnoRepo(Factory.repo.cron())),
-    kite: (): IKiteRepo => Factory._getInstance('kiteRepo', () => new KiteRepo()),
-    recent: (): IRecentTickerRepo =>
-      Factory._getInstance('recentRepo', () => new RecentTickerRepo(Factory.repo.cron())),
-    imdb: (): IImdbRepo => Factory._getInstance('imdbRepo', () => new ImdbRepo()),
+    flag: (): IFlagRepo => Factory.getInstance('flagRepo', () => new FlagRepo(Factory.repo.cron())),
+    watch: (): IWatchlistRepo => Factory.getInstance('watchRepo', () => new Watchlistrepo(Factory.repo.cron())),
+    alert: (): IAlertRepo => Factory.getInstance('alertRepo', () => new AlertRepo(Factory.repo.cron())),
+    pair: (): IPairRepo => Factory.getInstance('pairRepo', () => new PairRepo(Factory.repo.cron())),
+    exchange: (): IExchangeRepo => Factory.getInstance('exchangeRepo', () => new ExchangeRepo(Factory.repo.cron())),
+    ticker: (): ITickerRepo => Factory.getInstance('tickerRepo', () => new TickerRepo(Factory.repo.cron())),
+    sequence: (): ISequenceRepo => Factory.getInstance('sequenceRepo', () => new SequenceRepo(Factory.repo.cron())),
+    audit: (): IAuditRepo => Factory.getInstance('auditRepo', () => new AuditRepo(Factory.repo.cron())),
+    fno: (): IFnoRepo => Factory.getInstance('fnoRepo', () => new FnoRepo(Factory.repo.cron())),
+    kite: (): IKiteRepo => Factory.getInstance('kiteRepo', () => new KiteRepo()),
+    recent: (): IRecentTickerRepo => Factory.getInstance('recentRepo', () => new RecentTickerRepo(Factory.repo.cron())),
+    imdb: (): IImdbRepo => Factory.getInstance('imdbRepo', () => new ImdbRepo()),
   };
 
   /**
@@ -163,10 +167,10 @@ export class Factory {
    */
   public static manager = {
     timeFrame: (): ITimeFrameManager =>
-      Factory._getInstance('timeframeManager', () => new TimeFrameManager(Factory.manager.sequence())),
+      Factory.getInstance('timeframeManager', () => new TimeFrameManager(Factory.manager.sequence())),
 
     alert: (): IAlertManager =>
-      Factory._getInstance(
+      Factory.getInstance(
         'alertManager',
         () =>
           new AlertManager(
@@ -178,10 +182,10 @@ export class Factory {
           )
       ),
 
-    imdb: (): IImdbManager => Factory._getInstance('imdbManager', () => new ImdbManager(Factory.repo.imdb())),
+    imdb: (): IImdbManager => Factory.getInstance('imdbManager', () => new ImdbManager(Factory.repo.imdb())),
 
     audit: (): IAuditManager =>
-      Factory._getInstance(
+      Factory.getInstance(
         'auditManager',
         () =>
           new AuditManager(
@@ -193,7 +197,7 @@ export class Factory {
       ),
 
     watchlist: (): ITradingViewWatchlistManager =>
-      Factory._getInstance(
+      Factory.getInstance(
         'watchlistManager',
         () =>
           new TradingViewWatchlistManager(
@@ -206,7 +210,7 @@ export class Factory {
       ),
 
     header: (): IHeaderManager =>
-      Factory._getInstance(
+      Factory.getInstance(
         'headerManager',
         () =>
           new HeaderManager(
@@ -218,24 +222,24 @@ export class Factory {
           )
       ),
 
-    watch: (): IWatchManager => Factory._getInstance('watchManager', () => new WatchManager(Factory.repo.watch())),
+    watch: (): IWatchManager => Factory.getInstance('watchManager', () => new WatchManager(Factory.repo.watch())),
 
     screener: (): ITradingViewScreenerManager =>
-      Factory._getInstance(
+      Factory.getInstance(
         'screenerManager',
         () => new TradingViewScreenerManager(Factory.manager.paint(), Factory.manager.watch(), Factory.manager.flag())
       ),
 
     sequence: (): ISequenceManager =>
-      Factory._getInstance(
+      Factory.getInstance(
         'sequenceManager',
         () => new SequenceManager(Factory.repo.sequence(), Factory.manager.ticker())
       ),
 
-    paint: (): IPaintManager => Factory._getInstance('paintManager', () => new PaintManager()),
+    paint: (): IPaintManager => Factory.getInstance('paintManager', () => new PaintManager()),
 
     ticker: (): ITickerManager =>
-      Factory._getInstance(
+      Factory.getInstance(
         'tickerManager',
         () =>
           new TickerManager(
@@ -247,34 +251,40 @@ export class Factory {
       ),
 
     kite: (): IKiteManager =>
-      Factory._getInstance(
+      Factory.getInstance(
         'kiteManager',
         () => new KiteManager(Factory.manager.symbol(), Factory.client.kite(), Factory.repo.kite())
       ),
 
     symbol: (): ISymbolManager =>
-      Factory._getInstance('symbolManager', () => new SymbolManager(Factory.repo.ticker(), Factory.repo.exchange())),
+      Factory.getInstance('symbolManager', () => new SymbolManager(Factory.repo.ticker(), Factory.repo.exchange())),
 
-    tv: (): ITradingViewManager => Factory._getInstance('tvManager', () => new TradingViewManager(Factory.util.wait())),
+    tv: (): ITradingViewManager => Factory.getInstance('tvManager', () => new TradingViewManager(Factory.util.wait())),
 
-    pair: (): IPairManager => Factory._getInstance('pairManager', () => new PairManager(Factory.repo.pair())),
+    pair: (): IPairManager => Factory.getInstance('pairManager', () => new PairManager(Factory.repo.pair())),
 
     style: (): IStyleManager =>
-      Factory._getInstance('styleManager', () => new StyleManager(Factory.util.wait(), Factory.manager.timeFrame())),
+      Factory.getInstance('styleManager', () => new StyleManager(Factory.util.wait(), Factory.manager.timeFrame())),
 
     flag: (): IFlagManager =>
-      Factory._getInstance('flagManager', () => new FlagManager(Factory.repo.flag(), Factory.manager.paint())),
+      Factory.getInstance('flagManager', () => new FlagManager(Factory.repo.flag(), Factory.manager.paint())),
 
     recent: (): IRecentManager =>
-      Factory._getInstance('recentManager', () => new RecentManager(Factory.repo.recent(), Factory.manager.paint())),
+      Factory.getInstance('recentManager', () => new RecentManager(Factory.repo.recent(), Factory.manager.paint())),
     journal: (): IJournalManager =>
-      Factory._getInstance(
+      Factory.getInstance(
         'journalManager',
-        () => new JournalManager(Factory.manager.watch(), Factory.manager.sequence(), Factory.client.kohan())
+        () =>
+          new JournalManager(
+            Factory.manager.watch(),
+            Factory.manager.sequence(),
+            Factory.client.kohan(),
+            Factory.manager.timeFrame()
+          )
       ),
-    fno: (): IFnoManager => Factory._getInstance('fnoManager', () => new FnoManager(Factory.repo.fno())),
+    fno: (): IFnoManager => Factory.getInstance('fnoManager', () => new FnoManager(Factory.repo.fno())),
     alertFeed: (): IAlertFeedManager =>
-      Factory._getInstance(
+      Factory.getInstance(
         'alertFeedManager',
         () => new AlertFeedManager(Factory.manager.symbol(), Factory.manager.watch(), Factory.manager.recent())
       ),
@@ -285,9 +295,9 @@ export class Factory {
    * Handles specific operations and user interactions
    */
   public static handler = {
-    global: (): IGlobalErrorHandler => Factory._getInstance('globalErrorHandler', () => new GlobalErrorHandler()),
+    global: (): IGlobalErrorHandler => Factory.getInstance('globalErrorHandler', () => new GlobalErrorHandler()),
     alert: (): AlertHandler =>
-      Factory._getInstance(
+      Factory.getInstance(
         'alertHandler',
         () =>
           new AlertHandler(
@@ -305,18 +315,18 @@ export class Factory {
           )
       ),
     alertSummary: (): IAlertSummaryHandler =>
-      Factory._getInstance(
+      Factory.getInstance(
         'alertSummaryHandler',
         () => new AlertSummaryHandler(Factory.manager.alert(), Factory.manager.tv(), Factory.util.ui())
       ),
     audit: (): IAuditHandler =>
-      Factory._getInstance(
+      Factory.getInstance(
         'auditHandler',
         () =>
           new AuditHandler(Factory.manager.audit(), Factory.manager.pair(), Factory.util.ui(), Factory.handler.ticker())
       ),
     onload: (): IOnLoadHandler =>
-      Factory._getInstance(
+      Factory.getInstance(
         'onloadHandler',
         () =>
           new OnLoadHandler(
@@ -330,7 +340,7 @@ export class Factory {
           )
       ),
     hotkey: (): IHotkeyHandler =>
-      Factory._getInstance(
+      Factory.getInstance(
         'hotkeyHandler',
         () =>
           new HotkeyHandler(
@@ -342,7 +352,7 @@ export class Factory {
           )
       ),
     kite: (): IKiteHandler =>
-      Factory._getInstance(
+      Factory.getInstance(
         'kiteHandler',
         () =>
           new KiteHandler(
@@ -355,7 +365,7 @@ export class Factory {
           )
       ),
     ticker: (): ITickerHandler =>
-      Factory._getInstance(
+      Factory.getInstance(
         'tickerHandler',
         () =>
           new TickerHandler(
@@ -368,7 +378,7 @@ export class Factory {
       ),
 
     tickerChange: (): ITickerChangeHandler =>
-      Factory._getInstance(
+      Factory.getInstance(
         'tickerChangeHandler',
         () =>
           new TickerChangeHandler(
@@ -385,7 +395,7 @@ export class Factory {
       ),
 
     keyConfig: (): KeyConfig =>
-      Factory._getInstance(
+      Factory.getInstance(
         'keyConfig',
         () =>
           new KeyConfig(
@@ -399,7 +409,7 @@ export class Factory {
           )
       ),
     modifierKeyConfig: (): IModifierKeyConfig =>
-      Factory._getInstance(
+      Factory.getInstance(
         'modifierKeyConfig',
         () =>
           new ModifierKeyConfig(
@@ -411,7 +421,7 @@ export class Factory {
           )
       ),
     watchlist: (): IWatchListHandler =>
-      Factory._getInstance(
+      Factory.getInstance(
         'watchlistHandler',
         () =>
           new WatchListHandler(
@@ -425,22 +435,22 @@ export class Factory {
           )
       ),
     pair: (): IPairHandler =>
-      Factory._getInstance(
+      Factory.getInstance(
         'pairHandler',
         () => new PairHandler(Factory.client.investing(), Factory.manager.pair(), Factory.util.smart())
       ),
     flag: (): IFlagHandler =>
-      Factory._getInstance(
+      Factory.getInstance(
         'flagHandler',
         () => new FlagHandler(Factory.manager.flag(), Factory.manager.ticker(), Factory.handler.watchlist())
       ),
     sequence: (): ISequenceHandler =>
-      Factory._getInstance(
+      Factory.getInstance(
         'sequenceHandler',
         () => new SequenceHandler(Factory.manager.sequence(), Factory.manager.ticker())
       ),
     journal: (): IJournalHandler =>
-      Factory._getInstance(
+      Factory.getInstance(
         'journalHandler',
         () =>
           new JournalHandler(
@@ -452,15 +462,17 @@ export class Factory {
             Factory.manager.style()
           )
       ),
+    imdb: (): IImdbHandler =>
+      Factory.getInstance('imdbHandler', () => new ImdbHandler(Factory.manager.imdb(), Factory.util.search())),
     swiftKey: (): ISwiftKeyHandler =>
-      Factory._getInstance('swiftKeyHandler', () => new SwiftKeyHandler(Factory.manager.tv())),
+      Factory.getInstance('swiftKeyHandler', () => new SwiftKeyHandler(Factory.manager.tv())),
     command: (): ICommandInputHandler =>
-      Factory._getInstance(
+      Factory.getInstance(
         'commandHandler',
         () => new CommandInputHandler(Factory.handler.ticker(), Factory.handler.alert(), Factory.manager.fno())
       ),
     alertFeed: (): IAlertFeedHandler =>
-      Factory._getInstance(
+      Factory.getInstance(
         'alertFeedHandler',
         () =>
           new AlertFeedHandler(
@@ -479,15 +491,15 @@ export class Factory {
    * @param creator - Factory function
    * @returns Instance of type T
    */
-  private static _getInstance<T>(key: string, creator: () => T): T {
-    if (!this._instances[key]) {
+  private static getInstance<T>(key: string, creator: () => T): T {
+    if (!this.instances[key]) {
       try {
-        this._instances[key] = creator();
+        this.instances[key] = creator();
       } catch (error) {
         console.error(`Error creating instance for ${key}:`, error);
         throw error;
       }
     }
-    return this._instances[key] as T;
+    return this.instances[key] as T;
   }
 }

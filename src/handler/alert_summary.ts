@@ -75,7 +75,7 @@ export class AlertSummaryHandler implements IAlertSummaryHandler {
         return;
       }
       void this.alertManager.deleteAlert(alert).then(() => {
-        Notifier.success(`Alert deleted: ${alert.price}`);
+        Notifier.red(`❌ Alert deleted: ${alert.price}`);
         $button.remove();
       });
     });

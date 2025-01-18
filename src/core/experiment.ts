@@ -118,7 +118,7 @@ export class ExperimentApp {
   }
 
   private showMessage(text: string): void {
-    Notifier.info(text);
+    Notifier.info(`${text} 🎉`);
   }
 }
 

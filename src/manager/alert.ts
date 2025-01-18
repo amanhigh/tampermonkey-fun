@@ -29,7 +29,7 @@ export interface IAlertManager {
    * @param price Alert price
    * @throws Error If pair info not found for current ticker
    */
-  createAlertForCurrentTicker(price: number): Promise<void>;
+  createAlertForCurrentTicker(price: number): Promise<PairInfo>;
 
   /**
    * Delete all alerts for current ticker
@@ -88,11 +88,10 @@ export class AlertManager implements IAlertManager {
    * @param price Alert price
    * @private
    */
-  private async createAlert(investingTicker: string, price: number): Promise<void> {
+  private async createAlert(investingTicker: string, price: number): Promise<PairInfo> {
     const pairInfo = this.pairManager.investingTickerToPairInfo(investingTicker);
     if (!pairInfo) {
       throw new Error(`No pair info found for ticker: ${investingTicker}`);
-      return;
     }
 
     try {
@@ -100,6 +99,7 @@ export class AlertManager implements IAlertManager {
       const response = await this.investingClient.createAlert(pairInfo.name, pairInfo.pairId, price, ltp);
       const alert = new Alert('', response.pairId, response.price);
       this.alertRepo.addAlert(pairInfo.pairId, alert);
+      return pairInfo;
     } catch {
       throw new Error(`Failed to create alert for ${investingTicker} at price ${price}`);
     }
@@ -122,10 +122,13 @@ export class AlertManager implements IAlertManager {
         const price = parseFloat($alt.attr('data-value') || '0');
         const id = $alt.attr('data-alert-id') || '';
 
-        if (pairId && !isNaN(price) && id) {
-          const alert = new Alert(id, pairId, price);
+        const alert = new Alert(id, pairId, price);
+        if (pairId && !isNaN(price) && id && price > 0) {
           this.alertRepo.addAlert(pairId, alert);
           count++;
+        } else {
+          const name = this.pairManager.investingTickerToPairInfo(pairId)?.name;
+          console.warn('Invalid alert:', name, alert);
         }
       });
 
@@ -133,9 +136,9 @@ export class AlertManager implements IAlertManager {
   }
 
   /** @inheritdoc */
-  async createAlertForCurrentTicker(price: number): Promise<void> {
+  async createAlertForCurrentTicker(price: number): Promise<PairInfo> {
     const investingTicker = this.tickerManager.getInvestingTicker();
-    await this.createAlert(investingTicker, price);
+    return this.createAlert(investingTicker, price);
   }
 
   /** @inheritdoc */

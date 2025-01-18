@@ -13,29 +13,24 @@ export class ObjectUtils {
       throw new Error('Input must be a non-null object');
     }
 
-    try {
-      const reversed: Record<string, keyof T> = {};
+    const reversed: Record<string, keyof T> = {};
 
-      for (const [key, value] of Object.entries(obj)) {
-        if (value === null || value === undefined) {
-          console.warn(`Skipping null/undefined value for key: ${key}`);
-          continue;
-        }
-
-        // Convert value to string to ensure it can be used as a key
-        const newKey = String(value);
-
-        if (newKey in reversed) {
-          console.warn(`Duplicate value found: ${value}. Previous key will be overwritten.`);
-        }
-
-        reversed[newKey] = key;
+    for (const [key, value] of Object.entries(obj)) {
+      if (value === null || value === undefined) {
+        console.warn(`Skipping null/undefined value for key: ${key}`);
+        continue;
       }
 
-      return reversed;
-    } catch (error) {
-      console.error('Error in reverseMap:', error);
-      throw error;
+      // Convert value to string to ensure it can be used as a key
+      const newKey = String(value);
+
+      if (newKey in reversed) {
+        console.warn(`Duplicate value found: ${value}. Previous key will be overwritten.`);
+      }
+
+      reversed[newKey] = key;
     }
+
+    return reversed;
   }
 }

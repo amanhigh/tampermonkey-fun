@@ -100,36 +100,31 @@ export class KeyUtil implements IKeyUtil {
       return false;
     }
 
-    try {
-      // Check if key came not too fast and not too slow
-      if (this._doubleKeyState.init && this._doubleKeyState.begin && !this._doubleKeyState.end && !event.repeat) {
-        return true;
-      }
-
-      // After Init Before Begin; Reset Init
-      else if (this._doubleKeyState.init) {
-        this._doubleKeyState.init = this._doubleKeyState.begin;
-      }
-
-      // Before Init
-      else {
-        this._doubleKeyState.init = true;
-        this._doubleKeyState.begin = this._doubleKeyState.end = false;
-        // W1: Enter Begin (Too Fast Keys Filtered)
-        this._syncUtil.waitOn('fastDoubleKeyInput', 50, () => {
-          this._doubleKeyState.begin = true;
-        });
-        // W4: Reached End Reset Process
-        this._syncUtil.waitOn('doubleKeyInput', 200, () => {
-          this._doubleKeyState.end = true;
-          this._doubleKeyState.init = false;
-        });
-      }
-      return false;
-    } catch (error) {
-      console.error('isDoubleKey error:', error);
-      return false;
+    // Check if key came not too fast and not too slow
+    if (this._doubleKeyState.init && this._doubleKeyState.begin && !this._doubleKeyState.end && !event.repeat) {
+      return true;
     }
+
+    // After Init Before Begin; Reset Init
+    else if (this._doubleKeyState.init) {
+      this._doubleKeyState.init = this._doubleKeyState.begin;
+    }
+
+    // Before Init
+    else {
+      this._doubleKeyState.init = true;
+      this._doubleKeyState.begin = this._doubleKeyState.end = false;
+      // W1: Enter Begin (Too Fast Keys Filtered)
+      this._syncUtil.waitOn('fastDoubleKeyInput', 50, () => {
+        this._doubleKeyState.begin = true;
+      });
+      // W4: Reached End Reset Process
+      this._syncUtil.waitOn('doubleKeyInput', 200, () => {
+        this._doubleKeyState.end = true;
+        this._doubleKeyState.init = false;
+      });
+    }
+    return false;
   }
 
   /** @inheritdoc */

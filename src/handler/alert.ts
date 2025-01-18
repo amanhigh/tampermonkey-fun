@@ -16,6 +16,7 @@ import { ITickerHandler } from './ticker';
 import { IPairHandler } from './pair';
 import { IAuditHandler } from './audit';
 import { IAlertFeedManager } from '../manager/alertfeed';
+import { PairInfo } from '../models/alert';
 
 /**
  * Interface for managing alert operations
@@ -118,9 +119,10 @@ export class AlertHandler implements IAlertHandler {
     const prices = String(input).trim().split(' ');
     for (const p of prices) {
       const price = parseFloat(p);
-      await this.alertManager.createAlertForCurrentTicker(price);
-      this.refreshAlerts();
-      this.notifyAlertCreation(price);
+      await this.alertManager.createAlertForCurrentTicker(price).then((pairInfo) => {
+        this.refreshAlerts();
+        this.notifyAlertCreation(price, pairInfo);
+      });
     }
 
     setTimeout(() => {
@@ -134,21 +136,22 @@ export class AlertHandler implements IAlertHandler {
    * @param alertPrice Price at which alert was created
    * @private
    */
-  private notifyAlertCreation(alertPrice: number): void {
+  private notifyAlertCreation(alertPrice: number, pairInfo: PairInfo): void {
     const ltp = this.tradingViewManager.getLastTradedPrice();
     if (alertPrice > ltp) {
-      Notifier.success(`Alert ${alertPrice} > LTP ${ltp}`);
+      Notifier.success(`👆  ${pairInfo.name} - ${alertPrice}`);
     } else {
-      Notifier.red(`Alert ${alertPrice} < LTP ${ltp}`);
+      Notifier.red(`👇 ${pairInfo.name}  - ${alertPrice}`);
     }
   }
 
   /** @inheritdoc */
   public async createAlertAtCursor(): Promise<void> {
     const price = await this.tradingViewManager.getCursorPrice();
-    await this.alertManager.createAlertForCurrentTicker(price);
-    this.refreshAlerts();
-    this.notifyAlertCreation(price);
+    await this.alertManager.createAlertForCurrentTicker(price).then((pairInfo) => {
+      this.refreshAlerts();
+      this.notifyAlertCreation(price, pairInfo);
+    });
   }
 
   /** @inheritdoc */
@@ -156,9 +159,10 @@ export class AlertHandler implements IAlertHandler {
     const currentPrice = this.tradingViewManager.getLastTradedPrice();
     const targetPrice = (currentPrice * 1.2).toFixed(2);
     const price = parseFloat(targetPrice);
-    await this.alertManager.createAlertForCurrentTicker(price);
-    this.refreshAlerts();
-    this.notifyAlertCreation(price);
+    await this.alertManager.createAlertForCurrentTicker(price).then((pairInfo) => {
+      this.refreshAlerts();
+      this.notifyAlertCreation(price, pairInfo);
+    });
   }
 
   /** @inheritdoc */
@@ -166,13 +170,13 @@ export class AlertHandler implements IAlertHandler {
     const price = await this.tradingViewManager.getCursorPrice();
     await this.alertManager.deleteAlertsByPrice(price);
     this.refreshAlerts();
-    Notifier.success(`Alerts deleted around price: ${price}`);
+    Notifier.red(`❌ Alerts deleted around price: ${price}`);
   }
 
   /** @inheritdoc */
   public refreshAlerts(): void {
     this.syncUtil.waitOn('alert-refresh-local', 10, () => {
-      // FIXME: Should not do for Composite Symbols eg. N100/XAUEUR*1000
+      // FIXME: #A Should not do for Composite Symbols eg. N100/XAUEUR*1000
       const alerts = this.alertManager.getAlerts();
       this.alertSummaryHandler.displayAlerts(alerts);
       this.auditHandler.auditCurrent();
@@ -271,6 +275,6 @@ export class AlertHandler implements IAlertHandler {
   public async handleResetAlerts(): Promise<void> {
     await this.alertManager.deleteAllAlerts();
     this.refreshAlerts();
-    Notifier.success('All alerts deleted');
+    Notifier.red('❌ 🚀 All alerts deleted');
   }
 }

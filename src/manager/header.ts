@@ -30,13 +30,6 @@ export class HeaderManager implements IHeaderManager {
   /** @inheritdoc */
   paintHeader(): void {
     const ticker = this.tickerManager.getTicker();
-    const exchange = this.tickerManager.getCurrentExchange();
-
-    if (!ticker || !exchange) {
-      console.error('Missing required data for painting ticker');
-      return;
-    }
-
     const $name = $(Constants.DOM.BASIC.NAME);
 
     // Paint each component

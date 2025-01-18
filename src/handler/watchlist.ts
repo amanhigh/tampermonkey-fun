@@ -102,11 +102,11 @@ export class WatchListHandler implements IWatchListHandler {
    * @private
    */
   private executeCleanupWithConfirmation(count: number): void {
-    const confirmDeletion = confirm(`Potential Deletions: ${count}. Proceed with cleanup?`);
+    const confirmDeletion = confirm(`🚨 Potential Deletions: ${count}. Proceed with cleanup?`);
     if (confirmDeletion) {
       this.executeCleanup();
     } else {
-      Notifier.warn('Cleanup aborted by user.');
+      Notifier.yellow('🚫 Cleanup aborted by user.');
     }
   }
 

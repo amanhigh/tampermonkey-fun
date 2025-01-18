@@ -35,28 +35,24 @@ export class HotkeyHandler implements IHotkeyHandler {
 
   /* @inheritdoc */
   handleKeyDown(event: KeyboardEvent): void {
-    try {
-      // Handle global keys first - these should work regardless of swift state
-      if (this.handleGlobalKeys(event)) {
-        event.preventDefault();
-        return;
-      }
+    // Handle global keys first - these should work regardless of swift state
+    if (this.handleGlobalKeys(event)) {
+      event.preventDefault();
+      return;
+    }
 
-      const swiftEnabled = this.tvManager.isSwiftKeysEnabled();
+    const swiftEnabled = this.tvManager.isSwiftKeysEnabled();
 
-      // Auto-enable swift for timeframe keys (1-4)
-      if (this.shouldAutoEnableSwift(event, swiftEnabled)) {
-        this.setSwiftKeysState(true);
-        this.handleSwiftEnabled(event);
-        return;
-      }
+    // Auto-enable swift for timeframe keys (1-4)
+    if (this.shouldAutoEnableSwift(event, swiftEnabled)) {
+      this.setSwiftKeysState(true);
+      this.handleSwiftEnabled(event);
+      return;
+    }
 
-      // Only handle swift-specific keys if enabled
-      if (swiftEnabled) {
-        this.handleSwiftEnabled(event);
-      }
-    } catch (error) {
-      console.error('Error in handleKeyDown:', error);
+    // Only handle swift-specific keys if enabled
+    if (swiftEnabled) {
+      this.handleSwiftEnabled(event);
     }
   }
 
@@ -166,9 +162,9 @@ export class HotkeyHandler implements IHotkeyHandler {
   private setSwiftKeysState(enable: boolean): void {
     this.tvManager.setSwiftKeysState(enable);
     if (enable) {
-      Notifier.success('Swift Enabled');
+      Notifier.success('🚀 Swift Enabled');
     } else {
-      Notifier.warn('Swift Disabled');
+      Notifier.red('🚧 Swift Disabled');
     }
   }
 }

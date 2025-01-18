@@ -142,21 +142,16 @@ export class InvestingClient extends BaseClient implements IInvestingClient {
    * @throws Error if request fails or response is invalid
    */
   async getAllAlerts(): Promise<string> {
-    try {
-      const response = await this.makeRequest<string>('/members-admin/alert-center', {
-        method: 'GET',
-        responseType: 'text',
-      });
+    const response = await this.makeRequest<string>('/members-admin/alert-center', {
+      method: 'GET',
+      responseType: 'text',
+    });
 
-      // Ensure we got valid HTML response containing alerts
-      if (!response || !response.includes('js-alert-item')) {
-        throw new Error('Invalid alert center response');
-      }
-
-      return response;
-    } catch (error) {
-      console.error(error);
-      throw new Error(`Failed to get alerts: ${(error as Error).message}`);
+    // Ensure we got valid HTML response containing alerts
+    if (!response || !response.includes('js-alert-item')) {
+      throw new Error('Invalid alert center response');
     }
+
+    return response;
   }
 }

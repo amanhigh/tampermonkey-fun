@@ -66,8 +66,6 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     setTimeout(() => {
       this.handleHookButton();
     }, 2000);
-
-    console.info('Alert Feed initialized');
   }
 
   public handleHookButton(): void {
@@ -95,7 +93,7 @@ export class AlertFeedHandler implements IAlertFeedHandler {
   }
 
   public paintAlertFeed(): void {
-    Notifier.yellow('Painting alert feed');
+    Notifier.yellow('🎨 Painting alert feed');
     $(Constants.DOM.ALERT_FEED.ALERT_DATA).each((_, element) => {
       const $element = $(element);
       const alertName = $element.text();

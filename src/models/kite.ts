@@ -147,22 +147,17 @@ export class GttRefreshEvent extends BaseEvent {
     if (!data) {
       return new GttRefreshEvent();
     }
-    try {
-      const parsed = JSON.parse(data);
-      const event = new GttRefreshEvent();
-      if (parsed.orders && typeof parsed.orders === 'object') {
-        // Reconstruct orders from parsed data
-        Object.entries(parsed.orders).forEach(([sym, orders]) => {
-          (orders as Order[]).forEach((order) => {
-            event.addOrder(sym, order);
-          });
+    const parsed = JSON.parse(data);
+    const event = new GttRefreshEvent();
+    if (parsed.orders && typeof parsed.orders === 'object') {
+      // Reconstruct orders from parsed data
+      Object.entries(parsed.orders).forEach(([sym, orders]) => {
+        (orders as Order[]).forEach((order) => {
+          event.addOrder(sym, order);
         });
-      }
-      return event;
-    } catch (error) {
-      console.error('Failed to parse GttRefreshEvent:', error);
-      return new GttRefreshEvent();
+      });
     }
+    return event;
   }
 }
 

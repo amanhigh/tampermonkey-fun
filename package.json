@@ -14,7 +14,8 @@
   "scripts": {
     "analyze": "cross-env npm_config_report=true npm run build",
     "experiment": "webpack --config config/experiment.cjs",
-    "barkat": "webpack --config config/barkat.cjs"
+    "barkat": "webpack --config config/barkat.cjs",
+    "imdb": "webpack --config config/imdb.cjs"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",

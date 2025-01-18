@@ -68,15 +68,16 @@ export class JournalHandler implements IJournalHandler {
 
   /** @inheritdoc */
   public async handleJournalReasonPrompt(): Promise<void> {
-    const symbol = this.tickerManager.getTicker();
-
     try {
-      const reason = await this.smartPrompt.showModal(Constants.TRADING.PROMPT.REASONS);
+      const reason = await this.smartPrompt.showModal(
+        Constants.TRADING.PROMPT.REASONS,
+        Constants.TRADING.PROMPT.OVERRIDES
+      );
       if (!reason || reason === 'Cancel') {
         return;
       }
 
-      const text = this.journalManager.createReasonText(symbol, reason);
+      const text = this.journalManager.createReasonText(reason);
       this.tvManager.clipboardCopy(text);
       this.styleManager.selectToolbar(Constants.DOM.TOOLBARS.TEXT);
     } catch (error) {

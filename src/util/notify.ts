@@ -54,8 +54,12 @@ export class Notifier {
     this.message(`ℹ️ ${msg}`, 'white', timeout);
   }
 
+  public static green(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
+    this.message(`${msg}`, 'green', timeout);
+  }
+
   public static red(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
-    this.message(`❌ ${msg}`, 'red', timeout);
+    this.message(`${msg}`, 'red', timeout);
   }
 
   public static yellow(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {

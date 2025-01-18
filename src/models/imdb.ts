@@ -1,14 +1,4 @@
 /**
- * Search platform types
- */
-export enum SearchType {
-  YTS = 'YTS',
-  X1337 = '1337X',
-  XTREME = 'XTREME',
-  YOUTUBE = 'YOUTUBE',
-}
-
-/**
  * Movie details from IMDB page
  */
 export interface MovieDetails {
@@ -23,6 +13,18 @@ export interface MovieDetails {
 /**
  * Constants for IMDB operations
  */
+export enum SearchCommand {
+  YTS = 'YSearch',
+  X1337 = 'XSearch',
+  XTREME = 'Xtreme',
+  YOUTUBE = 'Youtube Full',
+}
+
+export interface SearchEvent {
+  command: SearchCommand;
+  date: number;
+}
+
 export const IMDB_CONSTANTS = {
   SELECTORS: {
     MOVIE_TITLE: 'h1',
@@ -35,5 +37,8 @@ export const IMDB_CONSTANTS = {
   },
   STORAGE: {
     AUTO_MODE: 'imdbAutoMode',
+  },
+  EVENTS: {
+    SEARCH: 'imdbSearchEvent',
   },
 };

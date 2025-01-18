@@ -99,14 +99,16 @@ export class TradingViewManager implements ITradingViewManager {
     return new Promise((resolve, reject) => {
       this.waitUtil.waitJEE(Constants.DOM.POPUPS.AUTO_ALERT, (el) => {
         try {
-          const match = PRICE_REGEX.exec(el.text());
+          const text = el.text();
+          const priceText = text.replace('Copy price', '').trim();
+          const match = PRICE_REGEX.exec(priceText);
           if (!match) {
-            reject(new Error('Failed to extract price from cursor position'));
+            reject(new Error(`Cursor Extraction Failed for '${text}'`));
             return;
           }
           const altPrice = parseFloat(match[0].replace(/,/g, ''));
-          if (isNaN(altPrice)) {
-            reject(new Error('Invalid price format at cursor position'));
+          if (isNaN(altPrice) || altPrice === 0) {
+            reject(new Error(`Invalid Cursor Price: ${altPrice} in ${match[0]}`));
             return;
           }
           resolve(altPrice);
@@ -120,7 +122,7 @@ export class TradingViewManager implements ITradingViewManager {
   /** @inheritdoc */
   clipboardCopy(text: string): void {
     void GM.setClipboard(text);
-    Notifier.yellow(`ClipCopy: ${text}`);
+    Notifier.yellow(`📋 ClipCopy: ${text}`);
   }
 
   /** @inheritdoc */

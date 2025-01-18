@@ -54,7 +54,7 @@ export interface ISymbolManager {
    */
   createTvToExchangeTickerMapping(tvTicker: string, exchange: string): void;
 
-  // FIXME: Add isComposite Method
+  // FIXME: #A Add isComposite Method
 
   // XXX: Clean all mappings, eg. Pair, Ticker, Exchange etc.
 }

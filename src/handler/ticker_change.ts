@@ -37,7 +37,7 @@ export class TickerChangeHandler implements ITickerChangeHandler {
       this.sequenceHandler.displaySequence();
 
       // Handle GTT operations
-      this.kiteHandler.refreshGttOrders().catch((error) => console.error('Failed to refresh GTT orders:', error));
+      void this.kiteHandler.refreshGttOrders();
     });
   }
 

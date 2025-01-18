@@ -59,24 +59,24 @@ export class CommandInputHandler implements ICommandInputHandler {
         return;
       }
     }
-      switch (processor.type) {
-        case 'TICKER':
-          this.processTickerInput(processor.value);
-          break;
-        case 'PRICES':
-          await this.processPriceInput(processor.value);
-          break;
-        case 'COMMAND':
-          const [action, value] = processor.value.split('=');
-          if (['FNO', 'FNO!', 'FNO-'].includes(action.toUpperCase())) {
-            this.processFnoCommand(action.toUpperCase(), value);
-          } else {
-            this.tickerHandler.processCommand(processor.value);
-          }
-          break;
-        default:
-          this.displayHelpMessage();
-      }
+    switch (processor.type) {
+      case 'TICKER':
+        this.processTickerInput(processor.value);
+        break;
+      case 'PRICES':
+        await this.processPriceInput(processor.value);
+        break;
+      case 'COMMAND':
+        const [action, value] = processor.value.split('=');
+        if (['FNO', 'FNO!', 'FNO-'].includes(action.toUpperCase())) {
+          this.processFnoCommand(action.toUpperCase(), value);
+        } else {
+          this.tickerHandler.processCommand(processor.value);
+        }
+        break;
+      default:
+        this.displayHelpMessage();
+    }
   }
 
   private determineInputType(value: string): InputProcessor {

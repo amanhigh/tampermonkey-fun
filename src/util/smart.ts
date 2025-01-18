@@ -76,6 +76,7 @@ export class SmartPrompt implements ISmartPrompt {
     radioButton.type = 'radio';
     radioButton.name = 'override';
     radioButton.value = text;
+    // BUG: #A Last Overrides always coming.
 
     radioButton.addEventListener('change', function () {
       document.querySelectorAll('input[name="override"]').forEach((rb) => {

@@ -53,7 +53,7 @@ export class TickerHandler implements ITickerHandler {
     this.recentManager.clearRecent();
     this.screenerManager.paintScreener();
     void this.alertFeedManager.createResetFeedEvent();
-    Notifier.warn('Recent Reset');
+    Notifier.yellow('🔁 Recent Reset');
   }
 
   processCommand(command: string): void {

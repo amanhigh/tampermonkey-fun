@@ -3,6 +3,7 @@ import { IWatchManager } from './watch';
 import { ISequenceManager } from './sequence';
 import { Notifier } from '../util/notify';
 import { IKohanClient } from '../client/kohan';
+import { ITimeFrameManager } from './timeframe';
 
 /**
  * Interface for managing trading journal operations
@@ -32,11 +33,10 @@ export interface IJournalManager {
 
   /**
    * Creates formatted text combining symbol and reason for clipboard copying
-   * @param symbol - Trading symbol
    * @param reason - Trading reason code
    * @returns Formatted text (e.g., "HGS - oe")
    */
-  createReasonText(symbol: string, reason: string): string;
+  createReasonText(reason: string): string;
 }
 
 /**
@@ -50,7 +50,8 @@ export class JournalManager implements IJournalManager {
   constructor(
     private readonly watchManager: IWatchManager,
     private readonly sequenceManager: ISequenceManager,
-    private readonly kohanClient: IKohanClient
+    private readonly kohanClient: IKohanClient,
+    private readonly timeframeManager: ITimeFrameManager
   ) {}
 
   /** @inheritdoc */
@@ -78,8 +79,9 @@ export class JournalManager implements IJournalManager {
   }
 
   /** @inheritdoc */
-  createReasonText(symbol: string, reason: string): string {
-    return `${symbol} - ${reason}`;
+  createReasonText(reason: string): string {
+    const timeframe = this.timeframeManager.getCurrentTimeFrameConfig().symbol;
+    return `${timeframe} - ${reason}`;
   }
 
   /**
