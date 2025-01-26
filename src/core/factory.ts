@@ -499,7 +499,7 @@ export class Factory {
         () => new PanelHandler(Factory.util.smart(), Factory.handler.pair(), Factory.manager.ticker())
       ),
     picasso: (): IPicassoHandler =>
-      Factory.getInstance('picassoHandler', () => new PicassoHandler(Factory.util.wait())),
+      Factory.getInstance('picassoHandler', () => new PicassoHandler(Factory.util.wait(), Factory.util.key())),
   };
 
   /**

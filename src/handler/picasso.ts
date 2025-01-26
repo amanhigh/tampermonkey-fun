@@ -1,5 +1,6 @@
 import { IWaitUtil } from '../util/wait';
 import { Notifier } from '../util/notify';
+import { IKeyUtil } from '../util/key';
 
 export interface IPicassoHandler {
   initialize(): void;
@@ -17,10 +18,18 @@ export class PicassoHandler implements IPicassoHandler {
     y: ['[data-testid="main-menu-trigger"]', '[aria-label="Reset the canvas"]'],
     "'": ['[data-testid="button-undo"]'],
     '.': ['[data-testid="button-redo"]'],
-    // Example combo: 'c': ['[data-testid="toolbar-circle"]', '[aria-label="Fill color"]']
+    j: ['[aria-label="Group selection"]'],
   };
 
-  constructor(private readonly waitUtil: IWaitUtil) {}
+  // Add double tap mappings
+  private readonly doubleTapMap: HotkeyMap = {
+    j: ['[aria-label="Ungroup selection"]'],
+  };
+
+  constructor(
+    private readonly waitUtil: IWaitUtil,
+    private readonly keyUtil: IKeyUtil
+  ) {}
 
   public initialize(): void {
     this.setupKeyListener();
@@ -36,10 +45,21 @@ export class PicassoHandler implements IPicassoHandler {
       return;
     }
 
+    // Check for double tap first
+    if (this.keyUtil.isDoubleKey(event)) {
+      const selector = this.doubleTapMap[event.key.toLowerCase()];
+      if (selector) {
+        console.info(`Double Key ${event.key}, Clicked ${selector}`);
+        event.preventDefault();
+        this.clickButton(selector);
+      }
+      return;
+    }
+
+    // Existing single tap logic
     const selector = this.buttonMap[event.key.toLowerCase()];
     if (selector) {
       console.info(`Key, ${event.key}, Clicked ${selector}`);
-
       event.preventDefault();
       this.clickButton(selector);
     }
