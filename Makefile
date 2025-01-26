@@ -49,6 +49,10 @@ imdb: ## Run IMDB Script
 	@printf $(_TITLE) "Run" "IMDB"
 	$(NPM) run imdb
 
+picasso: ## Build Picasso Production Script
+	@printf $(_TITLE) "Run" "Picasso"
+	$(NPM) run picasso
+
 ## Setup
 setup-npm:
 	@printf $(_TITLE) "Setup" "NPM"

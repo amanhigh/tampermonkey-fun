@@ -73,6 +73,8 @@ import { IAlertFeedManager, AlertFeedManager } from '../manager/alertfeed';
 import { IImdbRepo, ImdbRepo } from '../repo/imdb';
 import { IImdbManager as IImdbManager, ImdbManager } from '../manager/imdb';
 import { IPanelHandler, PanelHandler } from '../handler/panel';
+import { IPicassoHandler, PicassoHandler } from '../handler/picasso';
+import { PicassoApp } from './picasso';
 
 /**
  * Project Architecture Overview
@@ -119,6 +121,8 @@ export class Factory {
         'imdbApp',
         () => new ImdbApp(Factory.handler.imdb(), Factory.manager.imdb(), Factory.handler.global())
       ),
+    picasso: (): PicassoApp =>
+      Factory.getInstance('picassoApp', () => new PicassoApp(Factory.handler.global(), Factory.handler.picasso())),
   };
 
   /**
@@ -494,6 +498,8 @@ export class Factory {
         'panelHandler',
         () => new PanelHandler(Factory.util.smart(), Factory.handler.pair(), Factory.manager.ticker())
       ),
+    picasso: (): IPicassoHandler =>
+      Factory.getInstance('picassoHandler', () => new PicassoHandler(Factory.util.wait())),
   };
 
   /**

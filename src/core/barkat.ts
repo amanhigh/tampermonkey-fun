@@ -157,10 +157,10 @@ export class Barkat {
   }
 }
 
-function main(): void {
+export function RunBarkat(): void {
   console.info('Barkat started');
   const barkat = Factory.app.barkat();
   barkat.initialize();
 }
 
-main();
+RunBarkat();

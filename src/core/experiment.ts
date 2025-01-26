@@ -122,12 +122,10 @@ export class ExperimentApp {
   }
 }
 
-// @ts-expect-error Kept main for Testing
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function main(): void {
+export function RunExperiment(): void {
   console.info('Tamperfun Experiment started');
   const app = Factory.app.test();
   app.initialize();
 }
 
-// main();
+// RunExperiment();

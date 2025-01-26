@@ -16,6 +16,7 @@
     "experiment": "webpack --config config/experiment.cjs",
     "barkat": "webpack --config config/barkat.cjs",
     "imdb": "webpack --config config/imdb.cjs",
+    "picasso": "webpack --config config/picasso.cjs",
     "test": "jest"
   },
   "devDependencies": {

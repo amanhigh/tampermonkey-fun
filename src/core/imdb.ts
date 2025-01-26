@@ -54,12 +54,10 @@ export class ImdbApp {
   }
 }
 
-// @ts-expect-error Kept main for Imdb App
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function main(): void {
-  console.info('Tamperfun Experiment started');
+export function RunImdb(): void {
+  console.info('Imdb started');
   const app = Factory.app.imdb();
   app.initialize();
 }
 
-// main();
+// RunImdb();
