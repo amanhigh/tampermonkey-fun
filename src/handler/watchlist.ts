@@ -38,6 +38,11 @@ export interface IWatchListHandler {
    * @param categoryIndex The index of the category.
    */
   recordSelectedTicker(categoryIndex: number): void;
+
+  /**
+   * Applies default filters to the watchlist
+   */
+  applyDefaultFilters(): void;
 }
 
 /**
@@ -74,17 +79,20 @@ export class WatchListHandler implements IWatchListHandler {
 
   /** @inheritdoc */
   public async handleWatchlistCleanup(): Promise<void> {
+    // Get current UI tickers
+    const currentTickers = this.watchlistManager.getTickers();
+
     // Perform dry run to get potential deletion count
-    const dryRunCount = this.watchManager.dryRunClean();
+    const dryRunCount = this.watchManager.dryRunClean(currentTickers);
 
     // Wait for unfilter to complete
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     // Handle cleanup based on deletion count
     if (dryRunCount < 5) {
-      this.executeCleanup();
+      this.executeCleanup(currentTickers);
     } else {
-      this.executeCleanupWithConfirmation(dryRunCount);
+      this.executeCleanupWithConfirmation(currentTickers, dryRunCount);
     }
   }
 
@@ -92,8 +100,8 @@ export class WatchListHandler implements IWatchListHandler {
    * Executes cleanup for small number of deletions
    * @private
    */
-  private executeCleanup(): void {
-    const cleanCount = this.watchManager.clean();
+  private executeCleanup(currentTickers: string[]): void {
+    const cleanCount = this.watchManager.clean(currentTickers);
     Notifier.success(`Cleaned ${cleanCount} items`);
   }
 
@@ -101,10 +109,10 @@ export class WatchListHandler implements IWatchListHandler {
    * Executes cleanup with user confirmation for larger deletions
    * @private
    */
-  private executeCleanupWithConfirmation(count: number): void {
+  private executeCleanupWithConfirmation(currentTickers: string[], count: number): void {
     const confirmDeletion = confirm(`🚨 Potential Deletions: ${count}. Proceed with cleanup?`);
     if (confirmDeletion) {
-      this.executeCleanup();
+      this.executeCleanup(currentTickers);
     } else {
       Notifier.yellow('🚫 Cleanup aborted by user.');
     }
@@ -115,5 +123,10 @@ export class WatchListHandler implements IWatchListHandler {
     const tvTicker = this.tickerManager.getTicker();
     this.watchManager.recordCategory(categoryIndex, [tvTicker]);
     this.onWatchListChange();
+  }
+
+  /** @inheritdoc */
+  public applyDefaultFilters(): void {
+    this.watchlistManager.applyDefaultFilters();
   }
 }

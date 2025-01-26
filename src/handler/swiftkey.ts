@@ -14,7 +14,7 @@ export class SwiftKeyHandler implements ISwiftKeyHandler {
   public syncTitle(): void {
     const enabled = this.tvManager.isSwiftKeysEnabled();
     if (enabled) {
-      // HACK: Multiple Calls on Ticker Switch Improve further
+      // HACK: #C Multiple Calls on Ticker Switch Improve further
       this.tvManager.setSwiftKeysState(enabled);
     }
   }

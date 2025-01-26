@@ -54,9 +54,14 @@ export interface ISymbolManager {
    */
   createTvToExchangeTickerMapping(tvTicker: string, exchange: string): void;
 
-  // FIXME: #A Add isComposite Method
+  /**
+   * Checks if symbol is a composite symbol containing special characters like '/' or '*'
+   * @param symbol Symbol to check
+   * @returns True if symbol is composite
+   */
+  isComposite(symbol: string): boolean;
 
-  // XXX: Clean all mappings, eg. Pair, Ticker, Exchange etc.
+  // TODO: Audit & Clean all mappings, eg. Pair, Ticker, Exchange etc by Matching each Repo
 }
 
 /**
@@ -77,6 +82,12 @@ export class SymbolManager implements ISymbolManager {
    * @private
    */
   private readonly tvToKiteSymbolMap: Readonly<Record<string, string>>;
+
+  /**
+   * Special characters that indicate a composite symbol
+   * @private
+   */
+  private readonly COMPOSITE_CHARACTERS = ['/', '*'];
 
   /**
    * Initializes the SymbolManager with reverse mappings
@@ -124,6 +135,11 @@ export class SymbolManager implements ISymbolManager {
   /** @inheritdoc */
   createTvToExchangeTickerMapping(tvTicker: string, exchange: string): void {
     this.exchangeRepo.pinExchange(tvTicker, exchange);
+  }
+
+  /** @inheritdoc */
+  public isComposite(symbol: string): boolean {
+    return this.COMPOSITE_CHARACTERS.some((char) => symbol.includes(char));
   }
 
   /**

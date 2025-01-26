@@ -4,7 +4,6 @@ import { UIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
 import { ISequenceHandler } from '../handler/sequence';
 import { IOnLoadHandler } from '../handler/onload';
-import { IRepoCron } from '../repo/cron';
 import { IAlertHandler } from '../handler/alert';
 import { IJournalHandler } from '../handler/journal';
 import { ICommandInputHandler } from '../handler/command';
@@ -13,13 +12,14 @@ import { ITickerHandler } from '../handler/ticker';
 import { IAlertFeedHandler } from '../handler/alertfeed';
 import { Trend } from '../models/trading';
 import { IGlobalErrorHandler } from '../handler/error';
+import { IPanelHandler } from '../handler/panel';
+import { ITradingViewManager } from '../manager/tv';
 
 export class Barkat {
   // eslint-disable-next-line max-params
   constructor(
     private readonly errorHandler: IGlobalErrorHandler,
     private readonly uiUtil: UIUtil,
-    private readonly repoCron: IRepoCron,
     private readonly sequenceHandler: ISequenceHandler,
     private readonly onloadHandler: IOnLoadHandler,
     private readonly alertHandler: IAlertHandler,
@@ -27,7 +27,9 @@ export class Barkat {
     private readonly commandHandler: ICommandInputHandler,
     private readonly kiteHandler: IKiteHandler,
     private readonly tickerHandler: ITickerHandler,
-    private readonly alertFeedHandler: IAlertFeedHandler
+    private readonly alertFeedHandler: IAlertFeedHandler,
+    private readonly panelHandler: IPanelHandler,
+    private readonly tvManager: ITradingViewManager
   ) {}
 
   private isInvestingSite(): boolean {
@@ -63,14 +65,14 @@ export class Barkat {
     }
   }
 
-  // XXX: Remove suppressed Errors for eslint
+  // TASK Remove suppressed Errors for eslint
   // eslint-disable-next-line max-lines-per-function
   private setupTradingViewUI() {
-    // FIXME: #B Layout and Color Improvements
+    // FIXME: Layout and Color Improvements
     const $area = this.uiUtil.buildArea(Constants.UI.IDS.AREAS.MAIN, '76%', '6%');
     $area.appendTo('body');
 
-    // XXX: Move UI Build Logic to Handlers
+    // TASK Move UI Build Logic to Handlers
     this.uiUtil
       .buildWrapper(Constants.UI.IDS.AREAS.TOP)
       .appendTo($area)
@@ -93,7 +95,12 @@ export class Barkat {
           })
       )
       .append(
-        this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.REFRESH, 'R', () => this.alertHandler.handleRefreshButton())
+        this.uiUtil
+          .buildButton(Constants.UI.IDS.BUTTONS.REFRESH, 'R', () => this.alertHandler.handleRefreshButton())
+          .on('contextmenu', (e) => {
+            e.preventDefault();
+            void this.panelHandler.showPanel();
+          })
       )
       .append(
         this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.JOURNAL, 'J', () => {
@@ -128,7 +135,7 @@ export class Barkat {
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.AUDIT).hide().appendTo($area);
     this.journalUI();
     this.kiteHandler.setupGttRefreshListener();
-    this.repoCron.start();
+    this.tvManager.startAutoSave();
     this.onloadHandler.init();
     console.info('TradingView UI setup');
   }

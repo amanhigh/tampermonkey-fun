@@ -34,15 +34,17 @@ export interface IWatchManager {
 
   /**
    * Check how many order items would be removed by cleanup
+   * @param currentTickers List of current tickers in watchlist
    * @returns Number of items that would be removed
    */
-  dryRunClean(): number;
+  dryRunClean(currentTickers: string[]): number;
 
   /**
    * Remove order items not in watchlist and save changes
+   * @param currentTickers List of current tickers in watchlist
    * @returns Number of items removed
    */
-  clean(): number;
+  clean(currentTickers: string[]): number;
 
   /**
    * Check if a ticker is in any watch category
@@ -114,13 +116,13 @@ export class WatchManager implements IWatchManager {
   }
 
   /** @inheritdoc */
-  dryRunClean(): number {
-    return this.processCleanup(false);
+  dryRunClean(currentTickers: string[]): number {
+    return this.processCleanup(currentTickers, false);
   }
 
   /** @inheritdoc */
-  clean(): number {
-    return this.processCleanup(true);
+  clean(currentTickers: string[]): number {
+    return this.processCleanup(currentTickers, true);
   }
 
   /** @inheritdoc */
@@ -153,14 +155,15 @@ export class WatchManager implements IWatchManager {
    * @param executeChanges Whether to actually remove items and save
    * @returns Number of items affected
    */
-  private processCleanup(executeChanges: boolean): number {
+  private processCleanup(currentTickers: string[], executeChanges: boolean): number {
     let count = 0;
     const categoryLists = this.watchRepo.getWatchCategoryLists();
-    const watchListTickers = categoryLists.getList(5) || new Set();
+    const watchListTickers = new Set(currentTickers);
 
     categoryLists.getLists().forEach((list, key) => {
       for (const ticker of [...list]) {
         if (!watchListTickers.has(ticker)) {
+          console.log(`Removing ${ticker} from category ${key}`);
           if (executeChanges) {
             categoryLists.delete(key, ticker);
           }

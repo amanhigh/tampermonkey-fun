@@ -72,6 +72,7 @@ import { IGlobalErrorHandler, GlobalErrorHandler } from '../handler/error';
 import { IAlertFeedManager, AlertFeedManager } from '../manager/alertfeed';
 import { IImdbRepo, ImdbRepo } from '../repo/imdb';
 import { IImdbManager as IImdbManager, ImdbManager } from '../manager/imdb';
+import { IPanelHandler, PanelHandler } from '../handler/panel';
 
 /**
  * Project Architecture Overview
@@ -101,7 +102,6 @@ export class Factory {
           new Barkat(
             Factory.handler.global(),
             Factory.util.ui(),
-            Factory.repo.cron(),
             Factory.handler.sequence(),
             Factory.handler.onload(),
             Factory.handler.alert(),
@@ -109,11 +109,16 @@ export class Factory {
             Factory.handler.command(),
             Factory.handler.kite(),
             Factory.handler.ticker(),
-            Factory.handler.alertFeed()
+            Factory.handler.alertFeed(),
+            Factory.handler.panel(),
+            Factory.manager.tv()
           )
       ),
     imdb: (): ImdbApp =>
-      Factory.getInstance('imdbApp', () => new ImdbApp(Factory.handler.imdb(), Factory.manager.imdb())),
+      Factory.getInstance(
+        'imdbApp',
+        () => new ImdbApp(Factory.handler.imdb(), Factory.manager.imdb(), Factory.handler.global())
+      ),
   };
 
   /**
@@ -259,7 +264,8 @@ export class Factory {
     symbol: (): ISymbolManager =>
       Factory.getInstance('symbolManager', () => new SymbolManager(Factory.repo.ticker(), Factory.repo.exchange())),
 
-    tv: (): ITradingViewManager => Factory.getInstance('tvManager', () => new TradingViewManager(Factory.util.wait())),
+    tv: (): ITradingViewManager =>
+      Factory.getInstance('tvManager', () => new TradingViewManager(Factory.util.wait(), Factory.repo.cron())),
 
     pair: (): IPairManager => Factory.getInstance('pairManager', () => new PairManager(Factory.repo.pair())),
 
@@ -311,7 +317,8 @@ export class Factory {
             Factory.handler.alertSummary(),
             Factory.handler.ticker(),
             Factory.handler.pair(),
-            Factory.manager.alertFeed()
+            Factory.manager.alertFeed(),
+            Factory.handler.watchlist()
           )
       ),
     alertSummary: (): IAlertSummaryHandler =>
@@ -481,6 +488,11 @@ export class Factory {
             Factory.manager.alert(),
             Factory.manager.alertFeed()
           )
+      ),
+    panel: (): IPanelHandler =>
+      Factory.getInstance(
+        'panelHandler',
+        () => new PanelHandler(Factory.util.smart(), Factory.handler.pair(), Factory.manager.ticker())
       ),
   };
 

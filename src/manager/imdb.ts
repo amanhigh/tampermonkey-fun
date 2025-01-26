@@ -3,15 +3,11 @@ import { IImdbRepo } from '../repo/imdb';
 
 export interface IImdbManager {
   isMovieTab(): boolean;
-  getMovieDetails(): MovieDetails;
   isAutoModeEnabled(): Promise<boolean>;
   setAutoMode(enabled: boolean): Promise<void>;
-  getRatingCutoff(details: MovieDetails): number;
-  createSearchEvent(command: SearchCommand): Promise<void>;
-  getMovieTitle(): string;
-  isGameType(details: MovieDetails): boolean;
   openReviewPage(): void;
-  // FIXME: #C Reduce Public Functions
+  getMovieDetails(): MovieDetails;
+  createMovieSearch(command: SearchCommand): Promise<void>;
 }
 
 /**
@@ -38,15 +34,33 @@ export class ImdbManager implements IImdbManager {
     // Get name without year
     const fullName = $(sel.MOVIE_TITLE).text().trim();
     const [name, year] = fullName.split('(');
+    const type = $(sel.TYPE).text();
+    const language = $(sel.LANGUAGE).text();
+    const rating = parseFloat($(sel.MOVIE_RATING).text());
 
     return {
       name: name.trim(),
       year: year ? year.replace(')', '').trim() : undefined,
-      language: $(sel.LANGUAGE).text(),
-      type: $(sel.TYPE).text(),
-      rating: parseFloat($(sel.MOVIE_RATING).text()),
+      language,
+      type,
+      rating,
       userRating: this.getUserRating(),
+      isGame: type.includes('Video Game'),
+      ratingCutoff: this.calculateRatingCutoff(language, type),
     };
+  }
+
+  private calculateRatingCutoff(language: string, type: string): number {
+    if (type.includes('Video Game')) {
+      return 6.0;
+    }
+    if (language.includes('Punjabi') || language.includes('Hindi')) {
+      return 5.0;
+    }
+    if (language.includes('English')) {
+      return 6.5;
+    }
+    return 6.0;
   }
 
   /**
@@ -60,41 +74,12 @@ export class ImdbManager implements IImdbManager {
     await this.imdbRepo.setAutoMode(enabled);
   }
 
-  public async createSearchEvent(command: SearchCommand): Promise<void> {
-    // FIXME: Move to Repo Layer ?
+  public async createMovieSearch(command: SearchCommand): Promise<void> {
     const event: SearchEvent = {
       command,
       date: Date.now(),
     };
     await GM.setValue(IMDB_CONSTANTS.EVENTS.SEARCH, JSON.stringify(event));
-  }
-
-  public getMovieTitle(): string {
-    // FIXME: #C Is it already in Details ?
-    const fullTitle = $(IMDB_CONSTANTS.SELECTORS.MOVIE_TITLE).text().trim();
-    return fullTitle.split('(')[0].trim();
-  }
-
-  /**
-   * Determines rating cutoff based on movie type and language
-   * @param details Movie details to check
-   */
-  public getRatingCutoff(details: MovieDetails): number {
-    if (details.type.includes('Video Game')) {
-      return 6.0;
-    }
-
-    if (details.language.includes('Punjabi') || details.language.includes('Hindi')) {
-      return 5.0;
-    }
-
-    if (details.language.includes('English')) {
-      return 6.5;
-    }
-
-    // Default cutoff for unknown languages
-    console.warn(`Unknown language: ${details.language}, using default cutoff`);
-    return 6.0;
   }
 
   /**
@@ -104,14 +89,6 @@ export class ImdbManager implements IImdbManager {
   private getUserRating(): number | undefined {
     const ratingText = $(IMDB_CONSTANTS.SELECTORS.USER_RATING).text();
     return ratingText ? parseFloat(ratingText) : undefined;
-  }
-
-  /**
-   * Checks if movie is a game type
-   */
-  public isGameType(details: MovieDetails): boolean {
-    // FIXME: #C Move to Details
-    return details.type.includes('Video Game');
   }
 
   /**

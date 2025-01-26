@@ -36,6 +36,11 @@ export interface ITradingViewWatchlistManager {
    * Paints the TradingView watchlist
    */
   paintWatchList(): void;
+
+  /**
+   * Applies default filters to the watchlist
+   */
+  applyDefaultFilters(): void;
 }
 
 /**
@@ -88,7 +93,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   paintWatchList(): void {
     this.resetWatchList();
 
-    // XXX: Optimize Further only on Ticker Movement ?
+    // TASK Optimize Further only on Ticker Movement ?
     this.watchManager.computeDefaultList(this.getTickers());
 
     // Paint Symbols
@@ -110,6 +115,17 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
 
     // Apply Filters
     this.applyFilters();
+  }
+
+  /** @inheritdoc */
+  applyDefaultFilters(): void {
+    // Apply white filter by default
+    this.addFilter({
+      color: Constants.UI.COLORS.DEFAULT,
+      index: 1, // Left click
+      ctrl: false,
+      shift: false,
+    });
   }
 
   private resetWatchList(): void {

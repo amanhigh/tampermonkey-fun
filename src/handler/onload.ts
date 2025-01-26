@@ -115,6 +115,8 @@ export class OnLoadHandler implements IOnLoadHandler {
           this.watchListHandler.onWatchListChange();
         });
 
+        // Apply default filters before first paint
+        this.watchListHandler.applyDefaultFilters();
         this.watchListHandler.onWatchListChange();
 
         // Set up screener observer if exists
@@ -127,7 +129,6 @@ export class OnLoadHandler implements IOnLoadHandler {
               throw new Error('Unable to setup screener observer');
             }
             this.observeUtil.nodeObserver(targetElement, () => {
-              // HACK: Is this requred when Screener Changes?
               this.watchListHandler.onWatchListChange();
             });
             Notifier.success('Screener Hooked');

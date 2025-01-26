@@ -1,8 +1,11 @@
+# Directory
 node_modules
-.aider*
 /dist
+coverage/
+.aider*
+
+# Files
 .env
-Instructions.md
 Plan.md
 repomix-output.md
 storage_migrated.json

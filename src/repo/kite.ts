@@ -56,6 +56,9 @@ export class KiteRepo implements IKiteRepo {
 
   public async getGttRefereshEvent(): Promise<GttRefreshEvent> {
     const data = await GM.getValue(Constants.STORAGE.EVENTS.GTT_REFERSH);
-    return GttRefreshEvent.fromString(data?.toString());
+    if (!data) {
+      throw new Error('No GTT Orders Found');
+    }
+    return GttRefreshEvent.fromString(data.toString());
   }
 }

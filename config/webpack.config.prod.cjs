@@ -20,11 +20,6 @@ const cfg = merge(webpackConfig, {
     type: "filesystem",
     name: "prod",
   },
-  plugins: [
-    new UserScriptMetaDataPlugin({
-      metadata,
-    }),
-  ],
 });
 
 module.exports = cfg;

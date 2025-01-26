@@ -35,9 +35,6 @@ const cfg = merge(webpackConfig, {
     new LiveReloadPlugin({
       delay: 500,
     }),
-    new UserScriptMetaDataPlugin({
-      metadata,
-    }),
   ],
 });
 

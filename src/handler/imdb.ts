@@ -39,11 +39,11 @@ export class ImdbHandler implements IImdbHandler {
   }
 
   public async signalSearch(command: SearchCommand): Promise<void> {
-    await this.imdbManager.createSearchEvent(command);
+    await this.imdbManager.createMovieSearch(command);
   }
 
   public processSearchEvent(searchEvent: SearchEvent): void {
-    const movieTitle = this.imdbManager.getMovieTitle();
+    const movieTitle = this.imdbManager.getMovieDetails().name;
 
     switch (searchEvent.command) {
       case SearchCommand.YTS:
@@ -66,7 +66,7 @@ export class ImdbHandler implements IImdbHandler {
   public handleImdbPreview(): void {
     // Open trailer/review based on type
     const details = this.imdbManager.getMovieDetails();
-    const searchQuery = this.imdbManager.isGameType(details) ? `${details.name} review` : `${details.name} trailer`;
+    const searchQuery = details.isGame ? `${details.name} review` : `${details.name} trailer`;
 
     // Direct search without event system
     this.searchUtil.youtubeSearch(searchQuery);

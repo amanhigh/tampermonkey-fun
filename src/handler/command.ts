@@ -80,7 +80,7 @@ export class CommandInputHandler implements ICommandInputHandler {
   }
 
   private determineInputType(value: string): InputProcessor {
-    // XXX: Improved Ends With Symbol
+    // HACK: Improved Ends With Symbol
     if (this.hasTickerSuffix(value)) {
       return {
         type: 'TICKER',
@@ -161,18 +161,42 @@ export class CommandInputHandler implements ICommandInputHandler {
     $(`#${Constants.UI.IDS.INPUTS.COMMAND}`).focus();
   }
 
+  private formatHelpMessage(): string {
+    const styles = {
+      container: 'font-family: monospace; line-height: 1.5;',
+      section: 'color: #FFA500; font-weight: bold; margin: 8px 0;', // Orange headers
+      list: 'margin: 4px 0 8px 12px;',
+      item: 'color: #FFFFFF;', // White items
+      subItem: 'margin-left: 16px; color: #CCCCCC;', // Gray sub-items
+    };
+
+    return `
+        <div style="${styles.container}">
+            <div style="${styles.section}">Quick Commands:</div>
+            <div style="${styles.list}">
+                <div style="${styles.item}">• TICKER${this.TICKER_SUFFIX} - Open New Ticker</div>
+                <div style="${styles.item}">• 100.5 102.3 - Create Price Alerts</div>
+            </div>
+
+            <div style="${styles.section}">Exchange Commands:</div>
+            <div style="${styles.list}">
+                <div style="${styles.item}">• E=NSE - Set Exchange</div>
+            </div>
+
+            <div style="${styles.section}">FNO Commands:</div>
+            <div style="${styles.list}">
+                <div style="${styles.item}">• FNO=TICKER1,TICKER2</div>
+                <div style="${styles.subItem}>Add FNO Tickers</div>
+                <div style="${styles.item}">• FNO!=TICKER1,TICKER2</div>
+                <div style="${styles.subItem}>Replace FNO Tickers</div>
+                <div style="${styles.item}">• FNO-=TICKER1,TICKER2</div>
+                <div style="${styles.subItem}>Remove FNO Tickers</div>
+            </div>
+        </div>
+    `;
+  }
+
   private displayHelpMessage(): void {
-    // XXX: Update and Beautify Help Message
-    const help = `
-Input Formats:
-- Quick Ticker: TICKER${this.TICKER_SUFFIX}
-- Price Alerts: 100.5 102.3
-- Commands:
-  * E=NSE (Exchange)
-  * FNO=TICKER1,TICKER2 (Add FNO)
-  * FNO!=TICKER1,TICKER2 (Replace FNO)
-  * FNO-=TICKER1,TICKER2 (Remove FNO)
-`;
-    Notifier.info(help);
+    Notifier.info(this.formatHelpMessage());
   }
 }

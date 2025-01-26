@@ -198,12 +198,8 @@ export class KiteHandler implements IKiteHandler {
 
     // Store and notify based on order count
     const length = refreshEvent.getCount();
-    if (length > 0) {
-      await this.kiteManager.createGttRefreshEvent(refreshEvent);
-      Notifier.success(`GTT Map Built. Count: ${length}`);
-    } else {
-      Notifier.warn('No Active GTT Orders Found');
-    }
+    await this.kiteManager.createGttRefreshEvent(refreshEvent);
+    Notifier.success(`GTT Map Built. Count: ${length}`);
   }
 
   /**
@@ -226,7 +222,6 @@ export class KiteHandler implements IKiteHandler {
    * Triggers order refresh when GTT tab is activated
    * @private
    */
-  // FIXME: #B Make this Flow Work on kite and tv side.
   private setupGttTabListener(): void {
     this.waitUtil.waitJEE(this.gttSelector, ($element) => {
       $element.click(() => void this.reloadGttOrders());

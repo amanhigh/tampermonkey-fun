@@ -100,6 +100,7 @@ export class GttCreateEvent extends BaseEvent {
  */
 export class GttRefreshEvent extends BaseEvent {
   orders: Record<string, Order[]>;
+  time: number;
 
   /**
    * Creates a new GTT Refresh Event
@@ -107,6 +108,7 @@ export class GttRefreshEvent extends BaseEvent {
   constructor() {
     super();
     this.orders = {};
+    this.time = Date.now();
   }
 
   /**
@@ -143,20 +145,11 @@ export class GttRefreshEvent extends BaseEvent {
    * @param data Serialized event data
    * @returns New GttRefreshEvent instance
    */
-  public static fromString(data: string | undefined): GttRefreshEvent {
-    if (!data) {
-      return new GttRefreshEvent();
-    }
+  public static fromString(data: string): GttRefreshEvent {
     const parsed = JSON.parse(data);
     const event = new GttRefreshEvent();
-    if (parsed.orders && typeof parsed.orders === 'object') {
-      // Reconstruct orders from parsed data
-      Object.entries(parsed.orders).forEach(([sym, orders]) => {
-        (orders as Order[]).forEach((order) => {
-          event.addOrder(sym, order);
-        });
-      });
-    }
+    event.orders = parsed.orders;
+    event.time = parsed.time;
     return event;
   }
 }

@@ -1,5 +1,6 @@
 import { AlertAudit, AlertState, AuditStateCounts } from '../models/alert';
 import { Notifier } from '../util/notify';
+import { Color } from '../models/color';
 import { ITickerManager } from './ticker';
 import { IPairManager } from './pair';
 import { IAlertManager } from './alert';
@@ -55,7 +56,7 @@ export class AuditManager implements IAuditManager {
     this._auditRepo.clear();
     this.stateCounts = new AuditStateCounts();
     await this._processBatch(investingTickers);
-    Notifier.message(this.getAuditSummary(), 'purple', 10000);
+    Notifier.message(this.getAuditSummary(), Color.PURPLE, 10000);
   }
 
   getAuditSummary(): string {
@@ -102,7 +103,7 @@ export class AuditManager implements IAuditManager {
       processedCount = endIndex;
       const progress = Math.floor((processedCount / investingTickers.length) * 100);
       if (progress % 20 === 0) {
-        // XXX: Show progress at 20% intervals
+        // BUG: Show progress at 20% intervals
       }
 
       // Yield to prevent UI blocking
@@ -111,7 +112,7 @@ export class AuditManager implements IAuditManager {
 
     // Final status
     const auditCount = this._auditRepo.getCount();
-    Notifier.message(`Audited ${auditCount} out of ${investingTickers.length}`, 'purple', 5000);
+    Notifier.message(`Audited ${auditCount} out of ${investingTickers.length}`, Color.PURPLE, 5000);
   }
 
   /**

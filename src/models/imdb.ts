@@ -8,6 +8,8 @@ export interface MovieDetails {
   type: string;
   rating: number;
   userRating?: number;
+  ratingCutoff: number; // Added
+  isGame: boolean; // Added
 }
 
 /**

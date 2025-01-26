@@ -1,9 +1,10 @@
 import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 import { IWaitUtil } from '../util/wait';
+import { IRepoCron } from '../repo/cron';
 
 // Price and validation related constants
-const PRICE_REGEX = /[+-]?\d{1,3}(?:,\d{3})*(?:\.\d+)?/g;
+const PRICE_REGEX = /-?\d{1,3}(?:,\d{3})*(?:\.\d+)?/;
 
 // Error messages for LTP operations
 const TV_ERRORS = Object.freeze({
@@ -60,16 +61,44 @@ export interface ITradingViewManager {
    * @param enabled true to enable swift keys, false to disable
    */
   setSwiftKeysState(enabled: boolean): void;
+
+  /**
+   * Starts automatic saving of workspace at regular intervals
+   */
+  startAutoSave(): void;
 }
 
 /**
  * Manages TradingView page interactions and DOM operations
  */
 export class TradingViewManager implements ITradingViewManager {
+  private static readonly SAVE_INTERVAL = 30 * 1000;
+
   /**
    * @param waitUtil Manager for DOM operations
+   * @param repoCron Repository for cron operations
    */
-  constructor(private readonly waitUtil: IWaitUtil) {}
+  constructor(
+    private readonly waitUtil: IWaitUtil,
+    private readonly repoCron: IRepoCron
+  ) {}
+
+  public startAutoSave(): void {
+    setInterval(() => void this.autoSave(), TradingViewManager.SAVE_INTERVAL);
+  }
+
+  private async autoSave(): Promise<void> {
+    this.clickSaveButton();
+    await this.repoCron.saveAllRepositories();
+    Notifier.success('Workspace saved');
+  }
+
+  private clickSaveButton(): void {
+    const $save = $(Constants.DOM.HEADER.SAVE);
+    if ($save.length) {
+      $save.click();
+    }
+  }
 
   /** @inheritdoc */
   getName(): string {
@@ -95,23 +124,25 @@ export class TradingViewManager implements ITradingViewManager {
   }
 
   /** @inheritdoc */
+  public parsePriceFromText(text: string): number {
+    const priceText = text.replace('Copy price', '').trim();
+    const match = PRICE_REGEX.exec(priceText);
+    if (!match) {
+      throw new Error(`Cursor Extraction Failed for '${text}'`);
+    }
+    const price = parseFloat(match[0].replace(/,/g, ''));
+    if (isNaN(price) || price === 0) {
+      throw new Error(`Invalid Cursor Price: ${price} in ${match[0]}`);
+    }
+    return price;
+  }
+
   async getCursorPrice(): Promise<number> {
     return new Promise((resolve, reject) => {
       this.waitUtil.waitJEE(Constants.DOM.POPUPS.AUTO_ALERT, (el) => {
         try {
-          const text = el.text();
-          const priceText = text.replace('Copy price', '').trim();
-          const match = PRICE_REGEX.exec(priceText);
-          if (!match) {
-            reject(new Error(`Cursor Extraction Failed for '${text}'`));
-            return;
-          }
-          const altPrice = parseFloat(match[0].replace(/,/g, ''));
-          if (isNaN(altPrice) || altPrice === 0) {
-            reject(new Error(`Invalid Cursor Price: ${altPrice} in ${match[0]}`));
-            return;
-          }
-          resolve(altPrice);
+          const price = this.parsePriceFromText(el.text());
+          resolve(price);
         } catch (error) {
           reject(error);
         }

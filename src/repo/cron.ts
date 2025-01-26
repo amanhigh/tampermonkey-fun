@@ -1,4 +1,3 @@
-import { Notifier } from '../util/notify';
 import { BaseRepo } from './base';
 
 export interface IRepoCron {
@@ -9,36 +8,25 @@ export interface IRepoCron {
   registerRepository(repository: BaseRepo<unknown>): void;
 
   /**
-   * Starts the cron job for automatic saving
+   * Saves all registered repositories
    */
-  start(): void;
+  saveAllRepositories(): Promise<void>;
 }
 
 export class RepoCron implements IRepoCron {
-  private readonly _repositories: Set<BaseRepo<unknown>>;
-  private static readonly SAVE_INTERVAL = 10 * 1000; // 30 seconds
+  private readonly repositories: Set<BaseRepo<unknown>>;
 
   constructor() {
-    this._repositories = new Set();
-  }
-
-  public start(): void {
-    this._setupCron();
-  }
-
-  private _setupCron(): void {
-    // FIXME: #B Save Trading view as well.
-    setInterval(() => void this._saveRepositories(), RepoCron.SAVE_INTERVAL);
+    this.repositories = new Set();
   }
 
   public registerRepository(repository: BaseRepo<unknown>): void {
-    this._repositories.add(repository);
+    this.repositories.add(repository);
   }
 
-  private async _saveRepositories(): Promise<void> {
-    for (const repository of this._repositories) {
+  public async saveAllRepositories(): Promise<void> {
+    for (const repository of this.repositories) {
       await repository.save();
     }
-    Notifier.success('Repositories saved');
   }
 }

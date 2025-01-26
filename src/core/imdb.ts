@@ -1,15 +1,20 @@
 import { IImdbHandler } from '../handler/imdb';
 import { IImdbManager } from '../manager/imdb';
+import { IGlobalErrorHandler } from '../handler/error';
 import { IMDB_CONSTANTS, SearchCommand, SearchEvent } from '../models/imdb';
 import { Factory } from './factory';
 
 export class ImdbApp {
   constructor(
     private readonly imdbHandler: IImdbHandler,
-    private readonly imdbManager: IImdbManager
+    private readonly imdbManager: IImdbManager,
+    private readonly errorHandler: IGlobalErrorHandler
   ) {}
 
   public initialize(): void {
+    // Register error handlers first
+    this.errorHandler.registerGlobalErrorHandlers();
+
     // Always register
     GM.registerMenuCommand('Imdb Auto', () => void this.imdbHandler.handleAutoModeToggle());
 
@@ -20,8 +25,6 @@ export class ImdbApp {
       // Movie Search Tab
       GM.registerMenuCommand('List', () => this.imdbHandler.handleListMovies());
     }
-
-    // FIXME: #B Register global Error Handler
   }
 
   private initializeMovieFeatures(): void {

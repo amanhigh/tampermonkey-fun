@@ -1,3 +1,5 @@
+import { Color } from '../models/color';
+
 /**
  * Utility class for displaying notifications in the UI.
  * Uses a singleton pattern with static methods for notification management.
@@ -14,8 +16,7 @@ export class Notifier {
    * @param timeout - Duration to show message in milliseconds
    * @throws Error if message content is empty or container initialization fails
    */
-  public static message(msg: string, color: string, timeout = 2000): void {
-    // TODO: Take Color Enum if Possible
+  public static message(msg: string, color: Color, timeout = 2000): void {
     if (!msg) {
       throw new Error('Message content is required');
     }
@@ -39,31 +40,31 @@ export class Notifier {
    * @param timeout - Optional display duration in ms
    */
   public static error(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
-    this.message(`❌ ${msg}`, 'red', timeout);
+    this.message(`❌ ${msg}`, Color.ERROR, timeout);
   }
 
   public static warn(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
-    this.message(`⚠️ ${msg}`, 'orange', timeout);
+    this.message(`⚠️ ${msg}`, Color.WARN, timeout);
   }
 
   public static success(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
-    this.message(`✅ ${msg}`, 'green', timeout);
+    this.message(`✅ ${msg}`, Color.SUCCESS, timeout);
   }
 
   public static info(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
-    this.message(`ℹ️ ${msg}`, 'white', timeout);
+    this.message(`ℹ️ ${msg}`, Color.INFO, timeout);
   }
 
   public static green(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
-    this.message(`${msg}`, 'green', timeout);
+    this.message(`${msg}`, Color.GREEN, timeout);
   }
 
   public static red(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
-    this.message(`${msg}`, 'red', timeout);
+    this.message(`${msg}`, Color.RED, timeout);
   }
 
   public static yellow(msg: string, timeout = Notifier.DEFAULT_TIMEOUT): void {
-    this.message(`${msg}`, 'yellow', timeout);
+    this.message(`${msg}`, Color.YELLOW, timeout);
   }
 
   /**

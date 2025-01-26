@@ -12,6 +12,7 @@ import { IUIUtil } from '../util/ui';
 import { ISyncUtil } from '../util/sync';
 import { AlertClicked, AlertClickAction } from '../models/events';
 import { IAlertSummaryHandler } from './alert_summary';
+import { IWatchListHandler } from './watchlist';
 import { ITickerHandler } from './ticker';
 import { IPairHandler } from './pair';
 import { IAuditHandler } from './audit';
@@ -31,7 +32,6 @@ export interface IAlertHandler {
    * Creates alert at cursor price position
    */
   createAlertAtCursor(): Promise<void>;
-  // TODO: #C Linter to find unused Public Methods
 
   /**
    * Creates alert 20% above current price
@@ -111,7 +111,8 @@ export class AlertHandler implements IAlertHandler {
     private readonly alertSummaryHandler: IAlertSummaryHandler,
     private readonly tickerHandler: ITickerHandler,
     private readonly pairHandler: IPairHandler,
-    private readonly alertFeedManager: IAlertFeedManager
+    private readonly alertFeedManager: IAlertFeedManager,
+    private readonly watchListHandler: IWatchListHandler
   ) {}
 
   /** @inheritdoc */
@@ -176,10 +177,21 @@ export class AlertHandler implements IAlertHandler {
   /** @inheritdoc */
   public refreshAlerts(): void {
     this.syncUtil.waitOn('alert-refresh-local', 10, () => {
-      // FIXME: #A Should not do for Composite Symbols eg. N100/XAUEUR*1000
-      const alerts = this.alertManager.getAlerts();
-      this.alertSummaryHandler.displayAlerts(alerts);
-      this.auditHandler.auditCurrent();
+      try {
+        const alerts = this.alertManager.getAlerts();
+        this.alertSummaryHandler.displayAlerts(alerts);
+        this.auditHandler.auditCurrent();
+      } catch (error) {
+        const tvTicker = this.tickerManager.getTicker();
+
+        // Skip alert refresh for composite symbols
+        if (this.symbolManager.isComposite(tvTicker)) {
+          this.alertSummaryHandler.displayAlerts(null);
+          return;
+        } else {
+          throw error;
+        }
+      }
     });
   }
 
@@ -202,8 +214,7 @@ export class AlertHandler implements IAlertHandler {
     void this.refreshAllAlerts();
 
     // Use WatchlistHandler for cleanup
-    // TODO: Enable Back Cleanup
-    // void this.watchListHandler.handleWatchlistCleanup();
+    void this.watchListHandler.handleWatchlistCleanup();
   }
 
   /** @inheritdoc */
@@ -226,22 +237,9 @@ export class AlertHandler implements IAlertHandler {
 
   /** @inheritdoc */
   public handleAlertContextMenu(e: Event): void {
-    // Prevent default context menu
     e.preventDefault();
-
-    const event = e as MouseEvent; // Cast to access modifier keys
-    if (event.ctrlKey) {
-      void this.pairHandler.mapInvestingTicker(
-        this.tickerManager.getInvestingTicker(),
-        this.tickerManager.getCurrentExchange()
-      );
-    } else if (event.shiftKey) {
-      this.pairHandler.deletePairInfo(this.tickerManager.getInvestingTicker());
-    } else {
-      // Regular audit operation
-      this.auditHandler.auditCurrent();
-    }
-    this.refreshAlerts();
+    // Only keep audit operation
+    this.auditHandler.auditCurrent();
   }
 
   /** @inheritdoc */

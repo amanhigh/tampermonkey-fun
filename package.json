@@ -15,7 +15,8 @@
     "analyze": "cross-env npm_config_report=true npm run build",
     "experiment": "webpack --config config/experiment.cjs",
     "barkat": "webpack --config config/barkat.cjs",
-    "imdb": "webpack --config config/imdb.cjs"
+    "imdb": "webpack --config config/imdb.cjs",
+    "test": "jest"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",
@@ -30,6 +31,9 @@
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
     "globals": "^15.11.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "@types/jest": "^29.5.11",
     "less": "^4.2.0",
     "less-loader": "^12.2.0",
     "prettier": "^3.4.1",

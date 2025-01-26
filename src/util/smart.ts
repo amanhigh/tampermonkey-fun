@@ -76,7 +76,6 @@ export class SmartPrompt implements ISmartPrompt {
     radioButton.type = 'radio';
     radioButton.name = 'override';
     radioButton.value = text;
-    // BUG: #A Last Overrides always coming.
 
     radioButton.addEventListener('change', function () {
       document.querySelectorAll('input[name="override"]').forEach((rb) => {
@@ -100,6 +99,9 @@ export class SmartPrompt implements ISmartPrompt {
     return new Promise((resolve) => {
       this.modal = this.createModal();
       document.body.appendChild(this.modal);
+
+      // Reset state at start
+      this.resetRadioState();
 
       reasons.forEach((reason, index) => {
         const button = this.createButton(reason, `smart-button-${index}`, resolve);
@@ -135,8 +137,18 @@ export class SmartPrompt implements ISmartPrompt {
     });
   }
 
+  private resetRadioState(): void {
+    const radioButtons = document.querySelectorAll('input[name="override"]');
+    radioButtons.forEach((rb) => {
+      if (rb instanceof HTMLInputElement) {
+        rb.checked = false;
+        rb.style.backgroundColor = 'black';
+      }
+    });
+  }
+
   private getSelectedOverride(): string | null {
     const selectedRadio = document.querySelector('input[name="override"]:checked');
-    return selectedRadio instanceof HTMLInputElement ? selectedRadio.value : null;
+    return selectedRadio instanceof HTMLInputElement && selectedRadio.checked ? selectedRadio.value : null;
   }
 }

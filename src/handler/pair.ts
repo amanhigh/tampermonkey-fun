@@ -68,7 +68,6 @@ export class PairHandler implements IPairHandler {
   }
 
   private formatPair(pair: PairInfo): string {
-    // XXX: pair.symbol is needed ?
     return `${pair.name} (ID: ${pair.pairId}, Exchange: ${pair.exchange})`;
   }
 

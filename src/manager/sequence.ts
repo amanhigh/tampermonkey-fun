@@ -2,6 +2,7 @@ import { Constants } from '../models/constant';
 import { TimeFrameConfig, SequenceType, TimeFrame } from '../models/trading';
 import { ISequenceRepo } from '../repo/sequence';
 import { Notifier } from '../util/notify';
+import { Color } from '../models/color';
 import { ITickerManager } from './ticker';
 
 /**
@@ -97,7 +98,7 @@ export class SequenceManager implements ISequenceManager {
       Notifier.red('🚫 FreezeSequence Disabled');
     } else {
       this._frozenSequence = this.getCurrentSequence();
-      Notifier.message(`FreezeSequence: ${this._frozenSequence}`, 'royalblue');
+      Notifier.message(`FreezeSequence: ${this._frozenSequence}`, Color.ROYAL_BLUE);
     }
   }
 

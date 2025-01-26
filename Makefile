@@ -26,6 +26,7 @@ build: format compile lint ## Build all files
 
 test: ## Run tests
 	@printf $(_TITLE) "Test" "TypeScript"
+	$(NPM) run test
 
 format: ## Format TypeScript files using prettier
 	@printf $(_TITLE) "Format" "TypeScript"
@@ -59,7 +60,7 @@ clean-node:
 	rm -rf dist node_modules
 
 ## Misc
-.PHONY: pack
+.PHONY: pack test
 pack: ## Repomix Packing
 	@printf $(_TITLE) "Pack" "Repository"
 	@repomix --style markdown . --ignore "LICENSE"
@@ -73,7 +74,7 @@ help: ## Show this help
 info: ## Info
 infos: info ## Extended Info
 prepare: setup-npm ## Onetime Setup
-setup: build barkat ## Setup
+setup: build test barkat ## Setup
 clean: clean-node ## Clean
 reset: clean setup info ## Reset
 all:prepare reset ## Run All Targets
