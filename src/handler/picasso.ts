@@ -6,17 +6,18 @@ export interface IPicassoHandler {
 }
 
 interface HotkeyMap {
-  [key: string]: string;
+  [key: string]: string[];
 }
 
 export class PicassoHandler implements IPicassoHandler {
   private readonly buttonMap: HotkeyMap = {
-    ',': '[data-testid="toolbar-rectangle"]',
-    u: '[data-testid="toolbar-diamond"]',
-    ';': '[aria-label="Delete"]',
-    y: '[aria-label="Reset the canvas"]',
-    "'": '[data-testid="button-undo"]',
-    '.': '[data-testid="button-redo"]',
+    ',': ['[data-testid="toolbar-rectangle"]'],
+    u: ['[data-testid="toolbar-diamond"]'],
+    ';': ['[aria-label="Delete"]'],
+    y: ['[data-testid="main-menu-trigger"]', '[aria-label="Reset the canvas"]'],
+    "'": ['[data-testid="button-undo"]'],
+    '.': ['[data-testid="button-redo"]'],
+    // Example combo: 'c': ['[data-testid="toolbar-circle"]', '[aria-label="Fill color"]']
   };
 
   constructor(private readonly waitUtil: IWaitUtil) {}
@@ -44,7 +45,9 @@ export class PicassoHandler implements IPicassoHandler {
     }
   }
 
-  private clickButton(selector: string): void {
-    this.waitUtil.waitClick(selector);
+  private clickButton(selectors: string[]): void {
+    selectors.forEach((selector) => {
+      this.waitUtil.waitClick(selector);
+    });
   }
 }
