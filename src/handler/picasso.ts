@@ -1,6 +1,7 @@
 import { IWaitUtil } from '../util/wait';
 import { Notifier } from '../util/notify';
 import { IKeyUtil } from '../util/key';
+import { PICASSO_CONSTANTS } from '../models/picasso';
 
 export interface IPicassoHandler {
   initialize(): void;
@@ -26,18 +27,51 @@ export class PicassoHandler implements IPicassoHandler {
     j: ['[aria-label="Ungroup selection"]'],
   };
 
+  private modeIndicator: HTMLDivElement | null = null;
+
   constructor(
     private readonly waitUtil: IWaitUtil,
     private readonly keyUtil: IKeyUtil
   ) {}
 
+  private createModeIndicator(): void {
+    this.modeIndicator = document.createElement('div');
+    this.modeIndicator.className = PICASSO_CONSTANTS.CLASSES.MODE_INDICATOR;
+    document.body.appendChild(this.modeIndicator);
+    this.updateModeIndicator();
+  }
+
+  private isTextEditingMode(): boolean {
+    return !!document.querySelector(`.${PICASSO_CONSTANTS.CLASSES.TEXT_EDITOR}`);
+  }
+
+  private updateModeIndicator(): void {
+    if (this.modeIndicator) {
+      this.modeIndicator.textContent = this.isTextEditingMode()
+        ? PICASSO_CONSTANTS.INDICATOR.TEXT_MODE
+        : PICASSO_CONSTANTS.INDICATOR.DRAW_MODE;
+    }
+  }
+
+  private setupModeDetection(): void {
+    document.addEventListener('focusin', () => this.updateModeIndicator());
+    document.addEventListener('focusout', () => this.updateModeIndicator());
+  }
+
   public initialize(): void {
+    this.createModeIndicator();
+    this.setupModeDetection();
     this.setupKeyListener();
     Notifier.success('Picasso initialized 🎨');
   }
 
   private setupKeyListener(): void {
-    document.addEventListener('keydown', (e) => this.handleKeyPress(e));
+    document.addEventListener('keydown', (e) => {
+      // Only handle drawing hotkeys if not in text editing mode
+      if (!this.isTextEditingMode()) {
+        this.handleKeyPress(e);
+      }
+    });
   }
 
   private handleKeyPress(event: KeyboardEvent): void {
