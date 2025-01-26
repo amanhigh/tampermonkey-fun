@@ -3,6 +3,7 @@ import { Factory } from './factory';
 import { UIUtil } from '../util/ui';
 import { IKeyUtil } from '../util/key';
 import { Notifier } from '../util/notify';
+import { RunPicasso } from './picasso';
 
 interface TestComponents {
   input: JQuery;
@@ -128,4 +129,5 @@ export function RunExperiment(): void {
   app.initialize();
 }
 
-// RunExperiment();
+RunExperiment();
+// RunPicasso();

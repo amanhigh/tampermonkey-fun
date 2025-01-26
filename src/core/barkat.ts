@@ -163,4 +163,4 @@ export function RunBarkat(): void {
   barkat.initialize();
 }
 
-RunBarkat();
+// RunBarkat();
