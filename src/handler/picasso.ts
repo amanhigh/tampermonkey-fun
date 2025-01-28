@@ -20,6 +20,8 @@ export class PicassoHandler implements IPicassoHandler {
     "'": ['[data-testid="button-undo"]'],
     '.': ['[data-testid="button-redo"]'],
     j: ['[aria-label="Group selection"]'],
+    p: ['[data-testid="main-menu-trigger"]', '[aria-label="Center vertically"]'],
+    i: ['[data-testid="main-menu-trigger"]', '[aria-label="Center horizontally"]'],
   };
 
   // Add double tap mappings
