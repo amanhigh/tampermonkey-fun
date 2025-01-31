@@ -1,5 +1,4 @@
 import '../style/main.less';
-import { Factory } from './factory';
 import { UIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
 import { ISequenceHandler } from '../handler/sequence';
@@ -14,6 +13,7 @@ import { Trend } from '../models/trading';
 import { IGlobalErrorHandler } from '../handler/error';
 import { IPanelHandler } from '../handler/panel';
 import { ITradingViewManager } from '../manager/tv';
+import { Factory } from './factory';
 
 export class Barkat {
   // eslint-disable-next-line max-params

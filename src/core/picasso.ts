@@ -1,5 +1,6 @@
 import { IGlobalErrorHandler } from '../handler/error';
 import { IPicassoHandler } from '../handler/picasso';
+import { Factory } from './factory';
 
 export class PicassoApp {
   constructor(
@@ -12,8 +13,6 @@ export class PicassoApp {
     this.picassoHandler.initialize();
   }
 }
-
-import { Factory } from './factory';
 
 export function RunPicasso(): void {
   console.info('🎨 Picasso Drawing Accelerator Started');
