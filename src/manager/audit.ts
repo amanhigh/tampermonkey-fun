@@ -33,18 +33,18 @@ export interface IAuditManager {
  * Class representing the Audit Manager.
  */
 export class AuditManager implements IAuditManager {
-  private readonly _batchSize: number;
+  private readonly batchSize: number;
 
   private stateCounts: AuditStateCounts;
 
   constructor(
-    private readonly _auditRepo: IAuditRepo,
-    private readonly _tickerManager: ITickerManager,
-    private readonly _pairManager: IPairManager,
-    private readonly _alertManager: IAlertManager,
+    private readonly auditRepo: IAuditRepo,
+    private readonly tickerManager: ITickerManager,
+    private readonly pairManager: IPairManager,
+    private readonly alertManager: IAlertManager,
     batchSize = 50
   ) {
-    this._batchSize = batchSize;
+    this.batchSize = batchSize;
     this.stateCounts = new AuditStateCounts();
   }
 
@@ -52,10 +52,10 @@ export class AuditManager implements IAuditManager {
 
   /** @inheritdoc */
   async auditAlerts(): Promise<void> {
-    const investingTickers = this._pairManager.getAllInvestingTickers();
-    this._auditRepo.clear();
+    const investingTickers = this.pairManager.getAllInvestingTickers();
+    this.auditRepo.clear();
     this.stateCounts = new AuditStateCounts();
-    await this._processBatch(investingTickers);
+    await this.processBatch(investingTickers);
     Notifier.message(this.getAuditSummary(), Color.PURPLE, 10000);
   }
 
@@ -65,16 +65,16 @@ export class AuditManager implements IAuditManager {
 
   /** @inheritdoc */
   auditCurrentTicker(): AlertAudit {
-    const investingTicker = this._tickerManager.getInvestingTicker();
+    const investingTicker = this.tickerManager.getInvestingTicker();
     const state = this.auditAlertState(investingTicker);
     const audit = new AlertAudit(investingTicker, state);
-    this._auditRepo.set(investingTicker, audit);
+    this.auditRepo.set(investingTicker, audit);
     return audit;
   }
 
   /** @inheritdoc */
   filterAuditResults(state: AlertState): AlertAudit[] {
-    return this._auditRepo.getFilteredAuditResults(state);
+    return this.auditRepo.getFilteredAuditResults(state);
   }
 
   /********** Private Methods **********/
@@ -84,20 +84,20 @@ export class AuditManager implements IAuditManager {
    * @param investingTickers - The list of tickers to process.
    * @private
    */
-  private async _processBatch(investingTickers: string[]): Promise<void> {
+  private async processBatch(investingTickers: string[]): Promise<void> {
     let processedCount = 0;
 
     // Process in batches
     while (processedCount < investingTickers.length) {
       // Calculate batch bounds
-      const endIndex = Math.min(processedCount + this._batchSize, investingTickers.length);
+      const endIndex = Math.min(processedCount + this.batchSize, investingTickers.length);
 
       // Process current batch
       for (let i = processedCount; i < endIndex; i++) {
         const investingTicker = investingTickers[i];
         const state = this.auditAlertState(investingTicker);
         this.stateCounts.increment(state);
-        this._auditRepo.set(investingTicker, new AlertAudit(investingTicker, state));
+        this.auditRepo.set(investingTicker, new AlertAudit(investingTicker, state));
       }
 
       processedCount = endIndex;
@@ -111,7 +111,7 @@ export class AuditManager implements IAuditManager {
     }
 
     // Final status
-    const auditCount = this._auditRepo.getCount();
+    const auditCount = this.auditRepo.getCount();
     Notifier.message(`Audited ${auditCount} out of ${investingTickers.length}`, Color.PURPLE, 5000);
   }
 
@@ -122,12 +122,12 @@ export class AuditManager implements IAuditManager {
    * @private
    */
   private auditAlertState(investingTicker: string): AlertState {
-    const pairInfo = this._pairManager.investingTickerToPairInfo(investingTicker);
+    const pairInfo = this.pairManager.investingTickerToPairInfo(investingTicker);
     if (!pairInfo) {
       return AlertState.NO_ALERTS;
     }
 
-    const alerts = this._alertManager.getAlertsForInvestingTicker(investingTicker);
+    const alerts = this.alertManager.getAlertsForInvestingTicker(investingTicker);
     if (!alerts) {
       return AlertState.NO_PAIR;
     }

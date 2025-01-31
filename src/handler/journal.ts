@@ -56,6 +56,9 @@ export class JournalHandler implements IJournalHandler {
   public handleRecordJournal(trend: Trend): void {
     const ticker = this.tickerManager.getTicker();
 
+    // BUG: Disable Swift Keys while recording journal
+    this.tvManager.setSwiftKeysState(false);
+
     void this.smartPrompt
       .showModal(Constants.TRADING.PROMPT.REASONS, Constants.TRADING.PROMPT.OVERRIDES)
       .then((reason) => {
