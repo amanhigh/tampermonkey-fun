@@ -158,6 +158,7 @@ export class WatchManager implements IWatchManager {
   private processCleanup(currentTickers: string[], executeChanges: boolean): number {
     let count = 0;
     const categoryLists = this.watchRepo.getWatchCategoryLists();
+    // BUG: Clean should display Notification.
     const watchListTickers = new Set(currentTickers);
 
     categoryLists.getLists().forEach((list, key) => {

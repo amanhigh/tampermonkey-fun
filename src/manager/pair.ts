@@ -58,6 +58,7 @@ export class PairManager implements IPairManager {
 
   /** @inheritdoc */
   deletePairInfo(investingTicker: string): void {
+    // BUG: Unmap Event doesn't update alert feed.
     this.pairRepo.delete(investingTicker);
   }
 }
