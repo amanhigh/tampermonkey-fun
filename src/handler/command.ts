@@ -71,12 +71,17 @@ export class CommandInputHandler implements ICommandInputHandler {
         if (['FNO', 'FNO!', 'FNO-'].includes(action.toUpperCase())) {
           this.processFnoCommand(action.toUpperCase(), value);
         } else {
-          void this.tickerHandler.processCommand(action, value);
+          this.processCommandInput(action, value);
         }
         break;
       default:
         this.displayHelpMessage();
     }
+  }
+  
+  private processCommandInput(action: string, value: string) {
+    void this.tickerHandler.processCommand(action, value);
+    this.clearInputField();
   }
 
   private determineInputType(value: string): InputProcessor {
@@ -182,6 +187,11 @@ export class CommandInputHandler implements ICommandInputHandler {
             <div style="${styles.section}">Exchange Commands:</div>
             <div style="${styles.list}">
                 <div style="${styles.item}">• E=NSE - Set Exchange</div>
+            </div>
+
+            <div style="${styles.section}">Alert Commands:</div>
+            <div style="${styles.list}">
+                <div style="${styles.item}">• T=Ticker1 - Investing Ticker & Pair Map </div>
             </div>
 
             <div style="${styles.section}">FNO Commands:</div>

@@ -384,7 +384,8 @@ export class Factory {
             Factory.manager.ticker(),
             Factory.manager.symbol(),
             Factory.manager.screener(),
-            Factory.manager.alertFeed()
+            Factory.manager.alertFeed(),
+            Factory.handler.pair()
           )
       ),
 

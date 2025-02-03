@@ -4,6 +4,7 @@ import { ITickerManager } from '../manager/ticker';
 import { IRecentManager } from '../manager/recent';
 import { ISymbolManager } from '../manager/symbol';
 import { IAlertFeedManager } from '../manager/alertfeed';
+import { IPairHandler } from './pair';
 
 /**
  * Interface for managing ticker operations
@@ -37,7 +38,8 @@ export class TickerHandler implements ITickerHandler {
     private readonly tickerManager: ITickerManager,
     private readonly symbolManager: ISymbolManager,
     private readonly screenerManager: ITradingViewScreenerManager,
-    private readonly alertFeedManager: IAlertFeedManager
+    private readonly alertFeedManager: IAlertFeedManager,
+    private readonly pairHandler: IPairHandler
   ) {}
 
   /** @inheritdoc */
@@ -62,6 +64,11 @@ export class TickerHandler implements ITickerHandler {
         const ticker = this.tickerManager.getTicker();
         this.symbolManager.createTvToExchangeTickerMapping(ticker, value);
         Notifier.success(`Mapped ${ticker} to Exchange ${value}`);
+        break;
+      }
+      case 'T': {
+        this.symbolManager.createTvToInvestingMapping(this.tickerManager.getTicker(), value);
+        void this.pairHandler.mapInvestingTicker(value);
         break;
       }
       default:
