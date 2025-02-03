@@ -24,7 +24,7 @@ export interface ITickerHandler {
    * Processes command strings for ticker operations
    * @param command The command string to process
    */
-  processCommand(command: string): void;
+  processCommand(action: string, value: string): void;
 }
 
 /**
@@ -56,9 +56,7 @@ export class TickerHandler implements ITickerHandler {
     Notifier.yellow('🔁 Recent Reset');
   }
 
-  processCommand(command: string): void {
-    const [action, value] = command.split('=');
-
+  processCommand(action: string, value: string): void {
     switch (action.toUpperCase()) {
       case 'E': {
         const ticker = this.tickerManager.getTicker();

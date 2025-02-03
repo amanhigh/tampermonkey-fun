@@ -71,7 +71,7 @@ export class CommandInputHandler implements ICommandInputHandler {
         if (['FNO', 'FNO!', 'FNO-'].includes(action.toUpperCase())) {
           this.processFnoCommand(action.toUpperCase(), value);
         } else {
-          this.tickerHandler.processCommand(processor.value);
+          void this.tickerHandler.processCommand(action, value);
         }
         break;
       default:
