@@ -44,6 +44,7 @@ export class AuditHandler implements IAuditHandler {
     $(`#${Constants.UI.IDS.AREAS.AUDIT}`).empty();
 
     // Add single alert buttons
+    // FIXME: Limit to 10 Buttons Total
     singleAlerts.forEach((audit) => {
       this.createAuditButton(audit.investingTicker, audit.state).appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
     });
@@ -58,6 +59,7 @@ export class AuditHandler implements IAuditHandler {
    * Refreshes audit button for current ticker
    */
   public auditCurrent(): void {
+    // FIXME: Perfom after Alert Creation.
     const auditResult = this.auditManager.auditCurrentTicker();
 
     // Find existing button for this ticker

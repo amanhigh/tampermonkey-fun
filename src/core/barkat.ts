@@ -106,15 +106,15 @@ export class Barkat {
         this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.JOURNAL, 'J', () => {
           this.journalHandler.handleJournalButton();
         })
+        .on('contextmenu', (e: JQuery.ContextMenuEvent) => {
+          e.preventDefault();
+          this.uiUtil.toggleUI(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+        })
       )
       .append(
         this.uiUtil
           .buildButton(Constants.UI.IDS.BUTTONS.RECENT, 'X', () => {
             this.tickerHandler.resetRecent();
-          })
-          .on('contextmenu', (e: JQuery.ContextMenuEvent) => {
-            e.preventDefault();
-            this.uiUtil.toggleUI(`#${Constants.UI.IDS.AREAS.AUDIT}`);
           })
       )
       .append(this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.SUMMARY));
