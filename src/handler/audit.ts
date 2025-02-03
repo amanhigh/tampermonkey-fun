@@ -43,14 +43,9 @@ export class AuditHandler implements IAuditHandler {
     // Clear existing audit area
     $(`#${Constants.UI.IDS.AREAS.AUDIT}`).empty();
 
-    // Add single alert buttons
-    // FIXME: Limit to 10 Buttons Total
-    singleAlerts.forEach((audit) => {
-      this.createAuditButton(audit.investingTicker, audit.state).appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    });
-
-    // Add no-alert buttons
-    noAlerts.forEach((audit) => {
+    // Combine and limit to 10 buttons total
+    const allAudits = [...singleAlerts, ...noAlerts].slice(0, 10);
+    allAudits.forEach((audit) => {
       this.createAuditButton(audit.investingTicker, audit.state).appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
     });
   }

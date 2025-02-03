@@ -78,7 +78,7 @@ export class CommandInputHandler implements ICommandInputHandler {
         this.displayHelpMessage();
     }
   }
-  
+
   private processCommandInput(action: string, value: string) {
     void this.tickerHandler.processCommand(action, value);
     this.clearInputField();
