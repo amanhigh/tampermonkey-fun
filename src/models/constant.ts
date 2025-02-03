@@ -128,6 +128,7 @@ export const Constants = Object.freeze({
         'tested',
         'zn',
         'rsi',
+        'resp',
         'max',
         'base',
         'er',

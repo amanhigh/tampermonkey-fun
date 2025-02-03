@@ -1,6 +1,7 @@
 import { CategoryLists } from '../models/category';
 import { Constants } from '../models/constant';
 import { IWatchlistRepo } from '../repo/watch';
+import { Notifier } from '../util/notify';
 
 /**
  * Interface for managing watch category operations
@@ -158,13 +159,13 @@ export class WatchManager implements IWatchManager {
   private processCleanup(currentTickers: string[], executeChanges: boolean): number {
     let count = 0;
     const categoryLists = this.watchRepo.getWatchCategoryLists();
-    // BUG: Clean should display Notification.
     const watchListTickers = new Set(currentTickers);
 
     categoryLists.getLists().forEach((list, key) => {
       for (const ticker of [...list]) {
         if (!watchListTickers.has(ticker)) {
           console.log(`Removing ${ticker} from category ${key}`);
+          Notifier.red(`🗑️ ${ticker}`);
           if (executeChanges) {
             categoryLists.delete(key, ticker);
           }

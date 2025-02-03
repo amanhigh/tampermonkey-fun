@@ -264,6 +264,7 @@ export class KiteHandler implements IKiteHandler {
     const sl = parseFloat($(Constants.DOM.ORDER_PANEL.INPUTS.STOP_PRICE).val() as string);
 
     const risk = (ent - sl).toFixed(2);
+    // FIXME: #C Tests for Position Calculation.
     const qty = Math.round(Constants.TRADING.ORDER.RISK_LIMIT / parseFloat(risk));
     const doubleQty = Math.round((Constants.TRADING.ORDER.RISK_LIMIT * 2) / parseFloat(risk));
 

@@ -143,7 +143,7 @@ export class CommandInputHandler implements ICommandInputHandler {
     // Convert comma-separated tickers to Set
     const tickers = new Set(value.split(',').map((t) => t.trim()));
 
-    // FIXME: Pair Map command Setup.
+    // FIXME: #A Pair Map command Setup.
     if (command === 'FNO') {
       this.fnoManager.add(tickers);
       Notifier.success(`Added FNO tickers. Total: ${this.fnoManager.getCount()}`);

@@ -79,8 +79,9 @@ export class KiteManager implements IKiteManager {
     const buyRequest = this.buildBuyOrderRequest(pair, evt, exp);
     const ocoRequest = this.buildOcoOrderRequest(pair, evt, exp);
 
-    await this.kiteClient.createGTT(buyRequest);
     await this.kiteClient.createGTT(ocoRequest);
+    // Create Sell Orders before Buy
+    await this.kiteClient.createGTT(buyRequest);
   }
 
   /** @inheritdoc */

@@ -265,6 +265,7 @@ export interface GttApiData {
  * GTT API Response data format
  */
 export class GttDeleteEvent extends BaseEvent {
+  // TODO: Reorganize Models
   readonly orderId: string;
   readonly symbol: string;
 
