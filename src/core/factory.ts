@@ -334,7 +334,14 @@ export class Factory {
       Factory.getInstance(
         'auditHandler',
         () =>
-          new AuditHandler(Factory.manager.audit(), Factory.manager.pair(), Factory.util.ui(), Factory.handler.ticker())
+          new AuditHandler(
+            Factory.manager.audit(),
+            Factory.manager.pair(),
+            Factory.util.ui(),
+            Factory.handler.ticker(),
+            Factory.manager.watch(),
+            Factory.manager.symbol()
+          )
       ),
     onload: (): IOnLoadHandler =>
       Factory.getInstance(

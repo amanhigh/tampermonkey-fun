@@ -5,6 +5,8 @@ import { IPairManager } from '../manager/pair';
 import { IUIUtil } from '../util/ui';
 import { Notifier } from '../util/notify';
 import { ITickerHandler } from './ticker';
+import { IWatchManager } from '../manager/watch';
+import { ISymbolManager } from '../manager/symbol';
 
 /**
  * Interface for managing audit UI operations
@@ -29,7 +31,9 @@ export class AuditHandler implements IAuditHandler {
     private readonly auditManager: IAuditManager,
     private readonly pairManager: IPairManager,
     private readonly uiUtil: IUIUtil,
-    private readonly tickerHandler: ITickerHandler
+    private readonly tickerHandler: ITickerHandler,
+    private readonly watchManager: IWatchManager,
+    private readonly symbolManager: ISymbolManager
   ) {}
 
   /**
@@ -44,8 +48,13 @@ export class AuditHandler implements IAuditHandler {
     $(`#${Constants.UI.IDS.AREAS.AUDIT}`).empty();
 
     // Combine and limit to 10 buttons total
-    const allAudits = [...singleAlerts, ...noAlerts].slice(0, 10);
-    allAudits.forEach((audit) => {
+    const nonWatchedAudits = [...singleAlerts, ...noAlerts]
+      .filter((audit) => {
+        const tvAuditTicker = this.symbolManager.investingToTv(audit.investingTicker) || audit.investingTicker;
+        return !this.watchManager.isWatched(tvAuditTicker);
+      });
+
+    nonWatchedAudits.slice(0, 10).forEach((audit) => {
       this.createAuditButton(audit.investingTicker, audit.state).appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
     });
   }
