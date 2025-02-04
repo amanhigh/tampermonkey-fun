@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    // Keep the compilation and module settings
+    "outDir": "./dist/",
+    "target": "ES2020",
+    "downlevelIteration": true,
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "esModuleInterop": true,
+    // Keep the strict type checking bundle
+    "strict": true, // This enables many strict checks in one setting
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    // Keep source map and declaration settings
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "noImplicitReturns": true
+  },
+  "include": [
+    "src/**/*" // Include all files in src directory
+  ],
+  "exclude": [
+    "node_modules", // Exclude node_modules
+    "dist" // Exclude dist directory
+  ]
+}

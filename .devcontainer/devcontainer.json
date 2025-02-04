@@ -1,0 +1,30 @@
+{
+	"name": "TamperFun",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"features": {
+		"ghcr.io/devcontainers/features/python:1": {
+			"version": "3.11"
+		}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"dbaeumer.vscode-eslint",
+				"YuichiNakamura.code-to-clipboard",
+				"Codeium.codeium",
+				"RooVeterinaryInc.roo-cline",
+				"Gruntfuggly.todo-tree",
+				"esbenp.prettier-vscode"
+			]
+		}
+	},
+	"containerEnv": {
+		"DEEPSEEK_API_KEY": "${localEnv:DEEPSEEK_API_KEY}"
+	},
+	"mounts": [
+		"source=${localEnv:HOME}/.aider.conf.yml,target=/home/node/.aider.conf.yml,type=bind,consistency=cached"
+	],
+	"postCreateCommand": "npm install"
+}

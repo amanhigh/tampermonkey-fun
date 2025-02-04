@@ -1,12 +1,14 @@
 {
 	"folders": [
 		{
+			"name": "tampermonkey-fun",
 			"path": "."
 		}
 	],
-	"settings": {
-		"editor.quickSuggestions": {
-			"other": "off"
-		}
+	"settings": {},
+	"extensions": {
+		"recommendations": [
+			"dbaeumer.vscode-eslint"
+		]
 	}
 }

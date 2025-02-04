@@ -1,0 +1,25 @@
+// Button Styles
+@button-bg: black;
+@button-color: white;
+@button-font-size: 12px;
+@button-margin: 4px;
+@button-padding: 4px 6px;
+@button-radius: 4px;
+
+.aman-button {
+    background-color: @button-bg;
+    color: @button-color;
+    font-size: @button-font-size;
+    margin: @button-margin;
+    padding: @button-padding;
+    border-radius: @button-radius;
+    cursor: pointer;
+
+    &:hover {
+        background-color: #f0f0f0;
+    }
+
+    &:active {
+        transform: scale(0.95);
+    }
+}
