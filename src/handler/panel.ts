@@ -37,6 +37,7 @@ export class PanelHandler implements IPanelHandler {
 
     switch (action) {
       case PanelAction.MAP_TICKER:
+        // BUG: Remove as Covered in Alert Right Click ?
         await this.pairHandler.mapInvestingTicker(searchTicker);
         break;
       case PanelAction.DELETE_PAIR:

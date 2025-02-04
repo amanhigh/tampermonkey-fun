@@ -237,8 +237,9 @@ export class AlertHandler implements IAlertHandler {
   /** @inheritdoc */
   public handleAlertContextMenu(e: Event): void {
     e.preventDefault();
-    // Only keep audit operation
-    this.auditHandler.auditCurrent();
+    void this.pairHandler.mapInvestingTicker(this.tickerManager.getTicker()).then(() => {
+      this.refreshAlerts();
+    });
   }
 
   /** @inheritdoc */
