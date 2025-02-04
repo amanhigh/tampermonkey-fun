@@ -49,7 +49,7 @@ export class AuditHandler implements IAuditHandler {
 
     // Combine and limit to 10 buttons total
     const nonWatchedAudits = [...singleAlerts, ...noAlerts].filter((audit) => {
-      const tvAuditTicker = this.symbolManager.investingToTv(audit.investingTicker) || audit.investingTicker;
+      const tvAuditTicker = this.tryMapTvTicker(audit.investingTicker);
       return !this.watchManager.isWatched(tvAuditTicker);
     });
 
@@ -67,10 +67,9 @@ export class AuditHandler implements IAuditHandler {
 
     // Find existing button for this ticker
     const $button = $(`#${this.getAuditButtonId(auditResult.investingTicker)}`);
-    console.info(`Audit for ${auditResult.investingTicker} is ${auditResult.state}`);
 
     // If ticker has valid alerts or watched, remove the button if it exists
-    const tvAuditTicker = this.symbolManager.investingToTv(auditResult.investingTicker) || auditResult.investingTicker;
+    const tvAuditTicker = this.tryMapTvTicker(auditResult.investingTicker);
     if (auditResult.state === AlertState.VALID || this.watchManager.isWatched(tvAuditTicker)) {
       $button.remove();
       return;
@@ -101,7 +100,10 @@ export class AuditHandler implements IAuditHandler {
     const backgroundColor = this.getButtonColor(investingTicker, state);
 
     const button = this.uiUtil
-      .buildButton(buttonId, investingTicker, () => this.tickerHandler.openTicker(investingTicker))
+      .buildButton(buttonId, investingTicker, () => {
+        const tvTicker = this.tryMapTvTicker(investingTicker);
+        this.tickerHandler.openTicker(tvTicker);
+  })
       .css({
         'background-color': backgroundColor,
         margin: '2px',
@@ -144,5 +146,16 @@ export class AuditHandler implements IAuditHandler {
    */
   private getAuditButtonId(investingTicker: string): string {
     return `audit-${investingTicker}`.replace('/', '-');
+  }
+
+  /**
+   * Attempts to map an investing ticker to a tv ticker
+   * @private
+   * @param investingTicker The ticker symbol
+   * @returns The mapped tv ticker or the original ticker if no mapping exists
+   */
+  private tryMapTvTicker(investingTicker: string): string {
+    const tvTicker = this.symbolManager.investingToTv(investingTicker);
+    return tvTicker || investingTicker;
   }
 }
