@@ -27,14 +27,20 @@ export class PanelHandler implements IPanelHandler {
   }
 
   private async handlePanelAction(action: PanelAction): Promise<void> {
-    const investingTicker = this.tickerManager.getInvestingTicker();
+    let searchTicker = '';
+    try {
+      searchTicker = this.tickerManager.getInvestingTicker();
+    } catch (error) {
+      searchTicker = this.tickerManager.getTicker();
+      console.warn('Using TV Ticker Instead', error);
+    }
 
     switch (action) {
       case PanelAction.MAP_TICKER:
-        await this.pairHandler.mapInvestingTicker(investingTicker);
+        await this.pairHandler.mapInvestingTicker(searchTicker);
         break;
       case PanelAction.DELETE_PAIR:
-        this.pairHandler.deletePairInfo(investingTicker);
+        this.pairHandler.deletePairInfo(searchTicker);
         break;
     }
   }
