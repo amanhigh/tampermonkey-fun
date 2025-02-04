@@ -14,8 +14,9 @@ export class PairInfo {
   name: string;
   pairId: string;
   exchange: string;
+  symbol: string;
 
-  constructor(name: string, pairId: string, exchange: string) {
+  constructor(name: string, pairId: string, exchange: string,symbol: string) {
     const type = typeof pairId;
     if (type !== 'string') {
       throw new Error(`Expected ${name}, pairID - ${pairId} to be a string, got ${type}`);
@@ -23,6 +24,7 @@ export class PairInfo {
     this.name = name;
     this.pairId = pairId;
     this.exchange = exchange;
+    this.symbol = symbol;
   }
 }
 
