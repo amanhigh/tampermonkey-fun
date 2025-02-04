@@ -56,6 +56,7 @@ export class TimeFrameManager implements ITimeFrameManager {
 
   /** @inheritdoc */
   getCurrentTimeFrameConfig(): TimeFrameConfig {
+    // TODO: Timeframe based on Toolbar Selection. (Cover Non Hotkey Switches.)
     return this.currentTimeFrame;
   }
 

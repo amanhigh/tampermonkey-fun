@@ -53,6 +53,9 @@ export class AuditHandler implements IAuditHandler {
       return !this.watchManager.isWatched(tvAuditTicker);
     });
 
+    // Audit Label
+    this.uiUtil.buildLabel(`Audit: ${nonWatchedAudits.length} Remaining`).appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+
     nonWatchedAudits.slice(0, 10).forEach((audit) => {
       this.createAuditButton(audit.investingTicker, audit.state).appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
     });
