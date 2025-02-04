@@ -106,7 +106,7 @@ export class AuditHandler implements IAuditHandler {
       .buildButton(buttonId, investingTicker, () => {
         const tvTicker = this.tryMapTvTicker(investingTicker);
         this.tickerHandler.openTicker(tvTicker);
-  })
+      })
       .css({
         'background-color': backgroundColor,
         margin: '2px',
@@ -126,7 +126,7 @@ export class AuditHandler implements IAuditHandler {
    * Gets the background color for a button based on alert state
    * @private
    */
-  private getButtonColor(investingTicker: string ,state: AlertState): string {
+  private getButtonColor(investingTicker: string, state: AlertState): string {
     // Color Orange if not a Valid InvestingTicker
     const tvTicker = this.symbolManager.investingToTv(investingTicker);
     if (!tvTicker) {
