@@ -191,7 +191,7 @@ export class CommandInputHandler implements ICommandInputHandler {
 
             <div style="${styles.section}">Alert Commands:</div>
             <div style="${styles.list}">
-                <div style="${styles.item}">• T=Ticker1 - Investing Ticker & Pair Map </div>
+                <div style="${styles.item}">• P=SearchQuery - Map Pair (Symbol/Name etc) </div>
             </div>
 
             <div style="${styles.section}">FNO Commands:</div>

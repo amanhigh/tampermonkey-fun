@@ -247,7 +247,6 @@ export class AlertHandler implements IAlertHandler {
       case AlertClickAction.MAP:
         // Map TV Ticker to Investing Ticker
         const tvTickerNow = this.tickerManager.getTicker();
-        this.symbolManager.createTvToInvestingMapping(tvTickerNow, event.investingTicker);
         void this.alertFeedManager.createAlertFeedEvent(tvTickerNow);
         void this.pairHandler.mapInvestingTicker(event.investingTicker).then(() => {
           this.refreshAlerts();

@@ -456,7 +456,14 @@ export class Factory {
     pair: (): IPairHandler =>
       Factory.getInstance(
         'pairHandler',
-        () => new PairHandler(Factory.client.investing(), Factory.manager.pair(), Factory.util.smart())
+        () =>
+          new PairHandler(
+            Factory.client.investing(),
+            Factory.manager.pair(),
+            Factory.util.smart(),
+            Factory.manager.ticker(),
+            Factory.manager.symbol()
+          )
       ),
     flag: (): IFlagHandler =>
       Factory.getInstance(

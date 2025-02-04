@@ -3,6 +3,8 @@ import { ISmartPrompt } from '../util/smart';
 import { IPairManager } from '../manager/pair';
 import { Notifier } from '../util/notify';
 import { IInvestingClient } from '../client/investing';
+import { ISymbolManager } from '../manager/symbol';
+import { ITickerManager } from '../manager/ticker';
 
 /**
  * Interface for managing alert mapping operations
@@ -29,30 +31,33 @@ export class PairHandler implements IPairHandler {
   constructor(
     private readonly investingClient: IInvestingClient,
     private readonly pairManager: IPairManager,
-    private readonly smartPrompt: ISmartPrompt
+    private readonly smartPrompt: ISmartPrompt,
+    private readonly tickerManager: ITickerManager,
+    private readonly symbolManager: ISymbolManager
   ) {}
 
   /**
    * Maps a TradingView ticker to Investing.com pair data
-   * @param investingTicker The TradingView ticker symbol
+   * @param searchQuery The Ticker Symbol or Security Name
    * @param exchange Optional exchange name
    */
-  public async mapInvestingTicker(investingTicker: string, exchange = ''): Promise<void> {
-    Notifier.info(`Searching for ${investingTicker} on ${exchange}`);
+  public async mapInvestingTicker(searchQuery: string, exchange = ''): Promise<void> {
+    Notifier.info(`Searching for ${searchQuery} on ${exchange}`);
 
-    const pairs = await this.investingClient.fetchSymbolData(investingTicker);
+    const pairs = await this.investingClient.fetchSymbolData(searchQuery);
     const options = this.formatPairOptions(pairs);
     const selected = await this.smartPrompt.showModal(options.slice(0, 10));
 
     if (!selected) {
-      Notifier.warn(`Invalid selection for ${investingTicker} on ${exchange}, cant map Pair.`);
+      Notifier.warn(`Invalid selection for ${searchQuery} on ${exchange}, cant map Pair.`);
       return;
     }
 
     const selectedPair = this.findSelectedPair(pairs, selected);
     if (selectedPair) {
       Notifier.info(`Selected: ${this.formatPair(selectedPair)}`);
-      this.pairManager.createInvestingToPairMapping(investingTicker, selectedPair);
+      this.pairManager.createInvestingToPairMapping(selectedPair.symbol, selectedPair);
+      this.symbolManager.createTvToInvestingMapping(this.tickerManager.getTicker(), selectedPair.symbol);
       return;
     }
   }
@@ -68,7 +73,7 @@ export class PairHandler implements IPairHandler {
   }
 
   private formatPair(pair: PairInfo): string {
-    return `${pair.name} (ID: ${pair.pairId}, Exchange: ${pair.exchange})`;
+    return `${pair.name} (SYMBOL: ${pair.symbol}, Exchange: ${pair.exchange})`;
   }
 
   /**

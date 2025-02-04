@@ -48,11 +48,10 @@ export class AuditHandler implements IAuditHandler {
     $(`#${Constants.UI.IDS.AREAS.AUDIT}`).empty();
 
     // Combine and limit to 10 buttons total
-    const nonWatchedAudits = [...singleAlerts, ...noAlerts]
-      .filter((audit) => {
-        const tvAuditTicker = this.symbolManager.investingToTv(audit.investingTicker) || audit.investingTicker;
-        return !this.watchManager.isWatched(tvAuditTicker);
-      });
+    const nonWatchedAudits = [...singleAlerts, ...noAlerts].filter((audit) => {
+      const tvAuditTicker = this.symbolManager.investingToTv(audit.investingTicker) || audit.investingTicker;
+      return !this.watchManager.isWatched(tvAuditTicker);
+    });
 
     nonWatchedAudits.slice(0, 10).forEach((audit) => {
       this.createAuditButton(audit.investingTicker, audit.state).appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);

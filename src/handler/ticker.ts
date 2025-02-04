@@ -66,8 +66,7 @@ export class TickerHandler implements ITickerHandler {
         Notifier.success(`Mapped ${ticker} to Exchange ${value}`);
         break;
       }
-      case 'T': {
-        this.symbolManager.createTvToInvestingMapping(this.tickerManager.getTicker(), value);
+      case 'P': {
         void this.pairHandler.mapInvestingTicker(value);
         break;
       }
