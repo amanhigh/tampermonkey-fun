@@ -182,13 +182,12 @@ export class AlertHandler implements IAlertHandler {
         this.alertSummaryHandler.displayAlerts(alerts);
         this.auditHandler.auditCurrent();
       } catch (error) {
-        const tvTicker = this.tickerManager.getTicker();
+        // Show NO PAIR for Null Alerts
+        this.alertSummaryHandler.displayAlerts(null);
 
-        // Skip alert refresh for composite symbols
-        if (this.symbolManager.isComposite(tvTicker)) {
-          this.alertSummaryHandler.displayAlerts(null);
-          return;
-        } else {
+        const tvTicker = this.tickerManager.getTicker();
+        // Igoner Error for Composite Symbols as its expected.
+        if (!this.symbolManager.isComposite(tvTicker)) {
           throw error;
         }
       }
