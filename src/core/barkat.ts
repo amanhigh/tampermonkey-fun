@@ -1,5 +1,4 @@
 import '../style/main.less';
-import { Factory } from './factory';
 import { UIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
 import { ISequenceHandler } from '../handler/sequence';
@@ -14,6 +13,7 @@ import { Trend } from '../models/trading';
 import { IGlobalErrorHandler } from '../handler/error';
 import { IPanelHandler } from '../handler/panel';
 import { ITradingViewManager } from '../manager/tv';
+import { Factory } from './factory';
 
 export class Barkat {
   // eslint-disable-next-line max-params
@@ -68,7 +68,7 @@ export class Barkat {
   // TASK Remove suppressed Errors for eslint
   // eslint-disable-next-line max-lines-per-function
   private setupTradingViewUI() {
-    // FIXME: Layout and Color Improvements
+    // TODO: Layout and Color Improvements
     const $area = this.uiUtil.buildArea(Constants.UI.IDS.AREAS.MAIN, '76%', '6%');
     $area.appendTo('body');
 
@@ -103,19 +103,19 @@ export class Barkat {
           })
       )
       .append(
-        this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.JOURNAL, 'J', () => {
-          this.journalHandler.handleJournalButton();
-        })
-      )
-      .append(
         this.uiUtil
-          .buildButton(Constants.UI.IDS.BUTTONS.RECENT, 'X', () => {
-            this.tickerHandler.resetRecent();
+          .buildButton(Constants.UI.IDS.BUTTONS.JOURNAL, 'J', () => {
+            this.journalHandler.handleJournalButton();
           })
           .on('contextmenu', (e: JQuery.ContextMenuEvent) => {
             e.preventDefault();
             this.uiUtil.toggleUI(`#${Constants.UI.IDS.AREAS.AUDIT}`);
           })
+      )
+      .append(
+        this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.RECENT, 'X', () => {
+          this.tickerHandler.resetRecent();
+        })
       )
       .append(this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.SUMMARY));
 
@@ -163,4 +163,4 @@ export function RunBarkat(): void {
   barkat.initialize();
 }
 
-RunBarkat();
+// RunBarkat();

@@ -78,7 +78,7 @@ help: ## Show this help
 info: ## Info
 infos: info ## Extended Info
 prepare: setup-npm ## Onetime Setup
-setup: build test barkat ## Setup
+setup: build test experiment ## Setup
 clean: clean-node ## Clean
 reset: clean setup info ## Reset
 all:prepare reset ## Run All Targets

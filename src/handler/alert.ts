@@ -182,13 +182,12 @@ export class AlertHandler implements IAlertHandler {
         this.alertSummaryHandler.displayAlerts(alerts);
         this.auditHandler.auditCurrent();
       } catch (error) {
-        const tvTicker = this.tickerManager.getTicker();
+        // Show NO PAIR for Null Alerts
+        this.alertSummaryHandler.displayAlerts(null);
 
-        // Skip alert refresh for composite symbols
-        if (this.symbolManager.isComposite(tvTicker)) {
-          this.alertSummaryHandler.displayAlerts(null);
-          return;
-        } else {
+        const tvTicker = this.tickerManager.getTicker();
+        // Igoner Error for Composite Symbols as its expected.
+        if (!this.symbolManager.isComposite(tvTicker)) {
           throw error;
         }
       }
@@ -238,8 +237,9 @@ export class AlertHandler implements IAlertHandler {
   /** @inheritdoc */
   public handleAlertContextMenu(e: Event): void {
     e.preventDefault();
-    // Only keep audit operation
-    this.auditHandler.auditCurrent();
+    void this.pairHandler.mapInvestingTicker(this.tickerManager.getTicker()).then(() => {
+      this.refreshAlerts();
+    });
   }
 
   /** @inheritdoc */
@@ -248,7 +248,6 @@ export class AlertHandler implements IAlertHandler {
       case AlertClickAction.MAP:
         // Map TV Ticker to Investing Ticker
         const tvTickerNow = this.tickerManager.getTicker();
-        this.symbolManager.createTvToInvestingMapping(tvTickerNow, event.investingTicker);
         void this.alertFeedManager.createAlertFeedEvent(tvTickerNow);
         void this.pairHandler.mapInvestingTicker(event.investingTicker).then(() => {
           this.refreshAlerts();

@@ -47,8 +47,8 @@ export class PairRepo extends MapRepo<string, PairInfo> implements IPairRepo {
   protected deserialize(data: SerializedData): Map<string, PairInfo> {
     const pairMap = new Map<string, PairInfo>();
     Object.entries(data).forEach(([ticker, info]) => {
-      const pairData = info as { name: string; pairId: string; exchange: string };
-      pairMap.set(ticker, new PairInfo(pairData.name, pairData.pairId, pairData.exchange));
+      const pairData = info as { name: string; pairId: string; exchange: string; symbol: string };
+      pairMap.set(ticker, new PairInfo(pairData.name, pairData.pairId, pairData.exchange, pairData.symbol));
     });
     return pairMap;
   }
@@ -86,6 +86,6 @@ export class PairRepo extends MapRepo<string, PairInfo> implements IPairRepo {
    * @inheritdoc
    */
   public pinPair(investingTicker: string, pairInfo: PairInfo): void {
-    this.set(investingTicker, new PairInfo(pairInfo.name, pairInfo.pairId, pairInfo.exchange));
+    this.set(investingTicker, pairInfo);
   }
 }

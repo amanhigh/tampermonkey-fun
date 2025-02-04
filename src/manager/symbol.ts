@@ -129,6 +129,7 @@ export class SymbolManager implements ISymbolManager {
 
   /** @inheritdoc */
   createTvToInvestingMapping(tvTicker: string, investingTicker: string): void {
+    // TODO: Directy Map tvTicker to PairInfo (Now Contains investingTicker as Symbol)
     this.tickerRepo.pinInvestingTicker(tvTicker, investingTicker);
   }
 

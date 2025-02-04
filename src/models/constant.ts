@@ -128,14 +128,16 @@ export const Constants = Object.freeze({
         'tested',
         'zn',
         'rsi',
+        'resp',
         'max',
         'base',
         'er',
         'nzn',
         'nsprt',
-        'MISS',
-        'REC',
-        'WOW',
+        'MISS', // Missed It.
+        'SWITCH', // Switched Timeframe for Trade.
+        'REC', // Recording Done
+        'WOW', // Waiting WoW
       ], // Old name: reasons
       OVERRIDES: ['egf', 'int', 'lc', 'loc', 'doji', 'big', 'pn', 'tc', 'cfl', 'acm', 'adv'], // Old name: overrides
     },

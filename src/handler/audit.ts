@@ -5,6 +5,8 @@ import { IPairManager } from '../manager/pair';
 import { IUIUtil } from '../util/ui';
 import { Notifier } from '../util/notify';
 import { ITickerHandler } from './ticker';
+import { IWatchManager } from '../manager/watch';
+import { ISymbolManager } from '../manager/symbol';
 
 /**
  * Interface for managing audit UI operations
@@ -29,7 +31,9 @@ export class AuditHandler implements IAuditHandler {
     private readonly auditManager: IAuditManager,
     private readonly pairManager: IPairManager,
     private readonly uiUtil: IUIUtil,
-    private readonly tickerHandler: ITickerHandler
+    private readonly tickerHandler: ITickerHandler,
+    private readonly watchManager: IWatchManager,
+    private readonly symbolManager: ISymbolManager
   ) {}
 
   /**
@@ -43,13 +47,16 @@ export class AuditHandler implements IAuditHandler {
     // Clear existing audit area
     $(`#${Constants.UI.IDS.AREAS.AUDIT}`).empty();
 
-    // Add single alert buttons
-    singleAlerts.forEach((audit) => {
-      this.createAuditButton(audit.investingTicker, audit.state).appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+    // Combine and limit to 10 buttons total
+    const nonWatchedAudits = [...singleAlerts, ...noAlerts].filter((audit) => {
+      const tvAuditTicker = this.tryMapTvTicker(audit.investingTicker);
+      return !this.watchManager.isWatched(tvAuditTicker);
     });
 
-    // Add no-alert buttons
-    noAlerts.forEach((audit) => {
+    // Audit Label
+    this.uiUtil.buildLabel(`Audit: ${nonWatchedAudits.length} Remaining`).appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+
+    nonWatchedAudits.slice(0, 10).forEach((audit) => {
       this.createAuditButton(audit.investingTicker, audit.state).appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
     });
   }
@@ -58,13 +65,15 @@ export class AuditHandler implements IAuditHandler {
    * Refreshes audit button for current ticker
    */
   public auditCurrent(): void {
+    // FIXME: Perfom after Alert Creation.
     const auditResult = this.auditManager.auditCurrentTicker();
 
     // Find existing button for this ticker
     const $button = $(`#${this.getAuditButtonId(auditResult.investingTicker)}`);
 
-    // If ticker has valid alerts, remove the button if it exists
-    if (auditResult.state === AlertState.VALID) {
+    // If ticker has valid alerts or watched, remove the button if it exists
+    const tvAuditTicker = this.tryMapTvTicker(auditResult.investingTicker);
+    if (auditResult.state === AlertState.VALID || this.watchManager.isWatched(tvAuditTicker)) {
       $button.remove();
       return;
     }
@@ -91,10 +100,13 @@ export class AuditHandler implements IAuditHandler {
     const buttonId = this.getAuditButtonId(investingTicker);
 
     // Define button style based on alert state
-    const backgroundColor = this.getButtonColor(state);
+    const backgroundColor = this.getButtonColor(investingTicker, state);
 
     const button = this.uiUtil
-      .buildButton(buttonId, investingTicker, () => this.tickerHandler.openTicker(investingTicker))
+      .buildButton(buttonId, investingTicker, () => {
+        const tvTicker = this.tryMapTvTicker(investingTicker);
+        this.tickerHandler.openTicker(tvTicker);
+  })
       .css({
         'background-color': backgroundColor,
         margin: '2px',
@@ -114,7 +126,13 @@ export class AuditHandler implements IAuditHandler {
    * Gets the background color for a button based on alert state
    * @private
    */
-  private getButtonColor(state: AlertState): string {
+  private getButtonColor(investingTicker: string ,state: AlertState): string {
+    // Color Orange if not a Valid InvestingTicker
+    const tvTicker = this.symbolManager.investingToTv(investingTicker);
+    if (!tvTicker) {
+      return 'darkorange';
+    }
+
     switch (state) {
       case AlertState.SINGLE_ALERT:
         return 'darkred';
@@ -131,5 +149,16 @@ export class AuditHandler implements IAuditHandler {
    */
   private getAuditButtonId(investingTicker: string): string {
     return `audit-${investingTicker}`.replace('/', '-');
+  }
+
+  /**
+   * Attempts to map an investing ticker to a tv ticker
+   * @private
+   * @param investingTicker The ticker symbol
+   * @returns The mapped tv ticker or the original ticker if no mapping exists
+   */
+  private tryMapTvTicker(investingTicker: string): string {
+    const tvTicker = this.symbolManager.investingToTv(investingTicker);
+    return tvTicker || investingTicker;
   }
 }

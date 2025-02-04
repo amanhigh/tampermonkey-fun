@@ -101,12 +101,14 @@ export class KiteHandler implements IKiteHandler {
   /** @inheritdoc */
   setUpListners(): void {
     this.setupGttTabListener();
-    this.setupGttOrderListener();
+    this.setupGttCreateListener();
+    this.setupGttDeleteListener();
   }
 
   /** @inheritdoc */
   async handleGttCreateRequest(request: GttCreateEvent): Promise<void> {
     await this.kiteManager.createOrder(request);
+    Notifier.success(`GTT Order Created: ${request.symb}`);
   }
 
   /** @inheritdoc */
@@ -145,6 +147,7 @@ export class KiteHandler implements IKiteHandler {
   /** @inheritdoc */
   handleGttDeleteEvent(event: GttDeleteEvent): void {
     this.kiteManager.deleteOrder(event.orderId);
+    Notifier.red(`GTT Deleted: ${event.symbol}`);
   }
 
   /** @inheritdoc */
@@ -206,13 +209,24 @@ export class KiteHandler implements IKiteHandler {
    * Sets up GTT order change listener
    * @private
    */
-  private setupGttOrderListener(): void {
+  private setupGttCreateListener(): void {
     GM_addValueChangeListener(
       Constants.STORAGE.EVENTS.GTT_CREATE,
       (_keyName: string, _oldValue: unknown, newValue: unknown) => {
         // Convert string to GttCreateEvent before passing to handler
         const event = GttCreateEvent.fromString(newValue as string);
         void this.handleGttCreateRequest(event);
+      }
+    );
+  }
+
+  private setupGttDeleteListener(): void {
+    GM_addValueChangeListener(
+      Constants.STORAGE.EVENTS.GTT_DELETE,
+      (_keyName: string, _oldValue: unknown, newValue: unknown) => {
+        // Convert string to GttDeleteEvent before passing to handler
+        const event = GttDeleteEvent.fromString(newValue as string);
+        void this.handleGttDeleteEvent(event);
       }
     );
   }
@@ -250,6 +264,7 @@ export class KiteHandler implements IKiteHandler {
     const sl = parseFloat($(Constants.DOM.ORDER_PANEL.INPUTS.STOP_PRICE).val() as string);
 
     const risk = (ent - sl).toFixed(2);
+    // FIXME: #C Tests for Position Calculation.
     const qty = Math.round(Constants.TRADING.ORDER.RISK_LIMIT / parseFloat(risk));
     const doubleQty = Math.round((Constants.TRADING.ORDER.RISK_LIMIT * 2) / parseFloat(risk));
 

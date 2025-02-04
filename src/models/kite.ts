@@ -213,6 +213,26 @@ export class CreateGttRequest extends BaseEvent {
     this.type = type;
     this.expires_at = expiryDate;
   }
+
+  /**
+   * Encodes request data into URL-encoded format for API submission
+   * @returns URL-encoded string representation of the request
+   */
+  public encode(): string {
+    const params = new URLSearchParams();
+
+    // Encode condition object
+    params.append('condition', JSON.stringify(this.condition));
+
+    // Encode orders array
+    params.append('orders', JSON.stringify(this.orders));
+
+    // Encode type and expires_at
+    params.append('type', this.type);
+    params.append('expires_at', this.expires_at);
+
+    return params.toString();
+  }
 }
 
 /**
@@ -245,6 +265,7 @@ export interface GttApiData {
  * GTT API Response data format
  */
 export class GttDeleteEvent extends BaseEvent {
+  // TODO: Reorganize Models
   readonly orderId: string;
   readonly symbol: string;
 
@@ -252,6 +273,16 @@ export class GttDeleteEvent extends BaseEvent {
     super();
     this.orderId = orderId;
     this.symbol = symbol;
+  }
+
+  /**
+   * Create GttCreateEvent from serialized string
+   * @param data Serialized event data
+   * @returns New GttCreateEvent instance
+   */
+  public static fromString(data: string): GttDeleteEvent {
+    const parsed = JSON.parse(data);
+    return new GttDeleteEvent(parsed.orderId, parsed.symbol);
   }
 }
 

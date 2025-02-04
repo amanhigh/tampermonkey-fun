@@ -4,6 +4,7 @@ import { ITickerManager } from '../manager/ticker';
 import { IRecentManager } from '../manager/recent';
 import { ISymbolManager } from '../manager/symbol';
 import { IAlertFeedManager } from '../manager/alertfeed';
+import { IPairHandler } from './pair';
 
 /**
  * Interface for managing ticker operations
@@ -24,7 +25,7 @@ export interface ITickerHandler {
    * Processes command strings for ticker operations
    * @param command The command string to process
    */
-  processCommand(command: string): void;
+  processCommand(action: string, value: string): void;
 }
 
 /**
@@ -37,7 +38,8 @@ export class TickerHandler implements ITickerHandler {
     private readonly tickerManager: ITickerManager,
     private readonly symbolManager: ISymbolManager,
     private readonly screenerManager: ITradingViewScreenerManager,
-    private readonly alertFeedManager: IAlertFeedManager
+    private readonly alertFeedManager: IAlertFeedManager,
+    private readonly pairHandler: IPairHandler
   ) {}
 
   /** @inheritdoc */
@@ -56,14 +58,16 @@ export class TickerHandler implements ITickerHandler {
     Notifier.yellow('🔁 Recent Reset');
   }
 
-  processCommand(command: string): void {
-    const [action, value] = command.split('=');
-
+  processCommand(action: string, value: string): void {
     switch (action.toUpperCase()) {
       case 'E': {
         const ticker = this.tickerManager.getTicker();
         this.symbolManager.createTvToExchangeTickerMapping(ticker, value);
         Notifier.success(`Mapped ${ticker} to Exchange ${value}`);
+        break;
+      }
+      case 'P': {
+        void this.pairHandler.mapInvestingTicker(value);
         break;
       }
       default:

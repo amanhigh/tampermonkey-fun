@@ -334,7 +334,14 @@ export class Factory {
       Factory.getInstance(
         'auditHandler',
         () =>
-          new AuditHandler(Factory.manager.audit(), Factory.manager.pair(), Factory.util.ui(), Factory.handler.ticker())
+          new AuditHandler(
+            Factory.manager.audit(),
+            Factory.manager.pair(),
+            Factory.util.ui(),
+            Factory.handler.ticker(),
+            Factory.manager.watch(),
+            Factory.manager.symbol()
+          )
       ),
     onload: (): IOnLoadHandler =>
       Factory.getInstance(
@@ -384,7 +391,8 @@ export class Factory {
             Factory.manager.ticker(),
             Factory.manager.symbol(),
             Factory.manager.screener(),
-            Factory.manager.alertFeed()
+            Factory.manager.alertFeed(),
+            Factory.handler.pair()
           )
       ),
 
@@ -448,7 +456,14 @@ export class Factory {
     pair: (): IPairHandler =>
       Factory.getInstance(
         'pairHandler',
-        () => new PairHandler(Factory.client.investing(), Factory.manager.pair(), Factory.util.smart())
+        () =>
+          new PairHandler(
+            Factory.client.investing(),
+            Factory.manager.pair(),
+            Factory.util.smart(),
+            Factory.manager.ticker(),
+            Factory.manager.symbol()
+          )
       ),
     flag: (): IFlagHandler =>
       Factory.getInstance(
@@ -499,7 +514,7 @@ export class Factory {
         () => new PanelHandler(Factory.util.smart(), Factory.handler.pair(), Factory.manager.ticker())
       ),
     picasso: (): IPicassoHandler =>
-      Factory.getInstance('picassoHandler', () => new PicassoHandler(Factory.util.wait())),
+      Factory.getInstance('picassoHandler', () => new PicassoHandler(Factory.util.wait(), Factory.util.key())),
   };
 
   /**
