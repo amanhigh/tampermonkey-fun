@@ -67,9 +67,11 @@ export class AuditHandler implements IAuditHandler {
 
     // Find existing button for this ticker
     const $button = $(`#${this.getAuditButtonId(auditResult.investingTicker)}`);
+    console.info(`Audit for ${auditResult.investingTicker} is ${auditResult.state}`);
 
-    // If ticker has valid alerts, remove the button if it exists
-    if (auditResult.state === AlertState.VALID) {
+    // If ticker has valid alerts or watched, remove the button if it exists
+    const tvAuditTicker = this.symbolManager.investingToTv(auditResult.investingTicker) || auditResult.investingTicker;
+    if (auditResult.state === AlertState.VALID || this.watchManager.isWatched(tvAuditTicker)) {
       $button.remove();
       return;
     }
@@ -96,7 +98,7 @@ export class AuditHandler implements IAuditHandler {
     const buttonId = this.getAuditButtonId(investingTicker);
 
     // Define button style based on alert state
-    const backgroundColor = this.getButtonColor(state);
+    const backgroundColor = this.getButtonColor(investingTicker, state);
 
     const button = this.uiUtil
       .buildButton(buttonId, investingTicker, () => this.tickerHandler.openTicker(investingTicker))
@@ -119,7 +121,13 @@ export class AuditHandler implements IAuditHandler {
    * Gets the background color for a button based on alert state
    * @private
    */
-  private getButtonColor(state: AlertState): string {
+  private getButtonColor(investingTicker: string ,state: AlertState): string {
+    // Color Orange if not a Valid InvestingTicker
+    const tvTicker = this.symbolManager.investingToTv(investingTicker);
+    if (!tvTicker) {
+      return 'darkorange';
+    }
+
     switch (state) {
       case AlertState.SINGLE_ALERT:
         return 'darkred';
