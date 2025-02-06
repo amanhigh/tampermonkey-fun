@@ -263,14 +263,11 @@ export class KiteHandler implements IKiteHandler {
     const tp = parseFloat($(Constants.DOM.ORDER_PANEL.INPUTS.PROFIT_PRICE).val() as string);
     const sl = parseFloat($(Constants.DOM.ORDER_PANEL.INPUTS.STOP_PRICE).val() as string);
 
-    const risk = (ent - sl).toFixed(2);
-    // FIXME: #C Tests for Position Calculation.
-    const qty = Math.round(Constants.TRADING.ORDER.RISK_LIMIT / parseFloat(risk));
-    const doubleQty = Math.round((Constants.TRADING.ORDER.RISK_LIMIT * 2) / parseFloat(risk));
+    const compute = this.calculateQuantity(ent, sl);
 
     const confirmedQty = prompt(
-      `Qty (2X): ${qty} (${doubleQty}) RiskLimit: ${Constants.TRADING.ORDER.RISK_LIMIT} TradeRisk: ${risk}`,
-      qty.toString()
+      `Qty (2X): ${compute.qty} (${compute.doubleQty}) RiskLimit: ${Constants.TRADING.ORDER.RISK_LIMIT} TradeRisk: ${compute.risk}`,
+      compute.qty.toString()
     );
 
     return {
@@ -279,6 +276,19 @@ export class KiteHandler implements IKiteHandler {
       ent,
       tp,
     };
+  }
+
+  /**
+   * Calculates the quantity based on entry price, stop price, and risk limit.
+   * @param ent Entry price
+   * @param sl Stop price
+   * @returns Calculated quantity
+   */
+  public calculateQuantity(ent: number, sl: number): { risk: number; qty: number; doubleQty: number } {
+    const risk = parseFloat((ent - sl).toFixed(2));
+    const qty = Math.round(Constants.TRADING.ORDER.RISK_LIMIT / risk);
+    const doubleQty = Math.round((Constants.TRADING.ORDER.RISK_LIMIT * 2) / risk);
+    return { risk, qty, doubleQty };
   }
 
   /**
