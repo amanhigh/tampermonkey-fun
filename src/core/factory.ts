@@ -415,7 +415,8 @@ export class Factory {
             Factory.handler.kite(),
             Factory.util.sync(),
             Factory.manager.watch(), // Add dependency
-            Factory.manager.alertFeed()
+            Factory.manager.alertFeed(),
+            Factory.manager.screener()
           )
       ),
 
