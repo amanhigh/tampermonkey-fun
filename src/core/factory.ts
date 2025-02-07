@@ -236,7 +236,13 @@ export class Factory {
     screener: (): ITradingViewScreenerManager =>
       Factory.getInstance(
         'screenerManager',
-        () => new TradingViewScreenerManager(Factory.manager.paint(), Factory.manager.watch(), Factory.manager.flag())
+        () =>
+          new TradingViewScreenerManager(
+            Factory.manager.paint(),
+            Factory.manager.watch(),
+            Factory.manager.flag(),
+            Factory.manager.recent()
+          )
       ),
 
     sequence: (): ISequenceManager =>
