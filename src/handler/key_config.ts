@@ -267,15 +267,15 @@ export class KeyConfig implements IKeyConfig {
       [
         'F11',
         {
-          description: 'Brown Index Flag - Index 6',
-          action: () => this.flagHandler.recordSelectedTicker(6),
+          description: 'Normal Composite - Index 6',
+          action: () => this.watchlistHandler.recordSelectedTicker(6),
         },
       ],
       [
         'F12',
         {
-          description: 'Golden XAU Flag - Index 7',
-          action: () => this.flagHandler.recordSelectedTicker(7),
+          description: 'Golden Composite - Index 7',
+          action: () => this.watchlistHandler.recordSelectedTicker(7),
         },
       ],
     ]);
