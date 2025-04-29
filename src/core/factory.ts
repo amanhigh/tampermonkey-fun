@@ -41,6 +41,7 @@ import { ITradingViewManager, TradingViewManager } from '../manager/tv';
 import { IPairManager, PairManager } from '../manager/pair';
 import { FnoRepo, IFnoRepo } from '../repo/fno';
 import { IFnoManager, FnoManager } from '../manager/fno';
+import { IValidationManager, ValidationManager } from '../manager/validation';
 
 // Handler Imports
 import { AlertHandler } from '../handler/alert';
@@ -290,19 +291,18 @@ export class Factory {
     journal: (): IJournalManager =>
       Factory.getInstance(
         'journalManager',
-        () =>
-          new JournalManager(
-            Factory.manager.watch(),
-            Factory.manager.sequence(),
-            Factory.client.kohan(),
-            Factory.manager.timeFrame()
-          )
+        () => new JournalManager(Factory.manager.sequence(), Factory.client.kohan(), Factory.manager.timeFrame())
       ),
     fno: (): IFnoManager => Factory.getInstance('fnoManager', () => new FnoManager(Factory.repo.fno())),
     alertFeed: (): IAlertFeedManager =>
       Factory.getInstance(
         'alertFeedManager',
         () => new AlertFeedManager(Factory.manager.symbol(), Factory.manager.watch(), Factory.manager.recent())
+      ),
+    validation: (): IValidationManager =>
+      Factory.getInstance(
+        'validationManager',
+        () => new ValidationManager(Factory.repo.alert(), Factory.repo.pair(), Factory.repo.ticker())
       ),
   };
 
@@ -518,7 +518,13 @@ export class Factory {
     panel: (): IPanelHandler =>
       Factory.getInstance(
         'panelHandler',
-        () => new PanelHandler(Factory.util.smart(), Factory.handler.pair(), Factory.manager.ticker())
+        () =>
+          new PanelHandler(
+            Factory.util.smart(),
+            Factory.handler.pair(),
+            Factory.manager.ticker(),
+            Factory.manager.validation()
+          )
       ),
     picasso: (): IPicassoHandler =>
       Factory.getInstance('picassoHandler', () => new PicassoHandler(Factory.util.wait(), Factory.util.key())),

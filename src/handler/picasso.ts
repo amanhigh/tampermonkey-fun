@@ -12,6 +12,7 @@ interface HotkeyMap {
 }
 
 export class PicassoHandler implements IPicassoHandler {
+  // FIXME: Add Help Button
   private readonly buttonMap: HotkeyMap = {
     ',': ['[data-testid="toolbar-rectangle"]'],
     u: ['[data-testid="toolbar-diamond"]'],
@@ -49,6 +50,7 @@ export class PicassoHandler implements IPicassoHandler {
 
   private updateModeIndicator(): void {
     if (this.modeIndicator) {
+      // BUG: Overlapping Sidebar Change Location.
       this.modeIndicator.textContent = this.isTextEditingMode()
         ? PICASSO_CONSTANTS.INDICATOR.TEXT_MODE
         : PICASSO_CONSTANTS.INDICATOR.DRAW_MODE;
