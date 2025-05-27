@@ -50,7 +50,6 @@ export class PicassoHandler implements IPicassoHandler {
 
   private updateModeIndicator(): void {
     if (this.modeIndicator) {
-      // BUG: Overlapping Sidebar Change Location.
       this.modeIndicator.textContent = this.isTextEditingMode()
         ? PICASSO_CONSTANTS.INDICATOR.TEXT_MODE
         : PICASSO_CONSTANTS.INDICATOR.DRAW_MODE;
