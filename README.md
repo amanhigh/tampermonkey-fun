@@ -22,7 +22,7 @@ Build Steps:
 - Build Target using Make File. Eg. `make imdb`, `make picasso`, etc.
 - Copy output of `dist/index.prod.user.js` to your Tampermonkey userscript manager.
 
-*Note: Don't checkin the modified entry 
+*Note: Don't checkin the modified entry point file.*
 
 ## NPM Commands
 Key `npm` commands for project and dependency management:
