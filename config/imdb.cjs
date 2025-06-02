@@ -1,6 +1,6 @@
 const path = require("path");
 const { merge } = require("webpack-merge");
-const baseConfig = require("./webpack.config.dev.cjs");
+const baseConfig = require("./webpack.config.prod.cjs");
 const baseMetadata = require("./metadata.cjs");
 const { UserScriptMetaDataPlugin } = require("userscript-metadata-webpack-plugin");
 
@@ -14,18 +14,16 @@ const metadata = {
   match: ["*://*.imdb.com/*"],
   grant: [
     "GM.getValue",
-    "GM.setValue", 
+    "GM.setValue",
     "GM.openInTab",
-    "GM_addValueChangeListener"
+    "GM_addValueChangeListener",
+    "GM.registerMenuCommand"
   ]
 };
 
 // Override webpack config
 const cfg = merge(baseConfig, {
-  entry: {
-    debug: "./src/core/imdb.ts",
-    "dev.user": path.resolve(__dirname, "./empty.cjs"),
-  },
+  entry: "./src/core/imdb.ts",
   plugins: [
     new UserScriptMetaDataPlugin({
       metadata
