@@ -33,6 +33,7 @@ export class ImdbApp {
     GM.registerMenuCommand('XSearch', () => void this.imdbHandler.signalSearch(SearchCommand.X1337));
     GM.registerMenuCommand('Xtreme', () => void this.imdbHandler.signalSearch(SearchCommand.XTREME));
     GM.registerMenuCommand('Youtube Full', () => void this.imdbHandler.signalSearch(SearchCommand.YOUTUBE));
+    GM.registerMenuCommand('Binge', () => void this.imdbHandler.signalSearch(SearchCommand.BINGE));
 
     // Register search event listener
     GM_addValueChangeListener(IMDB_CONSTANTS.EVENTS.SEARCH, (_key: string, _old: unknown, newValue: unknown) => {

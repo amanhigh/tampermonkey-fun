@@ -25,6 +25,12 @@ export interface ISearchUtil {
    * @param query - Search query for Xtreme
    */
   xtremeSearch(query: string): void;
+
+  /**
+   * Opens Tata Play Binge search in new tab
+   * @param query - Search query for Binge
+   */
+  bingeSearch(query: string): void;
 }
 
 /**
@@ -52,5 +58,10 @@ export class SearchUtil implements ISearchUtil {
   /** @inheritdoc */
   public xtremeSearch(query: string): void {
     void GM.openInTab(`https://www.airtelxstream.in/search/${query}?q=${query}`, true);
+  }
+
+  /** @inheritdoc */
+  public bingeSearch(query: string): void {
+    void GM.openInTab(`https://www.tataplaybinge.com/search?q=${query}`, true);
   }
 }

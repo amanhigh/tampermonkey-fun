@@ -58,6 +58,9 @@ export class ImdbHandler implements IImdbHandler {
       case SearchCommand.YOUTUBE:
         this.searchUtil.youtubeSearch(`${movieTitle} Full Movie`);
         break;
+      case SearchCommand.BINGE:
+        this.searchUtil.bingeSearch(movieTitle);
+        break;
       default:
         Notifier.error(`Invalid Command: ${searchEvent.command}`);
     }
