@@ -56,9 +56,6 @@ export class JournalHandler implements IJournalHandler {
   public handleRecordJournal(type: JournalType): void {
     const ticker = this.tickerManager.getTicker();
 
-    // BUG: #A Disable Swift Keys while recording journal
-    this.tvManager.setSwiftKeysState(false);
-
     void this.smartPrompt
       .showModal(Constants.TRADING.PROMPT.REASONS, Constants.TRADING.PROMPT.OVERRIDES)
       .then((reason) => {
@@ -72,6 +69,9 @@ export class JournalHandler implements IJournalHandler {
   /** @inheritdoc */
   public async handleJournalReasonPrompt(): Promise<void> {
     try {
+      // Disable swift keys while modal is active to prevent interference
+      this.tvManager.setSwiftKeysState(false);
+
       const reason = await this.smartPrompt.showModal(
         Constants.TRADING.PROMPT.REASONS,
         Constants.TRADING.PROMPT.OVERRIDES
@@ -85,6 +85,9 @@ export class JournalHandler implements IJournalHandler {
       this.styleManager.selectToolbar(Constants.DOM.TOOLBARS.TEXT);
     } catch (error) {
       throw new Error(`Failed to handle reason prompt: ${error}`);
+    } finally {
+      // Re-enable swift keys (since 'k' only works when swift is enabled)
+      this.tvManager.setSwiftKeysState(true);
     }
   }
 }
