@@ -46,7 +46,7 @@ export class PanelHandler implements IPanelHandler {
         await this.pairHandler.mapInvestingTicker(searchTicker);
         break;
       case PanelAction.DELETE_PAIR:
-        this.pairHandler.deletePairInfo(searchTicker);
+        await this.pairHandler.deletePairInfo(searchTicker);
         break;
       case PanelAction.VALIDATE_DATA:
         this.handleValidation();

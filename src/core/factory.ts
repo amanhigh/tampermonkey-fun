@@ -342,11 +342,11 @@ export class Factory {
         () =>
           new AuditHandler(
             Factory.manager.audit(),
-            Factory.manager.pair(),
             Factory.util.ui(),
             Factory.handler.ticker(),
             Factory.manager.watch(),
-            Factory.manager.symbol()
+            Factory.manager.symbol(),
+            Factory.handler.pair()
           )
       ),
     onload: (): IOnLoadHandler =>
@@ -469,7 +469,8 @@ export class Factory {
             Factory.manager.pair(),
             Factory.util.smart(),
             Factory.manager.ticker(),
-            Factory.manager.symbol()
+            Factory.manager.symbol(),
+            Factory.manager.alertFeed()
           )
       ),
     flag: (): IFlagHandler =>

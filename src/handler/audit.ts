@@ -1,12 +1,12 @@
 import { Constants } from '../models/constant';
 import { AlertState } from '../models/alert';
 import { IAuditManager } from '../manager/audit';
-import { IPairManager } from '../manager/pair';
 import { IUIUtil } from '../util/ui';
 import { Notifier } from '../util/notify';
 import { ITickerHandler } from './ticker';
 import { IWatchManager } from '../manager/watch';
 import { ISymbolManager } from '../manager/symbol';
+import { IPairHandler } from './pair';
 
 /**
  * Interface for managing audit UI operations
@@ -29,11 +29,11 @@ export interface IAuditHandler {
 export class AuditHandler implements IAuditHandler {
   constructor(
     private readonly auditManager: IAuditManager,
-    private readonly pairManager: IPairManager,
     private readonly uiUtil: IUIUtil,
     private readonly tickerHandler: ITickerHandler,
     private readonly watchManager: IWatchManager,
-    private readonly symbolManager: ISymbolManager
+    private readonly symbolManager: ISymbolManager,
+    private readonly pairHandler: IPairHandler
   ) {}
 
   /**
@@ -114,9 +114,10 @@ export class AuditHandler implements IAuditHandler {
 
     button.on('contextmenu', (e: JQuery.ContextMenuEvent) => {
       e.preventDefault();
-      this.pairManager.deletePairInfo(investingTicker);
-      button.remove();
-      Notifier.red(`❌ Removed mapping for ${investingTicker}`);
+      void this.pairHandler.deletePairInfo(investingTicker).then(() => {
+        button.remove();
+        Notifier.red(`❌ Removed mapping for ${investingTicker}`);
+      });
     });
 
     return button;

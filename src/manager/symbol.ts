@@ -48,6 +48,12 @@ export interface ISymbolManager {
   createTvToInvestingMapping(tvTicker: string, investingTicker: string): void;
 
   /**
+   * Removes mapping between TradingView and Investing tickers
+   * @param investingTicker Investing.com ticker to unmap
+   */
+  removeTvToInvestingMapping(investingTicker: string): void;
+
+  /**
    * Creates mapping between TradingView ticker and Exchange
    * @param tvTicker TradingView ticker
    * @param exchange Exchange identifier (e.g., "NSE")
@@ -131,6 +137,16 @@ export class SymbolManager implements ISymbolManager {
   createTvToInvestingMapping(tvTicker: string, investingTicker: string): void {
     // TODO: Directy Map tvTicker to PairInfo (Now Contains investingTicker as Symbol)
     this.tickerRepo.pinInvestingTicker(tvTicker, investingTicker);
+  }
+
+  /** @inheritdoc */
+  removeTvToInvestingMapping(investingTicker: string): void {
+    // Get the tvTicker before removing to use tickerRepo.delete()
+    const tvTicker = this.investingToTv(investingTicker);
+    if (tvTicker) {
+      // Remove from tickerRepo (handles both forward and reverse mappings)
+      this.tickerRepo.delete(tvTicker);
+    }
   }
 
   /** @inheritdoc */
