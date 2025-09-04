@@ -54,6 +54,8 @@ export interface IMapRepo<K, V> extends IBaseRepo<Map<K, V>> {
   delete(key: K): boolean;
 }
 
+// TODO: Plan repositories Tests.
+
 /**
  * Base repository for Map-based storage
  * @template K Key type (restricted to string or number)

@@ -3,5 +3,5 @@ export default {
   testEnvironment: 'node',
   testMatch: ['**/test/**/*.test.ts'],
   collectCoverage: true,
-  coverageDirectory: 'coverage'
+  coverageDirectory: 'coverage',
 };
