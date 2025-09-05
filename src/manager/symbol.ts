@@ -1,6 +1,5 @@
 import { ITickerRepo } from '../repo/ticker';
 import { IExchangeRepo } from '../repo/exchange';
-import { fx } from 'jquery';
 
 /**
  * Interface for managing symbol mappings and transformations across trading platforms
@@ -74,7 +73,7 @@ export interface ISymbolManager {
 // FIXME: #A Alias Support for Dual Mapping.
 
 /*
-*
+ *
  * Manages symbol mappings and transformations for trading platforms
  */
 export class SymbolManager implements ISymbolManager {
