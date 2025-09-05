@@ -70,8 +70,6 @@ export interface ISymbolManager {
   // TODO: #A Audit & Clean all mappings, eg. Pair, Ticker, Exchange etc by Matching each Repo
 }
 
-// FIXME: #A Alias Support for Dual Mapping.
-
 /*
  *
  * Manages symbol mappings and transformations for trading platforms

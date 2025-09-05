@@ -1,6 +1,7 @@
 import { ISymbolManager } from './symbol';
 import { IKiteClient } from '../client/kite';
-import { GttCreateEvent, CreateGttRequest, GttApiResponse, GttRefreshEvent, GttDeleteEvent } from '../models/kite';
+import { CreateGttRequest, GttApiResponse } from '../models/kite';
+import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../models/gtt';
 import { IKiteRepo } from '../repo/kite';
 import { IWatchManager } from './watch';
 

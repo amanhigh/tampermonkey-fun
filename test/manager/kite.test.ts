@@ -3,7 +3,8 @@ import { ISymbolManager } from '../../src/manager/symbol';
 import { IKiteClient } from '../../src/client/kite';
 import { IKiteRepo } from '../../src/repo/kite';
 import { IWatchManager } from '../../src/manager/watch';
-import { GttCreateEvent, GttApiResponse, GttRefreshEvent, GttDeleteEvent } from '../../src/models/kite';
+import { GttApiResponse } from '../../src/models/kite';
+import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../../src/models/gtt';
 
 // Mock dependencies
 const mockSymbolManager: jest.Mocked<ISymbolManager> = {
