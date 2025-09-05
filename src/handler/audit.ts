@@ -65,7 +65,7 @@ export class AuditHandler implements IAuditHandler {
    * Refreshes audit button for current ticker
    */
   public auditCurrent(): void {
-    // FIXME: Perfom after Alert Creation.
+    // FIXME: #C Perfom after Alert Creation.
     const auditResult = this.auditManager.auditCurrentTicker();
 
     // Find existing button for this ticker

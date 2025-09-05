@@ -12,7 +12,7 @@ interface HotkeyMap {
 }
 
 export class PicassoHandler implements IPicassoHandler {
-  // FIXME: Add Help Button
+  // FIXME: #C Add Help Button
   private readonly buttonMap: HotkeyMap = {
     ',': ['[data-testid="toolbar-rectangle"]'],
     u: ['[aria-label="Duplicate"]'],

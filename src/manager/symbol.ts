@@ -1,5 +1,6 @@
 import { ITickerRepo } from '../repo/ticker';
 import { IExchangeRepo } from '../repo/exchange';
+import { fx } from 'jquery';
 
 /**
  * Interface for managing symbol mappings and transformations across trading platforms
@@ -67,10 +68,13 @@ export interface ISymbolManager {
    */
   isComposite(symbol: string): boolean;
 
-  // TODO: Audit & Clean all mappings, eg. Pair, Ticker, Exchange etc by Matching each Repo
+  // TODO: #A Audit & Clean all mappings, eg. Pair, Ticker, Exchange etc by Matching each Repo
 }
 
-/**
+// FIXME: #A Alias Support for Dual Mapping.
+
+/*
+*
  * Manages symbol mappings and transformations for trading platforms
  */
 export class SymbolManager implements ISymbolManager {
@@ -135,7 +139,7 @@ export class SymbolManager implements ISymbolManager {
 
   /** @inheritdoc */
   createTvToInvestingMapping(tvTicker: string, investingTicker: string): void {
-    // TODO: Directy Map tvTicker to PairInfo (Now Contains investingTicker as Symbol)
+    // FIXME: #C Directy Map tvTicker to PairInfo (Now Contains investingTicker as Symbol)
     this.tickerRepo.pinInvestingTicker(tvTicker, investingTicker);
   }
 
