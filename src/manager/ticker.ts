@@ -77,7 +77,7 @@ export class TickerManager implements ITickerManager {
 
   /** @inheritdoc */
   getTicker(): string {
-    const ticker = $(Constants.DOM.BASIC.TICKER).html();
+    const ticker = $(Constants.DOM.BASIC.TICKER).text();
     if (!ticker) {
       throw new Error('Ticker not found');
     }
