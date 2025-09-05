@@ -31,6 +31,23 @@ export interface IPairRepo extends IMapRepo<string, PairInfo> {
 /**
  * Repository for managing pair mappings
  * Maps Investing.com tickers to their pair information
+ *
+ * WHY tvTicker → investingTicker → PairInfo ARCHITECTURE:
+ * =====================================================
+ *
+ * 🔗 EXTERNAL API: Investing.com API returns investing ticker keyed data
+ * 📊 BATCH OPS: Audit system processes all pairs by investing ticker
+ * 🌐 EXTERNAL FEEDS: Alert events from Investing.com use investing tickers
+ * 💾 DATA STORAGE: Repository keyed by investing ticker for persistence
+ * 🔄 FLEXIBILITY: Supports multiple TV ticker aliases per investing ticker
+ *
+ * ❌ DIRECT tvTicker → PairInfo BREAKS:
+ * - AuditManager batch processing
+ * - AlertFeedHandler external parsing
+ * - InvestingClient API responses
+ * - PairRepo data persistence
+ *
+ * ✅ KEEP CURRENT: Optimize performance, not architecture
  */
 export class PairRepo extends MapRepo<string, PairInfo> implements IPairRepo {
   /**
