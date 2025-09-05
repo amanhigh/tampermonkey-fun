@@ -2,6 +2,7 @@ import { KiteManager, IKiteManager } from '../../src/manager/kite';
 import { ISymbolManager } from '../../src/manager/symbol';
 import { IKiteClient } from '../../src/client/kite';
 import { IKiteRepo } from '../../src/repo/kite';
+import { IWatchManager } from '../../src/manager/watch';
 import { GttCreateEvent, GttApiResponse, GttRefreshEvent, GttDeleteEvent } from '../../src/models/kite';
 
 // Mock dependencies
@@ -31,12 +32,22 @@ const mockKiteRepo: jest.Mocked<IKiteRepo> = {
   getGttRefereshEvent: jest.fn(),
 };
 
+const mockWatchManager: jest.Mocked<IWatchManager> = {
+  getCategory: jest.fn(),
+  getDefaultWatchlist: jest.fn(),
+  computeDefaultList: jest.fn(),
+  recordCategory: jest.fn(),
+  dryRunClean: jest.fn(),
+  clean: jest.fn(),
+  isWatched: jest.fn(),
+};
+
 describe('KiteManager', () => {
   let kiteManager: IKiteManager;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    kiteManager = new KiteManager(mockSymbolManager, mockKiteClient, mockKiteRepo);
+    kiteManager = new KiteManager(mockSymbolManager, mockKiteClient, mockKiteRepo, mockWatchManager);
   });
 
   describe('createOrder', () => {

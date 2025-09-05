@@ -269,7 +269,8 @@ export class Factory {
     kite: (): IKiteManager =>
       Factory.getInstance(
         'kiteManager',
-        () => new KiteManager(Factory.manager.symbol(), Factory.client.kite(), Factory.repo.kite())
+        () =>
+          new KiteManager(Factory.manager.symbol(), Factory.client.kite(), Factory.repo.kite(), Factory.manager.watch())
       ),
 
     symbol: (): ISymbolManager =>

@@ -77,6 +77,7 @@ export class KiteHandler implements IKiteHandler {
    * @param waitUtil - Utility for waiting operations
    * @param tickerManager - Manager for ticker operations
    * @param tvManager - Manager for TradingView operations
+   * @param uiUtil - Utility for UI operations
    */
   constructor(
     private readonly kiteManager: IKiteManager,
@@ -155,6 +156,14 @@ export class KiteHandler implements IKiteHandler {
     const currentTicker = this.tickerManager.getTicker();
     const gttData = await this.kiteManager.getGttRefereshEvent();
     const ordersForTicker = gttData.getOrdersForTicker(currentTicker);
+
+    // Check for unwatched GTT tickers and show warning
+    const unwatchedTickers = this.kiteManager.getUnwatchedGttTickers(gttData);
+    if (unwatchedTickers.length > 0) {
+      const tickerList = unwatchedTickers.join(', ');
+      Notifier.warn(`GTT Orders not in primary lists: ${tickerList}`, 5000);
+    }
+
     const $ordersContainer = $(`#${Constants.UI.IDS.AREAS.ORDERS}`);
 
     $ordersContainer.empty();
