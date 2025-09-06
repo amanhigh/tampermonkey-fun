@@ -3,7 +3,8 @@ import { ISymbolManager } from '../manager/symbol';
 import { ITickerManager } from '../manager/ticker';
 import { IWaitUtil } from '../util/wait';
 import { Constants } from '../models/constant';
-import { Order, GttCreateEvent, GttRefreshEvent, GttApiResponse, GttDeleteEvent } from '../models/kite';
+import { Order, GttApiResponse } from '../models/kite';
+import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../models/gtt';
 import { Notifier } from '../util/notify';
 import { ITradingViewManager } from '../manager/tv';
 import { IUIUtil } from '../util/ui';
@@ -77,6 +78,7 @@ export class KiteHandler implements IKiteHandler {
    * @param waitUtil - Utility for waiting operations
    * @param tickerManager - Manager for ticker operations
    * @param tvManager - Manager for TradingView operations
+   * @param uiUtil - Utility for UI operations
    */
   constructor(
     private readonly kiteManager: IKiteManager,
@@ -155,6 +157,14 @@ export class KiteHandler implements IKiteHandler {
     const currentTicker = this.tickerManager.getTicker();
     const gttData = await this.kiteManager.getGttRefereshEvent();
     const ordersForTicker = gttData.getOrdersForTicker(currentTicker);
+
+    // Check for unwatched GTT tickers and show warning
+    const unwatchedTickers = this.kiteManager.getUnwatchedGttTickers(gttData);
+    if (unwatchedTickers.length > 0) {
+      const tickerList = unwatchedTickers.join(', ');
+      Notifier.warn(`GTT Orders not in primary lists: ${tickerList}`, 5000);
+    }
+
     const $ordersContainer = $(`#${Constants.UI.IDS.AREAS.ORDERS}`);
 
     $ordersContainer.empty();
@@ -263,14 +273,11 @@ export class KiteHandler implements IKiteHandler {
     const tp = parseFloat($(Constants.DOM.ORDER_PANEL.INPUTS.PROFIT_PRICE).val() as string);
     const sl = parseFloat($(Constants.DOM.ORDER_PANEL.INPUTS.STOP_PRICE).val() as string);
 
-    const risk = (ent - sl).toFixed(2);
-    // FIXME: #C Tests for Position Calculation.
-    const qty = Math.round(Constants.TRADING.ORDER.RISK_LIMIT / parseFloat(risk));
-    const doubleQty = Math.round((Constants.TRADING.ORDER.RISK_LIMIT * 2) / parseFloat(risk));
+    const compute = this.calculateQuantity(ent, sl);
 
     const confirmedQty = prompt(
-      `Qty (2X): ${qty} (${doubleQty}) RiskLimit: ${Constants.TRADING.ORDER.RISK_LIMIT} TradeRisk: ${risk}`,
-      qty.toString()
+      `Qty (2X): ${compute.qty} (${compute.doubleQty}) RiskLimit: ${Constants.TRADING.ORDER.RISK_LIMIT} TradeRisk: ${compute.risk}`,
+      compute.qty.toString()
     );
 
     return {
@@ -279,6 +286,19 @@ export class KiteHandler implements IKiteHandler {
       ent,
       tp,
     };
+  }
+
+  /**
+   * Calculates the quantity based on entry price, stop price, and risk limit.
+   * @param ent Entry price
+   * @param sl Stop price
+   * @returns Calculated quantity
+   */
+  public calculateQuantity(ent: number, sl: number): { risk: number; qty: number; doubleQty: number } {
+    const risk = parseFloat((ent - sl).toFixed(2));
+    const qty = Math.round(Constants.TRADING.ORDER.RISK_LIMIT / risk);
+    const doubleQty = Math.round((Constants.TRADING.ORDER.RISK_LIMIT * 2) / risk);
+    return { risk, qty, doubleQty };
   }
 
   /**

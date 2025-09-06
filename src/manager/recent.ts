@@ -59,6 +59,6 @@ export class RecentManager implements IRecentManager {
     const colorList = Constants.UI.COLORS.LIST;
 
     const recentTickers = this.recentRepo.getAll();
-    this.paintManager.paintSymbols(screenerSymbolSelector, recentTickers, { color: colorList[3] });
+    this.paintManager.paintSymbols(screenerSymbolSelector, recentTickers, { color: colorList[1] });
   }
 }

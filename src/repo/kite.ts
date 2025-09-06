@@ -1,5 +1,5 @@
 import { Constants } from '../models/constant';
-import { GttCreateEvent, GttDeleteEvent, GttRefreshEvent } from '../models/kite';
+import { GttCreateEvent, GttDeleteEvent, GttRefreshEvent } from '../models/gtt';
 
 /**
  * Interface for Kite repository operations

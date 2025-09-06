@@ -101,10 +101,6 @@ export class AuditManager implements IAuditManager {
       }
 
       processedCount = endIndex;
-      const progress = Math.floor((processedCount / investingTickers.length) * 100);
-      if (progress % 20 === 0) {
-        // BUG: Show progress at 20% intervals
-      }
 
       // Yield to prevent UI blocking
       await new Promise((resolve) => setTimeout(resolve, 0));

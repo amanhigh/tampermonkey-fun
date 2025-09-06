@@ -105,7 +105,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     }
 
     // Paint Flags
-    this.flagManager.paint(Constants.DOM.WATCHLIST.SYMBOL);
+    this.flagManager.paint(Constants.DOM.WATCHLIST.SYMBOL, Constants.DOM.WATCHLIST.ITEM);
 
     // Ticker Set Summary Update
     this.displaySetSummary();

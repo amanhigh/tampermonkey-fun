@@ -3,7 +3,6 @@ import { IObserveUtil } from '../util/observer';
 import { IWaitUtil } from '../util/wait';
 import { IWatchListHandler } from './watchlist';
 import { ITickerChangeHandler } from './ticker_change';
-import { Notifier } from '../util/notify';
 import { IHotkeyHandler } from './hotkey';
 import { IAlertHandler } from './alert';
 
@@ -119,19 +118,35 @@ export class OnLoadHandler implements IOnLoadHandler {
         this.watchListHandler.applyDefaultFilters();
         this.watchListHandler.onWatchListChange();
 
-        // Set up screener observer if exists
-        Notifier.info('Waiting for Screener');
+        // Set up screener observer
+        this.setupScreenerObserver();
+      },
+      10
+    );
+  }
+
+  /**
+   * Sets up observer for screener DOM changes
+   * @private
+   */
+  private setupScreenerObserver(): void {
+    // Phase 1: Wait for screener widget to exist
+    this.waitUtil.waitJEE(
+      Constants.DOM.SCREENER.MAIN,
+      (mainElement) => {
+        // Phase 2: Wait for symbol elements to be ready
         this.waitUtil.waitJEE(
-          Constants.DOM.SCREENER.MAIN,
-          (screenerElement) => {
-            const targetElement = screenerElement.get(0);
+          Constants.DOM.SCREENER.SYMBOL,
+          (_symbolElement) => {
+            // Use mainElement directly (already found in phase 1)
+            const targetElement = mainElement.get(0);
             if (!targetElement) {
-              throw new Error('Unable to setup screener observer');
+              console.error('Unable to setup screener observer');
+              return;
             }
             this.observeUtil.nodeObserver(targetElement, () => {
               this.watchListHandler.onWatchListChange();
             });
-            Notifier.success('Screener Hooked');
           },
           10
         );

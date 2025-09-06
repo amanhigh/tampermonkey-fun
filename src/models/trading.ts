@@ -19,6 +19,15 @@ export enum Trend {
 }
 
 /**
+ * Available journal entry types
+ **/
+export enum JournalType {
+  SET = 'set',
+  RESULT = 'result',
+  REJECTED = 'rejected',
+}
+
+/**
  * Available timeframe keys
  */
 export enum TimeFrame {

@@ -76,9 +76,10 @@ export const Constants = Object.freeze({
       },
     },
     SCREENER: {
-      SYMBOL: '.tv-screener__symbol', // Old name: screenerSymbolSelector
-      MAIN: 'tbody.tv-data-table__tbody:nth(1)', // Old name: screenerSelector
-      LINE: 'tr.tv-screener-table__result-row', // Old name: screenerLineSelector
+      SYMBOL: 'a.tickerName-GrtoTeat', // Old name: screenerSymbolSelector
+      MAIN: '[data-qa-id="screener-widget"]', // Old name: screenerSelector
+      LINE: 'tr.row-RdUXZpkv', // Old name: screenerLineSelector
+      ITEM: 'tr.row-RdUXZpkv', // Screener item selector for flag painting
       BUTTON: 'button[data-name=toggle-visibility-button]', // Old name: screenerButtonSelector
       SELECTED: '.tv-screener-table__result-row--selected', // Old name: screenerSelectedSelector
     },

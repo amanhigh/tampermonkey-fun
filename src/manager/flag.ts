@@ -24,8 +24,9 @@ export interface IFlagManager {
   /**
    * Paint flag indicators based on category colors
    * @param selector Selector for ticker elements
+   * @param itemSelector Selector for item container
    */
-  paint(selector: string): void;
+  paint(selector: string, itemSelector: string): void;
 }
 
 /**
@@ -54,14 +55,14 @@ export class FlagManager implements IFlagManager {
   }
 
   /** @inheritdoc */
-  paint(selector: string): void {
+  paint(selector: string, itemSelector: string): void {
     const colorList = Constants.UI.COLORS.LIST;
 
     // Paint flags for each category
     for (let i = 0; i < colorList.length; i++) {
       const color = colorList[i];
       const flagSymbols = this.getCategory(i);
-      this.paintManager.paintFlags(selector, flagSymbols, color);
+      this.paintManager.paintFlags(selector, flagSymbols, color, itemSelector);
     }
   }
 

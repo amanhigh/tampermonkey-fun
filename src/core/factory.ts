@@ -41,6 +41,7 @@ import { ITradingViewManager, TradingViewManager } from '../manager/tv';
 import { IPairManager, PairManager } from '../manager/pair';
 import { FnoRepo, IFnoRepo } from '../repo/fno';
 import { IFnoManager, FnoManager } from '../manager/fno';
+import { IValidationManager, ValidationManager } from '../manager/validation';
 
 // Handler Imports
 import { AlertHandler } from '../handler/alert';
@@ -236,7 +237,13 @@ export class Factory {
     screener: (): ITradingViewScreenerManager =>
       Factory.getInstance(
         'screenerManager',
-        () => new TradingViewScreenerManager(Factory.manager.paint(), Factory.manager.watch(), Factory.manager.flag())
+        () =>
+          new TradingViewScreenerManager(
+            Factory.manager.paint(),
+            Factory.manager.watch(),
+            Factory.manager.flag(),
+            Factory.manager.recent()
+          )
       ),
 
     sequence: (): ISequenceManager =>
@@ -262,7 +269,8 @@ export class Factory {
     kite: (): IKiteManager =>
       Factory.getInstance(
         'kiteManager',
-        () => new KiteManager(Factory.manager.symbol(), Factory.client.kite(), Factory.repo.kite())
+        () =>
+          new KiteManager(Factory.manager.symbol(), Factory.client.kite(), Factory.repo.kite(), Factory.manager.watch())
       ),
 
     symbol: (): ISymbolManager =>
@@ -284,19 +292,18 @@ export class Factory {
     journal: (): IJournalManager =>
       Factory.getInstance(
         'journalManager',
-        () =>
-          new JournalManager(
-            Factory.manager.watch(),
-            Factory.manager.sequence(),
-            Factory.client.kohan(),
-            Factory.manager.timeFrame()
-          )
+        () => new JournalManager(Factory.manager.sequence(), Factory.client.kohan(), Factory.manager.timeFrame())
       ),
     fno: (): IFnoManager => Factory.getInstance('fnoManager', () => new FnoManager(Factory.repo.fno())),
     alertFeed: (): IAlertFeedManager =>
       Factory.getInstance(
         'alertFeedManager',
         () => new AlertFeedManager(Factory.manager.symbol(), Factory.manager.watch(), Factory.manager.recent())
+      ),
+    validation: (): IValidationManager =>
+      Factory.getInstance(
+        'validationManager',
+        () => new ValidationManager(Factory.repo.alert(), Factory.repo.pair(), Factory.repo.ticker())
       ),
   };
 
@@ -336,11 +343,11 @@ export class Factory {
         () =>
           new AuditHandler(
             Factory.manager.audit(),
-            Factory.manager.pair(),
             Factory.util.ui(),
             Factory.handler.ticker(),
             Factory.manager.watch(),
-            Factory.manager.symbol()
+            Factory.manager.symbol(),
+            Factory.handler.pair()
           )
       ),
     onload: (): IOnLoadHandler =>
@@ -409,7 +416,8 @@ export class Factory {
             Factory.handler.kite(),
             Factory.util.sync(),
             Factory.manager.watch(), // Add dependency
-            Factory.manager.alertFeed()
+            Factory.manager.alertFeed(),
+            Factory.manager.screener()
           )
       ),
 
@@ -462,7 +470,8 @@ export class Factory {
             Factory.manager.pair(),
             Factory.util.smart(),
             Factory.manager.ticker(),
-            Factory.manager.symbol()
+            Factory.manager.symbol(),
+            Factory.manager.alertFeed()
           )
       ),
     flag: (): IFlagHandler =>
@@ -511,7 +520,13 @@ export class Factory {
     panel: (): IPanelHandler =>
       Factory.getInstance(
         'panelHandler',
-        () => new PanelHandler(Factory.util.smart(), Factory.handler.pair(), Factory.manager.ticker())
+        () =>
+          new PanelHandler(
+            Factory.util.smart(),
+            Factory.handler.pair(),
+            Factory.manager.ticker(),
+            Factory.manager.validation()
+          )
       ),
     picasso: (): IPicassoHandler =>
       Factory.getInstance('picassoHandler', () => new PicassoHandler(Factory.util.wait(), Factory.util.key())),

@@ -12,9 +12,10 @@ interface HotkeyMap {
 }
 
 export class PicassoHandler implements IPicassoHandler {
+  // FIXME: #C Add Help Button
   private readonly buttonMap: HotkeyMap = {
     ',': ['[data-testid="toolbar-rectangle"]'],
-    u: ['[data-testid="toolbar-diamond"]'],
+    u: ['[aria-label="Duplicate"]'],
     ';': ['[aria-label="Delete"]'],
     y: ['[data-testid="main-menu-trigger"]', '[aria-label="Reset the canvas"]'],
     "'": ['[data-testid="button-undo"]'],

@@ -20,6 +20,7 @@ export enum SearchCommand {
   X1337 = 'XSearch',
   XTREME = 'Xtreme',
   YOUTUBE = 'Youtube Full',
+  BINGE = 'Binge',
 }
 
 export interface SearchEvent {

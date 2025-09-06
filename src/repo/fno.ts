@@ -20,10 +20,17 @@ export class FnoRepo extends SetRepo<string> implements IFnoRepo {
    */
   constructor(repoCron: IRepoCron) {
     super(repoCron, 'fnoRepo');
-    // Initialize with existing FNO symbols if empty
-    if (this.getCount() === 0) {
-      this._initializeDefaultSymbols();
-    }
+    // Initialize with existing FNO symbols after async loading completes
+    this.load()
+      .then((data) => {
+        if (data.size === 0) {
+          this._initializeDefaultSymbols();
+        }
+      })
+      .catch(() => {
+        // If loading fails, initialize with defaults
+        this._initializeDefaultSymbols();
+      });
   }
 
   /**

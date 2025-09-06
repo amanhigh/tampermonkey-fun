@@ -32,6 +32,8 @@ export interface IPairManager {
   deletePairInfo(investingTicker: string): void;
 }
 
+// TODO: Plan Manager Test Coverage.
+
 /**
  * Manages pair information and mappings
  */
@@ -58,7 +60,6 @@ export class PairManager implements IPairManager {
 
   /** @inheritdoc */
   deletePairInfo(investingTicker: string): void {
-    // BUG: #C Unmap Event doesn't update alert feed.
     this.pairRepo.delete(investingTicker);
   }
 }

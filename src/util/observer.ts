@@ -30,7 +30,22 @@ export class ObserveUtil implements IObserveUtil {
     }
 
     try {
+      // Always track text changes for enhanced functionality
+      let previousText = target.textContent || '';
+
       const observer = new MutationObserver((mutations) => {
+        // Detect text changes
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'characterData' || mutation.type === 'childList') {
+            const currentText = target.textContent || '';
+            if (currentText !== previousText) {
+              console.log(`Text changed from "${previousText}" to "${currentText}"`);
+              previousText = currentText;
+            }
+          }
+        });
+
+        // Call original callback for all changes (backward compatibility)
         if (mutations.length > 0) {
           callback();
         }

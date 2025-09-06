@@ -76,7 +76,6 @@ export class KiteClient extends BaseClient implements IKiteClient {
    * @param request GTT order creation request
    * @throws Error when GTT creation fails
    */
-  // FIXME: #B Create ATO alert based Orders
   async createGTT(request: CreateGttRequest): Promise<void> {
     try {
       await this.makeRequest('/triggers', {

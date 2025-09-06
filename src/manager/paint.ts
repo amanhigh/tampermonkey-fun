@@ -18,9 +18,10 @@ export interface IPaintManager {
    * @param selector The base selector for finding elements
    * @param symbols The set of symbols to filter elements
    * @param color The color to apply
+   * @param itemSelector The selector for the item container
    * @param force If true, apply color regardless of symbols
    */
-  paintFlags(selector: string, symbols: Set<string> | null, color: string, force?: boolean): void;
+  paintFlags(selector: string, symbols: Set<string> | null, color: string, itemSelector: string, force?: boolean): void;
 
   /**
    * Resets the colors of the specified selector to the default color
@@ -59,7 +60,7 @@ export class PaintManager implements IPaintManager {
   }
 
   /** @inheritdoc */
-  paintFlags(selector: string, symbols: Set<string> | null, color: string, force = false): void {
+  paintFlags(selector: string, symbols: Set<string> | null, color: string, itemSelector: string, force = false): void {
     if (!selector) {
       throw new Error('Selector is required');
     }
@@ -71,7 +72,7 @@ export class PaintManager implements IPaintManager {
         }
         return symbols ? symbols.has(element.innerHTML) : false;
       })
-      .parents(Constants.DOM.WATCHLIST.ITEM)
+      .closest(itemSelector)
       .find(Constants.DOM.FLAGS.SYMBOL)
       .css('color', color);
   }
@@ -92,7 +93,6 @@ export class PaintManager implements IPaintManager {
     this.paintSymbols(selector, null, { color: Constants.UI.COLORS.DEFAULT }, true);
 
     // Reset flag colors
-    // HACK: #B Unusable Paint Flags overwrites both watchlist and screener.
-    this.paintFlags(selector, null, Constants.UI.COLORS.DEFAULT, true);
+    this.paintFlags(selector, null, Constants.UI.COLORS.DEFAULT, Constants.DOM.WATCHLIST.ITEM, true);
   }
 }

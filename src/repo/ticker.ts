@@ -98,6 +98,10 @@ export class TickerRepo extends MapRepo<string, string> implements ITickerRepo {
    * @override
    */
   public override set(key: string, value: string): void {
+    const oldValue = this.get(key);
+    if (oldValue !== undefined && oldValue !== value) {
+      this.reverseMap.delete(oldValue);
+    }
     super.set(key, value);
     this.reverseMap.set(value, key);
   }

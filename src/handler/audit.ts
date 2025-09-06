@@ -1,12 +1,12 @@
 import { Constants } from '../models/constant';
 import { AlertState } from '../models/alert';
 import { IAuditManager } from '../manager/audit';
-import { IPairManager } from '../manager/pair';
 import { IUIUtil } from '../util/ui';
 import { Notifier } from '../util/notify';
 import { ITickerHandler } from './ticker';
 import { IWatchManager } from '../manager/watch';
 import { ISymbolManager } from '../manager/symbol';
+import { IPairHandler } from './pair';
 
 /**
  * Interface for managing audit UI operations
@@ -29,11 +29,11 @@ export interface IAuditHandler {
 export class AuditHandler implements IAuditHandler {
   constructor(
     private readonly auditManager: IAuditManager,
-    private readonly pairManager: IPairManager,
     private readonly uiUtil: IUIUtil,
     private readonly tickerHandler: ITickerHandler,
     private readonly watchManager: IWatchManager,
-    private readonly symbolManager: ISymbolManager
+    private readonly symbolManager: ISymbolManager,
+    private readonly pairHandler: IPairHandler
   ) {}
 
   /**
@@ -65,7 +65,7 @@ export class AuditHandler implements IAuditHandler {
    * Refreshes audit button for current ticker
    */
   public auditCurrent(): void {
-    // FIXME: Perfom after Alert Creation.
+    // FIXME: #C Perfom after Alert Creation.
     const auditResult = this.auditManager.auditCurrentTicker();
 
     // Find existing button for this ticker
@@ -106,7 +106,7 @@ export class AuditHandler implements IAuditHandler {
       .buildButton(buttonId, investingTicker, () => {
         const tvTicker = this.tryMapTvTicker(investingTicker);
         this.tickerHandler.openTicker(tvTicker);
-  })
+      })
       .css({
         'background-color': backgroundColor,
         margin: '2px',
@@ -114,9 +114,10 @@ export class AuditHandler implements IAuditHandler {
 
     button.on('contextmenu', (e: JQuery.ContextMenuEvent) => {
       e.preventDefault();
-      this.pairManager.deletePairInfo(investingTicker);
-      button.remove();
-      Notifier.red(`❌ Removed mapping for ${investingTicker}`);
+      void this.pairHandler.deletePairInfo(investingTicker).then(() => {
+        button.remove();
+        Notifier.red(`❌ Removed mapping for ${investingTicker}`);
+      });
     });
 
     return button;
@@ -126,7 +127,7 @@ export class AuditHandler implements IAuditHandler {
    * Gets the background color for a button based on alert state
    * @private
    */
-  private getButtonColor(investingTicker: string ,state: AlertState): string {
+  private getButtonColor(investingTicker: string, state: AlertState): string {
     // Color Orange if not a Valid InvestingTicker
     const tvTicker = this.symbolManager.investingToTv(investingTicker);
     if (!tvTicker) {

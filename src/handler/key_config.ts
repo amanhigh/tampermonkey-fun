@@ -68,11 +68,11 @@ export interface IKeyConfig {
 }
 
 export class KeyConfig implements IKeyConfig {
-  private readonly _toolbarKeys: KeyMap;
-  private readonly _timeframeKeys: KeyMap;
-  private readonly _orderKeys: KeyMap;
-  private readonly _flagKeys: KeyMap;
-  private readonly _utilityKeys: KeyMap;
+  private readonly toolbarKeys: KeyMap;
+  private readonly timeframeKeys: KeyMap;
+  private readonly orderKeys: KeyMap;
+  private readonly flagKeys: KeyMap;
+  private readonly utilityKeys: KeyMap;
 
   /**
    * @param sequenceManager Sequence manager for timeframes
@@ -91,7 +91,7 @@ export class KeyConfig implements IKeyConfig {
     private readonly journalHandler: IJournalHandler,
     private readonly kiteHandler: IKiteHandler
   ) {
-    this._toolbarKeys = new Map([
+    this.toolbarKeys = new Map([
       [
         ',',
         {
@@ -152,7 +152,7 @@ export class KeyConfig implements IKeyConfig {
       ],
     ]);
 
-    this._timeframeKeys = new Map([
+    this.timeframeKeys = new Map([
       [
         '0',
         {
@@ -190,7 +190,7 @@ export class KeyConfig implements IKeyConfig {
       ],
     ]);
 
-    this._orderKeys = new Map([
+    this.orderKeys = new Map([
       [
         'F1',
         {
@@ -228,7 +228,7 @@ export class KeyConfig implements IKeyConfig {
       ],
     ]);
 
-    this._flagKeys = new Map([
+    this.flagKeys = new Map([
       [
         'F6',
         {
@@ -267,20 +267,20 @@ export class KeyConfig implements IKeyConfig {
       [
         'F11',
         {
-          description: 'Brown Index Flag - Index 6',
-          action: () => this.flagHandler.recordSelectedTicker(6),
+          description: 'Normal Composite - Index 6',
+          action: () => this.watchlistHandler.recordSelectedTicker(6),
         },
       ],
       [
         'F12',
         {
-          description: 'Golden XAU Flag - Index 7',
-          action: () => this.flagHandler.recordSelectedTicker(7),
+          description: 'Golden Composite - Index 7',
+          action: () => this.watchlistHandler.recordSelectedTicker(7),
         },
       ],
     ]);
 
-    this._utilityKeys = new Map([
+    this.utilityKeys = new Map([
       [
         "'",
         {
@@ -295,35 +295,35 @@ export class KeyConfig implements IKeyConfig {
    * Execute toolbar key action if defined
    */
   executeToolbarAction(key: string): boolean {
-    return this._executeAction(this._toolbarKeys, key);
+    return this._executeAction(this.toolbarKeys, key);
   }
 
   /**
    * Execute timeframe key action if defined
    */
   executeTimeframeAction(key: string): boolean {
-    return this._executeAction(this._timeframeKeys, key);
+    return this._executeAction(this.timeframeKeys, key);
   }
 
   /**
    * Execute order key action if defined
    */
   executeOrderAction(key: string): boolean {
-    return this._executeAction(this._orderKeys, key);
+    return this._executeAction(this.orderKeys, key);
   }
 
   /**
    * Execute flag key action if defined
    */
   executeFlagAction(key: string): boolean {
-    return this._executeAction(this._flagKeys, key);
+    return this._executeAction(this.flagKeys, key);
   }
 
   /**
    * Execute utility key action if defined
    */
   executeUtilityAction(key: string): boolean {
-    return this._executeAction(this._utilityKeys, key);
+    return this._executeAction(this.utilityKeys, key);
   }
 
   /**
@@ -331,11 +331,11 @@ export class KeyConfig implements IKeyConfig {
    */
   getDescription(key: string): string | undefined {
     const binding =
-      this._toolbarKeys.get(key) ||
-      this._timeframeKeys.get(key) ||
-      this._orderKeys.get(key) ||
-      this._flagKeys.get(key) ||
-      this._utilityKeys.get(key);
+      this.toolbarKeys.get(key) ||
+      this.timeframeKeys.get(key) ||
+      this.orderKeys.get(key) ||
+      this.flagKeys.get(key) ||
+      this.utilityKeys.get(key);
     return binding?.description;
   }
 

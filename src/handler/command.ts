@@ -86,7 +86,7 @@ export class CommandInputHandler implements ICommandInputHandler {
   }
 
   private determineInputType(value: string): InputProcessor {
-    // HACK: Improved Ends With Symbol
+    // HACK:  Improved Ends With Symbol
     if (this.hasTickerSuffix(value)) {
       return {
         type: 'TICKER',

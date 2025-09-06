@@ -6,7 +6,7 @@ import { IJournalManager } from '../manager/journal';
 import { ISmartPrompt } from '../util/smart';
 import { IUIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
-import { Trend } from '../models/trading';
+import { JournalType } from '../models/trading';
 import { TickerManager } from '../manager/ticker';
 import { ITradingViewManager } from '../manager/tv';
 import { IStyleManager } from '../manager/style';
@@ -25,7 +25,7 @@ export interface IJournalHandler {
    * Handles Journal Creation operation
    * Shows reason prompt modal and creates journal entry
    */
-  handleRecordJournal(trend: Trend): void;
+  handleRecordJournal(type: JournalType): void;
 
   /**
    * Handles journal reason prompt operation
@@ -53,16 +53,13 @@ export class JournalHandler implements IJournalHandler {
   }
 
   /** @inheritdoc */
-  public handleRecordJournal(trend: Trend): void {
+  public handleRecordJournal(type: JournalType): void {
     const ticker = this.tickerManager.getTicker();
-
-    // BUG: #A Disable Swift Keys while recording journal
-    this.tvManager.setSwiftKeysState(false);
 
     void this.smartPrompt
       .showModal(Constants.TRADING.PROMPT.REASONS, Constants.TRADING.PROMPT.OVERRIDES)
       .then((reason) => {
-        void this.journalManager.createEntry(ticker, trend, reason);
+        void this.journalManager.createEntry(ticker, type, reason);
       })
       .catch((error) => {
         throw new Error(`Failed to select journal tag: ${error}`);
@@ -72,6 +69,9 @@ export class JournalHandler implements IJournalHandler {
   /** @inheritdoc */
   public async handleJournalReasonPrompt(): Promise<void> {
     try {
+      // Disable swift keys while modal is active to prevent interference
+      this.tvManager.setSwiftKeysState(false);
+
       const reason = await this.smartPrompt.showModal(
         Constants.TRADING.PROMPT.REASONS,
         Constants.TRADING.PROMPT.OVERRIDES
@@ -85,6 +85,9 @@ export class JournalHandler implements IJournalHandler {
       this.styleManager.selectToolbar(Constants.DOM.TOOLBARS.TEXT);
     } catch (error) {
       throw new Error(`Failed to handle reason prompt: ${error}`);
+    } finally {
+      // Re-enable swift keys (since 'k' only works when swift is enabled)
+      this.tvManager.setSwiftKeysState(true);
     }
   }
 }

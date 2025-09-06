@@ -1,6 +1,7 @@
 import { Constants } from '../models/constant';
 import { TimeFrame, TimeFrameConfig } from '../models/trading';
 import { ISequenceManager } from './sequence';
+import { Notifier } from '../util/notify';
 
 /**
  * Interface for managing trading timeframe operations
@@ -36,12 +37,6 @@ export interface ITimeFrameManager {
  */
 export class TimeFrameManager implements ITimeFrameManager {
   /**
-   * Currently selected timeframe
-   * @private
-   */
-  private currentTimeFrame: TimeFrameConfig = Constants.TIME.SEQUENCE_TYPES.FRAMES[TimeFrame.MONTHLY];
-
-  /**
    * @param sequenceManager - Manager for sequence operations
    */
   constructor(private readonly sequenceManager: ISequenceManager) {}
@@ -50,14 +45,25 @@ export class TimeFrameManager implements ITimeFrameManager {
   applyTimeFrame(position: number): boolean {
     const sequence = this.sequenceManager.getCurrentSequence();
     const timeFrame = this.sequenceManager.sequenceToTimeFrameConfig(sequence, position);
-    this.setTimeFrame(timeFrame);
     return this.clickTimeFrameToolbar(timeFrame.toolbar);
   }
 
   /** @inheritdoc */
   getCurrentTimeFrameConfig(): TimeFrameConfig {
-    // TODO: Timeframe based on Toolbar Selection. (Cover Non Hotkey Switches.)
-    return this.currentTimeFrame;
+    // Find active timeframe button using aria-checked attribute
+    const $activeButton = $(`${Constants.DOM.HEADER.TIMEFRAME}[aria-checked="true"]`);
+
+    if ($activeButton.length === 0) {
+      // Warning: Unable to detect current timeframe from DOM
+      Notifier.warn('Timeframe Detection Failed - Using Monthly as Fallback');
+      return Constants.TIME.SEQUENCE_TYPES.FRAMES[TimeFrame.MONTHLY];
+    }
+
+    // Get index of active button
+    const index = $(Constants.DOM.HEADER.TIMEFRAME).index($activeButton);
+
+    // Map index to TimeFrameConfig
+    return this.getTimeFrameConfigByToolbarIndex(index);
   }
 
   /**
@@ -76,11 +82,18 @@ export class TimeFrameManager implements ITimeFrameManager {
   }
 
   /**
-   * Set current timeframe without applying to chart
+   * Get TimeFrameConfig by toolbar index
    * @private
-   * @param timeFrame - Timeframe to set as current
+   * @param index - Toolbar button index
+   * @returns TimeFrameConfig for the index
    */
-  private setTimeFrame(timeFrame: TimeFrameConfig): void {
-    this.currentTimeFrame = timeFrame;
+  private getTimeFrameConfigByToolbarIndex(index: number): TimeFrameConfig {
+    for (const config of Object.values(Constants.TIME.SEQUENCE_TYPES.FRAMES)) {
+      if (config.toolbar === index) {
+        return config;
+      }
+    }
+
+    return Constants.TIME.SEQUENCE_TYPES.FRAMES[TimeFrame.MONTHLY];
   }
 }

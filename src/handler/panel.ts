@@ -1,6 +1,9 @@
 import { ISmartPrompt } from '../util/smart';
 import { IPairHandler } from './pair';
 import { ITickerManager } from '../manager/ticker';
+import { IValidationManager } from '../manager/validation';
+import { Notifier } from '../util/notify';
+import { Color } from '../models/color';
 
 export interface IPanelHandler {
   showPanel(): Promise<void>;
@@ -9,13 +12,15 @@ export interface IPanelHandler {
 enum PanelAction {
   MAP_TICKER = 'Map Investing Ticker',
   DELETE_PAIR = 'Delete Pair Info',
+  VALIDATE_DATA = 'Validate Data Integrity',
 }
 
 export class PanelHandler implements IPanelHandler {
   constructor(
     private readonly smartPrompt: ISmartPrompt,
     private readonly pairHandler: IPairHandler,
-    private readonly tickerManager: ITickerManager
+    private readonly tickerManager: ITickerManager,
+    private readonly validationManager: IValidationManager
   ) {}
 
   public async showPanel(): Promise<void> {
@@ -41,8 +46,21 @@ export class PanelHandler implements IPanelHandler {
         await this.pairHandler.mapInvestingTicker(searchTicker);
         break;
       case PanelAction.DELETE_PAIR:
-        this.pairHandler.deletePairInfo(searchTicker);
+        await this.pairHandler.deletePairInfo(searchTicker);
+        break;
+      case PanelAction.VALIDATE_DATA:
+        this.handleValidation();
         break;
     }
+  }
+
+  private handleValidation(): void {
+    const results = this.validationManager.validate();
+
+    // Show formatted summary in notification
+    Notifier.message(results.getFormattedSummary(), Color.ROYAL_BLUE, 10000);
+
+    // Log details to console
+    results.logDetailedResults();
   }
 }
