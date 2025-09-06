@@ -12,7 +12,7 @@ async function main() {
 
 async function fetchExample(): Promise<string> {
   const res = await GM_fetch('https://httpbin.org/uuid');
-  const data = await res.json() as { uuid: string };
+  const data = (await res.json()) as { uuid: string };
   return data.uuid;
 }
 
