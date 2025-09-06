@@ -500,7 +500,7 @@ export class Factory {
     imdb: (): IImdbHandler =>
       Factory.getInstance('imdbHandler', () => new ImdbHandler(Factory.manager.imdb(), Factory.util.search())),
     swiftKey: (): ISwiftKeyHandler =>
-      Factory.getInstance('swiftKeyHandler', () => new SwiftKeyHandler(Factory.manager.tv())),
+      Factory.getInstance('swiftKeyHandler', () => new SwiftKeyHandler(Factory.manager.tv(), Factory.util.sync())),
     command: (): ICommandInputHandler =>
       Factory.getInstance(
         'commandHandler',

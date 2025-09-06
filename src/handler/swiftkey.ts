@@ -33,10 +33,15 @@
  */
 
 import { ITradingViewManager } from '../manager/tv';
+import { ISyncUtil } from '../util/sync';
 
 export interface ISwiftKeyHandler {
   /**
    * Synchronizes document title with SwiftKey checkbox state for external IPC
+   *
+   * DEBOUNCED: Uses SyncUtil.waitOn() with 150ms timeout to prevent multiple
+   * rapid executions during ticker transitions when TradingView updates title
+   * multiple times (ticker name → ticker+price → ticker → ticker+price).
    *
    * Called by title observer when TradingView changes page title to ensure
    * SwiftKey signaling suffix is preserved. The setSwiftKeysState() call
@@ -46,13 +51,18 @@ export interface ISwiftKeyHandler {
 }
 
 export class SwiftKeyHandler implements ISwiftKeyHandler {
-  constructor(private readonly tvManager: ITradingViewManager) {}
+  constructor(
+    private readonly tvManager: ITradingViewManager,
+    private readonly syncUtil: ISyncUtil
+  ) {}
 
   public syncTitle(): void {
-    const enabled = this.tvManager.isSwiftKeysEnabled();
-    if (enabled) {
-      // Critical for Wayland IPC - signals external tools to enable SwiftKey mode
-      this.tvManager.setSwiftKeysState(enabled);
-    }
+    this.syncUtil.waitOn('swiftKeySync', 150, () => {
+      const enabled = this.tvManager.isSwiftKeysEnabled();
+      if (enabled) {
+        // Critical for Wayland IPC - signals external tools to enable SwiftKey mode
+        this.tvManager.setSwiftKeysState(enabled);
+      }
+    });
   }
 }
