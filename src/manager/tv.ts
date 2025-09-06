@@ -190,12 +190,19 @@ export class TradingViewManager implements ITradingViewManager {
   /**
    * Update document title based on swift keys state
    * @param enabled true to add suffix, false to remove suffix
+   *
+   * CRITICAL: Only modifies document.title when state actually differs
+   * to prevent circular observer triggers while maintaining Wayland IPC signaling.
    */
   private updateSwiftKeysTitle(enabled: boolean): void {
-    if (enabled && !document.title.includes(TradingViewManager.SWIFT_KEYS_TITLE_SUFFIX)) {
+    const hasSwiftSuffix = document.title.includes(TradingViewManager.SWIFT_KEYS_TITLE_SUFFIX);
+
+    // Only update if state actually differs (prevents circular DOM mutations)
+    if (enabled && !hasSwiftSuffix) {
       document.title += TradingViewManager.SWIFT_KEYS_TITLE_SUFFIX;
-    } else if (!enabled && document.title.includes(TradingViewManager.SWIFT_KEYS_TITLE_SUFFIX)) {
+    } else if (!enabled && hasSwiftSuffix) {
       document.title = document.title.replace(TradingViewManager.SWIFT_KEYS_TITLE_SUFFIX, '');
     }
+    // No change needed = No DOM mutation = No observer trigger
   }
 }
