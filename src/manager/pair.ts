@@ -32,7 +32,7 @@ export interface IPairManager {
   deletePairInfo(investingTicker: string): void;
 }
 
-// TODO: Plan Manager Test Coverage.
+// TODO: #A Plan Manager Test Coverage.
 
 /**
  * Manages pair information and mappings

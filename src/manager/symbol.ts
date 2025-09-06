@@ -67,7 +67,9 @@ export interface ISymbolManager {
    */
   isComposite(symbol: string): boolean;
 
-  // TODO: #A Audit & Clean all mappings, eg. Pair, Ticker, Exchange etc by Matching each Repo
+  // TODO: #B Audit & Clean all mappings, eg. Pair, Ticker, Exchange etc by Matching each Repo
+
+  // TODO: Audit Tickers not reviewed from Long Time.
 }
 
 /*
