@@ -136,6 +136,8 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     $(Constants.DOM.WATCHLIST.LINE).show();
     $(Constants.DOM.SCREENER.LINE).show();
 
+    // TODO: Multi Select in Watchlist should work for Move. Eg. White to Blue etc.
+
     // Disable List Transformation
     $(Constants.DOM.WATCHLIST.LINE).css('position', '');
     $(Constants.DOM.WATCHLIST.CONTAINER).css('overflow', '');
