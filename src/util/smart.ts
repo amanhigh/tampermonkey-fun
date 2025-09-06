@@ -105,7 +105,10 @@ export class SmartPrompt implements ISmartPrompt {
 
       reasons.forEach((reason, index) => {
         const button = this.createButton(reason, `smart-button-${index}`, resolve);
-        this.modal!.appendChild(button);
+        if (!this.modal) {
+          throw new Error('Modal not initialized');
+        }
+        this.modal.appendChild(button);
       });
 
       const overrideContainer = document.createElement('div');

@@ -59,7 +59,7 @@ export class SequenceManager implements ISequenceManager {
   /** @inheritdoc */
   getCurrentSequence(): SequenceType {
     // Return frozen sequence if exists
-    if (this._frozenSequence) {
+    if (this._frozenSequence !== null) {
       return this._frozenSequence;
     }
 
@@ -93,7 +93,7 @@ export class SequenceManager implements ISequenceManager {
 
   /** @inheritdoc */
   toggleFreezeSequence(): void {
-    if (this._frozenSequence) {
+    if (this._frozenSequence !== null) {
       this._frozenSequence = null;
       Notifier.red('🚫 FreezeSequence Disabled');
     } else {

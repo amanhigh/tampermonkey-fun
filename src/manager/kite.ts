@@ -97,7 +97,10 @@ export class KiteManager implements IKiteManager {
     }
 
     const exp = this.generateExpiryDate();
-    const pair = encodeURIComponent(this.symbolManager.tvToKite(evt.symb!));
+    if (!evt.symb) {
+      throw new Error('Missing symbol in GTT event');
+    }
+    const pair = encodeURIComponent(this.symbolManager.tvToKite(evt.symb));
 
     const buyRequest = this.buildBuyOrderRequest(pair, evt, exp);
     const ocoRequest = this.buildOcoOrderRequest(pair, evt, exp);

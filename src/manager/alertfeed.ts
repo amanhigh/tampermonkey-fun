@@ -59,8 +59,11 @@ export class AlertFeedManager implements IAlertFeedManager {
 
   public async createAlertFeedEvent(tvTicker: string): Promise<void> {
     const investingTicker = this.symbolManager.tvToInvesting(tvTicker);
-    const feedInfo = this.getAlertFeedState(investingTicker!);
-    const event = new AlertFeedEvent(investingTicker!, feedInfo);
+    if (!investingTicker) {
+      throw new Error(`Failed to convert ticker: ${tvTicker}`);
+    }
+    const feedInfo = this.getAlertFeedState(investingTicker);
+    const event = new AlertFeedEvent(investingTicker, feedInfo);
     await GM.setValue(Constants.STORAGE.EVENTS.ALERT_FEED_UPDATE, event.stringify());
   }
 
