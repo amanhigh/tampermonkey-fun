@@ -164,7 +164,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
       $label
         .mousedown((e: JQuery.MouseDownEvent) => {
           this.addFilter({
-            color: $(e.target).data('color'),
+            color: $(e.target).data('color') as string,
             index: e.which,
             ctrl: e.originalEvent?.ctrlKey || false,
             shift: e.originalEvent?.shiftKey || false,

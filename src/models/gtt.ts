@@ -46,7 +46,7 @@ export class GttCreateEvent extends BaseEvent {
    * @returns New GttCreateEvent instance
    */
   public static fromString(data: string): GttCreateEvent {
-    const parsed = JSON.parse(data);
+    const parsed = JSON.parse(data) as { symb: string; qty: number; ltp: number; sl: number; ent: number; tp: number };
     return new GttCreateEvent(parsed.symb, parsed.qty, parsed.ltp, parsed.sl, parsed.ent, parsed.tp);
   }
 }
@@ -103,7 +103,7 @@ export class GttRefreshEvent extends BaseEvent {
    * @returns New GttRefreshEvent instance
    */
   public static fromString(data: string): GttRefreshEvent {
-    const parsed = JSON.parse(data);
+    const parsed = JSON.parse(data) as { orders: Record<string, Order[]>; time: number };
     const event = new GttRefreshEvent();
     event.orders = parsed.orders;
     event.time = parsed.time;
@@ -130,7 +130,7 @@ export class GttDeleteEvent extends BaseEvent {
    * @returns New GttCreateEvent instance
    */
   public static fromString(data: string): GttDeleteEvent {
-    const parsed = JSON.parse(data);
+    const parsed = JSON.parse(data) as { orderId: string; symbol: string };
     return new GttDeleteEvent(parsed.orderId, parsed.symbol);
   }
 }

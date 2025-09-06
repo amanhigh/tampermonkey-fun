@@ -140,7 +140,7 @@ export class KiteHandler implements IKiteHandler {
 
   /** @inheritdoc */
   handleDeleteOrderButton($button: JQuery): void {
-    const orderId = $button.data('order-id');
+    const orderId = $button.data('order-id') as string;
     const symbol = this.tickerManager.getTicker();
     void this.kiteManager.createGttDeleteEvent(orderId, symbol);
     Notifier.red(`GTT Delete: ${orderId}`);

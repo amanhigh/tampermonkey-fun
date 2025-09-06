@@ -84,7 +84,7 @@ export class OnLoadHandler implements IOnLoadHandler {
       Constants.STORAGE.EVENTS.ALERT_CLICKED,
       (_keyName: string, _oldValue: unknown, newValue: unknown) => {
         if (newValue && typeof newValue === 'string') {
-          const alertClickData = JSON.parse(newValue);
+          const alertClickData = JSON.parse(newValue) as unknown;
           this.alertHandler.handleAlertClick(alertClickData);
         }
       }

@@ -45,7 +45,7 @@ export class CommandInputHandler implements ICommandInputHandler {
 
   /** @inheritdoc */
   public async handleInput(e: JQuery.TriggeredEvent): Promise<void> {
-    const input = $(e.target).val();
+    const input = $(e.target).val() as string;
     if (typeof input !== 'string') {
       return;
     }

@@ -27,7 +27,7 @@ export class AlertClicked extends BaseEvent {
   }
 
   public static fromString(data: string): AlertClicked {
-    const parsed = JSON.parse(data);
+    const parsed = JSON.parse(data) as { ticker: string; action: string };
     return new AlertClicked(parsed.ticker, parsed.action);
   }
 }
