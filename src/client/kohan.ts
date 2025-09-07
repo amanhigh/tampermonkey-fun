@@ -19,6 +19,22 @@ export interface IKohanClient extends IBaseClient {
    * @throws Error when retrieving clipboard data fails
    */
   getClip(): Promise<string>;
+
+  /**
+   * Enable a submap via the API
+   * @param submap - Submap name to enable (e.g., 'swiftkeys')
+   * @returns Promise resolving when submap is enabled
+   * @throws Error when enabling submap fails
+   */
+  enableSubmap(submap: string): Promise<void>;
+
+  /**
+   * Disable a submap via the API
+   * @param submap - Submap name to disable
+   * @returns Promise resolving when submap is disabled
+   * @throws Error when disabling submap fails
+   */
+  disableSubmap(submap: string): Promise<void>;
 }
 
 /**
@@ -58,6 +74,42 @@ export class KohanClient extends BaseClient implements IKohanClient {
       return await this.makeRequest<string>('/clip');
     } catch (error) {
       throw new Error(`Failed to get clip: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Enable a submap via the API
+   * @param submap - Submap name to enable (e.g., 'swiftkeys')
+   * @returns Promise resolving when submap is enabled
+   * @throws Error when enabling submap fails
+   */
+  async enableSubmap(submap: string): Promise<void> {
+    try {
+      await this.makeRequest<void>('/submap/enable', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        data: JSON.stringify({ submap }),
+      });
+    } catch (error) {
+      throw new Error(`Failed to enable submap: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Disable a submap via the API
+   * @param submap - Submap name to disable
+   * @returns Promise resolving when submap is disabled
+   * @throws Error when disabling submap fails
+   */
+  async disableSubmap(submap: string): Promise<void> {
+    try {
+      await this.makeRequest<void>('/submap/disable', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        data: JSON.stringify({ submap }),
+      });
+    } catch (error) {
+      throw new Error(`Failed to disable submap: ${(error as Error).message}`);
     }
   }
 }

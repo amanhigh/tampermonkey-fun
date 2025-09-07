@@ -360,8 +360,7 @@ export class Factory {
             Factory.handler.watchlist(),
             Factory.handler.hotkey(),
             Factory.handler.alert(),
-            Factory.handler.tickerChange(),
-            Factory.handler.swiftKey()
+            Factory.handler.tickerChange()
           )
       ),
     hotkey: (): IHotkeyHandler =>
@@ -373,7 +372,8 @@ export class Factory {
             Factory.handler.keyConfig(),
             Factory.handler.modifierKeyConfig(),
             Factory.manager.tv(),
-            Factory.handler.command()
+            Factory.handler.command(),
+            Factory.handler.swiftKey()
           )
       ),
     kite: (): IKiteHandler =>
@@ -500,7 +500,7 @@ export class Factory {
     imdb: (): IImdbHandler =>
       Factory.getInstance('imdbHandler', () => new ImdbHandler(Factory.manager.imdb(), Factory.util.search())),
     swiftKey: (): ISwiftKeyHandler =>
-      Factory.getInstance('swiftKeyHandler', () => new SwiftKeyHandler(Factory.manager.tv(), Factory.util.sync())),
+      Factory.getInstance('swiftKeyHandler', () => new SwiftKeyHandler(Factory.client.kohan())),
     command: (): ICommandInputHandler =>
       Factory.getInstance(
         'commandHandler',

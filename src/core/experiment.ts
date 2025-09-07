@@ -103,7 +103,7 @@ export class ExperimentApp {
         onload: (response) => {
           if (response.status >= 200 && response.status < 400) {
             try {
-              const data = JSON.parse(response.responseText) as unknown;
+              const data = JSON.parse(response.responseText) as T;
               resolve(data);
             } catch (error) {
               reject(new Error(`Failed to parse response: ${(error as Error).message}`));

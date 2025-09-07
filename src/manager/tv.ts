@@ -166,8 +166,6 @@ export class TradingViewManager implements ITradingViewManager {
     this.waitUtil.waitJClick(Constants.DOM.POPUPS.CLOSE_TEXTBOX);
   }
 
-  private static readonly SWIFT_KEYS_TITLE_SUFFIX = ' - SwiftKeys';
-
   /** @inheritdoc */
   isSwiftKeysEnabled(): boolean {
     return $(`#${Constants.UI.IDS.CHECKBOXES.SWIFT}`).prop('checked');
@@ -176,7 +174,6 @@ export class TradingViewManager implements ITradingViewManager {
   /** @inheritdoc */
   setSwiftKeysState(enabled: boolean): void {
     this.updateSwiftKeysCheckbox(enabled);
-    this.updateSwiftKeysTitle(enabled);
   }
 
   /**
@@ -185,24 +182,5 @@ export class TradingViewManager implements ITradingViewManager {
    */
   private updateSwiftKeysCheckbox(enabled: boolean): void {
     $(`#${Constants.UI.IDS.CHECKBOXES.SWIFT}`).prop('checked', enabled);
-  }
-
-  /**
-   * Update document title based on swift keys state
-   * @param enabled true to add suffix, false to remove suffix
-   *
-   * CRITICAL: Only modifies document.title when state actually differs
-   * to prevent circular observer triggers while maintaining Wayland IPC signaling.
-   */
-  private updateSwiftKeysTitle(enabled: boolean): void {
-    const hasSwiftSuffix = document.title.includes(TradingViewManager.SWIFT_KEYS_TITLE_SUFFIX);
-
-    // Only update if state actually differs (prevents circular DOM mutations)
-    if (enabled && !hasSwiftSuffix) {
-      document.title += TradingViewManager.SWIFT_KEYS_TITLE_SUFFIX;
-    } else if (!enabled && hasSwiftSuffix) {
-      document.title = document.title.replace(TradingViewManager.SWIFT_KEYS_TITLE_SUFFIX, '');
-    }
-    // No change needed = No DOM mutation = No observer trigger
   }
 }

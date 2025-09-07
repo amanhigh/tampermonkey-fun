@@ -45,7 +45,7 @@ export class AlertFeedEvent extends BaseEvent {
    * @returns The parsed alert feed event
    */
   static fromString(stringifiedEvent: string): AlertFeedEvent {
-    const parsedEvent = JSON.parse(stringifiedEvent) as { investingTicker: string; feedInfo: AlertFeedInfo };
+    const parsedEvent = JSON.parse(stringifiedEvent) as { investingTicker: string; feedInfo: FeedInfo };
     return new AlertFeedEvent(parsedEvent.investingTicker, parsedEvent.feedInfo);
   }
 }

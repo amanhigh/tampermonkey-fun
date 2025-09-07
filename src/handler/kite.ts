@@ -164,7 +164,7 @@ export class KiteHandler implements IKiteHandler {
       const tickerList = unwatchedTickers.join(', ');
       // FIXME: Move to Audit ?
       Notifier.warn(`GTT Orders not in primary lists: ${tickerList}`, 5000);
-      
+
       // TODO: Duplicate GTT Orders Audit.
     }
 

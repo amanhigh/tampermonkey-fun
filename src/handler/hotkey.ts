@@ -4,6 +4,7 @@ import { Notifier } from '../util/notify';
 import { IKeyConfig } from './key_config';
 import { IModifierKeyConfig } from './modifier_config';
 import { ICommandInputHandler } from './command';
+import { ISwiftKeyHandler } from './swiftkey';
 
 /**
  * Interface for managing hotkey operations
@@ -30,7 +31,8 @@ export class HotkeyHandler implements IHotkeyHandler {
     private readonly keyConfig: IKeyConfig,
     private readonly modifierKeyConfig: IModifierKeyConfig,
     private readonly tvManager: ITradingViewManager,
-    private readonly commandInputHandler: ICommandInputHandler
+    private readonly commandInputHandler: ICommandInputHandler,
+    private readonly swiftKeyHandler: ISwiftKeyHandler
   ) {}
 
   /* @inheritdoc */
@@ -45,7 +47,7 @@ export class HotkeyHandler implements IHotkeyHandler {
 
     // Auto-enable swift for timeframe keys (1-4)
     if (this.shouldAutoEnableSwift(event, swiftEnabled)) {
-      this.setSwiftKeysState(true);
+      void this.setSwiftKeysState(true);
       this.handleSwiftEnabled(event);
       return;
     }
@@ -77,20 +79,20 @@ export class HotkeyHandler implements IHotkeyHandler {
     // Close Text Box and Enable Swift
     if (this.keyUtil.isModifierKeyPressed(event.shiftKey, 'enter', event)) {
       this.tvManager.closeTextBox();
-      this.setSwiftKeysState(true);
+      void this.setSwiftKeysState(true);
       return true;
     }
 
     // Double Shift for Swift Toggle
     if (event.key === 'Shift' && this.keyUtil.isDoubleKey(event)) {
       const currentState = this.tvManager.isSwiftKeysEnabled();
-      this.setSwiftKeysState(!currentState);
+      void this.setSwiftKeysState(!currentState);
       return true;
     }
 
     // Disable Swift Keys
     if (this.keyUtil.isModifierKeyPressed(event.altKey, 'b', event)) {
-      this.setSwiftKeysState(false);
+      void this.setSwiftKeysState(false);
       return true;
     }
 
@@ -156,15 +158,20 @@ export class HotkeyHandler implements IHotkeyHandler {
   }
 
   /**
-   * Set Swift Keys state with notification
-   * @param enable True to enable, false to disable
+   * Set Swift Key State and Show Notification
+   * @param enable true to enable
    */
-  private setSwiftKeysState(enable: boolean): void {
-    this.tvManager.setSwiftKeysState(enable);
-    if (enable) {
-      Notifier.success('🚀 Swift Enabled');
-    } else {
-      Notifier.red('🚧 Swift Disabled');
+  private async setSwiftKeysState(enable: boolean): Promise<void> {
+    try {
+      await this.swiftKeyHandler.setSwiftKeysState(enable);
+      if (enable) {
+        Notifier.success('🚀 Swift Enabled');
+      } else {
+        Notifier.red('🚧 Swift Disabled');
+      }
+    } catch (error) {
+      console.error('SwiftKey state change failed:', error);
+      Notifier.error('SwiftKey toggle failed');
     }
   }
 }
