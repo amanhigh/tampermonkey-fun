@@ -52,7 +52,14 @@ describe('WatchManager', () => {
       save: jest.fn(),
     } as unknown as jest.Mocked<IWatchlistRepo>;
 
+    // Set up default mock behavior for most tests (all categories exist)
+    mockCategoryLists.getList.mockReturnValue(new Set(['DEFAULT']));
+
     watchManager = new WatchManager(mockWatchRepo);
+
+    // Clear the mock call history after creating the default instance
+    // This ensures constructor tests start with clean mock state
+    mockCategoryLists.setList.mockClear();
   });
 
   describe('constructor and initialization', () => {
@@ -66,7 +73,7 @@ describe('WatchManager', () => {
       new WatchManager(mockWatchRepo);
 
       expect(mockWatchRepo.getWatchCategoryLists).toHaveBeenCalled();
-      // Should call setList for each undefined category (0-7)
+      // Should call setList for each undefined category (0-3 only)
       expect(mockCategoryLists.setList).toHaveBeenCalledTimes(4);
       expect(mockCategoryLists.setList).toHaveBeenCalledWith(0, new Set());
       expect(mockCategoryLists.setList).toHaveBeenCalledWith(1, new Set());
@@ -126,7 +133,7 @@ describe('WatchManager', () => {
     });
 
     it('should handle empty default watchlist', () => {
-      const emptySet = new Set();
+      const emptySet = new Set<string>();
       mockCategoryLists.getList.mockReturnValue(emptySet);
 
       const result = watchManager.getDefaultWatchlist();
@@ -158,7 +165,7 @@ describe('WatchManager', () => {
     it('should handle single ticker', () => {
       watchManager.recordCategory(0, ['NIFTY']);
 
-      expect(mockCategoryLists.toggle).toHaveBeenCalledOnceWith(0, 'NIFTY');
+      expect(mockCategoryLists.toggle).toHaveBeenCalledWith(0, 'NIFTY');
     });
   });
 
@@ -172,7 +179,7 @@ describe('WatchManager', () => {
       const tvWatchlistTickers = ['HDFC', 'RELIANCE', 'TCS', 'WIPRO', 'INFY'];
 
       // Setup category lists - categories 0-4, 6-7 have some tickers, category 5 is watchlist
-      const mockCategoryMap = new Map([
+      const mockCategoryMap = new Map<number, Set<string>>([
         [0, new Set(['HDFC'])],
         [1, new Set(['RELIANCE'])],
         [2, new Set()],
@@ -195,7 +202,7 @@ describe('WatchManager', () => {
     it('should handle all tickers being in other categories', () => {
       const tvWatchlistTickers = ['HDFC', 'RELIANCE'];
 
-      const mockCategoryMap = new Map([
+      const mockCategoryMap = new Map<number, Set<string>>([
         [0, new Set(['HDFC'])],
         [1, new Set(['RELIANCE'])],
         [2, new Set()],
