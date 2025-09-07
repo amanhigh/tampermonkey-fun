@@ -4,7 +4,6 @@ import { Notifier } from '../util/notify';
 import { IKeyConfig } from './key_config';
 import { IModifierKeyConfig } from './modifier_config';
 import { ICommandInputHandler } from './command';
-import { ISwiftKeyHandler } from './swiftkey';
 
 /**
  * Interface for managing hotkey operations
@@ -31,8 +30,7 @@ export class HotkeyHandler implements IHotkeyHandler {
     private readonly keyConfig: IKeyConfig,
     private readonly modifierKeyConfig: IModifierKeyConfig,
     private readonly tvManager: ITradingViewManager,
-    private readonly commandInputHandler: ICommandInputHandler,
-    private readonly swiftKeyHandler: ISwiftKeyHandler
+    private readonly commandInputHandler: ICommandInputHandler
   ) {}
 
   /* @inheritdoc */
@@ -163,14 +161,13 @@ export class HotkeyHandler implements IHotkeyHandler {
    */
   private async setSwiftKeysState(enable: boolean): Promise<void> {
     try {
-      await this.swiftKeyHandler.setSwiftKeysState(enable);
+      await this.tvManager.setSwiftKeysState(enable);
       if (enable) {
         Notifier.success('🚀 Swift Enabled');
       } else {
         Notifier.red('🚧 Swift Disabled');
       }
-    } catch (error) {
-      console.error('SwiftKey state change failed:', error);
+    } catch {
       Notifier.error('SwiftKey toggle failed');
     }
   }

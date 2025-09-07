@@ -66,7 +66,7 @@ import { IFlagHandler, FlagHandler } from '../handler/flag';
 import { IKiteRepo, KiteRepo } from '../repo/kite';
 import { ITickerHandler, TickerHandler } from '../handler/ticker';
 import { ITickerChangeHandler, TickerChangeHandler } from '../handler/ticker_change';
-import { ISwiftKeyHandler, SwiftKeyHandler } from '../handler/swiftkey';
+
 import { ICommandInputHandler, CommandInputHandler } from '../handler/command';
 import { AlertFeedHandler, IAlertFeedHandler } from '../handler/alertfeed';
 import { IGlobalErrorHandler, GlobalErrorHandler } from '../handler/error';
@@ -277,7 +277,10 @@ export class Factory {
       Factory.getInstance('symbolManager', () => new SymbolManager(Factory.repo.ticker(), Factory.repo.exchange())),
 
     tv: (): ITradingViewManager =>
-      Factory.getInstance('tvManager', () => new TradingViewManager(Factory.util.wait(), Factory.repo.cron())),
+      Factory.getInstance(
+        'tvManager',
+        () => new TradingViewManager(Factory.util.wait(), Factory.repo.cron(), Factory.client.kohan())
+      ),
 
     pair: (): IPairManager => Factory.getInstance('pairManager', () => new PairManager(Factory.repo.pair())),
 
@@ -372,8 +375,7 @@ export class Factory {
             Factory.handler.keyConfig(),
             Factory.handler.modifierKeyConfig(),
             Factory.manager.tv(),
-            Factory.handler.command(),
-            Factory.handler.swiftKey()
+            Factory.handler.command()
           )
       ),
     kite: (): IKiteHandler =>
@@ -499,8 +501,7 @@ export class Factory {
       ),
     imdb: (): IImdbHandler =>
       Factory.getInstance('imdbHandler', () => new ImdbHandler(Factory.manager.imdb(), Factory.util.search())),
-    swiftKey: (): ISwiftKeyHandler =>
-      Factory.getInstance('swiftKeyHandler', () => new SwiftKeyHandler(Factory.client.kohan())),
+
     command: (): ICommandInputHandler =>
       Factory.getInstance(
         'commandHandler',

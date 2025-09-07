@@ -70,7 +70,7 @@ export class JournalHandler implements IJournalHandler {
   public async handleJournalReasonPrompt(): Promise<void> {
     try {
       // Disable swift keys while modal is active to prevent interference
-      this.tvManager.setSwiftKeysState(false);
+      await this.tvManager.setSwiftKeysState(false);
 
       const reason = await this.smartPrompt.showModal(
         Constants.TRADING.PROMPT.REASONS,
@@ -87,7 +87,7 @@ export class JournalHandler implements IJournalHandler {
       throw new Error(`Failed to handle reason prompt: ${error}`);
     } finally {
       // Re-enable swift keys (since 'k' only works when swift is enabled)
-      this.tvManager.setSwiftKeysState(true);
+      await this.tvManager.setSwiftKeysState(true);
     }
   }
 }

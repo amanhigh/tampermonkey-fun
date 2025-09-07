@@ -2,6 +2,7 @@ import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 import { IWaitUtil } from '../util/wait';
 import { IRepoCron } from '../repo/cron';
+import { IKohanClient } from '../client/kohan';
 
 // Price and validation related constants
 const PRICE_REGEX = /-?\d{1,3}(?:,\d{3})*(?:\.\d+)?/;
@@ -57,10 +58,11 @@ export interface ITradingViewManager {
   isSwiftKeysEnabled(): boolean;
 
   /**
-   * Set swift keys state
+   * Set swift keys state and control Hyprland submap
    * @param enabled true to enable swift keys, false to disable
+   * @returns Promise resolving when state change is complete
    */
-  setSwiftKeysState(enabled: boolean): void;
+  setSwiftKeysState(enabled: boolean): Promise<void>;
 
   /**
    * Starts automatic saving of workspace at regular intervals
@@ -77,10 +79,12 @@ export class TradingViewManager implements ITradingViewManager {
   /**
    * @param waitUtil Manager for DOM operations
    * @param repoCron Repository for cron operations
+   * @param kohanClient Client for HTTP API communication
    */
   constructor(
     private readonly waitUtil: IWaitUtil,
-    private readonly repoCron: IRepoCron
+    private readonly repoCron: IRepoCron,
+    private readonly kohanClient: IKohanClient
   ) {}
 
   public startAutoSave(): void {
@@ -172,8 +176,20 @@ export class TradingViewManager implements ITradingViewManager {
   }
 
   /** @inheritdoc */
-  setSwiftKeysState(enabled: boolean): void {
-    this.updateSwiftKeysCheckbox(enabled);
+  async setSwiftKeysState(enabled: boolean): Promise<void> {
+    try {
+      // Update UI checkbox
+      this.updateSwiftKeysCheckbox(enabled);
+
+      // Control Hyprland submap via HTTP API
+      if (enabled) {
+        await this.kohanClient.enableSubmap('swiftkeys');
+      } else {
+        await this.kohanClient.disableSubmap('swiftkeys');
+      }
+    } catch (error) {
+      throw new Error(`SwiftKey state change failed: ${(error as Error).message}`);
+    }
   }
 
   /**
