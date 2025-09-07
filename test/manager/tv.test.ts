@@ -1,10 +1,12 @@
 import { TradingViewManager } from '../../src/manager/tv';
 import { WaitUtil } from '../../src/util/wait';
 import { IRepoCron } from '../../src/repo/cron';
+import { IKohanClient } from '../../src/client/kohan';
 
 describe('TradingViewManager', () => {
   let manager: TradingViewManager;
   let mockRepoCron: jest.Mocked<IRepoCron>;
+  let mockKohanClient: jest.Mocked<IKohanClient>;
 
   beforeEach(() => {
     const waitUtil = new WaitUtil();
@@ -12,7 +14,14 @@ describe('TradingViewManager', () => {
       registerRepository: jest.fn(),
       saveAllRepositories: jest.fn(),
     };
-    manager = new TradingViewManager(waitUtil, mockRepoCron);
+    mockKohanClient = {
+      recordTicker: jest.fn(),
+      getClip: jest.fn(),
+      enableSubmap: jest.fn(),
+      disableSubmap: jest.fn(),
+      getBaseUrl: jest.fn(),
+    };
+    manager = new TradingViewManager(waitUtil, mockRepoCron, mockKohanClient);
   });
 
   describe('parsePriceFromText', () => {
