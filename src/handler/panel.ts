@@ -10,7 +10,6 @@ export interface IPanelHandler {
 }
 
 enum PanelAction {
-  MAP_TICKER = 'Map Investing Ticker',
   DELETE_PAIR = 'Delete Pair Info',
   VALIDATE_DATA = 'Validate Data Integrity',
 }
@@ -41,10 +40,6 @@ export class PanelHandler implements IPanelHandler {
     }
 
     switch (action) {
-      case PanelAction.MAP_TICKER:
-        // BUG: #A Remove as Covered in Alert Right Click ?
-        await this.pairHandler.mapInvestingTicker(searchTicker);
-        break;
       case PanelAction.DELETE_PAIR:
         await this.pairHandler.deletePairInfo(searchTicker);
         break;
