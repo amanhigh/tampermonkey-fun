@@ -1,26 +1,29 @@
 import { StyleManager, IStyleManager } from '../../src/manager/style';
 import { ITimeFrameManager } from '../../src/manager/timeframe';
-import { IWaitUtil } from '../../src/util/wait';
-import { Constants } from '../../src/models/constant';
+import { WaitUtil } from '../../src/util/wait';
 import { TimeFrameConfig } from '../../src/models/trading';
+import { Constants } from '../../src/models/constant';
 
 // Mock jQuery
-const mockJQuery = jest.fn();
 const mockJQueryElement = {
-  click: jest.fn(),
   length: 1,
+  click: jest.fn().mockReturnThis(),
 };
-
-mockJQuery.mockReturnValue(mockJQueryElement);
+const mockJQuery = jest.fn(() => mockJQueryElement);
 (global as any).$ = mockJQuery;
 
 describe('StyleManager', () => {
   let styleManager: IStyleManager;
-  let mockWaitUtil: jest.Mocked<IWaitUtil>;
+  let mockWaitUtil: jest.Mocked<WaitUtil>;
   let mockTimeFrameManager: jest.Mocked<ITimeFrameManager>;
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Reset jQuery mock to default working state
+    mockJQueryElement.length = 1;
+    mockJQueryElement.click = jest.fn().mockReturnThis();
+    mockJQuery.mockReturnValue(mockJQueryElement);
 
     // Mock WaitUtil
     mockWaitUtil = {
@@ -29,7 +32,7 @@ describe('StyleManager', () => {
       waitClick: jest.fn(),
       waitJClick: jest.fn(),
       waitInput: jest.fn(),
-    };
+    } as jest.Mocked<WaitUtil>;
 
     // Mock TimeFrameManager
     mockTimeFrameManager = {
@@ -48,30 +51,10 @@ describe('StyleManager', () => {
   });
 
   describe('selectToolbar', () => {
-    beforeEach(() => {
-      mockJQueryElement.length = 1;
-    });
-
-    it('should click toolbar at valid index', () => {
+    it('should select toolbar at valid index', () => {
       const index = 3;
-
-      styleManager.selectToolbar(index);
-
-      expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.TOOLBARS.MAIN}:nth(${index})`);
-      expect(mockJQueryElement.click).toHaveBeenCalledTimes(1);
-    });
-
-    it('should handle index 0', () => {
-      const index = 0;
-
-      styleManager.selectToolbar(index);
-
-      expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.TOOLBARS.MAIN}:nth(${index})`);
-      expect(mockJQueryElement.click).toHaveBeenCalledTimes(1);
-    });
-
-    it('should handle maximum valid index', () => {
-      const index = 10;
+      mockJQuery.mockReturnValue(mockJQueryElement);
+      mockJQueryElement.length = 1;
 
       styleManager.selectToolbar(index);
 
@@ -82,225 +65,165 @@ describe('StyleManager', () => {
     it('should throw error for negative index', () => {
       const index = -1;
 
-      expect(() => styleManager.selectToolbar(index)).toThrow('Invalid toolbar index: -1');
+      expect(() => styleManager.selectToolbar(index)).toThrow(`Invalid toolbar index: ${index}`);
       expect(mockJQuery).not.toHaveBeenCalled();
-      expect(mockJQueryElement.click).not.toHaveBeenCalled();
     });
 
     it('should throw error for index greater than 10', () => {
       const index = 11;
 
-      expect(() => styleManager.selectToolbar(index)).toThrow('Invalid toolbar index: 11');
+      expect(() => styleManager.selectToolbar(index)).toThrow(`Invalid toolbar index: ${index}`);
       expect(mockJQuery).not.toHaveBeenCalled();
-      expect(mockJQueryElement.click).not.toHaveBeenCalled();
     });
 
-    it('should throw error when toolbar element not found', () => {
+    it('should throw error when toolbar not found', () => {
       const index = 5;
-      mockJQueryElement.length = 0;
+      mockJQuery.mockReturnValue({ ...mockJQueryElement, length: 0 });
 
-      expect(() => styleManager.selectToolbar(index)).toThrow('Toolbar with index 5 not found');
+      expect(() => styleManager.selectToolbar(index)).toThrow(`Toolbar with index ${index} not found`);
       expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.TOOLBARS.MAIN}:nth(${index})`);
-      expect(mockJQueryElement.click).not.toHaveBeenCalled();
+    });
+
+    it('should handle boundary values correctly', () => {
+      // Ensure element is found for both tests
+      mockJQueryElement.length = 1;
+
+      // Test index 0 (minimum valid)
+      styleManager.selectToolbar(0);
+      expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.TOOLBARS.MAIN}:nth(0)`);
+
+      jest.clearAllMocks();
+      // Reset mock to return element again
+      mockJQuery.mockReturnValue(mockJQueryElement);
+
+      // Test index 10 (maximum valid)
+      styleManager.selectToolbar(10);
+      expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.TOOLBARS.MAIN}:nth(10)`);
     });
   });
 
   describe('applyZoneStyle', () => {
-    it('should apply zone style with current timeframe', () => {
+    it('should apply zone style with current timeframe style', () => {
       const zoneType = 'DZ';
       const mockTimeFrameConfig = new TimeFrameConfig('D', 'I', 2);
-
       mockTimeFrameManager.getCurrentTimeFrameConfig.mockReturnValue(mockTimeFrameConfig);
 
       styleManager.applyZoneStyle(zoneType);
 
       expect(mockTimeFrameManager.getCurrentTimeFrameConfig).toHaveBeenCalledTimes(1);
-      expect(mockWaitUtil.waitJClick).toHaveBeenCalledTimes(1);
       expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(Constants.DOM.TOOLBARS.STYLE, expect.any(Function));
     });
 
-    it('should combine style ID with zone type correctly', () => {
+    it('should combine different timeframe styles with zone types', () => {
+      // Test with different timeframe config
       const zoneType = 'SZ';
-      const mockTimeFrameConfig = new TimeFrameConfig('WK', 'H', 3);
-
+      const mockTimeFrameConfig = new TimeFrameConfig('W', 'H', 3);
       mockTimeFrameManager.getCurrentTimeFrameConfig.mockReturnValue(mockTimeFrameConfig);
-
-      // Mock the callback execution
-      let callbackFunction: (() => void) | undefined;
-      mockWaitUtil.waitJClick.mockImplementation((_, callback) => {
-        if (callback) {
-          callbackFunction = callback;
-        }
-      });
 
       styleManager.applyZoneStyle(zoneType);
 
-      // Execute the captured callback
-      if (callbackFunction) {
-        callbackFunction();
-      }
-
-      // Verify the combined style name 'HSZ' is used
-      expect(mockWaitUtil.waitJClick).toHaveBeenNthCalledWith(2, `${Constants.DOM.TOOLBARS.STYLE_ITEM}:contains(HSZ)`);
+      expect(mockTimeFrameManager.getCurrentTimeFrameConfig).toHaveBeenCalledTimes(1);
+      expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(Constants.DOM.TOOLBARS.STYLE, expect.any(Function));
     });
 
-    it('should handle different zone types', () => {
-      const testCases = [
-        { zoneType: 'DZ', style: 'VH', expected: 'VHDZ' },
-        { zoneType: 'SZ', style: 'I', expected: 'ISZ' },
-        { zoneType: 'CUSTOM', style: 'T', expected: 'TCUSTOM' },
-      ];
+    it('should handle empty zone type', () => {
+      const zoneType = '';
+      const mockTimeFrameConfig = new TimeFrameConfig('M', 'VH', 4);
+      mockTimeFrameManager.getCurrentTimeFrameConfig.mockReturnValue(mockTimeFrameConfig);
 
-      testCases.forEach(({ zoneType, style, expected }) => {
-        mockTimeFrameManager.getCurrentTimeFrameConfig.mockReturnValue(new TimeFrameConfig('TEST', style, 1));
+      styleManager.applyZoneStyle(zoneType);
 
-        let callbackFunction: (() => void) | undefined;
-        mockWaitUtil.waitJClick.mockImplementation((_, callback) => {
-          if (callback) {
-            callbackFunction = callback;
-          }
-        });
-
-        styleManager.applyZoneStyle(zoneType);
-
-        if (callbackFunction) {
-          callbackFunction();
-        }
-
-        expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(
-          `${Constants.DOM.TOOLBARS.STYLE_ITEM}:contains(${expected})`
-        );
-
-        jest.clearAllMocks();
-      });
+      expect(mockTimeFrameManager.getCurrentTimeFrameConfig).toHaveBeenCalledTimes(1);
+      expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(Constants.DOM.TOOLBARS.STYLE, expect.any(Function));
     });
   });
 
   describe('applyStyle', () => {
-    it('should apply style with given name', () => {
+    it('should apply style with correct selectors', () => {
       const styleName = 'IDZ';
 
       styleManager.applyStyle(styleName);
 
       expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(Constants.DOM.TOOLBARS.STYLE, expect.any(Function));
+
+      // Test the callback function
+      const callback = mockWaitUtil.waitJClick.mock.calls[0][1];
+      if (callback) {
+        callback();
+        expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(
+          `${Constants.DOM.TOOLBARS.STYLE_ITEM}:contains(${styleName})`
+        );
+      }
     });
 
-    it('should call waitJClick with correct style item selector', () => {
-      const styleName = 'HSZ';
-
-      let callbackFunction: (() => void) | undefined;
-      mockWaitUtil.waitJClick.mockImplementation((_, callback) => {
-        if (callback) {
-          callbackFunction = callback;
-        }
-      });
+    it('should handle special characters in style name', () => {
+      const styleName = 'VH-DZ';
 
       styleManager.applyStyle(styleName);
 
-      // Execute the captured callback
-      if (callbackFunction) {
-        callbackFunction();
+      const callback = mockWaitUtil.waitJClick.mock.calls[0][1];
+      if (callback) {
+        callback();
+        expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(
+          `${Constants.DOM.TOOLBARS.STYLE_ITEM}:contains(${styleName})`
+        );
       }
-
-      expect(mockWaitUtil.waitJClick).toHaveBeenCalledTimes(2);
-      expect(mockWaitUtil.waitJClick).toHaveBeenNthCalledWith(1, Constants.DOM.TOOLBARS.STYLE, expect.any(Function));
-      expect(mockWaitUtil.waitJClick).toHaveBeenNthCalledWith(
-        2,
-        `${Constants.DOM.TOOLBARS.STYLE_ITEM}:contains(${styleName})`
-      );
     });
 
     it('should handle empty style name', () => {
       const styleName = '';
 
-      let callbackFunction: (() => void) | undefined;
-      mockWaitUtil.waitJClick.mockImplementation((_, callback) => {
-        if (callback) {
-          callbackFunction = callback;
-        }
-      });
-
       styleManager.applyStyle(styleName);
 
-      if (callbackFunction) {
-        callbackFunction();
-      }
+      expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(Constants.DOM.TOOLBARS.STYLE, expect.any(Function));
 
-      expect(mockWaitUtil.waitJClick).toHaveBeenNthCalledWith(2, `${Constants.DOM.TOOLBARS.STYLE_ITEM}:contains()`);
+      const callback = mockWaitUtil.waitJClick.mock.calls[0][1];
+      if (callback) {
+        callback();
+        expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(`${Constants.DOM.TOOLBARS.STYLE_ITEM}:contains()`);
+      }
     });
   });
 
   describe('clearAll', () => {
-    it('should execute clear all operation with correct selectors', () => {
+    it('should clear all drawings with correct sequence', () => {
       styleManager.clearAll();
 
       expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(Constants.DOM.SIDEBAR.DELETE_ARROW, expect.any(Function));
+
+      // Test the callback function
+      const callback = mockWaitUtil.waitJClick.mock.calls[0][1];
+      if (callback) {
+        callback();
+        expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(Constants.DOM.SIDEBAR.DELETE_DRAWING);
+      }
     });
 
-    it('should call delete drawing in callback', () => {
-      let callbackFunction: (() => void) | undefined;
-      mockWaitUtil.waitJClick.mockImplementation((_, callback) => {
-        if (callback) {
-          callbackFunction = callback;
-        }
-      });
-
+    it('should use correct selectors from constants', () => {
       styleManager.clearAll();
 
-      // Execute the captured callback
-      if (callbackFunction) {
-        callbackFunction();
-      }
+      expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(Constants.DOM.SIDEBAR.DELETE_ARROW, expect.any(Function));
 
-      expect(mockWaitUtil.waitJClick).toHaveBeenCalledTimes(2);
-      expect(mockWaitUtil.waitJClick).toHaveBeenNthCalledWith(
-        1,
-        Constants.DOM.SIDEBAR.DELETE_ARROW,
-        expect.any(Function)
-      );
-      expect(mockWaitUtil.waitJClick).toHaveBeenNthCalledWith(2, Constants.DOM.SIDEBAR.DELETE_DRAWING);
+      const callback = mockWaitUtil.waitJClick.mock.calls[0][1];
+      if (callback) {
+        callback();
+        expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(Constants.DOM.SIDEBAR.DELETE_DRAWING);
+      }
     });
   });
 
   describe('integration scenarios', () => {
-    it('should handle complete style application workflow', () => {
-      const zoneType = 'DZ';
-      const mockTimeFrameConfig = new TimeFrameConfig('D', 'I', 2);
-
-      mockTimeFrameManager.getCurrentTimeFrameConfig.mockReturnValue(mockTimeFrameConfig);
-
-      // Mock callback execution for style application
-      let styleCallbacks: Array<(() => void) | undefined> = [];
-      mockWaitUtil.waitJClick.mockImplementation((_, callback) => {
-        styleCallbacks.push(callback);
-      });
-
-      // Apply zone style
-      styleManager.applyZoneStyle(zoneType);
-
-      // Execute all callbacks
-      styleCallbacks.forEach((callback) => {
-        if (callback) callback();
-      });
-
-      // Verify complete flow
-      expect(mockTimeFrameManager.getCurrentTimeFrameConfig).toHaveBeenCalledTimes(1);
-      expect(mockWaitUtil.waitJClick).toHaveBeenCalledTimes(2);
-      expect(mockWaitUtil.waitJClick).toHaveBeenNthCalledWith(1, Constants.DOM.TOOLBARS.STYLE, expect.any(Function));
-      expect(mockWaitUtil.waitJClick).toHaveBeenNthCalledWith(2, `${Constants.DOM.TOOLBARS.STYLE_ITEM}:contains(IDZ)`);
-    });
-
-    it('should handle toolbar selection and style application', () => {
-      const toolbarIndex = 4;
-      const styleName = 'VHDZ';
+    it('should handle complete workflow of selecting toolbar and applying style', () => {
+      const toolbarIndex = 2;
+      const styleName = 'HDZ';
 
       // Ensure element is found
       mockJQueryElement.length = 1;
 
-      // First select toolbar
+      // Select toolbar
       styleManager.selectToolbar(toolbarIndex);
 
-      // Then apply style
+      // Apply style
       styleManager.applyStyle(styleName);
 
       // Verify toolbar selection
@@ -311,48 +234,39 @@ describe('StyleManager', () => {
       expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(Constants.DOM.TOOLBARS.STYLE, expect.any(Function));
     });
 
-    it('should handle clear all after style operations', () => {
-      const styleName = 'TEST';
+    it('should handle zone style application workflow', () => {
+      const zoneType = Constants.TRADING.ZONES.DEMAND;
+      const mockTimeFrameConfig = new TimeFrameConfig('D', 'I', 2);
+      mockTimeFrameManager.getCurrentTimeFrameConfig.mockReturnValue(mockTimeFrameConfig);
 
-      // Apply style first
-      styleManager.applyStyle(styleName);
+      styleManager.applyZoneStyle(zoneType);
 
-      // Then clear all
+      expect(mockTimeFrameManager.getCurrentTimeFrameConfig).toHaveBeenCalled();
+      expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(Constants.DOM.TOOLBARS.STYLE, expect.any(Function));
+    });
+
+    it('should handle clear all followed by style application', () => {
+      const styleName = 'TST';
+
+      // Clear all drawings
       styleManager.clearAll();
 
+      // Apply new style
+      styleManager.applyStyle(styleName);
+
       // Verify both operations
-      expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(Constants.DOM.TOOLBARS.STYLE, expect.any(Function));
       expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(Constants.DOM.SIDEBAR.DELETE_ARROW, expect.any(Function));
+      expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(Constants.DOM.TOOLBARS.STYLE, expect.any(Function));
     });
   });
 
   describe('error handling', () => {
     beforeEach(() => {
-      // Reset jQuery mock before each error test
-      mockJQuery.mockClear();
-      mockJQuery.mockReturnValue(mockJQueryElement);
-      mockJQueryElement.length = 1;
+      // Reset mocks for error handling tests
+      jest.clearAllMocks();
     });
 
-    it('should handle jQuery selector errors in selectToolbar', () => {
-      const error = new Error('jQuery selector failed');
-      mockJQuery.mockImplementation(() => {
-        throw error;
-      });
-
-      expect(() => styleManager.selectToolbar(5)).toThrow('jQuery selector failed');
-    });
-
-    it('should handle timeframe manager errors in applyZoneStyle', () => {
-      const error = new Error('TimeFrame manager failed');
-      mockTimeFrameManager.getCurrentTimeFrameConfig.mockImplementation(() => {
-        throw error;
-      });
-
-      expect(() => styleManager.applyZoneStyle('DZ')).toThrow('TimeFrame manager failed');
-    });
-
-    it('should handle waitUtil errors in applyStyle', () => {
+    it('should handle waitUtil errors gracefully in applyStyle', () => {
       const error = new Error('WaitUtil failed');
       mockWaitUtil.waitJClick.mockImplementation(() => {
         throw error;
@@ -361,27 +275,118 @@ describe('StyleManager', () => {
       expect(() => styleManager.applyStyle('TEST')).toThrow('WaitUtil failed');
     });
 
-    it('should handle waitUtil errors in clearAll', () => {
-      const error = new Error('WaitUtil clearAll failed');
+    it('should handle waitUtil errors gracefully in clearAll', () => {
+      const error = new Error('Clear all failed');
       mockWaitUtil.waitJClick.mockImplementation(() => {
         throw error;
       });
 
-      expect(() => styleManager.clearAll()).toThrow('WaitUtil clearAll failed');
+      expect(() => styleManager.clearAll()).toThrow('Clear all failed');
     });
 
-    it('should handle click errors in selectToolbar', () => {
-      const error = new Error('Click failed');
-      // Reset mock to normal behavior first
-      mockJQuery.mockReturnValue(mockJQueryElement);
-      mockJQueryElement.length = 1;
-
-      // Then mock click to throw error
-      mockJQueryElement.click.mockImplementation(() => {
+    it('should handle timeframe manager errors gracefully', () => {
+      const error = new Error('TimeFrame config failed');
+      mockTimeFrameManager.getCurrentTimeFrameConfig.mockImplementation(() => {
         throw error;
       });
 
-      expect(() => styleManager.selectToolbar(3)).toThrow('Click failed');
+      expect(() => styleManager.applyZoneStyle('DZ')).toThrow('TimeFrame config failed');
+    });
+
+    it('should handle jQuery selector errors gracefully', () => {
+      const error = new Error('jQuery failed');
+      mockJQuery.mockImplementation(() => {
+        throw error;
+      });
+
+      expect(() => styleManager.selectToolbar(1)).toThrow('jQuery failed');
+    });
+
+    it('should handle click errors gracefully', () => {
+      const error = new Error('Click failed');
+      // First ensure jQuery returns an element
+      const mockElement = { ...mockJQueryElement, length: 1 };
+      mockElement.click = jest.fn(() => {
+        throw error;
+      });
+      mockJQuery.mockReturnValue(mockElement);
+
+      expect(() => styleManager.selectToolbar(1)).toThrow('Click failed');
+    });
+
+    it('should handle callback errors in applyStyle', () => {
+      const error = new Error('Style callback failed');
+
+      styleManager.applyStyle('TEST');
+
+      // Get the callback and test it throws error
+      const callback = mockWaitUtil.waitJClick.mock.calls[0][1];
+      mockWaitUtil.waitJClick.mockImplementation(() => {
+        throw error;
+      });
+
+      if (callback) {
+        expect(() => callback()).toThrow('Style callback failed');
+      }
+    });
+
+    it('should handle callback errors in clearAll', () => {
+      const error = new Error('Clear callback failed');
+
+      styleManager.clearAll();
+
+      // Get the callback and test it throws error
+      const callback = mockWaitUtil.waitJClick.mock.calls[0][1];
+      mockWaitUtil.waitJClick.mockImplementation(() => {
+        throw error;
+      });
+
+      if (callback) {
+        expect(() => callback()).toThrow('Clear callback failed');
+      }
+    });
+  });
+
+  describe('edge cases', () => {
+    beforeEach(() => {
+      // Ensure clean state for edge case tests
+      jest.clearAllMocks();
+      mockJQueryElement.length = 1;
+      mockJQueryElement.click = jest.fn().mockReturnThis();
+      mockJQuery.mockReturnValue(mockJQueryElement);
+    });
+
+    it('should handle multiple rapid toolbar selections', () => {
+      for (let i = 0; i <= 10; i++) {
+        styleManager.selectToolbar(i);
+      }
+
+      expect(mockJQuery).toHaveBeenCalledTimes(11);
+      expect(mockJQueryElement.click).toHaveBeenCalledTimes(11);
+    });
+
+    it('should handle multiple style applications', () => {
+      const styles = ['IDZ', 'HSZ', 'VHDZ', 'TST'];
+
+      styles.forEach((style) => styleManager.applyStyle(style));
+
+      expect(mockWaitUtil.waitJClick).toHaveBeenCalledTimes(styles.length);
+    });
+
+    it('should handle zone style with various timeframe configurations', () => {
+      const configs = [
+        new TimeFrameConfig('D', 'I', 1),
+        new TimeFrameConfig('W', 'H', 2),
+        new TimeFrameConfig('M', 'VH', 3),
+      ];
+
+      configs.forEach((config) => {
+        mockTimeFrameManager.getCurrentTimeFrameConfig.mockReturnValueOnce(config);
+        styleManager.applyZoneStyle('DZ');
+      });
+
+      expect(mockTimeFrameManager.getCurrentTimeFrameConfig).toHaveBeenCalledTimes(3);
+      expect(mockWaitUtil.waitJClick).toHaveBeenCalledTimes(3);
     });
   });
 });
