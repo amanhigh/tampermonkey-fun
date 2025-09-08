@@ -182,9 +182,11 @@ describe('TradingViewWatchlistManager', () => {
       // Verify watchlist computation
       expect(mockWatchManager.computeDefaultList).toHaveBeenCalledWith(['AAPL', 'GOOGL']);
 
-      // Verify color painting
-      expect(mockPaintManager.paintSymbols).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.SYMBOL, expect.any(Set), {
-        color: expect.any(String),
+      // Verify color painting - should be called for each color in the list
+      Constants.UI.COLORS.LIST.forEach((color) => {
+        expect(mockPaintManager.paintSymbols).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.SYMBOL, expect.any(Set), {
+          color: color,
+        });
       });
 
       // Verify flag painting
