@@ -121,6 +121,7 @@ export class AlertHandler implements IAlertHandler {
     for (const p of prices) {
       const price = parseFloat(p);
       await this.alertManager.createAlertForCurrentTicker(price).then((pairInfo) => {
+        this.auditHandler.auditCurrent();
         this.refreshAlerts();
         this.notifyAlertCreation(price, pairInfo);
       });
@@ -150,6 +151,7 @@ export class AlertHandler implements IAlertHandler {
   public async createAlertAtCursor(): Promise<void> {
     const price = await this.tradingViewManager.getCursorPrice();
     await this.alertManager.createAlertForCurrentTicker(price).then((pairInfo) => {
+      this.auditHandler.auditCurrent();
       this.refreshAlerts();
       this.notifyAlertCreation(price, pairInfo);
     });
@@ -161,6 +163,7 @@ export class AlertHandler implements IAlertHandler {
     const targetPrice = (currentPrice * 1.2).toFixed(2);
     const price = parseFloat(targetPrice);
     await this.alertManager.createAlertForCurrentTicker(price).then((pairInfo) => {
+      this.auditHandler.auditCurrent();
       this.refreshAlerts();
       this.notifyAlertCreation(price, pairInfo);
     });

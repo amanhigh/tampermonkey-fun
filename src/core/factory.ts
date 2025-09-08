@@ -530,7 +530,10 @@ export class Factory {
           )
       ),
     picasso: (): IPicassoHandler =>
-      Factory.getInstance('picassoHandler', () => new PicassoHandler(Factory.util.wait(), Factory.util.key())),
+      Factory.getInstance(
+        'picassoHandler',
+        () => new PicassoHandler(Factory.util.wait(), Factory.util.key(), Factory.util.smart())
+      ),
   };
 
   /**
