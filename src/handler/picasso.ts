@@ -1,40 +1,29 @@
 import { IWaitUtil } from '../util/wait';
 import { Notifier } from '../util/notify';
 import { IKeyUtil } from '../util/key';
-import { PICASSO_CONSTANTS } from '../models/picasso';
+import { ISmartPrompt } from '../util/smart';
+import { PICASSO_CONSTANTS, PICASSO_KEY_MAPPINGS, PicassoCategory } from '../models/picasso';
 
 export interface IPicassoHandler {
   initialize(): void;
 }
 
-interface HotkeyMap {
-  [key: string]: string[];
-}
-
 export class PicassoHandler implements IPicassoHandler {
-  // FIXME: #C Add Help Button
-  private readonly buttonMap: HotkeyMap = {
-    ',': ['[data-testid="toolbar-rectangle"]'],
-    u: ['[aria-label="Duplicate"]'],
-    ';': ['[aria-label="Delete"]'],
-    y: ['[data-testid="main-menu-trigger"]', '[aria-label="Reset the canvas"]'],
-    "'": ['[data-testid="button-undo"]'],
-    '.': ['[data-testid="button-redo"]'],
-    j: ['[aria-label="Group selection"]'],
-    p: ['[data-testid="main-menu-trigger"]', '[aria-label="Center vertically"]'],
-    i: ['[data-testid="main-menu-trigger"]', '[aria-label="Center horizontally"]'],
-  };
+  // Derived from unified key mappings
+  private get singleTapMappings() {
+    return PICASSO_KEY_MAPPINGS.filter((mapping) => !mapping.isDoubleTap && mapping.selectors.length > 0);
+  }
 
-  // Add double tap mappings
-  private readonly doubleTapMap: HotkeyMap = {
-    j: ['[aria-label="Ungroup selection"]'],
-  };
+  private get doubleTapMappings() {
+    return PICASSO_KEY_MAPPINGS.filter((mapping) => mapping.isDoubleTap && mapping.selectors.length > 0);
+  }
 
   private modeIndicator: HTMLDivElement | null = null;
 
   constructor(
     private readonly waitUtil: IWaitUtil,
-    private readonly keyUtil: IKeyUtil
+    private readonly keyUtil: IKeyUtil,
+    private readonly smartPrompt: ISmartPrompt
   ) {}
 
   private createModeIndicator(): void {
@@ -54,6 +43,52 @@ export class PicassoHandler implements IPicassoHandler {
         ? PICASSO_CONSTANTS.INDICATOR.TEXT_MODE
         : PICASSO_CONSTANTS.INDICATOR.DRAW_MODE;
     }
+  }
+
+  private showHelpModal(): void {
+    const helpContent = this.buildHelpContent();
+    this.smartPrompt.showModal(['Close'], []).catch(console.error);
+
+    // Override modal content with help text and add Picasso-specific styling
+    setTimeout(() => {
+      const modal = document.getElementById('smart-modal');
+      if (modal) {
+        modal.className = 'aman-modal picasso-help'; // Add scoped CSS class
+        modal.innerHTML = helpContent;
+        const closeButton = document.createElement('button');
+        closeButton.textContent = 'Close';
+        closeButton.className = 'aman-modal-button';
+        closeButton.onclick = () => {
+          modal.style.display = 'none';
+        };
+        modal.appendChild(closeButton);
+      }
+    }, 10);
+  }
+
+  private buildHelpContent(): string {
+    const { HELP } = PICASSO_CONSTANTS;
+    let content = `<div class="aman-modal-content"><h2>${HELP.TITLE}</h2>`;
+
+    // Group mappings by category using enum
+    Object.entries(HELP.CATEGORIES).forEach(([categoryKey, categoryTitle]) => {
+      const categoryEnum = categoryKey as keyof typeof PicassoCategory;
+      const categoryMappings = PICASSO_KEY_MAPPINGS.filter((m) => m.category === PicassoCategory[categoryEnum]);
+
+      if (categoryMappings.length > 0) {
+        content += `<h3>${categoryTitle}</h3><ul>`;
+
+        categoryMappings.forEach(({ key, description, isDoubleTap }) => {
+          const displayKey = isDoubleTap ? `${key}${key}` : key;
+          content += `<li><strong>${displayKey}</strong> - ${description}</li>`;
+        });
+
+        content += '</ul>';
+      }
+    });
+
+    content += '</div>';
+    return content;
   }
 
   private setupModeDetection(): void {
@@ -82,23 +117,31 @@ export class PicassoHandler implements IPicassoHandler {
       return;
     }
 
+    // Handle help key
+    if (event.key === '?') {
+      console.info('Help key pressed');
+      event.preventDefault();
+      this.showHelpModal();
+      return;
+    }
+
     // Check for double tap first
     if (this.keyUtil.isDoubleKey(event)) {
-      const selector = this.doubleTapMap[event.key.toLowerCase()];
-      if (selector) {
-        console.info(`Double Key ${event.key}, Clicked ${selector}`);
+      const mapping = this.doubleTapMappings.find((m) => m.key === event.key.toLowerCase());
+      if (mapping) {
+        console.info(`Double Key ${event.key}, Clicked ${mapping.selectors}`);
         event.preventDefault();
-        this.clickButton(selector);
+        this.clickButton(mapping.selectors);
       }
       return;
     }
 
     // Existing single tap logic
-    const selector = this.buttonMap[event.key.toLowerCase()];
-    if (selector) {
-      console.info(`Key, ${event.key}, Clicked ${selector}`);
+    const mapping = this.singleTapMappings.find((m) => m.key === event.key.toLowerCase());
+    if (mapping) {
+      console.info(`Key, ${event.key}, Clicked ${mapping.selectors}`);
       event.preventDefault();
-      this.clickButton(selector);
+      this.clickButton(mapping.selectors);
     }
   }
 

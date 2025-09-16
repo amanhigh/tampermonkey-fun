@@ -2,6 +2,7 @@ import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 import { IWaitUtil } from '../util/wait';
 import { IRepoCron } from '../repo/cron';
+import { IKohanClient } from '../client/kohan';
 
 // Price and validation related constants
 const PRICE_REGEX = /-?\d{1,3}(?:,\d{3})*(?:\.\d+)?/;
@@ -57,10 +58,11 @@ export interface ITradingViewManager {
   isSwiftKeysEnabled(): boolean;
 
   /**
-   * Set swift keys state
+   * Set swift keys state and control Hyprland submap
    * @param enabled true to enable swift keys, false to disable
+   * @returns Promise resolving when state change is complete
    */
-  setSwiftKeysState(enabled: boolean): void;
+  setSwiftKeysState(enabled: boolean): Promise<void>;
 
   /**
    * Starts automatic saving of workspace at regular intervals
@@ -77,10 +79,12 @@ export class TradingViewManager implements ITradingViewManager {
   /**
    * @param waitUtil Manager for DOM operations
    * @param repoCron Repository for cron operations
+   * @param kohanClient Client for HTTP API communication
    */
   constructor(
     private readonly waitUtil: IWaitUtil,
-    private readonly repoCron: IRepoCron
+    private readonly repoCron: IRepoCron,
+    private readonly kohanClient: IKohanClient
   ) {}
 
   public startAutoSave(): void {
@@ -166,17 +170,26 @@ export class TradingViewManager implements ITradingViewManager {
     this.waitUtil.waitJClick(Constants.DOM.POPUPS.CLOSE_TEXTBOX);
   }
 
-  private static readonly SWIFT_KEYS_TITLE_SUFFIX = ' - SwiftKeys';
-
   /** @inheritdoc */
   isSwiftKeysEnabled(): boolean {
     return $(`#${Constants.UI.IDS.CHECKBOXES.SWIFT}`).prop('checked');
   }
 
   /** @inheritdoc */
-  setSwiftKeysState(enabled: boolean): void {
-    this.updateSwiftKeysCheckbox(enabled);
-    this.updateSwiftKeysTitle(enabled);
+  async setSwiftKeysState(enabled: boolean): Promise<void> {
+    try {
+      // Update UI checkbox
+      this.updateSwiftKeysCheckbox(enabled);
+
+      // Control Hyprland submap via HTTP API
+      if (enabled) {
+        await this.kohanClient.enableSubmap('swiftkeys');
+      } else {
+        await this.kohanClient.disableSubmap('swiftkeys');
+      }
+    } catch (error) {
+      throw new Error(`SwiftKey state change failed: ${(error as Error).message}`);
+    }
   }
 
   /**
@@ -185,17 +198,5 @@ export class TradingViewManager implements ITradingViewManager {
    */
   private updateSwiftKeysCheckbox(enabled: boolean): void {
     $(`#${Constants.UI.IDS.CHECKBOXES.SWIFT}`).prop('checked', enabled);
-  }
-
-  /**
-   * Update document title based on swift keys state
-   * @param enabled true to add suffix, false to remove suffix
-   */
-  private updateSwiftKeysTitle(enabled: boolean): void {
-    if (enabled && !document.title.includes(TradingViewManager.SWIFT_KEYS_TITLE_SUFFIX)) {
-      document.title += TradingViewManager.SWIFT_KEYS_TITLE_SUFFIX;
-    } else if (!enabled && document.title.includes(TradingViewManager.SWIFT_KEYS_TITLE_SUFFIX)) {
-      document.title = document.title.replace(TradingViewManager.SWIFT_KEYS_TITLE_SUFFIX, '');
-    }
   }
 }

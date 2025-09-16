@@ -147,6 +147,8 @@ export class TickerManager implements ITickerManager {
     const currentTicker = this.getTicker();
     const visibleTickers = this.getVisibleTickers();
 
+    // BUG: Screener Visible Navigation is not working.
+
     if (!visibleTickers.length) {
       throw new Error('No visible tickers available for navigation');
     }

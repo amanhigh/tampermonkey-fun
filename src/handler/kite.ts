@@ -140,7 +140,7 @@ export class KiteHandler implements IKiteHandler {
 
   /** @inheritdoc */
   handleDeleteOrderButton($button: JQuery): void {
-    const orderId = $button.data('order-id');
+    const orderId = $button.data('order-id') as string;
     const symbol = this.tickerManager.getTicker();
     void this.kiteManager.createGttDeleteEvent(orderId, symbol);
     Notifier.red(`GTT Delete: ${orderId}`);
@@ -162,7 +162,10 @@ export class KiteHandler implements IKiteHandler {
     const unwatchedTickers = this.kiteManager.getUnwatchedGttTickers(gttData);
     if (unwatchedTickers.length > 0) {
       const tickerList = unwatchedTickers.join(', ');
+      // FIXME: Move to Audit ?
       Notifier.warn(`GTT Orders not in primary lists: ${tickerList}`, 5000);
+
+      // TODO: Duplicate GTT Orders Audit.
     }
 
     const $ordersContainer = $(`#${Constants.UI.IDS.AREAS.ORDERS}`);

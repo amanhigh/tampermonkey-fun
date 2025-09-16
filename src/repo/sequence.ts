@@ -64,7 +64,7 @@ export class SequenceRepo extends MapRepo<string, SequenceType> implements ISequ
    * @inheritdoc
    */
   public getSequence(tvTicker: string, defaultSequence: SequenceType): SequenceType {
-    return this.get(tvTicker) || defaultSequence;
+    return this.get(tvTicker) ?? defaultSequence;
   }
 
   /**

@@ -38,8 +38,8 @@ export class BaseClient implements IBaseClient {
                 return;
               }
               // Default JSON parsing for backward compatibility
-              const data = response.responseText ? JSON.parse(response.responseText) : null;
-              resolve(data);
+              const data = response.responseText ? (JSON.parse(response.responseText) as T) : null;
+              resolve(data as T);
             } catch (error) {
               reject(new Error(`Failed to parse response: ${(error as Error).message}`));
             }

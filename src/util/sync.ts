@@ -114,7 +114,7 @@ export class SyncUtil implements ISyncUtil {
    * @private
    */
   private _extendTimeout($waitOn: JQuery, dataId: string, timeout: number): void {
-    const newTimeout = $waitOn.data(dataId) + timeout; //Add to Timeout Bucket
+    const newTimeout = ($waitOn.data(dataId) as number) + timeout; //Add to Timeout Bucket
     $waitOn.data(dataId, newTimeout);
     // console.debug('Mutex Filled: ', id, newTimeout);
   }
