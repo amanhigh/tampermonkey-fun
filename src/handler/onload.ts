@@ -5,6 +5,7 @@ import { IWatchListHandler } from './watchlist';
 import { ITickerChangeHandler } from './ticker_change';
 import { IHotkeyHandler } from './hotkey';
 import { IAlertHandler } from './alert';
+import { ITradingViewScreenerManager } from '../manager/screener';
 
 /**
  * Interface for application initialization handling
@@ -14,6 +15,10 @@ export interface IOnLoadHandler {
    * Initializes application by setting up required observers and handlers
    * Currently handles:
    * - Watchlist observer for DOM changes
+   * - Screener observer for widget recreation
+   * - Ticker change observer
+   * - Hotkey handlers
+   * - Alert click listeners
    */
   init(): void;
 }
@@ -29,7 +34,8 @@ export class OnLoadHandler implements IOnLoadHandler {
     private readonly watchListHandler: IWatchListHandler,
     private readonly hotkeyHandler: IHotkeyHandler,
     private readonly alertHandler: IAlertHandler,
-    private readonly tickerChangeHandler: ITickerChangeHandler
+    private readonly tickerChangeHandler: ITickerChangeHandler,
+    private readonly screenerManager: ITradingViewScreenerManager
   ) {}
 
   /** @inheritdoc */
@@ -114,32 +120,41 @@ export class OnLoadHandler implements IOnLoadHandler {
   }
 
   /**
-   * Sets up observer for screener DOM changes
+   * Sets up observer for screener DOM changes and handles repainting on widget recreation
    * @private
    */
   private setupScreenerObserver(): void {
-    // Phase 1: Wait for screener widget to exist
-    this.waitUtil.waitJEE(
-      Constants.DOM.SCREENER.MAIN,
-      (mainElement) => {
-        // Phase 2: Wait for symbol elements to be ready
-        this.waitUtil.waitJEE(
-          Constants.DOM.SCREENER.SYMBOL,
-          (_symbolElement) => {
-            // Use mainElement directly (already found in phase 1)
-            const targetElement = mainElement.get(0);
-            if (!targetElement) {
-              console.error('Unable to setup screener observer');
-              return;
+    const toggleButton = $(Constants.DOM.SCREENER.BUTTON)[0];
+    if (!toggleButton) {
+      console.error('Screener toggle button not found');
+      return;
+    }
+
+    const persistentParent = toggleButton.closest(Constants.DOM.SCREENER.PERSISTENT_PARENT) as HTMLElement;
+    if (!persistentParent) {
+      console.error('Screener persistent parent not found');
+      return;
+    }
+
+    // Direct observer with inline screener repaint logic
+    try {
+      this.observeUtil.nodeObserver(persistentParent, () => {
+        // Check if screener widget was added and repaint immediately
+        if ($(Constants.DOM.SCREENER.MAIN).length > 0) {
+          setTimeout(() => {
+            try {
+              this.screenerManager.paintScreener();
+              console.log('Screener repainted after widget recreation');
+            } catch (error) {
+              console.error('Error repainting screener:', error);
             }
-            this.observeUtil.nodeObserver(targetElement, () => {
-              this.watchListHandler.onWatchListChange();
-            });
-          },
-          10
-        );
-      },
-      10
-    );
+          }, 100);
+        }
+      });
+
+      console.log('Screener observer established on persistent parent');
+    } catch (error) {
+      console.error('Failed to setup screener observer:', error);
+    }
   }
 }

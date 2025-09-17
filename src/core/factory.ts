@@ -363,7 +363,8 @@ export class Factory {
             Factory.handler.watchlist(),
             Factory.handler.hotkey(),
             Factory.handler.alert(),
-            Factory.handler.tickerChange()
+            Factory.handler.tickerChange(),
+            Factory.manager.screener()
           )
       ),
     hotkey: (): IHotkeyHandler =>
