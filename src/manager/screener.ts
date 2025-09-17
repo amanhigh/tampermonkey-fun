@@ -79,7 +79,7 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
 
   /** @inheritdoc */
   paintScreener(): void {
-    // BUG: Doesn't work on closing and reopening screener. Set Observer on Main element ?
+    // BUG: #A Doesn't work on closing and reopening screener. Set Observer on Main element ?
     const screenerSymbolSelector = Constants.DOM.SCREENER.SYMBOL;
     const colorList = Constants.UI.COLORS.LIST;
 
