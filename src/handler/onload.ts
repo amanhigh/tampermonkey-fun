@@ -124,37 +124,38 @@ export class OnLoadHandler implements IOnLoadHandler {
    * @private
    */
   private setupScreenerObserver(): void {
-    const toggleButton = $(Constants.DOM.SCREENER.BUTTON)[0];
-    if (!toggleButton) {
-      console.error('Screener toggle button not found');
-      return;
-    }
+    // Use document.body as observer target (proven to work in console testing)
+    const observeTarget = document.body;
 
-    const persistentParent = toggleButton.closest(Constants.DOM.SCREENER.PERSISTENT_PARENT) as HTMLElement;
-    if (!persistentParent) {
-      console.error('Screener persistent parent not found');
-      return;
-    }
-
-    // Direct observer with inline screener repaint logic
+    // Track screener state
+    let wasScreenerOpen = $(Constants.DOM.SCREENER.MAIN).length > 0;
+    // Direct observer with screener open/close detection
     try {
-      this.observeUtil.nodeObserver(persistentParent, () => {
-        // Check if screener widget was added and repaint immediately
-        if ($(Constants.DOM.SCREENER.MAIN).length > 0) {
-          setTimeout(() => {
-            try {
-              this.screenerManager.paintScreener();
-              console.log('Screener repainted after widget recreation');
-            } catch (error) {
-              console.error('Error repainting screener:', error);
-            }
-          }, 100);
+      this.observeUtil.nodeObserver(observeTarget, () => {
+        const isScreenerOpen = $(Constants.DOM.SCREENER.MAIN).length > 0;
+
+        // Only act on state changes
+        if (isScreenerOpen !== wasScreenerOpen) {
+          if (isScreenerOpen) {
+            console.log('🟢 SCREENER OPENED - triggering repaint');
+            setTimeout(() => {
+              try {
+                this.screenerManager.paintScreener();
+                console.log('✅ Screener repainted successfully');
+              } catch (error) {
+                console.error('❌ Error repainting screener:', error);
+              }
+            }, 50);
+          } else {
+            console.log('🔴 SCREENER CLOSED');
+          }
+          wasScreenerOpen = isScreenerOpen;
         }
       });
 
-      console.log('Screener observer established on persistent parent');
+      console.log('✅ Screener observer established on document.body');
     } catch (error) {
-      console.error('Failed to setup screener observer:', error);
+      console.error('❌ Failed to setup screener observer:', error);
     }
   }
 }
