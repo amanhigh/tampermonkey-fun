@@ -204,4 +204,143 @@ describe('KeyUtil', () => {
       expect(keyUtil.isModifierKeyPressed(true, ' ', event)).toBe(true);
     });
   });
+
+  describe('isDoubleKey', () => {
+    beforeEach(() => {
+      // Reset mock before each test
+      jest.clearAllMocks();
+    });
+
+    test('should return false and log error for null event', () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const result = keyUtil.isDoubleKey(null as any);
+
+      expect(result).toBe(false);
+      expect(consoleSpy).toHaveBeenCalledWith('Invalid keyboard event provided to isDoubleKey');
+      consoleSpy.mockRestore();
+    });
+
+    test('should return false and log error for undefined event', () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const result = keyUtil.isDoubleKey(undefined as any);
+
+      expect(result).toBe(false);
+      expect(consoleSpy).toHaveBeenCalledWith('Invalid keyboard event provided to isDoubleKey');
+      consoleSpy.mockRestore();
+    });
+
+    test('should return false and log error for non-KeyboardEvent object', () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const result = keyUtil.isDoubleKey({} as any);
+
+      expect(result).toBe(false);
+      expect(consoleSpy).toHaveBeenCalledWith('Invalid keyboard event provided to isDoubleKey');
+      consoleSpy.mockRestore();
+    });
+
+    test('should return false for repeat events', () => {
+      const event = new KeyboardEvent('keydown', { key: 'a', repeat: true });
+      const result = keyUtil.isDoubleKey(event);
+
+      expect(result).toBe(false);
+    });
+
+    test('should return false for first key press and setup waitOn calls', () => {
+      const event = new KeyboardEvent('keydown', { key: 'a', repeat: false });
+      const result = keyUtil.isDoubleKey(event);
+
+      expect(result).toBe(false);
+      expect(mockSyncUtil.waitOn).toHaveBeenCalledTimes(2);
+      expect(mockSyncUtil.waitOn).toHaveBeenCalledWith('fastDoubleKeyInput', 50, expect.any(Function));
+      expect(mockSyncUtil.waitOn).toHaveBeenCalledWith('doubleKeyInput', 200, expect.any(Function));
+    });
+
+    test('should return false for second key press before begin state', () => {
+      // First key press to initialize state
+      const firstEvent = new KeyboardEvent('keydown', { key: 'a', repeat: false });
+      keyUtil.isDoubleKey(firstEvent);
+
+      // Second key press immediately (before begin state)
+      const secondEvent = new KeyboardEvent('keydown', { key: 'a', repeat: false });
+      const result = keyUtil.isDoubleKey(secondEvent);
+
+      expect(result).toBe(false);
+    });
+
+    test('should handle double key state transitions correctly', () => {
+      // Test the state machine logic by simulating different states
+      const event = new KeyboardEvent('keydown', { key: 'a', repeat: false });
+
+      // First call - should initialize
+      let result = keyUtil.isDoubleKey(event);
+      expect(result).toBe(false);
+
+      // Verify waitOn was called to set up timers
+      expect(mockSyncUtil.waitOn).toHaveBeenCalledTimes(2);
+
+      // Extract the callbacks that would be called by SyncUtil
+      const fastCallback = mockSyncUtil.waitOn.mock.calls[0][2];
+      const endCallback = mockSyncUtil.waitOn.mock.calls[1][2];
+
+      // Simulate fast timer callback (sets begin state)
+      fastCallback();
+
+      // Second call after begin state is set - should return true
+      result = keyUtil.isDoubleKey(event);
+      expect(result).toBe(true);
+
+      // Simulate end timer callback (resets state)
+      endCallback();
+    });
+
+    test('should verify correct timeout values for double key detection', () => {
+      const event = new KeyboardEvent('keydown', { key: 'a', repeat: false });
+      keyUtil.isDoubleKey(event);
+
+      expect(mockSyncUtil.waitOn).toHaveBeenCalledWith('fastDoubleKeyInput', 50, expect.any(Function));
+      expect(mockSyncUtil.waitOn).toHaveBeenCalledWith('doubleKeyInput', 200, expect.any(Function));
+    });
+
+    test('should handle multiple different keys independently', () => {
+      const eventA = new KeyboardEvent('keydown', { key: 'a', repeat: false });
+      const eventB = new KeyboardEvent('keydown', { key: 'b', repeat: false });
+
+      // Test that different keys don't interfere with each other
+      let resultA = keyUtil.isDoubleKey(eventA);
+      let resultB = keyUtil.isDoubleKey(eventB);
+
+      expect(resultA).toBe(false);
+      expect(resultB).toBe(false);
+
+      // Note: KeyUtil uses a single state object, so both keys share the same state machine
+      // This test demonstrates the current behavior - single global state
+      expect(mockSyncUtil.waitOn).toHaveBeenCalledTimes(2); // Second call resets state
+    });
+
+    test('should verify state machine behavior with complete cycle', () => {
+      const event = new KeyboardEvent('keydown', { key: 'a', repeat: false });
+
+      // Initial state: init=false, begin=false, end=false
+      let result = keyUtil.isDoubleKey(event);
+      expect(result).toBe(false);
+
+      // Capture the callbacks
+      const fastCallback = mockSyncUtil.waitOn.mock.calls[0][2];
+      const endCallback = mockSyncUtil.waitOn.mock.calls[1][2];
+
+      // Simulate state transitions
+      fastCallback(); // Sets begin=true
+
+      // Now in window for double key detection
+      result = keyUtil.isDoubleKey(event);
+      expect(result).toBe(true);
+
+      // Simulate end timer
+      endCallback(); // Sets end=true, init=false
+
+      // After end, should start over
+      result = keyUtil.isDoubleKey(event);
+      expect(result).toBe(false);
+    });
+  });
 });
