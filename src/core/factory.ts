@@ -350,7 +350,8 @@ export class Factory {
             Factory.handler.ticker(),
             Factory.manager.watch(),
             Factory.manager.symbol(),
-            Factory.handler.pair()
+            Factory.handler.pair(),
+            Factory.handler.kite()
           )
       ),
     onload: (): IOnLoadHandler =>

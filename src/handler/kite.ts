@@ -59,6 +59,12 @@ export interface IKiteHandler {
    * Sets up GTT refresh event listener
    */
   setupGttRefreshListener(): void;
+
+  /**
+   * Performs GTT audit when called by audit system
+   * Reports unwatched GTT tickers with individual warnings
+   */
+  performGttAudit(): Promise<void>;
 }
 
 /**
@@ -153,23 +159,31 @@ export class KiteHandler implements IKiteHandler {
   }
 
   /** @inheritdoc */
+  public async performGttAudit(): Promise<void> {
+    const gttData = await this.kiteManager.getGttRefereshEvent();
+    const unwatchedTickers = this.kiteManager.getUnwatchedGttTickers(gttData);
+
+    if (unwatchedTickers.length === 0) {
+      Notifier.success(`✅ GTT Audit: ${Object.keys(gttData.orders).length} orders, all tickers watched`, 3000);
+      return;
+    }
+
+    // Print individual warning for each unwatched ticker
+    unwatchedTickers.forEach((ticker) => {
+      Notifier.warn(`⚠️ GTT Unwatched: ${ticker}`, 4000);
+    });
+
+    // Summary message
+    Notifier.warn(`GTT Audit Complete: ${unwatchedTickers.length} unwatched tickers found`, 6000);
+  }
+
+  /** @inheritdoc */
   async refreshGttOrders(): Promise<void> {
     const currentTicker = this.tickerManager.getTicker();
     const gttData = await this.kiteManager.getGttRefereshEvent();
     const ordersForTicker = gttData.getOrdersForTicker(currentTicker);
 
-    // Check for unwatched GTT tickers and show warning
-    const unwatchedTickers = this.kiteManager.getUnwatchedGttTickers(gttData);
-    if (unwatchedTickers.length > 0) {
-      const tickerList = unwatchedTickers.join(', ');
-      // FIXME: #C Move to Audit ?
-      Notifier.warn(`GTT Orders not in primary lists: ${tickerList}`, 5000);
-
-      // TODO: Duplicate GTT Orders Audit.
-    }
-
     const $ordersContainer = $(`#${Constants.UI.IDS.AREAS.ORDERS}`);
-
     $ordersContainer.empty();
 
     if (ordersForTicker.length === 0) {
@@ -198,7 +212,6 @@ export class KiteHandler implements IKiteHandler {
     // Only process if we have valid data
     if (!gttResponse?.data) {
       throw new Error(`Invalid GTT Response: ${JSON.stringify(gttResponse)}`);
-      return;
     }
 
     const refreshEvent = new GttRefreshEvent();

@@ -7,6 +7,7 @@ import { ITickerHandler } from './ticker';
 import { IWatchManager } from '../manager/watch';
 import { ISymbolManager } from '../manager/symbol';
 import { IPairHandler } from './pair';
+import { IKiteHandler } from './kite';
 
 /**
  * Interface for managing audit UI operations
@@ -33,7 +34,8 @@ export class AuditHandler implements IAuditHandler {
     private readonly tickerHandler: ITickerHandler,
     private readonly watchManager: IWatchManager,
     private readonly symbolManager: ISymbolManager,
-    private readonly pairHandler: IPairHandler
+    private readonly pairHandler: IPairHandler,
+    private readonly kiteHandler: IKiteHandler
   ) {}
 
   /**
@@ -59,6 +61,9 @@ export class AuditHandler implements IAuditHandler {
     nonWatchedAudits.slice(0, 10).forEach((audit) => {
       this.createAuditButton(audit.investingTicker, audit.state).appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
     });
+
+    // Perform GTT audit
+    await this.kiteHandler.performGttAudit();
   }
 
   /**
