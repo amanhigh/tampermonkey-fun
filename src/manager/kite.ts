@@ -78,6 +78,19 @@ export class KiteManager implements IKiteManager {
   private readonly margin = 0.005;
 
   /**
+   * NSE Cash Segment tick size configuration (April 15, 2025)
+   * @private
+   */
+  private readonly CASH_SEGMENT_TICK_CONFIG = [
+    { priceThreshold: 250, tickSize: 0.01 },
+    { priceThreshold: 1000, tickSize: 0.05 },
+    { priceThreshold: 5000, tickSize: 0.1 },
+    { priceThreshold: 10000, tickSize: 0.5 },
+    { priceThreshold: 20000, tickSize: 1.0 },
+    { priceThreshold: Infinity, tickSize: 5.0 },
+  ] as const;
+
+  /**
    * @param symbolManager Manager for symbol operations
    * @param kiteClient Client for Kite API operations
    * @param kiteRepo Repository for Kite data persistence
@@ -205,13 +218,65 @@ export class KiteManager implements IKiteManager {
   }
 
   /**
-   * Generates a tick value based on the input number
-   * @param price Current Price
+   * Generates tick value compliant with NSE Cash Segment regulations (April 15, 2025)
+   *
+   * Price ranges and corresponding tick sizes:
+   * - Below ₹250: 0.01 tick
+   * - ₹250-₹1000: 0.05 tick
+   * - ₹1000-₹5000: 0.10 tick
+   * - ₹5000-₹10000: 0.50 tick
+   * - ₹10000-₹20000: 1.00 tick
+   * - Above ₹20000: 5.00 tick
+   *
+   * @param price Current price to apply tick size to
    * @private
-   * @returns The generated tick value with two decimal places
+   * @returns Tick-adjusted price with appropriate decimal places
+   * @throws Error if price is not a valid number
    */
   private generateTick(price: number): string {
-    return (Math.ceil(price * 20) / 20).toFixed(2);
+    if (typeof price !== 'number' || isNaN(price)) {
+      throw new Error(`Invalid price for tick calculation: ${price}`);
+    }
+
+    const tickSize = this.getCashSegmentTickSize(price);
+    const multiplier = 1 / tickSize;
+    const tickedPrice = Math.ceil(price * multiplier) / multiplier;
+
+    // Recalculate decimal places based on the final price's tick size
+    // This handles cases where rounding crosses price range boundaries
+    const finalTickSize = this.getCashSegmentTickSize(tickedPrice);
+    const decimalPlaces = this.getDecimalPlaces(finalTickSize);
+
+    return tickedPrice.toFixed(decimalPlaces);
+  }
+
+  /**
+   * Determines tick size based on price level for Cash Segment per NSE regulations
+   * @param price Current price to evaluate
+   * @private
+   * @returns Appropriate tick size for the given price range
+   */
+  private getCashSegmentTickSize(price: number): number {
+    const config = this.CASH_SEGMENT_TICK_CONFIG.find((range) => price < range.priceThreshold);
+    return config?.tickSize ?? this.CASH_SEGMENT_TICK_CONFIG[this.CASH_SEGMENT_TICK_CONFIG.length - 1].tickSize;
+  }
+
+  /**
+   * Determines appropriate decimal places for price formatting based on tick size
+   *
+   * Formatting rules:
+   * - Tick ≥ 1.00: No decimals (e.g., "15001")
+   * - Tick ≥ 0.10: One decimal (e.g., "1500.1")
+   * - Tick < 0.10: Two decimals (e.g., "250.05")
+   *
+   * @param tickSize The tick size value
+   * @private
+   * @returns Number of decimal places for formatting
+   */
+  private getDecimalPlaces(tickSize: number): number {
+    if (tickSize >= 1) return 0;
+    if (tickSize >= 0.1) return 1;
+    return 2;
   }
 
   /**

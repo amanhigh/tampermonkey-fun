@@ -213,18 +213,118 @@ describe('KiteManager', () => {
     });
   });
 
-  describe('generateTick', () => {
-    it('should generate correct tick value', () => {
-      const manager = kiteManager as any;
-      expect(manager.generateTick(100.5)).toBe('100.50');
-      expect(manager.generateTick(100.123)).toBe('100.15'); // Ceil to nearest 0.05
-      expect(manager.generateTick(100.999)).toBe('101.00');
+  describe('generateTick - NSE Cash Segment Compliance (April 2025)', () => {
+    describe('Price Range: Below ₹250 (0.01 tick)', () => {
+      it('should apply 0.01 tick for prices below ₹250', () => {
+        const manager = kiteManager as any;
+        expect(manager.generateTick(100.005)).toBe('100.01');
+        expect(manager.generateTick(249.999)).toBe('250.00');
+        expect(manager.generateTick(150.003)).toBe('150.01');
+      });
+
+      it('should handle exact boundaries below ₹250', () => {
+        const manager = kiteManager as any;
+        expect(manager.generateTick(249.99)).toBe('249.99'); // Already on 0.01 tick
+        expect(manager.generateTick(249.995)).toBe('250.00'); // Rounds up to next range
+      });
     });
 
-    it('should handle edge cases', () => {
-      const manager = kiteManager as any;
-      expect(manager.generateTick(0)).toBe('0.00');
-      expect(manager.generateTick(-5.123)).toBe('-5.10'); // Negative numbers
+    describe('Price Range: ₹250-₹1000 (0.05 tick)', () => {
+      it('should maintain existing 0.05 tick behavior', () => {
+        const manager = kiteManager as any;
+        expect(manager.generateTick(500.123)).toBe('500.15');
+        expect(manager.generateTick(999.99)).toBe('1000.0'); // Crosses to 0.10 tick range
+        expect(manager.generateTick(750.03)).toBe('750.05');
+      });
+
+      it('should handle boundary at ₹250', () => {
+        const manager = kiteManager as any;
+        expect(manager.generateTick(250.0)).toBe('250.00');
+        expect(manager.generateTick(250.03)).toBe('250.05');
+      });
+    });
+
+    describe('Price Range: ₹1000-₹5000 (0.10 tick)', () => {
+      it('should apply 0.10 tick for mid-range prices', () => {
+        const manager = kiteManager as any;
+        expect(manager.generateTick(1500.05)).toBe('1500.1');
+        expect(manager.generateTick(3000.15)).toBe('3000.2');
+        expect(manager.generateTick(4999.95)).toBe('5000.0');
+      });
+
+      it('should handle boundary at ₹1000', () => {
+        const manager = kiteManager as any;
+        expect(manager.generateTick(1000.0)).toBe('1000.0');
+        expect(manager.generateTick(1000.05)).toBe('1000.1');
+      });
+    });
+
+    describe('Price Range: ₹5000-₹10000 (0.50 tick)', () => {
+      it('should apply 0.50 tick for high-range prices', () => {
+        const manager = kiteManager as any;
+        expect(manager.generateTick(7500.25)).toBe('7500.5');
+        expect(manager.generateTick(9999.75)).toBe('10000'); // Crosses to 1.00 tick range
+        expect(manager.generateTick(6000.1)).toBe('6000.5');
+      });
+
+      it('should handle boundary at ₹5000', () => {
+        const manager = kiteManager as any;
+        expect(manager.generateTick(5000.0)).toBe('5000.0');
+        expect(manager.generateTick(5000.25)).toBe('5000.5');
+      });
+    });
+
+    describe('Price Range: ₹10000-₹20000 (1.00 tick)', () => {
+      it('should apply 1.00 tick for very high prices', () => {
+        const manager = kiteManager as any;
+        expect(manager.generateTick(15000.5)).toBe('15001');
+        expect(manager.generateTick(19999.99)).toBe('20000');
+        expect(manager.generateTick(12500.25)).toBe('12501');
+      });
+
+      it('should handle boundary at ₹10000', () => {
+        const manager = kiteManager as any;
+        expect(manager.generateTick(10000.0)).toBe('10000');
+        expect(manager.generateTick(10000.5)).toBe('10001');
+      });
+    });
+
+    describe('Price Range: Above ₹20000 (5.00 tick)', () => {
+      it('should apply 5.00 tick for ultra-high prices', () => {
+        const manager = kiteManager as any;
+        expect(manager.generateTick(25000.5)).toBe('25005');
+        expect(manager.generateTick(50000.25)).toBe('50005');
+        expect(manager.generateTick(99999.99)).toBe('100000');
+      });
+
+      it('should handle boundary at ₹20000', () => {
+        const manager = kiteManager as any;
+        expect(manager.generateTick(20000.0)).toBe('20000');
+        expect(manager.generateTick(20000.5)).toBe('20005');
+      });
+    });
+
+    describe('Edge Cases and Boundaries', () => {
+      it('should handle exact boundary values correctly', () => {
+        const manager = kiteManager as any;
+        expect(manager.generateTick(249.995)).toBe('250.00'); // 0.01 → 0.05 boundary cross
+        expect(manager.generateTick(999.975)).toBe('1000.0'); // 0.05 → 0.10 boundary cross
+        expect(manager.generateTick(4999.95)).toBe('5000.0'); // 0.10 → 0.50 boundary cross
+        expect(manager.generateTick(9999.75)).toBe('10000'); // 0.50 → 1.00 boundary cross
+        expect(manager.generateTick(19999.75)).toBe('20000'); // 1.00 → 5.00 boundary cross
+      });
+
+      it('should handle zero and negative prices', () => {
+        const manager = kiteManager as any;
+        expect(manager.generateTick(0)).toBe('0.00');
+        expect(manager.generateTick(-5.123)).toBe('-5.12'); // Negative uses 0.01 tick
+      });
+
+      it('should throw error for invalid price inputs', () => {
+        const manager = kiteManager as any;
+        expect(() => manager.generateTick(NaN)).toThrow('Invalid price for tick calculation: NaN');
+        expect(() => manager.generateTick('invalid' as any)).toThrow('Invalid price for tick calculation: invalid');
+      });
     });
   });
 
