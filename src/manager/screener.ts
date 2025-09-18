@@ -56,12 +56,17 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
     const screener = Constants.DOM.SCREENER;
     return $(`${screener.SELECTED} ${screener.SYMBOL}:visible`)
       .toArray()
-      .map((s) => s.innerHTML);
+      .map((s) => s.textContent || s.innerHTML);
   }
 
   /** @inheritdoc */
   isScreenerVisible(): boolean {
-    return $(Constants.DOM.SCREENER.BUTTON).attr('data-active') === 'false';
+    // Check if the screener widget itself is visible in the DOM
+    const screenerWidget = $(Constants.DOM.SCREENER.MAIN);
+    const widgetExists = screenerWidget.length > 0;
+    const widgetVisible = screenerWidget.is(':visible');
+
+    return widgetExists && widgetVisible;
   }
 
   /**
@@ -72,9 +77,11 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
    * @returns Array of ticker strings
    */
   private tickerListHelper(selector: string, visible: boolean): string[] {
-    return $(visible ? selector + ':visible' : selector)
-      .toArray()
-      .map((s) => s.innerHTML);
+    const finalSelector = visible ? selector + ':visible' : selector;
+    const elements = $(finalSelector);
+
+    // Use textContent instead of innerHTML to avoid HTML entity encoding issues (M&amp;M → M&M)
+    return elements.toArray().map((s) => s.textContent || s.innerHTML);
   }
 
   /** @inheritdoc */
