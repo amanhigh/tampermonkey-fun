@@ -163,8 +163,8 @@ export class TickerManager implements ITickerManager {
    */
   private getVisibleSelectedTickers(): string[] {
     return this.screenerManager.isScreenerVisible()
-      ? this.screenerManager.getTickers(true)
-      : this.watchlistManager.getTickers(true);
+      ? this.screenerManager.getSelectedTickers()
+      : this.watchlistManager.getSelectedTickers();
   }
 
   /**

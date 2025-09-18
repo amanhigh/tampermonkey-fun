@@ -197,42 +197,52 @@ describe('TickerManager', () => {
     });
 
     it('should return screener tickers when screener is visible and has enough tickers', () => {
-      const screenTickers = ['HDFC', 'RELIANCE', 'TCS'];
+      const screenTickers = ['HDFC', 'RELIANCE'];
       mockScreenerManager.isScreenerVisible.mockReturnValue(true);
-      mockScreenerManager.getTickers.mockReturnValue(screenTickers);
+      mockScreenerManager.getSelectedTickers.mockReturnValue(screenTickers);
 
       const result = tickerManager.getSelectedTickers();
 
       expect(mockScreenerManager.isScreenerVisible).toHaveBeenCalled();
-      expect(mockScreenerManager.getTickers).toHaveBeenCalledWith(true);
+      expect(mockScreenerManager.getSelectedTickers).toHaveBeenCalled();
       expect(result).toEqual(screenTickers);
     });
 
     it('should return watchlist tickers when screener is not visible and has enough tickers', () => {
       const watchlistTickers = ['HDFC', 'RELIANCE'];
       mockScreenerManager.isScreenerVisible.mockReturnValue(false);
-      mockWatchlistManager.getTickers.mockReturnValue(watchlistTickers);
+      mockWatchlistManager.getSelectedTickers.mockReturnValue(watchlistTickers);
 
       const result = tickerManager.getSelectedTickers();
 
       expect(mockScreenerManager.isScreenerVisible).toHaveBeenCalled();
-      expect(mockWatchlistManager.getTickers).toHaveBeenCalledWith(true);
+      expect(mockWatchlistManager.getSelectedTickers).toHaveBeenCalled();
       expect(result).toEqual(watchlistTickers);
     });
 
     it('should return current ticker when not enough selected tickers available', () => {
       const singleTicker = ['HDFC'];
-      mockScreenerManager.isScreenerVisible.mockReturnValue(true);
-      mockScreenerManager.getTickers.mockReturnValue(singleTicker);
+      mockScreenerManager.isScreenerVisible.mockReturnValue(false);
+      mockWatchlistManager.getSelectedTickers.mockReturnValue(singleTicker);
+
+      // Mock getTicker to return 'TCS'
+      ((global as any).$ as jest.Mock).mockReturnValue({
+        text: jest.fn().mockReturnValue('TCS'),
+      });
 
       const result = tickerManager.getSelectedTickers();
 
-      expect(result).toEqual(['CURRENT_TICKER']);
+      expect(result).toEqual(['TCS']);
     });
 
     it('should return current ticker when no tickers available', () => {
       mockScreenerManager.isScreenerVisible.mockReturnValue(true);
-      mockScreenerManager.getTickers.mockReturnValue([]);
+      mockScreenerManager.getSelectedTickers.mockReturnValue([]);
+
+      // Mock getTicker to return 'CURRENT_TICKER'
+      ((global as any).$ as jest.Mock).mockReturnValue({
+        text: jest.fn().mockReturnValue('CURRENT_TICKER'),
+      });
 
       const result = tickerManager.getSelectedTickers();
 
@@ -409,27 +419,27 @@ describe('TickerManager', () => {
     it('should use screener when screener is visible for getSelectedTickers', () => {
       const screenTickers = ['HDFC', 'RELIANCE'];
       mockScreenerManager.isScreenerVisible.mockReturnValue(true);
-      mockScreenerManager.getTickers.mockReturnValue(screenTickers);
+      mockScreenerManager.getSelectedTickers.mockReturnValue(screenTickers);
 
       // Access private method through public interface
       const result = tickerManager.getSelectedTickers();
 
       expect(mockScreenerManager.isScreenerVisible).toHaveBeenCalled();
-      expect(mockScreenerManager.getTickers).toHaveBeenCalledWith(true);
-      expect(mockWatchlistManager.getTickers).not.toHaveBeenCalled();
+      expect(mockScreenerManager.getSelectedTickers).toHaveBeenCalled();
+      expect(mockWatchlistManager.getSelectedTickers).not.toHaveBeenCalled();
       expect(result).toEqual(screenTickers);
     });
 
     it('should use watchlist when screener is not visible for getSelectedTickers', () => {
       const watchlistTickers = ['HDFC', 'RELIANCE'];
       mockScreenerManager.isScreenerVisible.mockReturnValue(false);
-      mockWatchlistManager.getTickers.mockReturnValue(watchlistTickers);
+      mockWatchlistManager.getSelectedTickers.mockReturnValue(watchlistTickers);
 
       const result = tickerManager.getSelectedTickers();
 
       expect(mockScreenerManager.isScreenerVisible).toHaveBeenCalled();
-      expect(mockWatchlistManager.getTickers).toHaveBeenCalledWith(true);
-      expect(mockScreenerManager.getTickers).not.toHaveBeenCalled();
+      expect(mockWatchlistManager.getSelectedTickers).toHaveBeenCalled();
+      expect(mockScreenerManager.getSelectedTickers).not.toHaveBeenCalled();
       expect(result).toEqual(watchlistTickers);
     });
   });
