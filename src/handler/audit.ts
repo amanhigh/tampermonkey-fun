@@ -151,10 +151,16 @@ export class AuditHandler implements IAuditHandler {
 
   /**
    * Generates a unique ID for an audit button based on the ticker symbol
+   * Escapes CSS selector special characters to prevent jQuery parsing errors
    * @private
+   * @param investingTicker The ticker symbol that may contain special characters
+   * @returns A CSS-safe ID string for use in jQuery selectors
    */
   private getAuditButtonId(investingTicker: string): string {
-    return `audit-${investingTicker}`.replace('/', '-');
+    // Replace all CSS selector special characters with hyphens
+    // Preserves alphanumeric characters, hyphens, and underscores only
+    // Handles cases like: US10YT=X → audit-US10YT-X, M&M → audit-M-M, NSE:RELIANCE → audit-NSE-RELIANCE
+    return `audit-${investingTicker}`.replace(/[^a-zA-Z0-9-_]/g, '-');
   }
 
   /**
