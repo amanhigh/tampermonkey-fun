@@ -5,6 +5,7 @@ import { IWatchListHandler } from './watchlist';
 import { ITickerChangeHandler } from './ticker_change';
 import { IHotkeyHandler } from './hotkey';
 import { IAlertHandler } from './alert';
+import { ITradingViewScreenerManager } from '../manager/screener';
 
 /**
  * Interface for application initialization handling
@@ -14,6 +15,10 @@ export interface IOnLoadHandler {
    * Initializes application by setting up required observers and handlers
    * Currently handles:
    * - Watchlist observer for DOM changes
+   * - Screener observer for widget recreation
+   * - Ticker change observer
+   * - Hotkey handlers
+   * - Alert click listeners
    */
   init(): void;
 }
@@ -29,7 +34,8 @@ export class OnLoadHandler implements IOnLoadHandler {
     private readonly watchListHandler: IWatchListHandler,
     private readonly hotkeyHandler: IHotkeyHandler,
     private readonly alertHandler: IAlertHandler,
-    private readonly tickerChangeHandler: ITickerChangeHandler
+    private readonly tickerChangeHandler: ITickerChangeHandler,
+    private readonly screenerManager: ITradingViewScreenerManager
   ) {}
 
   /** @inheritdoc */
@@ -114,32 +120,42 @@ export class OnLoadHandler implements IOnLoadHandler {
   }
 
   /**
-   * Sets up observer for screener DOM changes
+   * Sets up observer for screener DOM changes and handles repainting on widget recreation
    * @private
    */
   private setupScreenerObserver(): void {
-    // Phase 1: Wait for screener widget to exist
-    this.waitUtil.waitJEE(
-      Constants.DOM.SCREENER.MAIN,
-      (mainElement) => {
-        // Phase 2: Wait for symbol elements to be ready
-        this.waitUtil.waitJEE(
-          Constants.DOM.SCREENER.SYMBOL,
-          (_symbolElement) => {
-            // Use mainElement directly (already found in phase 1)
-            const targetElement = mainElement.get(0);
-            if (!targetElement) {
-              console.error('Unable to setup screener observer');
-              return;
-            }
-            this.observeUtil.nodeObserver(targetElement, () => {
-              this.watchListHandler.onWatchListChange();
-            });
-          },
-          10
-        );
-      },
-      10
-    );
+    // Use document.body as observer target (proven to work in console testing)
+    const observeTarget = document.body;
+
+    // Track screener state
+    let wasScreenerOpen = $(Constants.DOM.SCREENER.MAIN).length > 0;
+    // Direct observer with screener open/close detection
+    try {
+      this.observeUtil.nodeObserver(observeTarget, () => {
+        const isScreenerOpen = $(Constants.DOM.SCREENER.MAIN).length > 0;
+
+        // Only act on state changes
+        if (isScreenerOpen !== wasScreenerOpen) {
+          if (isScreenerOpen) {
+            console.log('🟢 SCREENER OPENED - triggering repaint');
+            setTimeout(() => {
+              try {
+                this.screenerManager.paintScreener();
+                console.log('✅ Screener repainted successfully');
+              } catch (error) {
+                console.error('❌ Error repainting screener:', error);
+              }
+            }, 50);
+          } else {
+            console.log('🔴 SCREENER CLOSED');
+          }
+          wasScreenerOpen = isScreenerOpen;
+        }
+      });
+
+      console.log('✅ Screener observer established on document.body');
+    } catch (error) {
+      console.error('❌ Failed to setup screener observer:', error);
+    }
   }
 }

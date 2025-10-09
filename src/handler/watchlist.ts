@@ -120,8 +120,8 @@ export class WatchListHandler implements IWatchListHandler {
 
   /** @inheritdoc */
   public recordSelectedTicker(categoryIndex: number): void {
-    const tvTicker = this.tickerManager.getTicker();
-    this.watchManager.recordCategory(categoryIndex, [tvTicker]);
+    const selectedTickers = this.tickerManager.getSelectedTickers();
+    this.watchManager.recordCategory(categoryIndex, selectedTickers);
     this.onWatchListChange();
   }
 

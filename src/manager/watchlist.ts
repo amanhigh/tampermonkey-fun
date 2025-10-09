@@ -73,7 +73,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     const watchlist = Constants.DOM.WATCHLIST;
     return $(`${watchlist.SELECTED} ${watchlist.SYMBOL}:visible`)
       .toArray()
-      .map((s) => s.innerHTML);
+      .map((s) => s.textContent || s.innerHTML);
   }
 
   /**
@@ -84,9 +84,11 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
    * @returns Array of ticker strings
    */
   private tickerListHelper(selector: string, visible: boolean): string[] {
-    return $(visible ? selector + ':visible' : selector)
-      .toArray()
-      .map((s) => s.innerHTML);
+    const finalSelector = visible ? selector + ':visible' : selector;
+    const elements = $(finalSelector);
+
+    // Use textContent instead of innerHTML to avoid HTML entity encoding issues (M&amp;M → M&M)
+    return elements.toArray().map((s) => s.textContent || s.innerHTML);
   }
 
   /** @inheritdoc */
@@ -135,8 +137,6 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     // Show All Items
     $(Constants.DOM.WATCHLIST.LINE).show();
     $(Constants.DOM.SCREENER.LINE).show();
-
-    // TODO: Multi Select in Watchlist should work for Move. Eg. White to Blue etc.
 
     // Disable List Transformation
     $(Constants.DOM.WATCHLIST.LINE).css('position', '');

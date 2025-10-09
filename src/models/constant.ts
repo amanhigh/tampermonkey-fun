@@ -82,6 +82,7 @@ export const Constants = Object.freeze({
       ITEM: 'tr.row-RdUXZpkv', // Screener item selector for flag painting
       BUTTON: 'button[data-name=toggle-visibility-button]', // Old name: screenerButtonSelector
       SELECTED: '.tv-screener-table__result-row--selected', // Old name: screenerSelectedSelector
+      PERSISTENT_PARENT: '.buttons-dA6R3Y1X', // Persistent parent for observer
     },
     WATCHLIST: {
       SYMBOL: 'span[class*=symbolNameText]', // Old Name: watchListSymbolSelector

@@ -241,7 +241,118 @@ describe('AlertManager', () => {
     });
   });
 
-  describe('reloadAlerts', () => {
+  describe('deleteAllAlerts', () => {
+    it('should delete all alerts for current ticker', async () => {
+      const pairInfo = new PairInfo('HDFC Bank', '123', 'NSE', 'HDFC');
+      const testAlerts = [new Alert('1', '123', 100), new Alert('2', '123', 200)];
+
+      mockTickerManager.getInvestingTicker.mockReturnValue('HDFC');
+      mockPairManager.investingTickerToPairInfo.mockReturnValue(pairInfo);
+      mockAlertRepo.getSortedAlerts.mockReturnValue(testAlerts);
+      mockInvestingClient.deleteAlert.mockResolvedValue();
+
+      await alertManager.deleteAllAlerts();
+
+      expect(mockInvestingClient.deleteAlert).toHaveBeenCalledTimes(2);
+      expect(mockInvestingClient.deleteAlert).toHaveBeenCalledWith(testAlerts[0]);
+      expect(mockInvestingClient.deleteAlert).toHaveBeenCalledWith(testAlerts[1]);
+      expect(mockAlertRepo.removeAlert).toHaveBeenCalledTimes(2);
+    });
+
+    it('should warn when no alerts found to delete', async () => {
+      const pairInfo = new PairInfo('HDFC Bank', '123', 'NSE', 'HDFC');
+
+      mockTickerManager.getInvestingTicker.mockReturnValue('HDFC');
+      mockPairManager.investingTickerToPairInfo.mockReturnValue(pairInfo);
+      mockAlertRepo.getSortedAlerts.mockReturnValue(null as any);
+
+      await alertManager.deleteAllAlerts();
+
+      expect(mockInvestingClient.deleteAlert).not.toHaveBeenCalled();
+      // Notifier.warn is already mocked in the setup
+    });
+
+    it('should throw error when pair info not found', async () => {
+      mockTickerManager.getInvestingTicker.mockReturnValue('UNKNOWN');
+      mockPairManager.investingTickerToPairInfo.mockReturnValue(null);
+
+      await expect(alertManager.deleteAllAlerts()).rejects.toThrow('No Pair Info found for UNKNOWN');
+    });
+  });
+
+  describe('deleteAlertsByPrice', () => {
+    it('should delete alerts within price tolerance', async () => {
+      const pairInfo = new PairInfo('HDFC Bank', '123', 'NSE', 'HDFC');
+      const testAlerts = [
+        new Alert('1', '123', 100), // Within tolerance (3% of 100 = 3, so 97-103)
+        new Alert('2', '123', 102), // Within tolerance
+        new Alert('3', '123', 150), // Outside tolerance
+      ];
+
+      mockTickerManager.getInvestingTicker.mockReturnValue('HDFC');
+      mockPairManager.investingTickerToPairInfo.mockReturnValue(pairInfo);
+      mockAlertRepo.getSortedAlerts.mockReturnValue(testAlerts);
+      mockInvestingClient.deleteAlert.mockResolvedValue();
+
+      await alertManager.deleteAlertsByPrice(100);
+
+      expect(mockInvestingClient.deleteAlert).toHaveBeenCalledTimes(2);
+      expect(mockInvestingClient.deleteAlert).toHaveBeenCalledWith(testAlerts[0]);
+      expect(mockInvestingClient.deleteAlert).toHaveBeenCalledWith(testAlerts[1]);
+      expect(mockInvestingClient.deleteAlert).not.toHaveBeenCalledWith(testAlerts[2]);
+    });
+
+    it('should warn when no alerts found to delete', async () => {
+      const pairInfo = new PairInfo('HDFC Bank', '123', 'NSE', 'HDFC');
+
+      mockTickerManager.getInvestingTicker.mockReturnValue('HDFC');
+      mockPairManager.investingTickerToPairInfo.mockReturnValue(pairInfo);
+      mockAlertRepo.getSortedAlerts.mockReturnValue(null as any);
+
+      await alertManager.deleteAlertsByPrice(100);
+
+      expect(mockInvestingClient.deleteAlert).not.toHaveBeenCalled();
+    });
+
+    it('should warn when no alerts within price tolerance', async () => {
+      const pairInfo = new PairInfo('HDFC Bank', '123', 'NSE', 'HDFC');
+      const testAlerts = [
+        new Alert('1', '123', 50), // Outside tolerance (target 100, tolerance 3, so 97-103)
+        new Alert('2', '123', 200), // Outside tolerance
+      ];
+
+      mockTickerManager.getInvestingTicker.mockReturnValue('HDFC');
+      mockPairManager.investingTickerToPairInfo.mockReturnValue(pairInfo);
+      mockAlertRepo.getSortedAlerts.mockReturnValue(testAlerts);
+
+      await alertManager.deleteAlertsByPrice(100);
+
+      expect(mockInvestingClient.deleteAlert).not.toHaveBeenCalled();
+    });
+
+    it('should calculate tolerance correctly for different prices', async () => {
+      const pairInfo = new PairInfo('HDFC Bank', '123', 'NSE', 'HDFC');
+      const testAlerts = [
+        new Alert('1', '123', 1000), // Target 1000, tolerance 30, so 970-1030
+        new Alert('2', '123', 1025), // Within tolerance
+        new Alert('3', '123', 1040), // Outside tolerance
+      ];
+
+      mockTickerManager.getInvestingTicker.mockReturnValue('HDFC');
+      mockPairManager.investingTickerToPairInfo.mockReturnValue(pairInfo);
+      mockAlertRepo.getSortedAlerts.mockReturnValue(testAlerts);
+      mockInvestingClient.deleteAlert.mockResolvedValue();
+
+      await alertManager.deleteAlertsByPrice(1000);
+
+      expect(mockInvestingClient.deleteAlert).toHaveBeenCalledTimes(2);
+      expect(mockInvestingClient.deleteAlert).toHaveBeenCalledWith(testAlerts[0]);
+      expect(mockInvestingClient.deleteAlert).toHaveBeenCalledWith(testAlerts[1]);
+      expect(mockInvestingClient.deleteAlert).not.toHaveBeenCalledWith(testAlerts[2]);
+    });
+  });
+
+  describe('reloadAlerts with HTML parsing', () => {
     it('should clear alerts before reloading', async () => {
       const mockHtml = '<div></div>';
       mockInvestingClient.getAllAlerts.mockResolvedValue(mockHtml);
@@ -257,6 +368,161 @@ describe('AlertManager', () => {
 
       expect(mockAlertRepo.clear).toHaveBeenCalled();
       expect(mockInvestingClient.getAllAlerts).toHaveBeenCalled();
+      expect(count).toBe(0);
+    });
+
+    it('should parse valid alert items from HTML', async () => {
+      const mockHtml =
+        '<div class="js-alert-item" data-trigger="price" data-pair-id="123" data-value="100.50" data-alert-id="alert1"></div>';
+      mockInvestingClient.getAllAlerts.mockResolvedValue(mockHtml);
+
+      // Mock jQuery to simulate finding alert elements
+      const mockAlertElement = {
+        attr: jest.fn((attr: string) => {
+          switch (attr) {
+            case 'data-pair-id':
+              return '123';
+            case 'data-value':
+              return '100.50';
+            case 'data-alert-id':
+              return 'alert1';
+            default:
+              return '';
+          }
+        }),
+      };
+
+      // Mock the jQuery chain properly - $(html).find().each()
+      ((global as any).$ as jest.Mock).mockImplementation((input) => {
+        if (typeof input === 'string' && input.includes('alert-item')) {
+          return {
+            find: jest.fn().mockReturnValue({
+              each: jest.fn((callback) => {
+                callback(0, mockAlertElement);
+              }),
+            }),
+          };
+        }
+        // For $(alertElement) calls inside the each callback
+        return mockAlertElement;
+      });
+
+      const count = await alertManager.reloadAlerts();
+
+      expect(mockAlertRepo.clear).toHaveBeenCalled();
+      expect(mockAlertRepo.addAlert).toHaveBeenCalledWith('123', expect.any(Alert));
+      expect(count).toBe(1);
+    });
+
+    it('should warn about invalid alert items', async () => {
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockHtml = '<div class="js-alert-item" data-trigger="price"></div>';
+      mockInvestingClient.getAllAlerts.mockResolvedValue(mockHtml);
+
+      // Mock jQuery to simulate finding invalid alert elements
+      const mockInvalidElement = {
+        attr: jest.fn(() => ''), // Return empty strings for all attributes
+      };
+
+      ((global as any).$ as jest.Mock).mockImplementation((input) => {
+        if (typeof input === 'string') {
+          return {
+            find: jest.fn().mockReturnValue({
+              each: jest.fn((callback) => {
+                callback(0, mockInvalidElement);
+              }),
+            }),
+          };
+        }
+        return mockInvalidElement;
+      });
+
+      mockPairManager.investingTickerToPairInfo.mockReturnValue(null);
+
+      const count = await alertManager.reloadAlerts();
+
+      expect(consoleSpy).toHaveBeenCalledWith('Invalid alert:', undefined, expect.any(Alert));
+      expect(mockAlertRepo.addAlert).not.toHaveBeenCalled();
+      expect(count).toBe(0);
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle alerts with zero price', async () => {
+      const mockHtml =
+        '<div class="js-alert-item" data-trigger="price" data-pair-id="123" data-value="0" data-alert-id="alert1"></div>';
+      mockInvestingClient.getAllAlerts.mockResolvedValue(mockHtml);
+
+      const mockZeroPriceElement = {
+        attr: jest.fn((attr: string) => {
+          switch (attr) {
+            case 'data-pair-id':
+              return '123';
+            case 'data-value':
+              return '0';
+            case 'data-alert-id':
+              return 'alert1';
+            default:
+              return '';
+          }
+        }),
+      };
+
+      ((global as any).$ as jest.Mock).mockImplementation((input) => {
+        if (typeof input === 'string') {
+          return {
+            find: jest.fn().mockReturnValue({
+              each: jest.fn((callback) => {
+                callback(0, mockZeroPriceElement);
+              }),
+            }),
+          };
+        }
+        return mockZeroPriceElement;
+      });
+
+      const count = await alertManager.reloadAlerts();
+
+      expect(mockAlertRepo.addAlert).not.toHaveBeenCalled();
+      expect(count).toBe(0);
+    });
+
+    it('should handle alerts with invalid price', async () => {
+      const mockHtml =
+        '<div class="js-alert-item" data-trigger="price" data-pair-id="123" data-value="invalid" data-alert-id="alert1"></div>';
+      mockInvestingClient.getAllAlerts.mockResolvedValue(mockHtml);
+
+      const mockInvalidPriceElement = {
+        attr: jest.fn((attr: string) => {
+          switch (attr) {
+            case 'data-pair-id':
+              return '123';
+            case 'data-value':
+              return 'invalid';
+            case 'data-alert-id':
+              return 'alert1';
+            default:
+              return '';
+          }
+        }),
+      };
+
+      ((global as any).$ as jest.Mock).mockImplementation((input) => {
+        if (typeof input === 'string') {
+          return {
+            find: jest.fn().mockReturnValue({
+              each: jest.fn((callback) => {
+                callback(0, mockInvalidPriceElement);
+              }),
+            }),
+          };
+        }
+        return mockInvalidPriceElement;
+      });
+
+      const count = await alertManager.reloadAlerts();
+
+      expect(mockAlertRepo.addAlert).not.toHaveBeenCalled();
       expect(count).toBe(0);
     });
   });

@@ -7,6 +7,7 @@ import { ITickerHandler } from './ticker';
 import { IWatchManager } from '../manager/watch';
 import { ISymbolManager } from '../manager/symbol';
 import { IPairHandler } from './pair';
+import { IKiteHandler } from './kite';
 
 /**
  * Interface for managing audit UI operations
@@ -33,7 +34,8 @@ export class AuditHandler implements IAuditHandler {
     private readonly tickerHandler: ITickerHandler,
     private readonly watchManager: IWatchManager,
     private readonly symbolManager: ISymbolManager,
-    private readonly pairHandler: IPairHandler
+    private readonly pairHandler: IPairHandler,
+    private readonly kiteHandler: IKiteHandler
   ) {}
 
   /**
@@ -59,6 +61,9 @@ export class AuditHandler implements IAuditHandler {
     nonWatchedAudits.slice(0, 10).forEach((audit) => {
       this.createAuditButton(audit.investingTicker, audit.state).appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
     });
+
+    // Perform GTT audit
+    await this.kiteHandler.performGttAudit();
   }
 
   /**
@@ -146,10 +151,16 @@ export class AuditHandler implements IAuditHandler {
 
   /**
    * Generates a unique ID for an audit button based on the ticker symbol
+   * Escapes CSS selector special characters to prevent jQuery parsing errors
    * @private
+   * @param investingTicker The ticker symbol that may contain special characters
+   * @returns A CSS-safe ID string for use in jQuery selectors
    */
   private getAuditButtonId(investingTicker: string): string {
-    return `audit-${investingTicker}`.replace('/', '-');
+    // Replace all CSS selector special characters with hyphens
+    // Preserves alphanumeric characters, hyphens, and underscores only
+    // Handles cases like: US10YT=X → audit-US10YT-X, M&M → audit-M-M, NSE:RELIANCE → audit-NSE-RELIANCE
+    return `audit-${investingTicker}`.replace(/[^a-zA-Z0-9-_]/g, '-');
   }
 
   /**
