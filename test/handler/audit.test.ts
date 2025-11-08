@@ -212,7 +212,7 @@ describe('AuditHandler', () => {
   describe('auditAll', () => {
     beforeEach(() => {
       mockAuditManager.filterAuditResults.mockReturnValue([]);
-      mockAuditManager.auditAlerts.mockResolvedValue(undefined);
+      mockAuditManager.auditAlerts.mockImplementation(() => undefined);
     });
 
     it('should clear existing audit area', async () => {

@@ -17,6 +17,6 @@ export interface IAudit {
   // Validate plugin invariants (e.g., non-empty id/title)
   validate(): void;
 
-  // Runs audit and returns results; runner can call this directly
-  run(): Promise<AuditResult[]> | AuditResult[];
+  // Runs audit and returns results synchronously
+  run(): AuditResult[];
 }

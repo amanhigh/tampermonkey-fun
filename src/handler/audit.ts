@@ -28,6 +28,7 @@ export interface IAuditHandler {
  * Handles all UI operations related to audit display and interactions
  */
 export class AuditHandler implements IAuditHandler {
+  // eslint-disable-next-line max-params
   constructor(
     private readonly auditManager: IAuditManager,
     private readonly uiUtil: IUIUtil,
@@ -42,7 +43,7 @@ export class AuditHandler implements IAuditHandler {
    * Updates the audit summary in the UI based on current results
    */
   public async auditAll(): Promise<void> {
-    await this.auditManager.auditAlerts();
+    this.auditManager.auditAlerts();
     const singleAlerts = this.auditManager.filterAuditResults(AlertState.SINGLE_ALERT);
     const noAlerts = this.auditManager.filterAuditResults(AlertState.NO_ALERTS);
 

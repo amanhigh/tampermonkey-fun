@@ -274,8 +274,12 @@ export class KiteManager implements IKiteManager {
    * @returns Number of decimal places for formatting
    */
   private getDecimalPlaces(tickSize: number): number {
-    if (tickSize >= 1) return 0;
-    if (tickSize >= 0.1) return 1;
+    if (tickSize >= 1) {
+      return 0;
+    }
+    if (tickSize >= 0.1) {
+      return 1;
+    }
     return 2;
   }
 

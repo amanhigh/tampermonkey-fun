@@ -76,6 +76,8 @@ import { IImdbManager as IImdbManager, ImdbManager } from '../manager/imdb';
 import { IPanelHandler, PanelHandler } from '../handler/panel';
 import { IPicassoHandler, PicassoHandler } from '../handler/picasso';
 import { PicassoApp } from './picasso';
+import { AuditRegistry } from '../audit/registry';
+import { AlertsAudit } from '../audit/alerts';
 
 /**
  * Project Architecture Overview
@@ -202,7 +204,9 @@ export class Factory {
             Factory.repo.audit(),
             Factory.manager.ticker(),
             Factory.manager.pair(),
-            Factory.manager.alert()
+            Factory.manager.alert(),
+            // Pass registry that already has all audit plugins registered
+            Factory.audit.registry()
           )
       ),
 
@@ -309,6 +313,24 @@ export class Factory {
         () => new ValidationManager(Factory.repo.alert(), Factory.repo.pair(), Factory.repo.ticker())
       ),
   };
+
+  /**
+   * Audit Layer
+   * Each plugin is exposed as a separate field; registry is constructed at the end
+   */
+  public static audit = {
+    // Return a singleton AlertsAudit instance
+    alerts: () =>
+      Factory.getInstance('auditPlugin_alerts', () => new AlertsAudit(Factory.manager.pair(), Factory.manager.alert())),
+
+    // Build registry last by explicitly registering each plugin (no loops)
+    registry: () =>
+      Factory.getInstance('auditRegistry', () => {
+        const reg = new AuditRegistry();
+        reg.register(Factory.audit.alerts());
+        return reg;
+      }),
+  } as const;
 
   /**
    * Handler Layer

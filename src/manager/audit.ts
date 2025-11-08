@@ -5,6 +5,7 @@ import { ITickerManager } from './ticker';
 import { IPairManager } from './pair';
 import { IAlertManager } from './alert';
 import { IAuditRepo } from '../repo/audit';
+import type { AuditRegistry } from '../audit/registry';
 
 /**
  * Interface for Audit management operations
@@ -13,7 +14,7 @@ export interface IAuditManager {
   /**
    * Initiates the auditing process for all alerts
    */
-  auditAlerts(): Promise<void>;
+  auditAlerts(): void;
 
   /**
    * Audits the current ticker and updates its state
@@ -33,8 +34,6 @@ export interface IAuditManager {
  * Class representing the Audit Manager.
  */
 export class AuditManager implements IAuditManager {
-  private readonly batchSize: number;
-
   private stateCounts: AuditStateCounts;
 
   constructor(
@@ -42,20 +41,30 @@ export class AuditManager implements IAuditManager {
     private readonly tickerManager: ITickerManager,
     private readonly pairManager: IPairManager,
     private readonly alertManager: IAlertManager,
-    batchSize = 50
+    private readonly auditRegistry: AuditRegistry
   ) {
-    this.batchSize = batchSize;
     this.stateCounts = new AuditStateCounts();
   }
 
   /********** Public Methods **********/
 
   /** @inheritdoc */
-  async auditAlerts(): Promise<void> {
-    const investingTickers = this.pairManager.getAllInvestingTickers();
+  auditAlerts(): void {
+    // Always use registry-backed AlertsAudit plugin
+    const alertsPlugin = this.auditRegistry.get('alerts')!;
+
     this.auditRepo.clear();
     this.stateCounts = new AuditStateCounts();
-    await this.processBatch(investingTickers);
+
+    const results = alertsPlugin.run();
+    results
+      .filter((r) => r.code === AlertState.NO_ALERTS || r.code === AlertState.SINGLE_ALERT)
+      .forEach((r) => {
+        const state = r.code as AlertState;
+        this.stateCounts.increment(state);
+        this.auditRepo.set(r.target, new AlertAudit(r.target, state));
+      });
+
     Notifier.message(this.getAuditSummary(), Color.PURPLE, 10000);
   }
 
@@ -78,38 +87,6 @@ export class AuditManager implements IAuditManager {
   }
 
   /********** Private Methods **********/
-
-  /**
-   * Processes batches of tickers for auditing.
-   * @param investingTickers - The list of tickers to process.
-   * @private
-   */
-  private async processBatch(investingTickers: string[]): Promise<void> {
-    let processedCount = 0;
-
-    // Process in batches
-    while (processedCount < investingTickers.length) {
-      // Calculate batch bounds
-      const endIndex = Math.min(processedCount + this.batchSize, investingTickers.length);
-
-      // Process current batch
-      for (let i = processedCount; i < endIndex; i++) {
-        const investingTicker = investingTickers[i];
-        const state = this.auditAlertState(investingTicker);
-        this.stateCounts.increment(state);
-        this.auditRepo.set(investingTicker, new AlertAudit(investingTicker, state));
-      }
-
-      processedCount = endIndex;
-
-      // Yield to prevent UI blocking
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    }
-
-    // Final status
-    const auditCount = this.auditRepo.getCount();
-    Notifier.message(`Audited ${auditCount} out of ${investingTickers.length}`, Color.PURPLE, 5000);
-  }
 
   /**
    * Audits alerts for a single ticker.
