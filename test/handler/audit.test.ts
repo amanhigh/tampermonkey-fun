@@ -225,7 +225,7 @@ describe('AuditHandler', () => {
     it('should create audit label', async () => {
       await auditHandler.auditAll();
 
-      expect(mockUIUtil.buildLabel).toHaveBeenCalledWith('Audit: 0 Remaining');
+      expect(mockUIUtil.buildLabel).toHaveBeenCalledWith('Tot: 0', 'lightgray');
     });
 
     it('should filter non-watched audit results', async () => {
@@ -242,7 +242,7 @@ describe('AuditHandler', () => {
 
       await auditHandler.auditAll();
 
-      expect(mockUIUtil.buildLabel).toHaveBeenCalledWith('Audit: 3 Remaining');
+      expect(mockUIUtil.buildLabel).toHaveBeenCalledWith('Tot: 3', 'lightgray');
     });
 
     it('should limit audit buttons to 10', async () => {

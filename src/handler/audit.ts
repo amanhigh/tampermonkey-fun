@@ -43,28 +43,71 @@ export class AuditHandler implements IAuditHandler {
    * Updates the audit summary in the UI based on current results
    */
   public async auditAll(): Promise<void> {
+    // Populate audit data via manager (emits purple summary)
     this.auditManager.auditAlerts();
-    const singleAlerts = this.auditManager.filterAuditResults(AlertState.SINGLE_ALERT);
-    const noAlerts = this.auditManager.filterAuditResults(AlertState.NO_ALERTS);
 
-    // Clear existing audit area
-    $(`#${Constants.UI.IDS.AREAS.AUDIT}`).empty();
+    // Render alerts UI (header + buttons) before GTT audit
+    this.auditAlerts();
 
-    // Combine and limit to 10 buttons total
-    const nonWatchedAudits = [...singleAlerts, ...noAlerts].filter((audit) => {
-      const tvAuditTicker = this.tryMapTvTicker(audit.investingTicker);
-      return !this.watchManager.isWatched(tvAuditTicker);
-    });
-
-    // Audit Label
-    this.uiUtil.buildLabel(`Audit: ${nonWatchedAudits.length} Remaining`).appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-
-    nonWatchedAudits.slice(0, 10).forEach((audit) => {
-      this.createAuditButton(audit.investingTicker, audit.state).appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    });
-
-    // Perform GTT audit
+    // Run GTT audit after rendering
     await this.kiteHandler.performGttAudit();
+  }
+
+  // Renders audit header and buttons based on current repository state
+  private auditAlerts(): void {
+    const singles = this.getSortedAudits(AlertState.SINGLE_ALERT);
+    const none = this.getSortedAudits(AlertState.NO_ALERTS);
+
+    // Decide visible items (prioritize SINGLE_ALERT up to 10, then fill with NO_ALERTS)
+    const maxItems = 10;
+    const singlesToShow = singles.slice(0, Math.min(maxItems, singles.length));
+    const remainingSlots = Math.max(0, maxItems - singlesToShow.length);
+    const noneToShow = none.slice(0, remainingSlots);
+    const displayItems = [...singlesToShow, ...noneToShow];
+
+    // Totals (across all filtered items, not just visible)
+    const totalAll = singles.length + none.length;
+    const invalidAll = [...singles, ...none].filter((a) => !this.symbolManager.investingToTv(a.investingTicker)).length;
+
+    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+    $auditArea.empty();
+
+    // Header with colored counts in priority: Single (orange), None (gray), Invalid (red)
+    this.renderHeaderColors($auditArea, totalAll, singles.length, none.length, invalidAll);
+
+    // Render buttons inline (no partitions), rely on button colors to communicate state
+    this.renderButtons($auditArea, displayItems);
+  }
+
+  // Build header: exact summary + colored count labels matching button colors
+  private renderHeaderColors(
+    $root: JQuery,
+    totalCount: number,
+    singleCount: number,
+    noneCount: number,
+    invalidCount: number
+  ): void {
+    // Short header: One, None, Inv, Tot (no 'Audit: ...')
+    this.uiUtil.buildLabel(`One: ${singleCount}`, 'darkorange').appendTo($root);
+    this.uiUtil.buildLabel(`None: ${noneCount}`, 'darkgray').css({ marginLeft: '6px' }).appendTo($root);
+    this.uiUtil.buildLabel(`Inv: ${invalidCount}`, 'darkred').css({ marginLeft: '6px' }).appendTo($root);
+    this.uiUtil.buildLabel(`Tot: ${totalCount}`, 'lightgray').css({ marginLeft: '6px' }).appendTo($root);
+    $('<div>').css({ height: '6px' }).appendTo($root);
+  }
+
+  // Return filtered (hide watched) and alphabetically sorted audits for a state
+  private getSortedAudits(state: AlertState) {
+    return this.auditManager
+      .filterAuditResults(state)
+      .filter((a) => !this.watchManager.isWatched(this.tryMapTvTicker(a.investingTicker)))
+      .sort((a, b) => a.investingTicker.localeCompare(b.investingTicker));
+  }
+
+  // Render list of buttons (no group separators)
+  private renderButtons($root: JQuery, items: { investingTicker: string; state: AlertState }[]): void {
+    items.forEach((audit) => {
+      this.createAuditButton(audit.investingTicker, audit.state).appendTo($root);
+    });
   }
 
   /**
@@ -134,15 +177,15 @@ export class AuditHandler implements IAuditHandler {
    * @private
    */
   private getButtonColor(investingTicker: string, state: AlertState): string {
-    // Color Orange if not a Valid InvestingTicker
+    // Red if no valid TV mapping
     const tvTicker = this.symbolManager.investingToTv(investingTicker);
     if (!tvTicker) {
-      return 'darkorange';
+      return 'darkred';
     }
 
     switch (state) {
       case AlertState.SINGLE_ALERT:
-        return 'darkred';
+        return 'darkorange';
       case AlertState.NO_ALERTS:
         return 'darkgray';
       default:
