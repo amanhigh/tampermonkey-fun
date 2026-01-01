@@ -50,7 +50,7 @@ export const Constants = Object.freeze({
       NAME: 'div[class*=mainTitle]', // For main title element
       TICKER: '#header-toolbar-symbol-search > div', // For ticker display
       EXCHANGE: 'div[class*=exchangeTitle]', // For exchange name
-      LTP: 'span[class^="priceWrapper"] > span:first-child', // For last traded price
+      LTP: 'div[data-test-id-value-title="C"] > div[class^=valueValue]', // For last traded price (closing price from legend)
     },
     HEADER: {
       MAIN: '#header-toolbar-symbol-search', // Old name: headerSelector
