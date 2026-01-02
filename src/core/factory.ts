@@ -78,6 +78,7 @@ import { IPicassoHandler, PicassoHandler } from '../handler/picasso';
 import { PicassoApp } from './picasso';
 import { AuditRegistry } from '../audit/registry';
 import { AlertsAudit } from '../audit/alerts';
+import { TvMappingAudit } from '../audit/tv_mapping';
 
 /**
  * Project Architecture Overview
@@ -324,10 +325,18 @@ export class Factory {
       Factory.getInstance('auditPlugin_alerts', () => new AlertsAudit(Factory.manager.pair(), Factory.manager.alert())),
 
     // Build registry last by explicitly registering each plugin (no loops)
+    // Return a singleton TvMappingAudit instance
+    tvMapping: () =>
+      Factory.getInstance(
+        'auditPlugin_tvmapping',
+        () => new TvMappingAudit(Factory.manager.pair(), Factory.manager.symbol())
+      ),
+
     registry: () =>
       Factory.getInstance('auditRegistry', () => {
         const reg = new AuditRegistry();
         reg.register(Factory.audit.alerts());
+        reg.register(Factory.audit.tvMapping());
         return reg;
       }),
   } as const;
