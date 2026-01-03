@@ -99,5 +99,56 @@ describe('AlertsAudit', () => {
         expect(byTarget['NO_ALERTS_TICKER'].severity).toBe('MEDIUM');
       });
     });
+
+    describe('targeted run', () => {
+      beforeEach(() => {
+        pairManager.getAllInvestingTickers.mockReturnValue([
+          'NO_PAIR_TICKER',
+          'NO_ALERTS_TICKER',
+          'SINGLE_ALERT_TICKER',
+          'VALID_TICKER',
+        ]);
+
+        alertManager.getAlertsForInvestingTicker.mockImplementation((ticker: string) => {
+          switch (ticker) {
+            case 'NO_PAIR_TICKER':
+              return null;
+            case 'NO_ALERTS_TICKER':
+              return [] as any;
+            case 'SINGLE_ALERT_TICKER':
+              return [{ id: 'x', price: 1, pairId: 'p' }] as any;
+            case 'VALID_TICKER':
+              return [
+                { id: 'x', price: 1, pairId: 'p' },
+                { id: 'y', price: 2, pairId: 'p' },
+              ] as any;
+          }
+          return [] as any;
+        });
+      });
+
+      it('audits only specified targets when targets array is provided', () => {
+        const results = plugin.run(['SINGLE_ALERT_TICKER', 'VALID_TICKER']);
+
+        expect(results).toHaveLength(1);
+        expect(results[0].target).toBe('SINGLE_ALERT_TICKER');
+        expect(results[0].code).toBe(AlertState.SINGLE_ALERT);
+      });
+
+      it('audits all targets when no targets array is provided', () => {
+        const results = plugin.run();
+
+        const targets = results.map((r) => r.target);
+        expect(targets.sort()).toEqual(['NO_ALERTS_TICKER', 'NO_PAIR_TICKER', 'SINGLE_ALERT_TICKER']);
+      });
+
+      it('treats empty targets array same as undefined (uses all tickers)', () => {
+        const results = plugin.run([]);
+
+        // Empty targets array should behave like undefined - audit all tickers
+        const targets = results.map((r) => r.target);
+        expect(targets.sort()).toEqual(['NO_ALERTS_TICKER', 'NO_PAIR_TICKER', 'SINGLE_ALERT_TICKER']);
+      });
+    });
   });
 });

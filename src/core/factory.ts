@@ -204,8 +204,6 @@ export class Factory {
           new AuditManager(
             Factory.repo.audit(),
             Factory.manager.ticker(),
-            Factory.manager.pair(),
-            Factory.manager.alert(),
             // Pass registry that already has all audit plugins registered
             Factory.audit.registry()
           )

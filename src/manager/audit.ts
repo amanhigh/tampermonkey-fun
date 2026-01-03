@@ -2,8 +2,6 @@ import { AlertAudit, AlertState, AuditStateCounts } from '../models/alert';
 import { Notifier } from '../util/notify';
 import { Color } from '../models/color';
 import { ITickerManager } from './ticker';
-import { IPairManager } from './pair';
-import { IAlertManager } from './alert';
 import { IAuditRepo } from '../repo/audit';
 import type { AuditRegistry } from '../audit/registry';
 
@@ -39,8 +37,6 @@ export class AuditManager implements IAuditManager {
   constructor(
     private readonly auditRepo: IAuditRepo,
     private readonly tickerManager: ITickerManager,
-    private readonly pairManager: IPairManager,
-    private readonly alertManager: IAlertManager,
     private readonly auditRegistry: AuditRegistry
   ) {
     this.stateCounts = new AuditStateCounts();
@@ -75,7 +71,20 @@ export class AuditManager implements IAuditManager {
   /** @inheritdoc */
   auditCurrentTicker(): AlertAudit {
     const investingTicker = this.tickerManager.getInvestingTicker();
-    const state = this.auditAlertState(investingTicker);
+    const alertsPlugin = this.auditRegistry.get('alerts')!;
+
+    // Use plugin's targeted run for single ticker
+    const results = alertsPlugin.run([investingTicker]);
+
+    let state: AlertState;
+    if (results.length > 0) {
+      // Plugin returned a FAIL result; use the code as state
+      state = results[0].code as AlertState;
+    } else {
+      // No results means PASS/VALID state
+      state = AlertState.VALID;
+    }
+
     const audit = new AlertAudit(investingTicker, state);
     this.auditRepo.set(investingTicker, audit);
     return audit;
@@ -84,31 +93,5 @@ export class AuditManager implements IAuditManager {
   /** @inheritdoc */
   filterAuditResults(state: AlertState): AlertAudit[] {
     return this.auditRepo.getFilteredAuditResults(state);
-  }
-
-  /********** Private Methods **********/
-
-  /**
-   * Audits alerts for a single ticker.
-   * @param investingTicker - The ticker to audit.
-   * @returns The audit state for the ticker.
-   * @private
-   */
-  private auditAlertState(investingTicker: string): AlertState {
-    const pairInfo = this.pairManager.investingTickerToPairInfo(investingTicker);
-    if (!pairInfo) {
-      return AlertState.NO_ALERTS;
-    }
-
-    const alerts = this.alertManager.getAlertsForInvestingTicker(investingTicker);
-    if (!alerts) {
-      return AlertState.NO_PAIR;
-    }
-
-    return alerts.length === 0
-      ? AlertState.NO_ALERTS
-      : alerts.length === 1
-        ? AlertState.SINGLE_ALERT
-        : AlertState.VALID;
   }
 }

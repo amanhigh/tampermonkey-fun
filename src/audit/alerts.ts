@@ -19,8 +19,8 @@ export class AlertsAudit extends BaseAuditPlugin {
     super();
   }
 
-  run(): AuditResult[] {
-    const investingTickers = this.pairManager.getAllInvestingTickers();
+  run(targets?: string[]): AuditResult[] {
+    const investingTickers = targets && targets.length > 0 ? targets : this.pairManager.getAllInvestingTickers();
     const results: AuditResult[] = [];
 
     investingTickers.forEach((ticker: string) => {

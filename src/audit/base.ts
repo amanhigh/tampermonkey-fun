@@ -18,5 +18,6 @@ export abstract class BaseAuditPlugin implements IAudit {
   }
 
   // Force implementations to provide run()
-  abstract run(): ReturnType<IAudit['run']>;
+  // @param targets Optional array of specific targets to audit; if empty/undefined, audits all targets
+  abstract run(targets?: string[]): ReturnType<IAudit['run']>;
 }

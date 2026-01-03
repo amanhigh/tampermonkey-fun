@@ -18,5 +18,6 @@ export interface IAudit {
   validate(): void;
 
   // Runs audit and returns results synchronously
-  run(): AuditResult[];
+  // @param targets Optional array of specific targets to audit; if empty/undefined, audits all targets
+  run(targets?: string[]): AuditResult[];
 }
