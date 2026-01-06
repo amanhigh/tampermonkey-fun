@@ -18,7 +18,7 @@ export class TvMappingAudit extends BaseAuditPlugin {
     super();
   }
 
-  run(targets?: string[]): AuditResult[] {
+  async run(targets?: string[]): Promise<AuditResult[]> {
     const investingTickers = targets && targets.length > 0 ? targets : this.pairManager.getAllInvestingTickers();
     const results: AuditResult[] = [];
 

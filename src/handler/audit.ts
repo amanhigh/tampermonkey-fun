@@ -21,7 +21,7 @@ export interface IAuditHandler {
   /**
    * Refreshes audit button for current ticker
    */
-  auditCurrent(): void;
+  auditCurrent(): Promise<void>;
 }
 
 /**
@@ -44,7 +44,7 @@ export class AuditHandler implements IAuditHandler {
    */
   public async auditAll(): Promise<void> {
     // Populate audit data via manager (emits purple summary)
-    this.auditManager.auditAlerts();
+    await this.auditManager.auditAlerts();
 
     // Render alerts UI (header + buttons) before GTT audit
     this.auditAlerts();
@@ -113,9 +113,9 @@ export class AuditHandler implements IAuditHandler {
   /**
    * Refreshes audit button for current ticker
    */
-  public auditCurrent(): void {
+  public async auditCurrent(): Promise<void> {
     // Audit current ticker and update button states
-    const auditResult = this.auditManager.auditCurrentTicker();
+    const auditResult = await this.auditManager.auditCurrentTicker();
 
     // Find existing button for this ticker
     const $button = $(`#${this.getAuditButtonId(auditResult.investingTicker)}`);

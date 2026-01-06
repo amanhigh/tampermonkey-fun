@@ -17,7 +17,8 @@ export interface IAudit {
   // Validate plugin invariants (e.g., non-empty id/title)
   validate(): void;
 
-  // Runs audit and returns results synchronously
-  // @param targets Optional array of specific targets to audit; if empty/undefined, audits all targets
-  run(targets?: string[]): AuditResult[];
+  // Runs audit and returns results asynchronously
+  // All plugins are async for consistency and future-proofing
+  // Sync plugins automatically wrap results in Promise.resolve()
+  run(targets?: string[]): Promise<AuditResult[]>;
 }

@@ -79,6 +79,7 @@ import { PicassoApp } from './picasso';
 import { AuditRegistry } from '../audit/registry';
 import { AlertsAudit } from '../audit/alerts';
 import { TvMappingAudit } from '../audit/tv_mapping';
+import { GttUnwatchedAudit } from '../audit/gtt_unwatched';
 
 /**
  * Project Architecture Overview
@@ -273,7 +274,12 @@ export class Factory {
       Factory.getInstance(
         'kiteManager',
         () =>
-          new KiteManager(Factory.manager.symbol(), Factory.client.kite(), Factory.repo.kite(), Factory.manager.watch())
+          new KiteManager(
+            Factory.manager.symbol(),
+            Factory.client.kite(),
+            Factory.repo.kite(),
+            Factory.audit.registry()
+          )
       ),
 
     symbol: (): ISymbolManager =>
@@ -322,19 +328,32 @@ export class Factory {
     alerts: () =>
       Factory.getInstance('auditPlugin_alerts', () => new AlertsAudit(Factory.manager.pair(), Factory.manager.alert())),
 
-    // Build registry last by explicitly registering each plugin (no loops)
     // Return a singleton TvMappingAudit instance
+    // NOTE: Registered but not actively used in audit flow (deferred for future use cases)
+    // See Plan.md Task 2.2 for analysis of why this plugin is not integrated
     tvMapping: () =>
       Factory.getInstance(
         'auditPlugin_tvmapping',
         () => new TvMappingAudit(Factory.manager.pair(), Factory.manager.symbol())
       ),
 
+    // Return a singleton GttUnwatchedAudit instance
+    gttUnwatched: () =>
+      Factory.getInstance(
+        'auditPlugin_gttUnwatched',
+        () => new GttUnwatchedAudit(Factory.manager.kite(), Factory.manager.watch())
+      ),
+
+    // Build registry last by explicitly registering each plugin (no loops)
     registry: () =>
       Factory.getInstance('auditRegistry', () => {
         const reg = new AuditRegistry();
         reg.register(Factory.audit.alerts());
+        // TvMappingAudit registered but not called from active code paths
+        // Kept for future use (batch TV mapping audits, reporting, etc.)
         reg.register(Factory.audit.tvMapping());
+        // GttUnwatchedAudit for identifying unwatched GTT orders
+        reg.register(Factory.audit.gttUnwatched());
         return reg;
       }),
   } as const;

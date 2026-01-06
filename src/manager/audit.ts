@@ -12,12 +12,12 @@ export interface IAuditManager {
   /**
    * Initiates the auditing process for all alerts
    */
-  auditAlerts(): void;
+  auditAlerts(): Promise<void>;
 
   /**
    * Audits the current ticker and updates its state
    */
-  auditCurrentTicker(): AlertAudit;
+  auditCurrentTicker(): Promise<AlertAudit>;
 
   /**
    * Filters audit results by state
@@ -45,14 +45,14 @@ export class AuditManager implements IAuditManager {
   /********** Public Methods **********/
 
   /** @inheritdoc */
-  auditAlerts(): void {
+  async auditAlerts(): Promise<void> {
     // Always use registry-backed AlertsAudit plugin
     const alertsPlugin = this.auditRegistry.get('alerts')!;
 
     this.auditRepo.clear();
     this.stateCounts = new AuditStateCounts();
 
-    const results = alertsPlugin.run();
+    const results = await alertsPlugin.run();
     results
       .filter((r) => r.code === AlertState.NO_ALERTS || r.code === AlertState.SINGLE_ALERT)
       .forEach((r) => {
@@ -69,12 +69,12 @@ export class AuditManager implements IAuditManager {
   }
 
   /** @inheritdoc */
-  auditCurrentTicker(): AlertAudit {
+  async auditCurrentTicker(): Promise<AlertAudit> {
     const investingTicker = this.tickerManager.getInvestingTicker();
     const alertsPlugin = this.auditRegistry.get('alerts')!;
 
     // Use plugin's targeted run for single ticker
-    const results = alertsPlugin.run([investingTicker]);
+    const results = await alertsPlugin.run([investingTicker]);
 
     let state: AlertState;
     if (results.length > 0) {

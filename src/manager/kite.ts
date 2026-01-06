@@ -3,6 +3,8 @@ import { IKiteClient } from '../client/kite';
 import { CreateGttRequest, GttApiResponse } from '../models/kite';
 import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../models/gtt';
 import { IKiteRepo } from '../repo/kite';
+import type { AuditRegistry } from '../audit/registry';
+import { AuditResult } from '../models/audit';
 
 /**
  * Interface for managing Kite trading platform operations
@@ -36,6 +38,12 @@ export interface IKiteManager {
   createGttOrderEvent(event: GttCreateEvent): Promise<void>;
   createGttRefreshEvent(event: GttRefreshEvent): Promise<void>;
   getGttRefereshEvent(): Promise<GttRefreshEvent>;
+
+  /**
+   * Audits GTT orders for unwatched tickers
+   * @returns Audit results for unwatched GTT tickers
+   */
+  auditGttUnwatched(): Promise<AuditResult[]>;
 }
 
 /**
@@ -44,6 +52,12 @@ export interface IKiteManager {
 export class KiteManager implements IKiteManager {
   async getGttRefereshEvent(): Promise<GttRefreshEvent> {
     return await this.kiteRepo.getGttRefereshEvent();
+  }
+
+  /** @inheritdoc */
+  async auditGttUnwatched(): Promise<AuditResult[]> {
+    const plugin = this.auditRegistry.get('gtt-unwatched')!;
+    return await plugin.run();
   }
 
   public async createGttDeleteEvent(orderId: string, symbol: string): Promise<void> {
@@ -74,11 +88,13 @@ export class KiteManager implements IKiteManager {
    * @param symbolManager Manager for symbol operations
    * @param kiteClient Client for Kite API operations
    * @param kiteRepo Repository for Kite data persistence
+   * @param auditRegistry Registry for audit plugins
    */
   constructor(
     private readonly symbolManager: ISymbolManager,
     private readonly kiteClient: IKiteClient,
-    private readonly kiteRepo: IKiteRepo
+    private readonly kiteRepo: IKiteRepo,
+    private readonly auditRegistry: AuditRegistry
   ) {}
 
   /** @inheritdoc */
