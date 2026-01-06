@@ -8,6 +8,7 @@ import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../models/gtt';
 import { Notifier } from '../util/notify';
 import { ITradingViewManager } from '../manager/tv';
 import { IUIUtil } from '../util/ui';
+import { AuditResult } from '../models/audit';
 
 /**
  * Configuration for order button display
@@ -160,21 +161,21 @@ export class KiteHandler implements IKiteHandler {
 
   /** @inheritdoc */
   public async performGttAudit(): Promise<void> {
+    const unwatchedAudits = await this.kiteManager.auditGttUnwatched();
     const gttData = await this.kiteManager.getGttRefereshEvent();
-    const unwatchedTickers = this.kiteManager.getUnwatchedGttTickers(gttData);
+    const totalOrders = Object.keys(gttData.orders).length;
 
-    if (unwatchedTickers.length === 0) {
-      Notifier.success(`✅ GTT Audit: ${Object.keys(gttData.orders).length} orders, all tickers watched`, 3000);
+    if (unwatchedAudits.length === 0) {
+      Notifier.success(`✅ GTT Audit: ${totalOrders} orders, all tickers watched`, 3000);
       return;
     }
 
-    // Print individual warning for each unwatched ticker
-    unwatchedTickers.forEach((ticker) => {
-      Notifier.warn(`⚠️ GTT Unwatched: ${ticker}`, 4000);
+    // Notify user about each unwatched ticker
+    unwatchedAudits.forEach((audit: AuditResult) => {
+      Notifier.warn(`⚠️ GTT Unwatched: ${audit.target}`, 4000);
     });
 
-    // Summary message
-    Notifier.warn(`GTT Audit Complete: ${unwatchedTickers.length} unwatched tickers found`, 6000);
+    Notifier.warn(`GTT Audit Complete: ${unwatchedAudits.length} unwatched tickers found`, 6000);
   }
 
   /** @inheritdoc */

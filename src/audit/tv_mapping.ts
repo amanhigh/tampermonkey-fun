@@ -36,6 +36,6 @@ export class TvMappingAudit extends BaseAuditPlugin {
       }
     });
 
-    return results;
+    return Promise.resolve(results);
   }
 }

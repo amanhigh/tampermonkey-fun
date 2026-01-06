@@ -100,10 +100,10 @@ describe('AuditHandler', () => {
     // Test the private getAuditButtonId method by testing its behavior through public methods
     it('should generate CSS-safe IDs for basic ticker symbols', async () => {
       const mockAlertAudit = new AlertAudit('RELIANCE', AlertState.NO_ALERTS);
-      mockAuditManager.auditCurrentTicker.mockReturnValue(mockAlertAudit);
+      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
       mockWatchManager.isWatched.mockReturnValue(false);
 
-      auditHandler.auditCurrent();
+      await auditHandler.auditCurrent();
 
       // Verify $ was called with escaped ID
       expect($).toHaveBeenCalledWith('#audit-RELIANCE');
@@ -111,10 +111,10 @@ describe('AuditHandler', () => {
 
     it('should escape equals signs in US treasury symbols', async () => {
       const mockAlertAudit = new AlertAudit('US10YT=X', AlertState.NO_ALERTS);
-      mockAuditManager.auditCurrentTicker.mockReturnValue(mockAlertAudit);
+      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
       mockWatchManager.isWatched.mockReturnValue(false);
 
-      auditHandler.auditCurrent();
+      await auditHandler.auditCurrent();
 
       // Verify $ was called with escaped ID (= becomes -)
       expect($).toHaveBeenCalledWith('#audit-US10YT-X');
@@ -126,15 +126,16 @@ describe('AuditHandler', () => {
         new AlertAudit('AT&T', AlertState.SINGLE_ALERT),
       ];
 
-      mockAlertAudits.forEach((result) => {
-        mockAuditManager.auditCurrentTicker.mockReturnValue(result);
+      for (const result of mockAlertAudits) {
+        jest.clearAllMocks();
+        mockAuditManager.auditCurrentTicker.mockResolvedValue(result);
         mockWatchManager.isWatched.mockReturnValue(false);
 
-        auditHandler.auditCurrent();
+        await auditHandler.auditCurrent();
 
         const expectedId = `#audit-${result.investingTicker}`.replace(/[^a-zA-Z0-9-_#]/g, '-');
         expect($).toHaveBeenCalledWith(expectedId);
-      });
+      }
     });
 
     it('should escape colons in exchange-prefixed symbols', async () => {
@@ -143,23 +144,24 @@ describe('AuditHandler', () => {
         new AlertAudit('BINANCE:BTCUSDT', AlertState.SINGLE_ALERT),
       ];
 
-      mockAlertAudits.forEach((result) => {
-        mockAuditManager.auditCurrentTicker.mockReturnValue(result);
+      for (const result of mockAlertAudits) {
+        jest.clearAllMocks();
+        mockAuditManager.auditCurrentTicker.mockResolvedValue(result);
         mockWatchManager.isWatched.mockReturnValue(false);
 
-        auditHandler.auditCurrent();
+        await auditHandler.auditCurrent();
 
         const expectedId = `#audit-${result.investingTicker}`.replace(/[^a-zA-Z0-9-_#]/g, '-');
         expect($).toHaveBeenCalledWith(expectedId);
-      });
+      }
     });
 
     it('should escape complex composite symbols', async () => {
       const mockAlertAudit = new AlertAudit('GOLD/MCX:GOLD1!', AlertState.NO_ALERTS);
-      mockAuditManager.auditCurrentTicker.mockReturnValue(mockAlertAudit);
+      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
       mockWatchManager.isWatched.mockReturnValue(false);
 
-      auditHandler.auditCurrent();
+      await auditHandler.auditCurrent();
 
       // All special characters should become hyphens
       expect($).toHaveBeenCalledWith('#audit-GOLD-MCX-GOLD1-');
@@ -167,10 +169,10 @@ describe('AuditHandler', () => {
 
     it('should handle multiple special characters', async () => {
       const mockAlertAudit = new AlertAudit('TEST@#$%^&*()', AlertState.NO_ALERTS);
-      mockAuditManager.auditCurrentTicker.mockReturnValue(mockAlertAudit);
+      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
       mockWatchManager.isWatched.mockReturnValue(false);
 
-      auditHandler.auditCurrent();
+      await auditHandler.auditCurrent();
 
       // All special characters should become hyphens
       expect($).toHaveBeenCalledWith('#audit-TEST---------');
@@ -178,10 +180,10 @@ describe('AuditHandler', () => {
 
     it('should preserve hyphens and underscores', async () => {
       const mockAlertAudit = new AlertAudit('VALID-ID_123', AlertState.NO_ALERTS);
-      mockAuditManager.auditCurrentTicker.mockReturnValue(mockAlertAudit);
+      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
       mockWatchManager.isWatched.mockReturnValue(false);
 
-      auditHandler.auditCurrent();
+      await auditHandler.auditCurrent();
 
       // Hyphens and underscores should be preserved
       expect($).toHaveBeenCalledWith('#audit-VALID-ID_123');
@@ -189,20 +191,20 @@ describe('AuditHandler', () => {
 
     it('should handle empty ticker', async () => {
       const mockAlertAudit = new AlertAudit('', AlertState.NO_ALERTS);
-      mockAuditManager.auditCurrentTicker.mockReturnValue(mockAlertAudit);
+      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
       mockWatchManager.isWatched.mockReturnValue(false);
 
-      auditHandler.auditCurrent();
+      await auditHandler.auditCurrent();
 
       expect($).toHaveBeenCalledWith('#audit-');
     });
 
     it('should handle whitespace in ticker', async () => {
       const mockAlertAudit = new AlertAudit('   ', AlertState.NO_ALERTS);
-      mockAuditManager.auditCurrentTicker.mockReturnValue(mockAlertAudit);
+      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
       mockWatchManager.isWatched.mockReturnValue(false);
 
-      auditHandler.auditCurrent();
+      await auditHandler.auditCurrent();
 
       // Spaces should become hyphens
       expect($).toHaveBeenCalledWith('#audit----');
@@ -212,7 +214,7 @@ describe('AuditHandler', () => {
   describe('auditAll', () => {
     beforeEach(() => {
       mockAuditManager.filterAuditResults.mockReturnValue([]);
-      mockAuditManager.auditAlerts.mockImplementation(() => undefined);
+      mockAuditManager.auditAlerts.mockResolvedValue(undefined);
     });
 
     it('should clear existing audit area', async () => {
@@ -268,47 +270,47 @@ describe('AuditHandler', () => {
   });
 
   describe('auditCurrent', () => {
-    it('should remove button for valid alerts', () => {
+    it('should remove button for valid alerts', async () => {
       const mockAlertAudit = new AlertAudit('TICKER1', AlertState.VALID);
-      mockAuditManager.auditCurrentTicker.mockReturnValue(mockAlertAudit);
+      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
 
-      auditHandler.auditCurrent();
+      await auditHandler.auditCurrent();
 
       expect(mockJQuery.remove).toHaveBeenCalled();
       expect(mockUIUtil.buildButton).not.toHaveBeenCalled();
     });
 
-    it('should remove button for watched tickers', () => {
+    it('should remove button for watched tickers', async () => {
       const mockAlertAudit = new AlertAudit('TICKER1', AlertState.NO_ALERTS);
-      mockAuditManager.auditCurrentTicker.mockReturnValue(mockAlertAudit);
+      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
       mockSymbolManager.investingToTv.mockReturnValue('TV_TICKER');
       mockWatchManager.isWatched.mockReturnValue(true);
 
-      auditHandler.auditCurrent();
+      await auditHandler.auditCurrent();
 
       expect(mockJQuery.remove).toHaveBeenCalled();
       expect(mockUIUtil.buildButton).not.toHaveBeenCalled();
     });
 
-    it('should replace existing button with updated state', () => {
+    it('should replace existing button with updated state', async () => {
       const mockAlertAudit = new AlertAudit('TICKER1', AlertState.SINGLE_ALERT);
-      mockAuditManager.auditCurrentTicker.mockReturnValue(mockAlertAudit);
+      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
       mockWatchManager.isWatched.mockReturnValue(false);
       mockJQuery.length = 1; // Simulate button exists
 
-      auditHandler.auditCurrent();
+      await auditHandler.auditCurrent();
 
       expect(mockUIUtil.buildButton).toHaveBeenCalledWith('audit-TICKER1', 'TICKER1', expect.any(Function));
       expect(mockJQuery.replaceWith).toHaveBeenCalled();
     });
 
-    it('should append new button if none exists', () => {
+    it('should append new button if none exists', async () => {
       const mockAlertAudit = new AlertAudit('TICKER1', AlertState.NO_ALERTS);
-      mockAuditManager.auditCurrentTicker.mockReturnValue(mockAlertAudit);
+      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
       mockWatchManager.isWatched.mockReturnValue(false);
       mockJQuery.length = 0; // Simulate button doesn't exist
 
-      auditHandler.auditCurrent();
+      await auditHandler.auditCurrent();
 
       expect(mockUIUtil.buildButton).toHaveBeenCalledWith('audit-TICKER1', 'TICKER1', expect.any(Function));
       expect(mockJQuery.appendTo).toHaveBeenCalledWith(`#${Constants.UI.IDS.AREAS.AUDIT}`);
@@ -318,10 +320,10 @@ describe('AuditHandler', () => {
   describe('Button Context Menu', () => {
     it('should handle right-click to delete pair mapping', async () => {
       const mockAlertAudit = new AlertAudit('TEST_TICKER', AlertState.NO_ALERTS);
-      mockAuditManager.auditCurrentTicker.mockReturnValue(mockAlertAudit);
+      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
       mockWatchManager.isWatched.mockReturnValue(false);
 
-      auditHandler.auditCurrent();
+      await auditHandler.auditCurrent();
 
       // Get the context menu handler that was registered
       expect(mockJQuery.on).toHaveBeenCalledWith('contextmenu', expect.any(Function));

@@ -28,7 +28,7 @@ describe('TvMappingAudit', () => {
   });
 
   describe('run', () => {
-    it('emits FAIL for tickers without TV mapping and none for mapped', () => {
+    it('emits FAIL for tickers without TV mapping and none for mapped', async () => {
       pairManager.getAllInvestingTickers.mockReturnValue(['AAPL', 'NSE:RELIANCE', 'MISSING']);
 
       symbolManager.investingToTv.mockImplementation((ticker: string) => {
@@ -37,7 +37,7 @@ describe('TvMappingAudit', () => {
         return null;
       });
 
-      const results = plugin.run();
+      const results = await plugin.run();
       const targets = results.map((r) => r.target);
       expect(targets).toEqual(['MISSING']);
 
@@ -48,9 +48,9 @@ describe('TvMappingAudit', () => {
       expect(only.status).toBe('FAIL');
     });
 
-    it('handles empty list gracefully', () => {
+    it('handles empty list gracefully', async () => {
       pairManager.getAllInvestingTickers.mockReturnValue([]);
-      const results = plugin.run();
+      const results = await plugin.run();
       expect(results).toEqual([]);
     });
   });

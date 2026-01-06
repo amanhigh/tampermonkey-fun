@@ -120,8 +120,8 @@ export class AlertHandler implements IAlertHandler {
     const prices = String(input).trim().split(' ');
     for (const p of prices) {
       const price = parseFloat(p);
-      await this.alertManager.createAlertForCurrentTicker(price).then((pairInfo) => {
-        this.auditHandler.auditCurrent();
+      await this.alertManager.createAlertForCurrentTicker(price).then(async (pairInfo) => {
+        await this.auditHandler.auditCurrent();
         this.refreshAlerts();
         this.notifyAlertCreation(price, pairInfo);
       });
@@ -150,8 +150,8 @@ export class AlertHandler implements IAlertHandler {
   /** @inheritdoc */
   public async createAlertAtCursor(): Promise<void> {
     const price = await this.tradingViewManager.getCursorPrice();
-    await this.alertManager.createAlertForCurrentTicker(price).then((pairInfo) => {
-      this.auditHandler.auditCurrent();
+    await this.alertManager.createAlertForCurrentTicker(price).then(async (pairInfo) => {
+      await this.auditHandler.auditCurrent();
       this.refreshAlerts();
       this.notifyAlertCreation(price, pairInfo);
     });
@@ -162,8 +162,8 @@ export class AlertHandler implements IAlertHandler {
     const currentPrice = this.tradingViewManager.getLastTradedPrice();
     const targetPrice = (currentPrice * 1.2).toFixed(2);
     const price = parseFloat(targetPrice);
-    await this.alertManager.createAlertForCurrentTicker(price).then((pairInfo) => {
-      this.auditHandler.auditCurrent();
+    await this.alertManager.createAlertForCurrentTicker(price).then(async (pairInfo) => {
+      await this.auditHandler.auditCurrent();
       this.refreshAlerts();
       this.notifyAlertCreation(price, pairInfo);
     });
@@ -178,12 +178,13 @@ export class AlertHandler implements IAlertHandler {
   }
 
   /** @inheritdoc */
+  /** @inheritdoc */
   public refreshAlerts(): void {
     this.syncUtil.waitOn('alert-refresh-local', 10, () => {
       try {
         const alerts = this.alertManager.getAlerts();
         this.alertSummaryHandler.displayAlerts(alerts);
-        this.auditHandler.auditCurrent();
+        void this.auditHandler.auditCurrent();
       } catch (error) {
         // Show NO PAIR for Null Alerts
         this.alertSummaryHandler.displayAlerts(null);

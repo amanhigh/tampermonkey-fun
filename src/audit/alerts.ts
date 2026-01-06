@@ -49,6 +49,6 @@ export class AlertsAudit extends BaseAuditPlugin {
       }
     });
 
-    return results;
+    return Promise.resolve(results);
   }
 }

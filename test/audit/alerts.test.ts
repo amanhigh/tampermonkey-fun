@@ -30,9 +30,9 @@ describe('AlertsAudit', () => {
 
   describe('run', () => {
     describe('classification', () => {
-      let results: ReturnType<AlertsAudit['run']>;
+      let results: Awaited<ReturnType<AlertsAudit['run']>>;
 
-      beforeEach(() => {
+      beforeEach(async () => {
         pairManager.getAllInvestingTickers.mockReturnValue([
           'NO_PAIR_TICKER',
           'NO_ALERTS_TICKER',
@@ -61,7 +61,7 @@ describe('AlertsAudit', () => {
           return [] as any;
         });
 
-        results = plugin.run();
+        results = await plugin.run();
       });
 
       it('emits FAIL results for NO_PAIR/NO_ALERTS/SINGLE_ALERT and none for VALID', () => {
@@ -81,16 +81,16 @@ describe('AlertsAudit', () => {
     });
 
     describe('severity mapping', () => {
-      let results: ReturnType<AlertsAudit['run']>;
+      let results: Awaited<ReturnType<AlertsAudit['run']>>;
 
-      beforeEach(() => {
+      beforeEach(async () => {
         pairManager.getAllInvestingTickers.mockReturnValue(['SINGLE_ALERT_TICKER', 'NO_ALERTS_TICKER']);
         alertManager.getAlertsForInvestingTicker.mockImplementation((ticker: string) => {
           if (ticker === 'SINGLE_ALERT_TICKER') return [{ id: 'x', price: 1, pairId: 'p' }] as any; // SINGLE_ALERT
           if (ticker === 'NO_ALERTS_TICKER') return [] as any; // NO_ALERTS
           return [] as any;
         });
-        results = plugin.run();
+        results = await plugin.run();
       });
 
       it('marks SINGLE_ALERT as HIGH and NO_ALERTS as MEDIUM', () => {
@@ -127,23 +127,23 @@ describe('AlertsAudit', () => {
         });
       });
 
-      it('audits only specified targets when targets array is provided', () => {
-        const results = plugin.run(['SINGLE_ALERT_TICKER', 'VALID_TICKER']);
+      it('audits only specified targets when targets array is provided', async () => {
+        const results = await plugin.run(['SINGLE_ALERT_TICKER', 'VALID_TICKER']);
 
         expect(results).toHaveLength(1);
         expect(results[0].target).toBe('SINGLE_ALERT_TICKER');
         expect(results[0].code).toBe(AlertState.SINGLE_ALERT);
       });
 
-      it('audits all targets when no targets array is provided', () => {
-        const results = plugin.run();
+      it('audits all targets when no targets array is provided', async () => {
+        const results = await plugin.run();
 
         const targets = results.map((r) => r.target);
         expect(targets.sort()).toEqual(['NO_ALERTS_TICKER', 'NO_PAIR_TICKER', 'SINGLE_ALERT_TICKER']);
       });
 
-      it('treats empty targets array same as undefined (uses all tickers)', () => {
-        const results = plugin.run([]);
+      it('treats empty targets array same as undefined (uses all tickers)', async () => {
+        const results = await plugin.run([]);
 
         // Empty targets array should behave like undefined - audit all tickers
         const targets = results.map((r) => r.target);
