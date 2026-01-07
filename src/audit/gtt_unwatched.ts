@@ -1,6 +1,6 @@
 import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './base';
-import { IKiteManager } from '../manager/kite';
+import { IKiteRepo } from '../repo/kite';
 import { IWatchManager } from '../manager/watch';
 
 /**
@@ -13,7 +13,7 @@ export class GttUnwatchedAudit extends BaseAuditPlugin {
   public readonly title = 'GTT Unwatched Orders';
 
   constructor(
-    private readonly kiteManager: IKiteManager,
+    private readonly kiteRepo: IKiteRepo,
     private readonly watchManager: IWatchManager
   ) {
     super();
@@ -25,8 +25,8 @@ export class GttUnwatchedAudit extends BaseAuditPlugin {
    * @returns Promise resolving to array of audit results for unwatched GTT tickers
    */
   async run(): Promise<AuditResult[]> {
-    // Fetch GTT data from repository via manager
-    const gttData = await this.kiteManager.getGttRefereshEvent();
+    // Fetch GTT data from repository (breaks circular dependency with KiteManager)
+    const gttData = await this.kiteRepo.getGttRefereshEvent();
     const allGttTickers = Object.keys(gttData.orders);
 
     // Get watched categories (Orange, Red, Running Trades)

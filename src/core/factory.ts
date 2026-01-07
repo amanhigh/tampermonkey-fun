@@ -341,7 +341,7 @@ export class Factory {
     gttUnwatched: () =>
       Factory.getInstance(
         'auditPlugin_gttUnwatched',
-        () => new GttUnwatchedAudit(Factory.manager.kite(), Factory.manager.watch())
+        () => new GttUnwatchedAudit(Factory.repo.kite(), Factory.manager.watch())
       ),
 
     // Build registry last by explicitly registering each plugin (no loops)

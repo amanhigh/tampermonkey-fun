@@ -1,5 +1,5 @@
 import { GttUnwatchedAudit } from '../../src/audit/gtt_unwatched';
-import { IKiteManager } from '../../src/manager/kite';
+import { IKiteRepo } from '../../src/repo/kite';
 import { IWatchManager } from '../../src/manager/watch';
 import { GttRefreshEvent } from '../../src/models/gtt';
 import { Order } from '../../src/models/kite';
@@ -8,11 +8,11 @@ import { Order } from '../../src/models/kite';
 
 describe('GttUnwatchedAudit', () => {
   let plugin: GttUnwatchedAudit;
-  let kiteManager: jest.Mocked<IKiteManager>;
+  let kiteRepo: jest.Mocked<IKiteRepo>;
   let watchManager: jest.Mocked<IWatchManager>;
 
   beforeEach(() => {
-    kiteManager = {
+    kiteRepo = {
       getGttRefereshEvent: jest.fn(),
     } as any;
 
@@ -20,7 +20,7 @@ describe('GttUnwatchedAudit', () => {
       getCategory: jest.fn(),
     } as any;
 
-    plugin = new GttUnwatchedAudit(kiteManager, watchManager);
+    plugin = new GttUnwatchedAudit(kiteRepo, watchManager);
   });
 
   describe('validate', () => {
@@ -34,12 +34,12 @@ describe('GttUnwatchedAudit', () => {
   describe('run', () => {
     it('returns empty array when no GTT orders exist', async () => {
       const emptyGttEvent = new GttRefreshEvent();
-      kiteManager.getGttRefereshEvent.mockResolvedValue(emptyGttEvent);
+      kiteRepo.getGttRefereshEvent.mockResolvedValue(emptyGttEvent);
 
       const results = await plugin.run();
 
       expect(results).toEqual([]);
-      expect(kiteManager.getGttRefereshEvent).toHaveBeenCalledTimes(1);
+      expect(kiteRepo.getGttRefereshEvent).toHaveBeenCalledTimes(1);
     });
 
     it('returns empty array when all GTT tickers are in first watchlist (category 0)', async () => {
@@ -47,7 +47,7 @@ describe('GttUnwatchedAudit', () => {
       const mockOrder = new Order('AAPL', 10, 'single', '1', [100]);
       gttEvent.addOrder('AAPL', mockOrder);
 
-      kiteManager.getGttRefereshEvent.mockResolvedValue(gttEvent);
+      kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
       watchManager.getCategory.mockImplementation((index: number) => {
         if (index === 0) return new Set(['AAPL']); // Orange list
         if (index === 1) return new Set(); // Red list
@@ -68,7 +68,7 @@ describe('GttUnwatchedAudit', () => {
       const mockOrder = new Order('MSFT', 10, 'single', '1', [100]);
       gttEvent.addOrder('MSFT', mockOrder);
 
-      kiteManager.getGttRefereshEvent.mockResolvedValue(gttEvent);
+      kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
       watchManager.getCategory.mockImplementation((index: number) => {
         if (index === 0) return new Set(); // Orange list
         if (index === 1) return new Set(['MSFT']); // Red list
@@ -86,7 +86,7 @@ describe('GttUnwatchedAudit', () => {
       const mockOrder = new Order('GOOGL', 10, 'single', '1', [100]);
       gttEvent.addOrder('GOOGL', mockOrder);
 
-      kiteManager.getGttRefereshEvent.mockResolvedValue(gttEvent);
+      kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
       watchManager.getCategory.mockImplementation((index: number) => {
         if (index === 0) return new Set(); // Orange list
         if (index === 1) return new Set(); // Red list
@@ -104,7 +104,7 @@ describe('GttUnwatchedAudit', () => {
       const mockOrder = new Order('TSLA', 10, 'single', '1', [100]);
       gttEvent.addOrder('TSLA', mockOrder);
 
-      kiteManager.getGttRefereshEvent.mockResolvedValue(gttEvent);
+      kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
       watchManager.getCategory.mockImplementation((index: number) => {
         if (index === 0) return new Set(['AAPL']); // Orange list
         if (index === 1) return new Set(['MSFT']); // Red list
@@ -132,7 +132,7 @@ describe('GttUnwatchedAudit', () => {
       gttEvent.addOrder('TSLA', order1);
       gttEvent.addOrder('AMZN', order2);
 
-      kiteManager.getGttRefereshEvent.mockResolvedValue(gttEvent);
+      kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
       watchManager.getCategory.mockImplementation(() => new Set()); // All empty
 
       const results = await plugin.run();
@@ -156,7 +156,7 @@ describe('GttUnwatchedAudit', () => {
       gttEvent.addOrder('MSFT', new Order('MSFT', 10, 'single', '3', [200]));
       gttEvent.addOrder('AMZN', new Order('AMZN', 10, 'single', '4', [250]));
 
-      kiteManager.getGttRefereshEvent.mockResolvedValue(gttEvent);
+      kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
       watchManager.getCategory.mockImplementation((index: number) => {
         if (index === 0) return new Set(['AAPL']); // Orange list
         if (index === 1) return new Set(['MSFT']); // Red list
@@ -175,7 +175,7 @@ describe('GttUnwatchedAudit', () => {
       const gttEvent = new GttRefreshEvent();
       gttEvent.addOrder('AAPL', new Order('AAPL', 10, 'single', '1', [100]));
 
-      kiteManager.getGttRefereshEvent.mockResolvedValue(gttEvent);
+      kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
       watchManager.getCategory.mockImplementation((index: number) => {
         if (index === 0) return new Set(['AAPL']); // Orange list
         if (index === 1) return new Set(['AAPL']); // Red list (also has AAPL)
@@ -193,7 +193,7 @@ describe('GttUnwatchedAudit', () => {
       const gttEvent = new GttRefreshEvent();
       gttEvent.addOrder('UNWATCHED', new Order('UNWATCHED', 10, 'single', '1', [100]));
 
-      kiteManager.getGttRefereshEvent.mockResolvedValue(gttEvent);
+      kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
       watchManager.getCategory.mockImplementation(() => new Set());
 
       const results = await plugin.run();
