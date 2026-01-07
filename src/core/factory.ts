@@ -80,6 +80,7 @@ import { AuditRegistry } from '../audit/registry';
 import { AlertsAudit } from '../audit/alerts';
 import { TvMappingAudit } from '../audit/tv_mapping';
 import { GttUnwatchedAudit } from '../audit/gtt_unwatched';
+import { UnmappedPairsAudit } from '../audit/unmapped_pairs';
 
 /**
  * Project Architecture Overview
@@ -315,7 +316,7 @@ export class Factory {
     validation: (): IValidationManager =>
       Factory.getInstance(
         'validationManager',
-        () => new ValidationManager(Factory.repo.alert(), Factory.repo.pair(), Factory.repo.ticker())
+        () => new ValidationManager(Factory.repo.alert(), Factory.repo.pair(), Factory.audit.registry())
       ),
   };
 
@@ -344,6 +345,13 @@ export class Factory {
         () => new GttUnwatchedAudit(Factory.repo.kite(), Factory.manager.watch())
       ),
 
+    // Return a singleton UnmappedPairsAudit instance
+    unmappedPairs: () =>
+      Factory.getInstance(
+        'auditPlugin_unmappedPairs',
+        () => new UnmappedPairsAudit(Factory.repo.pair(), Factory.repo.ticker())
+      ),
+
     // Build registry last by explicitly registering each plugin (no loops)
     registry: () =>
       Factory.getInstance('auditRegistry', () => {
@@ -354,6 +362,8 @@ export class Factory {
         reg.register(Factory.audit.tvMapping());
         // GttUnwatchedAudit for identifying unwatched GTT orders
         reg.register(Factory.audit.gttUnwatched());
+        // UnmappedPairsAudit for identifying pairs without TradingView mappings
+        reg.register(Factory.audit.unmappedPairs());
         return reg;
       }),
   } as const;
