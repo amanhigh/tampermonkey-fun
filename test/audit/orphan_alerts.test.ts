@@ -140,71 +140,12 @@ describe('OrphanAlertsAudit', () => {
       expect(results[0].status).toBe('FAIL');
     });
 
-    it('supports targeted run for single pairId', async () => {
-      const orphanAlert = new Alert('1', 'ORPHAN_PAIR', 100);
-      const validPair = new PairInfo('Stock A', 'PAIR1', 'NSE', 'SYM1');
-
-      alertRepo.get.mockReturnValue([orphanAlert]);
-
-      pairRepo.getAllKeys.mockReturnValue(['INV1']);
-      pairRepo.get.mockReturnValue(validPair);
-
-      const results = await plugin.run(['ORPHAN_PAIR']);
-
-      expect(results).toHaveLength(1);
-      expect(results[0].target).toBe('ORPHAN_PAIR');
-      // getAllKeys should NOT be called in targeted mode for alerts
-      expect(alertRepo.getAllKeys).not.toHaveBeenCalled();
+    it('throws error when targets provided', async () => {
+      expect(() => plugin.run(['ORPHAN_PAIR'])).rejects.toThrow('does not support targeted mode');
     });
 
-    it('supports targeted run for multiple pairIds', async () => {
-      const orphanAlert1 = new Alert('1', 'ORPHAN1', 100);
-      const orphanAlert2 = new Alert('2', 'ORPHAN2', 150);
-      const validPair = new PairInfo('Stock A', 'PAIR1', 'NSE', 'SYM1');
-
-      alertRepo.get.mockImplementation((pairId: string) => {
-        if (pairId === 'ORPHAN1') return [orphanAlert1];
-        if (pairId === 'ORPHAN2') return [orphanAlert2];
-        return undefined;
-      });
-
-      pairRepo.getAllKeys.mockReturnValue(['INV1']);
-      pairRepo.get.mockReturnValue(validPair);
-
-      const results = await plugin.run(['ORPHAN1', 'ORPHAN2']);
-
-      expect(results).toHaveLength(2);
-      const targets = results.map((r) => r.target).sort();
-      expect(targets).toEqual(['ORPHAN1', 'ORPHAN2']);
-    });
-
-    it('handles empty targets array as batch mode (all alerts)', async () => {
-      const orphanAlert = new Alert('1', 'ORPHAN_PAIR', 100);
-      const validPair = new PairInfo('Stock A', 'PAIR1', 'NSE', 'SYM1');
-
-      alertRepo.getAllKeys.mockReturnValue(['ORPHAN_PAIR']);
-      alertRepo.get.mockReturnValue([orphanAlert]);
-
-      pairRepo.getAllKeys.mockReturnValue(['INV1']);
-      pairRepo.get.mockReturnValue(validPair);
-
-      const results = await plugin.run([]);
-
-      expect(results).toHaveLength(1);
-      // Empty array should trigger getAllKeys
-      expect(alertRepo.getAllKeys).toHaveBeenCalled();
-    });
-
-    it('skips alerts if get returns undefined/null', async () => {
-      alertRepo.getAllKeys.mockReturnValue(['PAIR1']);
-      alertRepo.get.mockReturnValue(undefined);
-
-      pairRepo.getAllKeys.mockReturnValue(['INV1']);
-      pairRepo.get.mockReturnValue(new PairInfo('Stock A', 'PAIR1', 'NSE', 'SYM1'));
-
-      const results = await plugin.run();
-
-      expect(results).toEqual([]);
+    it('throws error when empty targets array provided', async () => {
+      expect(() => plugin.run([])).rejects.toThrow('does not support targeted mode');
     });
 
     it('skips empty alert arrays', async () => {

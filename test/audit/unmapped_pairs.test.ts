@@ -137,60 +137,12 @@ describe('UnmappedPairsAudit', () => {
       expect(results[0].status).toBe('FAIL');
     });
 
-    it('supports targeted run for single ticker', async () => {
-      const pair = new PairInfo('TSLA', 'pair1', 'NSE', 'TSLA-EQ');
-
-      pairRepo.get.mockReturnValue(pair);
-      tickerRepo.getTvTicker.mockReturnValue(null);
-
-      const results = await plugin.run(['TSLA']);
-
-      expect(results).toHaveLength(1);
-      expect(results[0].target).toBe('TSLA');
-      // getAllKeys should NOT be called in targeted mode
-      expect(pairRepo.getAllKeys).not.toHaveBeenCalled();
+    it('throws error when targets provided', async () => {
+      expect(() => plugin.run(['TSLA'])).rejects.toThrow('does not support targeted mode');
     });
 
-    it('supports targeted run for multiple tickers', async () => {
-      const pair1 = new PairInfo('TSLA', 'pair1', 'NSE', 'TSLA-EQ');
-      const pair2 = new PairInfo('AMZN', 'pair2', 'NSE', 'AMZN-EQ');
-
-      pairRepo.get.mockImplementation((investingTicker: string) => {
-        if (investingTicker === 'TSLA') return pair1;
-        if (investingTicker === 'AMZN') return pair2;
-        return undefined;
-      });
-
-      tickerRepo.getTvTicker.mockReturnValue(null);
-
-      const results = await plugin.run(['TSLA', 'AMZN']);
-
-      expect(results).toHaveLength(2);
-      const targets = results.map((r) => r.target).sort();
-      expect(targets).toEqual(['AMZN', 'TSLA']);
-    });
-
-    it('handles empty targets array as batch mode (all pairs)', async () => {
-      const pair = new PairInfo('TSLA', 'pair1', 'NSE', 'TSLA-EQ');
-
-      pairRepo.getAllKeys.mockReturnValue(['TSLA']);
-      pairRepo.get.mockReturnValue(pair);
-      tickerRepo.getTvTicker.mockReturnValue(null);
-
-      const results = await plugin.run([]);
-
-      expect(results).toHaveLength(1);
-      // Empty array should trigger getAllKeys
-      expect(pairRepo.getAllKeys).toHaveBeenCalled();
-    });
-
-    it('skips pair if pairInfo is null (defensive)', async () => {
-      pairRepo.getAllKeys.mockReturnValue(['NONEXISTENT']);
-      pairRepo.get.mockReturnValue(undefined);
-
-      const results = await plugin.run();
-
-      expect(results).toEqual([]);
+    it('throws error when empty targets array provided', async () => {
+      expect(() => plugin.run([])).rejects.toThrow('does not support targeted mode');
     });
 
     it('verifies correct AuditResult structure', async () => {

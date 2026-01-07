@@ -20,27 +20,19 @@ export class UnmappedPairsAudit extends BaseAuditPlugin {
   }
 
   /**
-   * Runs unmapped pairs audit by checking each pair for TV ticker mapping.
-   * Supports both batch mode (all pairs) and targeted mode (specific tickers).
-   * @param targets Optional array of specific investing tickers to audit; if empty/undefined, audits all pairs
+   * Runs unmapped pairs audit by checking all pairs for TV ticker mapping.
+   * Audits entire repository - targets parameter not supported.
+   * @throws Error if targets array is provided
    * @returns Promise resolving to array of audit results for unmapped pairs
    */
   async run(targets?: string[]): Promise<AuditResult[]> {
-    // Determine which pairs to audit
-    const pairsToAudit = targets && targets.length > 0 ? targets : this.pairRepo.getAllKeys();
+    if (targets) {
+      throw new Error('Unmapped pairs audit does not support targeted mode');
+    }
 
     const results: AuditResult[] = [];
 
-    // Check each pair for TV ticker mapping
-    pairsToAudit.forEach((investingTicker: string) => {
-      const pairInfo = this.pairRepo.get(investingTicker);
-
-      // Skip if pair doesn't exist (defensive)
-      if (!pairInfo) {
-        return;
-      }
-
-      // Check if this pair has a TV ticker mapping
+    this.pairRepo.getAllKeys().forEach((investingTicker: string) => {
       const tvTicker = this.tickerRepo.getTvTicker(investingTicker);
       if (!tvTicker) {
         results.push({

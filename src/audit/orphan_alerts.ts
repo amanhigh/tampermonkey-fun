@@ -20,33 +20,28 @@ export class OrphanAlertsAudit extends BaseAuditPlugin {
   }
 
   /**
-   * Runs orphan alerts audit by checking each alert for a corresponding pair.
-   * Supports both batch mode (all alerts) and targeted mode (specific pairIds).
-   * @param targets Optional array of specific pairIds to audit; if empty/undefined, audits all alerts
+   * Runs orphan alerts audit by checking all alerts for corresponding pairs.
+   * Audits entire repository - targets parameter not supported.
+   * @throws Error if targets array is provided
    * @returns Promise resolving to array of audit results for orphan alerts
    */
   async run(targets?: string[]): Promise<AuditResult[]> {
-    // Determine which alerts to audit
-    const alertsToAudit = targets && targets.length > 0 ? targets : this.alertRepo.getAllKeys();
+    if (targets) {
+      throw new Error('Orphan alerts audit does not support targeted mode');
+    }
 
-    // Build set of valid pairIds
+    // Build set of valid pairIds from pairs
     const validPairIds = new Set<string>();
     this.pairRepo.getAllKeys().forEach((investingTicker: string) => {
-      const pairInfo = this.pairRepo.get(investingTicker);
-      if (pairInfo) {
-        validPairIds.add(pairInfo.pairId);
-      }
+      validPairIds.add(this.pairRepo.get(investingTicker)!.pairId);
     });
 
     const results: AuditResult[] = [];
 
-    // Check each alert for a matching pair
-    alertsToAudit.forEach((pairId: string) => {
-      const alerts = this.alertRepo.get(pairId);
-
-      // If this pairId doesn't exist in pairs
-      if (!validPairIds.has(pairId) && alerts && alerts.length > 0) {
-        // Report each alert with this orphan pairId
+    // Report alerts for pairIds not in validPairIds
+    this.alertRepo.getAllKeys().forEach((pairId: string) => {
+      if (!validPairIds.has(pairId)) {
+        const alerts = this.alertRepo.get(pairId)!;
         alerts.forEach(() => {
           results.push({
             pluginId: this.id,
