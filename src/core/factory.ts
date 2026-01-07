@@ -41,7 +41,6 @@ import { ITradingViewManager, TradingViewManager } from '../manager/tv';
 import { IPairManager, PairManager } from '../manager/pair';
 import { FnoRepo, IFnoRepo } from '../repo/fno';
 import { IFnoManager, FnoManager } from '../manager/fno';
-import { IValidationManager, ValidationManager } from '../manager/validation';
 
 // Handler Imports
 import { AlertHandler } from '../handler/alert';
@@ -313,11 +312,6 @@ export class Factory {
       Factory.getInstance(
         'alertFeedManager',
         () => new AlertFeedManager(Factory.manager.symbol(), Factory.manager.watch(), Factory.manager.recent())
-      ),
-    validation: (): IValidationManager =>
-      Factory.getInstance(
-        'validationManager',
-        () => new ValidationManager(Factory.repo.alert(), Factory.repo.pair(), Factory.audit.registry())
       ),
   };
 
@@ -596,7 +590,7 @@ export class Factory {
             Factory.util.smart(),
             Factory.handler.pair(),
             Factory.manager.ticker(),
-            Factory.manager.validation()
+            Factory.audit.registry()
           )
       ),
     picasso: (): IPicassoHandler =>
