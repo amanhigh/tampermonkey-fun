@@ -1,92 +1,81 @@
-import { AlertAudit, AlertState, AuditStateCounts } from '../models/alert';
-import { ITickerManager } from './ticker';
+import { AlertAudit, AlertState } from '../models/alert';
+import type { AuditResult } from '../models/audit';
 import { IAuditRepo } from '../repo/audit';
-import type { AuditRegistry } from '../audit/registry';
-import { AUDIT_IDS } from '../models/audit_ids';
 
 /**
- * Interface for Audit management operations
+ * Interface for Audit repository operations
+ * Manager handles all repo interactions (encapsulates data layer)
  */
 export interface IAuditManager {
   /**
-   * Initiates the auditing process for all alerts
-   * @returns State counts for audit results (for notification/summary)
+   * Resets audit data: clears all previous results and saves new batch
+   * Used when auditing all tickers at once
+   * @param results Raw audit results from plugin
    */
-  auditAlerts(): Promise<AuditStateCounts>;
+  resetAuditResults(results: AuditResult[]): void;
 
   /**
-   * Audits the current ticker and updates its state
-   */
-  auditCurrentTicker(): Promise<AlertAudit>;
-
-  /**
-   * Filters audit results by state
+   * Filters audit results by state from repository
    * @param state Alert state to filter by
    * @returns Filtered audit results
    */
   filterAuditResults(state: AlertState): AlertAudit[];
+
+  /**
+   * Updates audit state for a single ticker
+   * Does NOT clear existing data (unlike resetAuditResults)
+   * @param investingTicker The ticker to audit
+   * @param state The audit state
+   * @returns The updated audit
+   */
+  updateTickerAudit(investingTicker: string, state: AlertState): AlertAudit;
 }
 
 /**
- * Class representing the Audit Manager.
+ * Audit Manager - Handles all repository interactions for audit operations
+ * Does NOT handle plugin execution (plugins are run by handlers/managers)
+ *
+ * Responsibilities:
+ * - Save audit results to repository
+ * - Filter and retrieve audit results
+ * - Persist ticker-specific audit states
+ *
+ * NOT responsible for:
+ * - Running audit plugins
+ * - Getting plugins from registry
+ * - Formatting audit output
  */
 export class AuditManager implements IAuditManager {
-  private stateCounts: AuditStateCounts;
-
-  constructor(
-    private readonly auditRepo: IAuditRepo,
-    private readonly tickerManager: ITickerManager,
-    private readonly auditRegistry: AuditRegistry
-  ) {
-    this.stateCounts = new AuditStateCounts();
-  }
+  constructor(private readonly auditRepo: IAuditRepo) {}
 
   /********** Public Methods **********/
 
-  /** @inheritdoc */
-  async auditAlerts(): Promise<AuditStateCounts> {
-    // Always use registry-backed AlertsAudit plugin
-    const alertsPlugin = this.auditRegistry.mustGet(AUDIT_IDS.ALERTS);
-
+  /**
+   * Resets audit data: clears all previous results and saves new batch
+   * Used when auditing all tickers at once
+   */
+  resetAuditResults(results: AuditResult[]): void {
     this.auditRepo.clear();
-    this.stateCounts = new AuditStateCounts();
-
-    const results = await alertsPlugin.run();
-    // Save ALL FAIL results (NO_PAIR, NO_ALERTS, SINGLE_ALERT)
-    // Previously filtered out NO_PAIR, but that was a bug
     results.forEach((r) => {
       const state = r.code as AlertState;
-      this.stateCounts.increment(state);
       this.auditRepo.set(r.target, new AlertAudit(r.target, state));
     });
-
-    return this.stateCounts;
   }
 
-  /** @inheritdoc */
-  async auditCurrentTicker(): Promise<AlertAudit> {
-    const investingTicker = this.tickerManager.getInvestingTicker();
-    const alertsPlugin = this.auditRegistry.mustGet(AUDIT_IDS.ALERTS);
+  /**
+   * Filters audit results by state from repository
+   */
+  filterAuditResults(state: AlertState): AlertAudit[] {
+    return this.auditRepo.getFilteredAuditResults(state);
+  }
 
-    // Use plugin's targeted run for single ticker
-    const results = await alertsPlugin.run([investingTicker]);
-
-    let state: AlertState;
-    if (results.length > 0) {
-      // Plugin returned a FAIL result; use the code as state
-      state = results[0].code as AlertState;
-    } else {
-      // No results means PASS/VALID state
-      state = AlertState.VALID;
-    }
-
+  /**
+   * Updates audit state for a single ticker
+   * Does NOT clear existing data (unlike resetAuditResults)
+   */
+  updateTickerAudit(investingTicker: string, state: AlertState): AlertAudit {
     const audit = new AlertAudit(investingTicker, state);
     this.auditRepo.set(investingTicker, audit);
     return audit;
-  }
-
-  /** @inheritdoc */
-  filterAuditResults(state: AlertState): AlertAudit[] {
-    return this.auditRepo.getFilteredAuditResults(state);
   }
 }

@@ -199,17 +199,7 @@ export class Factory {
 
     imdb: (): IImdbManager => Factory.getInstance('imdbManager', () => new ImdbManager(Factory.repo.imdb())),
 
-    audit: (): IAuditManager =>
-      Factory.getInstance(
-        'auditManager',
-        () =>
-          new AuditManager(
-            Factory.repo.audit(),
-            Factory.manager.ticker(),
-            // Pass registry that already has all audit plugins registered
-            Factory.audit.registry()
-          )
-      ),
+    audit: (): IAuditManager => Factory.getInstance('auditManager', () => new AuditManager(Factory.repo.audit())),
 
     watchlist: (): ITradingViewWatchlistManager =>
       Factory.getInstance(
@@ -408,6 +398,8 @@ export class Factory {
         () =>
           new AuditHandler(
             Factory.manager.audit(),
+            Factory.audit.registry(),
+            Factory.manager.ticker(),
             Factory.util.ui(),
             Factory.handler.ticker(),
             Factory.manager.watch(),

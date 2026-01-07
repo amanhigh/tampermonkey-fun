@@ -2,9 +2,12 @@ import { Constants } from '../models/constant';
 import { AlertState } from '../models/alert';
 import { Color } from '../models/color';
 import { IAuditManager } from '../manager/audit';
+import { AuditRegistry } from '../audit/registry';
+import { AUDIT_IDS } from '../models/audit_ids';
 import { IUIUtil } from '../util/ui';
 import { Notifier } from '../util/notify';
 import { ITickerHandler } from './ticker';
+import { ITickerManager } from '../manager/ticker';
 import { IWatchManager } from '../manager/watch';
 import { ISymbolManager } from '../manager/symbol';
 import { IPairHandler } from './pair';
@@ -32,6 +35,8 @@ export class AuditHandler implements IAuditHandler {
   // eslint-disable-next-line max-params
   constructor(
     private readonly auditManager: IAuditManager,
+    private readonly auditRegistry: AuditRegistry,
+    private readonly tickerManager: ITickerManager,
     private readonly uiUtil: IUIUtil,
     private readonly tickerHandler: ITickerHandler,
     private readonly watchManager: IWatchManager,
@@ -44,13 +49,19 @@ export class AuditHandler implements IAuditHandler {
    * Updates the audit summary in the UI based on current results
    */
   public async auditAll(): Promise<void> {
-    // Populate audit data via manager (returns state counts)
-    const stateCounts = await this.auditManager.auditAlerts();
+    // Get AlertsAudit plugin from registry
+    const alertsPlugin = this.auditRegistry.mustGet(AUDIT_IDS.ALERTS);
 
-    // Calculate counts for notification
-    const noAlertsCount = stateCounts.getCount(AlertState.NO_ALERTS);
-    const singleAlertCount = stateCounts.getCount(AlertState.SINGLE_ALERT);
-    const noPairCount = stateCounts.getCount(AlertState.NO_PAIR);
+    // Run plugin to get audit results
+    const results = await alertsPlugin.run();
+
+    // Reset audit data and save new batch results
+    this.auditManager.resetAuditResults(results);
+
+    // Calculate counts from results for notification
+    const noAlertsCount = results.filter((r) => r.code === AlertState.NO_ALERTS).length;
+    const singleAlertCount = results.filter((r) => r.code === AlertState.SINGLE_ALERT).length;
+    const noPairCount = results.filter((r) => r.code === AlertState.NO_PAIR).length;
 
     // Format and show notification (handler controls UI)
     const summary =
@@ -128,8 +139,27 @@ export class AuditHandler implements IAuditHandler {
    * Refreshes audit button for current ticker
    */
   public async auditCurrent(): Promise<void> {
-    // Audit current ticker and update button states
-    const auditResult = await this.auditManager.auditCurrentTicker();
+    // Get current ticker
+    const investingTicker = this.tickerManager.getInvestingTicker();
+
+    // Get AlertsAudit plugin from registry
+    const alertsPlugin = this.auditRegistry.mustGet(AUDIT_IDS.ALERTS);
+
+    // Run plugin for current ticker
+    const results = await alertsPlugin.run([investingTicker]);
+
+    // Determine state from results
+    let state: AlertState;
+    if (results.length > 0) {
+      // Plugin returned a FAIL result; use the code as state
+      state = results[0].code as AlertState;
+    } else {
+      // No results means PASS/VALID state
+      state = AlertState.VALID;
+    }
+
+    // Update audit result via manager
+    const auditResult = this.auditManager.updateTickerAudit(investingTicker, state);
 
     // Find existing button for this ticker
     const $button = $(`#${this.getAuditButtonId(auditResult.investingTicker)}`);

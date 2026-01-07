@@ -1,12 +1,14 @@
 import { AuditHandler } from '../../src/handler/audit';
 import { IAuditManager } from '../../src/manager/audit';
+import { AuditRegistry } from '../../src/audit/registry';
 import { IUIUtil } from '../../src/util/ui';
 import { ITickerHandler } from '../../src/handler/ticker';
+import { ITickerManager } from '../../src/manager/ticker';
 import { IWatchManager } from '../../src/manager/watch';
 import { ISymbolManager } from '../../src/manager/symbol';
 import { IPairHandler } from '../../src/handler/pair';
 import { IKiteHandler } from '../../src/handler/kite';
-import { AlertState, AlertAudit, AuditStateCounts } from '../../src/models/alert';
+import { AlertState, AlertAudit } from '../../src/models/alert';
 import { Constants } from '../../src/models/constant';
 
 // Mock jQuery globally for DOM operations
@@ -38,6 +40,8 @@ jest.mock('../../src/util/notify', () => ({
 describe('AuditHandler', () => {
   let auditHandler: AuditHandler;
   let mockAuditManager: jest.Mocked<IAuditManager>;
+  let mockAuditRegistry: jest.Mocked<AuditRegistry>;
+  let mockTickerManager: jest.Mocked<ITickerManager>;
   let mockUIUtil: jest.Mocked<IUIUtil>;
   let mockTickerHandler: jest.Mocked<ITickerHandler>;
   let mockWatchManager: jest.Mocked<IWatchManager>;
@@ -55,12 +59,20 @@ describe('AuditHandler', () => {
     mockJQuery.css.mockReturnThis();
     mockJQuery.on.mockReturnThis();
 
-    const mockStateCounts = new AuditStateCounts();
-
     mockAuditManager = {
-      auditAlerts: jest.fn().mockResolvedValue(mockStateCounts),
-      auditCurrentTicker: jest.fn(),
+      resetAuditResults: jest.fn(),
       filterAuditResults: jest.fn().mockReturnValue([]),
+      updateTickerAudit: jest.fn(),
+    } as any;
+
+    mockAuditRegistry = {
+      mustGet: jest.fn(),
+      register: jest.fn(),
+      list: jest.fn().mockReturnValue([]),
+    } as any;
+
+    mockTickerManager = {
+      getInvestingTicker: jest.fn(),
     } as any;
 
     mockUIUtil = {
@@ -90,6 +102,8 @@ describe('AuditHandler', () => {
 
     auditHandler = new AuditHandler(
       mockAuditManager,
+      mockAuditRegistry,
+      mockTickerManager,
       mockUIUtil,
       mockTickerHandler,
       mockWatchManager,
@@ -102,8 +116,10 @@ describe('AuditHandler', () => {
   describe('CSS Selector ID Generation', () => {
     // Test the private getAuditButtonId method by testing its behavior through public methods
     it('should generate CSS-safe IDs for basic ticker symbols', async () => {
-      const mockAlertAudit = new AlertAudit('RELIANCE', AlertState.NO_ALERTS);
-      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
+      mockTickerManager.getInvestingTicker.mockReturnValue('RELIANCE');
+      mockAuditManager.updateTickerAudit.mockReturnValue(new AlertAudit('RELIANCE', AlertState.NO_ALERTS));
+      const mockPlugin = { run: jest.fn().mockResolvedValue([]) };
+      mockAuditRegistry.mustGet.mockReturnValue(mockPlugin as any);
       mockWatchManager.isWatched.mockReturnValue(false);
 
       await auditHandler.auditCurrent();
@@ -113,8 +129,10 @@ describe('AuditHandler', () => {
     });
 
     it('should escape equals signs in US treasury symbols', async () => {
-      const mockAlertAudit = new AlertAudit('US10YT=X', AlertState.NO_ALERTS);
-      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
+      mockTickerManager.getInvestingTicker.mockReturnValue('US10YT=X');
+      mockAuditManager.updateTickerAudit.mockReturnValue(new AlertAudit('US10YT=X', AlertState.NO_ALERTS));
+      const mockPlugin = { run: jest.fn().mockResolvedValue([]) };
+      mockAuditRegistry.mustGet.mockReturnValue(mockPlugin as any);
       mockWatchManager.isWatched.mockReturnValue(false);
 
       await auditHandler.auditCurrent();
@@ -124,44 +142,50 @@ describe('AuditHandler', () => {
     });
 
     it('should escape ampersands in corporate symbols', async () => {
-      const mockAlertAudits = [
-        new AlertAudit('M&M', AlertState.NO_ALERTS),
-        new AlertAudit('AT&T', AlertState.SINGLE_ALERT),
+      const testCases = [
+        { ticker: 'M&M', expected: '#audit-M-M' },
+        { ticker: 'AT&T', expected: '#audit-AT-T' },
       ];
 
-      for (const result of mockAlertAudits) {
+      for (const { ticker, expected } of testCases) {
         jest.clearAllMocks();
-        mockAuditManager.auditCurrentTicker.mockResolvedValue(result);
+        mockTickerManager.getInvestingTicker.mockReturnValue(ticker);
+        mockAuditManager.updateTickerAudit.mockReturnValue(new AlertAudit(ticker, AlertState.NO_ALERTS));
+        const mockPlugin = { run: jest.fn().mockResolvedValue([]) };
+        mockAuditRegistry.mustGet.mockReturnValue(mockPlugin as any);
         mockWatchManager.isWatched.mockReturnValue(false);
 
         await auditHandler.auditCurrent();
 
-        const expectedId = `#audit-${result.investingTicker}`.replace(/[^a-zA-Z0-9-_#]/g, '-');
-        expect($).toHaveBeenCalledWith(expectedId);
+        expect($).toHaveBeenCalledWith(expected);
       }
     });
 
     it('should escape colons in exchange-prefixed symbols', async () => {
-      const mockAlertAudits = [
-        new AlertAudit('NSE:RELIANCE', AlertState.NO_ALERTS),
-        new AlertAudit('BINANCE:BTCUSDT', AlertState.SINGLE_ALERT),
+      const testCases = [
+        { ticker: 'NSE:RELIANCE', expected: '#audit-NSE-RELIANCE' },
+        { ticker: 'BINANCE:BTCUSDT', expected: '#audit-BINANCE-BTCUSDT' },
       ];
 
-      for (const result of mockAlertAudits) {
+      for (const { ticker, expected } of testCases) {
         jest.clearAllMocks();
-        mockAuditManager.auditCurrentTicker.mockResolvedValue(result);
+        mockTickerManager.getInvestingTicker.mockReturnValue(ticker);
+        mockAuditManager.updateTickerAudit.mockReturnValue(new AlertAudit(ticker, AlertState.NO_ALERTS));
+        const mockPlugin = { run: jest.fn().mockResolvedValue([]) };
+        mockAuditRegistry.mustGet.mockReturnValue(mockPlugin as any);
         mockWatchManager.isWatched.mockReturnValue(false);
 
         await auditHandler.auditCurrent();
 
-        const expectedId = `#audit-${result.investingTicker}`.replace(/[^a-zA-Z0-9-_#]/g, '-');
-        expect($).toHaveBeenCalledWith(expectedId);
+        expect($).toHaveBeenCalledWith(expected);
       }
     });
 
     it('should escape complex composite symbols', async () => {
-      const mockAlertAudit = new AlertAudit('GOLD/MCX:GOLD1!', AlertState.NO_ALERTS);
-      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
+      mockTickerManager.getInvestingTicker.mockReturnValue('GOLD/MCX:GOLD1!');
+      mockAuditManager.updateTickerAudit.mockReturnValue(new AlertAudit('GOLD/MCX:GOLD1!', AlertState.NO_ALERTS));
+      const mockPlugin = { run: jest.fn().mockResolvedValue([]) };
+      mockAuditRegistry.mustGet.mockReturnValue(mockPlugin as any);
       mockWatchManager.isWatched.mockReturnValue(false);
 
       await auditHandler.auditCurrent();
@@ -171,8 +195,10 @@ describe('AuditHandler', () => {
     });
 
     it('should handle multiple special characters', async () => {
-      const mockAlertAudit = new AlertAudit('TEST@#$%^&*()', AlertState.NO_ALERTS);
-      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
+      mockTickerManager.getInvestingTicker.mockReturnValue('TEST@#$%^&*()');
+      mockAuditManager.updateTickerAudit.mockReturnValue(new AlertAudit('TEST@#$%^&*()', AlertState.NO_ALERTS));
+      const mockPlugin = { run: jest.fn().mockResolvedValue([]) };
+      mockAuditRegistry.mustGet.mockReturnValue(mockPlugin as any);
       mockWatchManager.isWatched.mockReturnValue(false);
 
       await auditHandler.auditCurrent();
@@ -182,8 +208,10 @@ describe('AuditHandler', () => {
     });
 
     it('should preserve hyphens and underscores', async () => {
-      const mockAlertAudit = new AlertAudit('VALID-ID_123', AlertState.NO_ALERTS);
-      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
+      mockTickerManager.getInvestingTicker.mockReturnValue('VALID-ID_123');
+      mockAuditManager.updateTickerAudit.mockReturnValue(new AlertAudit('VALID-ID_123', AlertState.NO_ALERTS));
+      const mockPlugin = { run: jest.fn().mockResolvedValue([]) };
+      mockAuditRegistry.mustGet.mockReturnValue(mockPlugin as any);
       mockWatchManager.isWatched.mockReturnValue(false);
 
       await auditHandler.auditCurrent();
@@ -193,8 +221,10 @@ describe('AuditHandler', () => {
     });
 
     it('should handle empty ticker', async () => {
-      const mockAlertAudit = new AlertAudit('', AlertState.NO_ALERTS);
-      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
+      mockTickerManager.getInvestingTicker.mockReturnValue('');
+      mockAuditManager.updateTickerAudit.mockReturnValue(new AlertAudit('', AlertState.NO_ALERTS));
+      const mockPlugin = { run: jest.fn().mockResolvedValue([]) };
+      mockAuditRegistry.mustGet.mockReturnValue(mockPlugin as any);
       mockWatchManager.isWatched.mockReturnValue(false);
 
       await auditHandler.auditCurrent();
@@ -203,8 +233,10 @@ describe('AuditHandler', () => {
     });
 
     it('should handle whitespace in ticker', async () => {
-      const mockAlertAudit = new AlertAudit('   ', AlertState.NO_ALERTS);
-      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
+      mockTickerManager.getInvestingTicker.mockReturnValue('   ');
+      mockAuditManager.updateTickerAudit.mockReturnValue(new AlertAudit('   ', AlertState.NO_ALERTS));
+      const mockPlugin = { run: jest.fn().mockResolvedValue([]) };
+      mockAuditRegistry.mustGet.mockReturnValue(mockPlugin as any);
       mockWatchManager.isWatched.mockReturnValue(false);
 
       await auditHandler.auditCurrent();
@@ -216,6 +248,11 @@ describe('AuditHandler', () => {
 
   describe('auditAll', () => {
     beforeEach(() => {
+      // Mock AlertsAudit plugin with run() method
+      const mockPlugin = {
+        run: jest.fn().mockResolvedValue([]),
+      };
+      mockAuditRegistry.mustGet.mockReturnValue(mockPlugin as any);
       mockAuditManager.filterAuditResults.mockReturnValue([]);
     });
 
@@ -272,9 +309,22 @@ describe('AuditHandler', () => {
   });
 
   describe('auditCurrent', () => {
+    beforeEach(() => {
+      // Setup for auditCurrent tests
+      mockTickerManager.getInvestingTicker.mockReturnValue('TICKER1');
+      mockAuditManager.updateTickerAudit.mockImplementation((ticker, state) => new AlertAudit(ticker, state));
+
+      // Mock AlertsAudit plugin
+      const mockPlugin = {
+        run: jest.fn().mockResolvedValue([]),
+      };
+      mockAuditRegistry.mustGet.mockReturnValue(mockPlugin as any);
+    });
+
     it('should remove button for valid alerts', async () => {
-      const mockAlertAudit = new AlertAudit('TICKER1', AlertState.VALID);
-      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
+      mockAuditManager.updateTickerAudit.mockReturnValue(new AlertAudit('TICKER1', AlertState.VALID));
+      const mockPlugin = { run: jest.fn().mockResolvedValue([]) };
+      mockAuditRegistry.mustGet.mockReturnValue(mockPlugin as any);
 
       await auditHandler.auditCurrent();
 
@@ -283,8 +333,9 @@ describe('AuditHandler', () => {
     });
 
     it('should remove button for watched tickers', async () => {
-      const mockAlertAudit = new AlertAudit('TICKER1', AlertState.NO_ALERTS);
-      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
+      mockAuditManager.updateTickerAudit.mockReturnValue(new AlertAudit('TICKER1', AlertState.NO_ALERTS));
+      const mockPlugin = { run: jest.fn().mockResolvedValue([]) };
+      mockAuditRegistry.mustGet.mockReturnValue(mockPlugin as any);
       mockSymbolManager.investingToTv.mockReturnValue('TV_TICKER');
       mockWatchManager.isWatched.mockReturnValue(true);
 
@@ -295,8 +346,9 @@ describe('AuditHandler', () => {
     });
 
     it('should replace existing button with updated state', async () => {
-      const mockAlertAudit = new AlertAudit('TICKER1', AlertState.SINGLE_ALERT);
-      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
+      mockAuditManager.updateTickerAudit.mockReturnValue(new AlertAudit('TICKER1', AlertState.SINGLE_ALERT));
+      const mockPlugin = { run: jest.fn().mockResolvedValue([]) };
+      mockAuditRegistry.mustGet.mockReturnValue(mockPlugin as any);
       mockWatchManager.isWatched.mockReturnValue(false);
       mockJQuery.length = 1; // Simulate button exists
 
@@ -307,8 +359,9 @@ describe('AuditHandler', () => {
     });
 
     it('should append new button if none exists', async () => {
-      const mockAlertAudit = new AlertAudit('TICKER1', AlertState.NO_ALERTS);
-      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
+      mockAuditManager.updateTickerAudit.mockReturnValue(new AlertAudit('TICKER1', AlertState.NO_ALERTS));
+      const mockPlugin = { run: jest.fn().mockResolvedValue([]) };
+      mockAuditRegistry.mustGet.mockReturnValue(mockPlugin as any);
       mockWatchManager.isWatched.mockReturnValue(false);
       mockJQuery.length = 0; // Simulate button doesn't exist
 
@@ -320,9 +373,15 @@ describe('AuditHandler', () => {
   });
 
   describe('Button Context Menu', () => {
+    beforeEach(() => {
+      // Setup for button context menu tests
+      mockTickerManager.getInvestingTicker.mockReturnValue('TEST_TICKER');
+      mockAuditManager.updateTickerAudit.mockReturnValue(new AlertAudit('TEST_TICKER', AlertState.NO_ALERTS));
+      const mockPlugin = { run: jest.fn().mockResolvedValue([]) };
+      mockAuditRegistry.mustGet.mockReturnValue(mockPlugin as any);
+    });
+
     it('should handle right-click to delete pair mapping', async () => {
-      const mockAlertAudit = new AlertAudit('TEST_TICKER', AlertState.NO_ALERTS);
-      mockAuditManager.auditCurrentTicker.mockResolvedValue(mockAlertAudit);
       mockWatchManager.isWatched.mockReturnValue(false);
 
       await auditHandler.auditCurrent();
