@@ -1,5 +1,6 @@
 import { Constants } from '../models/constant';
 import { AlertState } from '../models/alert';
+import { Color } from '../models/color';
 import { IAuditManager } from '../manager/audit';
 import { IUIUtil } from '../util/ui';
 import { Notifier } from '../util/notify';
@@ -43,8 +44,21 @@ export class AuditHandler implements IAuditHandler {
    * Updates the audit summary in the UI based on current results
    */
   public async auditAll(): Promise<void> {
-    // Populate audit data via manager (emits purple summary)
-    await this.auditManager.auditAlerts();
+    // Populate audit data via manager (returns state counts)
+    const stateCounts = await this.auditManager.auditAlerts();
+
+    // Calculate counts for notification
+    const noAlertsCount = stateCounts.getCount(AlertState.NO_ALERTS);
+    const singleAlertCount = stateCounts.getCount(AlertState.SINGLE_ALERT);
+    const noPairCount = stateCounts.getCount(AlertState.NO_PAIR);
+
+    // Format and show notification (handler controls UI)
+    const summary =
+      `Audit Results: ` +
+      `${singleAlertCount} SINGLE_ALERT, ` +
+      `${noAlertsCount} NO_ALERTS, ` +
+      `${noPairCount} NO_PAIR`;
+    Notifier.message(summary, Color.PURPLE, 10000);
 
     // Render alerts UI (header + buttons) before GTT audit
     this.auditAlerts();

@@ -1,6 +1,4 @@
 import { AlertAudit, AlertState, AuditStateCounts } from '../models/alert';
-import { Notifier } from '../util/notify';
-import { Color } from '../models/color';
 import { ITickerManager } from './ticker';
 import { IAuditRepo } from '../repo/audit';
 import type { AuditRegistry } from '../audit/registry';
@@ -12,8 +10,9 @@ import { AUDIT_IDS } from '../models/audit_ids';
 export interface IAuditManager {
   /**
    * Initiates the auditing process for all alerts
+   * @returns State counts for audit results (for notification/summary)
    */
-  auditAlerts(): Promise<void>;
+  auditAlerts(): Promise<AuditStateCounts>;
 
   /**
    * Audits the current ticker and updates its state
@@ -24,8 +23,7 @@ export interface IAuditManager {
    * Filters audit results by state
    * @param state Alert state to filter by
    * @returns Filtered audit results
-   * @private
-   * */
+   */
   filterAuditResults(state: AlertState): AlertAudit[];
 }
 
@@ -46,7 +44,7 @@ export class AuditManager implements IAuditManager {
   /********** Public Methods **********/
 
   /** @inheritdoc */
-  async auditAlerts(): Promise<void> {
+  async auditAlerts(): Promise<AuditStateCounts> {
     // Always use registry-backed AlertsAudit plugin
     const alertsPlugin = this.auditRegistry.mustGet(AUDIT_IDS.ALERTS);
 
@@ -54,19 +52,15 @@ export class AuditManager implements IAuditManager {
     this.stateCounts = new AuditStateCounts();
 
     const results = await alertsPlugin.run();
-    results
-      .filter((r) => r.code === AlertState.NO_ALERTS || r.code === AlertState.SINGLE_ALERT)
-      .forEach((r) => {
-        const state = r.code as AlertState;
-        this.stateCounts.increment(state);
-        this.auditRepo.set(r.target, new AlertAudit(r.target, state));
-      });
+    // Save ALL FAIL results (NO_PAIR, NO_ALERTS, SINGLE_ALERT)
+    // Previously filtered out NO_PAIR, but that was a bug
+    results.forEach((r) => {
+      const state = r.code as AlertState;
+      this.stateCounts.increment(state);
+      this.auditRepo.set(r.target, new AlertAudit(r.target, state));
+    });
 
-    Notifier.message(this.getAuditSummary(), Color.PURPLE, 10000);
-  }
-
-  getAuditSummary(): string {
-    return this.stateCounts.getFormattedSummary();
+    return this.stateCounts;
   }
 
   /** @inheritdoc */

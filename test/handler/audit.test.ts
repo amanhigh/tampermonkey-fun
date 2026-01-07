@@ -6,7 +6,7 @@ import { IWatchManager } from '../../src/manager/watch';
 import { ISymbolManager } from '../../src/manager/symbol';
 import { IPairHandler } from '../../src/handler/pair';
 import { IKiteHandler } from '../../src/handler/kite';
-import { AlertState, AlertAudit } from '../../src/models/alert';
+import { AlertState, AlertAudit, AuditStateCounts } from '../../src/models/alert';
 import { Constants } from '../../src/models/constant';
 
 // Mock jQuery globally for DOM operations
@@ -31,6 +31,7 @@ jest.mock('../../src/util/notify', () => ({
     success: jest.fn(),
     info: jest.fn(),
     warn: jest.fn(),
+    message: jest.fn(),
   },
 }));
 
@@ -54,10 +55,12 @@ describe('AuditHandler', () => {
     mockJQuery.css.mockReturnThis();
     mockJQuery.on.mockReturnThis();
 
+    const mockStateCounts = new AuditStateCounts();
+
     mockAuditManager = {
-      auditAlerts: jest.fn(),
-      filterAuditResults: jest.fn(),
+      auditAlerts: jest.fn().mockResolvedValue(mockStateCounts),
       auditCurrentTicker: jest.fn(),
+      filterAuditResults: jest.fn().mockReturnValue([]),
     } as any;
 
     mockUIUtil = {
@@ -214,7 +217,6 @@ describe('AuditHandler', () => {
   describe('auditAll', () => {
     beforeEach(() => {
       mockAuditManager.filterAuditResults.mockReturnValue([]);
-      mockAuditManager.auditAlerts.mockResolvedValue(undefined);
     });
 
     it('should clear existing audit area', async () => {
