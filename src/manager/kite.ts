@@ -5,6 +5,7 @@ import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../models/gtt';
 import { IKiteRepo } from '../repo/kite';
 import type { AuditRegistry } from '../audit/registry';
 import { AuditResult } from '../models/audit';
+import { AUDIT_IDS } from '../models/audit_ids';
 
 /**
  * Interface for managing Kite trading platform operations
@@ -56,7 +57,7 @@ export class KiteManager implements IKiteManager {
 
   /** @inheritdoc */
   async auditGttUnwatched(): Promise<AuditResult[]> {
-    const plugin = this.auditRegistry.mustGet('gtt-unwatched');
+    const plugin = this.auditRegistry.mustGet(AUDIT_IDS.GTT_UNWATCHED);
     return await plugin.run();
   }
 

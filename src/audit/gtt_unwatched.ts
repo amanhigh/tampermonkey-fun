@@ -2,6 +2,7 @@ import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './base';
 import { IKiteRepo } from '../repo/kite';
 import { IWatchManager } from '../manager/watch';
+import { AUDIT_IDS } from '../models/audit_ids';
 
 /**
  * GTT Unwatched Audit plugin: identifies GTT orders for tickers not in watchlists.
@@ -9,7 +10,7 @@ import { IWatchManager } from '../manager/watch';
  * Emits FAIL results only for unwatched GTT orders.
  */
 export class GttUnwatchedAudit extends BaseAuditPlugin {
-  public readonly id = 'gtt-unwatched';
+  public readonly id = AUDIT_IDS.GTT_UNWATCHED;
   public readonly title = 'GTT Unwatched Orders';
 
   constructor(

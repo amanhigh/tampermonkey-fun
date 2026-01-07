@@ -2,6 +2,7 @@ import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './base';
 import { IPairRepo } from '../repo/pair';
 import { ITickerRepo } from '../repo/ticker';
+import { AUDIT_IDS } from '../models/audit_ids';
 
 /**
  * Unmapped Pairs Audit plugin: identifies pairs without TradingView ticker mappings.
@@ -9,7 +10,7 @@ import { ITickerRepo } from '../repo/ticker';
  * Emits FAIL results only for pairs missing TV mappings.
  */
 export class UnmappedPairsAudit extends BaseAuditPlugin {
-  public readonly id = 'unmapped-pairs';
+  public readonly id = AUDIT_IDS.UNMAPPED_PAIRS;
   public readonly title = 'Unmapped Pairs';
 
   constructor(

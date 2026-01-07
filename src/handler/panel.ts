@@ -5,6 +5,7 @@ import { Notifier } from '../util/notify';
 import { Color } from '../models/color';
 import type { AuditRegistry } from '../audit/registry';
 import { AuditResult } from '../models/audit';
+import { AUDIT_IDS } from '../models/audit_ids';
 
 export interface IPanelHandler {
   showPanel(): Promise<void>;
@@ -70,8 +71,8 @@ export class PanelHandler implements IPanelHandler {
    * @returns Combined array of audit results
    */
   private async executeValidationAudits(): Promise<AuditResult[]> {
-    const orphanPlugin = this.auditRegistry.mustGet('orphan-alerts');
-    const unmappedPlugin = this.auditRegistry.mustGet('unmapped-pairs');
+    const orphanPlugin = this.auditRegistry.mustGet(AUDIT_IDS.ORPHAN_ALERTS);
+    const unmappedPlugin = this.auditRegistry.mustGet(AUDIT_IDS.UNMAPPED_PAIRS);
 
     const orphanResults = await orphanPlugin.run();
     const unmappedResults = await unmappedPlugin.run();

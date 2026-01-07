@@ -4,6 +4,7 @@ import { Color } from '../models/color';
 import { ITickerManager } from './ticker';
 import { IAuditRepo } from '../repo/audit';
 import type { AuditRegistry } from '../audit/registry';
+import { AUDIT_IDS } from '../models/audit_ids';
 
 /**
  * Interface for Audit management operations
@@ -47,7 +48,7 @@ export class AuditManager implements IAuditManager {
   /** @inheritdoc */
   async auditAlerts(): Promise<void> {
     // Always use registry-backed AlertsAudit plugin
-    const alertsPlugin = this.auditRegistry.mustGet('alerts');
+    const alertsPlugin = this.auditRegistry.mustGet(AUDIT_IDS.ALERTS);
 
     this.auditRepo.clear();
     this.stateCounts = new AuditStateCounts();
@@ -71,7 +72,7 @@ export class AuditManager implements IAuditManager {
   /** @inheritdoc */
   async auditCurrentTicker(): Promise<AlertAudit> {
     const investingTicker = this.tickerManager.getInvestingTicker();
-    const alertsPlugin = this.auditRegistry.mustGet('alerts');
+    const alertsPlugin = this.auditRegistry.mustGet(AUDIT_IDS.ALERTS);
 
     // Use plugin's targeted run for single ticker
     const results = await alertsPlugin.run([investingTicker]);

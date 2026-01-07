@@ -3,13 +3,14 @@ import { BaseAuditPlugin } from './base';
 import { IPairManager } from '../manager/pair';
 import { IAlertManager } from '../manager/alert';
 import { AlertState } from '../models/alert';
+import { AUDIT_IDS } from '../models/audit_ids';
 
 /**
  * Minimal Alerts audit plugin: classifies tickers using existing managers
  * and returns findings for non-VALID states.
  */
 export class AlertsAudit extends BaseAuditPlugin {
-  public readonly id = 'alerts';
+  public readonly id = AUDIT_IDS.ALERTS;
   public readonly title = 'Alerts Coverage';
 
   constructor(

@@ -2,6 +2,7 @@ import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './base';
 import { IAlertRepo } from '../repo/alert';
 import { IPairRepo } from '../repo/pair';
+import { AUDIT_IDS } from '../models/audit_ids';
 
 /**
  * Orphan Alerts Audit plugin: identifies alerts without corresponding pairs.
@@ -9,7 +10,7 @@ import { IPairRepo } from '../repo/pair';
  * Emits FAIL results only for alerts with no matching pair.
  */
 export class OrphanAlertsAudit extends BaseAuditPlugin {
-  public readonly id = 'orphan-alerts';
+  public readonly id = AUDIT_IDS.ORPHAN_ALERTS;
   public readonly title = 'Orphan Alerts';
 
   constructor(
