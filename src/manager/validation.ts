@@ -22,41 +22,41 @@ export class ValidationManager implements IValidationManager {
   public async validate(): Promise<ValidationResults> {
     const results = new ValidationResults();
 
-    // Run orphan alerts validation
-    this.validateAlertsToPairs(results);
+    // Run orphan alerts validation via plugin
+    await this.validateAlertsToPairsViaPlugin(results);
 
-    // Run unmapped pairs validation via plugin (replaces legacy logic)
+    // Run unmapped pairs validation via plugin
     await this.validatePairsToTickersViaPlugin(results);
 
     return results;
   }
 
   /**
-   * Validates that all alerts have corresponding pairs
+   * Validates that all alerts have corresponding pairs via plugin
+   * Replaces legacy validateAlertsToPairs() logic
    * @private
    */
-  private validateAlertsToPairs(results: ValidationResults): void {
-    // Get all alert keys and create set of pair IDs
-    const alertKeys = this.alertRepo.getAllKeys();
-    const pairIds = new Set<string>();
-
-    // Build set of pair IDs from all pairs
-    this.pairRepo.getAllKeys().forEach((ticker) => {
-      const pairInfo = this.pairRepo.get(ticker);
-      if (pairInfo) {
-        pairIds.add(pairInfo.pairId);
+  private async validateAlertsToPairsViaPlugin(results: ValidationResults): Promise<void> {
+    try {
+      const orphanAlertsPlugin = this.auditRegistry.get('orphan-alerts');
+      if (!orphanAlertsPlugin) {
+        console.warn('OrphanAlertsAudit plugin not found in registry');
+        return;
       }
-    });
 
-    // For each alert key
-    alertKeys.forEach((pairId: string) => {
-      const alerts = this.alertRepo.get(pairId) ?? [];
+      // Run the plugin to get orphan alerts
+      const auditResults = await orphanAlertsPlugin.run();
 
-      // If no pair exists for this alert's pairId
-      if (!pairIds.has(pairId)) {
-        alerts.forEach((alert) => results.addOrphanAlert(alert));
-      }
-    });
+      // Convert audit results to orphan alerts in ValidationResults
+      auditResults.forEach((auditResult) => {
+        const alerts = this.alertRepo.get(auditResult.target);
+        if (alerts) {
+          alerts.forEach((alert) => results.addOrphanAlert(alert));
+        }
+      });
+    } catch (error) {
+      console.error('Error running OrphanAlertsAudit plugin:', error);
+    }
   }
 
   /**

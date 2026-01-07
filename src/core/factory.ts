@@ -81,6 +81,7 @@ import { AlertsAudit } from '../audit/alerts';
 import { TvMappingAudit } from '../audit/tv_mapping';
 import { GttUnwatchedAudit } from '../audit/gtt_unwatched';
 import { UnmappedPairsAudit } from '../audit/unmapped_pairs';
+import { OrphanAlertsAudit } from '../audit/orphan_alerts';
 
 /**
  * Project Architecture Overview
@@ -352,6 +353,13 @@ export class Factory {
         () => new UnmappedPairsAudit(Factory.repo.pair(), Factory.repo.ticker())
       ),
 
+    // Return a singleton OrphanAlertsAudit instance
+    orphanAlerts: () =>
+      Factory.getInstance(
+        'auditPlugin_orphanAlerts',
+        () => new OrphanAlertsAudit(Factory.repo.alert(), Factory.repo.pair())
+      ),
+
     // Build registry last by explicitly registering each plugin (no loops)
     registry: () =>
       Factory.getInstance('auditRegistry', () => {
@@ -364,6 +372,8 @@ export class Factory {
         reg.register(Factory.audit.gttUnwatched());
         // UnmappedPairsAudit for identifying pairs without TradingView mappings
         reg.register(Factory.audit.unmappedPairs());
+        // OrphanAlertsAudit for identifying alerts without corresponding pairs
+        reg.register(Factory.audit.orphanAlerts());
         return reg;
       }),
   } as const;

@@ -44,18 +44,23 @@ export class PanelHandler implements IPanelHandler {
         await this.pairHandler.deletePairInfo(searchTicker);
         break;
       case PanelAction.VALIDATE_DATA:
-        this.handleValidation();
+        await this.handleValidation();
         break;
     }
   }
 
-  private handleValidation(): void {
-    const results = this.validationManager.validate();
+  private async handleValidation(): Promise<void> {
+    try {
+      const results = await this.validationManager.validate();
 
-    // Show formatted summary in notification
-    Notifier.message(results.getFormattedSummary(), Color.ROYAL_BLUE, 10000);
+      // Show formatted summary in notification
+      Notifier.message(results.getFormattedSummary(), Color.ROYAL_BLUE, 10000);
 
-    // Log details to console
-    results.logDetailedResults();
+      // Log details to console
+      results.logDetailedResults();
+    } catch (error) {
+      console.error('Validation failed:', error);
+      Notifier.message('Data validation failed. Check console for details.', Color.ROYAL_BLUE, 5000);
+    }
   }
 }

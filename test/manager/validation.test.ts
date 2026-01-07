@@ -53,32 +53,93 @@ describe('ValidationManager', () => {
     validationManager = new ValidationManager(mockAlertRepo, mockPairRepo, mockAuditRegistry);
   });
 
-  describe('Alert to Pair Validation', () => {
-    test('should identify orphan alerts', async () => {
-      // Setup
-      const orphanAlert = new Alert('1', 'orphanPair', 100);
-      mockAlertRepo.getAllKeys.mockReturnValue(['orphanPair']);
-      mockAlertRepo.get.mockImplementation((key: string) => (key === 'orphanPair' ? [orphanAlert] : []));
-      mockPairRepo.getAllKeys.mockReturnValue(['HDV']);
-      mockPairRepo.get.mockImplementation((key: string) =>
-        key === 'HDV' ? new PairInfo('HDFC', 'otherPair', 'NSE', 'HDV') : undefined
-      );
+  describe('Alert to Pair Validation (via Plugin)', () => {
+    test('should handle when OrphanAlertsAudit plugin is not available', async () => {
+      // Setup - plugin returns undefined (not available)
+      mockAlertRepo.getAllKeys.mockReturnValue([]);
+      mockPairRepo.getAllKeys.mockReturnValue([]);
       mockAuditRegistry.get.mockReturnValue(undefined);
+
+      // Execute
+      const results = await validationManager.validate();
+
+      // Verify - should still complete without error
+      expect(results.getOrphanAlertCount()).toBe(0);
+    });
+
+    test('should process orphan alerts from plugin results', async () => {
+      // Setup - mock plugin with orphan alerts result
+      const orphanAlert = new Alert('1', 'orphanPair', 100);
+      const validPair = new PairInfo('HDFC', 'validPair', 'NSE', 'HDV');
+
+      mockAlertRepo.getAllKeys.mockReturnValue(['orphanPair']);
+      mockAlertRepo.get.mockImplementation((key: string) => (key === 'orphanPair' ? [orphanAlert] : undefined));
+      mockPairRepo.getAllKeys.mockReturnValue(['HDV']);
+      mockPairRepo.get.mockReturnValue(validPair);
+
+      const mockPlugin = {
+        id: 'orphan-alerts',
+        title: 'Orphan Alerts',
+        validate: jest.fn(),
+        run: jest.fn().mockResolvedValue([
+          {
+            pluginId: 'orphan-alerts',
+            code: 'NO_PAIR_MAPPING',
+            target: 'orphanPair',
+            message: 'orphanPair: Alert exists but has no corresponding pair',
+            severity: 'HIGH' as const,
+            status: 'FAIL' as const,
+          },
+        ]),
+      };
+      mockAuditRegistry.get.mockImplementation((id: string) =>
+        id === 'orphan-alerts' ? (mockPlugin as any) : undefined
+      );
 
       // Execute
       const results = await validationManager.validate();
 
       // Verify
       expect(results.getOrphanAlertCount()).toBe(1);
-      expect(mockPairRepo.getAllKeys).toHaveBeenCalled();
-      expect(mockPairRepo.get).toHaveBeenCalled();
+      expect(mockAuditRegistry.get).toHaveBeenCalledWith('orphan-alerts');
+    });
+
+    test('should identify orphan alerts via plugin', async () => {
+      // Setup
+      const orphanAlert = new Alert('1', 'orphanPair', 100);
+      mockAlertRepo.get.mockReturnValue([orphanAlert]);
+
+      const mockPlugin = {
+        id: 'orphan-alerts',
+        title: 'Orphan Alerts',
+        validate: jest.fn(),
+        run: jest.fn().mockResolvedValue([
+          {
+            pluginId: 'orphan-alerts',
+            code: 'NO_PAIR_MAPPING',
+            target: 'orphanPair',
+            message: 'orphanPair: Alert exists but has no corresponding pair',
+            severity: 'HIGH' as const,
+            status: 'FAIL' as const,
+          },
+        ]),
+      };
+      mockAuditRegistry.get.mockImplementation((id: string) =>
+        id === 'orphan-alerts' ? (mockPlugin as any) : undefined
+      );
+
+      // Execute
+      const results = await validationManager.validate();
+
+      // Verify
+      expect(results.getOrphanAlertCount()).toBe(1);
     });
 
     test('should not flag alerts with valid pairs', async () => {
       // Setup
       const validAlert = new Alert('1', 'validPair', 100);
       mockAlertRepo.getAllKeys.mockReturnValue(['validPair']);
-      mockAlertRepo.get.mockImplementation((key: string) => (key === 'validPair' ? [validAlert] : []));
+      mockAlertRepo.get.mockImplementation((key: string) => (key === 'validPair' ? [validAlert] : undefined));
       mockPairRepo.getAllKeys.mockReturnValue(['HDV']);
       mockPairRepo.get.mockImplementation((key: string) =>
         key === 'HDV' ? new PairInfo('HDFC', 'validPair', 'NSE', 'HDV') : undefined
@@ -90,14 +151,12 @@ describe('ValidationManager', () => {
 
       // Verify
       expect(results.getOrphanAlertCount()).toBe(0);
-      expect(mockPairRepo.getAllKeys).toHaveBeenCalled();
-      expect(mockPairRepo.get).toHaveBeenCalled();
     });
   });
 
   describe('Pair to Ticker Validation (via Plugin)', () => {
     test('should handle when UnmappedPairsAudit plugin is not available', async () => {
-      // Setup - plugin returns null (not available)
+      // Setup - plugin returns undefined (not available)
       mockAlertRepo.getAllKeys.mockReturnValue([]);
       mockPairRepo.getAllKeys.mockReturnValue(['HDV']);
       mockAuditRegistry.get.mockReturnValue(undefined);
@@ -131,7 +190,9 @@ describe('ValidationManager', () => {
           },
         ]),
       };
-      mockAuditRegistry.get.mockReturnValue(mockPlugin as any);
+      mockAuditRegistry.get.mockImplementation((id: string) =>
+        id === 'unmapped-pairs' ? (mockPlugin as any) : undefined
+      );
 
       // Execute
       const results = await validationManager.validate();
@@ -180,10 +241,26 @@ describe('ValidationManager', () => {
       mockAlertRepo.getAllKeys.mockReturnValue(['orphanPair']);
       mockPairRepo.getAllKeys.mockReturnValue(['HDV']);
 
-      mockAlertRepo.get.mockImplementation((key: string) => (key === 'orphanPair' ? [orphanAlert] : []));
+      mockAlertRepo.get.mockImplementation((key: string) => (key === 'orphanPair' ? [orphanAlert] : undefined));
       mockPairRepo.get.mockImplementation((key: string) => (key === 'HDV' ? unmappedPair : undefined));
 
-      const mockPlugin = {
+      const orphanAlertsPlugin = {
+        id: 'orphan-alerts',
+        title: 'Orphan Alerts',
+        validate: jest.fn(),
+        run: jest.fn().mockResolvedValue([
+          {
+            pluginId: 'orphan-alerts',
+            code: 'NO_PAIR_MAPPING',
+            target: 'orphanPair',
+            message: 'orphanPair: Alert exists but has no corresponding pair',
+            severity: 'HIGH' as const,
+            status: 'FAIL' as const,
+          },
+        ]),
+      };
+
+      const unmappedPairsPlugin = {
         id: 'unmapped-pairs',
         title: 'Unmapped Pairs',
         validate: jest.fn(),
@@ -198,7 +275,12 @@ describe('ValidationManager', () => {
           },
         ]),
       };
-      mockAuditRegistry.get.mockReturnValue(mockPlugin as any);
+
+      mockAuditRegistry.get.mockImplementation((id: string) => {
+        if (id === 'orphan-alerts') return orphanAlertsPlugin as any;
+        if (id === 'unmapped-pairs') return unmappedPairsPlugin as any;
+        return undefined;
+      });
 
       // Execute
       const results = await validationManager.validate();
