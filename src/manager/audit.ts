@@ -47,7 +47,7 @@ export class AuditManager implements IAuditManager {
   /** @inheritdoc */
   async auditAlerts(): Promise<void> {
     // Always use registry-backed AlertsAudit plugin
-    const alertsPlugin = this.auditRegistry.get('alerts')!;
+    const alertsPlugin = this.auditRegistry.mustGet('alerts');
 
     this.auditRepo.clear();
     this.stateCounts = new AuditStateCounts();
@@ -71,7 +71,7 @@ export class AuditManager implements IAuditManager {
   /** @inheritdoc */
   async auditCurrentTicker(): Promise<AlertAudit> {
     const investingTicker = this.tickerManager.getInvestingTicker();
-    const alertsPlugin = this.auditRegistry.get('alerts')!;
+    const alertsPlugin = this.auditRegistry.mustGet('alerts');
 
     // Use plugin's targeted run for single ticker
     const results = await alertsPlugin.run([investingTicker]);

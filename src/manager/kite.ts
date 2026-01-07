@@ -56,7 +56,7 @@ export class KiteManager implements IKiteManager {
 
   /** @inheritdoc */
   async auditGttUnwatched(): Promise<AuditResult[]> {
-    const plugin = this.auditRegistry.get('gtt-unwatched')!;
+    const plugin = this.auditRegistry.mustGet('gtt-unwatched');
     return await plugin.run();
   }
 

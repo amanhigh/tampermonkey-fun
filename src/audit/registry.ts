@@ -18,8 +18,19 @@ export class AuditRegistry {
     this.plugins.set(plugin.id, plugin);
   }
 
-  get(id: string): IAudit | undefined {
-    return this.plugins.get(id);
+  /**
+   * Gets an audit plugin by id, throwing an error if not found
+   * Plugins are registered at initialization and must always be available
+   * @param id Plugin id
+   * @returns The audit plugin
+   * @throws Error if plugin not found
+   */
+  mustGet(id: string): IAudit {
+    const plugin = this.plugins.get(id);
+    if (!plugin) {
+      throw new Error(`Audit plugin '${id}' not found in registry`);
+    }
+    return plugin;
   }
 
   list(): IAudit[] {
