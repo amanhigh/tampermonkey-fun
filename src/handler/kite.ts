@@ -8,6 +8,8 @@ import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../models/gtt';
 import { Notifier } from '../util/notify';
 import { ITradingViewManager } from '../manager/tv';
 import { IUIUtil } from '../util/ui';
+import { AuditRegistry } from '../audit/registry';
+import { AUDIT_IDS } from '../models/audit_ids';
 import { AuditResult } from '../models/audit';
 
 /**
@@ -81,14 +83,17 @@ export class KiteHandler implements IKiteHandler {
 
   /**
    * @param kiteManager - Manager for Kite operations
+   * @param auditRegistry - Registry for audit plugins
    * @param symbolManager - Manager for symbol operations
    * @param waitUtil - Utility for waiting operations
    * @param tickerManager - Manager for ticker operations
    * @param tvManager - Manager for TradingView operations
    * @param uiUtil - Utility for UI operations
    */
+  // eslint-disable-next-line max-params
   constructor(
     private readonly kiteManager: IKiteManager,
+    private readonly auditRegistry: AuditRegistry,
     private readonly symbolManager: ISymbolManager,
     private readonly waitUtil: IWaitUtil,
     private readonly tickerManager: ITickerManager,
@@ -161,7 +166,10 @@ export class KiteHandler implements IKiteHandler {
 
   /** @inheritdoc */
   public async performGttAudit(): Promise<void> {
-    const unwatchedAudits = await this.kiteManager.auditGttUnwatched();
+    // Get GTT_UNWATCHED plugin from registry and run it
+    const gttUnwatchedPlugin = this.auditRegistry.mustGet(AUDIT_IDS.GTT_UNWATCHED);
+    const unwatchedAudits = await gttUnwatchedPlugin.run();
+
     const gttData = await this.kiteManager.getGttRefereshEvent();
     const totalOrders = Object.keys(gttData.orders).length;
 

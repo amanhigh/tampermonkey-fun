@@ -4,7 +4,6 @@ import { IKiteClient } from '../../src/client/kite';
 import { IKiteRepo } from '../../src/repo/kite';
 import { GttApiResponse } from '../../src/models/kite';
 import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../../src/models/gtt';
-import { AuditRegistry } from '../../src/audit/registry';
 
 // Mock dependencies
 const mockSymbolManager: jest.Mocked<ISymbolManager> = {
@@ -33,18 +32,12 @@ const mockKiteRepo: jest.Mocked<IKiteRepo> = {
   getGttRefereshEvent: jest.fn(),
 };
 
-const mockAuditRegistry: jest.Mocked<AuditRegistry> = {
-  get: jest.fn(),
-  register: jest.fn(),
-  getAll: jest.fn(),
-} as any;
-
 describe('KiteManager', () => {
   let kiteManager: IKiteManager;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    kiteManager = new KiteManager(mockSymbolManager, mockKiteClient, mockKiteRepo, mockAuditRegistry);
+    kiteManager = new KiteManager(mockSymbolManager, mockKiteClient, mockKiteRepo);
   });
 
   describe('createOrder', () => {

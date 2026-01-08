@@ -264,13 +264,7 @@ export class Factory {
     kite: (): IKiteManager =>
       Factory.getInstance(
         'kiteManager',
-        () =>
-          new KiteManager(
-            Factory.manager.symbol(),
-            Factory.client.kite(),
-            Factory.repo.kite(),
-            Factory.audit.registry()
-          )
+        () => new KiteManager(Factory.manager.symbol(), Factory.client.kite(), Factory.repo.kite())
       ),
 
     symbol: (): ISymbolManager =>
@@ -440,6 +434,7 @@ export class Factory {
         () =>
           new KiteHandler(
             Factory.manager.kite(),
+            Factory.audit.registry(),
             Factory.manager.symbol(),
             Factory.util.wait(),
             Factory.manager.ticker(),

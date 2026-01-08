@@ -1,5 +1,6 @@
 import { KiteHandler } from '../../src/handler/kite';
 import { IKiteManager } from '../../src/manager/kite';
+import { AuditRegistry } from '../../src/audit/registry';
 import { ISymbolManager } from '../../src/manager/symbol';
 import { IWaitUtil } from '../../src/util/wait';
 import { ITickerManager } from '../../src/manager/ticker';
@@ -10,6 +11,7 @@ import { Constants } from '../../src/models/constant';
 describe('KiteHandler', () => {
   let kiteHandler: KiteHandler;
   let kiteManagerMock: jest.Mocked<IKiteManager>;
+  let auditRegistryMock: jest.Mocked<AuditRegistry>;
   let symbolManagerMock: jest.Mocked<ISymbolManager>;
   let waitUtilMock: jest.Mocked<IWaitUtil>;
   let tickerManagerMock: jest.Mocked<ITickerManager>;
@@ -25,6 +27,11 @@ describe('KiteHandler', () => {
       getGttRefereshEvent: jest.fn(),
       createGttRefreshEvent: jest.fn(),
       loadOrders: jest.fn(),
+    } as any;
+    auditRegistryMock = {
+      mustGet: jest.fn(),
+      register: jest.fn(),
+      list: jest.fn().mockReturnValue([]),
     } as any;
     symbolManagerMock = {
       tvToKite: jest.fn(),
@@ -45,6 +52,7 @@ describe('KiteHandler', () => {
 
     kiteHandler = new KiteHandler(
       kiteManagerMock,
+      auditRegistryMock,
       symbolManagerMock,
       waitUtilMock,
       tickerManagerMock,
