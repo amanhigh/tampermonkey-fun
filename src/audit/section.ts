@@ -1,0 +1,45 @@
+import { IAudit, AuditResult } from '../models/audit';
+
+/**
+ * Specification for an audit section
+ * Defines both static properties and interactive handlers for rendering audit results
+ *
+ * @example
+ * ```typescript
+ * const gttSection: IAuditSection = {
+ *   id: 'gtt-unwatched',
+ *   title: 'GTT Orders',
+ *   plugin: gttUnwatchedPlugin,
+ *   headerFormatter: (results, total) => `${results.length} unwatched of ${total}`,
+ *   buttonColor: 'gold',
+ *   onLeftClick: (ticker) => openInTradingView(ticker),
+ *   onRightClick: (ticker) => addToWatchlist(ticker),
+ *   limit: 10,
+ *   context: totalOrders,
+ * };
+ *
+ * const component = new AuditSection(gttSection, uiUtil, $container);
+ * component.render();
+ * ```
+ */
+export interface IAuditSection {
+  // Identity
+  id: string; // Unique section identifier
+  title: string; // Display title
+
+  // Data source
+  plugin: IAudit; // Audit plugin to run
+
+  // Presentation
+  headerFormatter: (results: AuditResult[], context?: unknown) => string; // Custom header HTML
+  buttonColor: string;
+
+  // Interaction handlers
+  onLeftClick: (target: string) => void | Promise<void>; // Primary action (e.g., open in TV)
+  onRightClick: (target: string) => void | Promise<void>; // Secondary action (e.g., add to watchlist)
+  onMiddleClick?: (target: string) => void | Promise<void>; // Optional middle-click action
+
+  // Display options
+  limit?: number; // Items per page (0 or undefined = no pagination)
+  context?: unknown; // Additional context data (e.g., total count for header)
+}
