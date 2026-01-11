@@ -8,9 +8,6 @@ import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../models/gtt';
 import { Notifier } from '../util/notify';
 import { ITradingViewManager } from '../manager/tv';
 import { IUIUtil } from '../util/ui';
-import { AuditRegistry } from '../audit/registry';
-import { AUDIT_IDS } from '../models/audit_ids';
-import { AuditResult } from '../models/audit';
 
 /**
  * Configuration for order button display
@@ -62,12 +59,6 @@ export interface IKiteHandler {
    * Sets up GTT refresh event listener
    */
   setupGttRefreshListener(): void;
-
-  /**
-   * Performs GTT audit when called by audit system
-   * Reports unwatched GTT tickers with individual warnings
-   */
-  performGttAudit(): Promise<void>;
 }
 
 /**
@@ -93,7 +84,6 @@ export class KiteHandler implements IKiteHandler {
   // eslint-disable-next-line max-params
   constructor(
     private readonly kiteManager: IKiteManager,
-    private readonly auditRegistry: AuditRegistry,
     private readonly symbolManager: ISymbolManager,
     private readonly waitUtil: IWaitUtil,
     private readonly tickerManager: ITickerManager,
@@ -162,28 +152,6 @@ export class KiteHandler implements IKiteHandler {
   handleGttDeleteEvent(event: GttDeleteEvent): void {
     this.kiteManager.deleteOrder(event.orderId);
     Notifier.red(`GTT Deleted: ${event.symbol}`);
-  }
-
-  /** @inheritdoc */
-  public async performGttAudit(): Promise<void> {
-    // Get GTT_UNWATCHED plugin from registry and run it
-    const gttUnwatchedPlugin = this.auditRegistry.mustGet(AUDIT_IDS.GTT_UNWATCHED);
-    const unwatchedAudits = await gttUnwatchedPlugin.run();
-
-    const gttData = await this.kiteManager.getGttRefereshEvent();
-    const totalOrders = Object.keys(gttData.orders).length;
-
-    if (unwatchedAudits.length === 0) {
-      Notifier.success(`✅ GTT Audit: ${totalOrders} orders, all tickers watched`, 3000);
-      return;
-    }
-
-    // Notify user about each unwatched ticker
-    unwatchedAudits.forEach((audit: AuditResult) => {
-      Notifier.warn(`⚠️ GTT Unwatched: ${audit.target}`, 4000);
-    });
-
-    Notifier.warn(`GTT Audit Complete: ${unwatchedAudits.length} unwatched tickers found`, 6000);
   }
 
   /** @inheritdoc */

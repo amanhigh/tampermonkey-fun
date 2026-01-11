@@ -1,6 +1,7 @@
 /**
- * Type-safe audit plugin ID constants
- * Used to prevent typos and enable compile-time checking of plugin references
+ * Type-safe audit plugin and section ID constants
+ * Plugins and sections share IDs when they're related (e.g., GTT plugin with GTT section)
+ * Used to prevent typos and enable compile-time checking of references
  */
 export const AUDIT_IDS = {
   /** Alerts audit plugin - analyzes trading alerts */
@@ -12,7 +13,7 @@ export const AUDIT_IDS = {
   /** Unmapped pairs audit plugin - identifies pairs without TradingView mappings */
   UNMAPPED_PAIRS: 'unmapped-pairs',
 
-  /** GTT unwatched audit plugin - identifies unwatched GTT orders */
+  /** GTT unwatched audit plugin & section - identifies and displays unwatched GTT orders */
   GTT_UNWATCHED: 'gtt-unwatched',
 
   /** TV mapping audit plugin - analyzes TradingView to Kite symbol mappings */
