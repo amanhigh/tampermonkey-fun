@@ -17,6 +17,7 @@ const mockJQuery = {
   remove: jest.fn().mockReturnThis(),
   replaceWith: jest.fn().mockReturnThis(),
   appendTo: jest.fn().mockReturnThis(),
+  prependTo: jest.fn().mockReturnThis(),
   css: jest.fn().mockReturnThis(),
   on: jest.fn().mockReturnThis(),
   click: jest.fn().mockReturnThis(),
@@ -64,6 +65,7 @@ describe('AuditHandler', () => {
     mockJQuery.remove.mockReturnThis();
     mockJQuery.replaceWith.mockReturnThis();
     mockJQuery.appendTo.mockReturnThis();
+    mockJQuery.prependTo.mockReturnThis();
     mockJQuery.css.mockReturnThis();
     mockJQuery.on.mockReturnThis();
     mockJQuery.find.mockReturnThis();
@@ -262,6 +264,61 @@ describe('AuditHandler', () => {
     });
   });
 
+  describe('auditAllOnFirstRun', () => {
+    beforeEach(() => {
+      // Setup mocks for auditAllOnFirstRun tests
+      const mockPlugin = {
+        run: jest.fn().mockResolvedValue([]),
+      };
+      mockAuditRegistry.mustGet.mockReturnValue(mockPlugin as any);
+
+      const mockGttSection = {
+        id: 'gtt-unwatched',
+        title: 'GTT Orders',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('GTT Orders'),
+        buttonColor: 'gold',
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+      mockAuditRegistry.mustGetSection.mockReturnValue(mockGttSection as any);
+      mockAuditManager.filterAuditResults.mockReturnValue([]);
+    });
+
+    it('should run audits on first call', async () => {
+      await auditHandler.auditAllOnFirstRun();
+
+      // Verify audit was run - check that labels were created
+      expect(mockUIUtil.buildLabel).toHaveBeenCalled();
+      // Verify global refresh button was created
+      expect(mockUIUtil.buildButton).toHaveBeenCalledWith(
+        Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH,
+        '🔄 Refresh All Audits',
+        expect.any(Function)
+      );
+    });
+
+    it('should not run audits on second call (lazy load pattern)', async () => {
+      // Clear previous calls from beforeEach setup
+      jest.clearAllMocks();
+
+      // First call - should run
+      await auditHandler.auditAllOnFirstRun();
+      const firstLabelCallCount = mockUIUtil.buildLabel.mock.calls.length;
+
+      // Second call - should not run again
+      jest.clearAllMocks();
+      await auditHandler.auditAllOnFirstRun();
+      const secondLabelCallCount = mockUIUtil.buildLabel.mock.calls.length;
+
+      // Second call should not create any labels
+      expect(secondLabelCallCount).toBe(0);
+      expect(firstLabelCallCount).toBeGreaterThan(0);
+    });
+  });
+
   describe('auditAll', () => {
     beforeEach(() => {
       // Mock AlertsAudit plugin with run() method
@@ -334,8 +391,42 @@ describe('AuditHandler', () => {
 
       await auditHandler.auditAll();
 
-      // Should create 10 audit buttons (alert) + 1 GTT refresh button = 11 total
-      expect(mockUIUtil.buildButton).toHaveBeenCalledTimes(12);
+      // Should create:
+      // - 1 global refresh button (at top of audit area)
+      // - 10 audit buttons (limited from 15)
+      // - 1 GTT refresh button (in GTT section header)
+      // = 12 total buttons
+      expect(mockUIUtil.buildButton).toHaveBeenCalledTimes(13);
+    });
+
+    it('should create global refresh button', async () => {
+      const mockPlugin = {
+        run: jest.fn().mockResolvedValue([]),
+      };
+      mockAuditRegistry.mustGet.mockReturnValue(mockPlugin as any);
+
+      const mockGttSection = {
+        id: 'gtt-unwatched',
+        title: 'GTT Orders',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('GTT Orders'),
+        buttonColor: 'gold',
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+      mockAuditRegistry.mustGetSection.mockReturnValue(mockGttSection as any);
+      mockAuditManager.filterAuditResults.mockReturnValue([]);
+
+      await auditHandler.auditAll();
+
+      // Check that buildButton was called with global refresh button id
+      expect(mockUIUtil.buildButton).toHaveBeenCalledWith(
+        Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH,
+        '🔄 Refresh All Audits',
+        expect.any(Function)
+      );
     });
 
     it('should perform GTT audit', async () => {

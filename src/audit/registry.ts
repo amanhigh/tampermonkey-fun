@@ -71,6 +71,13 @@ export class AuditRegistry {
   }
 
   /**
+   * Lists all registered sections
+   */
+  listSections(): IAuditSection[] {
+    return Array.from(this.sections.values());
+  }
+
+  /**
    * Lists all registered plugins
    */
   list(): IAudit[] {

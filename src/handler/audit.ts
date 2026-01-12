@@ -23,6 +23,13 @@ export interface IAuditHandler {
   auditAll(): Promise<void>;
 
   /**
+   * Runs all audits on first toggle, only on initial invocation
+   * Subsequent calls do nothing (audit area already populated)
+   * Intended for lazy-loading audits when user first opens the audit area
+   */
+  auditAllOnFirstRun(): Promise<void>;
+
+  /**
    * Refreshes audit button for current ticker
    */
   auditCurrent(): Promise<void>;
@@ -37,6 +44,9 @@ export interface IAuditHandler {
  * - Renders sections via AuditSection component
  */
 export class AuditHandler implements IAuditHandler {
+  // Track whether audits have ever been run (used for initial vs subsequent toggles)
+  private auditHasRun: boolean = false;
+
   // eslint-disable-next-line max-params
   constructor(
     private readonly auditManager: IAuditManager,
@@ -48,6 +58,21 @@ export class AuditHandler implements IAuditHandler {
     private readonly symbolManager: ISymbolManager,
     private readonly pairHandler: IPairHandler
   ) {}
+
+  /**
+   * Runs all audits on first toggle, only on initial invocation
+   * Subsequent calls do nothing (audit area already populated)
+   * Intended for lazy-loading audits when user first opens the audit area
+   */
+  public async auditAllOnFirstRun(): Promise<void> {
+    // Only run if audits haven't been run before
+    if (this.auditHasRun) {
+      return; // Already run, do nothing
+    }
+
+    // Run all audits
+    await this.auditAll();
+  }
 
   /**
    * Updates the audit summary in the UI based on current results
@@ -75,11 +100,38 @@ export class AuditHandler implements IAuditHandler {
       `${noPairCount} NO_PAIR`;
     Notifier.message(summary, Color.PURPLE, 10000);
 
+    // Render global refresh button at top of audit area
+    this.renderGlobalRefreshButton();
+
     // Render alerts UI (header + buttons) before GTT audit
     this.auditAlerts();
 
     // Run GTT audit and render new UI
     await this.auditGttOrders();
+
+    // Mark audits as run
+    this.auditHasRun = true;
+  }
+
+  /**
+   * Renders global refresh button at the top of audit area
+   * Allows user to re-run all audits
+   * Styling is defined in src/style/_audit_section.less
+   */
+  private renderGlobalRefreshButton(): void {
+    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+    const buttonId = Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH;
+
+    // Remove old button if exists (in case of re-render)
+    $(`#${buttonId}`).remove();
+
+    // Create refresh button (styling defined in _audit_section.less)
+    const $button = this.uiUtil.buildButton(buttonId, '🔄 Refresh All Audits', () => {
+      void this.auditAll(); // Re-run all audits
+    });
+
+    // Add at top of audit area
+    $button.prependTo($auditArea);
   }
 
   // Renders audit header and buttons based on current repository state

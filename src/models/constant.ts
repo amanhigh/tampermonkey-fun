@@ -37,6 +37,7 @@ export const Constants = Object.freeze({
         JOURNAL: 'aman-journal-btn', // Old Name: journalBtnId
         HOOK: 'aman-hook', // Add this line
         RECENT: 'aman-recent', // Old Name: recentId
+        AUDIT_GLOBAL_REFRESH: 'aman-audit-global-refresh', // Global refresh button for all audits
       },
       CHECKBOXES: {
         SWIFT: 'aman-swift', // Old Name: swiftId

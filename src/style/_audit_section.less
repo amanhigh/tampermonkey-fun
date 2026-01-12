@@ -270,6 +270,40 @@
 }
 
 // ============================================
+// Global Refresh Button
+// ============================================
+#aman-audit-global-refresh {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  background-color: #00008b; // Dark blue
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background-color: #0000a8;
+    box-shadow: 0 2px 6px rgba(0, 0, 139, 0.4);
+    transform: translateY(-1px);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+    box-shadow: 0 1px 3px rgba(0, 0, 139, 0.2);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// ============================================
 // Pagination Controls
 // ============================================
 .audit-pagination {
