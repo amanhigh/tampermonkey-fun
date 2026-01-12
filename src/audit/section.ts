@@ -18,8 +18,8 @@ import { IAudit, AuditResult } from '../models/audit';
  *   context: totalOrders,
  * };
  *
- * const component = new AuditSection(gttSection, uiUtil, $container);
- * component.render();
+ * const renderer = new AuditRenderer(gttSection, uiUtil, $container);
+ * renderer.render();
  * ```
  */
 export interface IAuditSection {

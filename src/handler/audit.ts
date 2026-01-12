@@ -11,7 +11,7 @@ import { ITickerManager } from '../manager/ticker';
 import { IWatchManager } from '../manager/watch';
 import { ISymbolManager } from '../manager/symbol';
 import { IPairHandler } from './pair';
-import { IKiteHandler } from './kite';
+import { AuditRenderer } from '../audit/renderer';
 
 /**
  * Interface for managing audit UI operations
@@ -30,6 +30,11 @@ export interface IAuditHandler {
 
 /**
  * Handles all UI operations related to audit display and interactions
+ *
+ * Architecture:
+ * - Gets sections from registry (sections contain plugins)
+ * - Runs plugins via section.plugin.run()
+ * - Renders sections via AuditSection component
  */
 export class AuditHandler implements IAuditHandler {
   // eslint-disable-next-line max-params
@@ -41,8 +46,7 @@ export class AuditHandler implements IAuditHandler {
     private readonly tickerHandler: ITickerHandler,
     private readonly watchManager: IWatchManager,
     private readonly symbolManager: ISymbolManager,
-    private readonly pairHandler: IPairHandler,
-    private readonly kiteHandler: IKiteHandler
+    private readonly pairHandler: IPairHandler
   ) {}
 
   /**
@@ -74,8 +78,8 @@ export class AuditHandler implements IAuditHandler {
     // Render alerts UI (header + buttons) before GTT audit
     this.auditAlerts();
 
-    // Run GTT audit after rendering
-    await this.kiteHandler.performGttAudit();
+    // Run GTT audit and render new UI
+    await this.auditGttOrders();
   }
 
   // Renders audit header and buttons based on current repository state
@@ -102,6 +106,23 @@ export class AuditHandler implements IAuditHandler {
 
     // Render buttons inline (no partitions), rely on button colors to communicate state
     this.renderButtons($auditArea, displayItems);
+  }
+
+  /**
+   * Run GTT unwatched audit and render section
+   */
+  private async auditGttOrders(): Promise<void> {
+    // Get section from registry (section contains plugin)
+    const section = this.auditRegistry.mustGetSection(AUDIT_IDS.GTT_UNWATCHED);
+
+    // Run plugin via section
+    const results = await section.plugin.run();
+
+    // Create renderer with section and render
+    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
+    renderer.setResults(results);
+    renderer.render();
   }
 
   // Build header: exact summary + colored count labels matching button colors

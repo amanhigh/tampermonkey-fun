@@ -74,7 +74,6 @@ export class KiteHandler implements IKiteHandler {
 
   /**
    * @param kiteManager - Manager for Kite operations
-   * @param auditRegistry - Registry for audit plugins
    * @param symbolManager - Manager for symbol operations
    * @param waitUtil - Utility for waiting operations
    * @param tickerManager - Manager for ticker operations

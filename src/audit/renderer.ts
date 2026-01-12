@@ -3,7 +3,7 @@ import { IUIUtil } from '../util/ui';
 import { IAuditSection } from '../audit/section';
 
 /**
- * Reusable audit section component for displaying audit results
+ * Renderer for audit sections - displays audit results with interactive UI
  * Provides: header with status, collapsible body with action buttons
  *
  * Features:
@@ -12,8 +12,13 @@ import { IAuditSection } from '../audit/section';
  * - Right-click button for secondary action
  * - Refresh button to re-run audit
  * - Auto-update on action completion
+ *
+ * Architecture:
+ * - Receives section specification (IAuditSection) which defines what to render
+ * - Takes runtime context ($container) to know where to render
+ * - Created at runtime by handlers, not by Factory (transient, not singleton)
  */
-export class AuditSection {
+export class AuditRenderer {
   private collapsed: boolean = false;
   private results: AuditResult[] = [];
   private running: boolean = false;

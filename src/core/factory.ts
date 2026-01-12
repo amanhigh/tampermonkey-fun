@@ -81,6 +81,7 @@ import { TvMappingAudit } from '../audit/tv_mapping';
 import { GttUnwatchedAudit } from '../audit/gtt_unwatched';
 import { UnmappedPairsAudit } from '../audit/unmapped_pairs';
 import { OrphanAlertsAudit } from '../audit/orphan_alerts';
+import { GttAuditSection } from '../audit/gtt_section';
 
 /**
  * Project Architecture Overview
@@ -119,7 +120,8 @@ export class Factory {
             Factory.handler.ticker(),
             Factory.handler.alertFeed(),
             Factory.handler.panel(),
-            Factory.manager.tv()
+            Factory.manager.tv(),
+            Factory.handler.audit()
           )
       ),
     imdb: (): ImdbApp =>
@@ -301,9 +303,17 @@ export class Factory {
 
   /**
    * Audit Layer
-   * Each plugin is exposed as a separate field; registry is constructed at the end
+   * Each plugin is exposed as a separate field
+   * Each section is created and registered in the registry
+   * Registry is constructed at the end
+   *
+   * Architecture:
+   * - Plugins are created first (business logic)
+   * - Sections are created next (receive plugins via injection)
+   * - Registry stores sections (primary) and plugins (temporary)
    */
   public static audit = {
+    // ===== PLUGIN CREATION =====
     // Return a singleton AlertsAudit instance
     alerts: () =>
       Factory.getInstance('auditPlugin_alerts', () => new AlertsAudit(Factory.manager.pair(), Factory.manager.alert())),
@@ -338,20 +348,36 @@ export class Factory {
         () => new OrphanAlertsAudit(Factory.repo.alert(), Factory.repo.pair())
       ),
 
-    // Build registry last by explicitly registering each plugin (no loops)
+    // ===== SECTION CREATION =====
+    // GTT Audit Section - receives plugin via direct injection
+    // Pilot pattern: Follow this structure for other sections
+    gttSection: () =>
+      Factory.getInstance(
+        'gttSection',
+        () =>
+          new GttAuditSection(
+            Factory.audit.gttUnwatched(), // ✅ Direct plugin injection
+            Factory.handler.ticker(),
+            Factory.manager.watch()
+          )
+      ),
+
+    // ===== REGISTRY =====
+    // Build registry by explicitly registering plugins and sections
     registry: () =>
       Factory.getInstance('auditRegistry', () => {
         const reg = new AuditRegistry();
-        reg.register(Factory.audit.alerts());
-        // TvMappingAudit registered but not called from active code paths
-        // Kept for future use (batch TV mapping audits, reporting, etc.)
-        reg.register(Factory.audit.tvMapping());
-        // GttUnwatchedAudit for identifying unwatched GTT orders
-        reg.register(Factory.audit.gttUnwatched());
-        // UnmappedPairsAudit for identifying pairs without TradingView mappings
-        reg.register(Factory.audit.unmappedPairs());
-        // OrphanAlertsAudit for identifying alerts without corresponding pairs
-        reg.register(Factory.audit.orphanAlerts());
+
+        // Register plugins (temporary - Phase 4 will remove)
+        reg.registerPlugin(Factory.audit.alerts());
+        reg.registerPlugin(Factory.audit.tvMapping());
+        reg.registerPlugin(Factory.audit.gttUnwatched());
+        reg.registerPlugin(Factory.audit.unmappedPairs());
+        reg.registerPlugin(Factory.audit.orphanAlerts());
+
+        // Register sections (primary responsibility)
+        reg.registerSection(Factory.audit.gttSection());
+
         return reg;
       }),
   } as const;
@@ -387,21 +413,20 @@ export class Factory {
         () => new AlertSummaryHandler(Factory.manager.alert(), Factory.manager.tv(), Factory.util.ui())
       ),
     audit: (): IAuditHandler =>
-      Factory.getInstance(
-        'auditHandler',
-        () =>
-          new AuditHandler(
-            Factory.manager.audit(),
-            Factory.audit.registry(),
-            Factory.manager.ticker(),
-            Factory.util.ui(),
-            Factory.handler.ticker(),
-            Factory.manager.watch(),
-            Factory.manager.symbol(),
-            Factory.handler.pair(),
-            Factory.handler.kite()
-          )
-      ),
+      Factory.getInstance('auditHandler', () => {
+        // Handler receives registry which now contains sections
+        // Sections are registered in Factory.audit.registry()
+        return new AuditHandler(
+          Factory.manager.audit(),
+          Factory.audit.registry(),
+          Factory.manager.ticker(),
+          Factory.util.ui(),
+          Factory.handler.ticker(),
+          Factory.manager.watch(),
+          Factory.manager.symbol(),
+          Factory.handler.pair()
+        );
+      }),
     onload: (): IOnLoadHandler =>
       Factory.getInstance(
         'onloadHandler',
@@ -434,7 +459,6 @@ export class Factory {
         () =>
           new KiteHandler(
             Factory.manager.kite(),
-            Factory.audit.registry(),
             Factory.manager.symbol(),
             Factory.util.wait(),
             Factory.manager.ticker(),

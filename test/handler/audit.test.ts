@@ -7,7 +7,6 @@ import { ITickerManager } from '../../src/manager/ticker';
 import { IWatchManager } from '../../src/manager/watch';
 import { ISymbolManager } from '../../src/manager/symbol';
 import { IPairHandler } from '../../src/handler/pair';
-import { IKiteHandler } from '../../src/handler/kite';
 import { AlertState, AlertAudit } from '../../src/models/alert';
 import { Constants } from '../../src/models/constant';
 
@@ -21,6 +20,16 @@ const mockJQuery = {
   css: jest.fn().mockReturnThis(),
   on: jest.fn().mockReturnThis(),
   click: jest.fn().mockReturnThis(),
+  find: jest.fn().mockReturnThis(),
+  hide: jest.fn().mockReturnThis(),
+  show: jest.fn().mockReturnThis(),
+  attr: jest.fn().mockReturnThis(),
+  addClass: jest.fn().mockReturnThis(),
+  html: jest.fn().mockReturnThis(),
+  data: jest.fn().mockReturnThis(),
+  prop: jest.fn().mockReturnThis(),
+  slideUp: jest.fn().mockReturnThis(),
+  slideDown: jest.fn().mockReturnThis(),
 } as any;
 
 // Mock jQuery with proper typing
@@ -47,7 +56,6 @@ describe('AuditHandler', () => {
   let mockWatchManager: jest.Mocked<IWatchManager>;
   let mockSymbolManager: jest.Mocked<ISymbolManager>;
   let mockPairHandler: jest.Mocked<IPairHandler>;
-  let mockKiteHandler: jest.Mocked<IKiteHandler>;
 
   beforeEach(() => {
     // Reset jQuery mock
@@ -58,6 +66,16 @@ describe('AuditHandler', () => {
     mockJQuery.appendTo.mockReturnThis();
     mockJQuery.css.mockReturnThis();
     mockJQuery.on.mockReturnThis();
+    mockJQuery.find.mockReturnThis();
+    mockJQuery.hide.mockReturnThis();
+    mockJQuery.show.mockReturnThis();
+    mockJQuery.attr.mockReturnThis();
+    mockJQuery.addClass.mockReturnThis();
+    mockJQuery.html.mockReturnThis();
+    mockJQuery.data.mockReturnThis();
+    mockJQuery.prop.mockReturnThis();
+    mockJQuery.slideUp.mockReturnThis();
+    mockJQuery.slideDown.mockReturnThis();
 
     mockAuditManager = {
       resetAuditResults: jest.fn(),
@@ -67,7 +85,10 @@ describe('AuditHandler', () => {
 
     mockAuditRegistry = {
       mustGet: jest.fn(),
+      mustGetSection: jest.fn(),
       register: jest.fn(),
+      registerPlugin: jest.fn(),
+      registerSection: jest.fn(),
       list: jest.fn().mockReturnValue([]),
     } as any;
 
@@ -96,10 +117,6 @@ describe('AuditHandler', () => {
       deletePairInfo: jest.fn().mockResolvedValue(undefined),
     } as any;
 
-    mockKiteHandler = {
-      performGttAudit: jest.fn().mockResolvedValue(undefined),
-    } as any;
-
     auditHandler = new AuditHandler(
       mockAuditManager,
       mockAuditRegistry,
@@ -108,8 +125,7 @@ describe('AuditHandler', () => {
       mockTickerHandler,
       mockWatchManager,
       mockSymbolManager,
-      mockPairHandler,
-      mockKiteHandler
+      mockPairHandler
     );
   });
 
@@ -253,6 +269,21 @@ describe('AuditHandler', () => {
         run: jest.fn().mockResolvedValue([]),
       };
       mockAuditRegistry.mustGet.mockReturnValue(mockPlugin as any);
+
+      // Mock GTT section with plugin and all required properties
+      const mockGttSection = {
+        id: 'gtt-unwatched',
+        title: 'GTT Orders',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('GTT Orders'),
+        buttonColor: 'gold',
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+      mockAuditRegistry.mustGetSection.mockReturnValue(mockGttSection as any);
+
       mockAuditManager.filterAuditResults.mockReturnValue([]);
     });
 
@@ -295,16 +326,41 @@ describe('AuditHandler', () => {
       mockSymbolManager.investingToTv.mockReturnValue('TV_TICKER');
       mockWatchManager.isWatched.mockReturnValue(false);
 
+      const mockAlertPlugin = { run: jest.fn().mockResolvedValue([]) };
+      const mockGttPlugin = { run: jest.fn().mockResolvedValue([]) };
+
+      // Mock registry to return different plugins for each call
+      mockAuditRegistry.mustGet.mockReturnValueOnce(mockAlertPlugin as any).mockReturnValueOnce(mockGttPlugin as any);
+
       await auditHandler.auditAll();
 
-      // Should only create 10 buttons (plus 1 label)
-      expect(mockUIUtil.buildButton).toHaveBeenCalledTimes(10);
+      // Should create 10 audit buttons (alert) + 1 GTT refresh button = 11 total
+      expect(mockUIUtil.buildButton).toHaveBeenCalledTimes(12);
     });
 
     it('should perform GTT audit', async () => {
+      const mockAlertPlugin = { run: jest.fn().mockResolvedValue([]) };
+      const mockGttPlugin = { run: jest.fn().mockResolvedValue([]) };
+
+      mockAuditRegistry.mustGet.mockReturnValueOnce(mockAlertPlugin as any);
+
+      // Update mustGetSection to return section with mockGttPlugin
+      const mockGttSection = {
+        id: 'gtt-unwatched',
+        title: 'GTT Orders',
+        plugin: mockGttPlugin,
+        headerFormatter: jest.fn().mockReturnValue('GTT Orders'),
+        buttonColor: 'gold',
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+      mockAuditRegistry.mustGetSection.mockReturnValue(mockGttSection as any);
+
       await auditHandler.auditAll();
 
-      expect(mockKiteHandler.performGttAudit).toHaveBeenCalled();
+      expect(mockGttPlugin.run).toHaveBeenCalled();
     });
   });
 
