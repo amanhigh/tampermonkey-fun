@@ -32,7 +32,7 @@ export interface IAuditSection {
 
   // Presentation
   headerFormatter: (results: AuditResult[], context?: unknown) => string; // Custom header HTML
-  buttonColor: string;
+  buttonColorMapper: (result: AuditResult, context?: unknown) => string; // Maps result to button color (required)
 
   // Interaction handlers
   onLeftClick: (target: string) => void | Promise<void>; // Primary action (e.g., open in TV)

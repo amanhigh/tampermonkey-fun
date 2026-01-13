@@ -31,7 +31,6 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
   readonly plugin: IAudit;
 
   // Presentation
-  readonly buttonColor = 'gold';
   readonly limit = 10;
   readonly context: unknown = undefined;
 
@@ -47,6 +46,11 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
     this.watchManager.recordCategory(0, newTickers);
     Notifier.success(`✅ Added ${ticker} to watchlist`);
   };
+
+  /**
+   * Button color mapper - all GTT buttons are gold (single color, no switching)
+   */
+  readonly buttonColorMapper = (): string => 'gold';
 
   readonly headerFormatter = (auditResults: AuditResult[]) => {
     if (auditResults.length === 0) {

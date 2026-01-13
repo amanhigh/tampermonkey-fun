@@ -22,7 +22,7 @@ describe('AuditRegistry', () => {
           run: jest.fn().mockResolvedValue([]),
         },
         headerFormatter: jest.fn().mockReturnValue('Header'),
-        buttonColor: 'blue',
+        buttonColorMapper: jest.fn().mockReturnValue('blue'),
         onLeftClick: jest.fn(),
         onRightClick: jest.fn(),
       };
@@ -43,7 +43,7 @@ describe('AuditRegistry', () => {
           run: jest.fn().mockResolvedValue([]),
         },
         headerFormatter: jest.fn().mockReturnValue('Header'),
-        buttonColor: 'blue',
+        buttonColorMapper: jest.fn().mockReturnValue('blue'),
         onLeftClick: jest.fn(),
         onRightClick: jest.fn(),
       };
@@ -68,7 +68,7 @@ describe('AuditRegistry', () => {
           run: jest.fn().mockResolvedValue([]),
         },
         headerFormatter: jest.fn().mockReturnValue('Header'),
-        buttonColor: 'blue',
+        buttonColorMapper: jest.fn().mockReturnValue('blue'),
         onLeftClick: jest.fn(),
         onRightClick: jest.fn(),
       };
@@ -101,7 +101,7 @@ describe('AuditRegistry', () => {
           run: jest.fn().mockResolvedValue([]),
         },
         headerFormatter: jest.fn().mockReturnValue('Header 1'),
-        buttonColor: 'blue',
+        buttonColorMapper: jest.fn().mockReturnValue('blue'),
         onLeftClick: jest.fn(),
         onRightClick: jest.fn(),
       };
@@ -116,7 +116,7 @@ describe('AuditRegistry', () => {
           run: jest.fn().mockResolvedValue([]),
         },
         headerFormatter: jest.fn().mockReturnValue('Header 2'),
-        buttonColor: 'red',
+        buttonColorMapper: jest.fn().mockReturnValue('red'),
         onLeftClick: jest.fn(),
         onRightClick: jest.fn(),
       };

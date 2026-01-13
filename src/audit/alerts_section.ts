@@ -34,7 +34,6 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
   readonly plugin: IAudit;
 
   // Presentation
-  readonly buttonColor = 'darkorange';
   readonly limit = 10; // Show up to 10 items (prioritize SINGLE_ALERT)
   readonly context: unknown = undefined;
 
@@ -50,6 +49,32 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
     });
   };
 
+  /**
+   * Dynamic button color based on alert state and mapping validity
+   * Priority: darkred (invalid mapping) > darkorange (single alert) > darkgray (no alerts)
+   */
+  readonly buttonColorMapper = (result: AuditResult): string => {
+    const state = result.code as AlertState;
+
+    // First check: invalid mapping (NO_PAIR state)
+    if (state === AlertState.NO_PAIR) {
+      return 'darkred'; // Most urgent - broken mapping
+    }
+
+    // Second check: single alert (high priority)
+    if (state === AlertState.SINGLE_ALERT) {
+      return 'darkorange'; // Needs one more alert
+    }
+
+    // Third check: no alerts (medium priority)
+    if (state === AlertState.NO_ALERTS) {
+      return 'darkgray'; // Needs alerts
+    }
+
+    // Fallback (shouldn't happen for FAIL status results)
+    return 'black';
+  };
+
   readonly headerFormatter = (auditResults: AuditResult[]) => {
     if (auditResults.length === 0) {
       return `<span class="success-badge">✓ All alerts covered</span>`;
@@ -60,8 +85,14 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
     const nones = auditResults.filter((r) => r.code === AlertState.NO_ALERTS).length;
     const invalids = auditResults.filter((r) => r.code === AlertState.NO_PAIR).length;
 
-    // Format like the old header: "One: 3, None: 2, Inv: 1, Tot: 6"
-    return `One: ${singles}, None: ${nones}, Inv: ${invalids}, Tot: ${auditResults.length}`;
+    // Color-coded counts matching button colors for visual clarity
+    // One (SINGLE_ALERT): darkorange | None (NO_ALERTS): silver | Inv (NO_PAIR): darkred | Tot: default
+    return [
+      `<span style="color: darkorange">One: ${singles}</span>`,
+      `<span style="color: silver">None: ${nones}</span>`,
+      `<span style="color: darkred">Inv: ${invalids}</span>`,
+      `Tot: ${auditResults.length}`,
+    ].join(' | ');
   };
 
   /**

@@ -226,11 +226,14 @@ export class AuditRenderer {
     const ticker = result.target;
     const buttonId = `audit-${this.section.id}-${ticker}`.replace(/[^a-zA-Z0-9-_]/g, '-');
 
+    // Get button color from section's mapper (always available)
+    const buttonColor = this.section.buttonColorMapper(result, this.section.context);
+
     const $button = this.uiUtil
       .buildButton(buttonId, ticker)
       .addClass('audit-ticker-button')
       .css({
-        'background-color': this.section.buttonColor,
+        'background-color': buttonColor,
         margin: '2px',
       })
       .attr(
