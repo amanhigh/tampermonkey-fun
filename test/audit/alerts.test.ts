@@ -1,14 +1,18 @@
 import { AlertsAudit } from '../../src/audit/alerts';
 import { IPairManager } from '../../src/manager/pair';
 import { IAlertManager } from '../../src/manager/alert';
+import { IWatchManager } from '../../src/manager/watch';
+import { ISymbolManager } from '../../src/manager/symbol';
 import { AlertState } from '../../src/models/alert';
 
-// Minimal unit tests for AlertsAudit: PASS/FAIL mapping and severity
+// Unit tests for AlertsAudit: classification, severity, and watchlist exclusion
 
 describe('AlertsAudit', () => {
   let plugin: AlertsAudit;
   let pairManager: jest.Mocked<IPairManager>;
   let alertManager: jest.Mocked<IAlertManager>;
+  let watchManager: jest.Mocked<IWatchManager>;
+  let symbolManager: jest.Mocked<ISymbolManager>;
 
   beforeEach(() => {
     pairManager = {
@@ -19,7 +23,15 @@ describe('AlertsAudit', () => {
       getAlertsForInvestingTicker: jest.fn(),
     } as any;
 
-    plugin = new AlertsAudit(pairManager, alertManager);
+    watchManager = {
+      isWatched: jest.fn().mockReturnValue(false), // Default: not watched
+    } as any;
+
+    symbolManager = {
+      investingToTv: jest.fn().mockImplementation((ticker) => `TV:${ticker}`), // Default mapping
+    } as any;
+
+    plugin = new AlertsAudit(pairManager, alertManager, watchManager, symbolManager);
   });
 
   describe('validate', () => {
@@ -97,6 +109,64 @@ describe('AlertsAudit', () => {
         const byTarget = Object.fromEntries(results.map((r) => [r.target, r]));
         expect(byTarget['SINGLE_ALERT_TICKER'].severity).toBe('HIGH');
         expect(byTarget['NO_ALERTS_TICKER'].severity).toBe('MEDIUM');
+      });
+    });
+
+    describe('watchlist exclusion', () => {
+      beforeEach(() => {
+        pairManager.getAllInvestingTickers.mockReturnValue(['WATCHED_TICKER', 'UNWATCHED_TICKER', 'ANOTHER_WATCHED']);
+
+        alertManager.getAlertsForInvestingTicker.mockImplementation(() => {
+          // Return single alert for all tickers (would be FAIL if not watched)
+          return [{ id: 'x', price: 1, pairId: 'p' }] as any;
+        });
+
+        // Setup: WATCHED_TICKER and ANOTHER_WATCHED are in watchlist
+        symbolManager.investingToTv.mockImplementation((ticker: string) => {
+          const mapping: { [key: string]: string } = {
+            WATCHED_TICKER: 'TV:WATCHED_TICKER',
+            UNWATCHED_TICKER: 'TV:UNWATCHED_TICKER',
+            ANOTHER_WATCHED: 'TV:ANOTHER_WATCHED',
+          };
+          return mapping[ticker] || null;
+        });
+
+        watchManager.isWatched.mockImplementation(
+          (tvTicker: string) => tvTicker === 'TV:WATCHED_TICKER' || tvTicker === 'TV:ANOTHER_WATCHED'
+        );
+      });
+
+      it('excludes watched tickers from results', async () => {
+        const results = await plugin.run();
+
+        // Only UNWATCHED_TICKER should be in results (watched ones excluded)
+        expect(results).toHaveLength(1);
+        expect(results[0].target).toBe('UNWATCHED_TICKER');
+        expect(results[0].code).toBe(AlertState.SINGLE_ALERT);
+      });
+
+      it('uses TV ticker format for watchlist checking', async () => {
+        await plugin.run();
+
+        // Verify that symbolManager.investingToTv was called for each ticker
+        expect(symbolManager.investingToTv).toHaveBeenCalledWith('WATCHED_TICKER');
+        expect(symbolManager.investingToTv).toHaveBeenCalledWith('UNWATCHED_TICKER');
+        expect(symbolManager.investingToTv).toHaveBeenCalledWith('ANOTHER_WATCHED');
+
+        // Verify that watchManager.isWatched was called with TV format
+        expect(watchManager.isWatched).toHaveBeenCalledWith('TV:WATCHED_TICKER');
+        expect(watchManager.isWatched).toHaveBeenCalledWith('TV:UNWATCHED_TICKER');
+        expect(watchManager.isWatched).toHaveBeenCalledWith('TV:ANOTHER_WATCHED');
+      });
+
+      it('handles missing TV mappings gracefully (uses investing ticker as fallback)', async () => {
+        symbolManager.investingToTv.mockReturnValue(null); // No mapping
+        watchManager.isWatched.mockReturnValue(false);
+
+        const results = await plugin.run();
+
+        // All tickers should be included (no mapping = not in watchlist)
+        expect(results.length).toBe(3);
       });
     });
 

@@ -247,11 +247,12 @@ export class AuditRenderer {
       void Promise.resolve(this.section.onLeftClick(ticker));
     });
 
-    // Right-click: Secondary action (auto-refresh after action)
+    // Right-click: Secondary action (no auto-refresh for speed)
     $button.on('contextmenu', (e) => {
       e.preventDefault();
       void Promise.resolve(this.section.onRightClick(ticker)).then(() => {
-        void this.refresh();
+        $button.remove();
+        this.removeResultAndUpdateHeader(ticker);
       });
     });
 
@@ -347,5 +348,22 @@ export class AuditRenderer {
    */
   public getResults(): AuditResult[] {
     return this.results;
+  }
+
+  /**
+   * Remove a result from the list and update header count
+   * Used for fast right-click removal without full refresh
+   * @private
+   */
+  private removeResultAndUpdateHeader(ticker: string): void {
+    // Remove from results array
+    this.results = this.results.filter((r) => r.target !== ticker);
+
+    // Update just the header text (not full section rebuild)
+    const headerText = this.section.headerFormatter(this.results, this.section.context);
+    const fullHeaderText = `${headerText} - ${this.getTimestampText()}`;
+
+    const $headerText = $(`#audit-section-${this.section.id} .${Constants.AUDIT.CLASSES.HEADER_TEXT}`);
+    $headerText.html(fullHeaderText);
   }
 }

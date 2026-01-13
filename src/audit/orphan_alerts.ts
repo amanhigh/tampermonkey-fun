@@ -34,12 +34,13 @@ export class OrphanAlertsAudit extends BaseAuditPlugin {
     // Build set of valid pairIds from pairs
     const validPairIds = new Set<string>();
     this.pairRepo.getAllKeys().forEach((investingTicker: string) => {
-      validPairIds.add(this.pairRepo.get(investingTicker)!.pairId);
+      const pair = this.pairRepo.get(investingTicker)!;
+      validPairIds.add(pair.pairId);
     });
 
     const results: AuditResult[] = [];
 
-    // Report alerts for pairIds not in validPairIds
+    // Report alerts for pairIds not in validPairIds (orphan alerts without pair mappings)
     this.alertRepo.getAllKeys().forEach((pairId: string) => {
       if (!validPairIds.has(pairId)) {
         const alerts = this.alertRepo.get(pairId)!;

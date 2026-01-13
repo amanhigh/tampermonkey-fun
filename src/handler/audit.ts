@@ -12,6 +12,7 @@ import { IWatchManager } from '../manager/watch';
 import { ISymbolManager } from '../manager/symbol';
 import { IPairHandler } from './pair';
 import { AuditRenderer } from '../audit/renderer';
+import { AuditResult } from '../models/audit';
 
 /**
  * Interface for managing audit UI operations
@@ -84,9 +85,6 @@ export class AuditHandler implements IAuditHandler {
     // Run plugin to get audit results
     const results = await alertsPlugin.run();
 
-    // Reset audit data and save new batch results
-    this.auditManager.resetAuditResults(results);
-
     // Calculate counts from results for notification
     const noAlertsCount = results.filter((r) => r.code === AlertState.NO_ALERTS).length;
     const singleAlertCount = results.filter((r) => r.code === AlertState.SINGLE_ALERT).length;
@@ -104,7 +102,7 @@ export class AuditHandler implements IAuditHandler {
     this.renderGlobalRefreshButton();
 
     // Render alerts UI (header + buttons) before GTT audit
-    this.auditAlerts();
+    this.auditAlerts(results);
 
     // Run GTT audit and render new UI
     await this.auditGttOrders();
@@ -134,30 +132,24 @@ export class AuditHandler implements IAuditHandler {
     $button.prependTo($auditArea);
   }
 
-  // Renders audit header and buttons based on current repository state
-  private auditAlerts(): void {
-    const singles = this.getSortedAudits(AlertState.SINGLE_ALERT);
-    const none = this.getSortedAudits(AlertState.NO_ALERTS);
+  /**
+   * Renders alerts audit section using AuditRenderer
+   * Plugin handles all filtering (watched tickers, etc.)
+   * @param pluginResults Results from AlertsAudit plugin
+   */
+  private auditAlerts(pluginResults: AuditResult[]): void {
+    // Get section from registry (section contains plugin)
+    const section = this.auditRegistry.mustGetSection(AUDIT_IDS.ALERTS);
 
-    // Decide visible items (prioritize SINGLE_ALERT up to 10, then fill with NO_ALERTS)
-    const maxItems = 10;
-    const singlesToShow = singles.slice(0, Math.min(maxItems, singles.length));
-    const remainingSlots = Math.max(0, maxItems - singlesToShow.length);
-    const noneToShow = none.slice(0, remainingSlots);
-    const displayItems = [...singlesToShow, ...noneToShow];
-
-    // Totals (across all filtered items, not just visible)
-    const totalAll = singles.length + none.length;
-    const invalidAll = [...singles, ...none].filter((a) => !this.symbolManager.investingToTv(a.investingTicker)).length;
-
+    // Create renderer with section and render
     const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    $auditArea.empty();
+    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
 
-    // Header with colored counts in priority: Single (orange), None (gray), Invalid (red)
-    this.renderHeaderColors($auditArea, totalAll, singles.length, none.length, invalidAll);
+    // Render initial (empty) section first
+    renderer.render();
 
-    // Render buttons inline (no partitions), rely on button colors to communicate state
-    this.renderButtons($auditArea, displayItems);
+    // Set initial plugin results (plugin already handles filtering and sorting)
+    renderer.setResults(pluginResults);
   }
 
   /**
@@ -167,45 +159,15 @@ export class AuditHandler implements IAuditHandler {
     // Get section from registry (section contains plugin)
     const section = this.auditRegistry.mustGetSection(AUDIT_IDS.GTT_UNWATCHED);
 
-    // Run plugin via section
-    const results = await section.plugin.run();
-
     // Create renderer with section and render
     const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
     const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
-    renderer.setResults(results);
+
+    // Render initial (empty) section first
     renderer.render();
-  }
 
-  // Build header: exact summary + colored count labels matching button colors
-  private renderHeaderColors(
-    $root: JQuery,
-    totalCount: number,
-    singleCount: number,
-    noneCount: number,
-    invalidCount: number
-  ): void {
-    // Short header: One, None, Inv, Tot (no 'Audit: ...')
-    this.uiUtil.buildLabel(`One: ${singleCount}`, 'darkorange').appendTo($root);
-    this.uiUtil.buildLabel(`None: ${noneCount}`, 'darkgray').css({ marginLeft: '6px' }).appendTo($root);
-    this.uiUtil.buildLabel(`Inv: ${invalidCount}`, 'darkred').css({ marginLeft: '6px' }).appendTo($root);
-    this.uiUtil.buildLabel(`Tot: ${totalCount}`, 'lightgray').css({ marginLeft: '6px' }).appendTo($root);
-    $('<div>').css({ height: '6px' }).appendTo($root);
-  }
-
-  // Return filtered (hide watched) and alphabetically sorted audits for a state
-  private getSortedAudits(state: AlertState) {
-    return this.auditManager
-      .filterAuditResults(state)
-      .filter((a) => !this.watchManager.isWatched(this.tryMapTvTicker(a.investingTicker)))
-      .sort((a, b) => a.investingTicker.localeCompare(b.investingTicker));
-  }
-
-  // Render list of buttons (no group separators)
-  private renderButtons($root: JQuery, items: { investingTicker: string; state: AlertState }[]): void {
-    items.forEach((audit) => {
-      this.createAuditButton(audit.investingTicker, audit.state).appendTo($root);
-    });
+    // Now run audit via renderer (this records timestamp and updates display)
+    await renderer.refresh();
   }
 
   /**

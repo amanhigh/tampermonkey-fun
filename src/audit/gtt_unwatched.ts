@@ -37,14 +37,15 @@ export class GttUnwatchedAudit extends BaseAuditPlugin {
 
     // Find tickers with GTT orders that are not in any watchlist
     const results: AuditResult[] = [];
-    allGttTickers.forEach((ticker: string) => {
-      const isWatched = firstList.has(ticker) || secondList.has(ticker) || runningTradesList.has(ticker);
+    allGttTickers.forEach((tvTicker: string) => {
+      // Check if GTT ticker is in any watched category
+      const isWatched = firstList.has(tvTicker) || secondList.has(tvTicker) || runningTradesList.has(tvTicker);
       if (!isWatched) {
         results.push({
           pluginId: this.id,
           code: 'UNWATCHED_GTT',
-          target: ticker,
-          message: `${ticker}: GTT order exists but ticker not in watchlist`,
+          target: tvTicker,
+          message: `${tvTicker}: GTT order exists but ticker not in watchlist`,
           severity: 'HIGH',
           status: 'FAIL',
         });

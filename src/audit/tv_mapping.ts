@@ -23,14 +23,15 @@ export class TvMappingAudit extends BaseAuditPlugin {
     const investingTickers = targets && targets.length > 0 ? targets : this.pairManager.getAllInvestingTickers();
     const results: AuditResult[] = [];
 
-    investingTickers.forEach((ticker: string) => {
-      const tvTicker = this.symbolManager.investingToTv(ticker);
+    investingTickers.forEach((investingTicker: string) => {
+      // Check if investing ticker has a TV mapping
+      const tvTicker = this.symbolManager.investingToTv(investingTicker);
       if (!tvTicker) {
         results.push({
           pluginId: this.id,
           code: 'NO_TV_MAPPING',
-          target: ticker,
-          message: `${ticker}: NO_TV_MAPPING`,
+          target: investingTicker,
+          message: `${investingTicker}: NO_TV_MAPPING`,
           severity: 'HIGH',
           status: 'FAIL',
         });
