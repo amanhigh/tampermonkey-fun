@@ -4,6 +4,24 @@ import { SequenceMap, SequenceType, TimeFrameConfig, TimeFrame, TimeFrameMap } f
  * Application-wide constants organized by domain and functionality
  */
 export const Constants = Object.freeze({
+  // Audit Configuration
+  AUDIT: {
+    IDS: {
+      AREA: 'aman-audit', // Audit area container
+      GLOBAL_REFRESH_BUTTON: 'aman-audit-global-refresh', // Global refresh button for all audits
+    },
+    CLASSES: {
+      SECTION: 'aman-audit-section', // Main audit section container
+      STATUS_PASS: 'audit-status-pass', // When no issues found
+      STATUS_WARN: 'audit-status-warn', // When issues found
+      SECTION_HEADER: 'audit-section-header', // Section header
+      SECTION_BODY: 'audit-section-body', // Section body with results
+      SECTION_REFRESH: 'audit-section-refresh', // Refresh button in section
+      HEADER_ICON: 'header-icon', // Expand/collapse icon
+      HEADER_TEXT: 'header-text', // Header text with timestamp
+    },
+  },
+
   // UI element colors and styles
   UI: {
     COLORS: {

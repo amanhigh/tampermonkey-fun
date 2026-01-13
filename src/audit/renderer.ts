@@ -1,4 +1,5 @@
 import { AuditResult } from '../models/audit';
+import { Constants } from '../models/constant';
 import { IUIUtil } from '../util/ui';
 import { IAuditSection } from '../audit/section';
 
@@ -23,6 +24,7 @@ export class AuditRenderer {
   private results: AuditResult[] = [];
   private running: boolean = false;
   private currentPage: number = 0;
+  private lastRunTime: number = Date.now();
 
   constructor(
     private readonly section: IAuditSection,
@@ -53,10 +55,13 @@ export class AuditRenderer {
    * Build the complete section
    */
   private buildSection(): JQuery {
-    const $section = $('<div>').attr('id', `audit-section-${this.section.id}`).addClass('aman-audit-section');
+    const $section = $('<div>')
+      .attr('id', `audit-section-${this.section.id}`)
+      .addClass(Constants.AUDIT.CLASSES.SECTION);
 
     // Add status class based on results
-    const statusClass = this.results.length === 0 ? 'audit-status-pass' : 'audit-status-warn';
+    const statusClass =
+      this.results.length === 0 ? Constants.AUDIT.CLASSES.STATUS_PASS : Constants.AUDIT.CLASSES.STATUS_WARN;
     $section.addClass(statusClass);
 
     // Header (always visible)
@@ -96,21 +101,24 @@ export class AuditRenderer {
     const icon = this.collapsed ? '►' : '▼';
     const headerText = this.section.headerFormatter(this.results, this.section.context);
 
+    // Always append timestamp to header
+    const fullHeaderText = `${headerText} - ${this.getTimestampText()}`;
+
     const $header = $('<div>')
-      .addClass('audit-section-header')
+      .addClass(Constants.AUDIT.CLASSES.SECTION_HEADER)
       .on('click', () => this.toggleCollapse());
 
     // Expand/collapse icon + header text
-    $('<span>').addClass('header-icon').html(icon).appendTo($header);
+    $('<span>').addClass(Constants.AUDIT.CLASSES.HEADER_ICON).html(icon).appendTo($header);
 
-    $('<span>').addClass('header-text').html(headerText).appendTo($header);
+    $('<span>').addClass(Constants.AUDIT.CLASSES.HEADER_TEXT).html(fullHeaderText).appendTo($header);
 
     // Refresh button
     const $refresh = this.uiUtil
       .buildButton(`audit-refresh-${this.section.id}`, '🔄', () => {
         void this.runAudit();
       })
-      .addClass('audit-section-refresh');
+      .addClass(Constants.AUDIT.CLASSES.SECTION_REFRESH);
 
     this.setRefreshButtonState($refresh, !this.running);
     $refresh.appendTo($header);
@@ -122,7 +130,7 @@ export class AuditRenderer {
    * Build body with ticker buttons or success message
    */
   private buildBody(): JQuery {
-    const $body = $('<div>').addClass('audit-section-body');
+    const $body = $('<div>').addClass(Constants.AUDIT.CLASSES.SECTION_BODY);
 
     if (this.results.length === 0) {
       // Success state - no issues
@@ -277,6 +285,16 @@ export class AuditRenderer {
   }
 
   /**
+   * Get timestamp in HH:mm format when audit ran
+   */
+  private getTimestampText(): string {
+    const date = new Date(this.lastRunTime);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
+
+  /**
    * Run the audit plugin to get latest results
    */
   private async runAudit(): Promise<void> {
@@ -287,6 +305,9 @@ export class AuditRenderer {
 
       // Run plugin
       this.results = await this.section.plugin.run();
+
+      // Record timestamp
+      this.lastRunTime = Date.now();
 
       // Smart expand: expand if issues, collapse if clean
       this.smartExpand(this.results);
