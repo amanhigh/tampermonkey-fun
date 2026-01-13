@@ -317,7 +317,16 @@ export class Factory {
     // ===== PLUGIN CREATION =====
     // Return a singleton AlertsAudit instance
     alerts: () =>
-      Factory.getInstance('auditPlugin_alerts', () => new AlertsAudit(Factory.manager.pair(), Factory.manager.alert())),
+      Factory.getInstance(
+        'auditPlugin_alerts',
+        () =>
+          new AlertsAudit(
+            Factory.manager.pair(),
+            Factory.manager.alert(),
+            Factory.manager.watch(),
+            Factory.manager.symbol()
+          )
+      ),
 
     // Return a singleton TvMappingAudit instance
     // NOTE: Registered but not actively used in audit flow (deferred for future use cases)
