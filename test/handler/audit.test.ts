@@ -297,10 +297,23 @@ describe('AuditHandler', () => {
         onRightClick: jest.fn(),
       } as any;
 
+      const mockOrphanSection = {
+        id: 'orphan-alerts',
+        title: 'Orphan Alerts',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Orphan Alerts'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkred'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
       // Return appropriate section based on ID
       mockAuditRegistry.mustGetSection.mockImplementation((id) => {
         if (id === 'alerts') return mockAlertsSection;
         if (id === 'gtt-unwatched') return mockGttSection;
+        if (id === 'orphan-alerts') return mockOrphanSection;
         throw new Error(`Unknown section: ${id}`);
       });
 
@@ -373,10 +386,24 @@ describe('AuditHandler', () => {
         onRightClick: jest.fn(),
       } as any;
 
+      // Mock Orphan Alerts section
+      const mockOrphanSection = {
+        id: 'orphan-alerts',
+        title: 'Orphan Alerts',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Orphan Alerts'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkred'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
       // Return appropriate section based on ID
       mockAuditRegistry.mustGetSection.mockImplementation((id) => {
         if (id === 'alerts') return mockAlertsSection;
         if (id === 'gtt-unwatched') return mockGttSection;
+        if (id === 'orphan-alerts') return mockOrphanSection;
         throw new Error(`Unknown section: ${id}`);
       });
 
@@ -521,6 +548,73 @@ describe('AuditHandler', () => {
       await auditHandler.auditAll();
 
       expect(mockGttPlugin.run).toHaveBeenCalled();
+    });
+
+    it('should render orphan alerts section in auditAll', async () => {
+      // Setup AlertsAudit plugin
+      const mockAlertsPlugin = {
+        run: jest.fn().mockResolvedValue([]),
+      };
+      const mockAlertsSection = {
+        id: 'alerts',
+        title: 'Alerts Coverage',
+        plugin: mockAlertsPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Alerts'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      // Setup GTT plugin
+      const mockGttPlugin = {
+        run: jest.fn().mockResolvedValue([]),
+      };
+      const mockGttSection = {
+        id: 'gtt-unwatched',
+        title: 'GTT Orders',
+        plugin: mockGttPlugin,
+        headerFormatter: jest.fn().mockReturnValue('GTT Orders'),
+        buttonColorMapper: jest.fn().mockReturnValue('gold'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      // Setup OrphanAlerts plugin
+      const mockOrphanPlugin = {
+        run: jest.fn().mockResolvedValue([]),
+      };
+      const mockOrphanSection = {
+        id: 'orphan-alerts',
+        title: 'Orphan Alerts',
+        plugin: mockOrphanPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Orphan Alerts'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkred'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      // Mock mustGetSection to return different sections based on id
+      mockAuditRegistry.mustGetSection.mockImplementation((id: string) => {
+        if (id === 'alerts') return mockAlertsSection;
+        if (id === 'gtt-unwatched') return mockGttSection;
+        if (id === 'orphan-alerts') return mockOrphanSection;
+        throw new Error(`Unknown section: ${id}`);
+      });
+
+      mockAuditRegistry.mustGet.mockReturnValue(mockAlertsPlugin as any);
+
+      await auditHandler.auditAll();
+
+      // Verify all sections were rendered
+      expect(mockAlertsPlugin.run).toHaveBeenCalled();
+      expect(mockGttPlugin.run).toHaveBeenCalled();
+      expect(mockOrphanPlugin.run).toHaveBeenCalled();
     });
   });
 

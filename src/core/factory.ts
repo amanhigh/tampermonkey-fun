@@ -83,6 +83,7 @@ import { UnmappedPairsAudit } from '../audit/unmapped_pairs';
 import { OrphanAlertsAudit } from '../audit/orphan_alerts';
 import { GttAuditSection } from '../audit/gtt_section';
 import { AlertsAuditSection } from '../audit/alerts_section';
+import { OrphanAlertsSection } from '../audit/orphan_alerts_section';
 
 /**
  * Project Architecture Overview
@@ -386,6 +387,18 @@ export class Factory {
           )
       ),
 
+    // Orphan Alerts Audit Section - receives plugin via direct injection
+    // Follows GTT and Alerts patterns for consistency
+    orphanAlertsSection: () =>
+      Factory.getInstance(
+        'orphanAlertsSection',
+        () =>
+          new OrphanAlertsSection(
+            Factory.audit.orphanAlerts(), // ✅ Direct plugin injection
+            Factory.repo.alert()
+          )
+      ),
+
     // ===== REGISTRY =====
     // Build registry by explicitly registering plugins and sections
     registry: () =>
@@ -402,6 +415,7 @@ export class Factory {
         // Register sections (primary responsibility)
         reg.registerSection(Factory.audit.alertsSection());
         reg.registerSection(Factory.audit.gttSection());
+        reg.registerSection(Factory.audit.orphanAlertsSection());
 
         return reg;
       }),

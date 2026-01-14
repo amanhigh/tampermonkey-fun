@@ -107,6 +107,9 @@ export class AuditHandler implements IAuditHandler {
     // Run GTT audit and render new UI
     await this.auditGttOrders();
 
+    // Run Orphan Alerts audit and render section
+    await this.auditOrphanAlerts();
+
     // Mark audits as run
     this.auditHasRun = true;
   }
@@ -158,6 +161,24 @@ export class AuditHandler implements IAuditHandler {
   private async auditGttOrders(): Promise<void> {
     // Get section from registry (section contains plugin)
     const section = this.auditRegistry.mustGetSection(AUDIT_IDS.GTT_UNWATCHED);
+
+    // Create renderer with section and render
+    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
+
+    // Render initial (empty) section first
+    renderer.render();
+
+    // Now run audit via renderer (this records timestamp and updates display)
+    await renderer.refresh();
+  }
+
+  /**
+   * Run Orphan Alerts audit and render section
+   */
+  private async auditOrphanAlerts(): Promise<void> {
+    // Get section from registry (section contains plugin)
+    const section = this.auditRegistry.mustGetSection(AUDIT_IDS.ORPHAN_ALERTS);
 
     // Create renderer with section and render
     const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
