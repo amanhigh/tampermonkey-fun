@@ -447,5 +447,82 @@ describe('WatchManager', () => {
 
       expect(result).toBe(false);
     });
+
+    describe('evictTicker', () => {
+      it('should remove ticker from all categories where it exists', () => {
+        const tvTicker = 'HDFC';
+        
+        // Mock category lists with ticker in multiple categories
+        const mockCategoryMap = new Map([
+          [0, new Set(['HDFC', 'RELIANCE'])], // HDFC should be removed
+          [1, new Set(['TCS'])], // HDFC not present
+          [2, new Set(['HDFC', 'INFY'])], // HDFC should be removed
+        ]);
+        
+        mockCategoryLists.getLists.mockReturnValue(mockCategoryMap);
+
+        const result = watchManager.evictTicker(tvTicker);
+
+        // Verify ticker was removed from categories where it existed
+        expect(mockCategoryLists.delete).toHaveBeenCalledWith(0, tvTicker);
+        expect(mockCategoryLists.delete).toHaveBeenCalledWith(2, tvTicker);
+        expect(mockCategoryLists.delete).not.toHaveBeenCalledWith(1, tvTicker);
+        expect(result).toBe(true); // Ticker was found and removed
+      });
+
+      it('should return false when ticker not found in any category', () => {
+        const tvTicker = 'NONEXISTENT';
+        
+        // Mock category lists without the ticker
+        const mockCategoryMap = new Map([
+          [0, new Set(['HDFC', 'RELIANCE'])],
+          [1, new Set(['TCS'])],
+          [2, new Set(['INFY'])],
+        ]);
+        
+        mockCategoryLists.getLists.mockReturnValue(mockCategoryMap);
+
+        const result = watchManager.evictTicker(tvTicker);
+
+        // Verify no delete operations were called
+        expect(mockCategoryLists.delete).not.toHaveBeenCalled();
+        expect(result).toBe(false); // Ticker not found
+      });
+
+      it('should handle empty categories gracefully', () => {
+        const tvTicker = 'HDFC';
+        
+        // Mock empty category lists
+        const mockCategoryMap = new Map<number, Set<string>>([
+          [0, new Set<string>()],
+          [1, new Set<string>()],
+          [2, new Set<string>()],
+        ]);
+        
+        mockCategoryLists.getLists.mockReturnValue(mockCategoryMap);
+
+        const result = watchManager.evictTicker(tvTicker);
+
+        expect(mockCategoryLists.delete).not.toHaveBeenCalled();
+        expect(result).toBe(false); // Ticker not found in empty categories
+      });
+
+      it('should handle special characters in ticker names', () => {
+        const tvTicker = 'M&M_SPECIAL';
+        
+        // Mock category with special character ticker
+        const mockCategoryMap = new Map([
+          [0, new Set(['M&M_SPECIAL', 'L&T'])],
+          [1, new Set(['TCS'])],
+        ]);
+        
+        mockCategoryLists.getLists.mockReturnValue(mockCategoryMap);
+
+        const result = watchManager.evictTicker(tvTicker);
+
+        expect(mockCategoryLists.delete).toHaveBeenCalledWith(0, tvTicker);
+        expect(result).toBe(true); // Ticker was found and removed
+      });
+    });
   });
 });

@@ -297,5 +297,94 @@ describe('FlagManager', () => {
       // Should attempt to toggle all provided values (even undefined ones)
       expect(toggleSpy).toHaveBeenCalledTimes(3);
     });
+
+    describe('evictTicker', () => {
+      it('should remove ticker from all flag categories where it exists', () => {
+        const tvTicker = 'HDFC';
+        
+        // Mock flag category lists with ticker in multiple categories
+        const mockMap = new Map<number, Set<string>>([
+          [0, new Set(['HDFC', 'RELIANCE'])], // HDFC should be removed
+          [1, new Set(['TCS'])], // HDFC not present
+          [2, new Set(['HDFC', 'INFY'])], // HDFC should be removed
+        ]);
+        const mockCategoryLists = new CategoryLists(mockMap);
+        
+        // Create spy for delete method
+        const deleteSpy = jest.spyOn(mockCategoryLists, 'delete');
+        mockFlagRepo.getFlagCategoryLists.mockReturnValue(mockCategoryLists);
+
+        const result = flagManager.evictTicker(tvTicker);
+
+        // Verify ticker was removed from categories where it existed
+        expect(deleteSpy).toHaveBeenCalledWith(0, tvTicker);
+        expect(deleteSpy).toHaveBeenCalledWith(2, tvTicker);
+        expect(deleteSpy).not.toHaveBeenCalledWith(1, tvTicker);
+        expect(result).toBe(true); // Ticker was found and removed
+      });
+
+      it('should return false when ticker not found in any flag category', () => {
+        const tvTicker = 'NONEXISTENT';
+        
+        // Mock flag category lists without the ticker
+        const mockMap = new Map<number, Set<string>>([
+          [0, new Set(['HDFC', 'RELIANCE'])],
+          [1, new Set(['TCS'])],
+          [2, new Set(['INFY'])],
+        ]);
+        const mockCategoryLists = new CategoryLists(mockMap);
+        
+        // Create spy for delete method
+        const deleteSpy = jest.spyOn(mockCategoryLists, 'delete');
+        mockFlagRepo.getFlagCategoryLists.mockReturnValue(mockCategoryLists);
+
+        const result = flagManager.evictTicker(tvTicker);
+
+        // Verify no delete operations were called
+        expect(deleteSpy).not.toHaveBeenCalled();
+        expect(result).toBe(false); // Ticker not found
+      });
+
+      it('should handle empty flag categories gracefully', () => {
+        const tvTicker = 'HDFC';
+        
+        // Mock empty flag category lists
+        const mockMap = new Map<number, Set<string>>([
+          [0, new Set<string>()],
+          [1, new Set<string>()],
+          [2, new Set<string>()],
+        ]);
+        const mockCategoryLists = new CategoryLists(mockMap);
+        
+        // Create spy for delete method
+        const deleteSpy = jest.spyOn(mockCategoryLists, 'delete');
+        mockFlagRepo.getFlagCategoryLists.mockReturnValue(mockCategoryLists);
+
+        const result = flagManager.evictTicker(tvTicker);
+
+        expect(deleteSpy).not.toHaveBeenCalled();
+        expect(result).toBe(false); // Ticker not found in empty categories
+      });
+
+      it('should handle special characters in ticker names', () => {
+        const tvTicker = 'M&M_SPECIAL';
+        
+        // Mock flag category with special character ticker
+        const mockMap = new Map<number, Set<string>>([
+          [0, new Set(['M&M_SPECIAL', 'L&T'])],
+          [1, new Set(['TCS'])],
+        ]);
+        const mockCategoryLists = new CategoryLists(mockMap);
+        
+        // Create spy for delete method
+        const deleteSpy = jest.spyOn(mockCategoryLists, 'delete');
+        mockFlagRepo.getFlagCategoryLists.mockReturnValue(mockCategoryLists);
+
+        const result = flagManager.evictTicker(tvTicker);
+
+        expect(deleteSpy).toHaveBeenCalledWith(0, tvTicker);
+        expect(result).toBe(true); // Ticker was found and removed
+      });
+    });
   });
 });
