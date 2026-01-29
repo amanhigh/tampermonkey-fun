@@ -5,7 +5,6 @@ import { Notifier } from '../util/notify';
 import { IInvestingClient } from '../client/investing';
 import { ISymbolManager } from '../manager/symbol';
 import { ITickerManager } from '../manager/ticker';
-import { IAlertFeedManager } from '../manager/alertfeed';
 
 /**
  * Interface for managing alert mapping operations
@@ -22,7 +21,7 @@ export interface IPairHandler {
    * Deletes pair mapping information
    * @param investingTicker The investing.com ticker symbol to unmap
    */
-  deletePairInfo(investingTicker: string): Promise<void>;
+  deletePairInfo(investingTicker: string): void;
 }
 
 /**
@@ -34,8 +33,7 @@ export class PairHandler implements IPairHandler {
     private readonly pairManager: IPairManager,
     private readonly smartPrompt: ISmartPrompt,
     private readonly tickerManager: ITickerManager,
-    private readonly symbolManager: ISymbolManager,
-    private readonly alertFeedManager: IAlertFeedManager
+    private readonly symbolManager: ISymbolManager
   ) {}
 
   /**
@@ -93,15 +91,17 @@ export class PairHandler implements IPairHandler {
    * Deletes pair mapping information
    * @param investingTicker The investing.com ticker symbol to unmap
    */
-  public async deletePairInfo(investingTicker: string): Promise<void> {
-    this.pairManager.deletePairInfo(investingTicker);
-    // Remove symbol mapping to fully unmap the ticker
-    this.symbolManager.removeTvToInvestingMapping(investingTicker);
-    // Update alert feed to reflect unmapped state
+  public deletePairInfo(investingTicker: string): void {
+    // Delegate all cleanup logic to manager and get result
+    const cleanedFromLists = this.pairManager.deletePairInfo(investingTicker);
+
+    // Handle notification based on cleanup result
     const tvTicker = this.symbolManager.investingToTv(investingTicker);
-    if (tvTicker) {
-      await this.alertFeedManager.createAlertFeedEvent(tvTicker);
+
+    if (cleanedFromLists) {
+      Notifier.info(`🗑️ Cleaned ${tvTicker} from Lists (Watch/Flag)`);
     }
+
     Notifier.success(`Unmapped ${investingTicker}`);
   }
 }

@@ -34,6 +34,13 @@ export interface IWatchManager {
   recordCategory(categoryIndex: number, tvTickers: string[]): void;
 
   /**
+   * Evicts ticker from all watchlist categories if present
+   * @param tvTicker Ticker to evict
+   * @returns True if ticker was found and removed, false if not found
+   */
+  evictTicker(tvTicker: string): boolean;
+
+  /**
    * Check how many order items would be removed by cleanup
    * @param currentTickers List of current tickers in watchlist
    * @returns Number of items that would be removed
@@ -94,6 +101,21 @@ export class WatchManager implements IWatchManager {
   recordCategory(categoryIndex: number, tvTickers: string[]): void {
     const categoryLists = this.watchRepo.getWatchCategoryLists();
     this.recordCategoryInternal(categoryLists, categoryIndex, tvTickers);
+  }
+
+  /** @inheritdoc */
+  evictTicker(tvTicker: string): boolean {
+    const categoryLists = this.watchRepo.getWatchCategoryLists();
+    let removed = false;
+
+    categoryLists.getLists().forEach((list, categoryIndex) => {
+      if (list.has(tvTicker)) {
+        categoryLists.delete(categoryIndex, tvTicker);
+        removed = true;
+      }
+    });
+
+    return removed;
   }
 
   /** @inheritdoc */

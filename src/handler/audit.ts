@@ -263,10 +263,9 @@ export class AuditHandler implements IAuditHandler {
 
     button.on('contextmenu', (e: JQuery.ContextMenuEvent) => {
       e.preventDefault();
-      void this.pairHandler.deletePairInfo(investingTicker).then(() => {
-        button.remove();
-        Notifier.red(`❌ Removed mapping for ${investingTicker}`);
-      });
+      this.pairHandler.deletePairInfo(investingTicker);
+      button.remove();
+      Notifier.red(`❌ Removed mapping for ${investingTicker}`);
     });
 
     return button;

@@ -280,7 +280,18 @@ export class Factory {
         () => new TradingViewManager(Factory.util.wait(), Factory.repo.cron(), Factory.client.kohan())
       ),
 
-    pair: (): IPairManager => Factory.getInstance('pairManager', () => new PairManager(Factory.repo.pair())),
+    pair: (): IPairManager =>
+      Factory.getInstance(
+        'pairManager',
+        () =>
+          new PairManager(
+            Factory.repo.pair(),
+            Factory.manager.symbol(),
+            Factory.manager.watch(),
+            Factory.manager.flag(),
+            Factory.manager.alertFeed()
+          )
+      ),
 
     style: (): IStyleManager =>
       Factory.getInstance('styleManager', () => new StyleManager(Factory.util.wait(), Factory.manager.timeFrame())),
@@ -586,8 +597,7 @@ export class Factory {
             Factory.manager.pair(),
             Factory.util.smart(),
             Factory.manager.ticker(),
-            Factory.manager.symbol(),
-            Factory.manager.alertFeed()
+            Factory.manager.symbol()
           )
       ),
     flag: (): IFlagHandler =>

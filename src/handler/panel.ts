@@ -43,7 +43,7 @@ export class PanelHandler implements IPanelHandler {
 
     switch (action) {
       case PanelAction.DELETE_PAIR:
-        await this.pairHandler.deletePairInfo(searchTicker);
+        this.pairHandler.deletePairInfo(searchTicker);
         break;
       case PanelAction.VALIDATE_DATA:
         await this.handleValidation();

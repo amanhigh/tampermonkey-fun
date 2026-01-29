@@ -44,9 +44,8 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
   };
 
   readonly onRightClick = (ticker: string) => {
-    void this.pairHandler.deletePairInfo(ticker).then(() => {
-      Notifier.red(`❌ Removed mapping for ${ticker}`);
-    });
+    this.pairHandler.deletePairInfo(ticker);
+    Notifier.red(`❌ Removed mapping for ${ticker}`);
   };
 
   /**
