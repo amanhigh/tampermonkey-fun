@@ -101,6 +101,9 @@ export class AuditHandler implements IAuditHandler {
     // Render global refresh button at top of audit area
     this.renderGlobalRefreshButton();
 
+    // Clear old sections before re-rendering (prevents duplicates on refresh)
+    this.clearAuditSections();
+
     // Render alerts UI (header + buttons) before GTT audit
     this.auditAlerts(results);
 
@@ -133,6 +136,20 @@ export class AuditHandler implements IAuditHandler {
 
     // Add at top of audit area
     $button.prependTo($auditArea);
+  }
+
+  /**
+   * Clears all audit sections from the UI
+   * Preserves the global refresh button at the top
+   * Called before re-rendering sections to prevent duplicates
+   * @private
+   */
+  private clearAuditSections(): void {
+    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+
+    // Remove all audit sections (identified by class)
+    // This does NOT remove the global refresh button
+    $auditArea.find(`.${Constants.AUDIT.CLASSES.SECTION}`).remove();
   }
 
   /**

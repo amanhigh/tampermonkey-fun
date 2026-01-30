@@ -425,6 +425,19 @@ describe('AuditHandler', () => {
       expect(mockUIUtil.buildButton).toHaveBeenCalled();
     });
 
+    it('should clear old audit sections before re-rendering', async () => {
+      await auditHandler.auditAll();
+
+      // Verify that jQuery was called to find sections by class
+      expect($).toHaveBeenCalledWith(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+
+      // Verify that find() was called with the section class to locate old sections
+      expect(mockJQuery.find).toHaveBeenCalledWith(`.${Constants.AUDIT.CLASSES.SECTION}`);
+
+      // Verify that remove() was called to clear old sections
+      expect(mockJQuery.remove).toHaveBeenCalled();
+    });
+
     it('should filter non-watched audit results', async () => {
       const pluginResults = [
         {
