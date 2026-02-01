@@ -395,7 +395,7 @@ export class Factory {
             Factory.audit.alerts(), // ✅ Direct plugin injection
             Factory.handler.ticker(),
             Factory.manager.symbol(),
-            Factory.handler.pair()
+            Factory.manager.pair()
           )
       ),
 
@@ -421,7 +421,7 @@ export class Factory {
           new UnmappedPairsSection(
             Factory.audit.unmappedPairs(), // ✅ Direct plugin injection
             Factory.handler.ticker(), // For opening tickers
-            Factory.handler.pair() // For cleanup operations
+            Factory.manager.pair() // For cleanup operations
           )
       ),
 

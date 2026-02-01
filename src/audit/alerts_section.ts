@@ -4,7 +4,7 @@ import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './base_section';
 import { ITickerHandler } from '../handler/ticker';
 import { ISymbolManager } from '../manager/symbol';
-import { IPairHandler } from '../handler/pair';
+import { IPairManager } from '../manager/pair';
 import { Notifier } from '../util/notify';
 import { AlertState } from '../models/alert';
 import { AUDIT_IDS } from '../models/audit_ids';
@@ -46,7 +46,7 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
 
   readonly onRightClick = (result: AuditResult) => {
     const investingTicker = result.target;
-    this.pairHandler.deletePairInfo(investingTicker);
+    this.pairManager.deletePairInfo(investingTicker);
     Notifier.red(`❌ Removed mapping for ${investingTicker}`);
   };
 
@@ -75,13 +75,13 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
    * @param plugin - IAudit plugin for alerts analysis (injected directly)
    * @param tickerHandler - Handler for ticker operations
    * @param symbolManager - Manager for symbol mappings
-   * @param pairHandler - Handler for pair operations
+   * @param pairManager - Manager for pair operations
    */
   constructor(
     plugin: IAudit,
     private readonly tickerHandler: ITickerHandler,
     private readonly symbolManager: ISymbolManager,
-    private readonly pairHandler: IPairHandler
+    private readonly pairManager: IPairManager
   ) {
     super();
     this.plugin = plugin;

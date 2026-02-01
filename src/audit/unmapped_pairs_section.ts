@@ -3,7 +3,7 @@ import { IAuditSection } from './section';
 import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './base_section';
 import { ITickerHandler } from '../handler/ticker';
-import { IPairHandler } from '../handler/pair';
+import { IPairManager } from '../manager/pair';
 import { Notifier } from '../util/notify';
 import { AUDIT_IDS } from '../models/audit_ids';
 
@@ -41,7 +41,7 @@ export class UnmappedPairsSection extends BaseAuditSection implements IAuditSect
 
   readonly onRightClick = (result: AuditResult): void => {
     const investingTicker = result.target;
-    this.pairHandler.deletePairInfo(investingTicker);
+    this.pairManager.deletePairInfo(investingTicker);
     Notifier.red(`🗑️ Removed unmapped pair: ${investingTicker}`);
   };
 
@@ -54,12 +54,12 @@ export class UnmappedPairsSection extends BaseAuditSection implements IAuditSect
    * Constructor with injected dependencies
    * @param plugin UnmappedPairsAudit plugin
    * @param tickerHandler For opening tickers
-   * @param pairHandler For cleanup operations
+   * @param pairManager For cleanup operations
    */
   constructor(
     plugin: IAudit,
     private readonly tickerHandler: ITickerHandler,
-    private readonly pairHandler: IPairHandler
+    private readonly pairManager: IPairManager
   ) {
     super();
     this.plugin = plugin;
