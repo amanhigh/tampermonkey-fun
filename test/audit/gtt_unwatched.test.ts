@@ -119,9 +119,12 @@ describe('GttUnwatchedAudit', () => {
         pluginId: 'gtt-unwatched',
         code: 'UNWATCHED_GTT',
         target: 'TSLA',
-        message: 'TSLA: GTT order exists but ticker not in watchlist',
+        message: 'TSLA: 1 GTT order(s) exist but ticker not in watchlist',
         severity: 'HIGH',
         status: 'FAIL',
+        data: {
+          orderIds: ['1'],
+        },
       });
     });
 
@@ -207,7 +210,7 @@ describe('GttUnwatchedAudit', () => {
       expect(result).toHaveProperty('severity');
       expect(result).toHaveProperty('status');
       expect(result.message).toContain('UNWATCHED');
-      expect(result.message).toContain('GTT order exists but ticker not in watchlist');
+      expect(result.message).toContain('GTT order(s) exist but ticker not in watchlist');
     });
   });
 });
