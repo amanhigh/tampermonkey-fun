@@ -5,6 +5,7 @@ import { Notifier } from '../util/notify';
 import { IInvestingClient } from '../client/investing';
 import { ISymbolManager } from '../manager/symbol';
 import { ITickerManager } from '../manager/ticker';
+import { IWatchListHandler } from './watchlist';
 
 /**
  * Interface for managing alert mapping operations
@@ -33,7 +34,8 @@ export class PairHandler implements IPairHandler {
     private readonly pairManager: IPairManager,
     private readonly smartPrompt: ISmartPrompt,
     private readonly tickerManager: ITickerManager,
-    private readonly symbolManager: ISymbolManager
+    private readonly symbolManager: ISymbolManager,
+    private readonly watchListHandler: IWatchListHandler
   ) {}
 
   /**
@@ -100,6 +102,8 @@ export class PairHandler implements IPairHandler {
 
     if (cleanedFromLists) {
       Notifier.info(`🗑️ Cleaned ${tvTicker} from Lists (Watch/Flag)`);
+      // Trigger UI repaint to reflect changes
+      this.watchListHandler.onWatchListChange();
     }
 
     Notifier.success(`Unmapped ${investingTicker}`);

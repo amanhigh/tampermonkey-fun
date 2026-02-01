@@ -89,7 +89,6 @@ export class PairManager implements IPairManager {
     let cleanedFromLists = false;
 
     if (tvTicker) {
-      // FIXME: UI Must be repainted based on changes
       const watchlistRemoved = this.cleanupWatchlist(tvTicker);
       const flagsRemoved = this.cleanupFlags(tvTicker);
       cleanedFromLists = watchlistRemoved || flagsRemoved;

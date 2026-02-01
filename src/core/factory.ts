@@ -416,7 +416,7 @@ export class Factory {
       Factory.getInstance('auditRegistry', () => {
         const reg = new AuditRegistry();
 
-        // Register plugins (temporary - Phase 4 will remove)
+        // FIXME: Register plugins (temporary - Phase 4 will remove)
         reg.registerPlugin(Factory.audit.alerts());
         reg.registerPlugin(Factory.audit.tvMapping());
         reg.registerPlugin(Factory.audit.gttUnwatched());
@@ -597,7 +597,8 @@ export class Factory {
             Factory.manager.pair(),
             Factory.util.smart(),
             Factory.manager.ticker(),
-            Factory.manager.symbol()
+            Factory.manager.symbol(),
+            Factory.handler.watchlist()
           )
       ),
     flag: (): IFlagHandler =>
