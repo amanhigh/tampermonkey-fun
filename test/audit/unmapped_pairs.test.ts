@@ -74,7 +74,7 @@ describe('UnmappedPairsAudit', () => {
       expect(results[0].code).toBe('NO_TV_MAPPING');
       expect(results[0].target).toBe('TSLA');
       expect(results[0].message).toBe('TSLA: Pair exists but has no TradingView mapping');
-      expect(results[0].severity).toBe('HIGH');
+      expect(results[0].severity).toBe('MEDIUM');
       expect(results[0].status).toBe('FAIL');
       expect(results[0].data).toEqual({ investingTicker: 'TSLA' });
     });
@@ -101,7 +101,7 @@ describe('UnmappedPairsAudit', () => {
       results.forEach((result) => {
         expect(result.pluginId).toBe('unmapped-pairs');
         expect(result.code).toBe('NO_TV_MAPPING');
-        expect(result.severity).toBe('HIGH');
+        expect(result.severity).toBe('MEDIUM');
         expect(result.status).toBe('FAIL');
       });
     });
@@ -166,7 +166,7 @@ describe('UnmappedPairsAudit', () => {
 
       expect(result.pluginId).toBe('unmapped-pairs');
       expect(result.code).toBe('NO_TV_MAPPING');
-      expect(result.severity).toBe('HIGH');
+      expect(result.severity).toBe('MEDIUM');
       expect(result.status).toBe('FAIL');
       expect(result.message).toContain('UNMAPPED');
       expect(result.message).toContain('TradingView mapping');

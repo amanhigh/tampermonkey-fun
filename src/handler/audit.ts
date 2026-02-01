@@ -100,6 +100,9 @@ export class AuditHandler implements IAuditHandler {
     // Run Orphan Alerts audit and render section
     await this.auditOrphanAlerts();
 
+    // Run Unmapped Pairs audit and render section
+    await this.auditUnmappedPairs();
+
     // Mark audits as run
     this.auditHasRun = true;
   }
@@ -183,6 +186,24 @@ export class AuditHandler implements IAuditHandler {
   private async auditOrphanAlerts(): Promise<void> {
     // Get section from registry (section contains plugin)
     const section = this.auditRegistry.mustGetSection(AUDIT_IDS.ORPHAN_ALERTS);
+
+    // Create renderer with section and render
+    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
+
+    // Render initial (empty) section first
+    renderer.render();
+
+    // Now run audit via renderer (this records timestamp and updates display)
+    await renderer.refresh();
+  }
+
+  /**
+   * Run Unmapped Pairs audit and render section
+   */
+  private async auditUnmappedPairs(): Promise<void> {
+    // Get section from registry (section contains plugin)
+    const section = this.auditRegistry.mustGetSection(AUDIT_IDS.UNMAPPED_PAIRS);
 
     // Create renderer with section and render
     const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);

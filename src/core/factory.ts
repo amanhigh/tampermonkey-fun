@@ -84,6 +84,7 @@ import { OrphanAlertsAudit } from '../audit/orphan_alerts';
 import { GttAuditSection } from '../audit/gtt_section';
 import { AlertsAuditSection } from '../audit/alerts_section';
 import { OrphanAlertsSection } from '../audit/orphan_alerts_section';
+import { UnmappedPairsSection } from '../audit/unmapped_pairs_section';
 
 /**
  * Project Architecture Overview
@@ -411,6 +412,19 @@ export class Factory {
           )
       ),
 
+    // Unmapped Pairs Audit Section - receives plugin via direct injection
+    // Displays pairs without TradingView mappings for cleanup
+    unmappedPairsSection: () =>
+      Factory.getInstance(
+        'unmappedPairsSection',
+        () =>
+          new UnmappedPairsSection(
+            Factory.audit.unmappedPairs(), // ✅ Direct plugin injection
+            Factory.handler.ticker(), // For opening tickers
+            Factory.handler.pair() // For cleanup operations
+          )
+      ),
+
     // ===== REGISTRY =====
     // Build registry by registering sections only
     registry: () =>
@@ -421,6 +435,7 @@ export class Factory {
         reg.registerSection(Factory.audit.alertsSection());
         reg.registerSection(Factory.audit.gttSection());
         reg.registerSection(Factory.audit.orphanAlertsSection());
+        reg.registerSection(Factory.audit.unmappedPairsSection());
 
         return reg;
       }),

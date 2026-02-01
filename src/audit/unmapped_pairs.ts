@@ -51,7 +51,7 @@ export class UnmappedPairsAudit extends BaseAuditPlugin {
           code: 'NO_TV_MAPPING',
           target: investingTicker,
           message: `${investingTicker}: Pair exists but has no TradingView mapping`,
-          severity: 'HIGH',
+          severity: 'MEDIUM',
           status: 'FAIL',
           data: {
             investingTicker,

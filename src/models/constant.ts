@@ -28,6 +28,12 @@ export const Constants = Object.freeze({
       LIST: ['orange', 'red', 'dodgerblue', 'cyan', 'lime', 'white', 'brown', 'darkkhaki'], // Old name: colorList
       DEFAULT: 'white',
       FNO_CSS: { 'border-top-style': 'groove', 'border-width': 'medium' }, // Old name: fnoCss
+      // Severity colors for audit results
+      SEVERITY: {
+        LOW: 'darkgray', // Low severity - informational
+        MEDIUM: 'darkorange', // Medium severity - needs attention
+        HIGH: 'darkred', // High severity - critical issues
+      } as const,
     },
 
     // UI Component IDs
