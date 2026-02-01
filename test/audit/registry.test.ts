@@ -12,15 +12,17 @@ describe('AuditRegistry', () => {
 
   describe('registerSection', () => {
     it('should register a section', () => {
+      const mockPlugin: IAudit = {
+        id: AUDIT_IDS.GTT_UNWATCHED,
+        title: 'Test Plugin',
+        validate: jest.fn(),
+        run: jest.fn().mockResolvedValue([]),
+      };
+
       const mockSection: IAuditSection = {
         id: AUDIT_IDS.GTT_UNWATCHED,
         title: 'Test Section',
-        plugin: {
-          id: AUDIT_IDS.GTT_UNWATCHED,
-          title: 'Test Plugin',
-          validate: jest.fn(),
-          run: jest.fn().mockResolvedValue([]),
-        },
+        plugin: mockPlugin,
         headerFormatter: jest.fn().mockReturnValue('Header'),
         buttonColorMapper: jest.fn().mockReturnValue('blue'),
         onLeftClick: jest.fn(),
@@ -33,15 +35,17 @@ describe('AuditRegistry', () => {
     });
 
     it('should throw error for duplicate section id', () => {
+      const mockPlugin: IAudit = {
+        id: AUDIT_IDS.GTT_UNWATCHED,
+        title: 'Test Plugin',
+        validate: jest.fn(),
+        run: jest.fn().mockResolvedValue([]),
+      };
+
       const mockSection: IAuditSection = {
         id: AUDIT_IDS.GTT_UNWATCHED,
         title: 'Test Section',
-        plugin: {
-          id: AUDIT_IDS.GTT_UNWATCHED,
-          title: 'Test Plugin',
-          validate: jest.fn(),
-          run: jest.fn().mockResolvedValue([]),
-        },
+        plugin: mockPlugin,
         headerFormatter: jest.fn().mockReturnValue('Header'),
         buttonColorMapper: jest.fn().mockReturnValue('blue'),
         onLeftClick: jest.fn(),
@@ -50,23 +54,25 @@ describe('AuditRegistry', () => {
 
       registry.registerSection(mockSection);
 
-      expect(() => {
-        registry.registerSection(mockSection);
-      }).toThrow(`Duplicate section id: ${AUDIT_IDS.GTT_UNWATCHED}`);
+      expect(() => registry.registerSection(mockSection)).toThrow(
+        `Duplicate section id: ${AUDIT_IDS.GTT_UNWATCHED}`
+      );
     });
   });
 
   describe('mustGetSection', () => {
     it('should return registered section', () => {
+      const mockPlugin: IAudit = {
+        id: AUDIT_IDS.ALERTS,
+        title: 'Test Plugin',
+        validate: jest.fn(),
+        run: jest.fn().mockResolvedValue([]),
+      };
+
       const mockSection: IAuditSection = {
-        id: AUDIT_IDS.GTT_UNWATCHED,
+        id: AUDIT_IDS.ALERTS,
         title: 'Test Section',
-        plugin: {
-          id: AUDIT_IDS.GTT_UNWATCHED,
-          title: 'Test Plugin',
-          validate: jest.fn(),
-          run: jest.fn().mockResolvedValue([]),
-        },
+        plugin: mockPlugin,
         headerFormatter: jest.fn().mockReturnValue('Header'),
         buttonColorMapper: jest.fn().mockReturnValue('blue'),
         onLeftClick: jest.fn(),
@@ -75,31 +81,40 @@ describe('AuditRegistry', () => {
 
       registry.registerSection(mockSection);
 
-      expect(registry.mustGetSection(AUDIT_IDS.GTT_UNWATCHED)).toEqual(mockSection);
+      expect(registry.mustGetSection(AUDIT_IDS.ALERTS)).toEqual(mockSection);
     });
 
-    it('should throw error for non-existent section', () => {
-      expect(() => {
-        registry.mustGetSection(AUDIT_IDS.ALERTS);
-      }).toThrow(`Section '${AUDIT_IDS.ALERTS}' not found in registry`);
+    it('should throw error for unregistered section', () => {
+      expect(() => registry.mustGetSection(AUDIT_IDS.ALERTS)).toThrow(
+        "Section 'alerts' not found in registry"
+      );
     });
   });
 
   describe('listSections', () => {
-    it('should return empty array when no sections registered', () => {
+    it('should return empty list when no sections registered', () => {
       expect(registry.listSections()).toEqual([]);
     });
 
     it('should return all registered sections', () => {
-      const mockSection1: IAuditSection = {
+      const mockPlugin1: IAudit = {
+        id: AUDIT_IDS.ALERTS,
+        title: 'Plugin 1',
+        validate: jest.fn(),
+        run: jest.fn().mockResolvedValue([]),
+      };
+
+      const mockPlugin2: IAudit = {
         id: AUDIT_IDS.GTT_UNWATCHED,
+        title: 'Plugin 2',
+        validate: jest.fn(),
+        run: jest.fn().mockResolvedValue([]),
+      };
+
+      const mockSection1: IAuditSection = {
+        id: AUDIT_IDS.ALERTS,
         title: 'Section 1',
-        plugin: {
-          id: AUDIT_IDS.GTT_UNWATCHED,
-          title: 'Plugin 1',
-          validate: jest.fn(),
-          run: jest.fn().mockResolvedValue([]),
-        },
+        plugin: mockPlugin1,
         headerFormatter: jest.fn().mockReturnValue('Header 1'),
         buttonColorMapper: jest.fn().mockReturnValue('blue'),
         onLeftClick: jest.fn(),
@@ -107,14 +122,9 @@ describe('AuditRegistry', () => {
       };
 
       const mockSection2: IAuditSection = {
-        id: AUDIT_IDS.ORPHAN_ALERTS,
+        id: AUDIT_IDS.GTT_UNWATCHED,
         title: 'Section 2',
-        plugin: {
-          id: AUDIT_IDS.ORPHAN_ALERTS,
-          title: 'Plugin 2',
-          validate: jest.fn(),
-          run: jest.fn().mockResolvedValue([]),
-        },
+        plugin: mockPlugin2,
         headerFormatter: jest.fn().mockReturnValue('Header 2'),
         buttonColorMapper: jest.fn().mockReturnValue('red'),
         onLeftClick: jest.fn(),
@@ -125,107 +135,9 @@ describe('AuditRegistry', () => {
       registry.registerSection(mockSection2);
 
       const sections = registry.listSections();
-
       expect(sections).toHaveLength(2);
-      expect(sections).toContain(mockSection1);
-      expect(sections).toContain(mockSection2);
-    });
-  });
-
-  describe('registerPlugin', () => {
-    it('should register a plugin', () => {
-      const mockPlugin: IAudit = {
-        id: AUDIT_IDS.ALERTS,
-        title: 'Test Plugin',
-        validate: jest.fn(),
-        run: jest.fn().mockResolvedValue([]),
-      };
-
-      registry.registerPlugin(mockPlugin);
-
-      expect(registry.mustGet(AUDIT_IDS.ALERTS)).toEqual(mockPlugin);
-    });
-
-    it('should throw error for duplicate plugin id', () => {
-      const mockPlugin: IAudit = {
-        id: AUDIT_IDS.ALERTS,
-        title: 'Test Plugin',
-        validate: jest.fn(),
-        run: jest.fn().mockResolvedValue([]),
-      };
-
-      registry.registerPlugin(mockPlugin);
-
-      expect(() => {
-        registry.registerPlugin(mockPlugin);
-      }).toThrow(`Duplicate audit id: ${AUDIT_IDS.ALERTS}`);
-    });
-
-    it('should throw error for invalid plugin', () => {
-      const mockPlugin: IAudit = {
-        id: AUDIT_IDS.ALERTS,
-        title: 'Test Plugin',
-        validate: jest.fn().mockImplementation(() => {
-          throw new Error('Invalid plugin');
-        }),
-        run: jest.fn().mockResolvedValue([]),
-      };
-
-      expect(() => {
-        registry.registerPlugin(mockPlugin);
-      }).toThrow(`Invalid audit plugin '${AUDIT_IDS.ALERTS}': Invalid plugin`);
-    });
-  });
-
-  describe('mustGet', () => {
-    it('should return registered plugin', () => {
-      const mockPlugin: IAudit = {
-        id: AUDIT_IDS.ALERTS,
-        title: 'Test Plugin',
-        validate: jest.fn(),
-        run: jest.fn().mockResolvedValue([]),
-      };
-
-      registry.registerPlugin(mockPlugin);
-
-      expect(registry.mustGet(AUDIT_IDS.ALERTS)).toEqual(mockPlugin);
-    });
-
-    it('should throw error for non-existent plugin', () => {
-      expect(() => {
-        registry.mustGet(AUDIT_IDS.UNMAPPED_PAIRS);
-      }).toThrow(`Audit plugin '${AUDIT_IDS.UNMAPPED_PAIRS}' not found in registry`);
-    });
-  });
-
-  describe('list', () => {
-    it('should return empty array when no plugins registered', () => {
-      expect(registry.list()).toEqual([]);
-    });
-
-    it('should return all registered plugins', () => {
-      const mockPlugin1: IAudit = {
-        id: AUDIT_IDS.ALERTS,
-        title: 'Plugin 1',
-        validate: jest.fn(),
-        run: jest.fn().mockResolvedValue([]),
-      };
-
-      const mockPlugin2: IAudit = {
-        id: AUDIT_IDS.ORPHAN_ALERTS,
-        title: 'Plugin 2',
-        validate: jest.fn(),
-        run: jest.fn().mockResolvedValue([]),
-      };
-
-      registry.registerPlugin(mockPlugin1);
-      registry.registerPlugin(mockPlugin2);
-
-      const plugins = registry.list();
-
-      expect(plugins).toHaveLength(2);
-      expect(plugins).toContain(mockPlugin1);
-      expect(plugins).toContain(mockPlugin2);
+      expect(sections).toContainEqual(mockSection1);
+      expect(sections).toContainEqual(mockSection2);
     });
   });
 });

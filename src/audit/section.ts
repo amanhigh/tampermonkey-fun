@@ -28,6 +28,7 @@ export interface IAuditSection {
   title: string; // Display title
 
   // Data source
+  // HACK: Make Plugin Private ?
   plugin: IAudit; // Audit plugin to run
 
   // Presentation

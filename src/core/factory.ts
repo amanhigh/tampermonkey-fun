@@ -412,17 +412,10 @@ export class Factory {
       ),
 
     // ===== REGISTRY =====
-    // Build registry by explicitly registering plugins and sections
+    // Build registry by registering sections only
     registry: () =>
       Factory.getInstance('auditRegistry', () => {
         const reg = new AuditRegistry();
-
-        // Register plugins (required for backward compatibility with some handlers)
-        // Note: OrphanAlerts plugin removed - now accessible ONLY via section
-        reg.registerPlugin(Factory.audit.alerts());
-        reg.registerPlugin(Factory.audit.tvMapping());
-        reg.registerPlugin(Factory.audit.gttUnwatched());
-        reg.registerPlugin(Factory.audit.unmappedPairs()); // TODO: Create UnmappedPairsSection and remove this registration
 
         // Register sections (primary responsibility)
         reg.registerSection(Factory.audit.alertsSection());
