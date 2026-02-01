@@ -8,6 +8,14 @@ import { AUDIT_IDS } from '../models/audit_ids';
  * Unmapped Pairs Audit plugin: identifies pairs without TradingView ticker mappings.
  * Checks if each pair in the pair repository has a corresponding TV ticker mapping.
  * Emits FAIL results only for pairs missing TV mappings.
+ *
+ * TODO: Create UnmappedPairsSection to display results in Audit Framework
+ * - Currently this plugin is registered but not called by any handler
+ * - Was previously used by PanelHandler.VALIDATE_DATA (now removed)
+ * - Future: Create section similar to OrphanAlertsSection
+ * - Section should display unmapped pairs with click handlers
+ * - TODO: Decide click handler behavior (display-only, add mapping, etc.)
+ * - TODO: Decide button color (yellow for LOW severity?)
  */
 export class UnmappedPairsAudit extends BaseAuditPlugin {
   public readonly id = AUDIT_IDS.UNMAPPED_PAIRS;

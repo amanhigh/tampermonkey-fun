@@ -416,17 +416,18 @@ export class Factory {
       Factory.getInstance('auditRegistry', () => {
         const reg = new AuditRegistry();
 
-        // FIXME: Register plugins (temporary - Phase 4 will remove)
+        // Register plugins (required for backward compatibility with some handlers)
+        // Note: OrphanAlerts plugin removed - now accessible ONLY via section
         reg.registerPlugin(Factory.audit.alerts());
         reg.registerPlugin(Factory.audit.tvMapping());
         reg.registerPlugin(Factory.audit.gttUnwatched());
-        reg.registerPlugin(Factory.audit.unmappedPairs());
-        reg.registerPlugin(Factory.audit.orphanAlerts());
+        reg.registerPlugin(Factory.audit.unmappedPairs()); // TODO: Create UnmappedPairsSection and remove this registration
 
         // Register sections (primary responsibility)
         reg.registerSection(Factory.audit.alertsSection());
         reg.registerSection(Factory.audit.gttSection());
         reg.registerSection(Factory.audit.orphanAlertsSection());
+        // TODO: Register UnmappedPairsSection once created
 
         return reg;
       }),
@@ -646,13 +647,7 @@ export class Factory {
     panel: (): IPanelHandler =>
       Factory.getInstance(
         'panelHandler',
-        () =>
-          new PanelHandler(
-            Factory.util.smart(),
-            Factory.handler.pair(),
-            Factory.manager.ticker(),
-            Factory.audit.registry()
-          )
+        () => new PanelHandler(Factory.util.smart(), Factory.handler.pair(), Factory.manager.ticker())
       ),
     picasso: (): IPicassoHandler =>
       Factory.getInstance(
