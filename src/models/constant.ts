@@ -66,7 +66,7 @@ export const Constants = Object.freeze({
   // DOM Selectors for TradingView components
   DOM: {
     BASIC: {
-      NAME: 'div[class*=mainTitle]', // For main title element
+      NAME: 'div[class*=mainTitle][class*=withAction]', // For main title element (company name only, excludes EMA/Aman labels)
       TICKER: '#header-toolbar-symbol-search span[class^="value"]', // For ticker display (changed from > div to span[class^="value"])
       EXCHANGE: 'div[class*=exchangeTitle]', // For exchange name
       LTP: 'div[data-test-id-value-title="C"] > div[class^=valueValue]', // For last traded price (closing price from legend)
