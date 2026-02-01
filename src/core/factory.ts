@@ -381,7 +381,7 @@ export class Factory {
           new GttAuditSection(
             Factory.audit.gttUnwatched(), // ✅ Direct plugin injection
             Factory.handler.ticker(),
-            Factory.manager.watch()
+            Factory.manager.kite() // ✅ KiteManager for GTT order deletion
           )
       ),
 
