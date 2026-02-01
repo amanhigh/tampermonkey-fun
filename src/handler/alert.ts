@@ -121,7 +121,7 @@ export class AlertHandler implements IAlertHandler {
     for (const p of prices) {
       const price = parseFloat(p);
       await this.alertManager.createAlertForCurrentTicker(price).then(async (pairInfo) => {
-        await this.auditHandler.auditCurrent();
+        await this.auditHandler.auditAll();
         this.refreshAlerts();
         this.notifyAlertCreation(price, pairInfo);
       });
@@ -151,7 +151,7 @@ export class AlertHandler implements IAlertHandler {
   public async createAlertAtCursor(): Promise<void> {
     const price = await this.tradingViewManager.getCursorPrice();
     await this.alertManager.createAlertForCurrentTicker(price).then(async (pairInfo) => {
-      await this.auditHandler.auditCurrent();
+      await this.auditHandler.auditAll();
       this.refreshAlerts();
       this.notifyAlertCreation(price, pairInfo);
     });
@@ -163,7 +163,7 @@ export class AlertHandler implements IAlertHandler {
     const targetPrice = (currentPrice * 1.2).toFixed(2);
     const price = parseFloat(targetPrice);
     await this.alertManager.createAlertForCurrentTicker(price).then(async (pairInfo) => {
-      await this.auditHandler.auditCurrent();
+      await this.auditHandler.auditAll();
       this.refreshAlerts();
       this.notifyAlertCreation(price, pairInfo);
     });
@@ -184,7 +184,7 @@ export class AlertHandler implements IAlertHandler {
       try {
         const alerts = this.alertManager.getAlerts();
         this.alertSummaryHandler.displayAlerts(alerts);
-        void this.auditHandler.auditCurrent();
+        void this.auditHandler.auditAll();
       } catch (error) {
         // Show NO PAIR for Null Alerts
         this.alertSummaryHandler.displayAlerts(null);

@@ -194,39 +194,6 @@
   // Base styling - inherited from .aman-button
   // Color set per section via inline styles
 
-  // GTT Unwatched specific
-  &.gtt-ticker {
-    background-color: @gtt-button-bg;
-    color: @gtt-button-text;
-    font-weight: 500;
-    transition: all 0.2s ease;
-
-    &:hover {
-      background-color: @gtt-button-hover;
-      box-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
-      transform: translateY(-2px);
-    }
-
-    &:active {
-      transform: scale(0.95);
-    }
-  }
-
-  // Alert Coverage specific
-  &.alert-ticker {
-    font-weight: 500;
-    transition: all 0.2s ease;
-
-    &:hover {
-      box-shadow: 0 2px 4px rgba(255, 255, 255, 0.2);
-      transform: translateY(-2px);
-    }
-
-    &:active {
-      transform: scale(0.95);
-    }
-  }
-
   // Removing animation
   &.removing {
     animation: auditButtonRemove 0.3s ease forwards;

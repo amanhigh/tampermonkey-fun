@@ -467,16 +467,7 @@ export class Factory {
       Factory.getInstance('auditHandler', () => {
         // Handler receives registry which now contains sections
         // Sections are registered in Factory.audit.registry()
-        return new AuditHandler(
-          Factory.manager.audit(),
-          Factory.audit.registry(),
-          Factory.manager.ticker(),
-          Factory.util.ui(),
-          Factory.handler.ticker(),
-          Factory.manager.watch(),
-          Factory.manager.symbol(),
-          Factory.handler.pair()
-        );
+        return new AuditHandler(Factory.audit.registry(), Factory.util.ui());
       }),
     onload: (): IOnLoadHandler =>
       Factory.getInstance(
