@@ -3,6 +3,7 @@ import { IAuditSection } from './section';
 import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './base_section';
 import { IAlertRepo } from '../repo/alert';
+import { IAlertManager } from '../manager/alert';
 import { Notifier } from '../util/notify';
 import { AUDIT_IDS } from '../models/audit_ids';
 
@@ -33,21 +34,19 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
   readonly context: unknown = undefined;
 
   // Interaction handlers
-  readonly onLeftClick = (pairId: string) => {
+  readonly onLeftClick = (result: AuditResult) => {
+    const pairId = result.target;
     Notifier.warn(`Cannot open ${pairId} - no pair mapping exists`, 3000);
   };
 
-  readonly onRightClick = (pairId: string) => {
-    void Promise.resolve().then(() => {
-      this.alertRepo.delete(pairId);
-      Notifier.red(`❌ Deleted orphan alerts for ${pairId}`);
-    });
+  readonly onRightClick = async (result: AuditResult): Promise<void> => {
+    await this.handleOrphanDeletion(result);
   };
 
   /**
    * Button color mapper - all orphan alerts are high severity (darkred)
    */
-  readonly buttonColorMapper = (): string => 'darkred'; // eslint-disable-line @typescript-eslint/no-unused-vars
+  readonly buttonColorMapper = (_result: AuditResult): string => 'darkred';
 
   readonly headerFormatter = (auditResults: AuditResult[]) => {
     if (auditResults.length === 0) {
@@ -60,12 +59,68 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
    * Creates an Orphan Alerts audit section
    * @param plugin - IAudit plugin for orphan alerts (injected directly)
    * @param alertRepo - Repository for alert operations
+   * @param alertManager - Manager for alert deletion operations
    */
   constructor(
     plugin: IAudit,
-    private readonly alertRepo: IAlertRepo
+    private readonly alertRepo: IAlertRepo,
+    private readonly alertManager: IAlertManager
   ) {
     super();
     this.plugin = plugin;
+  }
+
+  /**
+   * Handle deletion of orphan alerts with confirmation
+   * @param result - AuditResult with pairId and alertCount in data field
+   */
+  private async handleOrphanDeletion(result: AuditResult): Promise<void> {
+    try {
+      // Extract metadata from result
+      const pairId = result.data?.pairId as string | undefined;
+      const alertCount = result.data?.alertCount as number | undefined;
+
+      if (!pairId) {
+        Notifier.warn('Invalid orphan alert result: missing pairId');
+        return;
+      }
+
+      // Get all alerts for this pairId
+      const alerts = this.alertRepo.get(pairId);
+      if (!alerts || alerts.length === 0) {
+        Notifier.warn(`No alerts found for pairId ${pairId}`);
+        return;
+      }
+
+      // Build confirmation message
+      const prices = alerts.map((a) => a.price).join(', ');
+      const message =
+        `Delete ${alertCount || alerts.length} orphan alert(s)?\n\n` +
+        `PairId: ${pairId}\n` +
+        `Prices: ${prices}\n\n` +
+        `This will permanently delete these alerts from Investing.com.`;
+
+      // Show confirmation dialog
+      if (!confirm(message)) {
+        Notifier.info('Deletion cancelled');
+        return;
+      }
+
+      // Show progress notification
+      Notifier.info(`Deleting ${alerts.length} alert(s)...`);
+
+      // Delete each alert from Investing.com via AlertManager
+      await Promise.all(alerts.map(async (alert) => this.alertManager.deleteAlert(alert)));
+
+      // Remove from local repo
+      this.alertRepo.delete(pairId);
+
+      // Success notification
+      Notifier.success(`✓ Deleted ${alerts.length} orphan alert(s) for ${pairId}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      Notifier.error(`Failed to delete alerts: ${errorMessage}`);
+      console.error('Orphan alert deletion failed:', error);
+    }
   }
 }

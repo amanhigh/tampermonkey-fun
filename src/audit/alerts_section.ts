@@ -38,14 +38,16 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
   readonly context: unknown = undefined;
 
   // Interaction handlers
-  readonly onLeftClick = (ticker: string) => {
-    const tvTicker = this.tryMapTvTicker(ticker);
+  readonly onLeftClick = (result: AuditResult) => {
+    const investingTicker = result.target;
+    const tvTicker = this.tryMapTvTicker(investingTicker);
     this.tickerHandler.openTicker(tvTicker);
   };
 
-  readonly onRightClick = (ticker: string) => {
-    this.pairHandler.deletePairInfo(ticker);
-    Notifier.red(`❌ Removed mapping for ${ticker}`);
+  readonly onRightClick = (result: AuditResult) => {
+    const investingTicker = result.target;
+    this.pairHandler.deletePairInfo(investingTicker);
+    Notifier.red(`❌ Removed mapping for ${investingTicker}`);
   };
 
   /**

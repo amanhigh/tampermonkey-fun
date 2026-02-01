@@ -27,6 +27,7 @@ export class OrphanAlertsAudit extends BaseAuditPlugin {
    * @returns Promise resolving to array of audit results for orphan alerts
    */
   async run(targets?: string[]): Promise<AuditResult[]> {
+    // FIXME: Introduce Fix all as new Capability in Section.
     if (targets) {
       throw new Error('Orphan alerts audit does not support targeted mode');
     }
@@ -44,15 +45,19 @@ export class OrphanAlertsAudit extends BaseAuditPlugin {
     this.alertRepo.getAllKeys().forEach((pairId: string) => {
       if (!validPairIds.has(pairId)) {
         const alerts = this.alertRepo.get(pairId)!;
-        alerts.forEach(() => {
-          results.push({
-            pluginId: this.id,
-            code: 'NO_PAIR_MAPPING',
-            target: pairId,
-            message: `${pairId}: Alert exists but has no corresponding pair`,
-            severity: 'HIGH',
-            status: 'FAIL',
-          });
+        // Create single result per orphan pairId, metadata in data field
+        results.push({
+          pluginId: this.id,
+          code: 'NO_PAIR_MAPPING',
+          // FIXME: Extract Better Name from HTML Parsing of Alerts.
+          target: `${pairId}`,
+          message: `${pairId}: ${alerts.length} alert(s) exist but have no corresponding pair`,
+          severity: 'HIGH',
+          status: 'FAIL',
+          data: {
+            pairId,
+            alertCount: alerts.length,
+          },
         });
       }
     });

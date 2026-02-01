@@ -35,9 +35,9 @@ export interface IAuditSection {
   buttonColorMapper: (result: AuditResult, context?: unknown) => string; // Maps result to button color (required)
 
   // Interaction handlers
-  onLeftClick: (target: string) => void | Promise<void>; // Primary action (e.g., open in TV)
-  onRightClick: (target: string) => void | Promise<void>; // Secondary action (e.g., add to watchlist)
-  onMiddleClick?: (target: string) => void | Promise<void>; // Optional middle-click action
+  onLeftClick: (result: AuditResult) => void | Promise<void>; // Primary action (e.g., open in TV)
+  onRightClick: (result: AuditResult) => void | Promise<void>; // Secondary action (e.g., add to watchlist)
+  onMiddleClick?: (result: AuditResult) => void | Promise<void>; // Optional middle-click action
 
   // Display options
   limit?: number; // Items per page (0 or undefined = no pagination)

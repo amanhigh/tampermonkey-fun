@@ -1,222 +1,377 @@
 import { OrphanAlertsSection } from '../../src/audit/orphan_alerts_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { IAlertRepo } from '../../src/repo/alert';
+import { IAlertManager } from '../../src/manager/alert';
+import { Alert } from '../../src/models/alert';
 import { Notifier } from '../../src/util/notify';
-import { AUDIT_IDS } from '../../src/models/audit_ids';
-
-// Unit tests for OrphanAlertsSection: UI specification for displaying orphan alerts
 
 describe('OrphanAlertsSection', () => {
   let section: OrphanAlertsSection;
-  let mockPlugin: jest.Mocked<IAudit>;
-  let mockAlertRepo: jest.Mocked<IAlertRepo>;
+  let mockPlugin: IAudit;
+  let mockAlertRepo: Partial<IAlertRepo>;
+  let mockAlertManager: Partial<IAlertManager>;
+  let confirmMock: jest.Mock;
+  let notifyWarnSpy: jest.SpyInstance;
+  let notifyInfoSpy: jest.SpyInstance;
+  let notifySuccessSpy: jest.SpyInstance;
+  let notifyErrorSpy: jest.SpyInstance;
+
+  const createMockAlert = (pairId: string, price: number): Alert => {
+    return new Alert(`${pairId}-${price}`, pairId, price);
+  };
 
   beforeEach(() => {
-    // Create mock plugin
+    // Mock plugin
     mockPlugin = {
-      id: AUDIT_IDS.ORPHAN_ALERTS,
+      id: 'orphan-alerts',
       title: 'Orphan Alerts',
       validate: jest.fn(),
-      run: jest.fn(),
-    } as jest.Mocked<IAudit>;
+      run: jest.fn().mockResolvedValue([]),
+    };
 
-    // Create mock alert repo
+    // Mock alert repo
     mockAlertRepo = {
+      get: jest.fn(),
+      set: jest.fn(),
       delete: jest.fn(),
-    } as any;
+      getAllKeys: jest.fn(),
+      clear: jest.fn(),
+      getCount: jest.fn(),
+      has: jest.fn(),
+      addAlert: jest.fn(),
+      getSortedAlerts: jest.fn(),
+      removeAlert: jest.fn(),
+      hasAlerts: jest.fn(),
+      getAlertCount: jest.fn(),
+      createAlertClickEvent: jest.fn(),
+    };
 
-    // Create section with mocked dependencies
-    section = new OrphanAlertsSection(mockPlugin, mockAlertRepo);
+    // Mock alert manager
+    mockAlertManager = {
+      deleteAlert: jest.fn().mockResolvedValue(undefined),
+    };
+
+    // Mock global confirm
+    confirmMock = jest.fn().mockReturnValue(false);
+    (global as any).confirm = confirmMock;
+
+    // Mock Notifier methods
+    notifyWarnSpy = jest.spyOn(Notifier, 'warn').mockImplementation();
+    notifyInfoSpy = jest.spyOn(Notifier, 'info').mockImplementation();
+    notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
+    notifyErrorSpy = jest.spyOn(Notifier, 'error').mockImplementation();
+
+    section = new OrphanAlertsSection(mockPlugin, mockAlertRepo as IAlertRepo, mockAlertManager as IAlertManager);
   });
 
-  describe('section properties', () => {
-    it('should have correct id', () => {
-      expect(section.id).toBe(AUDIT_IDS.ORPHAN_ALERTS);
+  afterEach(() => {
+    jest.restoreAllMocks();
+    delete (global as any).confirm;
+  });
+
+  describe('Section Properties', () => {
+    test('has correct id', () => {
       expect(section.id).toBe('orphan-alerts');
     });
 
-    it('should have correct title', () => {
+    test('has correct title', () => {
       expect(section.title).toBe('Orphan Alerts');
     });
 
-    it('should have correct limit', () => {
+    test('has correct limit', () => {
       expect(section.limit).toBe(10);
     });
 
-    it('should have undefined context', () => {
-      expect(section.context).toBeUndefined();
-    });
-
-    it('should have injected plugin', () => {
+    test('has plugin', () => {
       expect(section.plugin).toBe(mockPlugin);
     });
 
-    it('should have defined handlers', () => {
-      expect(section.onLeftClick).toBeDefined();
-      expect(section.onRightClick).toBeDefined();
-      expect(section.buttonColorMapper).toBeDefined();
-      expect(section.headerFormatter).toBeDefined();
-    });
-  });
-
-  describe('onLeftClick handler', () => {
-    it('should show warning notification when left-clicked', () => {
-      const notifyWarnSpy = jest.spyOn(Notifier, 'warn').mockImplementation();
-      const pairId = 'TEST-PAIR';
-
-      section.onLeftClick(pairId);
-
-      expect(notifyWarnSpy).toHaveBeenCalledWith(`Cannot open ${pairId} - no pair mapping exists`, 3000);
-      notifyWarnSpy.mockRestore();
-    });
-
-    it('should handle various pairId formats', () => {
-      const notifyWarnSpy = jest.spyOn(Notifier, 'warn').mockImplementation();
-
-      const pairIds = ['SBIN-LONG', 'INFY-SHORT', 'TCS-MID', 'OLD-DELETED'];
-      pairIds.forEach((pairId) => {
-        section.onLeftClick(pairId);
-        expect(notifyWarnSpy).toHaveBeenCalledWith(`Cannot open ${pairId} - no pair mapping exists`, 3000);
-      });
-
-      notifyWarnSpy.mockRestore();
-    });
-  });
-
-  describe('onRightClick handler', () => {
-    it('should delete alerts from repository', async () => {
-      const notifyRedSpy = jest.spyOn(Notifier, 'red').mockImplementation();
-      const pairId = 'TEST-PAIR';
-
-      await section.onRightClick(pairId);
-
-      expect(mockAlertRepo.delete).toHaveBeenCalledWith(pairId);
-      notifyRedSpy.mockRestore();
-    });
-
-    it('should show notification after deletion', async () => {
-      const notifyRedSpy = jest.spyOn(Notifier, 'red').mockImplementation();
-      const pairId = 'TEST-PAIR';
-
-      await section.onRightClick(pairId);
-
-      expect(notifyRedSpy).toHaveBeenCalledWith(`❌ Deleted orphan alerts for ${pairId}`);
-      notifyRedSpy.mockRestore();
-    });
-
-    it('should handle various pairId formats on delete', async () => {
-      const notifyRedSpy = jest.spyOn(Notifier, 'red').mockImplementation();
-
-      const pairIds = ['SBIN-LONG', 'INFY-SHORT', 'TCS-MID'];
-      for (const pairId of pairIds) {
-        await section.onRightClick(pairId);
-        expect(mockAlertRepo.delete).toHaveBeenCalledWith(pairId);
-      }
-
-      expect(mockAlertRepo.delete).toHaveBeenCalledTimes(3);
-      notifyRedSpy.mockRestore();
-    });
-  });
-
-  describe('buttonColorMapper', () => {
-    it('should always return darkred (high severity)', () => {
-      const color = section.buttonColorMapper();
-      expect(color).toBe('darkred');
-    });
-
-    it('should consistently return darkred for all calls', () => {
-      expect(section.buttonColorMapper()).toBe('darkred');
-      expect(section.buttonColorMapper()).toBe('darkred');
-      expect(section.buttonColorMapper()).toBe('darkred');
-    });
-  });
-
-  describe('headerFormatter', () => {
-    it('should show success message when no results', () => {
-      const header = section.headerFormatter([]);
-      expect(header).toContain('success-badge');
-      expect(header).toContain('✓');
-      expect(header).toContain('No orphan alerts');
-    });
-
-    it('should show count when results exist', () => {
-      const results: AuditResult[] = [
-        {
-          pluginId: AUDIT_IDS.ORPHAN_ALERTS,
-          code: 'NO_PAIR_MAPPING',
-          target: 'PAIR1',
-          message: 'Message 1',
-          severity: 'HIGH',
-          status: 'FAIL',
-        },
-      ];
-
-      const header = section.headerFormatter(results);
-      expect(header).toContain('Orphans: 1');
-      expect(header).toContain('darkred');
-    });
-
-    it('should show correct count for multiple results', () => {
-      const results: AuditResult[] = Array.from({ length: 5 }, (_, i) => ({
-        pluginId: AUDIT_IDS.ORPHAN_ALERTS,
+    test('onLeftClick shows warning', () => {
+      const result: AuditResult = {
+        pluginId: 'orphan-alerts',
         code: 'NO_PAIR_MAPPING',
-        target: `PAIR${i + 1}`,
-        message: `Message ${i + 1}`,
+        target: '6393',
+        message: '6393: 6 alert(s) exist but have no corresponding pair',
         severity: 'HIGH',
         status: 'FAIL',
-      }));
-
-      const header = section.headerFormatter(results);
-      expect(header).toContain('Orphans: 5');
-    });
-
-    it('should format header with color styling', () => {
-      const results: AuditResult[] = [
-        {
-          pluginId: AUDIT_IDS.ORPHAN_ALERTS,
-          code: 'NO_PAIR_MAPPING',
-          target: 'PAIR1',
-          message: 'Message',
-          severity: 'HIGH',
-          status: 'FAIL',
-        },
-      ];
-
-      const header = section.headerFormatter(results);
-      expect(header).toContain('style');
-      expect(header).toContain('darkred');
-    });
-  });
-
-  describe('integration', () => {
-    it('should follow IAuditSection contract', () => {
-      // Verify all required properties exist
-      expect(section.id).toBeDefined();
-      expect(section.title).toBeDefined();
-      expect(section.plugin).toBeDefined();
-      expect(section.limit).toBeDefined();
-      // context is allowed to be undefined
-      expect(section.onLeftClick).toBeDefined();
-      expect(section.onRightClick).toBeDefined();
-      expect(section.buttonColorMapper).toBeDefined();
-      expect(section.headerFormatter).toBeDefined();
-    });
-
-    it('should have consistent orphan alerts theme', () => {
-      // All indicators should use darkred (danger/high-priority color)
-      const mockResult: AuditResult = {
-        pluginId: AUDIT_IDS.ORPHAN_ALERTS,
-        code: 'NO_PAIR_MAPPING',
-        target: 'TEST',
-        message: 'Test',
-        severity: 'HIGH',
-        status: 'FAIL',
+        data: { pairId: '6393', alertCount: 6 },
       };
 
-      expect(section.buttonColorMapper()).toBe('darkred');
+      section.onLeftClick(result);
 
-      const header = section.headerFormatter([mockResult]);
-      expect(header).toContain('darkred');
+      expect(notifyWarnSpy).toHaveBeenCalledWith('Cannot open 6393 - no pair mapping exists', 3000);
+    });
+
+    test('onRightClick is async function', () => {
+      const result: AuditResult = {
+        pluginId: 'orphan-alerts',
+        code: 'NO_PAIR_MAPPING',
+        target: '6393',
+        message: '6393: 1 alert(s) exist but have no corresponding pair',
+        severity: 'HIGH',
+        status: 'FAIL',
+        data: { pairId: '6393', alertCount: 1 },
+      };
+
+      expect(section.onRightClick(result)).toBeInstanceOf(Promise);
+    });
+  });
+
+  describe('Right-Click Handler: Deletion', () => {
+    test('extracts pairId and alertCount from data field', async () => {
+      const alerts = [createMockAlert('6393', 391.92), createMockAlert('6393', 404.4)];
+      const result: AuditResult = {
+        pluginId: 'orphan-alerts',
+        code: 'NO_PAIR_MAPPING',
+        target: '6393',
+        message: '6393: 2 alert(s) exist but have no corresponding pair',
+        severity: 'HIGH',
+        status: 'FAIL',
+        data: { pairId: '6393', alertCount: 2 },
+      };
+
+      (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
+      confirmMock.mockReturnValue(true);
+
+      await section.onRightClick(result);
+
+      expect(mockAlertRepo.get).toHaveBeenCalledWith('6393');
+    });
+
+    test('cancels deletion when user declines confirmation', async () => {
+      const alerts = [createMockAlert('6393', 391.92)];
+      const result: AuditResult = {
+        pluginId: 'orphan-alerts',
+        code: 'NO_PAIR_MAPPING',
+        target: '6393',
+        message: '6393: 1 alert(s) exist but have no corresponding pair',
+        severity: 'HIGH',
+        status: 'FAIL',
+        data: { pairId: '6393', alertCount: 1 },
+      };
+
+      (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
+      confirmMock.mockReturnValue(false);
+
+      await section.onRightClick(result);
+
+      expect(notifyInfoSpy).toHaveBeenCalledWith('Deletion cancelled');
+      expect(mockAlertManager.deleteAlert).not.toHaveBeenCalled();
+    });
+
+    test('deletes all alerts when user confirms', async () => {
+      const alerts = [createMockAlert('6393', 391.92), createMockAlert('6393', 404.4), createMockAlert('6393', 410.0)];
+      const result: AuditResult = {
+        pluginId: 'orphan-alerts',
+        code: 'NO_PAIR_MAPPING',
+        target: '6393',
+        message: '6393: 3 alert(s) exist but have no corresponding pair',
+        severity: 'HIGH',
+        status: 'FAIL',
+        data: { pairId: '6393', alertCount: 3 },
+      };
+
+      (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
+      confirmMock.mockReturnValue(true);
+
+      await section.onRightClick(result);
+
+      expect(mockAlertManager.deleteAlert).toHaveBeenCalledTimes(3);
+      expect(mockAlertManager.deleteAlert).toHaveBeenCalledWith(alerts[0]);
+      expect(mockAlertManager.deleteAlert).toHaveBeenCalledWith(alerts[1]);
+      expect(mockAlertManager.deleteAlert).toHaveBeenCalledWith(alerts[2]);
+    });
+
+    test('removes pairId from repo after deletion', async () => {
+      const alerts = [createMockAlert('6393', 391.92)];
+      const result: AuditResult = {
+        pluginId: 'orphan-alerts',
+        code: 'NO_PAIR_MAPPING',
+        target: '6393',
+        message: '6393: 1 alert(s) exist but have no corresponding pair',
+        severity: 'HIGH',
+        status: 'FAIL',
+        data: { pairId: '6393', alertCount: 1 },
+      };
+
+      (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
+      confirmMock.mockReturnValue(true);
+
+      await section.onRightClick(result);
+
+      expect(mockAlertRepo.delete).toHaveBeenCalledWith('6393');
+    });
+
+    test('shows success notification after deletion', async () => {
+      const alerts = [createMockAlert('6393', 391.92)];
+      const result: AuditResult = {
+        pluginId: 'orphan-alerts',
+        code: 'NO_PAIR_MAPPING',
+        target: '6393',
+        message: '6393: 1 alert(s) exist but have no corresponding pair',
+        severity: 'HIGH',
+        status: 'FAIL',
+        data: { pairId: '6393', alertCount: 1 },
+      };
+
+      (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
+      confirmMock.mockReturnValue(true);
+
+      await section.onRightClick(result);
+
+      expect(notifySuccessSpy).toHaveBeenCalledWith('✓ Deleted 1 orphan alert(s) for 6393');
+    });
+
+    test('shows warning when no alerts found', async () => {
+      const result: AuditResult = {
+        pluginId: 'orphan-alerts',
+        code: 'NO_PAIR_MAPPING',
+        target: '6393',
+        message: '6393: 0 alert(s) exist but have no corresponding pair',
+        severity: 'HIGH',
+        status: 'FAIL',
+        data: { pairId: '6393', alertCount: 0 },
+      };
+
+      (mockAlertRepo.get as jest.Mock).mockReturnValue([]);
+
+      await section.onRightClick(result);
+
+      expect(notifyWarnSpy).toHaveBeenCalledWith('No alerts found for pairId 6393');
+      expect(mockAlertManager.deleteAlert).not.toHaveBeenCalled();
+    });
+
+    test('handles alert manager errors gracefully', async () => {
+      const alerts = [createMockAlert('6393', 391.92)];
+      const result: AuditResult = {
+        pluginId: 'orphan-alerts',
+        code: 'NO_PAIR_MAPPING',
+        target: '6393',
+        message: '6393: 1 alert(s) exist but have no corresponding pair',
+        severity: 'HIGH',
+        status: 'FAIL',
+        data: { pairId: '6393', alertCount: 1 },
+      };
+
+      (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
+      confirmMock.mockReturnValue(true);
+      (mockAlertManager.deleteAlert as jest.Mock).mockRejectedValue(new Error('API Error: Cannot delete alert'));
+
+      await section.onRightClick(result);
+
+      expect(notifyErrorSpy).toHaveBeenCalledWith('Failed to delete alerts: API Error: Cannot delete alert');
+      expect(mockAlertRepo.delete).not.toHaveBeenCalled();
+    });
+
+    test('shows confirmation with alert details and prices', async () => {
+      const alerts = [createMockAlert('6393', 391.92), createMockAlert('6393', 404.4)];
+      const result: AuditResult = {
+        pluginId: 'orphan-alerts',
+        code: 'NO_PAIR_MAPPING',
+        target: '6393',
+        message: '6393: 2 alert(s) exist but have no corresponding pair',
+        severity: 'HIGH',
+        status: 'FAIL',
+        data: { pairId: '6393', alertCount: 2 },
+      };
+
+      (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
+      confirmMock.mockReturnValue(false);
+
+      await section.onRightClick(result);
+
+      expect(confirmMock).toHaveBeenCalledWith(expect.stringContaining('Delete 2 orphan alert(s)?'));
+      expect(confirmMock).toHaveBeenCalledWith(expect.stringContaining('PairId: 6393'));
+      expect(confirmMock).toHaveBeenCalledWith(expect.stringContaining('391.92, 404.4'));
+    });
+
+    test('handles missing pairId in data field', async () => {
+      const result: AuditResult = {
+        pluginId: 'orphan-alerts',
+        code: 'NO_PAIR_MAPPING',
+        target: '6393',
+        message: '6393: 1 alert(s) exist but have no corresponding pair',
+        severity: 'HIGH',
+        status: 'FAIL',
+        data: { alertCount: 1 }, // missing pairId
+      };
+
+      await section.onRightClick(result);
+
+      expect(notifyWarnSpy).toHaveBeenCalledWith('Invalid orphan alert result: missing pairId');
+      expect(mockAlertRepo.get).not.toHaveBeenCalled();
+    });
+
+    test('shows progress notification during deletion', async () => {
+      const alerts = [createMockAlert('6393', 391.92)];
+      const result: AuditResult = {
+        pluginId: 'orphan-alerts',
+        code: 'NO_PAIR_MAPPING',
+        target: '6393',
+        message: '6393: 1 alert(s) exist but have no corresponding pair',
+        severity: 'HIGH',
+        status: 'FAIL',
+        data: { pairId: '6393', alertCount: 1 },
+      };
+
+      (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
+      confirmMock.mockReturnValue(true);
+
+      await section.onRightClick(result);
+
+      expect(notifyInfoSpy).toHaveBeenCalledWith('Deleting 1 alert(s)...');
+    });
+  });
+
+  describe('Button Color Mapper', () => {
+    test('always returns darkred', () => {
+      const result: AuditResult = {
+        pluginId: 'orphan-alerts',
+        code: 'NO_PAIR_MAPPING',
+        target: '6393',
+        message: '6393: 1 alert(s) exist but have no corresponding pair',
+        severity: 'HIGH',
+        status: 'FAIL',
+        data: { pairId: '6393', alertCount: 1 },
+      };
+
+      const color = section.buttonColorMapper(result);
+      expect(color).toBe('darkred');
+    });
+  });
+
+  describe('Header Formatter', () => {
+    test('shows success message when no results', () => {
+      const html = section.headerFormatter([]);
+      expect(html).toContain('No orphan alerts');
+      expect(html).toContain('success-badge');
+    });
+
+    test('shows count when results exist', () => {
+      const results: AuditResult[] = [
+        {
+          pluginId: 'orphan-alerts',
+          code: 'NO_PAIR_MAPPING',
+          target: '6393',
+          message: '6393: 1 alert(s) exist but have no corresponding pair',
+          severity: 'HIGH',
+          status: 'FAIL',
+          data: { pairId: '6393', alertCount: 1 },
+        },
+        {
+          pluginId: 'orphan-alerts',
+          code: 'NO_PAIR_MAPPING',
+          target: '6394',
+          message: '6394: 2 alert(s) exist but have no corresponding pair',
+          severity: 'HIGH',
+          status: 'FAIL',
+          data: { pairId: '6394', alertCount: 2 },
+        },
+      ];
+
+      const html = section.headerFormatter(results);
+      expect(html).toContain('Orphans: 2');
+      expect(html).toContain('darkred');
     });
   });
 });

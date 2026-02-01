@@ -8,6 +8,7 @@ export interface AuditResult {
   message: string;
   severity: AuditSeverity;
   status: AuditStatus; // Explicit pass/fail for each target
+  data?: Record<string, unknown>; // Optional metadata passed by plugins (e.g., pairId, alertCount)
 }
 
 export interface IAudit {

@@ -153,17 +153,17 @@ export class Barkat {
       .appendTo(`#${Constants.UI.IDS.AREAS.JOURNAL}`)
       .append(
         this.uiUtil.buildButton('trend', 'RJ', () => {
-          this.journalHandler.handleRecordJournal(JournalType.REJECTED);
+          void this.journalHandler.handleRecordJournal(JournalType.REJECTED);
         })
       )
       .append(
         this.uiUtil.buildButton('trend', 'RS', () => {
-          this.journalHandler.handleRecordJournal(JournalType.RESULT);
+          void this.journalHandler.handleRecordJournal(JournalType.RESULT);
         })
       )
       .append(
         this.uiUtil.buildButton('trend', 'ST', () => {
-          this.journalHandler.handleRecordJournal(JournalType.SET);
+          void this.journalHandler.handleRecordJournal(JournalType.SET);
         })
       );
   }

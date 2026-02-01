@@ -70,14 +70,13 @@ describe('UnmappedPairsAudit', () => {
       const results = await plugin.run();
 
       expect(results).toHaveLength(1);
-      expect(results[0]).toEqual({
-        pluginId: 'unmapped-pairs',
-        code: 'NO_TV_MAPPING',
-        target: 'TSLA',
-        message: 'TSLA: Pair exists but has no TradingView mapping',
-        severity: 'HIGH',
-        status: 'FAIL',
-      });
+      expect(results[0].pluginId).toBe('unmapped-pairs');
+      expect(results[0].code).toBe('NO_TV_MAPPING');
+      expect(results[0].target).toBe('TSLA');
+      expect(results[0].message).toBe('TSLA: Pair exists but has no TradingView mapping');
+      expect(results[0].severity).toBe('HIGH');
+      expect(results[0].status).toBe('FAIL');
+      expect(results[0].data).toEqual({ investingTicker: 'TSLA' });
     });
 
     it('emits FAIL for multiple pairs without TV mappings', async () => {
@@ -135,6 +134,7 @@ describe('UnmappedPairsAudit', () => {
       expect(results).toHaveLength(1);
       expect(results[0].target).toBe('TSLA');
       expect(results[0].status).toBe('FAIL');
+      expect(results[0].data).toEqual({ investingTicker: 'TSLA' });
     });
 
     it('throws error when targets provided', async () => {
@@ -162,6 +162,7 @@ describe('UnmappedPairsAudit', () => {
       expect(result).toHaveProperty('message');
       expect(result).toHaveProperty('severity');
       expect(result).toHaveProperty('status');
+      expect(result).toHaveProperty('data');
 
       expect(result.pluginId).toBe('unmapped-pairs');
       expect(result.code).toBe('NO_TV_MAPPING');
@@ -169,6 +170,7 @@ describe('UnmappedPairsAudit', () => {
       expect(result.status).toBe('FAIL');
       expect(result.message).toContain('UNMAPPED');
       expect(result.message).toContain('TradingView mapping');
+      expect(result.data).toEqual({ investingTicker: 'UNMAPPED' });
     });
   });
 });

@@ -9,13 +9,15 @@ import { AUDIT_IDS } from '../models/audit_ids';
  * Checks if each pair in the pair repository has a corresponding TV ticker mapping.
  * Emits FAIL results only for pairs missing TV mappings.
  *
+ * Metadata in data field:
+ * - investingTicker: The Investing.com ticker without TV mapping
+ *
  * TODO: Create UnmappedPairsSection to display results in Audit Framework
  * - Currently this plugin is registered but not called by any handler
  * - Was previously used by PanelHandler.VALIDATE_DATA (now removed)
  * - Future: Create section similar to OrphanAlertsSection
- * - Section should display unmapped pairs with click handlers
- * - TODO: Decide click handler behavior (display-only, add mapping, etc.)
- * - TODO: Decide button color (yellow for LOW severity?)
+ * - Section should display unmapped pairs with click handlers to add mappings
+ * - TODO: Decide button color (yellow for LOW severity or orange for MEDIUM?)
  */
 export class UnmappedPairsAudit extends BaseAuditPlugin {
   public readonly id = AUDIT_IDS.UNMAPPED_PAIRS;
@@ -51,6 +53,9 @@ export class UnmappedPairsAudit extends BaseAuditPlugin {
           message: `${investingTicker}: Pair exists but has no TradingView mapping`,
           severity: 'HIGH',
           status: 'FAIL',
+          data: {
+            investingTicker,
+          },
         });
       }
     });

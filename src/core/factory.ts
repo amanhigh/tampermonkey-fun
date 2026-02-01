@@ -406,7 +406,8 @@ export class Factory {
         () =>
           new OrphanAlertsSection(
             Factory.audit.orphanAlerts(), // ✅ Direct plugin injection
-            Factory.repo.alert()
+            Factory.repo.alert(),
+            Factory.manager.alert() // ✅ AlertManager for deletion operations
           )
       ),
 
@@ -427,7 +428,6 @@ export class Factory {
         reg.registerSection(Factory.audit.alertsSection());
         reg.registerSection(Factory.audit.gttSection());
         reg.registerSection(Factory.audit.orphanAlertsSection());
-        // TODO: Register UnmappedPairsSection once created
 
         return reg;
       }),
