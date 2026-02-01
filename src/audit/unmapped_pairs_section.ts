@@ -6,7 +6,6 @@ import { ITickerHandler } from '../handler/ticker';
 import { IPairHandler } from '../handler/pair';
 import { Notifier } from '../util/notify';
 import { AUDIT_IDS } from '../models/audit_ids';
-import { Constants } from '../models/constant';
 
 /**
  * Unmapped Pairs Audit Section
@@ -45,11 +44,6 @@ export class UnmappedPairsSection extends BaseAuditSection implements IAuditSect
     this.pairHandler.deletePairInfo(investingTicker);
     Notifier.red(`🗑️ Removed unmapped pair: ${investingTicker}`);
   };
-
-  /**
-   * Button color mapper - MEDIUM severity (darkorange)
-   */
-  readonly buttonColorMapper = (_result: AuditResult): string => Constants.UI.COLORS.SEVERITY.MEDIUM;
 
   /**
    * Header formatter showing count of unmapped pairs

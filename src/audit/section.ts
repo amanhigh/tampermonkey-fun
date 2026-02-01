@@ -31,6 +31,7 @@ export interface IAuditSection {
   // HACK: Make Plugin Private ?
   plugin: IAudit; // Audit plugin to run
 
+  // FIXME: Collapse Section If Everything Okay by default
   // Presentation
   headerFormatter: (results: AuditResult[], context?: unknown) => string; // Custom header HTML
   buttonColorMapper: (result: AuditResult, context?: unknown) => string; // Maps result to button color (required)

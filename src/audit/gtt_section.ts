@@ -42,17 +42,12 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
   readonly onRightClick = (result: AuditResult) => {
     const tvTicker = result.target;
     const currentCategory = this.watchManager.getCategory(0);
-    // FIXME:  Should this delete the GTT Order ?
+    // FIXME: #C  Should this delete the GTT Order ?
     const newTickers = Array.from(currentCategory);
     newTickers.push(tvTicker);
     this.watchManager.recordCategory(0, newTickers);
     Notifier.success(`✅ Added ${tvTicker} to watchlist`);
   };
-
-  /**
-   * Button color mapper - all GTT buttons are gold (single color, no switching)
-   */
-  readonly buttonColorMapper = (_result: AuditResult): string => 'gold';
 
   readonly headerFormatter = (auditResults: AuditResult[]) => {
     if (auditResults.length === 0) {

@@ -1,4 +1,4 @@
-import { AuditResult } from '../models/audit';
+import { AuditResult, AuditSeverity } from '../models/audit';
 import { BaseAuditPlugin } from './base';
 import { IPairManager } from '../manager/pair';
 import { IAlertManager } from '../manager/alert';
@@ -59,7 +59,7 @@ export class AlertsAudit extends BaseAuditPlugin {
       const status = state === AlertState.VALID ? 'PASS' : 'FAIL';
       if (status === 'FAIL') {
         // Severity mapping: invalid mapping > single alert > no alerts
-        const severity: 'LOW' | 'MEDIUM' | 'HIGH' =
+        const severity: AuditSeverity =
           state === AlertState.NO_PAIR
             ? 'HIGH' // Invalid mapping is most urgent
             : state === AlertState.SINGLE_ALERT

@@ -50,32 +50,6 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
     Notifier.red(`❌ Removed mapping for ${investingTicker}`);
   };
 
-  /**
-   * Dynamic button color based on alert state and mapping validity
-   * Priority: darkred (invalid mapping) > darkorange (single alert) > darkgray (no alerts)
-   */
-  readonly buttonColorMapper = (result: AuditResult): string => {
-    const state = result.code as AlertState;
-
-    // First check: invalid mapping (NO_PAIR state)
-    if (state === AlertState.NO_PAIR) {
-      return 'darkred'; // Most urgent - broken mapping
-    }
-
-    // Second check: single alert (high priority)
-    if (state === AlertState.SINGLE_ALERT) {
-      return 'darkorange'; // Needs one more alert
-    }
-
-    // Third check: no alerts (medium priority)
-    if (state === AlertState.NO_ALERTS) {
-      return 'darkgray'; // Needs alerts
-    }
-
-    // Fallback (shouldn't happen for FAIL status results)
-    return 'black';
-  };
-
   readonly headerFormatter = (auditResults: AuditResult[]) => {
     if (auditResults.length === 0) {
       return `<span class="success-badge">✓ All alerts covered</span>`;

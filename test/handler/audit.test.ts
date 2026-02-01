@@ -124,11 +124,24 @@ describe('AuditHandler', () => {
         onRightClick: jest.fn(),
       } as any;
 
+      const mockUnmappedPairsSection = {
+        id: 'unmapped-pairs',
+        title: 'Unmapped Pairs',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Unmapped Pairs'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
       // Return appropriate section based on ID
       mockAuditRegistry.mustGetSection.mockImplementation((id) => {
         if (id === 'alerts') return mockAlertsSection;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
+        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
         throw new Error(`Unknown section: ${id}`);
       });
     });
@@ -209,11 +222,25 @@ describe('AuditHandler', () => {
         onRightClick: jest.fn(),
       } as any;
 
+      // Mock Unmapped Pairs section
+      const mockUnmappedPairsSection = {
+        id: 'unmapped-pairs',
+        title: 'Unmapped Pairs',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Unmapped Pairs'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
       // Return appropriate section based on ID
       mockAuditRegistry.mustGetSection.mockImplementation((id) => {
         if (id === 'alerts') return mockAlertsSection;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
+        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
         throw new Error(`Unknown section: ${id}`);
       });
     });
@@ -311,10 +338,22 @@ describe('AuditHandler', () => {
         limit: 10,
         context: undefined,
       } as any;
+      const mockUnmappedPairsSection = {
+        id: 'unmapped-pairs',
+        title: 'Unmapped Pairs',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn(),
+        buttonColorMapper: jest.fn(),
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+        limit: 10,
+        context: undefined,
+      } as any;
       mockAuditRegistry.mustGetSection.mockImplementation((id: string) => {
         if (id === 'alerts') return mockAlertsSectionWithResults;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
+        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
         throw new Error(`Unknown section: ${id}`);
       });
 
@@ -371,10 +410,22 @@ describe('AuditHandler', () => {
         limit: 10,
         context: undefined,
       } as any;
+      const mockUnmappedPairsSection = {
+        id: 'unmapped-pairs',
+        title: 'Unmapped Pairs',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn(),
+        buttonColorMapper: jest.fn(),
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+        limit: 10,
+        context: undefined,
+      } as any;
       mockAuditRegistry.mustGetSection.mockImplementation((id: string) => {
         if (id === 'alerts') return mockAlertsSectionWithResults;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
+        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
         throw new Error(`Unknown section: ${id}`);
       });
 
@@ -422,10 +473,22 @@ describe('AuditHandler', () => {
         limit: 10,
         context: undefined,
       } as any;
+      const mockUnmappedPairsSection = {
+        id: 'unmapped-pairs',
+        title: 'Unmapped Pairs',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn(),
+        buttonColorMapper: jest.fn(),
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+        limit: 10,
+        context: undefined,
+      } as any;
       mockAuditRegistry.mustGetSection.mockImplementation((id: string) => {
         if (id === 'alerts') return mockAlertsSection;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
+        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
         throw new Error(`Unknown section: ${id}`);
       });
 
@@ -474,10 +537,22 @@ describe('AuditHandler', () => {
         limit: 10,
         context: undefined,
       } as any;
+      const mockUnmappedPairsSection = {
+        id: 'unmapped-pairs',
+        title: 'Unmapped Pairs',
+        plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn(),
+        buttonColorMapper: jest.fn(),
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+        limit: 10,
+        context: undefined,
+      } as any;
       mockAuditRegistry.mustGetSection.mockImplementation((id: string) => {
         if (id === 'alerts') return mockAlertsSection;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
+        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
         throw new Error(`Unknown section: ${id}`);
       });
 
@@ -534,12 +609,24 @@ describe('AuditHandler', () => {
         onLeftClick: jest.fn(),
         onRightClick: jest.fn(),
       } as any;
+      const mockUnmappedPairsSection = {
+        id: 'unmapped-pairs',
+        title: 'Unmapped Pairs',
+        plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('Unmapped Pairs'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
 
       // Mock mustGetSection to return different sections based on id
       mockAuditRegistry.mustGetSection.mockImplementation((id: string) => {
         if (id === 'alerts') return mockAlertsSection;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
+        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
         throw new Error(`Unknown section: ${id}`);
       });
 

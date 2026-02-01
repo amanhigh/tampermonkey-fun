@@ -6,6 +6,7 @@ import { IAuditRepo } from '../repo/audit';
  * Interface for Audit repository operations
  * Manager handles all repo interactions (encapsulates data layer)
  */
+// HACK: Remove If Unused..
 export interface IAuditManager {
   /**
    * Resets audit data: clears all previous results and saves new batch

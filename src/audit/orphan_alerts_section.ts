@@ -43,11 +43,6 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
     await this.handleOrphanDeletion(result);
   };
 
-  /**
-   * Button color mapper - all orphan alerts are high severity (darkred)
-   */
-  readonly buttonColorMapper = (_result: AuditResult): string => 'darkred';
-
   readonly headerFormatter = (auditResults: AuditResult[]) => {
     if (auditResults.length === 0) {
       return `<span class="success-badge">✓ No orphan alerts</span>`;
