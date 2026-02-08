@@ -22,7 +22,6 @@ import { IPairRepo, PairRepo } from '../repo/pair';
 import { IExchangeRepo, ExchangeRepo } from '../repo/exchange';
 import { ITickerRepo, TickerRepo } from '../repo/ticker';
 import { ISequenceRepo, SequenceRepo } from '../repo/sequence';
-import { IAuditRepo, AuditRepo } from '../repo/audit';
 import { IRecentTickerRepo, RecentTickerRepo } from '../repo/recent';
 import { IAlertRepo, AlertRepo } from '../repo/alert';
 
@@ -30,7 +29,6 @@ import { IAlertRepo, AlertRepo } from '../repo/alert';
 import { ITimeFrameManager, TimeFrameManager } from '../manager/timeframe';
 import { IJournalManager, JournalManager } from '../manager/journal';
 import { IAlertManager, AlertManager } from '../manager/alert';
-import { IAuditManager, AuditManager } from '../manager/audit';
 import { ITradingViewWatchlistManager, TradingViewWatchlistManager } from '../manager/watchlist';
 import { ITradingViewScreenerManager, TradingViewScreenerManager } from '../manager/screener';
 import { ISequenceManager, SequenceManager } from '../manager/sequence';
@@ -174,7 +172,6 @@ export class Factory {
     exchange: (): IExchangeRepo => Factory.getInstance('exchangeRepo', () => new ExchangeRepo(Factory.repo.cron())),
     ticker: (): ITickerRepo => Factory.getInstance('tickerRepo', () => new TickerRepo(Factory.repo.cron())),
     sequence: (): ISequenceRepo => Factory.getInstance('sequenceRepo', () => new SequenceRepo(Factory.repo.cron())),
-    audit: (): IAuditRepo => Factory.getInstance('auditRepo', () => new AuditRepo(Factory.repo.cron())),
     fno: (): IFnoRepo => Factory.getInstance('fnoRepo', () => new FnoRepo(Factory.repo.cron())),
     kite: (): IKiteRepo => Factory.getInstance('kiteRepo', () => new KiteRepo()),
     recent: (): IRecentTickerRepo => Factory.getInstance('recentRepo', () => new RecentTickerRepo(Factory.repo.cron())),
@@ -203,8 +200,6 @@ export class Factory {
       ),
 
     imdb: (): IImdbManager => Factory.getInstance('imdbManager', () => new ImdbManager(Factory.repo.imdb())),
-
-    audit: (): IAuditManager => Factory.getInstance('auditManager', () => new AuditManager(Factory.repo.audit())),
 
     watchlist: (): ITradingViewWatchlistManager =>
       Factory.getInstance(
