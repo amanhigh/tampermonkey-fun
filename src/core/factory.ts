@@ -587,8 +587,7 @@ export class Factory {
             Factory.util.sync(),
             Factory.manager.watch(),
             Factory.manager.ticker(),
-            Factory.manager.alertFeed(),
-            Factory.handler.audit()
+            Factory.manager.alertFeed()
           )
       ),
     pair: (): IPairHandler =>

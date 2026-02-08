@@ -10,7 +10,6 @@ import { Notifier } from '../util/notify';
 import { ISyncUtil } from '../util/sync';
 import { ITickerManager } from '../manager/ticker';
 import { IAlertFeedManager } from '../manager/alertfeed';
-import { IAuditHandler } from './audit';
 
 /**
  * Handles watchlist-related events and UI updates
@@ -58,8 +57,7 @@ export class WatchListHandler implements IWatchListHandler {
     private readonly syncUtil: ISyncUtil,
     private readonly watchManager: IWatchManager,
     private readonly tickerManager: ITickerManager,
-    private readonly alertFeedManager: IAlertFeedManager,
-    private readonly auditHandler: IAuditHandler
+    private readonly alertFeedManager: IAlertFeedManager
   ) {}
 
   /** @inheritdoc */
@@ -76,9 +74,6 @@ export class WatchListHandler implements IWatchListHandler {
 
       // Update alert feed with watchlist changes
       void this.alertFeedManager.createAlertFeedEvent(this.tickerManager.getTicker());
-
-      // Trigger audit to refresh audit results based on new watchlist
-      void this.auditHandler.auditAll();
     });
   }
 
