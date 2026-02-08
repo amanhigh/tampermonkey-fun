@@ -1,4 +1,4 @@
-import { GttUnwatchedAudit } from '../../src/audit/gtt_unwatched';
+import { GttPlugin } from '../../src/manager/gtt_plugin';
 import { IKiteRepo } from '../../src/repo/kite';
 import { IWatchManager } from '../../src/manager/watch';
 import { GttRefreshEvent } from '../../src/models/gtt';
@@ -6,8 +6,8 @@ import { Order } from '../../src/models/kite';
 
 // Unit tests for GttUnwatchedAudit: identifies GTT orders for unwatched tickers
 
-describe('GttUnwatchedAudit', () => {
-  let plugin: GttUnwatchedAudit;
+describe('GttPlugin', () => {
+  let plugin: GttPlugin;
   let kiteRepo: jest.Mocked<IKiteRepo>;
   let watchManager: jest.Mocked<IWatchManager>;
 
@@ -20,7 +20,7 @@ describe('GttUnwatchedAudit', () => {
       getCategory: jest.fn(),
     } as any;
 
-    plugin = new GttUnwatchedAudit(kiteRepo, watchManager);
+    plugin = new GttPlugin(kiteRepo, watchManager);
   });
 
   describe('validate', () => {

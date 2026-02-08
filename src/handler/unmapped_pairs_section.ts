@@ -1,10 +1,10 @@
 import { AuditResult } from '../models/audit';
-import { IAuditSection } from './section';
+import { IAuditSection } from '../audit/section';
 import { IAudit } from '../models/audit';
-import { BaseAuditSection } from './base_section';
-import { ITickerHandler } from '../handler/ticker';
+import { BaseAuditSection } from '../audit/base_section';
+import { ITickerHandler } from './ticker';
 import { IPairManager } from '../manager/pair';
-import { IWatchListHandler } from '../handler/watchlist';
+import { IWatchListHandler } from './watchlist';
 import { Notifier } from '../util/notify';
 import { AUDIT_IDS } from '../models/audit_ids';
 

@@ -1,4 +1,4 @@
-import { AlertsAudit } from '../../src/audit/alerts';
+import { AlertsPlugin } from '../../src/manager/alerts_plugin';
 import { IPairManager } from '../../src/manager/pair';
 import { IAlertManager } from '../../src/manager/alert';
 import { IWatchManager } from '../../src/manager/watch';
@@ -7,8 +7,8 @@ import { AlertState } from '../../src/models/alert';
 
 // Unit tests for AlertsAudit: classification, severity, and watchlist exclusion
 
-describe('AlertsAudit', () => {
-  let plugin: AlertsAudit;
+describe('AlertsPlugin', () => {
+  let plugin: AlertsPlugin;
   let pairManager: jest.Mocked<IPairManager>;
   let alertManager: jest.Mocked<IAlertManager>;
   let watchManager: jest.Mocked<IWatchManager>;
@@ -31,7 +31,7 @@ describe('AlertsAudit', () => {
       investingToTv: jest.fn().mockImplementation((ticker) => `TV:${ticker}`), // Default mapping
     } as any;
 
-    plugin = new AlertsAudit(pairManager, alertManager, watchManager, symbolManager);
+    plugin = new AlertsPlugin(pairManager, alertManager, watchManager, symbolManager);
   });
 
   describe('validate', () => {
@@ -42,7 +42,7 @@ describe('AlertsAudit', () => {
 
   describe('run', () => {
     describe('classification', () => {
-      let results: Awaited<ReturnType<AlertsAudit['run']>>;
+      let results: Awaited<ReturnType<AlertsPlugin['run']>>;
 
       beforeEach(async () => {
         pairManager.getAllInvestingTickers.mockReturnValue([
@@ -93,7 +93,7 @@ describe('AlertsAudit', () => {
     });
 
     describe('severity mapping', () => {
-      let results: Awaited<ReturnType<AlertsAudit['run']>>;
+      let results: Awaited<ReturnType<AlertsPlugin['run']>>;
 
       beforeEach(async () => {
         pairManager.getAllInvestingTickers.mockReturnValue(['SINGLE_ALERT_TICKER', 'NO_ALERTS_TICKER']);

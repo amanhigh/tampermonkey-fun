@@ -1,4 +1,4 @@
-import { OrphanAlertsSection } from '../../src/audit/orphan_alerts_section';
+import { OrphanAlertsSection } from '../../src/handler/orphan_alerts_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { IAlertRepo } from '../../src/repo/alert';
 import { IAlertManager } from '../../src/manager/alert';

@@ -1,11 +1,11 @@
-import { TvMappingAudit } from '../../src/audit/tv_mapping';
+import { TvMappingPlugin } from '../../src/manager/tv_mapping_plugin';
 import { IPairManager } from '../../src/manager/pair';
 import { ISymbolManager } from '../../src/manager/symbol';
 
 // Unit tests for TvMappingAudit: flags missing TV mapping
 
-describe('TvMappingAudit', () => {
-  let plugin: TvMappingAudit;
+describe('TvMappingPlugin', () => {
+  let plugin: TvMappingPlugin;
   let pairManager: jest.Mocked<IPairManager>;
   let symbolManager: jest.Mocked<ISymbolManager>;
 
@@ -18,7 +18,7 @@ describe('TvMappingAudit', () => {
       investingToTv: jest.fn(),
     } as any;
 
-    plugin = new TvMappingAudit(pairManager, symbolManager);
+    plugin = new TvMappingPlugin(pairManager, symbolManager);
   });
 
   describe('validate', () => {

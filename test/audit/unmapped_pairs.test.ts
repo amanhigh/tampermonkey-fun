@@ -1,12 +1,12 @@
-import { UnmappedPairsAudit } from '../../src/audit/unmapped_pairs';
+import { UnmappedPairsPlugin } from '../../src/manager/unmapped_pairs_plugin';
 import { IPairRepo } from '../../src/repo/pair';
 import { ITickerRepo } from '../../src/repo/ticker';
 import { PairInfo } from '../../src/models/alert';
 
 // Unit tests for UnmappedPairsAudit: identifies pairs without TradingView mappings
 
-describe('UnmappedPairsAudit', () => {
-  let plugin: UnmappedPairsAudit;
+describe('UnmappedPairsPlugin', () => {
+  let plugin: UnmappedPairsPlugin;
   let pairRepo: jest.Mocked<IPairRepo>;
   let tickerRepo: jest.Mocked<ITickerRepo>;
 
@@ -20,7 +20,7 @@ describe('UnmappedPairsAudit', () => {
       getTvTicker: jest.fn(),
     } as any;
 
-    plugin = new UnmappedPairsAudit(pairRepo, tickerRepo);
+    plugin = new UnmappedPairsPlugin(pairRepo, tickerRepo);
   });
 
   describe('validate', () => {

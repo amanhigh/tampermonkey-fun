@@ -1,5 +1,5 @@
 import { AuditResult } from '../models/audit';
-import { BaseAuditPlugin } from './base';
+import { BaseAuditPlugin } from './audit_plugin_base';
 import { IPairRepo } from '../repo/pair';
 import { ITickerRepo } from '../repo/ticker';
 import { AUDIT_IDS } from '../models/audit_ids';
@@ -19,7 +19,7 @@ import { AUDIT_IDS } from '../models/audit_ids';
  * - Section should display unmapped pairs with click handlers to add mappings
  * - TODO: Decide button color (yellow for LOW severity or orange for MEDIUM?)
  */
-export class UnmappedPairsAudit extends BaseAuditPlugin {
+export class UnmappedPairsPlugin extends BaseAuditPlugin {
   public readonly id = AUDIT_IDS.UNMAPPED_PAIRS;
   public readonly title = 'Unmapped Pairs';
 

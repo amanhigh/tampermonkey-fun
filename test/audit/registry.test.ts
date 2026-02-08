@@ -10,8 +10,8 @@ describe('AuditRegistry', () => {
     registry = new AuditRegistry();
   });
 
-  describe('registerSectionFactory', () => {
-    it('should register a section factory and instantiate on first access', () => {
+  describe('registerSection', () => {
+    it('should register a section', () => {
       const mockPlugin: IAudit = {
         id: AUDIT_IDS.GTT_UNWATCHED,
         title: 'Test Plugin',
@@ -29,19 +29,30 @@ describe('AuditRegistry', () => {
         onRightClick: jest.fn(),
       };
 
-      const factory = jest.fn().mockReturnValue(mockSection);
-      registry.registerSectionFactory(AUDIT_IDS.GTT_UNWATCHED, factory);
+      registry.registerSection(mockSection);
 
-      expect(factory).not.toHaveBeenCalled();
       expect(registry.mustGetSection(AUDIT_IDS.GTT_UNWATCHED)).toEqual(mockSection);
-      expect(factory).toHaveBeenCalledTimes(1);
     });
 
     it('should throw error for duplicate section id', () => {
-      const factory = jest.fn();
-      registry.registerSectionFactory(AUDIT_IDS.GTT_UNWATCHED, factory);
+      const mockSection: IAuditSection = {
+        id: AUDIT_IDS.GTT_UNWATCHED,
+        title: 'Test Section',
+        plugin: {
+          id: AUDIT_IDS.GTT_UNWATCHED,
+          title: 'Test Plugin',
+          validate: jest.fn(),
+          run: jest.fn().mockResolvedValue([]),
+        },
+        headerFormatter: jest.fn().mockReturnValue('Header'),
+        buttonColorMapper: jest.fn().mockReturnValue('blue'),
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      };
+      
+      registry.registerSection(mockSection);
 
-      expect(() => registry.registerSectionFactory(AUDIT_IDS.GTT_UNWATCHED, factory)).toThrow(
+      expect(() => registry.registerSection(mockSection)).toThrow(
         `Duplicate section id: ${AUDIT_IDS.GTT_UNWATCHED}`
       );
     });
@@ -66,7 +77,7 @@ describe('AuditRegistry', () => {
         onRightClick: jest.fn(),
       };
 
-      registry.registerSectionFactory(AUDIT_IDS.ALERTS, () => mockSection);
+      registry.registerSection(mockSection);
 
       expect(registry.mustGetSection(AUDIT_IDS.ALERTS)).toEqual(mockSection);
     });
@@ -118,8 +129,8 @@ describe('AuditRegistry', () => {
         onRightClick: jest.fn(),
       };
 
-      registry.registerSectionFactory(AUDIT_IDS.ALERTS, () => mockSection1);
-      registry.registerSectionFactory(AUDIT_IDS.GTT_UNWATCHED, () => mockSection2);
+      registry.registerSection(mockSection1);
+      registry.registerSection(mockSection2);
 
       const sections = registry.listSections();
       expect(sections).toHaveLength(2);

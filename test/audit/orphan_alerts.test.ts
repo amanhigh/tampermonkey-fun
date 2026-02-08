@@ -1,12 +1,12 @@
-import { OrphanAlertsAudit } from '../../src/audit/orphan_alerts';
+import { OrphanAlertsPlugin } from '../../src/manager/orphan_alerts_plugin';
 import { IAlertRepo } from '../../src/repo/alert';
 import { IPairRepo } from '../../src/repo/pair';
 import { Alert, PairInfo } from '../../src/models/alert';
 
 // Unit tests for OrphanAlertsAudit: identifies alerts without corresponding pairs
 
-describe('OrphanAlertsAudit', () => {
-  let plugin: OrphanAlertsAudit;
+describe('OrphanAlertsPlugin', () => {
+  let plugin: OrphanAlertsPlugin;
   let alertRepo: jest.Mocked<IAlertRepo>;
   let pairRepo: jest.Mocked<IPairRepo>;
 
@@ -21,7 +21,7 @@ describe('OrphanAlertsAudit', () => {
       get: jest.fn(),
     } as any;
 
-    plugin = new OrphanAlertsAudit(alertRepo, pairRepo);
+    plugin = new OrphanAlertsPlugin(alertRepo, pairRepo);
   });
 
   describe('validate', () => {

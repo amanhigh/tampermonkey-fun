@@ -1,7 +1,7 @@
-import { IAuditSection } from './section';
+import { IAuditSection } from '../audit/section';
 import { IAudit, AuditResult } from '../models/audit';
-import { BaseAuditSection } from './base_section';
-import { ITickerHandler } from '../handler/ticker';
+import { BaseAuditSection } from '../audit/base_section';
+import { ITickerHandler } from './ticker';
 import { IKiteManager } from '../manager/kite';
 import { AUDIT_IDS } from '../models/audit_ids';
 import { Notifier } from '../util/notify';

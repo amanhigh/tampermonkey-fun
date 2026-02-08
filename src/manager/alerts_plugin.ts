@@ -1,9 +1,9 @@
 import { AuditResult, AuditSeverity } from '../models/audit';
-import { BaseAuditPlugin } from './base';
-import { IPairManager } from '../manager/pair';
-import { IAlertManager } from '../manager/alert';
-import { IWatchManager } from '../manager/watch';
-import { ISymbolManager } from '../manager/symbol';
+import { BaseAuditPlugin } from './audit_plugin_base';
+import { IPairManager } from './pair';
+import { IAlertManager } from './alert';
+import { IWatchManager } from './watch';
+import { ISymbolManager } from './symbol';
 import { AlertState } from '../models/alert';
 import { AUDIT_IDS } from '../models/audit_ids';
 
@@ -17,7 +17,7 @@ import { AUDIT_IDS } from '../models/audit_ids';
  * - Classifies alerts: NO_PAIR, NO_ALERTS, SINGLE_ALERT, VALID
  * - Returns only FAIL status results (issues that need attention)
  */
-export class AlertsAudit extends BaseAuditPlugin {
+export class AlertsPlugin extends BaseAuditPlugin {
   public readonly id = AUDIT_IDS.ALERTS;
   public readonly title = 'Alerts Coverage';
 

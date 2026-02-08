@@ -1,7 +1,7 @@
 import { AuditResult } from '../models/audit';
-import { BaseAuditPlugin } from './base';
+import { BaseAuditPlugin } from './audit_plugin_base';
 import { IKiteRepo } from '../repo/kite';
-import { IWatchManager } from '../manager/watch';
+import { IWatchManager } from './watch';
 import { AUDIT_IDS } from '../models/audit_ids';
 
 /**
@@ -9,7 +9,7 @@ import { AUDIT_IDS } from '../models/audit_ids';
  * Checks if GTT order tickers are in Orange (category 0), Red (category 1), or Lime (category 4) watchlists.
  * Emits FAIL results only for unwatched GTT orders.
  */
-export class GttUnwatchedAudit extends BaseAuditPlugin {
+export class GttPlugin extends BaseAuditPlugin {
   public readonly id = AUDIT_IDS.GTT_UNWATCHED;
   public readonly title = 'GTT Unwatched Orders';
 

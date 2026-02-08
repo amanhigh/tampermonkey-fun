@@ -76,15 +76,15 @@ import { IPanelHandler, PanelHandler } from '../handler/panel';
 import { IPicassoHandler, PicassoHandler } from '../handler/picasso';
 import { PicassoApp } from './picasso';
 import { AuditRegistry } from '../audit/registry';
-import { AlertsAudit } from '../audit/alerts';
-import { TvMappingAudit } from '../audit/tv_mapping';
-import { GttUnwatchedAudit } from '../audit/gtt_unwatched';
-import { UnmappedPairsAudit } from '../audit/unmapped_pairs';
-import { OrphanAlertsAudit } from '../audit/orphan_alerts';
-import { GttAuditSection } from '../audit/gtt_section';
-import { AlertsAuditSection } from '../audit/alerts_section';
-import { OrphanAlertsSection } from '../audit/orphan_alerts_section';
-import { UnmappedPairsSection } from '../audit/unmapped_pairs_section';
+import { AlertsPlugin } from '../manager/alerts_plugin';
+import { TvMappingPlugin } from '../manager/tv_mapping_plugin';
+import { GttPlugin } from '../manager/gtt_plugin';
+import { UnmappedPairsPlugin } from '../manager/unmapped_pairs_plugin';
+import { OrphanAlertsPlugin } from '../manager/orphan_alerts_plugin';
+import { GttAuditSection } from '../handler/gtt_section';
+import { AlertsAuditSection } from '../handler/alerts_section';
+import { OrphanAlertsSection } from '../handler/orphan_alerts_section';
+import { UnmappedPairsSection } from '../handler/unmapped_pairs_section';
 
 /**
  * Project Architecture Overview
@@ -333,7 +333,7 @@ export class Factory {
       Factory.getInstance(
         'auditPlugin_alerts',
         () =>
-          new AlertsAudit(
+          new AlertsPlugin(
             Factory.manager.pair(),
             Factory.manager.alert(),
             Factory.manager.watch(),
@@ -341,34 +341,34 @@ export class Factory {
           )
       ),
 
-    // Return a singleton TvMappingAudit instance
+    // Return a singleton TvMappingPlugin instance
     // NOTE: Registered but not actively used in audit flow (deferred for future use cases)
     // See Plan.md Task 2.2 for analysis of why this plugin is not integrated
     tvMapping: () =>
       Factory.getInstance(
         'auditPlugin_tvmapping',
-        () => new TvMappingAudit(Factory.manager.pair(), Factory.manager.symbol())
+        () => new TvMappingPlugin(Factory.manager.pair(), Factory.manager.symbol())
       ),
 
-    // Return a singleton GttUnwatchedAudit instance
+    // Return a singleton GttPlugin instance
     gttUnwatched: () =>
       Factory.getInstance(
         'auditPlugin_gttUnwatched',
-        () => new GttUnwatchedAudit(Factory.repo.kite(), Factory.manager.watch())
+        () => new GttPlugin(Factory.repo.kite(), Factory.manager.watch())
       ),
 
-    // Return a singleton UnmappedPairsAudit instance
+    // Return a singleton UnmappedPairsPlugin instance
     unmappedPairs: () =>
       Factory.getInstance(
         'auditPlugin_unmappedPairs',
-        () => new UnmappedPairsAudit(Factory.repo.pair(), Factory.repo.ticker())
+        () => new UnmappedPairsPlugin(Factory.repo.pair(), Factory.repo.ticker())
       ),
 
-    // Return a singleton OrphanAlertsAudit instance
+    // Return a singleton OrphanAlertsPlugin instance
     orphanAlerts: () =>
       Factory.getInstance(
         'auditPlugin_orphanAlerts',
-        () => new OrphanAlertsAudit(Factory.repo.alert(), Factory.repo.pair())
+        () => new OrphanAlertsPlugin(Factory.repo.alert(), Factory.repo.pair())
       ),
 
     // ===== SECTION CREATION =====
@@ -395,7 +395,8 @@ export class Factory {
             Factory.audit.alerts(), // ✅ Direct plugin injection
             Factory.handler.ticker(),
             Factory.manager.symbol(),
-            Factory.manager.pair()
+            Factory.manager.pair(),
+            Factory.handler.watchlist() // For watchlist repaint after pair deletion
           )
       ),
 
@@ -421,7 +422,8 @@ export class Factory {
           new UnmappedPairsSection(
             Factory.audit.unmappedPairs(), // ✅ Direct plugin injection
             Factory.handler.ticker(), // For opening tickers
-            Factory.manager.pair() // For cleanup operations
+            Factory.manager.pair(), // For cleanup operations
+            Factory.handler.watchlist() // For watchlist repaint after pair deletion
           )
       ),
 
@@ -598,8 +600,7 @@ export class Factory {
             Factory.manager.pair(),
             Factory.util.smart(),
             Factory.manager.ticker(),
-            Factory.manager.symbol(),
-            Factory.handler.watchlist()
+            Factory.manager.symbol()
           )
       ),
     flag: (): IFlagHandler =>
