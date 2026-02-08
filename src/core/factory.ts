@@ -395,8 +395,7 @@ export class Factory {
             Factory.audit.alerts(), // ✅ Direct plugin injection
             Factory.handler.ticker(),
             Factory.manager.symbol(),
-            Factory.manager.pair(),
-            Factory.handler.watchlist() // For watchlist repaint after pair deletion
+            Factory.handler.pair() // ✅ PairHandler handles watchlist repaint
           )
       ),
 
@@ -422,8 +421,7 @@ export class Factory {
           new UnmappedPairsSection(
             Factory.audit.unmappedPairs(), // ✅ Direct plugin injection
             Factory.handler.ticker(), // For opening tickers
-            Factory.manager.pair(), // For cleanup operations
-            Factory.handler.watchlist() // For watchlist repaint after pair deletion
+            Factory.handler.pair() // ✅ PairHandler handles watchlist repaint
           )
       ),
 
@@ -599,7 +597,8 @@ export class Factory {
             Factory.manager.pair(),
             Factory.util.smart(),
             Factory.manager.ticker(),
-            Factory.manager.symbol()
+            Factory.manager.symbol(),
+            Factory.handler.watchlist()
           )
       ),
     flag: (): IFlagHandler =>

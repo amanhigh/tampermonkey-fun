@@ -5,6 +5,7 @@ import { Notifier } from '../util/notify';
 import { IInvestingClient } from '../client/investing';
 import { ISymbolManager } from '../manager/symbol';
 import { ITickerManager } from '../manager/ticker';
+import { IWatchListHandler } from './watchlist';
 
 /**
  * Interface for managing alert mapping operations
@@ -33,7 +34,8 @@ export class PairHandler implements IPairHandler {
     private readonly pairManager: IPairManager,
     private readonly smartPrompt: ISmartPrompt,
     private readonly tickerManager: ITickerManager,
-    private readonly symbolManager: ISymbolManager
+    private readonly symbolManager: ISymbolManager,
+    private readonly watchListHandler: IWatchListHandler
   ) {}
 
   /**
@@ -95,10 +97,12 @@ export class PairHandler implements IPairHandler {
     // Delegate all cleanup logic to manager and get result
     const cleanedFromLists = this.pairManager.deletePairInfo(investingTicker);
 
+
     // Handle notification based on cleanup result
     const tvTicker = this.symbolManager.investingToTv(investingTicker);
 
     if (cleanedFromLists) {
+      this.watchListHandler.onWatchListChange();
       Notifier.info(`🗑️ Cleaned ${tvTicker} from Lists (Watch/Flag)`);
     }
 
