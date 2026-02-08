@@ -24,8 +24,9 @@ export interface IJournalHandler {
   /**
    * Handles Journal Creation operation
    * Shows reason prompt modal and creates journal entry
+   * @param type Journal entry type (REJECTED, RESULT, SET)
    */
-  handleRecordJournal(type: JournalType): void;
+  handleRecordJournal(type: JournalType): Promise<void>;
 
   /**
    * Handles journal reason prompt operation
@@ -53,40 +54,56 @@ export class JournalHandler implements IJournalHandler {
   }
 
   /** @inheritdoc */
-  public handleRecordJournal(type: JournalType): void {
-    const ticker = this.tickerManager.getTicker();
+  public async handleRecordJournal(type: JournalType): Promise<void> {
+    const reason = await this.showReasonModal();
 
-    void this.smartPrompt
-      .showModal(Constants.TRADING.PROMPT.REASONS, Constants.TRADING.PROMPT.OVERRIDES)
-      .then((reason) => {
-        void this.journalManager.createEntry(ticker, type, reason);
-      })
-      .catch((error) => {
-        throw new Error(`Failed to select journal tag: ${error}`);
-      });
+    if (!reason) {
+      return;
+    }
+
+    const ticker = this.tickerManager.getTicker();
+    return this.journalManager.createEntry(ticker, type, reason).catch((error) => {
+      throw new Error(`Failed to record journal entry: ${error}`);
+    });
   }
 
   /** @inheritdoc */
   public async handleJournalReasonPrompt(): Promise<void> {
+    const reason = await this.showReasonModal();
+
+    if (!reason) {
+      return;
+    }
+
+    const text = this.journalManager.createReasonText(reason);
+    this.tvManager.clipboardCopy(text);
+    this.styleManager.selectToolbar(Constants.DOM.TOOLBARS.TEXT);
+  }
+
+  /**
+   * Shows reason selection modal with Swift keys disabled
+   * Disables Swift keys while modal is open to prevent keyboard interference
+   * Re-enables them after modal closes
+   * @private
+   * @returns Selected reason or null if cancelled/no selection
+   */
+  private async showReasonModal(): Promise<string | null> {
     try {
-      // Disable swift keys while modal is active to prevent interference
       await this.tvManager.setSwiftKeysState(false);
 
       const reason = await this.smartPrompt.showModal(
         Constants.TRADING.PROMPT.REASONS,
         Constants.TRADING.PROMPT.OVERRIDES
       );
+
       if (!reason || reason === 'Cancel') {
-        return;
+        return null;
       }
 
-      const text = this.journalManager.createReasonText(reason);
-      this.tvManager.clipboardCopy(text);
-      this.styleManager.selectToolbar(Constants.DOM.TOOLBARS.TEXT);
+      return reason;
     } catch (error) {
-      throw new Error(`Failed to handle reason prompt: ${error}`);
+      throw new Error(`Failed to show reason modal: ${error}`);
     } finally {
-      // Re-enable swift keys (since 'k' only works when swift is enabled)
       await this.tvManager.setSwiftKeysState(true);
     }
   }

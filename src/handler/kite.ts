@@ -59,12 +59,6 @@ export interface IKiteHandler {
    * Sets up GTT refresh event listener
    */
   setupGttRefreshListener(): void;
-
-  /**
-   * Performs GTT audit when called by audit system
-   * Reports unwatched GTT tickers with individual warnings
-   */
-  performGttAudit(): Promise<void>;
 }
 
 /**
@@ -86,6 +80,7 @@ export class KiteHandler implements IKiteHandler {
    * @param tvManager - Manager for TradingView operations
    * @param uiUtil - Utility for UI operations
    */
+  // eslint-disable-next-line max-params
   constructor(
     private readonly kiteManager: IKiteManager,
     private readonly symbolManager: ISymbolManager,
@@ -156,25 +151,6 @@ export class KiteHandler implements IKiteHandler {
   handleGttDeleteEvent(event: GttDeleteEvent): void {
     this.kiteManager.deleteOrder(event.orderId);
     Notifier.red(`GTT Deleted: ${event.symbol}`);
-  }
-
-  /** @inheritdoc */
-  public async performGttAudit(): Promise<void> {
-    const gttData = await this.kiteManager.getGttRefereshEvent();
-    const unwatchedTickers = this.kiteManager.getUnwatchedGttTickers(gttData);
-
-    if (unwatchedTickers.length === 0) {
-      Notifier.success(`✅ GTT Audit: ${Object.keys(gttData.orders).length} orders, all tickers watched`, 3000);
-      return;
-    }
-
-    // Print individual warning for each unwatched ticker
-    unwatchedTickers.forEach((ticker) => {
-      Notifier.warn(`⚠️ GTT Unwatched: ${ticker}`, 4000);
-    });
-
-    // Summary message
-    Notifier.warn(`GTT Audit Complete: ${unwatchedTickers.length} unwatched tickers found`, 6000);
   }
 
   /** @inheritdoc */

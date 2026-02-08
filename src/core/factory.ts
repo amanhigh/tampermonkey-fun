@@ -41,7 +41,6 @@ import { ITradingViewManager, TradingViewManager } from '../manager/tv';
 import { IPairManager, PairManager } from '../manager/pair';
 import { FnoRepo, IFnoRepo } from '../repo/fno';
 import { IFnoManager, FnoManager } from '../manager/fno';
-import { IValidationManager, ValidationManager } from '../manager/validation';
 
 // Handler Imports
 import { AlertHandler } from '../handler/alert';
@@ -76,6 +75,16 @@ import { IImdbManager as IImdbManager, ImdbManager } from '../manager/imdb';
 import { IPanelHandler, PanelHandler } from '../handler/panel';
 import { IPicassoHandler, PicassoHandler } from '../handler/picasso';
 import { PicassoApp } from './picasso';
+import { AuditSectionRegistry } from '../util/audit_registry';
+import { AlertsPlugin } from '../manager/alerts_plugin';
+import { TvMappingPlugin } from '../manager/tv_mapping_plugin';
+import { GttPlugin } from '../manager/gtt_plugin';
+import { UnmappedPairsPlugin } from '../manager/unmapped_pairs_plugin';
+import { OrphanAlertsPlugin } from '../manager/orphan_alerts_plugin';
+import { GttAuditSection } from '../handler/gtt_section';
+import { AlertsAuditSection } from '../handler/alerts_section';
+import { OrphanAlertsSection } from '../handler/orphan_alerts_section';
+import { UnmappedPairsSection } from '../handler/unmapped_pairs_section';
 
 /**
  * Project Architecture Overview
@@ -114,7 +123,8 @@ export class Factory {
             Factory.handler.ticker(),
             Factory.handler.alertFeed(),
             Factory.handler.panel(),
-            Factory.manager.tv()
+            Factory.manager.tv(),
+            Factory.handler.audit()
           )
       ),
     imdb: (): ImdbApp =>
@@ -194,17 +204,7 @@ export class Factory {
 
     imdb: (): IImdbManager => Factory.getInstance('imdbManager', () => new ImdbManager(Factory.repo.imdb())),
 
-    audit: (): IAuditManager =>
-      Factory.getInstance(
-        'auditManager',
-        () =>
-          new AuditManager(
-            Factory.repo.audit(),
-            Factory.manager.ticker(),
-            Factory.manager.pair(),
-            Factory.manager.alert()
-          )
-      ),
+    audit: (): IAuditManager => Factory.getInstance('auditManager', () => new AuditManager(Factory.repo.audit())),
 
     watchlist: (): ITradingViewWatchlistManager =>
       Factory.getInstance(
@@ -269,8 +269,7 @@ export class Factory {
     kite: (): IKiteManager =>
       Factory.getInstance(
         'kiteManager',
-        () =>
-          new KiteManager(Factory.manager.symbol(), Factory.client.kite(), Factory.repo.kite(), Factory.manager.watch())
+        () => new KiteManager(Factory.manager.symbol(), Factory.client.kite(), Factory.repo.kite())
       ),
 
     symbol: (): ISymbolManager =>
@@ -282,7 +281,18 @@ export class Factory {
         () => new TradingViewManager(Factory.util.wait(), Factory.repo.cron(), Factory.client.kohan())
       ),
 
-    pair: (): IPairManager => Factory.getInstance('pairManager', () => new PairManager(Factory.repo.pair())),
+    pair: (): IPairManager =>
+      Factory.getInstance(
+        'pairManager',
+        () =>
+          new PairManager(
+            Factory.repo.pair(),
+            Factory.manager.symbol(),
+            Factory.manager.watch(),
+            Factory.manager.flag(),
+            Factory.manager.alertFeed()
+          )
+      ),
 
     style: (): IStyleManager =>
       Factory.getInstance('styleManager', () => new StyleManager(Factory.util.wait(), Factory.manager.timeFrame())),
@@ -303,12 +313,133 @@ export class Factory {
         'alertFeedManager',
         () => new AlertFeedManager(Factory.manager.symbol(), Factory.manager.watch(), Factory.manager.recent())
       ),
-    validation: (): IValidationManager =>
-      Factory.getInstance(
-        'validationManager',
-        () => new ValidationManager(Factory.repo.alert(), Factory.repo.pair(), Factory.repo.ticker())
-      ),
   };
+
+  /**
+   * Audit Layer
+   * Each plugin is exposed as a separate field
+   * Each section is created and registered in the registry
+   * Registry is constructed at the end
+   *
+   * Architecture:
+   * - Plugins are created first (business logic)
+   * - Sections are created next (receive plugins via injection)
+   * - Registry stores sections (primary) and plugins (temporary)
+   */
+  public static audit = {
+    // ===== PLUGIN CREATION =====
+    // Return a singleton AlertsAudit instance
+    alerts: () =>
+      Factory.getInstance(
+        'auditPlugin_alerts',
+        () =>
+          new AlertsPlugin(
+            Factory.manager.pair(),
+            Factory.manager.alert(),
+            Factory.manager.watch(),
+            Factory.manager.symbol()
+          )
+      ),
+
+    // Return a singleton TvMappingPlugin instance
+    // NOTE: Registered but not actively used in audit flow (deferred for future use cases)
+    // See Plan.md Task 2.2 for analysis of why this plugin is not integrated
+    tvMapping: () =>
+      Factory.getInstance(
+        'auditPlugin_tvmapping',
+        () => new TvMappingPlugin(Factory.manager.pair(), Factory.manager.symbol())
+      ),
+
+    // Return a singleton GttPlugin instance
+    gttUnwatched: () =>
+      Factory.getInstance(
+        'auditPlugin_gttUnwatched',
+        () => new GttPlugin(Factory.repo.kite(), Factory.manager.watch())
+      ),
+
+    // Return a singleton UnmappedPairsPlugin instance
+    unmappedPairs: () =>
+      Factory.getInstance(
+        'auditPlugin_unmappedPairs',
+        () => new UnmappedPairsPlugin(Factory.repo.pair(), Factory.repo.ticker())
+      ),
+
+    // Return a singleton OrphanAlertsPlugin instance
+    orphanAlerts: () =>
+      Factory.getInstance(
+        'auditPlugin_orphanAlerts',
+        () => new OrphanAlertsPlugin(Factory.repo.alert(), Factory.repo.pair())
+      ),
+
+    // ===== SECTION CREATION =====
+    // GTT Audit Section - receives plugin via direct injection
+    // Pilot pattern: Follow this structure for other sections
+    gttSection: () =>
+      Factory.getInstance(
+        'gttSection',
+        () =>
+          new GttAuditSection(
+            Factory.audit.gttUnwatched(), // ✅ Direct plugin injection
+            Factory.handler.ticker(),
+            Factory.manager.kite() // ✅ KiteManager for GTT order deletion
+          )
+      ),
+
+    // Alerts Audit Section - receives plugin via direct injection
+    // Follows GTT pattern for consistency
+    alertsSection: () =>
+      Factory.getInstance(
+        'alertsSection',
+        () =>
+          new AlertsAuditSection(
+            Factory.audit.alerts(), // ✅ Direct plugin injection
+            Factory.handler.ticker(),
+            Factory.manager.symbol(),
+            Factory.handler.pair() // ✅ PairHandler handles watchlist repaint
+          )
+      ),
+
+    // Orphan Alerts Audit Section - receives plugin via direct injection
+    // Follows GTT and Alerts patterns for consistency
+    orphanAlertsSection: () =>
+      Factory.getInstance(
+        'orphanAlertsSection',
+        () =>
+          new OrphanAlertsSection(
+            Factory.audit.orphanAlerts(), // ✅ Direct plugin injection
+            Factory.repo.alert(),
+            Factory.manager.alert() // ✅ AlertManager for deletion operations
+          )
+      ),
+
+    // Unmapped Pairs Audit Section - receives plugin via direct injection
+    // Displays pairs without TradingView mappings for cleanup
+    unmappedPairsSection: () =>
+      Factory.getInstance(
+        'unmappedPairsSection',
+        () =>
+          new UnmappedPairsSection(
+            Factory.audit.unmappedPairs(), // ✅ Direct plugin injection
+            Factory.handler.ticker(), // For opening tickers
+            Factory.handler.pair() // ✅ PairHandler handles watchlist repaint
+          )
+      ),
+
+    // ===== REGISTRY =====
+    // Build registry by registering sections only
+    registry: () =>
+      Factory.getInstance('auditRegistry', () => {
+        const reg = new AuditSectionRegistry();
+
+        // Register sections (primary responsibility)
+        reg.registerSection(Factory.audit.alertsSection());
+        reg.registerSection(Factory.audit.gttSection());
+        reg.registerSection(Factory.audit.orphanAlertsSection());
+        reg.registerSection(Factory.audit.unmappedPairsSection());
+
+        return reg;
+      }),
+  } as const;
 
   /**
    * Handler Layer
@@ -341,19 +472,11 @@ export class Factory {
         () => new AlertSummaryHandler(Factory.manager.alert(), Factory.manager.tv(), Factory.util.ui())
       ),
     audit: (): IAuditHandler =>
-      Factory.getInstance(
-        'auditHandler',
-        () =>
-          new AuditHandler(
-            Factory.manager.audit(),
-            Factory.util.ui(),
-            Factory.handler.ticker(),
-            Factory.manager.watch(),
-            Factory.manager.symbol(),
-            Factory.handler.pair(),
-            Factory.handler.kite()
-          )
-      ),
+      Factory.getInstance('auditHandler', () => {
+        // Handler receives registry which now contains sections
+        // Sections are registered in Factory.audit.registry()
+        return new AuditHandler(Factory.audit.registry(), Factory.util.ui());
+      }),
     onload: (): IOnLoadHandler =>
       Factory.getInstance(
         'onloadHandler',
@@ -475,7 +598,7 @@ export class Factory {
             Factory.util.smart(),
             Factory.manager.ticker(),
             Factory.manager.symbol(),
-            Factory.manager.alertFeed()
+            Factory.handler.watchlist()
           )
       ),
     flag: (): IFlagHandler =>
@@ -523,13 +646,7 @@ export class Factory {
     panel: (): IPanelHandler =>
       Factory.getInstance(
         'panelHandler',
-        () =>
-          new PanelHandler(
-            Factory.util.smart(),
-            Factory.handler.pair(),
-            Factory.manager.ticker(),
-            Factory.manager.validation()
-          )
+        () => new PanelHandler(Factory.util.smart(), Factory.handler.pair(), Factory.manager.ticker())
       ),
     picasso: (): IPicassoHandler =>
       Factory.getInstance(

@@ -1,176 +1,218 @@
 import { Constants } from '../models/constant';
 import { AlertState } from '../models/alert';
-import { IAuditManager } from '../manager/audit';
+import { Color } from '../models/color';
+import { AuditSectionRegistry } from '../util/audit_registry';
+import { AUDIT_IDS } from '../models/audit_ids';
 import { IUIUtil } from '../util/ui';
 import { Notifier } from '../util/notify';
-import { ITickerHandler } from './ticker';
-import { IWatchManager } from '../manager/watch';
-import { ISymbolManager } from '../manager/symbol';
-import { IPairHandler } from './pair';
-import { IKiteHandler } from './kite';
+import { AuditRenderer } from '../util/audit_renderer';
+import { AuditResult } from '../models/audit';
 
 /**
  * Interface for managing audit UI operations
+ *
+ * Clean architecture: ONLY handles audit sections (multi-ticker view)
+ * No single-ticker button management - keep separation of concerns
  */
 export interface IAuditHandler {
   /**
-   * Updates the audit summary in the UI based on current results
+   * Renders all audit sections showing tickers that need attention
+   * Multi-ticker view: AlertsSection, GttSection, OrphanAlertsSection
    */
   auditAll(): Promise<void>;
 
   /**
-   * Refreshes audit button for current ticker
+   * Runs audits once on first toggle (lazy-loading)
+   * Subsequent calls do nothing (audit area already populated)
    */
-  auditCurrent(): void;
+  auditAllOnFirstRun(): Promise<void>;
 }
 
 /**
- * Handles all UI operations related to audit display and interactions
+ * Handles audit section UI operations
+ *
+ * Architecture:
+ * - Gets sections from registry (sections contain plugins)
+ * - Runs plugins via section.plugin.run()
+ * - Renders sections via AuditRenderer
+ * - NO button management (only audit sections)
  */
 export class AuditHandler implements IAuditHandler {
+  // Track whether audits have ever been run (used for initial vs subsequent toggles)
+  private auditHasRun: boolean = false;
+
   constructor(
-    private readonly auditManager: IAuditManager,
-    private readonly uiUtil: IUIUtil,
-    private readonly tickerHandler: ITickerHandler,
-    private readonly watchManager: IWatchManager,
-    private readonly symbolManager: ISymbolManager,
-    private readonly pairHandler: IPairHandler,
-    private readonly kiteHandler: IKiteHandler
+    private readonly auditRegistry: AuditSectionRegistry,
+    private readonly uiUtil: IUIUtil
   ) {}
+
+  /**
+   * Runs all audits on first toggle, only on initial invocation
+   * Subsequent calls do nothing (audit area already populated)
+   * Intended for lazy-loading audits when user first opens the audit area
+   */
+  public async auditAllOnFirstRun(): Promise<void> {
+    // Only run if audits haven't been run before
+    if (this.auditHasRun) {
+      return; // Already run, do nothing
+    }
+
+    // Run all audits
+    await this.auditAll();
+  }
 
   /**
    * Updates the audit summary in the UI based on current results
    */
   public async auditAll(): Promise<void> {
-    await this.auditManager.auditAlerts();
-    const singleAlerts = this.auditManager.filterAuditResults(AlertState.SINGLE_ALERT);
-    const noAlerts = this.auditManager.filterAuditResults(AlertState.NO_ALERTS);
+    // Get Alerts section from registry (section contains plugin)
+    const alertsSection = this.auditRegistry.mustGetSection(AUDIT_IDS.ALERTS);
 
-    // Clear existing audit area
-    $(`#${Constants.UI.IDS.AREAS.AUDIT}`).empty();
+    // Run section's plugin to get audit results
+    //TODO: Remove Plugin Injection and use Section directly
+    const results = await alertsSection.plugin.run();
 
-    // Combine and limit to 10 buttons total
-    const nonWatchedAudits = [...singleAlerts, ...noAlerts].filter((audit) => {
-      const tvAuditTicker = this.tryMapTvTicker(audit.investingTicker);
-      return !this.watchManager.isWatched(tvAuditTicker);
+    // Calculate counts from results for notification
+    const noAlertsCount = results.filter((r) => r.code === AlertState.NO_ALERTS).length;
+    const singleAlertCount = results.filter((r) => r.code === AlertState.SINGLE_ALERT).length;
+    const noPairCount = results.filter((r) => r.code === AlertState.NO_PAIR).length;
+
+    // Format and show notification (handler controls UI)
+    const summary =
+      `Audit Results: ` +
+      `${singleAlertCount} SINGLE_ALERT, ` +
+      `${noAlertsCount} NO_ALERTS, ` +
+      `${noPairCount} NO_PAIR`;
+    Notifier.message(summary, Color.PURPLE, 10000);
+
+    // Render global refresh button at top of audit area
+    this.renderGlobalRefreshButton();
+
+    // Clear old sections before re-rendering (prevents duplicates on refresh)
+    this.clearAuditSections();
+
+    // Render alerts UI (header + buttons) before GTT audit
+    this.auditAlerts(results);
+
+    // Run GTT audit and render new UI
+    await this.auditGttOrders();
+
+    // Run Orphan Alerts audit and render section
+    await this.auditOrphanAlerts();
+
+    // Run Unmapped Pairs audit and render section
+    await this.auditUnmappedPairs();
+
+    // Mark audits as run
+    this.auditHasRun = true;
+  }
+
+  /**
+   * Renders global refresh button at the top of audit area
+   * Allows user to re-run all audits
+   * Styling is defined in src/style/_audit_section.less
+   */
+  private renderGlobalRefreshButton(): void {
+    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+    const buttonId = Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH;
+
+    // Remove old button if exists (in case of re-render)
+    $(`#${buttonId}`).remove();
+
+    // Create refresh button (styling defined in _audit_section.less)
+    const $button = this.uiUtil.buildButton(buttonId, '🔄 Refresh All Audits', () => {
+      void this.auditAll(); // Re-run all audits
     });
 
-    // Audit Label
-    this.uiUtil.buildLabel(`Audit: ${nonWatchedAudits.length} Remaining`).appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-
-    nonWatchedAudits.slice(0, 10).forEach((audit) => {
-      this.createAuditButton(audit.investingTicker, audit.state).appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    });
-
-    // Perform GTT audit
-    await this.kiteHandler.performGttAudit();
+    // Add at top of audit area
+    $button.prependTo($auditArea);
   }
 
   /**
-   * Refreshes audit button for current ticker
-   */
-  public auditCurrent(): void {
-    // Audit current ticker and update button states
-    const auditResult = this.auditManager.auditCurrentTicker();
-
-    // Find existing button for this ticker
-    const $button = $(`#${this.getAuditButtonId(auditResult.investingTicker)}`);
-
-    // If ticker has valid alerts or watched, remove the button if it exists
-    const tvAuditTicker = this.tryMapTvTicker(auditResult.investingTicker);
-    if (auditResult.state === AlertState.VALID || this.watchManager.isWatched(tvAuditTicker)) {
-      $button.remove();
-      return;
-    }
-
-    // Create new button with updated state
-    const newButton = this.createAuditButton(auditResult.investingTicker, auditResult.state);
-
-    // Replace existing button or append new one
-    if ($button.length) {
-      $button.replaceWith(newButton);
-    } else {
-      newButton.appendTo(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    }
-  }
-
-  /**
-   * Creates an audit button for a given ticker
-   * @private
-   * @param investingTicker The ticker symbol
-   * @param state Current alert state for the ticker
-   * @returns The created button element
-   */
-  private createAuditButton(investingTicker: string, state: AlertState): JQuery {
-    const buttonId = this.getAuditButtonId(investingTicker);
-
-    // Define button style based on alert state
-    const backgroundColor = this.getButtonColor(investingTicker, state);
-
-    const button = this.uiUtil
-      .buildButton(buttonId, investingTicker, () => {
-        const tvTicker = this.tryMapTvTicker(investingTicker);
-        this.tickerHandler.openTicker(tvTicker);
-      })
-      .css({
-        'background-color': backgroundColor,
-        margin: '2px',
-      });
-
-    button.on('contextmenu', (e: JQuery.ContextMenuEvent) => {
-      e.preventDefault();
-      void this.pairHandler.deletePairInfo(investingTicker).then(() => {
-        button.remove();
-        Notifier.red(`❌ Removed mapping for ${investingTicker}`);
-      });
-    });
-
-    return button;
-  }
-
-  /**
-   * Gets the background color for a button based on alert state
+   * Clears all audit sections from the UI
+   * Preserves the global refresh button at the top
+   * Called before re-rendering sections to prevent duplicates
    * @private
    */
-  private getButtonColor(investingTicker: string, state: AlertState): string {
-    // Color Orange if not a Valid InvestingTicker
-    const tvTicker = this.symbolManager.investingToTv(investingTicker);
-    if (!tvTicker) {
-      return 'darkorange';
-    }
+  private clearAuditSections(): void {
+    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
 
-    switch (state) {
-      case AlertState.SINGLE_ALERT:
-        return 'darkred';
-      case AlertState.NO_ALERTS:
-        return 'darkgray';
-      default:
-        return 'black';
-    }
+    // Remove all audit sections (identified by class)
+    // This does NOT remove the global refresh button
+    $auditArea.find(`.${Constants.AUDIT.CLASSES.SECTION}`).remove();
   }
 
   /**
-   * Generates a unique ID for an audit button based on the ticker symbol
-   * Escapes CSS selector special characters to prevent jQuery parsing errors
-   * @private
-   * @param investingTicker The ticker symbol that may contain special characters
-   * @returns A CSS-safe ID string for use in jQuery selectors
+   * Renders alerts audit section using AuditRenderer
+   * Plugin handles all filtering (watched tickers, etc.)
+   * @param pluginResults Results from AlertsAudit plugin
    */
-  private getAuditButtonId(investingTicker: string): string {
-    // Replace all CSS selector special characters with hyphens
-    // Preserves alphanumeric characters, hyphens, and underscores only
-    // Handles cases like: US10YT=X → audit-US10YT-X, M&M → audit-M-M, NSE:RELIANCE → audit-NSE-RELIANCE
-    return `audit-${investingTicker}`.replace(/[^a-zA-Z0-9-_]/g, '-');
+  private auditAlerts(pluginResults: AuditResult[]): void {
+    // Get section from registry (section contains plugin)
+    const section = this.auditRegistry.mustGetSection(AUDIT_IDS.ALERTS);
+
+    // Create renderer with section and render
+    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
+
+    // Render initial (empty) section first
+    renderer.render();
+
+    // Set initial plugin results (plugin already handles filtering and sorting)
+    renderer.setResults(pluginResults);
   }
 
   /**
-   * Attempts to map an investing ticker to a tv ticker
-   * @private
-   * @param investingTicker The ticker symbol
-   * @returns The mapped tv ticker or the original ticker if no mapping exists
+   * Run GTT unwatched audit and render section
    */
-  private tryMapTvTicker(investingTicker: string): string {
-    const tvTicker = this.symbolManager.investingToTv(investingTicker);
-    return tvTicker || investingTicker;
+  private async auditGttOrders(): Promise<void> {
+    // Get section from registry (section contains plugin)
+    const section = this.auditRegistry.mustGetSection(AUDIT_IDS.GTT_UNWATCHED);
+
+    // Create renderer with section and render
+    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
+
+    // Render initial (empty) section first
+    renderer.render();
+
+    // Now run audit via renderer (this records timestamp and updates display)
+    await renderer.refresh();
+  }
+
+  /**
+   * Run Orphan Alerts audit and render section
+   */
+  private async auditOrphanAlerts(): Promise<void> {
+    // Get section from registry (section contains plugin)
+    const section = this.auditRegistry.mustGetSection(AUDIT_IDS.ORPHAN_ALERTS);
+
+    // Create renderer with section and render
+    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
+
+    // Render initial (empty) section first
+    renderer.render();
+
+    // Now run audit via renderer (this records timestamp and updates display)
+    await renderer.refresh();
+  }
+
+  /**
+   * Run Unmapped Pairs audit and render section
+   */
+  private async auditUnmappedPairs(): Promise<void> {
+    // Get section from registry (section contains plugin)
+    const section = this.auditRegistry.mustGetSection(AUDIT_IDS.UNMAPPED_PAIRS);
+
+    // Create renderer with section and render
+    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
+
+    // Render initial (empty) section first
+    renderer.render();
+
+    // Now run audit via renderer (this records timestamp and updates display)
+    await renderer.refresh();
   }
 }

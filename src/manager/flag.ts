@@ -22,6 +22,13 @@ export interface IFlagManager {
   recordCategory(categoryIndex: number, tvTickers: string[]): void;
 
   /**
+   * Evicts ticker from all flag categories if present
+   * @param tvTicker Ticker to evict
+   * @returns True if ticker was found and removed, false if not found
+   */
+  evictTicker(tvTicker: string): boolean;
+
+  /**
    * Paint flag indicators based on category colors
    * @param selector Selector for ticker elements
    * @param itemSelector Selector for item container
@@ -52,6 +59,21 @@ export class FlagManager implements IFlagManager {
   recordCategory(categoryIndex: number, tvTickers: string[]): void {
     const categoryLists = this.flagRepo.getFlagCategoryLists();
     this._recordCategory(categoryLists, categoryIndex, tvTickers);
+  }
+
+  /** @inheritdoc */
+  evictTicker(tvTicker: string): boolean {
+    const categoryLists = this.flagRepo.getFlagCategoryLists();
+    let removed = false;
+
+    categoryLists.getLists().forEach((list, categoryIndex) => {
+      if (list.has(tvTicker)) {
+        categoryLists.delete(categoryIndex, tvTicker);
+        removed = true;
+      }
+    });
+
+    return removed;
   }
 
   /** @inheritdoc */

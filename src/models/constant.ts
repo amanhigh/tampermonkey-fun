@@ -4,12 +4,36 @@ import { SequenceMap, SequenceType, TimeFrameConfig, TimeFrame, TimeFrameMap } f
  * Application-wide constants organized by domain and functionality
  */
 export const Constants = Object.freeze({
+  // Audit Configuration
+  AUDIT: {
+    IDS: {
+      AREA: 'aman-audit', // Audit area container
+      GLOBAL_REFRESH_BUTTON: 'aman-audit-global-refresh', // Global refresh button for all audits
+    },
+    CLASSES: {
+      SECTION: 'aman-audit-section', // Main audit section container
+      STATUS_PASS: 'audit-status-pass', // When no issues found
+      STATUS_WARN: 'audit-status-warn', // When issues found
+      SECTION_HEADER: 'audit-section-header', // Section header
+      SECTION_BODY: 'audit-section-body', // Section body with results
+      SECTION_REFRESH: 'audit-section-refresh', // Refresh button in section
+      HEADER_ICON: 'header-icon', // Expand/collapse icon
+      HEADER_TEXT: 'header-text', // Header text with timestamp
+    },
+  },
+
   // UI element colors and styles
   UI: {
     COLORS: {
       LIST: ['orange', 'red', 'dodgerblue', 'cyan', 'lime', 'white', 'brown', 'darkkhaki'], // Old name: colorList
       DEFAULT: 'white',
       FNO_CSS: { 'border-top-style': 'groove', 'border-width': 'medium' }, // Old name: fnoCss
+      // Severity colors for audit results
+      SEVERITY: {
+        LOW: 'darkgray', // Low severity - informational
+        MEDIUM: 'darkorange', // Medium severity - needs attention
+        HIGH: 'darkred', // High severity - critical issues
+      } as const,
     },
 
     // UI Component IDs
@@ -37,6 +61,7 @@ export const Constants = Object.freeze({
         JOURNAL: 'aman-journal-btn', // Old Name: journalBtnId
         HOOK: 'aman-hook', // Add this line
         RECENT: 'aman-recent', // Old Name: recentId
+        AUDIT_GLOBAL_REFRESH: 'aman-audit-global-refresh', // Global refresh button for all audits
       },
       CHECKBOXES: {
         SWIFT: 'aman-swift', // Old Name: swiftId
@@ -47,10 +72,10 @@ export const Constants = Object.freeze({
   // DOM Selectors for TradingView components
   DOM: {
     BASIC: {
-      NAME: 'div[class*=mainTitle]', // For main title element
-      TICKER: '#header-toolbar-symbol-search > div', // For ticker display
+      NAME: 'div[class*=mainTitle][class*=withAction]', // For main title element (company name only, excludes EMA/Aman labels)
+      TICKER: '#header-toolbar-symbol-search span[class^="value"]', // For ticker display (changed from > div to span[class^="value"])
       EXCHANGE: 'div[class*=exchangeTitle]', // For exchange name
-      LTP: 'span[class^="priceWrapper"] > span:first-child', // For last traded price
+      LTP: 'div[data-test-id-value-title="C"] > div[class^=valueValue]', // For last traded price (closing price from legend)
     },
     HEADER: {
       MAIN: '#header-toolbar-symbol-search', // Old name: headerSelector

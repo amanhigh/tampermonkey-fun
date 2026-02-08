@@ -13,6 +13,7 @@ import { JournalType } from '../models/trading';
 import { IGlobalErrorHandler } from '../handler/error';
 import { IPanelHandler } from '../handler/panel';
 import { ITradingViewManager } from '../manager/tv';
+import { IAuditHandler } from '../handler/audit';
 import { Factory } from './factory';
 
 export class Barkat {
@@ -29,7 +30,8 @@ export class Barkat {
     private readonly tickerHandler: ITickerHandler,
     private readonly alertFeedHandler: IAlertFeedHandler,
     private readonly panelHandler: IPanelHandler,
-    private readonly tvManager: ITradingViewManager
+    private readonly tvManager: ITradingViewManager,
+    private readonly auditHandler: IAuditHandler
   ) {}
 
   private isInvestingSite(): boolean {
@@ -109,7 +111,12 @@ export class Barkat {
           })
           .on('contextmenu', (e: JQuery.ContextMenuEvent) => {
             e.preventDefault();
-            this.uiUtil.toggleUI(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+            const auditAreaId = `#${Constants.UI.IDS.AREAS.AUDIT}`;
+
+            // Toggle audit area: runs audits on first toggle, shows/hides on subsequent
+            void this.auditHandler.auditAllOnFirstRun().then(() => {
+              this.uiUtil.toggleUI(auditAreaId);
+            });
           })
       )
       .append(
@@ -146,17 +153,17 @@ export class Barkat {
       .appendTo(`#${Constants.UI.IDS.AREAS.JOURNAL}`)
       .append(
         this.uiUtil.buildButton('trend', 'RJ', () => {
-          this.journalHandler.handleRecordJournal(JournalType.REJECTED);
+          void this.journalHandler.handleRecordJournal(JournalType.REJECTED);
         })
       )
       .append(
         this.uiUtil.buildButton('trend', 'RS', () => {
-          this.journalHandler.handleRecordJournal(JournalType.RESULT);
+          void this.journalHandler.handleRecordJournal(JournalType.RESULT);
         })
       )
       .append(
         this.uiUtil.buildButton('trend', 'ST', () => {
-          this.journalHandler.handleRecordJournal(JournalType.SET);
+          void this.journalHandler.handleRecordJournal(JournalType.SET);
         })
       );
   }

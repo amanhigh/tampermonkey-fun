@@ -3,7 +3,6 @@ import { IKiteClient } from '../client/kite';
 import { CreateGttRequest, GttApiResponse } from '../models/kite';
 import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../models/gtt';
 import { IKiteRepo } from '../repo/kite';
-import { IWatchManager } from './watch';
 
 /**
  * Interface for managing Kite trading platform operations
@@ -37,13 +36,6 @@ export interface IKiteManager {
   createGttOrderEvent(event: GttCreateEvent): Promise<void>;
   createGttRefreshEvent(event: GttRefreshEvent): Promise<void>;
   getGttRefereshEvent(): Promise<GttRefreshEvent>;
-
-  /**
-   * Returns GTT tickers that are not in first or second watchlist
-   * @param gttRefreshEvent Current GTT refresh event
-   * @returns Array of unwatched ticker symbols
-   */
-  getUnwatchedGttTickers(gttRefreshEvent: GttRefreshEvent): string[];
 }
 
 /**
@@ -52,18 +44,6 @@ export interface IKiteManager {
 export class KiteManager implements IKiteManager {
   async getGttRefereshEvent(): Promise<GttRefreshEvent> {
     return await this.kiteRepo.getGttRefereshEvent();
-  }
-
-  /** @inheritdoc */
-  getUnwatchedGttTickers(gttRefreshEvent: GttRefreshEvent): string[] {
-    const allGttTickers = Object.keys(gttRefreshEvent.orders);
-    const firstList = this.watchManager.getCategory(0); // Orange list
-    const secondList = this.watchManager.getCategory(1); // Red list
-    const runningTradesList = this.watchManager.getCategory(4); // Lime list - Running trades
-
-    return allGttTickers.filter(
-      (ticker) => !firstList.has(ticker) && !secondList.has(ticker) && !runningTradesList.has(ticker)
-    );
   }
 
   public async createGttDeleteEvent(orderId: string, symbol: string): Promise<void> {
@@ -94,13 +74,11 @@ export class KiteManager implements IKiteManager {
    * @param symbolManager Manager for symbol operations
    * @param kiteClient Client for Kite API operations
    * @param kiteRepo Repository for Kite data persistence
-   * @param watchManager Manager for watchlist operations
    */
   constructor(
     private readonly symbolManager: ISymbolManager,
     private readonly kiteClient: IKiteClient,
-    private readonly kiteRepo: IKiteRepo,
-    private readonly watchManager: IWatchManager
+    private readonly kiteRepo: IKiteRepo
   ) {}
 
   /** @inheritdoc */
@@ -274,8 +252,12 @@ export class KiteManager implements IKiteManager {
    * @returns Number of decimal places for formatting
    */
   private getDecimalPlaces(tickSize: number): number {
-    if (tickSize >= 1) return 0;
-    if (tickSize >= 0.1) return 1;
+    if (tickSize >= 1) {
+      return 0;
+    }
+    if (tickSize >= 0.1) {
+      return 1;
+    }
     return 2;
   }
 

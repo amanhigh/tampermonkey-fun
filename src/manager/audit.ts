@@ -1,137 +1,82 @@
-import { AlertAudit, AlertState, AuditStateCounts } from '../models/alert';
-import { Notifier } from '../util/notify';
-import { Color } from '../models/color';
-import { ITickerManager } from './ticker';
-import { IPairManager } from './pair';
-import { IAlertManager } from './alert';
+import { AlertAudit, AlertState } from '../models/alert';
+import type { AuditResult } from '../models/audit';
 import { IAuditRepo } from '../repo/audit';
 
 /**
- * Interface for Audit management operations
+ * Interface for Audit repository operations
+ * Manager handles all repo interactions (encapsulates data layer)
  */
+// HACK: Remove If Unused..
 export interface IAuditManager {
   /**
-   * Initiates the auditing process for all alerts
+   * Resets audit data: clears all previous results and saves new batch
+   * Used when auditing all tickers at once
+   * @param results Raw audit results from plugin
    */
-  auditAlerts(): Promise<void>;
+  resetAuditResults(results: AuditResult[]): void;
 
   /**
-   * Audits the current ticker and updates its state
-   */
-  auditCurrentTicker(): AlertAudit;
-
-  /**
-   * Filters audit results by state
+   * Filters audit results by state from repository
    * @param state Alert state to filter by
    * @returns Filtered audit results
-   * @private
-   * */
+   */
   filterAuditResults(state: AlertState): AlertAudit[];
+
+  /**
+   * Updates audit state for a single ticker
+   * Does NOT clear existing data (unlike resetAuditResults)
+   * @param investingTicker The ticker to audit
+   * @param state The audit state
+   * @returns The updated audit
+   */
+  updateTickerAudit(investingTicker: string, state: AlertState): AlertAudit;
 }
 
 /**
- * Class representing the Audit Manager.
+ * Audit Manager - Handles all repository interactions for audit operations
+ * Does NOT handle plugin execution (plugins are run by handlers/managers)
+ *
+ * Responsibilities:
+ * - Save audit results to repository
+ * - Filter and retrieve audit results
+ * - Persist ticker-specific audit states
+ *
+ * NOT responsible for:
+ * - Running audit plugins
+ * - Getting plugins from registry
+ * - Formatting audit output
  */
 export class AuditManager implements IAuditManager {
-  private readonly batchSize: number;
-
-  private stateCounts: AuditStateCounts;
-
-  constructor(
-    private readonly auditRepo: IAuditRepo,
-    private readonly tickerManager: ITickerManager,
-    private readonly pairManager: IPairManager,
-    private readonly alertManager: IAlertManager,
-    batchSize = 50
-  ) {
-    this.batchSize = batchSize;
-    this.stateCounts = new AuditStateCounts();
-  }
+  constructor(private readonly auditRepo: IAuditRepo) {}
 
   /********** Public Methods **********/
 
-  /** @inheritdoc */
-  async auditAlerts(): Promise<void> {
-    const investingTickers = this.pairManager.getAllInvestingTickers();
+  /**
+   * Resets audit data: clears all previous results and saves new batch
+   * Used when auditing all tickers at once
+   */
+  resetAuditResults(results: AuditResult[]): void {
     this.auditRepo.clear();
-    this.stateCounts = new AuditStateCounts();
-    await this.processBatch(investingTickers);
-    Notifier.message(this.getAuditSummary(), Color.PURPLE, 10000);
+    results.forEach((r) => {
+      const state = r.code as AlertState;
+      this.auditRepo.set(r.target, new AlertAudit(r.target, state));
+    });
   }
 
-  getAuditSummary(): string {
-    return this.stateCounts.getFormattedSummary();
-  }
-
-  /** @inheritdoc */
-  auditCurrentTicker(): AlertAudit {
-    const investingTicker = this.tickerManager.getInvestingTicker();
-    const state = this.auditAlertState(investingTicker);
-    const audit = new AlertAudit(investingTicker, state);
-    this.auditRepo.set(investingTicker, audit);
-    return audit;
-  }
-
-  /** @inheritdoc */
+  /**
+   * Filters audit results by state from repository
+   */
   filterAuditResults(state: AlertState): AlertAudit[] {
     return this.auditRepo.getFilteredAuditResults(state);
   }
 
-  /********** Private Methods **********/
-
   /**
-   * Processes batches of tickers for auditing.
-   * @param investingTickers - The list of tickers to process.
-   * @private
+   * Updates audit state for a single ticker
+   * Does NOT clear existing data (unlike resetAuditResults)
    */
-  private async processBatch(investingTickers: string[]): Promise<void> {
-    let processedCount = 0;
-
-    // Process in batches
-    while (processedCount < investingTickers.length) {
-      // Calculate batch bounds
-      const endIndex = Math.min(processedCount + this.batchSize, investingTickers.length);
-
-      // Process current batch
-      for (let i = processedCount; i < endIndex; i++) {
-        const investingTicker = investingTickers[i];
-        const state = this.auditAlertState(investingTicker);
-        this.stateCounts.increment(state);
-        this.auditRepo.set(investingTicker, new AlertAudit(investingTicker, state));
-      }
-
-      processedCount = endIndex;
-
-      // Yield to prevent UI blocking
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    }
-
-    // Final status
-    const auditCount = this.auditRepo.getCount();
-    Notifier.message(`Audited ${auditCount} out of ${investingTickers.length}`, Color.PURPLE, 5000);
-  }
-
-  /**
-   * Audits alerts for a single ticker.
-   * @param investingTicker - The ticker to audit.
-   * @returns The audit state for the ticker.
-   * @private
-   */
-  private auditAlertState(investingTicker: string): AlertState {
-    const pairInfo = this.pairManager.investingTickerToPairInfo(investingTicker);
-    if (!pairInfo) {
-      return AlertState.NO_ALERTS;
-    }
-
-    const alerts = this.alertManager.getAlertsForInvestingTicker(investingTicker);
-    if (!alerts) {
-      return AlertState.NO_PAIR;
-    }
-
-    return alerts.length === 0
-      ? AlertState.NO_ALERTS
-      : alerts.length === 1
-        ? AlertState.SINGLE_ALERT
-        : AlertState.VALID;
+  updateTickerAudit(investingTicker: string, state: AlertState): AlertAudit {
+    const audit = new AlertAudit(investingTicker, state);
+    this.auditRepo.set(investingTicker, audit);
+    return audit;
   }
 }
