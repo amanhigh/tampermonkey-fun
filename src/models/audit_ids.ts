@@ -4,6 +4,7 @@
  * Used to prevent typos and enable compile-time checking of references
  */
 export const AUDIT_IDS = {
+  // HACK: Move these to Constants ?
   /** Alerts audit plugin - analyzes trading alerts */
   ALERTS: 'alerts',
 

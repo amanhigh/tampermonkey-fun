@@ -100,6 +100,8 @@ export class PairHandler implements IPairHandler {
     // Handle notification based on cleanup result
     const tvTicker = this.symbolManager.investingToTv(investingTicker);
 
+    // FIXME: Unflag Ticker if Flagged.
+
     if (cleanedFromLists) {
       this.watchListHandler.onWatchListChange();
       Notifier.info(`🗑️ Cleaned ${tvTicker} from Lists (Watch/Flag)`);

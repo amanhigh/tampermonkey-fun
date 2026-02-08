@@ -89,8 +89,8 @@ export class PairManager implements IPairManager {
     let cleanedFromLists = false;
 
     if (tvTicker) {
-      const watchlistRemoved = this.cleanupWatchlist(tvTicker);
-      const flagsRemoved = this.cleanupFlags(tvTicker);
+      const watchlistRemoved = this.watchManager.evictTicker(tvTicker);
+      const flagsRemoved = this.flagManager.evictTicker(tvTicker);
       cleanedFromLists = watchlistRemoved || flagsRemoved;
     }
 
@@ -100,27 +100,5 @@ export class PairManager implements IPairManager {
     }
 
     return cleanedFromLists;
-  }
-
-  /**
-   * Removes ticker from all watchlist categories
-   * @private
-   * @param tvTicker TradingView ticker to remove
-   * @returns True if ticker was removed, false otherwise
-   */
-  private cleanupWatchlist(tvTicker: string): boolean {
-    // Use manager interface - evict ticker from all watchlist categories
-    return this.watchManager.evictTicker(tvTicker);
-  }
-
-  /**
-   * Removes ticker from all flag categories
-   * @private
-   * @param tvTicker TradingView ticker to remove
-   * @returns True if ticker was removed, false otherwise
-   */
-  private cleanupFlags(tvTicker: string): boolean {
-    // Use manager interface - evict ticker from all flag categories
-    return this.flagManager.evictTicker(tvTicker);
   }
 }
