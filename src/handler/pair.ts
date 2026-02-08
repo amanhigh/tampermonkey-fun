@@ -97,7 +97,6 @@ export class PairHandler implements IPairHandler {
     // Delegate all cleanup logic to manager and get result
     const cleanedFromLists = this.pairManager.deletePairInfo(investingTicker);
 
-
     // Handle notification based on cleanup result
     const tvTicker = this.symbolManager.investingToTv(investingTicker);
 
