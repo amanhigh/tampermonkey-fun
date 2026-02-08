@@ -1,11 +1,11 @@
-import { IAuditSection } from './section';
+import { IAuditSection } from '../handler/audit_section';
 import type { AuditId } from '../models/audit_ids';
 
 /**
  * Registry for audit sections only
  * Sections contain their own plugins (private access)
  */
-export class AuditRegistry {
+export class AuditSectionRegistry {
   private readonly sections: Map<AuditId, IAuditSection> = new Map();
 
   /**

@@ -1,7 +1,7 @@
 import { AuditResult } from '../models/audit';
 import { Constants } from '../models/constant';
 import { IUIUtil } from '../util/ui';
-import { IAuditSection } from '../audit/section';
+import { IAuditSection } from '../handler/audit_section';
 
 /**
  * Renderer for audit sections - displays audit results with interactive UI

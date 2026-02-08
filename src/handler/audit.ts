@@ -1,11 +1,11 @@
 import { Constants } from '../models/constant';
 import { AlertState } from '../models/alert';
 import { Color } from '../models/color';
-import { AuditRegistry } from '../audit/registry';
+import { AuditSectionRegistry } from '../util/audit_registry';
 import { AUDIT_IDS } from '../models/audit_ids';
 import { IUIUtil } from '../util/ui';
 import { Notifier } from '../util/notify';
-import { AuditRenderer } from '../audit/renderer';
+import { AuditRenderer } from '../util/audit_renderer';
 import { AuditResult } from '../models/audit';
 
 /**
@@ -42,7 +42,7 @@ export class AuditHandler implements IAuditHandler {
   private auditHasRun: boolean = false;
 
   constructor(
-    private readonly auditRegistry: AuditRegistry,
+    private readonly auditRegistry: AuditSectionRegistry,
     private readonly uiUtil: IUIUtil
   ) {}
 

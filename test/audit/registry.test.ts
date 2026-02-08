@@ -1,13 +1,13 @@
-import { AuditRegistry } from '../../src/audit/registry';
-import { IAuditSection } from '../../src/audit/section';
+import { AuditSectionRegistry } from '../../src/util/audit_registry';
+import { IAuditSection } from '../../src/handler/audit_section';
 import { IAudit } from '../../src/models/audit';
 import { AUDIT_IDS } from '../../src/models/audit_ids';
 
-describe('AuditRegistry', () => {
-  let registry: AuditRegistry;
+describe('AuditSectionRegistry', () => {
+  let registry: AuditSectionRegistry;
 
   beforeEach(() => {
-    registry = new AuditRegistry();
+    registry = new AuditSectionRegistry();
   });
 
   describe('registerSection', () => {

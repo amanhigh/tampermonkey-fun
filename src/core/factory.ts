@@ -75,7 +75,7 @@ import { IImdbManager as IImdbManager, ImdbManager } from '../manager/imdb';
 import { IPanelHandler, PanelHandler } from '../handler/panel';
 import { IPicassoHandler, PicassoHandler } from '../handler/picasso';
 import { PicassoApp } from './picasso';
-import { AuditRegistry } from '../audit/registry';
+import { AuditSectionRegistry } from '../util/audit_registry';
 import { AlertsPlugin } from '../manager/alerts_plugin';
 import { TvMappingPlugin } from '../manager/tv_mapping_plugin';
 import { GttPlugin } from '../manager/gtt_plugin';
@@ -431,7 +431,7 @@ export class Factory {
     // Build registry by registering sections only
     registry: () =>
       Factory.getInstance('auditRegistry', () => {
-        const reg = new AuditRegistry();
+        const reg = new AuditSectionRegistry();
 
         // Register sections (primary responsibility)
         reg.registerSection(Factory.audit.alertsSection());

@@ -1,5 +1,5 @@
 import { AuditHandler } from '../../src/handler/audit';
-import { AuditRegistry } from '../../src/audit/registry';
+import { AuditSectionRegistry } from '../../src/util/audit_registry';
 import { IUIUtil } from '../../src/util/ui';
 import { AlertState } from '../../src/models/alert';
 import { Constants } from '../../src/models/constant';
@@ -44,7 +44,7 @@ jest.mock('../../src/util/notify', () => ({
 
 describe('AuditHandler', () => {
   let auditHandler: AuditHandler;
-  let mockAuditRegistry: jest.Mocked<AuditRegistry>;
+  let mockAuditRegistry: jest.Mocked<AuditSectionRegistry>;
   let mockUIUtil: jest.Mocked<IUIUtil>;
 
   beforeEach(() => {

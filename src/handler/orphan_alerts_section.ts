@@ -1,7 +1,7 @@
 import { AuditResult } from '../models/audit';
-import { IAuditSection } from '../audit/section';
+import { IAuditSection } from './audit_section';
 import { IAudit } from '../models/audit';
-import { BaseAuditSection } from '../audit/base_section';
+import { BaseAuditSection } from './audit_section_base';
 import { IAlertRepo } from '../repo/alert';
 import { IAlertManager } from '../manager/alert';
 import { Notifier } from '../util/notify';
