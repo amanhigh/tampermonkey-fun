@@ -2,7 +2,7 @@ import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
 import { IAlertRepo } from '../repo/alert';
 import { IPairRepo } from '../repo/pair';
-import { AUDIT_IDS } from '../models/audit_ids';
+import { Constants } from '../models/constant';
 
 /**
  * Orphan Alerts Audit plugin: identifies alerts without corresponding pairs.
@@ -10,7 +10,7 @@ import { AUDIT_IDS } from '../models/audit_ids';
  * Emits FAIL results only for alerts with no matching pair.
  */
 export class OrphanAlertsPlugin extends BaseAuditPlugin {
-  public readonly id = AUDIT_IDS.ORPHAN_ALERTS;
+  public readonly id = Constants.AUDIT.PLUGINS.ORPHAN_ALERTS;
   public readonly title = 'Orphan Alerts';
 
   constructor(
@@ -27,7 +27,6 @@ export class OrphanAlertsPlugin extends BaseAuditPlugin {
    * @returns Promise resolving to array of audit results for orphan alerts
    */
   async run(targets?: string[]): Promise<AuditResult[]> {
-    // FIXME: #B Introduce Fix all as new Capability in Section.
     if (targets) {
       throw new Error('Orphan alerts audit does not support targeted mode');
     }
@@ -49,7 +48,7 @@ export class OrphanAlertsPlugin extends BaseAuditPlugin {
         results.push({
           pluginId: this.id,
           code: 'NO_PAIR_MAPPING',
-          // FIXME: #A Extract Better Name from HTML Parsing of Alerts.
+          // BUG: #A Extract Better Name from HTML Parsing of Alerts.
           target: `${pairId}`,
           message: `${pairId}: ${alerts.length} alert(s) exist but have no corresponding pair`,
           severity: 'HIGH',

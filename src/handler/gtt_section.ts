@@ -3,7 +3,7 @@ import { IAudit, AuditResult } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { ITickerHandler } from './ticker';
 import { IKiteManager } from '../manager/kite';
-import { AUDIT_IDS } from '../models/audit_ids';
+import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 
 /**
@@ -23,7 +23,7 @@ import { Notifier } from '../util/notify';
  */
 export class GttAuditSection extends BaseAuditSection implements IAuditSection {
   // Identity - shares ID with GTT_UNWATCHED plugin
-  readonly id = AUDIT_IDS.GTT_UNWATCHED;
+  readonly id = Constants.AUDIT.PLUGINS.GTT_UNWATCHED;
   readonly title = 'GTT Orders';
 
   // Data source (injected directly, not fetched from registry)

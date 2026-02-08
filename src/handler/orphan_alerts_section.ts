@@ -5,7 +5,7 @@ import { BaseAuditSection } from './audit_section_base';
 import { IAlertRepo } from '../repo/alert';
 import { IAlertManager } from '../manager/alert';
 import { Notifier } from '../util/notify';
-import { AUDIT_IDS } from '../models/audit_ids';
+import { Constants } from '../models/constant';
 
 /**
  * Orphan Alerts Audit Section
@@ -23,7 +23,7 @@ import { AUDIT_IDS } from '../models/audit_ids';
  */
 export class OrphanAlertsSection extends BaseAuditSection implements IAuditSection {
   // Identity - shares ID with ORPHAN_ALERTS plugin
-  readonly id = AUDIT_IDS.ORPHAN_ALERTS;
+  readonly id = Constants.AUDIT.PLUGINS.ORPHAN_ALERTS;
   readonly title = 'Orphan Alerts';
 
   // Data source (injected directly, not fetched from registry)

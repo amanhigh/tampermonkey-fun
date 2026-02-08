@@ -1,5 +1,5 @@
 import { IAuditSection } from '../handler/audit_section';
-import type { AuditId } from '../models/audit_ids';
+import type { AuditId } from '../models/constant';
 
 /**
  * Registry for audit sections only
@@ -22,7 +22,7 @@ export class AuditSectionRegistry {
 
   /**
    * Gets an audit section by id
-   * @param id Section id (use AUDIT_IDS constants)
+   * @param id Section id (use Constants.AUDIT.PLUGINS ids)
    * @returns The audit section
    * @throws Error if section not found
    */
@@ -42,5 +42,5 @@ export class AuditSectionRegistry {
   }
 }
 
-// Re-export for convenience
-export { AUDIT_IDS, type AuditId } from '../models/audit_ids';
+// Re-export type for convenience
+export type { AuditId } from '../models/constant';

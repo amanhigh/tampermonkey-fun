@@ -2,7 +2,6 @@ import { Constants } from '../models/constant';
 import { AlertState } from '../models/alert';
 import { Color } from '../models/color';
 import { AuditSectionRegistry } from '../util/audit_registry';
-import { AUDIT_IDS } from '../models/audit_ids';
 import { IUIUtil } from '../util/ui';
 import { Notifier } from '../util/notify';
 import { AuditRenderer } from '../util/audit_renderer';
@@ -66,7 +65,7 @@ export class AuditHandler implements IAuditHandler {
    */
   public async auditAll(): Promise<void> {
     // Get Alerts section from registry (section contains plugin)
-    const alertsSection = this.auditRegistry.mustGetSection(AUDIT_IDS.ALERTS);
+    const alertsSection = this.auditRegistry.mustGetSection(Constants.AUDIT.PLUGINS.ALERTS);
 
     // Run section's plugin to get audit results
     //TODO: Remove Plugin Injection and use Section directly
@@ -149,7 +148,7 @@ export class AuditHandler implements IAuditHandler {
    */
   private auditAlerts(pluginResults: AuditResult[]): void {
     // Get section from registry (section contains plugin)
-    const section = this.auditRegistry.mustGetSection(AUDIT_IDS.ALERTS);
+    const section = this.auditRegistry.mustGetSection(Constants.AUDIT.PLUGINS.ALERTS);
 
     // Create renderer with section and render
     const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
@@ -167,7 +166,7 @@ export class AuditHandler implements IAuditHandler {
    */
   private async auditGttOrders(): Promise<void> {
     // Get section from registry (section contains plugin)
-    const section = this.auditRegistry.mustGetSection(AUDIT_IDS.GTT_UNWATCHED);
+    const section = this.auditRegistry.mustGetSection(Constants.AUDIT.PLUGINS.GTT_UNWATCHED);
 
     // Create renderer with section and render
     const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
@@ -185,7 +184,7 @@ export class AuditHandler implements IAuditHandler {
    */
   private async auditOrphanAlerts(): Promise<void> {
     // Get section from registry (section contains plugin)
-    const section = this.auditRegistry.mustGetSection(AUDIT_IDS.ORPHAN_ALERTS);
+    const section = this.auditRegistry.mustGetSection(Constants.AUDIT.PLUGINS.ORPHAN_ALERTS);
 
     // Create renderer with section and render
     const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
@@ -203,7 +202,7 @@ export class AuditHandler implements IAuditHandler {
    */
   private async auditUnmappedPairs(): Promise<void> {
     // Get section from registry (section contains plugin)
-    const section = this.auditRegistry.mustGetSection(AUDIT_IDS.UNMAPPED_PAIRS);
+    const section = this.auditRegistry.mustGetSection(Constants.AUDIT.PLUGINS.UNMAPPED_PAIRS);
 
     // Create renderer with section and render
     const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);

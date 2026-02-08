@@ -2,14 +2,14 @@ import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
 import { IPairManager } from './pair';
 import { ISymbolManager } from './symbol';
-import { AUDIT_IDS } from '../models/audit_ids';
+import { Constants } from '../models/constant';
 
 /**
  * TV Mapping Audit plugin: flags investing tickers that lack a TradingView mapping.
  * Emits FAIL results only (no PASS records) similar to AlertsAudit behavior.
  */
 export class TvMappingPlugin extends BaseAuditPlugin {
-  public readonly id = AUDIT_IDS.TV_MAPPING;
+  public readonly id = Constants.AUDIT.PLUGINS.TV_MAPPING;
   public readonly title = 'TradingView Mapping';
 
   constructor(

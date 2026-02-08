@@ -5,7 +5,7 @@ import { BaseAuditSection } from './audit_section_base';
 import { ITickerHandler } from './ticker';
 import { IPairHandler } from './pair';
 import { Notifier } from '../util/notify';
-import { AUDIT_IDS } from '../models/audit_ids';
+import { Constants } from '../models/constant';
 
 /**
  * Unmapped Pairs Audit Section
@@ -23,7 +23,7 @@ import { AUDIT_IDS } from '../models/audit_ids';
  */
 export class UnmappedPairsSection extends BaseAuditSection implements IAuditSection {
   // Identity - shares ID with UNMAPPED_PAIRS plugin
-  readonly id = AUDIT_IDS.UNMAPPED_PAIRS;
+  readonly id = Constants.AUDIT.PLUGINS.UNMAPPED_PAIRS;
   readonly title = 'Unmapped Pairs';
 
   // Data source (injected directly, not fetched from registry)

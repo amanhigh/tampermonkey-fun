@@ -20,6 +20,22 @@ export const Constants = Object.freeze({
       HEADER_ICON: 'header-icon', // Expand/collapse icon
       HEADER_TEXT: 'header-text', // Header text with timestamp
     },
+    PLUGINS: Object.freeze({
+      /** Alerts audit plugin - analyzes trading alerts */
+      ALERTS: 'alerts',
+
+      /** Orphan alerts audit plugin - identifies alerts without corresponding pairs */
+      ORPHAN_ALERTS: 'orphan-alerts',
+
+      /** Unmapped pairs audit plugin - identifies pairs without TradingView mappings */
+      UNMAPPED_PAIRS: 'unmapped-pairs',
+
+      /** GTT unwatched audit plugin & section - identifies and displays unwatched GTT orders */
+      GTT_UNWATCHED: 'gtt-unwatched',
+
+      /** TV mapping audit plugin - analyzes TradingView to Kite symbol mappings */
+      TV_MAPPING: 'tv-mapping',
+    }),
   },
 
   // UI element colors and styles
@@ -223,3 +239,8 @@ export const Constants = Object.freeze({
     },
   },
 });
+
+/**
+ * Type for audit plugin IDs - ensures only valid IDs can be used
+ */
+export type AuditId = (typeof Constants.AUDIT.PLUGINS)[keyof typeof Constants.AUDIT.PLUGINS];

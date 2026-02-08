@@ -1,7 +1,7 @@
 import { AuditSectionRegistry } from '../../src/util/audit_registry';
 import { IAuditSection } from '../../src/handler/audit_section';
 import { IAudit } from '../../src/models/audit';
-import { AUDIT_IDS } from '../../src/models/audit_ids';
+import { Constants } from '../../src/models/constant';
 
 describe('AuditSectionRegistry', () => {
   let registry: AuditSectionRegistry;
@@ -13,14 +13,14 @@ describe('AuditSectionRegistry', () => {
   describe('registerSection', () => {
     it('should register a section', () => {
       const mockPlugin: IAudit = {
-        id: AUDIT_IDS.GTT_UNWATCHED,
+        id: Constants.AUDIT.PLUGINS.GTT_UNWATCHED,
         title: 'Test Plugin',
         validate: jest.fn(),
         run: jest.fn().mockResolvedValue([]),
       };
 
       const mockSection: IAuditSection = {
-        id: AUDIT_IDS.GTT_UNWATCHED,
+        id: Constants.AUDIT.PLUGINS.GTT_UNWATCHED,
         title: 'Test Section',
         plugin: mockPlugin,
         headerFormatter: jest.fn().mockReturnValue('Header'),
@@ -31,15 +31,15 @@ describe('AuditSectionRegistry', () => {
 
       registry.registerSection(mockSection);
 
-      expect(registry.mustGetSection(AUDIT_IDS.GTT_UNWATCHED)).toEqual(mockSection);
+      expect(registry.mustGetSection(Constants.AUDIT.PLUGINS.GTT_UNWATCHED)).toEqual(mockSection);
     });
 
     it('should throw error for duplicate section id', () => {
       const mockSection: IAuditSection = {
-        id: AUDIT_IDS.GTT_UNWATCHED,
+        id: Constants.AUDIT.PLUGINS.GTT_UNWATCHED,
         title: 'Test Section',
         plugin: {
-          id: AUDIT_IDS.GTT_UNWATCHED,
+          id: Constants.AUDIT.PLUGINS.GTT_UNWATCHED,
           title: 'Test Plugin',
           validate: jest.fn(),
           run: jest.fn().mockResolvedValue([]),
@@ -53,7 +53,7 @@ describe('AuditSectionRegistry', () => {
       registry.registerSection(mockSection);
 
       expect(() => registry.registerSection(mockSection)).toThrow(
-        `Duplicate section id: ${AUDIT_IDS.GTT_UNWATCHED}`
+        `Duplicate section id: ${Constants.AUDIT.PLUGINS.GTT_UNWATCHED}`
       );
     });
   });
@@ -61,14 +61,14 @@ describe('AuditSectionRegistry', () => {
   describe('mustGetSection', () => {
     it('should return registered section', () => {
       const mockPlugin: IAudit = {
-        id: AUDIT_IDS.ALERTS,
+        id: Constants.AUDIT.PLUGINS.ALERTS,
         title: 'Test Plugin',
         validate: jest.fn(),
         run: jest.fn().mockResolvedValue([]),
       };
 
       const mockSection: IAuditSection = {
-        id: AUDIT_IDS.ALERTS,
+        id: Constants.AUDIT.PLUGINS.ALERTS,
         title: 'Test Section',
         plugin: mockPlugin,
         headerFormatter: jest.fn().mockReturnValue('Header'),
@@ -79,11 +79,11 @@ describe('AuditSectionRegistry', () => {
 
       registry.registerSection(mockSection);
 
-      expect(registry.mustGetSection(AUDIT_IDS.ALERTS)).toEqual(mockSection);
+      expect(registry.mustGetSection(Constants.AUDIT.PLUGINS.ALERTS)).toEqual(mockSection);
     });
 
     it('should throw error for unregistered section', () => {
-      expect(() => registry.mustGetSection(AUDIT_IDS.ALERTS)).toThrow(
+      expect(() => registry.mustGetSection(Constants.AUDIT.PLUGINS.ALERTS)).toThrow(
         "Section 'alerts' not found in registry"
       );
     });
@@ -96,21 +96,21 @@ describe('AuditSectionRegistry', () => {
 
     it('should return all registered sections', () => {
       const mockPlugin1: IAudit = {
-        id: AUDIT_IDS.ALERTS,
+        id: Constants.AUDIT.PLUGINS.ALERTS,
         title: 'Plugin 1',
         validate: jest.fn(),
         run: jest.fn().mockResolvedValue([]),
       };
 
       const mockPlugin2: IAudit = {
-        id: AUDIT_IDS.GTT_UNWATCHED,
+        id: Constants.AUDIT.PLUGINS.GTT_UNWATCHED,
         title: 'Plugin 2',
         validate: jest.fn(),
         run: jest.fn().mockResolvedValue([]),
       };
 
       const mockSection1: IAuditSection = {
-        id: AUDIT_IDS.ALERTS,
+        id: Constants.AUDIT.PLUGINS.ALERTS,
         title: 'Section 1',
         plugin: mockPlugin1,
         headerFormatter: jest.fn().mockReturnValue('Header 1'),
@@ -120,7 +120,7 @@ describe('AuditSectionRegistry', () => {
       };
 
       const mockSection2: IAuditSection = {
-        id: AUDIT_IDS.GTT_UNWATCHED,
+        id: Constants.AUDIT.PLUGINS.GTT_UNWATCHED,
         title: 'Section 2',
         plugin: mockPlugin2,
         headerFormatter: jest.fn().mockReturnValue('Header 2'),

@@ -2,7 +2,7 @@ import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
 import { IPairRepo } from '../repo/pair';
 import { ITickerRepo } from '../repo/ticker';
-import { AUDIT_IDS } from '../models/audit_ids';
+import { Constants } from '../models/constant';
 
 /**
  * Unmapped Pairs Audit plugin: identifies pairs without TradingView ticker mappings.
@@ -20,7 +20,7 @@ import { AUDIT_IDS } from '../models/audit_ids';
  * - TODO: Decide button color (yellow for LOW severity or orange for MEDIUM?)
  */
 export class UnmappedPairsPlugin extends BaseAuditPlugin {
-  public readonly id = AUDIT_IDS.UNMAPPED_PAIRS;
+  public readonly id = Constants.AUDIT.PLUGINS.UNMAPPED_PAIRS;
   public readonly title = 'Unmapped Pairs';
 
   constructor(

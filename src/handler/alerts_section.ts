@@ -7,7 +7,7 @@ import { ISymbolManager } from '../manager/symbol';
 import { IPairHandler } from './pair';
 import { Notifier } from '../util/notify';
 import { AlertState } from '../models/alert';
-import { AUDIT_IDS } from '../models/audit_ids';
+import { Constants } from '../models/constant';
 
 /**
  * Alerts Audit Section
@@ -27,7 +27,7 @@ import { AUDIT_IDS } from '../models/audit_ids';
  */
 export class AlertsAuditSection extends BaseAuditSection implements IAuditSection {
   // Identity - shares ID with ALERTS plugin
-  readonly id = AUDIT_IDS.ALERTS;
+  readonly id = Constants.AUDIT.PLUGINS.ALERTS;
   readonly title = 'Alerts Coverage';
 
   // Data source (injected directly, not fetched from registry)
