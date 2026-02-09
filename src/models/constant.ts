@@ -48,6 +48,9 @@ export const Constants = Object.freeze({
       /** Duplicate pair IDs audit plugin - identifies multiple investing tickers sharing the same pairId */
       DUPLICATE_PAIR_IDS: 'duplicate-pair-ids',
 
+      /** Ticker collision audit plugin - identifies reverse map collisions in TickerRepo */
+      TICKER_COLLISION: 'ticker-collision',
+
       /** Trade risk multiple audit plugin - identifies trades with non-standard risk multiples */
       TRADE_RISK: 'trade-risk',
     }),

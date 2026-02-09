@@ -1,7 +1,6 @@
 import { OrphanFlagsPlugin } from '../../src/manager/orphan_flags_plugin';
 import { IFlagRepo } from '../../src/repo/flag';
 import { ITickerRepo } from '../../src/repo/ticker';
-import { IPairRepo } from '../../src/repo/pair';
 import { ISymbolManager } from '../../src/manager/symbol';
 import { CategoryLists } from '../../src/models/category';
 
@@ -9,7 +8,6 @@ describe('OrphanFlagsPlugin', () => {
   let plugin: OrphanFlagsPlugin;
   let flagRepo: jest.Mocked<IFlagRepo>;
   let tickerRepo: jest.Mocked<ITickerRepo>;
-  let pairRepo: jest.Mocked<IPairRepo>;
   let symbolManager: jest.Mocked<ISymbolManager>;
 
   beforeEach(() => {
@@ -21,15 +19,11 @@ describe('OrphanFlagsPlugin', () => {
       has: jest.fn(),
     } as any;
 
-    pairRepo = {
-      has: jest.fn(),
-    } as any;
-
     symbolManager = {
       isComposite: jest.fn(),
     } as any;
 
-    plugin = new OrphanFlagsPlugin(flagRepo, tickerRepo, pairRepo, symbolManager);
+    plugin = new OrphanFlagsPlugin(flagRepo, tickerRepo, symbolManager);
   });
 
   describe('validate', () => {
@@ -63,20 +57,6 @@ describe('OrphanFlagsPlugin', () => {
       expect(results).toEqual([]);
     });
 
-    it('returns empty array when flag ticker exists in PairRepo', async () => {
-      const lists = new Map<number, Set<string>>();
-      lists.set(0, new Set(['HDFC']));
-      const categoryLists = new CategoryLists(lists);
-      flagRepo.getFlagCategoryLists.mockReturnValue(categoryLists);
-      tickerRepo.has.mockReturnValue(false);
-      pairRepo.has.mockReturnValue(true);
-      symbolManager.isComposite.mockReturnValue(false);
-
-      const results = await plugin.run();
-
-      expect(results).toEqual([]);
-    });
-
     it('skips composite/formula tickers', async () => {
       const lists = new Map<number, Set<string>>();
       lists.set(0, new Set(['NIFTY/BANKNIFTY', 'GOLD*2']));
@@ -84,21 +64,19 @@ describe('OrphanFlagsPlugin', () => {
       flagRepo.getFlagCategoryLists.mockReturnValue(categoryLists);
       symbolManager.isComposite.mockReturnValue(true);
       tickerRepo.has.mockReturnValue(false);
-      pairRepo.has.mockReturnValue(false);
 
       const results = await plugin.run();
 
       expect(results).toEqual([]);
     });
 
-    it('emits FAIL for orphan flag not in TickerRepo or PairRepo', async () => {
+    it('emits FAIL for orphan flag not in TickerRepo', async () => {
       const lists = new Map<number, Set<string>>();
       lists.set(2, new Set(['ORPHAN']));
       const categoryLists = new CategoryLists(lists);
       flagRepo.getFlagCategoryLists.mockReturnValue(categoryLists);
       symbolManager.isComposite.mockReturnValue(false);
       tickerRepo.has.mockReturnValue(false);
-      pairRepo.has.mockReturnValue(false);
 
       const results = await plugin.run();
 
@@ -118,7 +96,6 @@ describe('OrphanFlagsPlugin', () => {
       flagRepo.getFlagCategoryLists.mockReturnValue(categoryLists);
       symbolManager.isComposite.mockReturnValue(false);
       tickerRepo.has.mockReturnValue(false);
-      pairRepo.has.mockReturnValue(false);
 
       const results = await plugin.run();
 
@@ -134,7 +111,6 @@ describe('OrphanFlagsPlugin', () => {
       flagRepo.getFlagCategoryLists.mockReturnValue(categoryLists);
       symbolManager.isComposite.mockReturnValue(false);
       tickerRepo.has.mockImplementation((key: string) => key === 'VALID');
-      pairRepo.has.mockReturnValue(false);
 
       const results = await plugin.run();
 
@@ -153,7 +129,6 @@ describe('OrphanFlagsPlugin', () => {
       flagRepo.getFlagCategoryLists.mockReturnValue(categoryLists);
       symbolManager.isComposite.mockReturnValue(false);
       tickerRepo.has.mockReturnValue(false);
-      pairRepo.has.mockReturnValue(false);
 
       const results = await plugin.run();
 

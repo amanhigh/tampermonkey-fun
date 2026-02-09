@@ -1,14 +1,12 @@
 import { OrphanSequencesPlugin } from '../../src/manager/orphan_sequences_plugin';
 import { ISequenceRepo } from '../../src/repo/sequence';
 import { ITickerRepo } from '../../src/repo/ticker';
-import { IPairRepo } from '../../src/repo/pair';
 import { SequenceType } from '../../src/models/trading';
 
 describe('OrphanSequencesPlugin', () => {
   let plugin: OrphanSequencesPlugin;
   let sequenceRepo: jest.Mocked<ISequenceRepo>;
   let tickerRepo: jest.Mocked<ITickerRepo>;
-  let pairRepo: jest.Mocked<IPairRepo>;
 
   beforeEach(() => {
     sequenceRepo = {
@@ -21,11 +19,7 @@ describe('OrphanSequencesPlugin', () => {
       has: jest.fn(),
     } as any;
 
-    pairRepo = {
-      has: jest.fn(),
-    } as any;
-
-    plugin = new OrphanSequencesPlugin(sequenceRepo, tickerRepo, pairRepo);
+    plugin = new OrphanSequencesPlugin(sequenceRepo, tickerRepo);
   });
 
   describe('validate', () => {
@@ -54,21 +48,10 @@ describe('OrphanSequencesPlugin', () => {
       expect(results).toEqual([]);
     });
 
-    it('returns empty array when sequence ticker exists in PairRepo', async () => {
-      sequenceRepo.getAllKeys.mockReturnValue(['HDFC']);
-      tickerRepo.has.mockReturnValue(false);
-      pairRepo.has.mockReturnValue(true);
-
-      const results = await plugin.run();
-
-      expect(results).toEqual([]);
-    });
-
-    it('emits FAIL for orphan sequence not in TickerRepo or PairRepo', async () => {
+    it('emits FAIL for orphan sequence not in TickerRepo', async () => {
       sequenceRepo.getAllKeys.mockReturnValue(['ORPHAN']);
       sequenceRepo.get.mockReturnValue(SequenceType.MWD);
       tickerRepo.has.mockReturnValue(false);
-      pairRepo.has.mockReturnValue(false);
 
       const results = await plugin.run();
 
@@ -87,7 +70,6 @@ describe('OrphanSequencesPlugin', () => {
         return SequenceType.MWD;
       });
       tickerRepo.has.mockImplementation((key: string) => key === 'VALID');
-      pairRepo.has.mockReturnValue(false);
 
       const results = await plugin.run();
 
@@ -99,7 +81,6 @@ describe('OrphanSequencesPlugin', () => {
       sequenceRepo.getAllKeys.mockReturnValue(['ORPHAN1', 'ORPHAN2']);
       sequenceRepo.get.mockReturnValue(SequenceType.MWD);
       tickerRepo.has.mockReturnValue(false);
-      pairRepo.has.mockReturnValue(false);
 
       const results = await plugin.run();
 
@@ -116,7 +97,6 @@ describe('OrphanSequencesPlugin', () => {
       sequenceRepo.getAllKeys.mockReturnValue(['ORPHAN']);
       sequenceRepo.get.mockReturnValue(SequenceType.MWD);
       tickerRepo.has.mockReturnValue(false);
-      pairRepo.has.mockReturnValue(false);
 
       const results = await plugin.run();
 

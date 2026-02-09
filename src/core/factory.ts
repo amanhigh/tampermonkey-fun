@@ -84,10 +84,17 @@ import { OrphanFlagsPlugin } from '../manager/orphan_flags_plugin';
 import { OrphanExchangePlugin } from '../manager/orphan_exchange_plugin';
 import { DuplicatePairIdsPlugin } from '../manager/duplicate_pair_ids_plugin';
 import { TradeRiskPlugin } from '../manager/trade_risk_plugin';
+import { TickerCollisionPlugin } from '../manager/ticker_collision_plugin';
 import { GttAuditSection } from '../handler/gtt_section';
 import { AlertsAuditSection } from '../handler/alerts_section';
 import { OrphanAlertsSection } from '../handler/orphan_alerts_section';
 import { UnmappedPairsSection } from '../handler/unmapped_pairs_section';
+import { OrphanSequencesSection } from '../handler/orphan_sequences_section';
+import { OrphanFlagsSection } from '../handler/orphan_flags_section';
+import { OrphanExchangeSection } from '../handler/orphan_exchange_section';
+import { DuplicatePairIdsSection } from '../handler/duplicate_pair_ids_section';
+import { TickerCollisionSection } from '../handler/ticker_collision_section';
+import { TradeRiskSection } from '../handler/trade_risk_section';
 
 /**
  * Project Architecture Overview
@@ -380,7 +387,7 @@ export class Factory {
     orphanSequences: () =>
       Factory.getInstance(
         'auditPlugin_orphanSequences',
-        () => new OrphanSequencesPlugin(Factory.repo.sequence(), Factory.repo.ticker(), Factory.repo.pair())
+        () => new OrphanSequencesPlugin(Factory.repo.sequence(), Factory.repo.ticker())
       ),
 
     // Return a singleton OrphanFlagsPlugin instance
@@ -391,7 +398,6 @@ export class Factory {
           new OrphanFlagsPlugin(
             Factory.repo.flag(),
             Factory.repo.ticker(),
-            Factory.repo.pair(),
             Factory.manager.symbol()
           )
       ),
@@ -406,6 +412,10 @@ export class Factory {
     // Return a singleton DuplicatePairIdsPlugin instance
     duplicatePairIds: () =>
       Factory.getInstance('auditPlugin_duplicatePairIds', () => new DuplicatePairIdsPlugin(Factory.repo.pair())),
+
+    // Return a singleton TickerCollisionPlugin instance
+    tickerCollision: () =>
+      Factory.getInstance('auditPlugin_tickerCollision', () => new TickerCollisionPlugin(Factory.repo.ticker())),
 
     // Return a singleton TradeRiskPlugin instance
     tradeRisk: () =>
@@ -465,17 +475,96 @@ export class Factory {
           )
       ),
 
+    // Orphan Sequences Audit Section (FR-011)
+    orphanSequencesSection: () =>
+      Factory.getInstance(
+        'orphanSequencesSection',
+        () =>
+          new OrphanSequencesSection(
+            Factory.audit.orphanSequences(),
+            Factory.handler.ticker(),
+            Factory.repo.sequence()
+          )
+      ),
+
+    // Orphan Flags Audit Section (FR-012)
+    orphanFlagsSection: () =>
+      Factory.getInstance(
+        'orphanFlagsSection',
+        () =>
+          new OrphanFlagsSection(
+            Factory.audit.orphanFlags(),
+            Factory.handler.ticker(),
+            Factory.manager.flag()
+          )
+      ),
+
+    // Orphan Exchange Audit Section (FR-013)
+    orphanExchangeSection: () =>
+      Factory.getInstance(
+        'orphanExchangeSection',
+        () =>
+          new OrphanExchangeSection(
+            Factory.audit.orphanExchange(),
+            Factory.handler.ticker(),
+            Factory.repo.exchange()
+          )
+      ),
+
+    // Duplicate PairIds Audit Section (FR-014)
+    duplicatePairIdsSection: () =>
+      Factory.getInstance(
+        'duplicatePairIdsSection',
+        () =>
+          new DuplicatePairIdsSection(
+            Factory.audit.duplicatePairIds(),
+            Factory.handler.ticker(),
+            Factory.handler.pair(),
+            Factory.manager.symbol()
+          )
+      ),
+
+    // Ticker Collision Audit Section (FR-015)
+    tickerCollisionSection: () =>
+      Factory.getInstance(
+        'tickerCollisionSection',
+        () =>
+          new TickerCollisionSection(
+            Factory.audit.tickerCollision(),
+            Factory.handler.ticker(),
+            Factory.repo.ticker()
+          )
+      ),
+
+    // Trade Risk Audit Section (FR-016)
+    tradeRiskSection: () =>
+      Factory.getInstance(
+        'tradeRiskSection',
+        () =>
+          new TradeRiskSection(
+            Factory.audit.tradeRisk(),
+            Factory.handler.ticker(),
+            Factory.manager.kite()
+          )
+      ),
+
     // ===== REGISTRY =====
-    // Build registry by registering sections only
+    // Build registry by registering all sections
     registry: () =>
       Factory.getInstance('auditRegistry', () => {
         const reg = new AuditSectionRegistry();
 
-        // Register sections (primary responsibility)
+        // Register all sections
         reg.registerSection(Factory.audit.alertsSection());
         reg.registerSection(Factory.audit.gttSection());
         reg.registerSection(Factory.audit.orphanAlertsSection());
         reg.registerSection(Factory.audit.unmappedPairsSection());
+        reg.registerSection(Factory.audit.orphanSequencesSection());
+        reg.registerSection(Factory.audit.orphanFlagsSection());
+        reg.registerSection(Factory.audit.orphanExchangeSection());
+        reg.registerSection(Factory.audit.duplicatePairIdsSection());
+        reg.registerSection(Factory.audit.tickerCollisionSection());
+        reg.registerSection(Factory.audit.tradeRiskSection());
 
         return reg;
       }),

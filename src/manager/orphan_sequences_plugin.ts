@@ -2,12 +2,11 @@ import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
 import { ISequenceRepo } from '../repo/sequence';
 import { ITickerRepo } from '../repo/ticker';
-import { IPairRepo } from '../repo/pair';
 import { Constants } from '../models/constant';
 
 /**
  * Orphan Sequences Audit plugin: identifies sequence entries without corresponding tickers.
- * Checks if each key in SequenceRepo exists in TickerRepo (tvTicker) or PairRepo (investingTicker).
+ * Checks if each key in SequenceRepo exists in TickerRepo (tvTicker keys).
  * Emits FAIL results only for orphan sequence entries.
  */
 export class OrphanSequencesPlugin extends BaseAuditPlugin {
@@ -16,8 +15,7 @@ export class OrphanSequencesPlugin extends BaseAuditPlugin {
 
   constructor(
     private readonly sequenceRepo: ISequenceRepo,
-    private readonly tickerRepo: ITickerRepo,
-    private readonly pairRepo: IPairRepo
+    private readonly tickerRepo: ITickerRepo
   ) {
     super();
   }
@@ -36,16 +34,13 @@ export class OrphanSequencesPlugin extends BaseAuditPlugin {
     const results: AuditResult[] = [];
 
     this.sequenceRepo.getAllKeys().forEach((ticker: string) => {
-      const inTickerRepo = this.tickerRepo.has(ticker);
-      const inPairRepo = this.pairRepo.has(ticker);
-
-      if (!inTickerRepo && !inPairRepo) {
+      if (!this.tickerRepo.has(ticker)) {
         const sequence = this.sequenceRepo.get(ticker);
         results.push({
           pluginId: this.id,
           code: 'ORPHAN_SEQUENCE',
           target: ticker,
-          message: `${ticker}: Sequence (${sequence}) exists but ticker not in TickerRepo or PairRepo`,
+          message: `${ticker}: Sequence (${sequence}) exists but ticker not in TickerRepo`,
           severity: 'MEDIUM',
           status: 'FAIL',
           data: {

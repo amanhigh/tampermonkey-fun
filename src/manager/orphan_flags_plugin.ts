@@ -2,16 +2,14 @@ import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
 import { IFlagRepo } from '../repo/flag';
 import { ITickerRepo } from '../repo/ticker';
-import { IPairRepo } from '../repo/pair';
 import { ISymbolManager } from './symbol';
 import { Constants } from '../models/constant';
 
 /**
  * Orphan Flags Audit plugin: identifies flag entries without corresponding tickers.
  * Collects all unique tickers across flag categories and cross-checks against
- * TickerRepo (tvTicker keys) and PairRepo (investingTicker keys).
- * Formula tickers (containing '/', '*') are excluded as synthetic expressions.
- * Emits FAIL results only for orphan flag entries.
+ * TickerRepo (tvTicker keys). Formula tickers (containing '/', '*') are excluded
+ * as synthetic expressions. Emits FAIL results only for orphan flag entries.
  */
 export class OrphanFlagsPlugin extends BaseAuditPlugin {
   public readonly id = Constants.AUDIT.PLUGINS.ORPHAN_FLAGS;
@@ -20,7 +18,6 @@ export class OrphanFlagsPlugin extends BaseAuditPlugin {
   constructor(
     private readonly flagRepo: IFlagRepo,
     private readonly tickerRepo: ITickerRepo,
-    private readonly pairRepo: IPairRepo,
     private readonly symbolManager: ISymbolManager
   ) {
     super();
@@ -47,15 +44,12 @@ export class OrphanFlagsPlugin extends BaseAuditPlugin {
           return;
         }
 
-        const inTickerRepo = this.tickerRepo.has(ticker);
-        const inPairRepo = this.pairRepo.has(ticker);
-
-        if (!inTickerRepo && !inPairRepo) {
+        if (!this.tickerRepo.has(ticker)) {
           results.push({
             pluginId: this.id,
             code: 'ORPHAN_FLAG',
             target: ticker,
-            message: `${ticker}: Flag in category ${categoryIndex} but ticker not in TickerRepo or PairRepo`,
+            message: `${ticker}: Flag in category ${categoryIndex} but ticker not in TickerRepo`,
             severity: 'LOW',
             status: 'FAIL',
             data: {
