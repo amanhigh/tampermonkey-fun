@@ -63,7 +63,7 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
     if (auditResults.length === 0) {
       return `<span class="success-badge">✓ No orphan alerts</span>`;
     }
-    return `<span style="color: darkred">Orphans: ${auditResults.length}</span>`;
+    return `<span style="color: darkred">Orphan Alerts: ${auditResults.length}</span>`;
   };
 
   /**

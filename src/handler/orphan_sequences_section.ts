@@ -51,7 +51,7 @@ export class OrphanSequencesSection extends BaseAuditSection implements IAuditSe
     if (results.length === 0) {
       return `<span class="success-badge">✓ No orphan sequences</span>`;
     }
-    return `<span class="count-badge">Orphans: ${results.length}</span>`;
+    return `<span class="count-badge">Orphan Sequences: ${results.length}</span>`;
   };
 
   constructor(

@@ -51,7 +51,7 @@ export class OrphanFlagsSection extends BaseAuditSection implements IAuditSectio
     if (results.length === 0) {
       return `<span class="success-badge">✓ No orphan flags</span>`;
     }
-    return `<span class="count-badge">Orphans: ${results.length}</span>`;
+    return `<span class="count-badge">Orphan Flags: ${results.length}</span>`;
   };
 
   constructor(

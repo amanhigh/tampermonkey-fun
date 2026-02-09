@@ -445,12 +445,12 @@ describe('OrphanAlertsSection', () => {
           message: '6394: 2 alert(s) exist but have no corresponding pair',
           severity: 'HIGH',
           status: 'FAIL',
-          data: { pairId: '6394', alertCount: 2 },
+          data: { pairId: '6394', alertCount: 1 },
         },
       ];
 
       const html = section.headerFormatter(results);
-      expect(html).toContain('Orphans: 2');
+      expect(html).toContain('Orphan Alerts: 2');
       expect(html).toContain('darkred');
     });
   });
