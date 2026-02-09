@@ -43,6 +43,22 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
     await this.handleOrphanDeletion(result);
   };
 
+  readonly onFixAll = async (results: AuditResult[]): Promise<void> => {
+    let totalDeleted = 0;
+    for (const result of results) {
+      const pairId = result.data?.pairId as string | undefined;
+      if (!pairId) continue;
+
+      const alerts = this.alertRepo.get(pairId);
+      if (!alerts || alerts.length === 0) continue;
+
+      await Promise.all(alerts.map(async (alert) => this.alertManager.deleteAlert(alert)));
+      this.alertRepo.delete(pairId);
+      totalDeleted += alerts.length;
+    }
+    Notifier.success(`✓ Deleted ${totalDeleted} orphan alert(s) for ${results.length} pair(s)`);
+  };
+
   readonly headerFormatter = (auditResults: AuditResult[]) => {
     if (auditResults.length === 0) {
       return `<span class="success-badge">✓ No orphan alerts</span>`;

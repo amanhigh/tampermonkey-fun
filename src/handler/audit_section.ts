@@ -39,6 +39,7 @@ export interface IAuditSection {
   onLeftClick: (result: AuditResult) => void | Promise<void>; // Primary action (e.g., open in TV)
   onRightClick: (result: AuditResult) => void | Promise<void>; // Secondary action (e.g., add to watchlist)
   onMiddleClick?: (result: AuditResult) => void | Promise<void>; // Optional middle-click action
+  onFixAll?: (results: AuditResult[]) => void | Promise<void>; // Optional bulk-action handler for "Fix All" workflow
 
   // Display options
   limit?: number; // Items per page (0 or undefined = no pagination)

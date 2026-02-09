@@ -323,6 +323,86 @@ describe('OrphanAlertsSection', () => {
     });
   });
 
+  describe('Fix All Handler', () => {
+    test('deletes all orphan alerts for all pairs', async () => {
+      const alerts1 = [createMockAlert('6393', 391.92), createMockAlert('6393', 404.4)];
+      const alerts2 = [createMockAlert('6394', 100.0)];
+      const results: AuditResult[] = [
+        {
+          pluginId: 'orphan-alerts',
+          code: 'NO_PAIR_MAPPING',
+          target: '6393',
+          message: '6393: 2 alert(s)',
+          severity: 'HIGH',
+          status: 'FAIL',
+          data: { pairId: '6393', alertCount: 2 },
+        },
+        {
+          pluginId: 'orphan-alerts',
+          code: 'NO_PAIR_MAPPING',
+          target: '6394',
+          message: '6394: 1 alert(s)',
+          severity: 'HIGH',
+          status: 'FAIL',
+          data: { pairId: '6394', alertCount: 1 },
+        },
+      ];
+
+      (mockAlertRepo.get as jest.Mock).mockImplementation((pairId: string) => {
+        if (pairId === '6393') return alerts1;
+        if (pairId === '6394') return alerts2;
+        return [];
+      });
+
+      await section.onFixAll!(results);
+
+      expect(mockAlertManager.deleteAlert).toHaveBeenCalledTimes(3);
+      expect(mockAlertRepo.delete).toHaveBeenCalledWith('6393');
+      expect(mockAlertRepo.delete).toHaveBeenCalledWith('6394');
+      expect(notifySuccessSpy).toHaveBeenCalledWith('✓ Deleted 3 orphan alert(s) for 2 pair(s)');
+    });
+
+    test('skips results with missing pairId', async () => {
+      const results: AuditResult[] = [
+        {
+          pluginId: 'orphan-alerts',
+          code: 'NO_PAIR_MAPPING',
+          target: '6393',
+          message: '6393: 1 alert(s)',
+          severity: 'HIGH',
+          status: 'FAIL',
+          data: { alertCount: 1 }, // missing pairId
+        },
+      ];
+
+      await section.onFixAll!(results);
+
+      expect(mockAlertRepo.get).not.toHaveBeenCalled();
+      expect(mockAlertManager.deleteAlert).not.toHaveBeenCalled();
+    });
+
+    test('skips pairs with no alerts found', async () => {
+      const results: AuditResult[] = [
+        {
+          pluginId: 'orphan-alerts',
+          code: 'NO_PAIR_MAPPING',
+          target: '6393',
+          message: '6393: 0 alert(s)',
+          severity: 'HIGH',
+          status: 'FAIL',
+          data: { pairId: '6393', alertCount: 0 },
+        },
+      ];
+
+      (mockAlertRepo.get as jest.Mock).mockReturnValue([]);
+
+      await section.onFixAll!(results);
+
+      expect(mockAlertManager.deleteAlert).not.toHaveBeenCalled();
+      expect(mockAlertRepo.delete).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Button Color Mapper', () => {
     test('always returns darkred', () => {
       const result: AuditResult = {

@@ -45,6 +45,13 @@ export class UnmappedPairsSection extends BaseAuditSection implements IAuditSect
     Notifier.red(`🗑️ Removed unmapped pair: ${investingTicker}`);
   };
 
+  readonly onFixAll = (results: AuditResult[]) => {
+    results.forEach((result) => {
+      this.pairHandler.deletePairInfo(result.target);
+    });
+    Notifier.red(`🗑️ Removed ${results.length} unmapped pair(s)`);
+  };
+
   /**
    * Header formatter showing count of unmapped pairs
    */

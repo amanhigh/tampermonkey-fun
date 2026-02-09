@@ -113,6 +113,18 @@ export class AuditRenderer {
 
     $('<span>').addClass(Constants.AUDIT.CLASSES.HEADER_TEXT).html(fullHeaderText).appendTo($header);
 
+    // Fix All button (only when section declares onFixAll and has results)
+    if (this.section.onFixAll && this.results.length > 0) {
+      const $fixAll = this.uiUtil
+        .buildButton(`audit-fixall-${this.section.id}`, '🔧 Fix All', () => {
+          void this.handleFixAll();
+        })
+        .addClass(Constants.AUDIT.CLASSES.SECTION_REFRESH);
+
+      this.setRefreshButtonState($fixAll, !this.running);
+      $fixAll.appendTo($header);
+    }
+
     // Refresh button
     const $refresh = this.uiUtil
       .buildButton(`audit-refresh-${this.section.id}`, '🔄', () => {
@@ -332,6 +344,28 @@ export class AuditRenderer {
     if (results.length > 0 && this.collapsed) {
       this.collapsed = false;
     }
+  }
+
+  /**
+   * Handle "Fix All" workflow with confirmation before executing bulk action
+   */
+  private async handleFixAll(): Promise<void> {
+    if (!this.section.onFixAll || this.results.length === 0) {
+      return;
+    }
+
+    const confirmed = confirm(
+      `Fix All: ${this.section.title}\n\n` +
+        `This will apply the fix action to all ${this.results.length} item(s).\n\n` +
+        `Are you sure?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    await Promise.resolve(this.section.onFixAll(this.results));
+    await this.refresh();
   }
 
   /**

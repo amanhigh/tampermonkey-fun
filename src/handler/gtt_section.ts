@@ -78,6 +78,20 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
     }
   };
 
+  readonly onFixAll = (results: AuditResult[]) => {
+    let totalDeleted = 0;
+    results.forEach((result) => {
+      const orderIds = result.data?.orderIds as string[] | undefined;
+      if (orderIds && orderIds.length > 0) {
+        orderIds.forEach((orderId) => {
+          this.kiteManager.deleteOrder(orderId);
+        });
+        totalDeleted += orderIds.length;
+      }
+    });
+    Notifier.success(`Deleted ${totalDeleted} GTT order(s) for ${results.length} ticker(s)`);
+  };
+
   readonly headerFormatter = (auditResults: AuditResult[]) => {
     if (auditResults.length === 0) {
       return `<span class="success-badge">✓ All orders watched</span>`;

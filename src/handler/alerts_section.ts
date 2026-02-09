@@ -50,6 +50,13 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
     Notifier.red(`❌ Removed mapping for ${investingTicker}`);
   };
 
+  readonly onFixAll = (results: AuditResult[]) => {
+    results.forEach((result) => {
+      this.pairHandler.deletePairInfo(result.target);
+    });
+    Notifier.red(`❌ Removed ${results.length} pair mapping(s)`);
+  };
+
   readonly headerFormatter = (auditResults: AuditResult[]) => {
     if (auditResults.length === 0) {
       return `<span class="success-badge">✓ All alerts covered</span>`;
