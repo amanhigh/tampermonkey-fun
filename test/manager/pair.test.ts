@@ -5,6 +5,11 @@ import { ISymbolManager } from '../../src/manager/symbol';
 import { IWatchManager } from '../../src/manager/watch';
 import { IFlagManager } from '../../src/manager/flag';
 import { IAlertFeedManager } from '../../src/manager/alertfeed';
+import { IRecentTickerRepo } from '../../src/repo/recent';
+import { ISequenceRepo } from '../../src/repo/sequence';
+import { IExchangeRepo } from '../../src/repo/exchange';
+import { IAlertRepo } from '../../src/repo/alert';
+import { IInvestingClient } from '../../src/client/investing';
 
 // Mock Notifier to avoid DOM issues in tests
 jest.mock('../../src/util/notify', () => ({
@@ -22,6 +27,11 @@ describe('PairManager', () => {
   let mockWatchManager: jest.Mocked<IWatchManager>;
   let mockFlagManager: jest.Mocked<IFlagManager>;
   let mockAlertFeedManager: jest.Mocked<IAlertFeedManager>;
+  let mockRecentRepo: jest.Mocked<IRecentTickerRepo>;
+  let mockSequenceRepo: jest.Mocked<ISequenceRepo>;
+  let mockExchangeRepo: jest.Mocked<IExchangeRepo>;
+  let mockAlertRepo: jest.Mocked<IAlertRepo>;
+  let mockInvestingClient: jest.Mocked<IInvestingClient>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -64,12 +74,38 @@ describe('PairManager', () => {
       createAlertFeedEvent: jest.fn(),
     } as unknown as jest.Mocked<IAlertFeedManager>;
 
+    mockRecentRepo = {
+      delete: jest.fn(),
+    } as unknown as jest.Mocked<IRecentTickerRepo>;
+
+    mockSequenceRepo = {
+      delete: jest.fn(),
+    } as unknown as jest.Mocked<ISequenceRepo>;
+
+    mockExchangeRepo = {
+      delete: jest.fn(),
+    } as unknown as jest.Mocked<IExchangeRepo>;
+
+    mockAlertRepo = {
+      get: jest.fn(),
+      delete: jest.fn(),
+    } as unknown as jest.Mocked<IAlertRepo>;
+
+    mockInvestingClient = {
+      deleteAlert: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<IInvestingClient>;
+
     pairManager = new PairManager(
       mockPairRepo,
       mockSymbolManager,
       mockWatchManager,
       mockFlagManager,
-      mockAlertFeedManager
+      mockAlertFeedManager,
+      mockRecentRepo,
+      mockSequenceRepo,
+      mockExchangeRepo,
+      mockAlertRepo,
+      mockInvestingClient
     );
   });
 
@@ -211,6 +247,9 @@ describe('PairManager', () => {
       expect(mockFlagManager.evictTicker).toHaveBeenCalledWith(tvTicker);
       expect(mockSymbolManager.removeTvToInvestingMapping).toHaveBeenCalledWith(investingTicker);
       expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith(tvTicker);
+      expect(mockRecentRepo.delete).toHaveBeenCalledWith(tvTicker);
+      expect(mockSequenceRepo.delete).toHaveBeenCalledWith(tvTicker);
+      expect(mockExchangeRepo.delete).toHaveBeenCalledWith(tvTicker);
       expect(result).toBe(true); // Both returned true, so combined result is true
     });
 
@@ -226,6 +265,9 @@ describe('PairManager', () => {
       expect(mockWatchManager.evictTicker).not.toHaveBeenCalled();
       expect(mockFlagManager.evictTicker).not.toHaveBeenCalled();
       expect(mockAlertFeedManager.createAlertFeedEvent).not.toHaveBeenCalled();
+      expect(mockRecentRepo.delete).not.toHaveBeenCalled();
+      expect(mockSequenceRepo.delete).not.toHaveBeenCalled();
+      expect(mockExchangeRepo.delete).not.toHaveBeenCalled();
       
       // Verify other operations still happened
       expect(mockPairRepo.delete).toHaveBeenCalledWith(investingTicker);

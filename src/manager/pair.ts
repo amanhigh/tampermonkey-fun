@@ -4,6 +4,11 @@ import { ISymbolManager } from './symbol';
 import { IWatchManager } from './watch';
 import { IFlagManager } from './flag';
 import { IAlertFeedManager } from './alertfeed';
+import { IRecentTickerRepo } from '../repo/recent';
+import { ISequenceRepo } from '../repo/sequence';
+import { IExchangeRepo } from '../repo/exchange';
+import { IAlertRepo } from '../repo/alert';
+import { IInvestingClient } from '../client/investing';
 
 /**
  * Interface for managing pair information and mappings
@@ -47,13 +52,23 @@ export class PairManager implements IPairManager {
    * @param watchManager Manager for watchlist operations
    * @param flagManager Manager for flag operations
    * @param alertFeedManager Manager for alert feed operations
+   * @param recentRepo Repository for recent ticker operations
+   * @param sequenceRepo Repository for sequence operations
+   * @param exchangeRepo Repository for exchange operations
+   * @param alertRepo Repository for alert operations
+   * @param investingClient Client for Investing.com alert deletion
    */
   constructor(
     private readonly pairRepo: IPairRepo,
     private readonly symbolManager: ISymbolManager,
     private readonly watchManager: IWatchManager,
     private readonly flagManager: IFlagManager,
-    private readonly alertFeedManager: IAlertFeedManager
+    private readonly alertFeedManager: IAlertFeedManager,
+    private readonly recentRepo: IRecentTickerRepo,
+    private readonly sequenceRepo: ISequenceRepo,
+    private readonly exchangeRepo: IExchangeRepo,
+    private readonly alertRepo: IAlertRepo,
+    private readonly investingClient: IInvestingClient
   ) {}
 
   /** @inheritdoc */
@@ -72,17 +87,17 @@ export class PairManager implements IPairManager {
   }
 
   /**
-   * Deletes pair mapping information and performs cleanup
+   * Deletes pair mapping information and performs full cascade cleanup
    * @param investingTicker The investing.com ticker symbol to unmap
    * @returns True if ticker was removed from any lists, false otherwise
    */
   deletePairInfo(investingTicker: string): boolean {
     const tvTicker = this.symbolManager.investingToTv(investingTicker);
 
-    // 1. Delete pair mapping (existing functionality)
+    // 1. Delete pair mapping
     this.pairRepo.delete(investingTicker);
 
-    // 2. Remove symbol mapping (moved from handler)
+    // 2. Remove symbol mapping
     this.symbolManager.removeTvToInvestingMapping(investingTicker);
 
     // 3. Cleanup watchlist, flags if present
@@ -94,9 +109,34 @@ export class PairManager implements IPairManager {
       cleanedFromLists = watchlistRemoved || flagsRemoved;
     }
 
-    // 4. Update alert feed (moved from handler, fire-and-forget)
+    // 4. Update alert feed (fire-and-forget)
     if (tvTicker) {
       void this.alertFeedManager.createAlertFeedEvent(tvTicker);
+    }
+
+    // 5. Remove from recent tickers
+    if (tvTicker) {
+      this.recentRepo.delete(tvTicker);
+    }
+
+    // 6. Remove sequence preferences
+    if (tvTicker) {
+      this.sequenceRepo.delete(tvTicker);
+    }
+
+    // 7. Remove exchange mapping
+    if (tvTicker) {
+      this.exchangeRepo.delete(tvTicker);
+    }
+
+    // 8. Delete Investing.com alerts for this pair (fire-and-forget)
+    const pairInfo = this.pairRepo.get(investingTicker);
+    if (pairInfo) {
+      const alerts = this.alertRepo.get(pairInfo.pairId);
+      if (alerts && alerts.length > 0) {
+        void Promise.all(alerts.map(async (alert) => this.investingClient.deleteAlert(alert)));
+        this.alertRepo.delete(pairInfo.pairId);
+      }
     }
 
     return cleanedFromLists;

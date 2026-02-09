@@ -79,6 +79,11 @@ import { TvMappingPlugin } from '../manager/tv_mapping_plugin';
 import { GttPlugin } from '../manager/gtt_plugin';
 import { UnmappedPairsPlugin } from '../manager/unmapped_pairs_plugin';
 import { OrphanAlertsPlugin } from '../manager/orphan_alerts_plugin';
+import { OrphanSequencesPlugin } from '../manager/orphan_sequences_plugin';
+import { OrphanFlagsPlugin } from '../manager/orphan_flags_plugin';
+import { OrphanExchangePlugin } from '../manager/orphan_exchange_plugin';
+import { DuplicatePairIdsPlugin } from '../manager/duplicate_pair_ids_plugin';
+import { TradeRiskPlugin } from '../manager/trade_risk_plugin';
 import { GttAuditSection } from '../handler/gtt_section';
 import { AlertsAuditSection } from '../handler/alerts_section';
 import { OrphanAlertsSection } from '../handler/orphan_alerts_section';
@@ -285,7 +290,12 @@ export class Factory {
             Factory.manager.symbol(),
             Factory.manager.watch(),
             Factory.manager.flag(),
-            Factory.manager.alertFeed()
+            Factory.manager.alertFeed(),
+            Factory.repo.recent(),
+            Factory.repo.sequence(),
+            Factory.repo.exchange(),
+            Factory.repo.alert(),
+            Factory.client.investing()
           )
       ),
 
@@ -365,6 +375,41 @@ export class Factory {
         'auditPlugin_orphanAlerts',
         () => new OrphanAlertsPlugin(Factory.repo.alert(), Factory.repo.pair())
       ),
+
+    // Return a singleton OrphanSequencesPlugin instance
+    orphanSequences: () =>
+      Factory.getInstance(
+        'auditPlugin_orphanSequences',
+        () => new OrphanSequencesPlugin(Factory.repo.sequence(), Factory.repo.ticker(), Factory.repo.pair())
+      ),
+
+    // Return a singleton OrphanFlagsPlugin instance
+    orphanFlags: () =>
+      Factory.getInstance(
+        'auditPlugin_orphanFlags',
+        () =>
+          new OrphanFlagsPlugin(
+            Factory.repo.flag(),
+            Factory.repo.ticker(),
+            Factory.repo.pair(),
+            Factory.manager.symbol()
+          )
+      ),
+
+    // Return a singleton OrphanExchangePlugin instance
+    orphanExchange: () =>
+      Factory.getInstance(
+        'auditPlugin_orphanExchange',
+        () => new OrphanExchangePlugin(Factory.repo.exchange(), Factory.repo.ticker())
+      ),
+
+    // Return a singleton DuplicatePairIdsPlugin instance
+    duplicatePairIds: () =>
+      Factory.getInstance('auditPlugin_duplicatePairIds', () => new DuplicatePairIdsPlugin(Factory.repo.pair())),
+
+    // Return a singleton TradeRiskPlugin instance
+    tradeRisk: () =>
+      Factory.getInstance('auditPlugin_tradeRisk', () => new TradeRiskPlugin(Factory.repo.kite())),
 
     // ===== SECTION CREATION =====
     // GTT Audit Section - receives plugin via direct injection

@@ -35,6 +35,21 @@ export const Constants = Object.freeze({
 
       /** TV mapping audit plugin - analyzes TradingView to Kite symbol mappings */
       TV_MAPPING: 'tv-mapping',
+
+      /** Orphan sequences audit plugin - identifies sequence entries without corresponding tickers */
+      ORPHAN_SEQUENCES: 'orphan-sequences',
+
+      /** Orphan flags audit plugin - identifies flag entries without corresponding tickers */
+      ORPHAN_FLAGS: 'orphan-flags',
+
+      /** Orphan exchange audit plugin - identifies exchange mappings without corresponding tickers */
+      ORPHAN_EXCHANGE: 'orphan-exchange',
+
+      /** Duplicate pair IDs audit plugin - identifies multiple investing tickers sharing the same pairId */
+      DUPLICATE_PAIR_IDS: 'duplicate-pair-ids',
+
+      /** Trade risk multiple audit plugin - identifies trades with non-standard risk multiples */
+      TRADE_RISK: 'trade-risk',
     }),
   },
 
