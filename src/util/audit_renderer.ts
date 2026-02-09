@@ -20,7 +20,7 @@ import { IAuditSection } from '../handler/audit_section';
  * - Created at runtime by handlers, not by Factory (transient, not singleton)
  */
 export class AuditRenderer {
-  private collapsed: boolean = false;
+  private collapsed: boolean = true;
   private results: AuditResult[] = [];
   private running: boolean = false;
   private currentPage: number = 0;
