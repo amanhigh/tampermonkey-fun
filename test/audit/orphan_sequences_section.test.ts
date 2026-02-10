@@ -1,14 +1,14 @@
 import { OrphanSequencesSection } from '../../src/handler/orphan_sequences_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
-import { ISequenceRepo } from '../../src/repo/sequence';
+import { ISequenceManager } from '../../src/manager/sequence';
 import { Notifier } from '../../src/util/notify';
 
 describe('OrphanSequencesSection', () => {
   let section: OrphanSequencesSection;
   let mockPlugin: IAudit;
   let mockTickerHandler: Partial<ITickerHandler>;
-  let mockSequenceRepo: Partial<ISequenceRepo>;
+  let mockSequenceManager: Partial<ISequenceManager>;
   let notifySuccessSpy: jest.SpyInstance;
 
   const createResult = (ticker: string): AuditResult => ({
@@ -33,8 +33,8 @@ describe('OrphanSequencesSection', () => {
       openTicker: jest.fn(),
     };
 
-    mockSequenceRepo = {
-      delete: jest.fn(),
+    mockSequenceManager = {
+      deleteSequence: jest.fn(),
     };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
@@ -43,7 +43,7 @@ describe('OrphanSequencesSection', () => {
     section = new OrphanSequencesSection(
       mockPlugin,
       mockTickerHandler as ITickerHandler,
-      mockSequenceRepo as ISequenceRepo
+      mockSequenceManager as ISequenceManager
     );
   });
 
@@ -82,10 +82,10 @@ describe('OrphanSequencesSection', () => {
   });
 
   describe('onRightClick', () => {
-    test('deletes orphan sequence from SequenceRepo', () => {
+    test('deletes orphan sequence via SequenceManager', () => {
       const result = createResult('ORPHAN');
       section.onRightClick(result);
-      expect(mockSequenceRepo.delete).toHaveBeenCalledWith('ORPHAN');
+      expect(mockSequenceManager.deleteSequence).toHaveBeenCalledWith('ORPHAN');
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
   });
@@ -94,9 +94,9 @@ describe('OrphanSequencesSection', () => {
     test('deletes all orphan sequences', () => {
       const results = [createResult('ORPHAN1'), createResult('ORPHAN2')];
       section.onFixAll!(results);
-      expect(mockSequenceRepo.delete).toHaveBeenCalledTimes(2);
-      expect(mockSequenceRepo.delete).toHaveBeenCalledWith('ORPHAN1');
-      expect(mockSequenceRepo.delete).toHaveBeenCalledWith('ORPHAN2');
+      expect(mockSequenceManager.deleteSequence).toHaveBeenCalledTimes(2);
+      expect(mockSequenceManager.deleteSequence).toHaveBeenCalledWith('ORPHAN1');
+      expect(mockSequenceManager.deleteSequence).toHaveBeenCalledWith('ORPHAN2');
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
   });

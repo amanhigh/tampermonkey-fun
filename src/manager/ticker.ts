@@ -54,6 +54,7 @@ export interface ITickerManager {
    * @throws Error When no visible tickers are available
    */
   navigateTickers(step: number): void;
+
 }
 
 /**
@@ -62,7 +63,6 @@ export interface ITickerManager {
 export class TickerManager implements ITickerManager {
   /**
    * Manages all ticker operations including retrieval, mapping, navigation and selection
-   * @param recentTickerRepo Repository for recent tickers
    * @param waitUtil DOM operation manager
    * @param symbolManager Manager for symbol operations
    * @param screenerManager Manager for screener operations

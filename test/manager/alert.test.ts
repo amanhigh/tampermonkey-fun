@@ -72,6 +72,7 @@ describe('AlertManager', () => {
       getSelectedTickers: jest.fn(),
       openBenchmarkTicker: jest.fn(),
       navigateTickers: jest.fn(),
+      deleteTicker: jest.fn(),
     };
 
     // Mock InvestingClient

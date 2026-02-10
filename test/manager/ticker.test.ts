@@ -3,6 +3,7 @@ import { IWaitUtil } from '../../src/util/wait';
 import { ISymbolManager } from '../../src/manager/symbol';
 import { ITradingViewScreenerManager } from '../../src/manager/screener';
 import { ITradingViewWatchlistManager } from '../../src/manager/watchlist';
+import { ITickerRepo } from '../../src/repo/ticker';
 import { Constants } from '../../src/models/constant';
 
 // Mock jQuery globally
@@ -16,6 +17,7 @@ describe('TickerManager', () => {
   let mockSymbolManager: jest.Mocked<ISymbolManager>;
   let mockScreenerManager: jest.Mocked<ITradingViewScreenerManager>;
   let mockWatchlistManager: jest.Mocked<ITradingViewWatchlistManager>;
+  let mockTickerRepo: jest.Mocked<ITickerRepo>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -70,7 +72,19 @@ describe('TickerManager', () => {
       switchWatchlist: jest.fn(),
     } as unknown as jest.Mocked<ITradingViewWatchlistManager>;
 
-    tickerManager = new TickerManager(mockWaitUtil, mockSymbolManager, mockScreenerManager, mockWatchlistManager);
+    // Mock TickerRepo
+    mockTickerRepo = {
+      get: jest.fn(),
+      set: jest.fn(),
+      delete: jest.fn(),
+      getAllKeys: jest.fn(),
+      clear: jest.fn(),
+      getCount: jest.fn(),
+      has: jest.fn(),
+      getAllEntries: jest.fn(),
+    } as unknown as jest.Mocked<ITickerRepo>;
+
+    tickerManager = new TickerManager(mockWaitUtil, mockSymbolManager, mockScreenerManager, mockWatchlistManager, mockTickerRepo);
   });
 
   describe('getTicker', () => {

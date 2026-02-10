@@ -39,6 +39,7 @@ import { ITradingViewManager, TradingViewManager } from '../manager/tv';
 import { IPairManager, PairManager } from '../manager/pair';
 import { FnoRepo, IFnoRepo } from '../repo/fno';
 import { IFnoManager, FnoManager } from '../manager/fno';
+import { IExchangeManager, ExchangeManager } from '../manager/exchange';
 
 // Handler Imports
 import { AlertHandler } from '../handler/alert';
@@ -483,7 +484,7 @@ export class Factory {
           new OrphanSequencesSection(
             Factory.audit.orphanSequences(),
             Factory.handler.ticker(),
-            Factory.repo.sequence()
+            Factory.manager.sequence()
           )
       ),
 
@@ -507,7 +508,7 @@ export class Factory {
           new OrphanExchangeSection(
             Factory.audit.orphanExchange(),
             Factory.handler.ticker(),
-            Factory.repo.exchange()
+            Factory.manager.symbol()
           )
       ),
 
@@ -532,7 +533,7 @@ export class Factory {
           new TickerCollisionSection(
             Factory.audit.tickerCollision(),
             Factory.handler.ticker(),
-            Factory.repo.ticker()
+            Factory.manager.symbol()
           )
       ),
 

@@ -66,6 +66,18 @@ export interface ISymbolManager {
    * @returns True if symbol is composite
    */
   isComposite(symbol: string): boolean;
+
+  /**
+   * Removes mapping between TradingView ticker and Exchange ticker
+   * @param tvTicker TradingView ticker
+   */
+  removeTvToExchangeTickerMapping(tvTicker: string): void;
+
+  /**
+   * Deletes a TradingView ticker entry from the ticker repository
+   * @param tvTicker TradingView ticker
+   */
+  deleteTvTicker(tvTicker: string): void;
 }
 
 /*
@@ -155,6 +167,16 @@ export class SymbolManager implements ISymbolManager {
   /** @inheritdoc */
   public isComposite(symbol: string): boolean {
     return this.COMPOSITE_CHARACTERS.some((char) => symbol.includes(char));
+  }
+
+  /** @inheritdoc */
+  removeTvToExchangeTickerMapping(tvTicker: string): void {
+    this.exchangeRepo.delete(tvTicker);
+  }
+
+  /** @inheritdoc */
+  deleteTvTicker(tvTicker: string): void {
+    this.tickerRepo.delete(tvTicker);
   }
 
   /**

@@ -3,7 +3,7 @@ import { IAuditSection } from './audit_section';
 import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { ITickerHandler } from './ticker';
-import { ISequenceRepo } from '../repo/sequence';
+import { ISequenceManager } from '../manager/sequence';
 import { Notifier } from '../util/notify';
 import { Constants } from '../models/constant';
 
@@ -36,13 +36,13 @@ export class OrphanSequencesSection extends BaseAuditSection implements IAuditSe
 
   readonly onRightClick = (result: AuditResult): void => {
     const ticker = result.target;
-    this.sequenceRepo.delete(ticker);
+    this.sequenceManager.deleteSequence(ticker);
     Notifier.success(`✓ Removed orphan sequence: ${ticker}`);
   };
 
   readonly onFixAll = (results: AuditResult[]): void => {
     results.forEach((result) => {
-      this.sequenceRepo.delete(result.target);
+      this.sequenceManager.deleteSequence(result.target);
     });
     Notifier.success(`✓ Removed ${results.length} orphan sequence(s)`);
   };
@@ -57,7 +57,7 @@ export class OrphanSequencesSection extends BaseAuditSection implements IAuditSe
   constructor(
     plugin: IAudit,
     private readonly tickerHandler: ITickerHandler,
-    private readonly sequenceRepo: ISequenceRepo
+    private readonly sequenceManager: ISequenceManager
   ) {
     super();
     this.plugin = plugin;

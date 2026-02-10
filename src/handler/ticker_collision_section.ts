@@ -3,7 +3,7 @@ import { IAuditSection } from './audit_section';
 import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { ITickerHandler } from './ticker';
-import { ITickerRepo } from '../repo/ticker';
+import { ISymbolManager } from '../manager/symbol';
 import { Notifier } from '../util/notify';
 import { Constants } from '../models/constant';
 
@@ -41,7 +41,7 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
     // Delete all but the first (canonical) tvTicker alias
     const staleAliases = tvTickers.slice(1);
     staleAliases.forEach((tvTicker) => {
-      this.tickerRepo.delete(tvTicker);
+      this.symbolManager.deleteTvTicker(tvTicker);
     });
     Notifier.success(`✓ Removed ${staleAliases.length} stale alias(es) for ${result.target}`);
   };
@@ -53,7 +53,7 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
       if (!tvTickers || tvTickers.length < 2) return;
       const staleAliases = tvTickers.slice(1);
       staleAliases.forEach((tvTicker) => {
-        this.tickerRepo.delete(tvTicker);
+        this.symbolManager.deleteTvTicker(tvTicker);
       });
       totalRemoved += staleAliases.length;
     });
@@ -70,7 +70,7 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
   constructor(
     plugin: IAudit,
     private readonly tickerHandler: ITickerHandler,
-    private readonly tickerRepo: ITickerRepo
+    private readonly symbolManager: ISymbolManager
   ) {
     super();
     this.plugin = plugin;
