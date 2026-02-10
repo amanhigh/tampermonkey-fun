@@ -19,10 +19,16 @@ export interface IPairHandler {
   mapInvestingTicker(investingTicker: string, exchange?: string): Promise<void>;
 
   /**
-   * Deletes pair mapping information
-   * @param investingTicker The investing.com ticker symbol to unmap
+   * Stops tracking an investing ticker — full cascade cleanup + UI notification
+   * @param investingTicker The investing.com ticker symbol to stop tracking
    */
-  deletePairInfo(investingTicker: string): void;
+  stopTrackingByInvestingTicker(investingTicker: string): void;
+
+  /**
+   * Stops tracking a TV ticker — resolves and performs full cascade cleanup + UI notification
+   * @param tvTicker The TradingView ticker to stop tracking
+   */
+  stopTrackingByTvTicker(tvTicker: string): void;
 }
 
 /**
@@ -90,21 +96,32 @@ export class PairHandler implements IPairHandler {
   }
 
   /**
-   * Deletes pair mapping information
-   * @param investingTicker The investing.com ticker symbol to unmap
+   * Stops tracking an investing ticker — full cascade cleanup + UI notification
+   * @param investingTicker The investing.com ticker symbol to stop tracking
    */
-  public deletePairInfo(investingTicker: string): void {
-    // Delegate all cleanup logic to manager and get result
-    const cleanedFromLists = this.pairManager.deletePairInfo(investingTicker);
-
-    // Handle notification based on cleanup result
-    const tvTicker = this.symbolManager.investingToTv(investingTicker);
+  public stopTrackingByInvestingTicker(investingTicker: string): void {
+    // BUG: It should also delete all chart elements
+    // BUG: Delete Alerts that are Setup.
+    const cleanedFromLists = this.pairManager.stopTrackingByInvestingTicker(investingTicker);
 
     if (cleanedFromLists) {
       this.watchListHandler.onWatchListChange();
-      Notifier.info(`🗑️ Cleaned ${tvTicker} from Lists (Watch/Flag)`);
     }
 
-    Notifier.success(`Unmapped ${investingTicker}`);
+    Notifier.success(`⏹ Stopped tracking ${investingTicker}`);
+  }
+
+  /**
+   * Stops tracking a TV ticker — resolves and performs full cascade cleanup + UI notification
+   * @param tvTicker The TradingView ticker to stop tracking
+   */
+  public stopTrackingByTvTicker(tvTicker: string): void {
+    const cleanedFromLists = this.pairManager.stopTrackingByTvTicker(tvTicker);
+
+    if (cleanedFromLists) {
+      this.watchListHandler.onWatchListChange();
+    }
+
+    Notifier.success(`⏹ Stopped tracking ${tvTicker}`);
   }
 }

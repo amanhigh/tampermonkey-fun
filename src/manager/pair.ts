@@ -35,11 +35,18 @@ export interface IPairManager {
   investingTickerToPairInfo(investingTicker: string): PairInfo | null;
 
   /**
-   * Deletes a ticker's pair info
+   * Stops tracking an investing ticker — full cascade cleanup
    * @param investingTicker Investing.com ticker
    * @returns True if ticker was removed from any lists, false otherwise
    */
-  deletePairInfo(investingTicker: string): boolean;
+  stopTrackingByInvestingTicker(investingTicker: string): boolean;
+
+  /**
+   * Stops tracking a TV ticker — resolves to investing ticker and performs full cascade cleanup
+   * @param tvTicker TradingView ticker
+   * @returns True if ticker was removed from any lists, false otherwise
+   */
+  stopTrackingByTvTicker(tvTicker: string): boolean;
 }
 
 /**
@@ -87,50 +94,26 @@ export class PairManager implements IPairManager {
   }
 
   /**
-   * Deletes pair mapping information and performs full cascade cleanup
-   * @param investingTicker The investing.com ticker symbol to unmap
+   * Stops tracking an investing ticker — full cascade cleanup
+   * @param investingTicker The investing.com ticker symbol to stop tracking
    * @returns True if ticker was removed from any lists, false otherwise
    */
-  deletePairInfo(investingTicker: string): boolean {
+  stopTrackingByInvestingTicker(investingTicker: string): boolean {
     const tvTicker = this.symbolManager.investingToTv(investingTicker);
 
-    // 1. Delete pair mapping
+    // 1. Read pair info BEFORE delete (needed for alert cleanup)
+    const pairInfo = this.pairRepo.getPairInfo(investingTicker);
+
+    // 2. Delete pair mapping
     this.pairRepo.delete(investingTicker);
 
-    // 2. Remove symbol mapping
+    // 3. Remove symbol mapping
     this.symbolManager.removeTvToInvestingMapping(investingTicker);
 
-    // 3. Cleanup watchlist, flags if present
-    let cleanedFromLists = false;
+    // 4. Cleanup tvTicker-keyed stores
+    const cleanedFromLists = this.cleanupTvTickerStores(tvTicker);
 
-    if (tvTicker) {
-      const watchlistRemoved = this.watchManager.evictTicker(tvTicker);
-      const flagsRemoved = this.flagManager.evictTicker(tvTicker);
-      cleanedFromLists = watchlistRemoved || flagsRemoved;
-    }
-
-    // 4. Update alert feed (fire-and-forget)
-    if (tvTicker) {
-      void this.alertFeedManager.createAlertFeedEvent(tvTicker);
-    }
-
-    // 5. Remove from recent tickers
-    if (tvTicker) {
-      this.recentRepo.delete(tvTicker);
-    }
-
-    // 6. Remove sequence preferences
-    if (tvTicker) {
-      this.sequenceRepo.delete(tvTicker);
-    }
-
-    // 7. Remove exchange mapping
-    if (tvTicker) {
-      this.exchangeRepo.delete(tvTicker);
-    }
-
-    // 8. Delete Investing.com alerts for this pair (fire-and-forget)
-    const pairInfo = this.pairRepo.get(investingTicker);
+    // 5. Delete Investing.com alerts for this pair (fire-and-forget)
     if (pairInfo) {
       const alerts = this.alertRepo.get(pairInfo.pairId);
       if (alerts && alerts.length > 0) {
@@ -140,5 +123,44 @@ export class PairManager implements IPairManager {
     }
 
     return cleanedFromLists;
+  }
+
+  /**
+   * Stops tracking a TV ticker — resolves to investing ticker and performs full cascade cleanup
+   * @param tvTicker TradingView ticker to stop tracking
+   * @returns True if ticker was removed from any lists, false otherwise
+   */
+  stopTrackingByTvTicker(tvTicker: string): boolean {
+    const investingTicker = this.symbolManager.tvToInvesting(tvTicker);
+
+    // If investing mapping exists, delegate to full cleanup
+    if (investingTicker) {
+      return this.stopTrackingByInvestingTicker(investingTicker);
+    }
+
+    // No investing mapping — still clean up tvTicker-keyed stores
+    return this.cleanupTvTickerStores(tvTicker);
+  }
+
+  /**
+   * Cleans up all tvTicker-keyed stores (watchlist, flags, alertfeed, recent, sequence, exchange)
+   * @param tvTicker TradingView ticker (may be null if no mapping exists)
+   * @returns True if ticker was removed from any lists, false otherwise
+   */
+  private cleanupTvTickerStores(tvTicker: string | null): boolean {
+    // HACK: Why we need to handle null tvTicker ?
+    if (!tvTicker) {
+      return false;
+    }
+
+    const watchlistRemoved = this.watchManager.evictTicker(tvTicker);
+    const flagsRemoved = this.flagManager.evictTicker(tvTicker);
+
+    void this.alertFeedManager.createAlertFeedEvent(tvTicker);
+    this.recentRepo.delete(tvTicker);
+    this.sequenceRepo.delete(tvTicker);
+    this.exchangeRepo.delete(tvTicker);
+
+    return watchlistRemoved || flagsRemoved;
   }
 }

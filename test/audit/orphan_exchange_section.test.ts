@@ -1,14 +1,14 @@
 import { OrphanExchangeSection } from '../../src/handler/orphan_exchange_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
-import { ISymbolManager } from '../../src/manager/symbol';
+import { IPairHandler } from '../../src/handler/pair';
 import { Notifier } from '../../src/util/notify';
 
 describe('OrphanExchangeSection', () => {
   let section: OrphanExchangeSection;
   let mockPlugin: IAudit;
   let mockTickerHandler: Partial<ITickerHandler>;
-  let mockSymbolManager: Partial<ISymbolManager>;
+  let mockPairHandler: Partial<IPairHandler>;
   let notifySuccessSpy: jest.SpyInstance;
 
   const createResult = (tvTicker: string): AuditResult => ({
@@ -30,7 +30,7 @@ describe('OrphanExchangeSection', () => {
     };
 
     mockTickerHandler = { openTicker: jest.fn() };
-    mockSymbolManager = { removeTvToExchangeTickerMapping: jest.fn() };
+    mockPairHandler = { stopTrackingByTvTicker: jest.fn() };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
     jest.spyOn(Notifier, 'warn').mockImplementation();
@@ -38,7 +38,7 @@ describe('OrphanExchangeSection', () => {
     section = new OrphanExchangeSection(
       mockPlugin,
       mockTickerHandler as ITickerHandler,
-      mockSymbolManager as ISymbolManager
+      mockPairHandler as IPairHandler
     );
   });
 
@@ -62,16 +62,19 @@ describe('OrphanExchangeSection', () => {
   });
 
   describe('onRightClick', () => {
-    test('deletes orphan exchange mapping', () => {
+    test('stops tracking orphan exchange ticker', () => {
       section.onRightClick(createResult('HDFC'));
-      expect(notifySuccessSpy).toHaveBeenCalled();
+      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledWith('HDFC');
     });
   });
 
   describe('onFixAll', () => {
-    test('deletes all orphan exchange mappings', () => {
+    test('stops tracking all orphan exchange tickers', () => {
       const results = [createResult('HDFC'), createResult('TCS')];
       section.onFixAll!(results);
+      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledTimes(2);
+      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledWith('HDFC');
+      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledWith('TCS');
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
   });

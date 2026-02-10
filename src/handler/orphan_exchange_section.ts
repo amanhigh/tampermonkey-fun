@@ -3,7 +3,7 @@ import { IAuditSection } from './audit_section';
 import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { ITickerHandler } from './ticker';
-import { ISymbolManager } from '../manager/symbol';
+import { IPairHandler } from './pair';
 import { Notifier } from '../util/notify';
 import { Constants } from '../models/constant';
 
@@ -36,15 +36,14 @@ export class OrphanExchangeSection extends BaseAuditSection implements IAuditSec
 
   readonly onRightClick = (result: AuditResult): void => {
     const tvTicker = result.target;
-    this.symbolManager.removeTvToExchangeTickerMapping(tvTicker);
-    Notifier.success(`✓ Removed orphan exchange: ${tvTicker}`);
+    this.pairHandler.stopTrackingByTvTicker(tvTicker);
   };
 
   readonly onFixAll = (results: AuditResult[]): void => {
     results.forEach((result) => {
-      this.symbolManager.removeTvToExchangeTickerMapping(result.target);
+      this.pairHandler.stopTrackingByTvTicker(result.target);
     });
-    Notifier.success(`✓ Removed ${results.length} orphan exchange mapping(s)`);
+    Notifier.success(`⏹ Stopped tracking ${results.length} orphan exchange(s)`);
   };
 
   readonly headerFormatter = (results: AuditResult[]): string => {
@@ -57,7 +56,7 @@ export class OrphanExchangeSection extends BaseAuditSection implements IAuditSec
   constructor(
     plugin: IAudit,
     private readonly tickerHandler: ITickerHandler,
-    private readonly symbolManager: ISymbolManager
+    private readonly pairHandler: IPairHandler
   ) {
     super();
     this.plugin = plugin;

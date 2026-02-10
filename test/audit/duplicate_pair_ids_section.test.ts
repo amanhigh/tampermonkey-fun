@@ -33,7 +33,7 @@ describe('DuplicatePairIdsSection', () => {
     };
 
     mockTickerHandler = { openTicker: jest.fn() };
-    mockPairHandler = { deletePairInfo: jest.fn() };
+    mockPairHandler = { stopTrackingByInvestingTicker: jest.fn() };
     mockSymbolManager = { investingToTv: jest.fn() };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
@@ -77,15 +77,15 @@ describe('DuplicatePairIdsSection', () => {
   describe('onRightClick', () => {
     test('deletes duplicate investingTickers (keeps first as canonical)', () => {
       section.onRightClick(createResult('123', ['CANONICAL', 'DUP1', 'DUP2']));
-      expect(mockPairHandler.deletePairInfo).toHaveBeenCalledTimes(2);
-      expect(mockPairHandler.deletePairInfo).toHaveBeenCalledWith('DUP1');
-      expect(mockPairHandler.deletePairInfo).toHaveBeenCalledWith('DUP2');
+      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledTimes(2);
+      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('DUP1');
+      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('DUP2');
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
 
     test('does nothing when less than 2 investingTickers', () => {
       section.onRightClick(createResult('123', ['ONLY']));
-      expect(mockPairHandler.deletePairInfo).not.toHaveBeenCalled();
+      expect(mockPairHandler.stopTrackingByInvestingTicker).not.toHaveBeenCalled();
     });
   });
 
@@ -97,7 +97,7 @@ describe('DuplicatePairIdsSection', () => {
       ];
       section.onFixAll!(results);
       // Group 1: deletes B, C (keeps A). Group 2: deletes E (keeps D).
-      expect(mockPairHandler.deletePairInfo).toHaveBeenCalledTimes(3);
+      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledTimes(3);
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
   });

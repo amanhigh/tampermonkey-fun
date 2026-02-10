@@ -11,6 +11,7 @@ import { Constants } from '../models/constant';
  */
 export class OrphanSequencesPlugin extends BaseAuditPlugin {
   public readonly id = Constants.AUDIT.PLUGINS.ORPHAN_SEQUENCES;
+  // BUG: Remove Orphan in title for all plugins.
   public readonly title = 'Orphan Sequences';
 
   constructor(
@@ -32,6 +33,7 @@ export class OrphanSequencesPlugin extends BaseAuditPlugin {
     }
 
     const results: AuditResult[] = [];
+    // BUG: Should exclude Composite Symbols.
 
     this.sequenceRepo.getAllKeys().forEach((ticker: string) => {
       if (!this.tickerRepo.has(ticker)) {

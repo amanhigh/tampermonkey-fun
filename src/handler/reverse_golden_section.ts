@@ -41,15 +41,14 @@ export class ReverseGoldenSection extends BaseAuditSection implements IAuditSect
 
   readonly onRightClick = (result: AuditResult): void => {
     const investingTicker = result.target;
-    this.pairHandler.deletePairInfo(investingTicker);
-    Notifier.red(`🗑️ Removed reverse golden violation: ${investingTicker}`);
+    this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
   };
 
   readonly onFixAll = (results: AuditResult[]) => {
     results.forEach((result) => {
-      this.pairHandler.deletePairInfo(result.target);
+      this.pairHandler.stopTrackingByInvestingTicker(result.target);
     });
-    Notifier.red(`🗑️ Removed ${results.length} reverse golden violation(s)`);
+    Notifier.success(`⏹ Stopped tracking ${results.length} ticker(s)`);
   };
 
   /**

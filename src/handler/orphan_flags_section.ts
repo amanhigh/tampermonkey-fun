@@ -3,7 +3,7 @@ import { IAuditSection } from './audit_section';
 import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { ITickerHandler } from './ticker';
-import { IFlagManager } from '../manager/flag';
+import { IPairHandler } from './pair';
 import { Notifier } from '../util/notify';
 import { Constants } from '../models/constant';
 
@@ -36,15 +36,15 @@ export class OrphanFlagsSection extends BaseAuditSection implements IAuditSectio
 
   readonly onRightClick = (result: AuditResult): void => {
     const ticker = result.target;
-    this.flagManager.evictTicker(ticker);
-    Notifier.success(`✓ Removed orphan flag: ${ticker}`);
+    // HACK: Clarify it is tvTicker or investingTicker
+    this.pairHandler.stopTrackingByTvTicker(ticker);
   };
 
   readonly onFixAll = (results: AuditResult[]): void => {
     results.forEach((result) => {
-      this.flagManager.evictTicker(result.target);
+      this.pairHandler.stopTrackingByTvTicker(result.target);
     });
-    Notifier.success(`✓ Removed ${results.length} orphan flag(s)`);
+    Notifier.success(`⏹ Stopped tracking ${results.length} orphan flag(s)`);
   };
 
   readonly headerFormatter = (results: AuditResult[]): string => {
@@ -57,7 +57,7 @@ export class OrphanFlagsSection extends BaseAuditSection implements IAuditSectio
   constructor(
     plugin: IAudit,
     private readonly tickerHandler: ITickerHandler,
-    private readonly flagManager: IFlagManager
+    private readonly pairHandler: IPairHandler
   ) {
     super();
     this.plugin = plugin;

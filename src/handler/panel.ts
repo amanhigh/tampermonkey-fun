@@ -7,7 +7,7 @@ export interface IPanelHandler {
 }
 
 enum PanelAction {
-  DELETE_PAIR = 'Delete Pair Info',
+  STOP_TRACKING = 'Stop Tracking',
 }
 
 export class PanelHandler implements IPanelHandler {
@@ -35,8 +35,9 @@ export class PanelHandler implements IPanelHandler {
     }
 
     switch (action) {
-      case PanelAction.DELETE_PAIR:
-        this.pairHandler.deletePairInfo(searchTicker);
+      case PanelAction.STOP_TRACKING:
+        // BUG: Clarify it is investing ticker or tv ticker
+        this.pairHandler.stopTrackingByInvestingTicker(searchTicker);
         break;
     }
   }

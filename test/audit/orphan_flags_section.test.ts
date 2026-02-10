@@ -1,14 +1,14 @@
 import { OrphanFlagsSection } from '../../src/handler/orphan_flags_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
-import { IFlagManager } from '../../src/manager/flag';
+import { IPairHandler } from '../../src/handler/pair';
 import { Notifier } from '../../src/util/notify';
 
 describe('OrphanFlagsSection', () => {
   let section: OrphanFlagsSection;
   let mockPlugin: IAudit;
   let mockTickerHandler: Partial<ITickerHandler>;
-  let mockFlagManager: Partial<IFlagManager>;
+  let mockPairHandler: Partial<IPairHandler>;
   let notifySuccessSpy: jest.SpyInstance;
 
   const createResult = (ticker: string, categoryIndex = 0): AuditResult => ({
@@ -30,12 +30,12 @@ describe('OrphanFlagsSection', () => {
     };
 
     mockTickerHandler = { openTicker: jest.fn() };
-    mockFlagManager = { evictTicker: jest.fn().mockReturnValue(true) };
+    mockPairHandler = { stopTrackingByTvTicker: jest.fn() };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
     jest.spyOn(Notifier, 'warn').mockImplementation();
 
-    section = new OrphanFlagsSection(mockPlugin, mockTickerHandler as ITickerHandler, mockFlagManager as IFlagManager);
+    section = new OrphanFlagsSection(mockPlugin, mockTickerHandler as ITickerHandler, mockPairHandler as IPairHandler);
   });
 
   afterEach(() => {
@@ -58,20 +58,19 @@ describe('OrphanFlagsSection', () => {
   });
 
   describe('onRightClick', () => {
-    test('evicts orphan ticker from flag categories', () => {
+    test('stops tracking orphan ticker', () => {
       section.onRightClick(createResult('ORPHAN'));
-      expect(mockFlagManager.evictTicker).toHaveBeenCalledWith('ORPHAN');
-      expect(notifySuccessSpy).toHaveBeenCalled();
+      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledWith('ORPHAN');
     });
   });
 
   describe('onFixAll', () => {
-    test('evicts all orphan flag tickers', () => {
+    test('stops tracking all orphan flag tickers', () => {
       const results = [createResult('O1'), createResult('O2')];
       section.onFixAll!(results);
-      expect(mockFlagManager.evictTicker).toHaveBeenCalledTimes(2);
-      expect(mockFlagManager.evictTicker).toHaveBeenCalledWith('O1');
-      expect(mockFlagManager.evictTicker).toHaveBeenCalledWith('O2');
+      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledTimes(2);
+      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledWith('O1');
+      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledWith('O2');
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
   });

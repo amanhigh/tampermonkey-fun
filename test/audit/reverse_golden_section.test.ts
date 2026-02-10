@@ -9,7 +9,7 @@ describe('ReverseGoldenSection', () => {
   let mockPlugin: IAudit;
   let mockTickerHandler: Partial<ITickerHandler>;
   let mockPairHandler: Partial<IPairHandler>;
-  let notifyRedSpy: jest.SpyInstance;
+  let notifySuccessSpy: jest.SpyInstance;
 
   beforeEach(() => {
     mockPlugin = {
@@ -24,10 +24,10 @@ describe('ReverseGoldenSection', () => {
     };
 
     mockPairHandler = {
-      deletePairInfo: jest.fn(),
+      stopTrackingByInvestingTicker: jest.fn(),
     };
 
-    notifyRedSpy = jest.spyOn(Notifier, 'red').mockImplementation();
+    notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
 
     section = new ReverseGoldenSection(
       mockPlugin,
@@ -88,8 +88,7 @@ describe('ReverseGoldenSection', () => {
 
       section.onRightClick(result);
 
-      expect(mockPairHandler.deletePairInfo).toHaveBeenCalledWith('USDINR');
-      expect(notifyRedSpy).toHaveBeenCalledWith('🗑️ Removed reverse golden violation: USDINR');
+      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('USDINR');
     });
   });
 
@@ -124,18 +123,18 @@ describe('ReverseGoldenSection', () => {
 
       section.onFixAll!(results);
 
-      expect(mockPairHandler.deletePairInfo).toHaveBeenCalledTimes(3);
-      expect(mockPairHandler.deletePairInfo).toHaveBeenCalledWith('USDINR');
-      expect(mockPairHandler.deletePairInfo).toHaveBeenCalledWith('BANKNIFTY');
-      expect(mockPairHandler.deletePairInfo).toHaveBeenCalledWith('NIFTY');
-      expect(notifyRedSpy).toHaveBeenCalledWith('🗑️ Removed 3 reverse golden violation(s)');
+      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledTimes(3);
+      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('USDINR');
+      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('BANKNIFTY');
+      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('NIFTY');
+      expect(notifySuccessSpy).toHaveBeenCalledWith('⏹ Stopped tracking 3 ticker(s)');
     });
 
     test('handles empty results', () => {
       section.onFixAll!([]);
 
-      expect(mockPairHandler.deletePairInfo).not.toHaveBeenCalled();
-      expect(notifyRedSpy).toHaveBeenCalledWith('🗑️ Removed 0 reverse golden violation(s)');
+      expect(mockPairHandler.stopTrackingByInvestingTicker).not.toHaveBeenCalled();
+      expect(notifySuccessSpy).toHaveBeenCalledWith('⏹ Stopped tracking 0 ticker(s)');
     });
   });
 

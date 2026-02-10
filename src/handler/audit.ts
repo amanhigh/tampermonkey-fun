@@ -1,9 +1,6 @@
 import { Constants } from '../models/constant';
-import { AlertState } from '../models/alert';
-import { Color } from '../models/color';
 import { AuditSectionRegistry } from '../util/audit_registry';
 import { IUIUtil } from '../util/ui';
-import { Notifier } from '../util/notify';
 import { AuditRenderer } from '../util/audit_renderer';
 import { AuditResult } from '../models/audit';
 
@@ -70,19 +67,6 @@ export class AuditHandler implements IAuditHandler {
     // Run section's plugin to get audit results
     //TODO: Remove Plugin Injection and use Section directly
     const results = await alertsSection.plugin.run();
-
-    // Calculate counts from results for notification
-    const noAlertsCount = results.filter((r) => r.code === AlertState.NO_ALERTS).length;
-    const singleAlertCount = results.filter((r) => r.code === AlertState.SINGLE_ALERT).length;
-    const noPairCount = results.filter((r) => r.code === AlertState.NO_PAIR).length;
-
-    // Format and show notification (handler controls UI)
-    const summary =
-      `Audit Results: ` +
-      `${singleAlertCount} SINGLE_ALERT, ` +
-      `${noAlertsCount} NO_ALERTS, ` +
-      `${noPairCount} NO_PAIR`;
-    Notifier.message(summary, Color.PURPLE, 10000);
 
     // Render global refresh button at top of audit area
     this.renderGlobalRefreshButton();

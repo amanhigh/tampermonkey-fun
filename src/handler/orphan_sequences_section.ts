@@ -3,7 +3,7 @@ import { IAuditSection } from './audit_section';
 import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { ITickerHandler } from './ticker';
-import { ISequenceManager } from '../manager/sequence';
+import { IPairHandler } from './pair';
 import { Notifier } from '../util/notify';
 import { Constants } from '../models/constant';
 
@@ -36,15 +36,14 @@ export class OrphanSequencesSection extends BaseAuditSection implements IAuditSe
 
   readonly onRightClick = (result: AuditResult): void => {
     const ticker = result.target;
-    this.sequenceManager.deleteSequence(ticker);
-    Notifier.success(`✓ Removed orphan sequence: ${ticker}`);
+    this.pairHandler.stopTrackingByTvTicker(ticker);
   };
 
   readonly onFixAll = (results: AuditResult[]): void => {
     results.forEach((result) => {
-      this.sequenceManager.deleteSequence(result.target);
+      this.pairHandler.stopTrackingByTvTicker(result.target);
     });
-    Notifier.success(`✓ Removed ${results.length} orphan sequence(s)`);
+    Notifier.success(`⏹ Stopped tracking ${results.length} orphan sequence(s)`);
   };
 
   readonly headerFormatter = (results: AuditResult[]): string => {
@@ -57,7 +56,7 @@ export class OrphanSequencesSection extends BaseAuditSection implements IAuditSe
   constructor(
     plugin: IAudit,
     private readonly tickerHandler: ITickerHandler,
-    private readonly sequenceManager: ISequenceManager
+    private readonly pairHandler: IPairHandler
   ) {
     super();
     this.plugin = plugin;

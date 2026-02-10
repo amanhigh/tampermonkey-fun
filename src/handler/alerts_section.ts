@@ -46,15 +46,14 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
 
   readonly onRightClick = (result: AuditResult) => {
     const investingTicker = result.target;
-    this.pairHandler.deletePairInfo(investingTicker);
-    Notifier.red(`❌ Removed mapping for ${investingTicker}`);
+    this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
   };
 
   readonly onFixAll = (results: AuditResult[]) => {
     results.forEach((result) => {
-      this.pairHandler.deletePairInfo(result.target);
+      this.pairHandler.stopTrackingByInvestingTicker(result.target);
     });
-    Notifier.red(`❌ Removed ${results.length} pair mapping(s)`);
+    Notifier.success(`⏹ Stopped tracking ${results.length} ticker(s)`);
   };
 
   readonly headerFormatter = (auditResults: AuditResult[]) => {

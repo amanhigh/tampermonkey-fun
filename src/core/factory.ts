@@ -474,18 +474,14 @@ export class Factory {
       Factory.getInstance(
         'orphanSequencesSection',
         () =>
-          new OrphanSequencesSection(
-            Factory.audit.orphanSequences(),
-            Factory.handler.ticker(),
-            Factory.manager.sequence()
-          )
+          new OrphanSequencesSection(Factory.audit.orphanSequences(), Factory.handler.ticker(), Factory.handler.pair())
       ),
 
     // Orphan Flags Audit Section (FR-012)
     orphanFlagsSection: () =>
       Factory.getInstance(
         'orphanFlagsSection',
-        () => new OrphanFlagsSection(Factory.audit.orphanFlags(), Factory.handler.ticker(), Factory.manager.flag())
+        () => new OrphanFlagsSection(Factory.audit.orphanFlags(), Factory.handler.ticker(), Factory.handler.pair())
       ),
 
     // Orphan Exchange Audit Section (FR-013)
@@ -493,7 +489,7 @@ export class Factory {
       Factory.getInstance(
         'orphanExchangeSection',
         () =>
-          new OrphanExchangeSection(Factory.audit.orphanExchange(), Factory.handler.ticker(), Factory.manager.symbol())
+          new OrphanExchangeSection(Factory.audit.orphanExchange(), Factory.handler.ticker(), Factory.handler.pair())
       ),
 
     // Duplicate PairIds Audit Section (FR-014)

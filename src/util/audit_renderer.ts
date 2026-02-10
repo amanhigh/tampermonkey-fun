@@ -151,6 +151,7 @@ export class AuditRenderer {
     }
 
     // Get paginated results
+    // BUG: Setting Alert Re Runs Audits and Page is lost resetting it to one loss of Focus. (Targeted mode should not lose pagination)
     const totalPages = this.getTotalPages();
     const displayResults = this.getPaginatedResults();
 

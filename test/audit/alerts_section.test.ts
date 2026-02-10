@@ -12,7 +12,7 @@ describe('AlertsAuditSection', () => {
   let mockTickerHandler: Partial<ITickerHandler>;
   let mockSymbolManager: Partial<ISymbolManager>;
   let mockPairHandler: Partial<IPairHandler>;
-  let notifyRedSpy: jest.SpyInstance;
+  let notifySuccessSpy: jest.SpyInstance;
 
   beforeEach(() => {
     mockPlugin = {
@@ -31,10 +31,10 @@ describe('AlertsAuditSection', () => {
     };
 
     mockPairHandler = {
-      deletePairInfo: jest.fn(),
+      stopTrackingByInvestingTicker: jest.fn(),
     };
 
-    notifyRedSpy = jest.spyOn(Notifier, 'red').mockImplementation();
+    notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
 
     section = new AlertsAuditSection(
       mockPlugin,
@@ -114,8 +114,7 @@ describe('AlertsAuditSection', () => {
 
       section.onRightClick(result);
 
-      expect(mockPairHandler.deletePairInfo).toHaveBeenCalledWith('INFY');
-      expect(notifyRedSpy).toHaveBeenCalledWith('❌ Removed mapping for INFY');
+      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('INFY');
     });
   });
 
@@ -150,18 +149,18 @@ describe('AlertsAuditSection', () => {
 
       section.onFixAll!(results);
 
-      expect(mockPairHandler.deletePairInfo).toHaveBeenCalledTimes(3);
-      expect(mockPairHandler.deletePairInfo).toHaveBeenCalledWith('INFY');
-      expect(mockPairHandler.deletePairInfo).toHaveBeenCalledWith('TCS');
-      expect(mockPairHandler.deletePairInfo).toHaveBeenCalledWith('HDFC');
-      expect(notifyRedSpy).toHaveBeenCalledWith('❌ Removed 3 pair mapping(s)');
+      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledTimes(3);
+      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('INFY');
+      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('TCS');
+      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('HDFC');
+      expect(notifySuccessSpy).toHaveBeenCalledWith('⏹ Stopped tracking 3 ticker(s)');
     });
 
     test('handles empty results', () => {
       section.onFixAll!([]);
 
-      expect(mockPairHandler.deletePairInfo).not.toHaveBeenCalled();
-      expect(notifyRedSpy).toHaveBeenCalledWith('❌ Removed 0 pair mapping(s)');
+      expect(mockPairHandler.stopTrackingByInvestingTicker).not.toHaveBeenCalled();
+      expect(notifySuccessSpy).toHaveBeenCalledWith('⏹ Stopped tracking 0 ticker(s)');
     });
   });
 
