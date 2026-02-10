@@ -47,10 +47,14 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
     let totalDeleted = 0;
     for (const result of results) {
       const pairId = result.data?.pairId as string | undefined;
-      if (!pairId) continue;
+      if (!pairId) {
+        continue;
+      }
 
       const alerts = this.alertRepo.get(pairId);
-      if (!alerts || alerts.length === 0) continue;
+      if (!alerts || alerts.length === 0) {
+        continue;
+      }
 
       await Promise.all(alerts.map(async (alert) => this.alertManager.deleteAlert(alert)));
       this.alertRepo.delete(pairId);

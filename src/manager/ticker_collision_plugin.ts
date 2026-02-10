@@ -33,7 +33,9 @@ export class TickerCollisionPlugin extends BaseAuditPlugin {
 
     this.tickerRepo.getAllKeys().forEach((tvTicker: string) => {
       const investingTicker = this.tickerRepo.get(tvTicker);
-      if (!investingTicker) return;
+      if (!investingTicker) {
+        return;
+      }
 
       if (!investingToTvTickers.has(investingTicker)) {
         investingToTvTickers.set(investingTicker, []);

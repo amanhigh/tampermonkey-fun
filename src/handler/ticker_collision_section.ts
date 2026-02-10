@@ -36,7 +36,9 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
 
   readonly onRightClick = (result: AuditResult): void => {
     const tvTickers = result.data?.tvTickers as string[] | undefined;
-    if (!tvTickers || tvTickers.length < 2) return;
+    if (!tvTickers || tvTickers.length < 2) {
+      return;
+    }
 
     // Delete all but the first (canonical) tvTicker alias
     const staleAliases = tvTickers.slice(1);
@@ -50,7 +52,9 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
     let totalRemoved = 0;
     results.forEach((result) => {
       const tvTickers = result.data?.tvTickers as string[] | undefined;
-      if (!tvTickers || tvTickers.length < 2) return;
+      if (!tvTickers || tvTickers.length < 2) {
+        return;
+      }
       const staleAliases = tvTickers.slice(1);
       staleAliases.forEach((tvTicker) => {
         this.symbolManager.deleteTvTicker(tvTicker);

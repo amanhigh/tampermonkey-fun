@@ -40,7 +40,9 @@ export class DuplicatePairIdsSection extends BaseAuditSection implements IAuditS
 
   readonly onRightClick = (result: AuditResult): void => {
     const investingTickers = result.data?.investingTickers as string[] | undefined;
-    if (!investingTickers || investingTickers.length < 2) return;
+    if (!investingTickers || investingTickers.length < 2) {
+      return;
+    }
 
     // Delete all but the first (canonical) investingTicker
     const duplicates = investingTickers.slice(1);
@@ -54,7 +56,9 @@ export class DuplicatePairIdsSection extends BaseAuditSection implements IAuditS
     let totalRemoved = 0;
     results.forEach((result) => {
       const investingTickers = result.data?.investingTickers as string[] | undefined;
-      if (!investingTickers || investingTickers.length < 2) return;
+      if (!investingTickers || investingTickers.length < 2) {
+        return;
+      }
       const duplicates = investingTickers.slice(1);
       duplicates.forEach((ticker) => {
         this.pairHandler.deletePairInfo(ticker);

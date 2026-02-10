@@ -32,7 +32,9 @@ export class DuplicatePairIdsPlugin extends BaseAuditPlugin {
 
     this.pairRepo.getAllKeys().forEach((investingTicker: string) => {
       const pair = this.pairRepo.get(investingTicker);
-      if (!pair) return;
+      if (!pair) {
+        return;
+      }
 
       const pairId = pair.pairId;
       if (!pairIdToTickers.has(pairId)) {

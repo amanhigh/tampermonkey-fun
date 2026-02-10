@@ -48,7 +48,7 @@ export class TradeRiskPlugin extends BaseAuditPlugin {
           const stop = order.prices[0];
           // Find corresponding single-leg buy order for this ticker to get entry
           const buyOrder = orders.find((o) => o.type === 'single' && o.prices.length >= 1);
-          if (!buyOrder) return;
+          if (!buyOrder) {return;}
 
           const entry = buyOrder.prices[0];
           const risk = Math.abs(entry - stop) * order.qty;

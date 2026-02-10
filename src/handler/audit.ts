@@ -96,32 +96,25 @@ export class AuditHandler implements IAuditHandler {
     // Run GTT audit and render new UI
     await this.auditGttOrders();
 
-    // Run Orphan Alerts audit and render section
-    await this.auditOrphanAlerts();
-
-    // Run ReverseGolden audit and render section
-    await this.auditReverseGolden();
-
-    // Run Orphan Sequences audit and render section
-    await this.auditOrphanSequences();
-
-    // Run Orphan Flags audit and render section
-    await this.auditOrphanFlags();
-
-    // Run Orphan Exchange audit and render section
-    await this.auditOrphanExchange();
-
-    // Run Duplicate PairIds audit and render section
-    await this.auditDuplicatePairIds();
-
-    // Run Ticker Collision audit and render section
-    await this.auditTickerCollision();
-
-    // Run Trade Risk audit and render section
-    await this.auditTradeRisk();
+    // Run all remaining audits
+    await this.runRemainingAudits();
 
     // Mark audits as run
     this.auditHasRun = true;
+  }
+
+  /**
+   * Runs all remaining audits in sequence after GTT and Alerts
+   */
+  private async runRemainingAudits(): Promise<void> {
+    await this.auditOrphanAlerts();
+    await this.auditReverseGolden();
+    await this.auditOrphanSequences();
+    await this.auditOrphanFlags();
+    await this.auditOrphanExchange();
+    await this.auditDuplicatePairIds();
+    await this.auditTickerCollision();
+    await this.auditTradeRisk();
   }
 
   /**
