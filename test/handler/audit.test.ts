@@ -935,19 +935,6 @@ describe('AuditHandler', () => {
         limit: 10,
         context: undefined,
       } as any;
-      const mockUnmappedPairsSection = {
-        id: 'unmapped-pairs',
-        title: 'Unmapped Pairs',
-        plugin: { run: jest.fn().mockResolvedValue([]) },
-        headerFormatter: jest.fn(),
-        buttonColorMapper: jest.fn(),
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-        limit: 10,
-        context: undefined,
-      } as any;
-
-      // Create mock sections for remaining plugins
       const mockOrphanSequencesSection = {
         id: 'orphan-sequences',
         title: 'Orphan Sequences',

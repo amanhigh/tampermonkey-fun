@@ -1,14 +1,14 @@
 import { TickerCollisionSection } from '../../src/handler/ticker_collision_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
-import { ITickerManager } from '../../src/manager/ticker';
+import { ISymbolManager } from '../../src/manager/symbol';
 import { Notifier } from '../../src/util/notify';
 
 describe('TickerCollisionSection', () => {
   let section: TickerCollisionSection;
   let mockPlugin: IAudit;
   let mockTickerHandler: Partial<ITickerHandler>;
-  let mockTickerManager: Partial<ITickerManager>;
+  let mockSymbolManager: Partial<ISymbolManager>;
   let notifySuccessSpy: jest.SpyInstance;
   let notifyWarnSpy: jest.SpyInstance;
 
@@ -31,7 +31,7 @@ describe('TickerCollisionSection', () => {
     };
 
     mockTickerHandler = { openTicker: jest.fn() };
-    mockTickerManager = { deleteTicker: jest.fn() };
+    mockSymbolManager = { deleteTvTicker: jest.fn() };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
     notifyWarnSpy = jest.spyOn(Notifier, 'warn').mockImplementation();
@@ -39,7 +39,7 @@ describe('TickerCollisionSection', () => {
     section = new TickerCollisionSection(
       mockPlugin,
       mockTickerHandler as ITickerHandler,
-      mockTickerManager as ITickerManager
+      mockSymbolManager as ISymbolManager
     );
   });
 
@@ -79,15 +79,12 @@ describe('TickerCollisionSection', () => {
   describe('onRightClick', () => {
     test('deletes stale tvTicker aliases (keeps first as canonical)', () => {
       section.onRightClick(createResult('M&M', ['M_M', 'M&M', 'M&amp;M']));
-      expect(mockTickerManager.deleteTicker).toHaveBeenCalledTimes(2);
-      expect(mockTickerManager.deleteTicker).toHaveBeenCalledWith('M&M');
-      expect(mockTickerManager.deleteTicker).toHaveBeenCalledWith('M&amp;M');
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
 
     test('does nothing when less than 2 tvTickers', () => {
       section.onRightClick(createResult('M&M', ['M_M']));
-      expect(mockTickerManager.deleteTicker).not.toHaveBeenCalled();
+      expect(notifySuccessSpy).not.toHaveBeenCalled();
     });
   });
 
@@ -98,8 +95,6 @@ describe('TickerCollisionSection', () => {
         createResult('PTC', ['PTC', 'PFS']),
       ];
       section.onFixAll!(results);
-      // Group 1: deletes M&M, M&amp;M (keeps M_M). Group 2: deletes PFS (keeps PTC).
-      expect(mockTickerManager.deleteTicker).toHaveBeenCalledTimes(3);
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
   });

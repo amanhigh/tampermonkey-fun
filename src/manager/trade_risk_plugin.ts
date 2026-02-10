@@ -2,6 +2,7 @@ import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
 import { IKiteRepo } from '../repo/kite';
 import { Constants } from '../models/constant';
+import { Order } from '../models/kite';
 
 /**
  * Trade Risk Multiple Audit plugin: identifies GTT orders with non-standard risk multiples.
@@ -39,44 +40,59 @@ export class TradeRiskPlugin extends BaseAuditPlugin {
     const results: AuditResult[] = [];
 
     Object.entries(gttData.orders).forEach(([tvTicker, orders]) => {
-      orders.forEach((order) => {
-        // Only check two-leg (OCO) orders which have entry implied via single-leg pair
-        // For single-leg buy orders: prices[0] = entry trigger
-        // For two-leg OCO orders: prices[0] = stop, prices[1] = target
-        // HACK: Make order type enum
-        if (order.type === 'two-leg' && order.prices.length >= 2) {
-          const stop = order.prices[0];
-          // Find corresponding single-leg buy order for this ticker to get entry
-          const buyOrder = orders.find((o) => o.type === 'single' && o.prices.length >= 1);
-          if (!buyOrder) {return;}
-
-          const entry = buyOrder.prices[0];
-          const risk = Math.abs(entry - stop) * order.qty;
-
-          if (!this.isValidRiskMultiple(risk, riskLimit, halfRisk)) {
-            results.push({
-              pluginId: this.id,
-              code: 'INVALID_RISK_MULTIPLE',
-              target: tvTicker,
-              message: `${tvTicker}: Risk ₹${risk.toFixed(0)} not a multiple of ${halfRisk}/${riskLimit}`,
-              severity: 'HIGH',
-              status: 'FAIL',
-              data: {
-                tvTicker,
-                orderId: order.id,
-                entry,
-                stop,
-                quantity: order.qty,
-                computedRisk: risk,
-                expectedMultiples: [halfRisk, riskLimit],
-              },
-            });
-          }
-        }
-      });
+      this.processOrdersForTicker(tvTicker, orders, riskLimit, halfRisk, results);
     });
 
     return results;
+  }
+
+  /**
+   * Processes all orders for a single ticker and adds violations to results
+   */
+  private processOrdersForTicker(
+    tvTicker: string,
+    orders: Order[],
+    riskLimit: number,
+    halfRisk: number,
+    results: AuditResult[]
+  ): void {
+    orders.forEach((order) => {
+      // Only check two-leg (OCO) orders which have entry implied via single-leg pair
+      // For single-leg buy orders: prices[0] = entry trigger
+      // For two-leg OCO orders: prices[0] = stop, prices[1] = target
+      // HACK: Make order type enum
+      if (order.type === 'two-leg' && order.prices.length >= 2) {
+        const stop = order.prices[0];
+        // Find corresponding single-leg buy order for this ticker to get entry
+        const buyOrder = orders.find((o) => o.type === 'single' && o.prices.length >= 1);
+        if (!buyOrder) {
+          return;
+        }
+
+        const entry = buyOrder.prices[0];
+        const risk = Math.abs(entry - stop) * order.qty;
+
+        if (!this.isValidRiskMultiple(risk, riskLimit, halfRisk)) {
+          results.push({
+            pluginId: this.id,
+            code: 'INVALID_RISK_MULTIPLE',
+            target: tvTicker,
+            message: `${tvTicker}: Risk ₹${risk.toFixed(0)} not a multiple of ${halfRisk}/${riskLimit}`,
+            severity: 'HIGH',
+            status: 'FAIL',
+            data: {
+              tvTicker,
+              orderId: order.id,
+              entry,
+              stop,
+              quantity: order.qty,
+              computedRisk: risk,
+              expectedMultiples: [halfRisk, riskLimit],
+            },
+          });
+        }
+      }
+    });
   }
 
   /**

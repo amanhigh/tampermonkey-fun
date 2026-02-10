@@ -1,11 +1,11 @@
-import { TvMappingPlugin } from '../../src/manager/tv_mapping_plugin';
+import { GoldenPlugin } from '../../src/manager/golden_plugin';
 import { IPairManager } from '../../src/manager/pair';
 import { ISymbolManager } from '../../src/manager/symbol';
 
-// Unit tests for TvMappingAudit: flags missing TV mapping
+// Unit tests for GoldenAudit: flags missing TV mapping
 
-describe('TvMappingPlugin', () => {
-  let plugin: TvMappingPlugin;
+describe('GoldenPlugin', () => {
+  let plugin: GoldenPlugin;
   let pairManager: jest.Mocked<IPairManager>;
   let symbolManager: jest.Mocked<ISymbolManager>;
 
@@ -18,7 +18,7 @@ describe('TvMappingPlugin', () => {
       investingToTv: jest.fn(),
     } as any;
 
-    plugin = new TvMappingPlugin(pairManager, symbolManager);
+    plugin = new GoldenPlugin(pairManager, symbolManager);
   });
 
   describe('validate', () => {
@@ -42,7 +42,7 @@ describe('TvMappingPlugin', () => {
       expect(targets).toEqual(['MISSING']);
 
       const only = results[0];
-      expect(only.pluginId).toBe('tv-mapping');
+      expect(only.pluginId).toBe('golden');
       expect(only.code).toBe('NO_TV_MAPPING');
       expect(only.severity).toBe('HIGH');
       expect(only.status).toBe('FAIL');
