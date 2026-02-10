@@ -54,7 +54,6 @@ export interface ITickerManager {
    * @throws Error When no visible tickers are available
    */
   navigateTickers(step: number): void;
-
 }
 
 /**

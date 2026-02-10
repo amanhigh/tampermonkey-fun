@@ -27,14 +27,14 @@ export const Constants = Object.freeze({
       /** Orphan alerts audit plugin - identifies alerts without corresponding pairs */
       ORPHAN_ALERTS: 'orphan-alerts',
 
-      /** Unmapped pairs audit plugin - identifies pairs without TradingView mappings */
-      UNMAPPED_PAIRS: 'unmapped-pairs',
+      /** ReverseGolden Integrity audit plugin (FR-007) - ensures every investingTicker in PairRepo has a corresponding tvTicker in TickerRepo */
+      REVERSE_GOLDEN: 'reverse-golden',
+
+      /** Golden Integrity audit plugin (FR-008) - ensures every tvTicker in TickerRepo resolves to an investingTicker present in PairRepo */
+      GOLDEN: 'golden',
 
       /** GTT unwatched audit plugin & section - identifies and displays unwatched GTT orders */
       GTT_UNWATCHED: 'gtt-unwatched',
-
-      /** TV mapping audit plugin - analyzes TradingView to Kite symbol mappings */
-      TV_MAPPING: 'tv-mapping',
 
       /** Orphan sequences audit plugin - identifies sequence entries without corresponding tickers */
       ORPHAN_SEQUENCES: 'orphan-sequences',

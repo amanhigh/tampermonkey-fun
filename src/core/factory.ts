@@ -39,7 +39,6 @@ import { ITradingViewManager, TradingViewManager } from '../manager/tv';
 import { IPairManager, PairManager } from '../manager/pair';
 import { FnoRepo, IFnoRepo } from '../repo/fno';
 import { IFnoManager, FnoManager } from '../manager/fno';
-import { IExchangeManager, ExchangeManager } from '../manager/exchange';
 
 // Handler Imports
 import { AlertHandler } from '../handler/alert';
@@ -76,9 +75,9 @@ import { IPicassoHandler, PicassoHandler } from '../handler/picasso';
 import { PicassoApp } from './picasso';
 import { AuditSectionRegistry } from '../util/audit_registry';
 import { AlertsPlugin } from '../manager/alerts_plugin';
-import { TvMappingPlugin } from '../manager/tv_mapping_plugin';
+import { GoldenPlugin } from '../manager/golden_plugin';
 import { GttPlugin } from '../manager/gtt_plugin';
-import { UnmappedPairsPlugin } from '../manager/unmapped_pairs_plugin';
+import { ReverseGoldenPlugin } from '../manager/reverse_golden_plugin';
 import { OrphanAlertsPlugin } from '../manager/orphan_alerts_plugin';
 import { OrphanSequencesPlugin } from '../manager/orphan_sequences_plugin';
 import { OrphanFlagsPlugin } from '../manager/orphan_flags_plugin';
@@ -89,7 +88,7 @@ import { TickerCollisionPlugin } from '../manager/ticker_collision_plugin';
 import { GttAuditSection } from '../handler/gtt_section';
 import { AlertsAuditSection } from '../handler/alerts_section';
 import { OrphanAlertsSection } from '../handler/orphan_alerts_section';
-import { UnmappedPairsSection } from '../handler/unmapped_pairs_section';
+import { ReverseGoldenSection } from '../handler/reverse_golden_section';
 import { OrphanSequencesSection } from '../handler/orphan_sequences_section';
 import { OrphanFlagsSection } from '../handler/orphan_flags_section';
 import { OrphanExchangeSection } from '../handler/orphan_exchange_section';
@@ -354,13 +353,13 @@ export class Factory {
           )
       ),
 
-    // Return a singleton TvMappingPlugin instance
+    // Return a singleton GoldenPlugin instance (FR-008)
     // NOTE: Registered but not actively used in audit flow (deferred for future use cases)
     // See Plan.md Task 2.2 for analysis of why this plugin is not integrated
-    tvMapping: () =>
+    golden: () =>
       Factory.getInstance(
-        'auditPlugin_tvmapping',
-        () => new TvMappingPlugin(Factory.manager.pair(), Factory.manager.symbol())
+        'auditPlugin_golden',
+        () => new GoldenPlugin(Factory.manager.pair(), Factory.manager.symbol())
       ),
 
     // Return a singleton GttPlugin instance
@@ -370,11 +369,11 @@ export class Factory {
         () => new GttPlugin(Factory.repo.kite(), Factory.manager.watch())
       ),
 
-    // Return a singleton UnmappedPairsPlugin instance
-    unmappedPairs: () =>
+    // Return a singleton ReverseGoldenPlugin instance (FR-007)
+    reverseGolden: () =>
       Factory.getInstance(
-        'auditPlugin_unmappedPairs',
-        () => new UnmappedPairsPlugin(Factory.repo.pair(), Factory.repo.ticker())
+        'auditPlugin_reverseGolden',
+        () => new ReverseGoldenPlugin(Factory.repo.pair(), Factory.repo.ticker())
       ),
 
     // Return a singleton OrphanAlertsPlugin instance
@@ -395,12 +394,7 @@ export class Factory {
     orphanFlags: () =>
       Factory.getInstance(
         'auditPlugin_orphanFlags',
-        () =>
-          new OrphanFlagsPlugin(
-            Factory.repo.flag(),
-            Factory.repo.ticker(),
-            Factory.manager.symbol()
-          )
+        () => new OrphanFlagsPlugin(Factory.repo.flag(), Factory.repo.ticker(), Factory.manager.symbol())
       ),
 
     // Return a singleton OrphanExchangePlugin instance
@@ -419,8 +413,7 @@ export class Factory {
       Factory.getInstance('auditPlugin_tickerCollision', () => new TickerCollisionPlugin(Factory.repo.ticker())),
 
     // Return a singleton TradeRiskPlugin instance
-    tradeRisk: () =>
-      Factory.getInstance('auditPlugin_tradeRisk', () => new TradeRiskPlugin(Factory.repo.kite())),
+    tradeRisk: () => Factory.getInstance('auditPlugin_tradeRisk', () => new TradeRiskPlugin(Factory.repo.kite())),
 
     // ===== SECTION CREATION =====
     // GTT Audit Section - receives plugin via direct injection
@@ -463,14 +456,14 @@ export class Factory {
           )
       ),
 
-    // Unmapped Pairs Audit Section - receives plugin via direct injection
+    // ReverseGolden Audit Section (FR-007) - receives plugin via direct injection
     // Displays pairs without TradingView mappings for cleanup
-    unmappedPairsSection: () =>
+    reverseGoldenSection: () =>
       Factory.getInstance(
-        'unmappedPairsSection',
+        'reverseGoldenSection',
         () =>
-          new UnmappedPairsSection(
-            Factory.audit.unmappedPairs(), // ✅ Direct plugin injection
+          new ReverseGoldenSection(
+            Factory.audit.reverseGolden(), // ✅ Direct plugin injection
             Factory.handler.ticker(), // For opening tickers
             Factory.handler.pair() // ✅ PairHandler handles watchlist repaint
           )
@@ -492,12 +485,7 @@ export class Factory {
     orphanFlagsSection: () =>
       Factory.getInstance(
         'orphanFlagsSection',
-        () =>
-          new OrphanFlagsSection(
-            Factory.audit.orphanFlags(),
-            Factory.handler.ticker(),
-            Factory.manager.flag()
-          )
+        () => new OrphanFlagsSection(Factory.audit.orphanFlags(), Factory.handler.ticker(), Factory.manager.flag())
       ),
 
     // Orphan Exchange Audit Section (FR-013)
@@ -505,11 +493,7 @@ export class Factory {
       Factory.getInstance(
         'orphanExchangeSection',
         () =>
-          new OrphanExchangeSection(
-            Factory.audit.orphanExchange(),
-            Factory.handler.ticker(),
-            Factory.manager.symbol()
-          )
+          new OrphanExchangeSection(Factory.audit.orphanExchange(), Factory.handler.ticker(), Factory.manager.symbol())
       ),
 
     // Duplicate PairIds Audit Section (FR-014)
@@ -541,12 +525,7 @@ export class Factory {
     tradeRiskSection: () =>
       Factory.getInstance(
         'tradeRiskSection',
-        () =>
-          new TradeRiskSection(
-            Factory.audit.tradeRisk(),
-            Factory.handler.ticker(),
-            Factory.manager.kite()
-          )
+        () => new TradeRiskSection(Factory.audit.tradeRisk(), Factory.handler.ticker(), Factory.manager.kite())
       ),
 
     // ===== REGISTRY =====
@@ -559,7 +538,7 @@ export class Factory {
         reg.registerSection(Factory.audit.alertsSection());
         reg.registerSection(Factory.audit.gttSection());
         reg.registerSection(Factory.audit.orphanAlertsSection());
-        reg.registerSection(Factory.audit.unmappedPairsSection());
+        reg.registerSection(Factory.audit.reverseGoldenSection());
         reg.registerSection(Factory.audit.orphanSequencesSection());
         reg.registerSection(Factory.audit.orphanFlagsSection());
         reg.registerSection(Factory.audit.orphanExchangeSection());

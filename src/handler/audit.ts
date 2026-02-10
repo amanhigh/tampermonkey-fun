@@ -99,8 +99,8 @@ export class AuditHandler implements IAuditHandler {
     // Run Orphan Alerts audit and render section
     await this.auditOrphanAlerts();
 
-    // Run Unmapped Pairs audit and render section
-    await this.auditUnmappedPairs();
+    // Run ReverseGolden audit and render section
+    await this.auditReverseGolden();
 
     // Run Orphan Sequences audit and render section
     await this.auditOrphanSequences();
@@ -216,11 +216,11 @@ export class AuditHandler implements IAuditHandler {
   }
 
   /**
-   * Run Unmapped Pairs audit and render section
+   * Run ReverseGolden audit and render section
    */
-  private async auditUnmappedPairs(): Promise<void> {
+  private async auditReverseGolden(): Promise<void> {
     // Get section from registry (section contains plugin)
-    const section = this.auditRegistry.mustGetSection(Constants.AUDIT.PLUGINS.UNMAPPED_PAIRS);
+    const section = this.auditRegistry.mustGetSection(Constants.AUDIT.PLUGINS.REVERSE_GOLDEN);
 
     // Create renderer with section and render
     const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);

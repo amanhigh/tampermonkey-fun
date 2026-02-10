@@ -124,9 +124,9 @@ describe('AuditHandler', () => {
         onRightClick: jest.fn(),
       } as any;
 
-      const mockUnmappedPairsSection = {
-        id: 'unmapped-pairs',
-        title: 'Unmapped Pairs',
+      const mockReverseGoldenSection = {
+        id: 'reverse-golden',
+        title: 'ReverseGolden Integrity',
         plugin: mockPlugin,
         headerFormatter: jest.fn().mockReturnValue('Unmapped Pairs'),
         buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
@@ -214,7 +214,7 @@ describe('AuditHandler', () => {
         if (id === 'alerts') return mockAlertsSection;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
-        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
+        if (id === 'reverse-golden') return mockReverseGoldenSection;
         if (id === 'orphan-sequences') return mockOrphanSequencesSection;
         if (id === 'orphan-flags') return mockOrphanFlagsSection;
         if (id === 'orphan-exchange') return mockOrphanExchangeSection;
@@ -302,9 +302,9 @@ describe('AuditHandler', () => {
       } as any;
 
       // Mock Unmapped Pairs section
-      const mockUnmappedPairsSection = {
-        id: 'unmapped-pairs',
-        title: 'Unmapped Pairs',
+      const mockReverseGoldenSection = {
+        id: 'reverse-golden',
+        title: 'ReverseGolden Integrity',
         plugin: mockPlugin,
         headerFormatter: jest.fn().mockReturnValue('Unmapped Pairs'),
         buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
@@ -392,7 +392,7 @@ describe('AuditHandler', () => {
         if (id === 'alerts') return mockAlertsSection;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
-        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
+        if (id === 'reverse-golden') return mockReverseGoldenSection;
         if (id === 'orphan-sequences') return mockOrphanSequencesSection;
         if (id === 'orphan-flags') return mockOrphanFlagsSection;
         if (id === 'orphan-exchange') return mockOrphanExchangeSection;
@@ -496,9 +496,9 @@ describe('AuditHandler', () => {
         limit: 10,
         context: undefined,
       } as any;
-      const mockUnmappedPairsSection = {
-        id: 'unmapped-pairs',
-        title: 'Unmapped Pairs',
+      const mockReverseGoldenSection = {
+        id: 'reverse-golden',
+        title: 'ReverseGolden Integrity',
         plugin: mockPlugin,
         headerFormatter: jest.fn(),
         buttonColorMapper: jest.fn(),
@@ -585,7 +585,7 @@ describe('AuditHandler', () => {
         if (id === 'alerts') return mockAlertsSectionWithResults;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
-        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
+        if (id === 'reverse-golden') return mockReverseGoldenSection;
         if (id === 'orphan-sequences') return mockOrphanSequencesSection;
         if (id === 'orphan-flags') return mockOrphanFlagsSection;
         if (id === 'orphan-exchange') return mockOrphanExchangeSection;
@@ -648,9 +648,9 @@ describe('AuditHandler', () => {
         limit: 10,
         context: undefined,
       } as any;
-      const mockUnmappedPairsSection = {
-        id: 'unmapped-pairs',
-        title: 'Unmapped Pairs',
+      const mockReverseGoldenSection = {
+        id: 'reverse-golden',
+        title: 'ReverseGolden Integrity',
         plugin: mockPlugin,
         headerFormatter: jest.fn(),
         buttonColorMapper: jest.fn(),
@@ -737,7 +737,7 @@ describe('AuditHandler', () => {
         if (id === 'alerts') return mockAlertsSectionWithResults;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
-        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
+        if (id === 'reverse-golden') return mockReverseGoldenSection;
         if (id === 'orphan-sequences') return mockOrphanSequencesSection;
         if (id === 'orphan-flags') return mockOrphanFlagsSection;
         if (id === 'orphan-exchange') return mockOrphanExchangeSection;
@@ -791,9 +791,9 @@ describe('AuditHandler', () => {
         limit: 10,
         context: undefined,
       } as any;
-      const mockUnmappedPairsSection = {
-        id: 'unmapped-pairs',
-        title: 'Unmapped Pairs',
+      const mockReverseGoldenSection = {
+        id: 'reverse-golden',
+        title: 'ReverseGolden Integrity',
         plugin: mockPlugin,
         headerFormatter: jest.fn(),
         buttonColorMapper: jest.fn(),
@@ -880,7 +880,7 @@ describe('AuditHandler', () => {
         if (id === 'alerts') return mockAlertsSection;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
-        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
+        if (id === 'reverse-golden') return mockReverseGoldenSection;
         if (id === 'orphan-sequences') return mockOrphanSequencesSection;
         if (id === 'orphan-flags') return mockOrphanFlagsSection;
         if (id === 'orphan-exchange') return mockOrphanExchangeSection;
@@ -1008,6 +1008,18 @@ describe('AuditHandler', () => {
         onRightClick: jest.fn(),
       } as any;
 
+      const mockReverseGoldenSection = {
+        id: 'reverse-golden',
+        title: 'ReverseGolden Integrity',
+        plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('ReverseGolden'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
       const mockTradeRiskSection = {
         id: 'trade-risk',
         title: 'Trade Risk Multiple',
@@ -1024,7 +1036,7 @@ describe('AuditHandler', () => {
         if (id === 'alerts') return mockAlertsSection;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
-        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
+        if (id === 'reverse-golden') return mockReverseGoldenSection;
         if (id === 'orphan-sequences') return mockOrphanSequencesSection;
         if (id === 'orphan-flags') return mockOrphanFlagsSection;
         if (id === 'orphan-exchange') return mockOrphanExchangeSection;
@@ -1082,17 +1094,6 @@ describe('AuditHandler', () => {
         plugin: mockOrphanPlugin,
         headerFormatter: jest.fn().mockReturnValue('Orphan Alerts'),
         buttonColorMapper: jest.fn().mockReturnValue('darkred'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-      const mockUnmappedPairsSection = {
-        id: 'unmapped-pairs',
-        title: 'Unmapped Pairs',
-        plugin: { run: jest.fn().mockResolvedValue([]) },
-        headerFormatter: jest.fn().mockReturnValue('Unmapped Pairs'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
         limit: 10,
         context: undefined,
         onLeftClick: jest.fn(),
@@ -1160,6 +1161,18 @@ describe('AuditHandler', () => {
         onRightClick: jest.fn(),
       } as any;
 
+      const mockReverseGoldenSection = {
+        id: 'reverse-golden',
+        title: 'ReverseGolden Integrity',
+        plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('ReverseGolden'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
       const mockTradeRiskSection = {
         id: 'trade-risk',
         title: 'Trade Risk Multiple',
@@ -1177,7 +1190,7 @@ describe('AuditHandler', () => {
         if (id === 'alerts') return mockAlertsSection;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
-        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
+        if (id === 'reverse-golden') return mockReverseGoldenSection;
         if (id === 'orphan-sequences') return mockOrphanSequencesSection;
         if (id === 'orphan-flags') return mockOrphanFlagsSection;
         if (id === 'orphan-exchange') return mockOrphanExchangeSection;

@@ -8,7 +8,7 @@ import { Notifier } from '../util/notify';
 import { Constants } from '../models/constant';
 
 /**
- * Unmapped Pairs Audit Section
+ * ReverseGolden Integrity Audit Section (FR-007)
  * Displays pairs that exist without TradingView ticker mappings
  *
  * Features:
@@ -21,10 +21,10 @@ import { Constants } from '../models/constant';
  * - Plugin contains the business logic for finding unmapped pairs
  * - Section defines the UI specification and interaction handlers
  */
-export class UnmappedPairsSection extends BaseAuditSection implements IAuditSection {
-  // Identity - shares ID with UNMAPPED_PAIRS plugin
-  readonly id = Constants.AUDIT.PLUGINS.UNMAPPED_PAIRS;
-  readonly title = 'Unmapped Pairs';
+export class ReverseGoldenSection extends BaseAuditSection implements IAuditSection {
+  // Identity - shares ID with REVERSE_GOLDEN plugin
+  readonly id = Constants.AUDIT.PLUGINS.REVERSE_GOLDEN;
+  readonly title = 'ReverseGolden Integrity';
 
   // Data source (injected directly, not fetched from registry)
   readonly plugin: IAudit;
@@ -42,24 +42,24 @@ export class UnmappedPairsSection extends BaseAuditSection implements IAuditSect
   readonly onRightClick = (result: AuditResult): void => {
     const investingTicker = result.target;
     this.pairHandler.deletePairInfo(investingTicker);
-    Notifier.red(`🗑️ Removed unmapped pair: ${investingTicker}`);
+    Notifier.red(`🗑️ Removed reverse golden violation: ${investingTicker}`);
   };
 
   readonly onFixAll = (results: AuditResult[]) => {
     results.forEach((result) => {
       this.pairHandler.deletePairInfo(result.target);
     });
-    Notifier.red(`🗑️ Removed ${results.length} unmapped pair(s)`);
+    Notifier.red(`🗑️ Removed ${results.length} reverse golden violation(s)`);
   };
 
   /**
-   * Header formatter showing count of unmapped pairs
+   * Header formatter showing count of reverse golden violations
    */
-  readonly headerFormatter = (results: AuditResult[]): string => `Unmapped Pairs (${results.length})`;
+  readonly headerFormatter = (results: AuditResult[]): string => `ReverseGolden (${results.length})`;
 
   /**
    * Constructor with injected dependencies
-   * @param plugin UnmappedPairsAudit plugin
+   * @param plugin ReverseGolden audit plugin
    * @param tickerHandler For opening tickers
    * @param pairHandler For cleanup operations (handles watchlist repaint internally)
    */

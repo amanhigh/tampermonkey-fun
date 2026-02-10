@@ -5,12 +5,13 @@ import { ISymbolManager } from './symbol';
 import { Constants } from '../models/constant';
 
 /**
- * TV Mapping Audit plugin: flags investing tickers that lack a TradingView mapping.
+ * Golden Integrity Audit plugin (FR-008): ensures every tvTicker in TickerRepo resolves to an investingTicker present in PairRepo.
+ * Flags investing tickers that lack a TradingView mapping.
  * Emits FAIL results only (no PASS records) similar to AlertsAudit behavior.
  */
-export class TvMappingPlugin extends BaseAuditPlugin {
-  public readonly id = Constants.AUDIT.PLUGINS.TV_MAPPING;
-  public readonly title = 'TradingView Mapping';
+export class GoldenPlugin extends BaseAuditPlugin {
+  public readonly id = Constants.AUDIT.PLUGINS.GOLDEN;
+  public readonly title = 'Golden Integrity';
 
   constructor(
     private readonly pairManager: IPairManager,
