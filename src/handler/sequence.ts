@@ -55,11 +55,11 @@ export class SequenceHandler implements ISequenceHandler {
     const $displayInput = $(`#${Constants.UI.IDS.INPUTS.DISPLAY}`);
     $displayInput.val(message);
 
-    // Red background for unmapped tickers, maroon for YR sequence, black otherwise
+    // Background colors: maroon for unmapped, blue for YR sequence, black otherwise
     if (!investingTicker) {
-      $displayInput.css('background-color', 'red');
-    } else if (sequence === SequenceType.YR) {
       $displayInput.css('background-color', 'maroon');
+    } else if (sequence === SequenceType.YR) {
+      $displayInput.css('background-color', 'blue');
     } else {
       $displayInput.css('background-color', 'black');
     }

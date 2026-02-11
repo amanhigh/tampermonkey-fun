@@ -34,15 +34,21 @@ export class TradeRiskSection extends BaseAuditSection implements IAuditSection 
     }
   };
 
+  private allResults: AuditResult[] = [];
+
   readonly onRightClick = (result: AuditResult): void => {
-    const orderId = result.data?.orderId as string | undefined;
-    if (!orderId) {
+    const tvTicker = result.target;
+    // Find all non-compliant orders for this ticker
+    const tickerResults = this.allResults.filter((r) => r.target === tvTicker);
+    const orderIds = tickerResults.map((r) => r.data?.orderId as string | undefined).filter((id): id is string => !!id);
+
+    if (orderIds.length === 0) {
       Notifier.warn('No order ID found for this finding');
       return;
     }
-    // BUG: Handle more than one order for Ticker ?
-    this.kiteManager.deleteOrder(orderId);
-    Notifier.success(`✓ Deleted order ${orderId} for ${result.target}`);
+
+    orderIds.forEach((orderId) => this.kiteManager.deleteOrder(orderId));
+    Notifier.success(`✓ Deleted ${orderIds.length} order(s) for ${tvTicker}`);
   };
 
   readonly onFixAll = (results: AuditResult[]): void => {
@@ -58,6 +64,7 @@ export class TradeRiskSection extends BaseAuditSection implements IAuditSection 
   };
 
   readonly headerFormatter = (results: AuditResult[]): string => {
+    this.allResults = results;
     if (results.length === 0) {
       return `<span class="success-badge">✓ All trades compliant</span>`;
     }
