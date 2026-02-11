@@ -121,14 +121,16 @@ export class AlertManager implements IAlertManager {
         const pairId = $alt.attr('data-pair-id') || '';
         const price = parseFloat($alt.attr('data-value') || '0');
         const id = $alt.attr('data-alert-id') || '';
+        const name = $alt.attr('data-name') || '';
 
-        const alert = new Alert(id, pairId, price);
+        const alert = new Alert(id, pairId, price, name);
+
         if (pairId && !isNaN(price) && id && price > 0) {
           this.alertRepo.addAlert(pairId, alert);
           count++;
         } else {
-          const name = this.pairManager.investingTickerToPairInfo(pairId)?.name;
-          console.warn('Invalid alert:', name, alert);
+          const fallbackName = this.pairManager.investingTickerToPairInfo(pairId)?.name;
+          console.warn('Invalid alert:', fallbackName, alert);
         }
       });
 

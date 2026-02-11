@@ -2,11 +2,13 @@ export class Alert {
   id: string;
   price: number;
   pairId: string;
+  name: string;
 
-  constructor(id: string, pairId: string, price: number) {
+  constructor(id: string, pairId: string, price: number, name = '') {
     this.id = id;
     this.pairId = pairId;
     this.price = price;
+    this.name = name;
   }
 }
 

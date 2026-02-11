@@ -1,5 +1,6 @@
 import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
+import { Alert } from '../models/alert';
 import { IAlertRepo } from '../repo/alert';
 import { IPairRepo } from '../repo/pair';
 import { Constants } from '../models/constant';
@@ -11,7 +12,7 @@ import { Constants } from '../models/constant';
  */
 export class OrphanAlertsPlugin extends BaseAuditPlugin {
   public readonly id = Constants.AUDIT.PLUGINS.ORPHAN_ALERTS;
-  public readonly title = 'Orphan Alerts';
+  public readonly title = 'Alerts';
 
   constructor(
     private readonly alertRepo: IAlertRepo,
@@ -44,17 +45,18 @@ export class OrphanAlertsPlugin extends BaseAuditPlugin {
     this.alertRepo.getAllKeys().forEach((pairId: string) => {
       if (!validPairIds.has(pairId)) {
         const alerts = this.alertRepo.get(pairId)!;
+        const alertName = this.resolveAlertName(alerts, pairId);
         // Create single result per orphan pairId, metadata in data field
         results.push({
           pluginId: this.id,
           code: 'NO_PAIR_MAPPING',
-          // TODO: #A Extract Better Name from HTML Parsing of Alerts.
-          target: `${pairId}`,
-          message: `${pairId}: ${alerts.length} alert(s) exist but have no corresponding pair`,
+          target: alertName,
+          message: `${alertName}: ${alerts.length} alert(s) exist but have no corresponding pair`,
           severity: 'HIGH',
           status: 'FAIL',
           data: {
             pairId,
+            alertName,
             alertCount: alerts.length,
           },
         });
@@ -62,5 +64,17 @@ export class OrphanAlertsPlugin extends BaseAuditPlugin {
     });
 
     return Promise.resolve(results);
+  }
+
+  /**
+   * Resolves a human-readable name for an orphan alert group.
+   * Uses the first alert's data-name attribute if available, falls back to pairId.
+   * @param alerts Array of alerts for this pairId
+   * @param pairId The pair identifier
+   * @returns Human-readable name or pairId as fallback
+   */
+  private resolveAlertName(alerts: Alert[], pairId: string): string {
+    const name = alerts.find((a) => a.name)?.name;
+    return name || pairId;
   }
 }
