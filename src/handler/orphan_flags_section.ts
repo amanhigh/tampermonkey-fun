@@ -48,9 +48,9 @@ export class OrphanFlagsSection extends BaseAuditSection implements IAuditSectio
 
   readonly headerFormatter = (results: AuditResult[]): string => {
     if (results.length === 0) {
-      return `<span class="success-badge">✓ No orphan flags</span>`;
+      return `<span class="success-badge">✓ No flags</span>`;
     }
-    return `<span class="count-badge">Orphan Flags: ${results.length}</span>`;
+    return `<span class="count-badge">Flags: ${results.length}</span>`;
   };
 
   constructor(

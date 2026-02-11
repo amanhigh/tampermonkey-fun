@@ -103,7 +103,7 @@ describe('OrphanSequencesSection', () => {
   describe('headerFormatter', () => {
     test('shows success when no results', () => {
       const header = section.headerFormatter([]);
-      expect(header).toContain('No orphan sequences');
+      expect(header).toContain('No sequences');
     });
 
     test('shows count when results present', () => {

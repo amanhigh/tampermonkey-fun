@@ -48,9 +48,9 @@ export class OrphanExchangeSection extends BaseAuditSection implements IAuditSec
 
   readonly headerFormatter = (results: AuditResult[]): string => {
     if (results.length === 0) {
-      return `<span class="success-badge">✓ No orphan exchanges</span>`;
+      return `<span class="success-badge">✓ No exchanges</span>`;
     }
-    return `<span class="count-badge">Orphan Exchange: ${results.length}</span>`;
+    return `<span class="count-badge">Exchange: ${results.length}</span>`;
   };
 
   constructor(

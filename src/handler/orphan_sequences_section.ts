@@ -48,9 +48,9 @@ export class OrphanSequencesSection extends BaseAuditSection implements IAuditSe
 
   readonly headerFormatter = (results: AuditResult[]): string => {
     if (results.length === 0) {
-      return `<span class="success-badge">✓ No orphan sequences</span>`;
+      return `<span class="success-badge">✓ No sequences</span>`;
     }
-    return `<span class="count-badge">Orphan Sequences: ${results.length}</span>`;
+    return `<span class="count-badge">Sequences: ${results.length}</span>`;
   };
 
   constructor(

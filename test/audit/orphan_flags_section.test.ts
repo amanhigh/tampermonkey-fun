@@ -77,7 +77,7 @@ describe('OrphanFlagsSection', () => {
 
   describe('headerFormatter', () => {
     test('shows success when no results', () => {
-      expect(section.headerFormatter([])).toContain('No orphan flags');
+      expect(section.headerFormatter([])).toContain('No flags');
     });
 
     test('shows count when results present', () => {

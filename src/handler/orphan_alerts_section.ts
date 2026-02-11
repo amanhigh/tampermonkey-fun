@@ -68,9 +68,10 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
 
   readonly headerFormatter = (auditResults: AuditResult[]) => {
     if (auditResults.length === 0) {
-      return `<span class="success-badge">✓ No orphan alerts</span>`;
+      return `<span class="success-badge">✓ No alerts</span>`;
     }
-    return `<span style="color: darkred">Orphan Alerts: ${auditResults.length}</span>`;
+    // BUG: Why are we not reading title from Plugin from all sections or move title here avoid duplication.
+    return `<span style="color: darkred">Alerts: ${auditResults.length}</span>`;
   };
 
   /**
