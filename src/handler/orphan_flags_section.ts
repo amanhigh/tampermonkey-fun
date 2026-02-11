@@ -26,18 +26,17 @@ export class OrphanFlagsSection extends BaseAuditSection implements IAuditSectio
   readonly context: unknown = undefined;
 
   readonly onLeftClick = (result: AuditResult) => {
-    const ticker = result.target;
-    if (ticker) {
-      this.tickerHandler.openTicker(ticker);
+    const tvTicker = result.target;
+    if (tvTicker) {
+      this.tickerHandler.openTicker(tvTicker);
     } else {
       Notifier.warn(`No tvTicker found for ${result.target}`);
     }
   };
 
   readonly onRightClick = (result: AuditResult): void => {
-    const ticker = result.target;
-    // HACK: Clarify it is tvTicker or investingTicker
-    this.pairHandler.stopTrackingByTvTicker(ticker);
+    const tvTicker = result.target;
+    this.pairHandler.stopTrackingByTvTicker(tvTicker);
   };
 
   readonly onFixAll = (results: AuditResult[]): void => {

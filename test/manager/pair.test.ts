@@ -249,7 +249,7 @@ describe('PairManager', () => {
       expect(result).toBe(true);
     });
 
-    it('should skip cleanup when tvTicker does not exist', () => {
+    it('should skip cleanup when no TV ticker exists', () => {
       const investingTicker = 'HDFC';
 
       mockSymbolManager.investingToTv.mockReturnValue(null);

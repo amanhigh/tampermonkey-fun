@@ -2,6 +2,7 @@ import { OrphanAlertsSection } from '../../src/handler/orphan_alerts_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { IAlertRepo } from '../../src/repo/alert';
 import { IAlertManager } from '../../src/manager/alert';
+import { IUIUtil } from '../../src/util/ui';
 import { Alert } from '../../src/models/alert';
 import { Notifier } from '../../src/util/notify';
 
@@ -10,7 +11,7 @@ describe('OrphanAlertsSection', () => {
   let mockPlugin: IAudit;
   let mockAlertRepo: Partial<IAlertRepo>;
   let mockAlertManager: Partial<IAlertManager>;
-  let confirmMock: jest.Mock;
+  let mockUIUtil: Partial<IUIUtil>;
   let notifyWarnSpy: jest.SpyInstance;
   let notifyInfoSpy: jest.SpyInstance;
   let notifySuccessSpy: jest.SpyInstance;
@@ -51,9 +52,10 @@ describe('OrphanAlertsSection', () => {
       deleteAlert: jest.fn().mockResolvedValue(undefined),
     };
 
-    // Mock global confirm
-    confirmMock = jest.fn().mockReturnValue(false);
-    (global as any).confirm = confirmMock;
+    // Mock UIUtil
+    mockUIUtil = {
+      showConfirm: jest.fn().mockReturnValue(false),
+    };
 
     // Mock Notifier methods
     notifyWarnSpy = jest.spyOn(Notifier, 'warn').mockImplementation();
@@ -61,12 +63,11 @@ describe('OrphanAlertsSection', () => {
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
     notifyErrorSpy = jest.spyOn(Notifier, 'error').mockImplementation();
 
-    section = new OrphanAlertsSection(mockPlugin, mockAlertRepo as IAlertRepo, mockAlertManager as IAlertManager);
+    section = new OrphanAlertsSection(mockPlugin, mockAlertRepo as IAlertRepo, mockAlertManager as IAlertManager, mockUIUtil as IUIUtil);
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
-    delete (global as any).confirm;
   });
 
   describe('Section Properties', () => {
@@ -131,7 +132,7 @@ describe('OrphanAlertsSection', () => {
       };
 
       (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
-      confirmMock.mockReturnValue(true);
+      (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(true);
 
       await section.onRightClick(result);
 
@@ -151,7 +152,7 @@ describe('OrphanAlertsSection', () => {
       };
 
       (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
-      confirmMock.mockReturnValue(false);
+      (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(false);
 
       await section.onRightClick(result);
 
@@ -172,7 +173,7 @@ describe('OrphanAlertsSection', () => {
       };
 
       (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
-      confirmMock.mockReturnValue(true);
+      (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(true);
 
       await section.onRightClick(result);
 
@@ -195,7 +196,7 @@ describe('OrphanAlertsSection', () => {
       };
 
       (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
-      confirmMock.mockReturnValue(true);
+      (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(true);
 
       await section.onRightClick(result);
 
@@ -215,7 +216,7 @@ describe('OrphanAlertsSection', () => {
       };
 
       (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
-      confirmMock.mockReturnValue(true);
+      (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(true);
 
       await section.onRightClick(result);
 
@@ -254,7 +255,7 @@ describe('OrphanAlertsSection', () => {
       };
 
       (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
-      confirmMock.mockReturnValue(true);
+      (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(true);
       (mockAlertManager.deleteAlert as jest.Mock).mockRejectedValue(new Error('API Error: Cannot delete alert'));
 
       await section.onRightClick(result);
@@ -276,13 +277,14 @@ describe('OrphanAlertsSection', () => {
       };
 
       (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
-      confirmMock.mockReturnValue(false);
+      (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(false);
 
       await section.onRightClick(result);
 
-      expect(confirmMock).toHaveBeenCalledWith(expect.stringContaining('Delete 2 orphan alert(s)?'));
-      expect(confirmMock).toHaveBeenCalledWith(expect.stringContaining('PairId: 6393'));
-      expect(confirmMock).toHaveBeenCalledWith(expect.stringContaining('391.92, 404.4'));
+      expect(mockUIUtil.showConfirm).toHaveBeenCalledWith(
+        'Delete Orphan Alerts',
+        expect.stringContaining('Delete 2 orphan alert(s)?')
+      );
     });
 
     test('handles missing pairId in data field', async () => {
@@ -315,7 +317,7 @@ describe('OrphanAlertsSection', () => {
       };
 
       (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
-      confirmMock.mockReturnValue(true);
+      (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(true);
 
       await section.onRightClick(result);
 

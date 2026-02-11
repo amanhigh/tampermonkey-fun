@@ -3,6 +3,7 @@ import { IAudit, AuditResult } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { ITickerHandler } from './ticker';
 import { IKiteManager } from '../manager/kite';
+import { IUIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 
@@ -58,7 +59,7 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
         `This will permanently delete these orders from Kite.`;
 
       // Show confirmation dialog
-      if (!confirm(message)) {
+      if (!this.uiUtil.showConfirm('Delete GTT Orders', message)) {
         Notifier.info('Deletion cancelled');
         return;
       }
@@ -108,7 +109,8 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
   constructor(
     plugin: IAudit,
     private readonly tickerHandler: ITickerHandler,
-    private readonly kiteManager: IKiteManager
+    private readonly kiteManager: IKiteManager,
+    private readonly uiUtil: IUIUtil
   ) {
     super();
     this.plugin = plugin;

@@ -46,9 +46,8 @@ export class DuplicatePairIdsSection extends BaseAuditSection implements IAuditS
 
     // Delete all but the first (canonical) investingTicker
     const duplicates = investingTickers.slice(1);
-    duplicates.forEach((ticker) => {
-      // HACK: Clarify it is investing ticker or tv ticker
-      this.pairHandler.stopTrackingByInvestingTicker(ticker);
+    duplicates.forEach((investingTicker) => {
+      this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
     });
     Notifier.success(`⏹ Stopped tracking ${duplicates.length} duplicate(s) for pairId ${result.target}`);
   };
@@ -61,8 +60,8 @@ export class DuplicatePairIdsSection extends BaseAuditSection implements IAuditS
         return;
       }
       const duplicates = investingTickers.slice(1);
-      duplicates.forEach((ticker) => {
-        this.pairHandler.stopTrackingByInvestingTicker(ticker);
+      duplicates.forEach((investingTicker) => {
+        this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
       });
       totalRemoved += duplicates.length;
     });

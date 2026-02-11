@@ -76,7 +76,6 @@ export interface IUIUtil {
    * @returns True if user confirmed, false otherwise
    */
   showConfirm(title: string, message?: string): boolean;
-  // HACK: Use this in all places where confirm is used
 }
 
 export class UIUtil implements IUIUtil {

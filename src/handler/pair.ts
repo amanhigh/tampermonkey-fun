@@ -4,6 +4,7 @@ import { IPairManager } from '../manager/pair';
 import { Notifier } from '../util/notify';
 import { IInvestingClient } from '../client/investing';
 import { ISymbolManager } from '../manager/symbol';
+import { IStyleManager } from '../manager/style';
 import { ITickerManager } from '../manager/ticker';
 import { IWatchListHandler } from './watchlist';
 
@@ -41,7 +42,8 @@ export class PairHandler implements IPairHandler {
     private readonly smartPrompt: ISmartPrompt,
     private readonly tickerManager: ITickerManager,
     private readonly symbolManager: ISymbolManager,
-    private readonly watchListHandler: IWatchListHandler
+    private readonly watchListHandler: IWatchListHandler,
+    private readonly styleManager: IStyleManager
   ) {}
 
   /**
@@ -100,8 +102,9 @@ export class PairHandler implements IPairHandler {
    * @param investingTicker The investing.com ticker symbol to stop tracking
    */
   public stopTrackingByInvestingTicker(investingTicker: string): void {
-    // BUG: It should also delete all chart elements
-    // BUG: Delete Alerts that are Setup.
+    // Clear chart drawings if currently viewing the ticker being untracked
+    this.clearChartIfCurrentTicker(investingTicker);
+
     const cleanedFromLists = this.pairManager.stopTrackingByInvestingTicker(investingTicker);
 
     if (cleanedFromLists) {
@@ -116,6 +119,11 @@ export class PairHandler implements IPairHandler {
    * @param tvTicker The TradingView ticker to stop tracking
    */
   public stopTrackingByTvTicker(tvTicker: string): void {
+    // Clear chart drawings if currently viewing the ticker being untracked
+    if (this.tickerManager.getTicker() === tvTicker) {
+      this.styleManager.clearAll();
+    }
+
     const cleanedFromLists = this.pairManager.stopTrackingByTvTicker(tvTicker);
 
     if (cleanedFromLists) {
@@ -123,5 +131,16 @@ export class PairHandler implements IPairHandler {
     }
 
     Notifier.success(`⏹ Stopped tracking ${tvTicker}`);
+  }
+
+  /**
+   * Clears chart drawings if the current chart shows a ticker mapped to the investing ticker
+   * @param investingTicker Investing.com ticker being untracked
+   */
+  private clearChartIfCurrentTicker(investingTicker: string): void {
+    const tvTicker = this.symbolManager.investingToTv(investingTicker);
+    if (this.tickerManager.getTicker() === tvTicker) {
+      this.styleManager.clearAll();
+    }
   }
 }

@@ -2,6 +2,7 @@ import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
 import { ISequenceRepo } from '../repo/sequence';
 import { ITickerRepo } from '../repo/ticker';
+import { ISymbolManager } from './symbol';
 import { Constants } from '../models/constant';
 
 /**
@@ -15,7 +16,8 @@ export class OrphanSequencesPlugin extends BaseAuditPlugin {
 
   constructor(
     private readonly sequenceRepo: ISequenceRepo,
-    private readonly tickerRepo: ITickerRepo
+    private readonly tickerRepo: ITickerRepo,
+    private readonly symbolManager: ISymbolManager
   ) {
     super();
   }
@@ -32,9 +34,11 @@ export class OrphanSequencesPlugin extends BaseAuditPlugin {
     }
 
     const results: AuditResult[] = [];
-    // BUG: Should exclude Composite Symbols.
 
     this.sequenceRepo.getAllKeys().forEach((ticker: string) => {
+      if (this.symbolManager.isComposite(ticker)) {
+        return;
+      }
       if (!this.tickerRepo.has(ticker)) {
         const sequence = this.sequenceRepo.get(ticker);
         results.push({

@@ -99,21 +99,25 @@ export class PairManager implements IPairManager {
    * @returns True if ticker was removed from any lists, false otherwise
    */
   stopTrackingByInvestingTicker(investingTicker: string): boolean {
+    // 1. Get TV ticker before removing mappings
     const tvTicker = this.symbolManager.investingToTv(investingTicker);
 
-    // 1. Read pair info BEFORE delete (needed for alert cleanup)
+    // 2. Read pair info BEFORE delete (needed for alert cleanup)
     const pairInfo = this.pairRepo.getPairInfo(investingTicker);
 
-    // 2. Delete pair mapping
+    // 3. Delete pair mapping
     this.pairRepo.delete(investingTicker);
 
-    // 3. Remove symbol mapping
+    // 4. Remove symbol mappings for this investing ticker
     this.symbolManager.removeTvToInvestingMapping(investingTicker);
 
-    // 4. Cleanup tvTicker-keyed stores
-    const cleanedFromLists = this.cleanupTvTickerStores(tvTicker);
+    // 5. Cleanup tvTicker-keyed stores
+    let cleanedFromLists = false;
+    if (tvTicker) {
+      cleanedFromLists = this.cleanupTvTickerStores(tvTicker);
+    }
 
-    // 5. Delete Investing.com alerts for this pair (fire-and-forget)
+    // 6. Delete Investing.com alerts for this pair (fire-and-forget)
     if (pairInfo) {
       const alerts = this.alertRepo.get(pairInfo.pairId);
       if (alerts && alerts.length > 0) {
@@ -144,15 +148,10 @@ export class PairManager implements IPairManager {
 
   /**
    * Cleans up all tvTicker-keyed stores (watchlist, flags, alertfeed, recent, sequence, exchange)
-   * @param tvTicker TradingView ticker (may be null if no mapping exists)
+   * @param tvTicker TradingView ticker to clean up
    * @returns True if ticker was removed from any lists, false otherwise
    */
-  private cleanupTvTickerStores(tvTicker: string | null): boolean {
-    // HACK: Why we need to handle null tvTicker ?
-    if (!tvTicker) {
-      return false;
-    }
-
+  private cleanupTvTickerStores(tvTicker: string): boolean {
     const watchlistRemoved = this.watchManager.evictTicker(tvTicker);
     const flagsRemoved = this.flagManager.evictTicker(tvTicker);
 

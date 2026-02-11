@@ -387,7 +387,7 @@ export class Factory {
     orphanSequences: () =>
       Factory.getInstance(
         'auditPlugin_orphanSequences',
-        () => new OrphanSequencesPlugin(Factory.repo.sequence(), Factory.repo.ticker())
+        () => new OrphanSequencesPlugin(Factory.repo.sequence(), Factory.repo.ticker(), Factory.manager.symbol())
       ),
 
     // Return a singleton OrphanFlagsPlugin instance
@@ -425,7 +425,8 @@ export class Factory {
           new GttAuditSection(
             Factory.audit.gttUnwatched(), // ✅ Direct plugin injection
             Factory.handler.ticker(),
-            Factory.manager.kite() // ✅ KiteManager for GTT order deletion
+            Factory.manager.kite(), // ✅ KiteManager for GTT order deletion
+            Factory.util.ui()
           )
       ),
 
@@ -452,7 +453,8 @@ export class Factory {
           new OrphanAlertsSection(
             Factory.audit.orphanAlerts(), // ✅ Direct plugin injection
             Factory.repo.alert(),
-            Factory.manager.alert() // ✅ AlertManager for deletion operations
+            Factory.manager.alert(), // ✅ AlertManager for deletion operations
+            Factory.util.ui()
           )
       ),
 
@@ -690,7 +692,8 @@ export class Factory {
             Factory.util.sync(),
             Factory.manager.watch(),
             Factory.manager.ticker(),
-            Factory.manager.alertFeed()
+            Factory.manager.alertFeed(),
+            Factory.util.ui()
           )
       ),
     pair: (): IPairHandler =>
@@ -703,7 +706,8 @@ export class Factory {
             Factory.util.smart(),
             Factory.manager.ticker(),
             Factory.manager.symbol(),
-            Factory.handler.watchlist()
+            Factory.handler.watchlist(),
+            Factory.manager.style()
           )
       ),
     flag: (): IFlagHandler =>

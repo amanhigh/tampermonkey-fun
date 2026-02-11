@@ -1,12 +1,14 @@
 import { OrphanSequencesPlugin } from '../../src/manager/orphan_sequences_plugin';
 import { ISequenceRepo } from '../../src/repo/sequence';
 import { ITickerRepo } from '../../src/repo/ticker';
+import { ISymbolManager } from '../../src/manager/symbol';
 import { SequenceType } from '../../src/models/trading';
 
 describe('OrphanSequencesPlugin', () => {
   let plugin: OrphanSequencesPlugin;
   let sequenceRepo: jest.Mocked<ISequenceRepo>;
   let tickerRepo: jest.Mocked<ITickerRepo>;
+  let symbolManager: jest.Mocked<ISymbolManager>;
 
   beforeEach(() => {
     sequenceRepo = {
@@ -19,7 +21,11 @@ describe('OrphanSequencesPlugin', () => {
       has: jest.fn(),
     } as any;
 
-    plugin = new OrphanSequencesPlugin(sequenceRepo, tickerRepo);
+    symbolManager = {
+      isComposite: jest.fn().mockReturnValue(false),
+    } as any;
+
+    plugin = new OrphanSequencesPlugin(sequenceRepo, tickerRepo, symbolManager);
   });
 
   describe('validate', () => {
@@ -87,6 +93,18 @@ describe('OrphanSequencesPlugin', () => {
       expect(results).toHaveLength(2);
       const targets = results.map((r) => r.target).sort();
       expect(targets).toEqual(['ORPHAN1', 'ORPHAN2']);
+    });
+
+    it('excludes composite symbols from orphan check', async () => {
+      sequenceRepo.getAllKeys.mockReturnValue(['HDFC/TCS', 'ORPHAN']);
+      sequenceRepo.get.mockReturnValue(SequenceType.MWD);
+      tickerRepo.has.mockReturnValue(false);
+      symbolManager.isComposite.mockImplementation((s: string) => s.includes('/'));
+
+      const results = await plugin.run();
+
+      expect(results).toHaveLength(1);
+      expect(results[0].target).toBe('ORPHAN');
     });
 
     it('throws error when targets provided', async () => {

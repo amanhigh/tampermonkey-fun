@@ -4,6 +4,7 @@ import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { IAlertRepo } from '../repo/alert';
 import { IAlertManager } from '../manager/alert';
+import { IUIUtil } from '../util/ui';
 import { Notifier } from '../util/notify';
 import { Constants } from '../models/constant';
 
@@ -81,7 +82,8 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
   constructor(
     plugin: IAudit,
     private readonly alertRepo: IAlertRepo,
-    private readonly alertManager: IAlertManager
+    private readonly alertManager: IAlertManager,
+    private readonly uiUtil: IUIUtil
   ) {
     super();
     this.plugin = plugin;
@@ -118,7 +120,7 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
         `This will permanently delete these alerts from Investing.com.`;
 
       // Show confirmation dialog
-      if (!confirm(message)) {
+      if (!this.uiUtil.showConfirm('Delete Orphan Alerts', message)) {
         Notifier.info('Deletion cancelled');
         return;
       }

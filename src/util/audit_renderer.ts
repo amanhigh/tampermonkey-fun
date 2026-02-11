@@ -150,9 +150,11 @@ export class AuditRenderer {
       return $body;
     }
 
-    // Get paginated results
-    // BUG: Setting Alert Re Runs Audits and Page is lost resetting it to one loss of Focus. (Targeted mode should not lose pagination)
+    // Clamp currentPage to valid range after results change
     const totalPages = this.getTotalPages();
+    if (this.currentPage >= totalPages) {
+      this.currentPage = Math.max(0, totalPages - 1);
+    }
     const displayResults = this.getPaginatedResults();
 
     // Add buttons
@@ -355,10 +357,9 @@ export class AuditRenderer {
       return;
     }
 
-    const confirmed = confirm(
-      `Fix All: ${this.section.title}\n\n` +
-        `This will apply the fix action to all ${this.results.length} item(s).\n\n` +
-        `Are you sure?`
+    const confirmed = this.uiUtil.showConfirm(
+      `Fix All: ${this.section.title}`,
+      `This will apply the fix action to all ${this.results.length} item(s).`
     );
 
     if (!confirmed) {

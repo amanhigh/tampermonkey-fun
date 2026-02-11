@@ -59,13 +59,27 @@ describe('TradeRiskSection', () => {
   });
 
   describe('onRightClick', () => {
-    test('deletes the underlying GTT order', () => {
+    test('deletes all orders for the same ticker', () => {
+      // Populate allResults via headerFormatter
+      const results = [createResult('HDFC', 'ord-1'), createResult('HDFC', 'ord-2'), createResult('TCS', 'ord-3')];
+      section.headerFormatter(results);
+
       section.onRightClick(createResult('HDFC', 'ord-1'));
       expect(mockKiteManager.deleteOrder).toHaveBeenCalledWith('ord-1');
-      expect(notifySuccessSpy).toHaveBeenCalled();
+      expect(mockKiteManager.deleteOrder).toHaveBeenCalledWith('ord-2');
+      expect(mockKiteManager.deleteOrder).not.toHaveBeenCalledWith('ord-3');
+      expect(notifySuccessSpy).toHaveBeenCalledWith('✓ Deleted 2 order(s) for HDFC');
     });
 
-    test('warns when no order ID found', () => {
+    test('deletes single order when only one for ticker', () => {
+      section.headerFormatter([createResult('HDFC', 'ord-1')]);
+      section.onRightClick(createResult('HDFC', 'ord-1'));
+      expect(mockKiteManager.deleteOrder).toHaveBeenCalledWith('ord-1');
+      expect(notifySuccessSpy).toHaveBeenCalledWith('✓ Deleted 1 order(s) for HDFC');
+    });
+
+    test('warns when no order ID found in allResults', () => {
+      section.headerFormatter([]);
       const result: AuditResult = {
         pluginId: 'trade-risk',
         code: 'INVALID_RISK_MULTIPLE',

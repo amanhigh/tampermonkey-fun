@@ -225,6 +225,33 @@ describe('TickerRepo', () => {
       expect(tickerRepo.getTvTicker('apple-2')).toBe('AAPL');
     });
 
+    it('should support multiple TV tickers for same investing ticker (aliases)', () => {
+      tickerRepo.set('AAPL', 'apple-inc');
+      tickerRepo.set('APPLE', 'apple-inc');
+      expect(tickerRepo.getTvTickers('apple-inc')).toEqual(expect.arrayContaining(['AAPL', 'APPLE']));
+      expect(tickerRepo.getTvTickers('apple-inc')).toHaveLength(2);
+      expect(tickerRepo.getTvTicker('apple-inc')).toBeTruthy();
+    });
+
+    it('should return empty array for getTvTickers with no mapping', () => {
+      expect(tickerRepo.getTvTickers('nonexistent')).toEqual([]);
+    });
+
+    it('should remove alias from set on delete without affecting other aliases', () => {
+      tickerRepo.set('AAPL', 'apple-inc');
+      tickerRepo.set('APPLE', 'apple-inc');
+      tickerRepo.delete('AAPL');
+      expect(tickerRepo.getTvTickers('apple-inc')).toEqual(['APPLE']);
+      expect(tickerRepo.getTvTicker('apple-inc')).toBe('APPLE');
+    });
+
+    it('should remove investing key from reverse map when last alias deleted', () => {
+      tickerRepo.set('AAPL', 'apple-inc');
+      tickerRepo.delete('AAPL');
+      expect(tickerRepo.getTvTickers('apple-inc')).toEqual([]);
+      expect(tickerRepo.getTvTicker('apple-inc')).toBeNull();
+    });
+
     it('should handle case sensitivity', () => {
       tickerRepo.set('aapl', 'apple');
       expect(tickerRepo.getInvestingTicker('AAPL')).toBeNull();
@@ -237,7 +264,7 @@ describe('TickerRepo', () => {
       tickerRepo.set('empty-value', '');
       expect(tickerRepo.get('')).toBe('empty-key');
       expect(tickerRepo.get('empty-value')).toBe('');
-      expect(tickerRepo.getTvTicker('empty-key')).toBeNull(); // Empty string value is falsy, returns null
+      expect(tickerRepo.getTvTicker('empty-key')).toBe(''); // Empty string tvTicker is stored in alias set
       expect(tickerRepo.getTvTicker('')).toBe('empty-value'); // There is a mapping for empty string key
     });
 

@@ -2,6 +2,7 @@ import { GttAuditSection } from '../../src/handler/gtt_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
 import { IKiteManager } from '../../src/manager/kite';
+import { IUIUtil } from '../../src/util/ui';
 import { Notifier } from '../../src/util/notify';
 
 describe('GttAuditSection', () => {
@@ -9,7 +10,7 @@ describe('GttAuditSection', () => {
   let mockPlugin: IAudit;
   let mockTickerHandler: Partial<ITickerHandler>;
   let mockKiteManager: Partial<IKiteManager>;
-  let confirmMock: jest.Mock;
+  let mockUIUtil: Partial<IUIUtil>;
   let notifySuccessSpy: jest.SpyInstance;
   let notifyWarnSpy: jest.SpyInstance;
   let notifyInfoSpy: jest.SpyInstance;
@@ -30,8 +31,9 @@ describe('GttAuditSection', () => {
       deleteOrder: jest.fn(),
     };
 
-    confirmMock = jest.fn().mockReturnValue(false);
-    (global as any).confirm = confirmMock;
+    mockUIUtil = {
+      showConfirm: jest.fn().mockReturnValue(false),
+    };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
     notifyWarnSpy = jest.spyOn(Notifier, 'warn').mockImplementation();
@@ -41,13 +43,13 @@ describe('GttAuditSection', () => {
     section = new GttAuditSection(
       mockPlugin,
       mockTickerHandler as ITickerHandler,
-      mockKiteManager as IKiteManager
+      mockKiteManager as IKiteManager,
+      mockUIUtil as IUIUtil
     );
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
-    delete (global as any).confirm;
   });
 
   describe('Section Properties', () => {
@@ -98,7 +100,7 @@ describe('GttAuditSection', () => {
         data: { orderIds: ['123', '456'] },
       };
 
-      confirmMock.mockReturnValue(true);
+      (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(true);
 
       section.onRightClick(result);
 
@@ -118,7 +120,7 @@ describe('GttAuditSection', () => {
         data: { orderIds: ['123', '456'] },
       };
 
-      confirmMock.mockReturnValue(false);
+      (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(false);
 
       section.onRightClick(result);
 
