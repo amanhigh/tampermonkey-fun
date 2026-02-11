@@ -718,7 +718,7 @@ export class Factory {
     sequence: (): ISequenceHandler =>
       Factory.getInstance(
         'sequenceHandler',
-        () => new SequenceHandler(Factory.manager.sequence(), Factory.manager.ticker())
+        () => new SequenceHandler(Factory.manager.sequence(), Factory.manager.ticker(), Factory.manager.symbol())
       ),
     journal: (): IJournalHandler =>
       Factory.getInstance(
