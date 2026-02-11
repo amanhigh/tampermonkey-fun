@@ -2,7 +2,7 @@ import { GttPlugin } from '../../src/manager/gtt_plugin';
 import { IKiteRepo } from '../../src/repo/kite';
 import { IWatchManager } from '../../src/manager/watch';
 import { GttRefreshEvent } from '../../src/models/gtt';
-import { Order } from '../../src/models/kite';
+import { Order, OrderType } from '../../src/models/kite';
 
 // Unit tests for GttUnwatchedAudit: identifies GTT orders for unwatched tickers
 
@@ -44,7 +44,7 @@ describe('GttPlugin', () => {
 
     it('returns empty array when all GTT tickers are in first watchlist (category 0)', async () => {
       const gttEvent = new GttRefreshEvent();
-      const mockOrder = new Order('AAPL', 10, 'single', '1', [100]);
+      const mockOrder = new Order('AAPL', 10, OrderType.SINGLE, '1', [100]);
       gttEvent.addOrder('AAPL', mockOrder);
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
@@ -65,7 +65,7 @@ describe('GttPlugin', () => {
 
     it('returns empty array when all GTT tickers are in second watchlist (category 1)', async () => {
       const gttEvent = new GttRefreshEvent();
-      const mockOrder = new Order('MSFT', 10, 'single', '1', [100]);
+      const mockOrder = new Order('MSFT', 10, OrderType.SINGLE, '1', [100]);
       gttEvent.addOrder('MSFT', mockOrder);
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
@@ -83,7 +83,7 @@ describe('GttPlugin', () => {
 
     it('returns empty array when all GTT tickers are in running trades watchlist (category 4)', async () => {
       const gttEvent = new GttRefreshEvent();
-      const mockOrder = new Order('GOOGL', 10, 'single', '1', [100]);
+      const mockOrder = new Order('GOOGL', 10, OrderType.SINGLE, '1', [100]);
       gttEvent.addOrder('GOOGL', mockOrder);
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
@@ -101,7 +101,7 @@ describe('GttPlugin', () => {
 
     it('emits FAIL for GTT ticker not in any watchlist', async () => {
       const gttEvent = new GttRefreshEvent();
-      const mockOrder = new Order('TSLA', 10, 'single', '1', [100]);
+      const mockOrder = new Order('TSLA', 10, OrderType.SINGLE, '1', [100]);
       gttEvent.addOrder('TSLA', mockOrder);
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
@@ -130,8 +130,8 @@ describe('GttPlugin', () => {
 
     it('emits FAIL for multiple unwatched GTT tickers', async () => {
       const gttEvent = new GttRefreshEvent();
-      const order1 = new Order('TSLA', 10, 'single', '1', [100]);
-      const order2 = new Order('AMZN', 10, 'single', '2', [150]);
+      const order1 = new Order('TSLA', 10, OrderType.SINGLE, '1', [100]);
+      const order2 = new Order('AMZN', 10, OrderType.SINGLE, '2', [150]);
       gttEvent.addOrder('TSLA', order1);
       gttEvent.addOrder('AMZN', order2);
 
@@ -154,10 +154,10 @@ describe('GttPlugin', () => {
 
     it('emits FAIL only for unwatched tickers when some are watched', async () => {
       const gttEvent = new GttRefreshEvent();
-      gttEvent.addOrder('AAPL', new Order('AAPL', 10, 'single', '1', [100]));
-      gttEvent.addOrder('TSLA', new Order('TSLA', 10, 'single', '2', [150]));
-      gttEvent.addOrder('MSFT', new Order('MSFT', 10, 'single', '3', [200]));
-      gttEvent.addOrder('AMZN', new Order('AMZN', 10, 'single', '4', [250]));
+      gttEvent.addOrder('AAPL', new Order('AAPL', 10, OrderType.SINGLE, '1', [100]));
+      gttEvent.addOrder('TSLA', new Order('TSLA', 10, OrderType.SINGLE, '2', [150]));
+      gttEvent.addOrder('MSFT', new Order('MSFT', 10, OrderType.SINGLE, '3', [200]));
+      gttEvent.addOrder('AMZN', new Order('AMZN', 10, OrderType.SINGLE, '4', [250]));
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
       watchManager.getCategory.mockImplementation((index: number) => {
@@ -176,7 +176,7 @@ describe('GttPlugin', () => {
 
     it('handles ticker in multiple watchlists correctly', async () => {
       const gttEvent = new GttRefreshEvent();
-      gttEvent.addOrder('AAPL', new Order('AAPL', 10, 'single', '1', [100]));
+      gttEvent.addOrder('AAPL', new Order('AAPL', 10, OrderType.SINGLE, '1', [100]));
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
       watchManager.getCategory.mockImplementation((index: number) => {
@@ -194,7 +194,7 @@ describe('GttPlugin', () => {
 
     it('verifies correct AuditResult structure', async () => {
       const gttEvent = new GttRefreshEvent();
-      gttEvent.addOrder('UNWATCHED', new Order('UNWATCHED', 10, 'single', '1', [100]));
+      gttEvent.addOrder('UNWATCHED', new Order('UNWATCHED', 10, OrderType.SINGLE, '1', [100]));
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
       watchManager.getCategory.mockImplementation(() => new Set());

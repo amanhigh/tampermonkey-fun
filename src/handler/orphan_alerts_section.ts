@@ -24,7 +24,7 @@ import { Constants } from '../models/constant';
 export class OrphanAlertsSection extends BaseAuditSection implements IAuditSection {
   // Identity - shares ID with ORPHAN_ALERTS plugin
   readonly id = Constants.AUDIT.PLUGINS.ORPHAN_ALERTS;
-  readonly title = 'Orphan Alerts';
+  readonly title = 'Alerts';
 
   // Data source (injected directly, not fetched from registry)
   readonly plugin: IAudit;
@@ -35,8 +35,10 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
 
   // Interaction handlers
   readonly onLeftClick = (result: AuditResult) => {
-    const pairId = result.target;
-    Notifier.warn(`Cannot open ${pairId} - no pair mapping exists`, 3000);
+    const alertName = result.data?.alertName as string | undefined;
+    const pairId = result.data?.pairId as string | undefined;
+    const label = alertName || pairId || result.target;
+    Notifier.warn(`${label} — no ticker mapping, cannot navigate`, 3000);
   };
 
   readonly onRightClick = async (result: AuditResult): Promise<void> => {

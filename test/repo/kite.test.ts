@@ -1,6 +1,6 @@
 import { KiteRepo, IKiteRepo } from '../../src/repo/kite';
 import { GttCreateEvent, GttDeleteEvent, GttRefreshEvent } from '../../src/models/gtt';
-import { Order } from '../../src/models/kite';
+import { Order, OrderType } from '../../src/models/kite';
 import { Constants } from '../../src/models/constant';
 
 // Mock GM API
@@ -83,7 +83,7 @@ describe('KiteRepo', () => {
   describe('createGttRefreshEvent', () => {
     it('should store valid GTT refresh event to GM storage', async () => {
       const event = new GttRefreshEvent();
-      event.addOrder('HDFC', new Order('HDFC', 10, 'single', 'order1', [1500, 1450]));
+      event.addOrder('HDFC', new Order('HDFC', 10, OrderType.SINGLE, 'order1', [1500, 1450]));
       mockGM.setValue.mockResolvedValue(undefined);
 
       await kiteRepo.createGttRefreshEvent(event);
@@ -122,9 +122,9 @@ describe('KiteRepo', () => {
 
     it('should handle events with multiple symbols and orders', async () => {
       const event = new GttRefreshEvent();
-      event.addOrder('HDFC', new Order('HDFC', 10, 'single', 'order1', [1500]));
-      event.addOrder('HDFC', new Order('HDFC', 5, 'two-leg', 'order2', [1500, 1450]));
-      event.addOrder('RELIANCE', new Order('RELIANCE', 2, 'single', 'order3', [2500]));
+      event.addOrder('HDFC', new Order('HDFC', 10, OrderType.SINGLE, 'order1', [1500]));
+      event.addOrder('HDFC', new Order('HDFC', 5, OrderType.TWO_LEG, 'order2', [1500, 1450]));
+      event.addOrder('RELIANCE', new Order('RELIANCE', 2, OrderType.SINGLE, 'order3', [2500]));
       mockGM.setValue.mockResolvedValue(undefined);
 
       await kiteRepo.createGttRefreshEvent(event);
@@ -134,7 +134,7 @@ describe('KiteRepo', () => {
 
     it('should handle events with complex order structures', async () => {
       const event = new GttRefreshEvent();
-      const complexOrder = new Order('COMPLEX', 100, 'multi-leg', 'complex123', [1000, 950, 1050, 1100, 900]);
+      const complexOrder = new Order('COMPLEX', 100, 'multi-leg' as any, 'complex123', [1000, 950, 1050, 1100, 900]);
       event.addOrder('COMPLEX', complexOrder);
       mockGM.setValue.mockResolvedValue(undefined);
 
@@ -147,7 +147,7 @@ describe('KiteRepo', () => {
   describe('getGttRefereshEvent', () => {
     it('should retrieve stored GTT refresh event from GM storage', async () => {
       const storedEvent = new GttRefreshEvent();
-      storedEvent.addOrder('HDFC', new Order('HDFC', 10, 'single', 'order1', [1500]));
+      storedEvent.addOrder('HDFC', new Order('HDFC', 10, OrderType.SINGLE, 'order1', [1500]));
       const storedData = storedEvent.stringify();
 
       mockGM.getValue.mockResolvedValue(storedData);
@@ -184,7 +184,7 @@ describe('KiteRepo', () => {
 
     it('should return valid GttRefreshEvent instance', async () => {
       const storedEvent = new GttRefreshEvent();
-      storedEvent.addOrder('TEST', new Order('TEST', 1, 'single', 'test', [100]));
+      storedEvent.addOrder('TEST', new Order('TEST', 1, OrderType.SINGLE, 'test', [100]));
       const storedData = storedEvent.stringify();
 
       mockGM.getValue.mockResolvedValue(storedData);
@@ -232,8 +232,8 @@ describe('KiteRepo', () => {
   describe('Event Lifecycle Integration', () => {
     it('should store and retrieve GTT refresh event successfully', async () => {
       const originalEvent = new GttRefreshEvent();
-      originalEvent.addOrder('HDFC', new Order('HDFC', 10, 'single', 'order1', [1500, 1450]));
-      originalEvent.addOrder('RELIANCE', new Order('RELIANCE', 5, 'two-leg', 'order2', [2500, 2400]));
+      originalEvent.addOrder('HDFC', new Order('HDFC', 10, OrderType.SINGLE, 'order1', [1500, 1450]));
+      originalEvent.addOrder('RELIANCE', new Order('RELIANCE', 5, OrderType.TWO_LEG, 'order2', [2500, 2400]));
 
       mockGM.setValue.mockResolvedValue(undefined);
       await kiteRepo.createGttRefreshEvent(originalEvent);
@@ -252,7 +252,7 @@ describe('KiteRepo', () => {
     it('should maintain data integrity through store/retrieve cycle', async () => {
       const originalEvent = new GttRefreshEvent();
       const originalTime = originalEvent.time;
-      originalEvent.addOrder('TEST', new Order('TEST', 42, 'test-type', 'test-id', [100, 200, 300]));
+      originalEvent.addOrder('TEST', new Order('TEST', 42, 'test-type' as any, 'test-id', [100, 200, 300]));
 
       mockGM.setValue.mockResolvedValue(undefined);
       await kiteRepo.createGttRefreshEvent(originalEvent);

@@ -30,7 +30,7 @@ describe('OrphanFlagsPlugin', () => {
     it('enforces non-empty id/title', () => {
       expect(() => plugin.validate()).not.toThrow();
       expect(plugin.id).toBe('orphan-flags');
-      expect(plugin.title).toBe('Orphan Flags');
+      expect(plugin.title).toBe('Flags');
     });
   });
 

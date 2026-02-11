@@ -57,7 +57,7 @@ describe('OrphanSequencesSection', () => {
     });
 
     test('has correct title', () => {
-      expect(section.title).toBe('Orphan Sequences');
+      expect(section.title).toBe('Sequences');
     });
 
     test('has pagination limit', () => {

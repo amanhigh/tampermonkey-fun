@@ -26,7 +26,7 @@ describe('OrphanSequencesPlugin', () => {
     it('enforces non-empty id/title', () => {
       expect(() => plugin.validate()).not.toThrow();
       expect(plugin.id).toBe('orphan-sequences');
-      expect(plugin.title).toBe('Orphan Sequences');
+      expect(plugin.title).toBe('Sequences');
     });
   });
 

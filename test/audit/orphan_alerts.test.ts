@@ -28,7 +28,7 @@ describe('OrphanAlertsPlugin', () => {
     it('enforces non-empty id/title', () => {
       expect(() => plugin.validate()).not.toThrow();
       expect(plugin.id).toBe('orphan-alerts');
-      expect(plugin.title).toBe('Orphan Alerts');
+      expect(plugin.title).toBe('Alerts');
     });
   });
 
@@ -85,7 +85,7 @@ describe('OrphanAlertsPlugin', () => {
       expect(results[0].code).toBe('NO_PAIR_MAPPING');
       expect(results[0].severity).toBe('HIGH');
       expect(results[0].status).toBe('FAIL');
-      expect(results[0].data).toEqual({ pairId: 'ORPHAN_PAIR', alertCount: 1 });
+      expect(results[0].data).toEqual({ pairId: 'ORPHAN_PAIR', alertName: 'ORPHAN_PAIR', alertCount: 1 });
     });
 
     it('emits FAIL for multiple orphan alerts with same pairId', async () => {
@@ -107,7 +107,7 @@ describe('OrphanAlertsPlugin', () => {
       expect(results[0].code).toBe('NO_PAIR_MAPPING');
       expect(results[0].severity).toBe('HIGH');
       expect(results[0].status).toBe('FAIL');
-      expect(results[0].data).toEqual({ pairId: 'ORPHAN_PAIR', alertCount: 2 });
+      expect(results[0].data).toEqual({ pairId: 'ORPHAN_PAIR', alertName: 'ORPHAN_PAIR', alertCount: 2 });
     });
 
     it('emits FAIL only for orphan alerts when some are valid', async () => {
@@ -135,7 +135,7 @@ describe('OrphanAlertsPlugin', () => {
       expect(results).toHaveLength(1);
       expect(results[0].target).toBe('ORPHAN_PAIR');
       expect(results[0].status).toBe('FAIL');
-      expect(results[0].data).toEqual({ pairId: 'ORPHAN_PAIR', alertCount: 1 });
+      expect(results[0].data).toEqual({ pairId: 'ORPHAN_PAIR', alertName: 'ORPHAN_PAIR', alertCount: 1 });
     });
 
     it('throws error when targets provided', async () => {
@@ -158,7 +158,7 @@ describe('OrphanAlertsPlugin', () => {
       // Empty alert arrays are reported
       expect(results).toHaveLength(1);
       expect(results[0].target).toBe('ORPHAN_PAIR');
-      expect(results[0].data).toEqual({ pairId: 'ORPHAN_PAIR', alertCount: 0 });
+      expect(results[0].data).toEqual({ pairId: 'ORPHAN_PAIR', alertName: 'ORPHAN_PAIR', alertCount: 0 });
     });
 
     it('verifies correct AuditResult structure', async () => {
@@ -227,9 +227,9 @@ describe('OrphanAlertsPlugin', () => {
       expect(targets).toEqual(['ORPHAN1', 'ORPHAN2']);
       // Verify data field contains metadata
       const orphan1Result = results.find((r) => r.target === 'ORPHAN1');
-      expect(orphan1Result?.data).toEqual({ pairId: 'ORPHAN1', alertCount: 1 });
+      expect(orphan1Result?.data).toEqual({ pairId: 'ORPHAN1', alertName: 'ORPHAN1', alertCount: 1 });
       const orphan2Result = results.find((r) => r.target === 'ORPHAN2');
-      expect(orphan2Result?.data).toEqual({ pairId: 'ORPHAN2', alertCount: 1 });
+      expect(orphan2Result?.data).toEqual({ pairId: 'ORPHAN2', alertName: 'ORPHAN2', alertCount: 1 });
     });
   });
 });

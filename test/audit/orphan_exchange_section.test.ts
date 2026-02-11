@@ -48,7 +48,7 @@ describe('OrphanExchangeSection', () => {
 
   describe('Section Properties', () => {
     test('has correct id', () => expect(section.id).toBe('orphan-exchange'));
-    test('has correct title', () => expect(section.title).toBe('Orphan Exchange'));
+    test('has correct title', () => expect(section.title).toBe('Exchange'));
     test('has pagination limit', () => expect(section.limit).toBe(10));
     test('has plugin reference', () => expect(section.plugin).toBe(mockPlugin));
     test('has onFixAll handler', () => expect(section.onFixAll).toBeDefined());

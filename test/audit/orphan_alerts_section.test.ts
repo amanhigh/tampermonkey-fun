@@ -75,7 +75,7 @@ describe('OrphanAlertsSection', () => {
     });
 
     test('has correct title', () => {
-      expect(section.title).toBe('Orphan Alerts');
+      expect(section.title).toBe('Alerts');
     });
 
     test('has correct limit', () => {
@@ -94,12 +94,12 @@ describe('OrphanAlertsSection', () => {
         message: '6393: 6 alert(s) exist but have no corresponding pair',
         severity: 'HIGH',
         status: 'FAIL',
-        data: { pairId: '6393', alertCount: 6 },
+        data: { pairId: '6393', alertName: 'JBM Auto', alertCount: 6 },
       };
 
       section.onLeftClick(result);
 
-      expect(notifyWarnSpy).toHaveBeenCalledWith('Cannot open 6393 - no pair mapping exists', 3000);
+      expect(notifyWarnSpy).toHaveBeenCalledWith('JBM Auto — no ticker mapping, cannot navigate', 3000);
     });
 
     test('onRightClick is async function', () => {

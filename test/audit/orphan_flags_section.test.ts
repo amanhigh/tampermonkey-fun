@@ -44,7 +44,7 @@ describe('OrphanFlagsSection', () => {
 
   describe('Section Properties', () => {
     test('has correct id', () => expect(section.id).toBe('orphan-flags'));
-    test('has correct title', () => expect(section.title).toBe('Orphan Flags'));
+    test('has correct title', () => expect(section.title).toBe('Flags'));
     test('has pagination limit', () => expect(section.limit).toBe(10));
     test('has plugin reference', () => expect(section.plugin).toBe(mockPlugin));
     test('has onFixAll handler', () => expect(section.onFixAll).toBeDefined());

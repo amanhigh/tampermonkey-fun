@@ -24,7 +24,7 @@ describe('OrphanExchangePlugin', () => {
     it('enforces non-empty id/title', () => {
       expect(() => plugin.validate()).not.toThrow();
       expect(plugin.id).toBe('orphan-exchange');
-      expect(plugin.title).toBe('Orphan Exchange');
+      expect(plugin.title).toBe('Exchange');
     });
   });
 
