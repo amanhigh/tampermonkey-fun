@@ -18,7 +18,7 @@ import { Constants } from '../models/constant';
  */
 export class OrphanSequencesSection extends BaseAuditSection implements IAuditSection {
   readonly id = Constants.AUDIT.PLUGINS.ORPHAN_SEQUENCES;
-  readonly title = 'Orphan Sequences';
+  readonly title = 'Sequences';
 
   readonly plugin: IAudit;
 

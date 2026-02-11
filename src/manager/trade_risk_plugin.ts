@@ -2,7 +2,7 @@ import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
 import { IKiteRepo } from '../repo/kite';
 import { Constants } from '../models/constant';
-import { Order } from '../models/kite';
+import { Order, OrderType } from '../models/kite';
 
 /**
  * Trade Risk Multiple Audit plugin: identifies GTT orders with non-standard risk multiples.
@@ -15,8 +15,7 @@ export class TradeRiskPlugin extends BaseAuditPlugin {
   public readonly id = Constants.AUDIT.PLUGINS.TRADE_RISK;
   public readonly title = 'Trade Risk Multiple';
 
-  // HACK: Move to Constants
-  private readonly TOLERANCE = 0.01; // ±1% rounding tolerance
+  private readonly TOLERANCE = Constants.TRADING.ORDER.RISK_TOLERANCE;
 
   constructor(private readonly kiteRepo: IKiteRepo) {
     super();
@@ -60,11 +59,10 @@ export class TradeRiskPlugin extends BaseAuditPlugin {
       // Only check two-leg (OCO) orders which have entry implied via single-leg pair
       // For single-leg buy orders: prices[0] = entry trigger
       // For two-leg OCO orders: prices[0] = stop, prices[1] = target
-      // HACK: Make order type enum
-      if (order.type === 'two-leg' && order.prices.length >= 2) {
+      if (order.type === OrderType.TWO_LEG && order.prices.length >= 2) {
         const stop = order.prices[0];
         // Find corresponding single-leg buy order for this ticker to get entry
-        const buyOrder = orders.find((o) => o.type === 'single' && o.prices.length >= 1);
+        const buyOrder = orders.find((o) => o.type === OrderType.SINGLE && o.prices.length >= 1);
         if (!buyOrder) {
           return;
         }

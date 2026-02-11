@@ -13,7 +13,7 @@ import { Constants } from '../models/constant';
  */
 export class OrphanFlagsPlugin extends BaseAuditPlugin {
   public readonly id = Constants.AUDIT.PLUGINS.ORPHAN_FLAGS;
-  public readonly title = 'Orphan Flags';
+  public readonly title = 'Flags';
 
   constructor(
     private readonly flagRepo: IFlagRepo,

@@ -18,7 +18,7 @@ import { Constants } from '../models/constant';
  */
 export class OrphanFlagsSection extends BaseAuditSection implements IAuditSection {
   readonly id = Constants.AUDIT.PLUGINS.ORPHAN_FLAGS;
-  readonly title = 'Orphan Flags';
+  readonly title = 'Flags';
 
   readonly plugin: IAudit;
 

@@ -11,7 +11,7 @@ import { Constants } from '../models/constant';
  */
 export class OrphanExchangePlugin extends BaseAuditPlugin {
   public readonly id = Constants.AUDIT.PLUGINS.ORPHAN_EXCHANGE;
-  public readonly title = 'Orphan Exchange';
+  public readonly title = 'Exchange';
 
   constructor(
     private readonly exchangeRepo: IExchangeRepo,

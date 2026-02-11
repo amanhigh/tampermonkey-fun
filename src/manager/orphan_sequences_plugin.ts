@@ -11,8 +11,7 @@ import { Constants } from '../models/constant';
  */
 export class OrphanSequencesPlugin extends BaseAuditPlugin {
   public readonly id = Constants.AUDIT.PLUGINS.ORPHAN_SEQUENCES;
-  // BUG: Remove Orphan in title for all plugins.
-  public readonly title = 'Orphan Sequences';
+  public readonly title = 'Sequences';
 
   constructor(
     private readonly sequenceRepo: ISequenceRepo,

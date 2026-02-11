@@ -177,6 +177,7 @@ export const Constants = Object.freeze({
   TRADING: {
     ORDER: {
       RISK_LIMIT: 6400, // Old name: orderRiskLimit
+      RISK_TOLERANCE: 0.01, // ±1% rounding tolerance for risk multiple validation
     },
     PROMPT: {
       REASONS: [
