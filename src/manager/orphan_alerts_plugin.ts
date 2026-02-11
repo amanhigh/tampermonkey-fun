@@ -48,7 +48,7 @@ export class OrphanAlertsPlugin extends BaseAuditPlugin {
         results.push({
           pluginId: this.id,
           code: 'NO_PAIR_MAPPING',
-          // BUG: #A Extract Better Name from HTML Parsing of Alerts.
+          // TODO: #A Extract Better Name from HTML Parsing of Alerts.
           target: `${pairId}`,
           message: `${pairId}: ${alerts.length} alert(s) exist but have no corresponding pair`,
           severity: 'HIGH',
