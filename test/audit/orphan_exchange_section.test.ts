@@ -81,7 +81,7 @@ describe('OrphanExchangeSection', () => {
 
   describe('headerFormatter', () => {
     test('shows success when no results', () => {
-      expect(section.headerFormatter([])).toContain('No orphan exchanges');
+      expect(section.headerFormatter([])).toContain('No exchanges');
     });
 
     test('shows count when results present', () => {

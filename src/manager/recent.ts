@@ -40,7 +40,7 @@ export class RecentManager implements IRecentManager {
 
   /** @inheritdoc */
   public addTicker(tvTicker: string): void {
-    this.recentRepo.add(tvTicker);
+    this.recentRepo.set(tvTicker, Date.now());
   }
 
   /** @inheritdoc */
@@ -58,7 +58,7 @@ export class RecentManager implements IRecentManager {
     const screenerSymbolSelector = Constants.DOM.SCREENER.SYMBOL;
     const colorList = Constants.UI.COLORS.LIST;
 
-    const recentTickers = this.recentRepo.getAll();
+    const recentTickers = this.recentRepo.getAllTickersAsSet();
     this.paintManager.paintSymbols(screenerSymbolSelector, recentTickers, { color: colorList[1] });
   }
 }

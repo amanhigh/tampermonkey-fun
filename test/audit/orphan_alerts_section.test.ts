@@ -425,7 +425,7 @@ describe('OrphanAlertsSection', () => {
   describe('Header Formatter', () => {
     test('shows success message when no results', () => {
       const html = section.headerFormatter([]);
-      expect(html).toContain('No orphan alerts');
+      expect(html).toContain('No alerts');
       expect(html).toContain('success-badge');
     });
 
@@ -452,7 +452,7 @@ describe('OrphanAlertsSection', () => {
       ];
 
       const html = section.headerFormatter(results);
-      expect(html).toContain('Orphan Alerts: 2');
+      expect(html).toContain('Alerts: 2');
       expect(html).toContain('darkred');
     });
   });
