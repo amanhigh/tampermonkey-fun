@@ -29,11 +29,13 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
 
   readonly onLeftClick = (result: AuditResult) => {
     const tvTickers = result.data?.tvTickers as string[] | undefined;
-    if (tvTickers && tvTickers.length > 0) {
-      this.tickerHandler.openTicker(tvTickers[0]);
-    } else {
+    if (!tvTickers || tvTickers.length < 2) {
       Notifier.warn(`No tvTicker found for ${result.target}`);
+      return;
     }
+
+    const ranked = this.canonicalRanker.rankTvTickers(tvTickers);
+    this.tickerHandler.openTicker(ranked[0].ticker);
   };
 
   readonly onRightClick = (result: AuditResult): boolean => {

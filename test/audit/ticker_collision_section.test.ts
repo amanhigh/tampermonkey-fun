@@ -65,8 +65,9 @@ describe('TickerCollisionSection', () => {
   });
 
   describe('onLeftClick', () => {
-    test('opens first tvTicker alias in TradingView', () => {
+    test('opens canonical tvTicker alias via CanonicalRanker', () => {
       section.onLeftClick(createResult('M&M', ['M_M', 'M&M']));
+      expect(mockCanonicalRanker.rankTvTickers).toHaveBeenCalledWith(['M_M', 'M&M']);
       expect(mockTickerHandler.openTicker).toHaveBeenCalledWith('M_M');
     });
 
@@ -82,6 +83,12 @@ describe('TickerCollisionSection', () => {
       };
       section.onLeftClick(result);
       expect(notifyWarnSpy).toHaveBeenCalled();
+    });
+
+    test('shows warning when less than 2 tvTickers', () => {
+      section.onLeftClick(createResult('M&M', ['M_M']));
+      expect(notifyWarnSpy).toHaveBeenCalled();
+      expect(mockCanonicalRanker.rankTvTickers).not.toHaveBeenCalled();
     });
   });
 

@@ -30,13 +30,18 @@ export class DuplicatePairIdsSection extends BaseAuditSection implements IAuditS
 
   readonly onLeftClick = (result: AuditResult) => {
     const investingTickers = result.data?.investingTickers as string[] | undefined;
-    if (investingTickers && investingTickers.length > 0) {
-      const tvTicker = this.symbolManager.investingToTv(investingTickers[0]);
-      if (tvTicker) {
-        this.tickerHandler.openTicker(tvTicker);
-      } else {
-        Notifier.warn(`No tvTicker found for ${investingTickers[0]}`);
-      }
+    const pairId = result.data?.pairId as string | undefined;
+    if (!investingTickers || investingTickers.length < 2 || !pairId) {
+      return;
+    }
+
+    const ranked = this.canonicalRanker.rankInvestingTickers(investingTickers, pairId);
+    const canonical = ranked[0];
+    const tvTicker = this.symbolManager.investingToTv(canonical.ticker);
+    if (tvTicker) {
+      this.tickerHandler.openTicker(tvTicker);
+    } else {
+      Notifier.warn(`No tvTicker found for ${canonical.ticker}`);
     }
   };
 

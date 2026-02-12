@@ -69,17 +69,24 @@ describe('DuplicatePairIdsSection', () => {
   });
 
   describe('onLeftClick', () => {
-    test('opens first investingTicker resolved tvTicker', () => {
+    test('opens canonical investingTicker resolved tvTicker via CanonicalRanker', () => {
       (mockSymbolManager.investingToTv as jest.Mock).mockReturnValue('HDFC_TV');
       section.onLeftClick(createResult('123', ['HDFC', 'HDF']));
+      expect(mockCanonicalRanker.rankInvestingTickers).toHaveBeenCalledWith(['HDFC', 'HDF'], '123');
       expect(mockSymbolManager.investingToTv).toHaveBeenCalledWith('HDFC');
       expect(mockTickerHandler.openTicker).toHaveBeenCalledWith('HDFC_TV');
     });
 
-    test('shows warning when no tvTicker mapping found', () => {
+    test('shows warning when canonical ticker has no tvTicker mapping', () => {
       (mockSymbolManager.investingToTv as jest.Mock).mockReturnValue(null);
       section.onLeftClick(createResult('123', ['HDFC', 'HDF']));
       expect(notifyWarnSpy).toHaveBeenCalled();
+    });
+
+    test('does nothing when less than 2 investingTickers', () => {
+      section.onLeftClick(createResult('123', ['ONLY']));
+      expect(mockCanonicalRanker.rankInvestingTickers).not.toHaveBeenCalled();
+      expect(mockTickerHandler.openTicker).not.toHaveBeenCalled();
     });
   });
 
