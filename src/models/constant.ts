@@ -53,6 +53,9 @@ export const Constants = Object.freeze({
 
       /** Trade risk multiple audit plugin - identifies trades with non-standard risk multiples */
       TRADE_RISK: 'trade-risk',
+
+      /** Stale review audit plugin - identifies tickers not opened within configurable review window */
+      STALE_REVIEW: 'stale-review',
     }),
   },
 

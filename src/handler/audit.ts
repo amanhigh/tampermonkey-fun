@@ -100,7 +100,9 @@ export class AuditHandler implements IAuditHandler {
     await this.auditOrphanExchange();
     await this.auditDuplicatePairIds();
     await this.auditTickerCollision();
+    await this.auditGolden();
     await this.auditTradeRisk();
+    await this.auditStaleReview();
   }
 
   /**
@@ -219,10 +221,26 @@ export class AuditHandler implements IAuditHandler {
   }
 
   /**
+   * Run Golden Integrity audit and render section
+   */
+  private async auditGolden(): Promise<void> {
+    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.GOLDEN);
+    await renderer.refresh();
+  }
+
+  /**
    * Run Trade Risk audit and render section
    */
   private async auditTradeRisk(): Promise<void> {
     const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.TRADE_RISK);
+    await renderer.refresh();
+  }
+
+  /**
+   * Run Stale Review audit and render section
+   */
+  private async auditStaleReview(): Promise<void> {
+    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.STALE_REVIEW);
     await renderer.refresh();
   }
 }

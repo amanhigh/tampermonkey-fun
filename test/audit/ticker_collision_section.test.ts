@@ -1,14 +1,16 @@
 import { TickerCollisionSection } from '../../src/handler/ticker_collision_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
-import { ISymbolManager } from '../../src/manager/symbol';
+import { ICanonicalRanker } from '../../src/manager/canonical_ranker';
+import { IPairHandler } from '../../src/handler/pair';
 import { Notifier } from '../../src/util/notify';
 
 describe('TickerCollisionSection', () => {
   let section: TickerCollisionSection;
   let mockPlugin: IAudit;
   let mockTickerHandler: Partial<ITickerHandler>;
-  let mockSymbolManager: Partial<ISymbolManager>;
+  let mockCanonicalRanker: Partial<ICanonicalRanker>;
+  let mockPairHandler: Partial<IPairHandler>;
   let notifySuccessSpy: jest.SpyInstance;
   let notifyWarnSpy: jest.SpyInstance;
 
@@ -31,15 +33,22 @@ describe('TickerCollisionSection', () => {
     };
 
     mockTickerHandler = { openTicker: jest.fn() };
-    mockSymbolManager = { deleteTvTicker: jest.fn() };
+    mockCanonicalRanker = {
+      rankTvTickers: jest.fn().mockImplementation((tickers: string[]) =>
+        tickers.map((t, i) => ({ ticker: t, alertCount: 0, isWatched: false, recentTimestamp: 0, hasSequence: false, hasExchange: false, hasPairMapping: true, score: tickers.length - i }))
+      ),
+    };
+    mockPairHandler = { stopTrackingByTvTicker: jest.fn() };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
     notifyWarnSpy = jest.spyOn(Notifier, 'warn').mockImplementation();
+    (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(true);
 
     section = new TickerCollisionSection(
       mockPlugin,
       mockTickerHandler as ITickerHandler,
-      mockSymbolManager as ISymbolManager
+      mockCanonicalRanker as ICanonicalRanker,
+      mockPairHandler as IPairHandler
     );
   });
 
@@ -77,8 +86,10 @@ describe('TickerCollisionSection', () => {
   });
 
   describe('onRightClick', () => {
-    test('deletes stale tvTicker aliases (keeps first as canonical)', () => {
+    test('ranks aliases and removes lower-ranked after confirmation', () => {
       section.onRightClick(createResult('M&M', ['M_M', 'M&M', 'M&amp;M']));
+      expect(mockCanonicalRanker.rankTvTickers).toHaveBeenCalledWith(['M_M', 'M&M', 'M&amp;M']);
+      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledTimes(2);
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
 
@@ -86,16 +97,30 @@ describe('TickerCollisionSection', () => {
       section.onRightClick(createResult('M&M', ['M_M']));
       expect(notifySuccessSpy).not.toHaveBeenCalled();
     });
+
+    test('does nothing when user cancels confirmation', () => {
+      (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(false);
+      section.onRightClick(createResult('M&M', ['M_M', 'M&M']));
+      expect(mockPairHandler.stopTrackingByTvTicker).not.toHaveBeenCalled();
+    });
   });
 
   describe('onFixAll', () => {
-    test('deletes all stale aliases across groups', () => {
+    test('ranks and removes all lower-ranked aliases across groups after confirmation', () => {
       const results = [
         createResult('M&M', ['M_M', 'M&M', 'M&amp;M']),
         createResult('PTC', ['PTC', 'PFS']),
       ];
       section.onFixAll!(results);
+      // Group 1: keeps M_M, removes M&M, M&amp;M. Group 2: keeps PTC, removes PFS.
+      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledTimes(3);
       expect(notifySuccessSpy).toHaveBeenCalled();
+    });
+
+    test('does nothing when user cancels confirmation', () => {
+      (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(false);
+      section.onFixAll!([createResult('M&M', ['M_M', 'M&M'])]);
+      expect(mockPairHandler.stopTrackingByTvTicker).not.toHaveBeenCalled();
     });
   });
 

@@ -209,6 +209,30 @@ describe('AuditHandler', () => {
         onRightClick: jest.fn(),
       } as any;
 
+      const mockGoldenSection = {
+        id: 'golden',
+        title: 'Golden Integrity',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Golden Integrity'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockStaleReviewSection = {
+        id: 'stale-review',
+        title: 'Stale Review',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Stale Review'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
       // Return appropriate section based on ID
       mockAuditRegistry.mustGetSection.mockImplementation((id) => {
         if (id === 'alerts') return mockAlertsSection;
@@ -220,7 +244,9 @@ describe('AuditHandler', () => {
         if (id === 'orphan-exchange') return mockOrphanExchangeSection;
         if (id === 'duplicate-pair-ids') return mockDuplicatePairIdsSection;
         if (id === 'ticker-collision') return mockTickerCollisionSection;
+        if (id === 'golden') return mockGoldenSection;
         if (id === 'trade-risk') return mockTradeRiskSection;
+        if (id === 'stale-review') return mockStaleReviewSection;
         throw new Error(`Unknown section: ${id}`);
       });
     });
@@ -387,6 +413,30 @@ describe('AuditHandler', () => {
         onRightClick: jest.fn(),
       } as any;
 
+      const mockGoldenSection = {
+        id: 'golden',
+        title: 'Golden Integrity',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Golden Integrity'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockStaleReviewSection = {
+        id: 'stale-review',
+        title: 'Stale Review',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Stale Review'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
       // Return appropriate section based on ID
       mockAuditRegistry.mustGetSection.mockImplementation((id) => {
         if (id === 'alerts') return mockAlertsSection;
@@ -398,7 +448,9 @@ describe('AuditHandler', () => {
         if (id === 'orphan-exchange') return mockOrphanExchangeSection;
         if (id === 'duplicate-pair-ids') return mockDuplicatePairIdsSection;
         if (id === 'ticker-collision') return mockTickerCollisionSection;
+        if (id === 'golden') return mockGoldenSection;
         if (id === 'trade-risk') return mockTradeRiskSection;
+        if (id === 'stale-review') return mockStaleReviewSection;
         throw new Error(`Unknown section: ${id}`);
       });
     });
@@ -579,6 +631,19 @@ describe('AuditHandler', () => {
         onRightClick: jest.fn(),
       } as any;
 
+      const mockGoldenSection = {
+        id: 'golden', title: 'Golden Integrity', plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Golden Integrity'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10, context: undefined, onLeftClick: jest.fn(), onRightClick: jest.fn(),
+      } as any;
+      const mockStaleReviewSection = {
+        id: 'stale-review', title: 'Stale Review', plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Stale Review'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10, context: undefined, onLeftClick: jest.fn(), onRightClick: jest.fn(),
+      } as any;
+
       mockAuditRegistry.mustGetSection.mockImplementation((id: string) => {
         if (id === 'alerts') return mockAlertsSectionWithResults;
         if (id === 'gtt-unwatched') return mockGttSection;
@@ -589,7 +654,9 @@ describe('AuditHandler', () => {
         if (id === 'orphan-exchange') return mockOrphanExchangeSection;
         if (id === 'duplicate-pair-ids') return mockDuplicatePairIdsSection;
         if (id === 'ticker-collision') return mockTickerCollisionSection;
+        if (id === 'golden') return mockGoldenSection;
         if (id === 'trade-risk') return mockTradeRiskSection;
+        if (id === 'stale-review') return mockStaleReviewSection;
         throw new Error(`Unknown section: ${id}`);
       });
 
@@ -731,6 +798,19 @@ describe('AuditHandler', () => {
         onRightClick: jest.fn(),
       } as any;
 
+      const mockGoldenSection = {
+        id: 'golden', title: 'Golden Integrity', plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Golden Integrity'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10, context: undefined, onLeftClick: jest.fn(), onRightClick: jest.fn(),
+      } as any;
+      const mockStaleReviewSection = {
+        id: 'stale-review', title: 'Stale Review', plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Stale Review'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10, context: undefined, onLeftClick: jest.fn(), onRightClick: jest.fn(),
+      } as any;
+
       mockAuditRegistry.mustGetSection.mockImplementation((id: string) => {
         if (id === 'alerts') return mockAlertsSectionWithResults;
         if (id === 'gtt-unwatched') return mockGttSection;
@@ -741,7 +821,9 @@ describe('AuditHandler', () => {
         if (id === 'orphan-exchange') return mockOrphanExchangeSection;
         if (id === 'duplicate-pair-ids') return mockDuplicatePairIdsSection;
         if (id === 'ticker-collision') return mockTickerCollisionSection;
+        if (id === 'golden') return mockGoldenSection;
         if (id === 'trade-risk') return mockTradeRiskSection;
+        if (id === 'stale-review') return mockStaleReviewSection;
         throw new Error(`Unknown section: ${id}`);
       });
 
@@ -874,6 +956,19 @@ describe('AuditHandler', () => {
         onRightClick: jest.fn(),
       } as any;
 
+      const mockGoldenSection = {
+        id: 'golden', title: 'Golden Integrity', plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Golden Integrity'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10, context: undefined, onLeftClick: jest.fn(), onRightClick: jest.fn(),
+      } as any;
+      const mockStaleReviewSection = {
+        id: 'stale-review', title: 'Stale Review', plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Stale Review'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10, context: undefined, onLeftClick: jest.fn(), onRightClick: jest.fn(),
+      } as any;
+
       mockAuditRegistry.mustGetSection.mockImplementation((id: string) => {
         if (id === 'alerts') return mockAlertsSection;
         if (id === 'gtt-unwatched') return mockGttSection;
@@ -884,7 +979,9 @@ describe('AuditHandler', () => {
         if (id === 'orphan-exchange') return mockOrphanExchangeSection;
         if (id === 'duplicate-pair-ids') return mockDuplicatePairIdsSection;
         if (id === 'ticker-collision') return mockTickerCollisionSection;
+        if (id === 'golden') return mockGoldenSection;
         if (id === 'trade-risk') return mockTradeRiskSection;
+        if (id === 'stale-review') return mockStaleReviewSection;
         throw new Error(`Unknown section: ${id}`);
       });
 
@@ -1017,6 +1114,19 @@ describe('AuditHandler', () => {
         onRightClick: jest.fn(),
       } as any;
 
+      const mockGoldenSection = {
+        id: 'golden', title: 'Golden Integrity', plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('Golden Integrity'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10, context: undefined, onLeftClick: jest.fn(), onRightClick: jest.fn(),
+      } as any;
+      const mockStaleReviewSection = {
+        id: 'stale-review', title: 'Stale Review', plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('Stale Review'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10, context: undefined, onLeftClick: jest.fn(), onRightClick: jest.fn(),
+      } as any;
+
       mockAuditRegistry.mustGetSection.mockImplementation((id: string) => {
         if (id === 'alerts') return mockAlertsSection;
         if (id === 'gtt-unwatched') return mockGttSection;
@@ -1027,7 +1137,9 @@ describe('AuditHandler', () => {
         if (id === 'orphan-exchange') return mockOrphanExchangeSection;
         if (id === 'duplicate-pair-ids') return mockDuplicatePairIdsSection;
         if (id === 'ticker-collision') return mockTickerCollisionSection;
+        if (id === 'golden') return mockGoldenSection;
         if (id === 'trade-risk') return mockTradeRiskSection;
+        if (id === 'stale-review') return mockStaleReviewSection;
         throw new Error(`Unknown section: ${id}`);
       });
 
@@ -1170,6 +1282,30 @@ describe('AuditHandler', () => {
         onRightClick: jest.fn(),
       } as any;
 
+      const mockGoldenSection = {
+        id: 'golden',
+        title: 'Golden Integrity',
+        plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('Golden Integrity'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockStaleReviewSection = {
+        id: 'stale-review',
+        title: 'Stale Review',
+        plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('Stale Review'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
       // Mock mustGetSection to return different sections based on id
       mockAuditRegistry.mustGetSection.mockImplementation((id: string) => {
         if (id === 'alerts') return mockAlertsSection;
@@ -1181,7 +1317,9 @@ describe('AuditHandler', () => {
         if (id === 'orphan-exchange') return mockOrphanExchangeSection;
         if (id === 'duplicate-pair-ids') return mockDuplicatePairIdsSection;
         if (id === 'ticker-collision') return mockTickerCollisionSection;
+        if (id === 'golden') return mockGoldenSection;
         if (id === 'trade-risk') return mockTradeRiskSection;
+        if (id === 'stale-review') return mockStaleReviewSection;
         throw new Error(`Unknown section: ${id}`);
       });
 

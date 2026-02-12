@@ -3,6 +3,7 @@ import { IAudit, AuditResult } from '../../src/models/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
 import { IPairHandler } from '../../src/handler/pair';
 import { ISymbolManager } from '../../src/manager/symbol';
+import { ICanonicalRanker } from '../../src/manager/canonical_ranker';
 import { Notifier } from '../../src/util/notify';
 
 describe('DuplicatePairIdsSection', () => {
@@ -11,6 +12,7 @@ describe('DuplicatePairIdsSection', () => {
   let mockTickerHandler: Partial<ITickerHandler>;
   let mockPairHandler: Partial<IPairHandler>;
   let mockSymbolManager: Partial<ISymbolManager>;
+  let mockCanonicalRanker: Partial<ICanonicalRanker>;
   let notifySuccessSpy: jest.SpyInstance;
   let notifyWarnSpy: jest.SpyInstance;
 
@@ -35,15 +37,22 @@ describe('DuplicatePairIdsSection', () => {
     mockTickerHandler = { openTicker: jest.fn() };
     mockPairHandler = { stopTrackingByInvestingTicker: jest.fn() };
     mockSymbolManager = { investingToTv: jest.fn() };
+    mockCanonicalRanker = {
+      rankInvestingTickers: jest.fn().mockImplementation((tickers: string[]) =>
+        tickers.map((t, i) => ({ ticker: t, alertCount: 0, isWatched: false, recentTimestamp: 0, hasSequence: false, hasExchange: false, hasPairMapping: true, score: tickers.length - i }))
+      ),
+    };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
     notifyWarnSpy = jest.spyOn(Notifier, 'warn').mockImplementation();
+    (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(true);
 
     section = new DuplicatePairIdsSection(
       mockPlugin,
       mockTickerHandler as ITickerHandler,
       mockPairHandler as IPairHandler,
-      mockSymbolManager as ISymbolManager
+      mockSymbolManager as ISymbolManager,
+      mockCanonicalRanker as ICanonicalRanker
     );
   });
 
@@ -75,8 +84,9 @@ describe('DuplicatePairIdsSection', () => {
   });
 
   describe('onRightClick', () => {
-    test('deletes duplicate investingTickers (keeps first as canonical)', () => {
+    test('ranks tickers and removes lower-ranked aliases after confirmation', () => {
       section.onRightClick(createResult('123', ['CANONICAL', 'DUP1', 'DUP2']));
+      expect(mockCanonicalRanker.rankInvestingTickers).toHaveBeenCalledWith(['CANONICAL', 'DUP1', 'DUP2'], '123');
       expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledTimes(2);
       expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('DUP1');
       expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('DUP2');
@@ -87,18 +97,30 @@ describe('DuplicatePairIdsSection', () => {
       section.onRightClick(createResult('123', ['ONLY']));
       expect(mockPairHandler.stopTrackingByInvestingTicker).not.toHaveBeenCalled();
     });
+
+    test('does nothing when user cancels confirmation', () => {
+      (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(false);
+      section.onRightClick(createResult('123', ['A', 'B', 'C']));
+      expect(mockPairHandler.stopTrackingByInvestingTicker).not.toHaveBeenCalled();
+    });
   });
 
   describe('onFixAll', () => {
-    test('deletes all duplicate entries across groups', () => {
+    test('ranks and removes all lower-ranked aliases across groups after confirmation', () => {
       const results = [
         createResult('123', ['A', 'B', 'C']),
         createResult('456', ['D', 'E']),
       ];
       section.onFixAll!(results);
-      // Group 1: deletes B, C (keeps A). Group 2: deletes E (keeps D).
+      // Group 1: keeps A, removes B, C. Group 2: keeps D, removes E.
       expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledTimes(3);
       expect(notifySuccessSpy).toHaveBeenCalled();
+    });
+
+    test('does nothing when user cancels confirmation', () => {
+      (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(false);
+      section.onFixAll!([createResult('123', ['A', 'B'])]);
+      expect(mockPairHandler.stopTrackingByInvestingTicker).not.toHaveBeenCalled();
     });
   });
 

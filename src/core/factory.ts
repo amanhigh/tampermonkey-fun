@@ -95,6 +95,10 @@ import { OrphanExchangeSection } from '../handler/orphan_exchange_section';
 import { DuplicatePairIdsSection } from '../handler/duplicate_pair_ids_section';
 import { TickerCollisionSection } from '../handler/ticker_collision_section';
 import { TradeRiskSection } from '../handler/trade_risk_section';
+import { GoldenSection } from '../handler/golden_section';
+import { CanonicalRanker, ICanonicalRanker } from '../manager/canonical_ranker';
+import { StaleReviewPlugin } from '../manager/stale_review_plugin';
+import { StaleReviewSection } from '../handler/stale_review_section';
 
 /**
  * Project Architecture Overview
@@ -325,6 +329,20 @@ export class Factory {
         'alertFeedManager',
         () => new AlertFeedManager(Factory.manager.symbol(), Factory.manager.watch(), Factory.manager.recent())
       ),
+    canonicalRanker: (): ICanonicalRanker =>
+      Factory.getInstance(
+        'canonicalRanker',
+        () =>
+          new CanonicalRanker({
+            alertRepo: Factory.repo.alert(),
+            watchManager: Factory.manager.watch(),
+            recentRepo: Factory.repo.recent(),
+            sequenceRepo: Factory.repo.sequence(),
+            exchangeRepo: Factory.repo.exchange(),
+            pairRepo: Factory.repo.pair(),
+            symbolManager: Factory.manager.symbol(),
+          })
+      ),
   };
 
   /**
@@ -415,6 +433,19 @@ export class Factory {
     // Return a singleton TradeRiskPlugin instance
     tradeRisk: () => Factory.getInstance('auditPlugin_tradeRisk', () => new TradeRiskPlugin(Factory.repo.kite())),
 
+    // Return a singleton StaleReviewPlugin instance (FR-016)
+    staleReview: () =>
+      Factory.getInstance(
+        'auditPlugin_staleReview',
+        () =>
+          new StaleReviewPlugin(
+            Factory.repo.recent(),
+            Factory.repo.ticker(),
+            Factory.manager.watch(),
+            Factory.manager.flag()
+          )
+      ),
+
     // ===== SECTION CREATION =====
     // GTT Audit Section - receives plugin via direct injection
     // Pilot pattern: Follow this structure for other sections
@@ -503,7 +534,8 @@ export class Factory {
             Factory.audit.duplicatePairIds(),
             Factory.handler.ticker(),
             Factory.handler.pair(),
-            Factory.manager.symbol()
+            Factory.manager.symbol(),
+            Factory.manager.canonicalRanker()
           )
       ),
 
@@ -515,15 +547,30 @@ export class Factory {
           new TickerCollisionSection(
             Factory.audit.tickerCollision(),
             Factory.handler.ticker(),
-            Factory.manager.symbol()
+            Factory.manager.canonicalRanker(),
+            Factory.handler.pair()
           )
       ),
 
-    // Trade Risk Audit Section (FR-016)
+    // Golden Integrity Audit Section (FR-008)
+    goldenSection: () =>
+      Factory.getInstance(
+        'goldenSection',
+        () => new GoldenSection(Factory.audit.golden(), Factory.handler.ticker(), Factory.manager.symbol())
+      ),
+
+    // Trade Risk Audit Section (FR-017)
     tradeRiskSection: () =>
       Factory.getInstance(
         'tradeRiskSection',
         () => new TradeRiskSection(Factory.audit.tradeRisk(), Factory.handler.ticker(), Factory.manager.kite())
+      ),
+
+    // Stale Review Audit Section (FR-016)
+    staleReviewSection: () =>
+      Factory.getInstance(
+        'staleReviewSection',
+        () => new StaleReviewSection(Factory.audit.staleReview(), Factory.handler.ticker(), Factory.handler.pair())
       ),
 
     // ===== REGISTRY =====
@@ -542,7 +589,9 @@ export class Factory {
         reg.registerSection(Factory.audit.orphanExchangeSection());
         reg.registerSection(Factory.audit.duplicatePairIdsSection());
         reg.registerSection(Factory.audit.tickerCollisionSection());
+        reg.registerSection(Factory.audit.goldenSection());
         reg.registerSection(Factory.audit.tradeRiskSection());
+        reg.registerSection(Factory.audit.staleReviewSection());
 
         return reg;
       }),

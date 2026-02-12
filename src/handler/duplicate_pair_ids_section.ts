@@ -5,6 +5,7 @@ import { BaseAuditSection } from './audit_section_base';
 import { ITickerHandler } from './ticker';
 import { IPairHandler } from './pair';
 import { ISymbolManager } from '../manager/symbol';
+import { ICanonicalRanker } from '../manager/canonical_ranker';
 import { Notifier } from '../util/notify';
 import { Constants } from '../models/constant';
 
@@ -14,8 +15,8 @@ import { Constants } from '../models/constant';
  *
  * Features:
  * - Left-click: Open Investing ticker's TradingView chart (toast if no mapping)
- * - Right-click: Delete the selected duplicate investingTicker entry from PairRepo
- * - Fix All: Bulk-remove every duplicate entry returned by the audit
+ * - Right-click: Rank tickers by live signals, confirm canonical, remove lower-ranked aliases
+ * - Fix All: Apply canonical-selection per pairId with summary before bulk cleanup
  */
 export class DuplicatePairIdsSection extends BaseAuditSection implements IAuditSection {
   readonly id = Constants.AUDIT.PLUGINS.DUPLICATE_PAIR_IDS;
@@ -40,30 +41,51 @@ export class DuplicatePairIdsSection extends BaseAuditSection implements IAuditS
 
   readonly onRightClick = (result: AuditResult): void => {
     const investingTickers = result.data?.investingTickers as string[] | undefined;
-    if (!investingTickers || investingTickers.length < 2) {
+    const pairId = result.data?.pairId as string | undefined;
+    if (!investingTickers || investingTickers.length < 2 || !pairId) {
       return;
     }
 
-    // Delete all but the first (canonical) investingTicker
-    const duplicates = investingTickers.slice(1);
-    duplicates.forEach((investingTicker) => {
-      this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
-    });
-    Notifier.success(`⏹ Stopped tracking ${duplicates.length} duplicate(s) for pairId ${result.target}`);
+    const ranked = this.canonicalRanker.rankInvestingTickers(investingTickers, pairId);
+    const canonical = ranked[0];
+    const removals = ranked.slice(1);
+
+    const preview = `Keep: ${canonical.ticker} (score:${canonical.score}) | Remove: ${removals.map((r) => r.ticker).join(', ')}`;
+    if (!confirm(preview)) {
+      return;
+    }
+
+    removals.forEach((r) => this.pairHandler.stopTrackingByInvestingTicker(r.ticker));
+    Notifier.success(`⏹ Kept ${canonical.ticker}, removed ${removals.length} duplicate(s) for pairId ${pairId}`);
   };
 
   readonly onFixAll = (results: AuditResult[]): void => {
+    const summaryLines: string[] = [];
     let totalRemoved = 0;
-    results.forEach((result) => {
+
+    const plans = results.map((result) => {
       const investingTickers = result.data?.investingTickers as string[] | undefined;
-      if (!investingTickers || investingTickers.length < 2) {
+      const pairId = result.data?.pairId as string | undefined;
+      if (!investingTickers || investingTickers.length < 2 || !pairId) {
+        return null;
+      }
+      const ranked = this.canonicalRanker.rankInvestingTickers(investingTickers, pairId);
+      const canonical = ranked[0];
+      const removals = ranked.slice(1);
+      summaryLines.push(`${pairId}: keep ${canonical.ticker}, remove ${removals.map((r) => r.ticker).join(', ')}`);
+      return { canonical, removals };
+    });
+
+    if (!confirm(`Fix All Duplicates:\n${summaryLines.join('\n')}`)) {
+      return;
+    }
+
+    plans.forEach((plan) => {
+      if (!plan) {
         return;
       }
-      const duplicates = investingTickers.slice(1);
-      duplicates.forEach((investingTicker) => {
-        this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
-      });
-      totalRemoved += duplicates.length;
+      plan.removals.forEach((r) => this.pairHandler.stopTrackingByInvestingTicker(r.ticker));
+      totalRemoved += plan.removals.length;
     });
     Notifier.success(`⏹ Stopped tracking ${totalRemoved} duplicate pair(s)`);
   };
@@ -79,7 +101,8 @@ export class DuplicatePairIdsSection extends BaseAuditSection implements IAuditS
     plugin: IAudit,
     private readonly tickerHandler: ITickerHandler,
     private readonly pairHandler: IPairHandler,
-    private readonly symbolManager: ISymbolManager
+    private readonly symbolManager: ISymbolManager,
+    private readonly canonicalRanker: ICanonicalRanker
   ) {
     super();
     this.plugin = plugin;

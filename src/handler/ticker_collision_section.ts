@@ -3,7 +3,8 @@ import { IAuditSection } from './audit_section';
 import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { ITickerHandler } from './ticker';
-import { ISymbolManager } from '../manager/symbol';
+import { ICanonicalRanker } from '../manager/canonical_ranker';
+import { IPairHandler } from './pair';
 import { Notifier } from '../util/notify';
 import { Constants } from '../models/constant';
 
@@ -13,12 +14,13 @@ import { Constants } from '../models/constant';
  *
  * Features:
  * - Left-click: Open the first tvTicker alias in TradingView
- * - Right-click: Delete the stale tvTicker alias from TickerRepo
- * - Fix All: Bulk-clean alias collisions
+ * - Right-click: Rank aliases by live signals, confirm canonical, remove lower-ranked via cascade cleanup
+ * - Fix All: Bulk-clean alias collisions with ranking-based canonical selection
  */
 export class TickerCollisionSection extends BaseAuditSection implements IAuditSection {
   readonly id = Constants.AUDIT.PLUGINS.TICKER_COLLISION;
   readonly title = 'Ticker Collisions';
+  // FIXME: Add Description on title hover of each section explaining what it does.
 
   readonly plugin: IAudit;
 
@@ -40,26 +42,49 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
       return;
     }
 
-    // Delete all but the first (canonical) tvTicker alias
-    const staleAliases = tvTickers.slice(1);
-    staleAliases.forEach((tvTicker) => {
-      this.symbolManager.deleteTvTicker(tvTicker);
-    });
-    Notifier.success(`✓ Removed ${staleAliases.length} stale alias(es) for ${result.target}`);
+    const ranked = this.canonicalRanker.rankTvTickers(tvTickers);
+    const canonical = ranked[0];
+    const removals = ranked.slice(1);
+
+    const preview = `Keep: ${canonical.ticker} (score:${canonical.score}) | Remove: ${removals.map((r) => r.ticker).join(', ')}`;
+    if (!confirm(preview)) {
+      // BUG: On Cancel ticker gets removed from Section.
+      return;
+    }
+
+    // HACK: Change to tvTicker or investingTicker not just name ticker.
+    removals.forEach((r) => this.pairHandler.stopTrackingByTvTicker(r.ticker));
+    Notifier.success(`✓ Kept ${canonical.ticker}, removed ${removals.length} stale alias(es) for ${result.target}`);
   };
 
   readonly onFixAll = (results: AuditResult[]): void => {
+    const summaryLines: string[] = [];
     let totalRemoved = 0;
-    results.forEach((result) => {
+
+    const plans = results.map((result) => {
       const tvTickers = result.data?.tvTickers as string[] | undefined;
       if (!tvTickers || tvTickers.length < 2) {
+        return null;
+      }
+      const ranked = this.canonicalRanker.rankTvTickers(tvTickers);
+      const canonical = ranked[0];
+      const removals = ranked.slice(1);
+      summaryLines.push(
+        `${result.target}: keep ${canonical.ticker}, remove ${removals.map((r) => r.ticker).join(', ')}`
+      );
+      return { removals };
+    });
+
+    if (!confirm(`Fix All Collisions:\n${summaryLines.join('\n')}`)) {
+      return;
+    }
+
+    plans.forEach((plan) => {
+      if (!plan) {
         return;
       }
-      const staleAliases = tvTickers.slice(1);
-      staleAliases.forEach((tvTicker) => {
-        this.symbolManager.deleteTvTicker(tvTicker);
-      });
-      totalRemoved += staleAliases.length;
+      plan.removals.forEach((r) => this.pairHandler.stopTrackingByTvTicker(r.ticker));
+      totalRemoved += plan.removals.length;
     });
     Notifier.success(`✓ Removed ${totalRemoved} stale ticker alias(es)`);
   };
@@ -74,7 +99,8 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
   constructor(
     plugin: IAudit,
     private readonly tickerHandler: ITickerHandler,
-    private readonly symbolManager: ISymbolManager
+    private readonly canonicalRanker: ICanonicalRanker,
+    private readonly pairHandler: IPairHandler
   ) {
     super();
     this.plugin = plugin;
