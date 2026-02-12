@@ -48,16 +48,19 @@ export class DuplicatePairIdsPlugin extends BaseAuditPlugin {
 
     pairIdToTickers.forEach((tickers, pairId) => {
       if (tickers.length > 1) {
+        const pairName = this.pairRepo.get(tickers[0])?.name ?? pairId;
         results.push({
           pluginId: this.id,
           code: 'DUPLICATE_PAIR_ID',
+          // BUG: Should this be pairName or pairId?
           target: pairId,
-          message: `PairId ${pairId}: shared by ${tickers.join(', ')}`,
+          message: `${pairName} (${pairId}): shared by ${tickers.join(', ')}`,
           severity: 'MEDIUM',
           status: 'FAIL',
           data: {
             pairId,
             investingTickers: tickers,
+            pairName,
           },
         });
       }

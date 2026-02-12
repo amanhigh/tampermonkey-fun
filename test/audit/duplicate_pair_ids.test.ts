@@ -69,6 +69,7 @@ describe('DuplicatePairIdsPlugin', () => {
       expect(results[0].data).toEqual({
         pairId: '18462',
         investingTickers: ['VOLTAS', 'VOLT'],
+        pairName: 'Voltas Ltd.',
       });
     });
 
@@ -82,6 +83,7 @@ describe('DuplicatePairIdsPlugin', () => {
       expect(results[0].data).toEqual({
         pairId: '947157',
         investingTickers: ['AEGISCHEM', 'AEGISLOG', 'AEGS'],
+        pairName: 'Aegis Logistics',
       });
       expect(results[0].message).toContain('AEGISCHEM');
       expect(results[0].message).toContain('AEGISLOG');
