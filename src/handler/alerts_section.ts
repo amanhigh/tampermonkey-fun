@@ -29,6 +29,8 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
   // Identity - shares ID with ALERTS plugin
   readonly id = Constants.AUDIT.PLUGINS.ALERTS;
   readonly title = 'Alerts Coverage';
+  readonly description =
+    'Audits alert coverage for every tracked Investing ticker (NO_PAIR / NO_ALERTS / SINGLE_ALERT)';
 
   // Data source (injected directly, not fetched from registry)
   readonly plugin: IAudit;

@@ -19,6 +19,7 @@ import { Constants } from '../models/constant';
 export class OrphanFlagsSection extends BaseAuditSection implements IAuditSection {
   readonly id = Constants.AUDIT.PLUGINS.ORPHAN_FLAGS;
   readonly title = 'Flags';
+  readonly description = 'Flag category entries for tickers no longer present in TickerRepo';
 
   readonly plugin: IAudit;
 
@@ -48,9 +49,9 @@ export class OrphanFlagsSection extends BaseAuditSection implements IAuditSectio
 
   readonly headerFormatter = (results: AuditResult[]): string => {
     if (results.length === 0) {
-      return `<span class="success-badge">✓ No flags</span>`;
+      return `<span class="success-badge">✓ No ${this.title.toLowerCase()}</span>`;
     }
-    return `<span class="count-badge">Flags: ${results.length}</span>`;
+    return `<span class="count-badge">${this.title}: ${results.length}</span>`;
   };
 
   constructor(

@@ -26,6 +26,7 @@ export interface IAuditSection {
   // Identity
   id: string; // Unique section identifier
   title: string; // Display title
+  description?: string; // Tooltip shown on header hover
 
   // Data source
   // TODO: Make Plugin Private ?

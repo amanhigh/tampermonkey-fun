@@ -26,6 +26,7 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
   // Identity - shares ID with ORPHAN_ALERTS plugin
   readonly id = Constants.AUDIT.PLUGINS.ORPHAN_ALERTS;
   readonly title = 'Alerts';
+  readonly description = 'Alerts whose pairId no longer exists in PairRepo — orphaned after pair removal';
 
   // Data source (injected directly, not fetched from registry)
   readonly plugin: IAudit;
@@ -68,10 +69,9 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
 
   readonly headerFormatter = (auditResults: AuditResult[]) => {
     if (auditResults.length === 0) {
-      return `<span class="success-badge">✓ No alerts</span>`;
+      return `<span class="success-badge">✓ No ${this.title.toLowerCase()}</span>`;
     }
-    // BUG: Why are we not reading title from Plugin from all sections or move title here avoid duplication.
-    return `<span style="color: darkred">Alerts: ${auditResults.length}</span>`;
+    return `<span style="color: darkred">${this.title}: ${auditResults.length}</span>`;
   };
 
   /**

@@ -20,7 +20,7 @@ import { Constants } from '../models/constant';
 export class TickerCollisionSection extends BaseAuditSection implements IAuditSection {
   readonly id = Constants.AUDIT.PLUGINS.TICKER_COLLISION;
   readonly title = 'Ticker Collisions';
-  // FIXME: Add Description on title hover of each section explaining what it does.
+  readonly description = 'Multiple TradingView tickers mapping to the same Investing ticker — ambiguous reverse lookup';
 
   readonly plugin: IAudit;
 
@@ -91,9 +91,9 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
 
   readonly headerFormatter = (results: AuditResult[]): string => {
     if (results.length === 0) {
-      return `<span class="success-badge">✓ No ticker collisions</span>`;
+      return `<span class="success-badge">✓ No ${this.title.toLowerCase()}</span>`;
     }
-    return `<span class="count-badge">Collisions: ${results.length}</span>`;
+    return `<span class="count-badge">${this.title}: ${results.length}</span>`;
   };
 
   constructor(

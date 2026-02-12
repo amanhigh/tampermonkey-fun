@@ -25,6 +25,7 @@ export class ReverseGoldenSection extends BaseAuditSection implements IAuditSect
   // Identity - shares ID with REVERSE_GOLDEN plugin
   readonly id = Constants.AUDIT.PLUGINS.REVERSE_GOLDEN;
   readonly title = 'ReverseGolden Integrity';
+  readonly description = 'Investing tickers in PairRepo that have no corresponding TradingView ticker in TickerRepo';
 
   // Data source (injected directly, not fetched from registry)
   readonly plugin: IAudit;
@@ -54,7 +55,12 @@ export class ReverseGoldenSection extends BaseAuditSection implements IAuditSect
   /**
    * Header formatter showing count of reverse golden violations
    */
-  readonly headerFormatter = (results: AuditResult[]): string => `ReverseGolden (${results.length})`;
+  readonly headerFormatter = (results: AuditResult[]): string => {
+    if (results.length === 0) {
+      return `<span class="success-badge">✓ No ${this.title.toLowerCase()} issues</span>`;
+    }
+    return `<span class="count-badge">${this.title}: ${results.length}</span>`;
+  };
 
   /**
    * Constructor with injected dependencies

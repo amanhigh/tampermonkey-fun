@@ -132,7 +132,6 @@ export class AuditHandler implements IAuditHandler {
    * On subsequent calls: returns existing renderer (collapse state preserved)
    */
   private getOrCreateRenderer(sectionId: AuditId): AuditRenderer {
-    // HACK: Should Renderers be created in Factory?
     const existing = this.renderers.get(sectionId);
     if (existing) {
       return existing;

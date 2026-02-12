@@ -126,7 +126,7 @@ describe('DuplicatePairIdsSection', () => {
 
   describe('headerFormatter', () => {
     test('shows success when no results', () => {
-      expect(section.headerFormatter([])).toContain('No duplicate pairIds');
+      expect(section.headerFormatter([])).toContain('No duplicate pairids');
     });
 
     test('shows count when results present', () => {

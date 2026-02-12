@@ -207,7 +207,7 @@ describe('GttAuditSection', () => {
   describe('Header Formatter', () => {
     test('shows success when no results', () => {
       const html = section.headerFormatter([]);
-      expect(html).toContain('All orders watched');
+      expect(html).toContain('gtt orders watched');
       expect(html).toContain('success-badge');
     });
 
@@ -225,7 +225,7 @@ describe('GttAuditSection', () => {
       ];
 
       const html = section.headerFormatter(results);
-      expect(html).toContain('Unwatched: 1');
+      expect(html).toContain('GTT Orders: 1');
     });
   });
 });

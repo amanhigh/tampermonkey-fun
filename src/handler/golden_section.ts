@@ -19,6 +19,7 @@ import { Constants } from '../models/constant';
 export class GoldenSection extends BaseAuditSection implements IAuditSection {
   readonly id = Constants.AUDIT.PLUGINS.GOLDEN;
   readonly title = 'Golden Integrity';
+  readonly description = 'TradingView tickers in TickerRepo whose Investing counterpart is missing from PairRepo';
 
   readonly plugin: IAudit;
 
@@ -61,9 +62,9 @@ export class GoldenSection extends BaseAuditSection implements IAuditSection {
 
   readonly headerFormatter = (results: AuditResult[]): string => {
     if (results.length === 0) {
-      return `<span class="success-badge">✓ No golden integrity issues</span>`;
+      return `<span class="success-badge">✓ No ${this.title.toLowerCase()} issues</span>`;
     }
-    return `<span class="count-badge">Unmapped: ${results.length}</span>`;
+    return `<span class="count-badge">${this.title}: ${results.length}</span>`;
   };
 
   constructor(

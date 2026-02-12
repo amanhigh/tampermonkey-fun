@@ -26,6 +26,7 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
   // Identity - shares ID with GTT_UNWATCHED plugin
   readonly id = Constants.AUDIT.PLUGINS.GTT_UNWATCHED;
   readonly title = 'GTT Orders';
+  readonly description = 'Surfaces GTT orders on tickers absent from active watchlists (Orange / Red / Running)';
 
   // Data source (injected directly, not fetched from registry)
   readonly plugin: IAudit;
@@ -95,9 +96,9 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
 
   readonly headerFormatter = (auditResults: AuditResult[]) => {
     if (auditResults.length === 0) {
-      return `<span class="success-badge">✓ All orders watched</span>`;
+      return `<span class="success-badge">✓ All ${this.title.toLowerCase()} watched</span>`;
     }
-    return `<span class="count-badge">Unwatched: ${auditResults.length}</span>`;
+    return `<span class="count-badge">${this.title}: ${auditResults.length}</span>`;
   };
 
   /**

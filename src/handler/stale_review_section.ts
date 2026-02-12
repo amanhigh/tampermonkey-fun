@@ -19,6 +19,7 @@ import { Constants } from '../models/constant';
 export class StaleReviewSection extends BaseAuditSection implements IAuditSection {
   readonly id = Constants.AUDIT.PLUGINS.STALE_REVIEW;
   readonly title = 'Stale Review';
+  readonly description = 'Tickers not opened within the review window (default 90 days) — candidates for pruning';
 
   readonly plugin: IAudit;
 
@@ -53,9 +54,9 @@ export class StaleReviewSection extends BaseAuditSection implements IAuditSectio
 
   readonly headerFormatter = (results: AuditResult[]): string => {
     if (results.length === 0) {
-      return `<span class="success-badge">✓ No stale tickers</span>`;
+      return `<span class="success-badge">✓ No ${this.title.toLowerCase()} issues</span>`;
     }
-    return `<span class="count-badge">Stale: ${results.length}</span>`;
+    return `<span class="count-badge">${this.title}: ${results.length}</span>`;
   };
 
   constructor(

@@ -19,6 +19,7 @@ import { Constants } from '../models/constant';
 export class OrphanExchangeSection extends BaseAuditSection implements IAuditSection {
   readonly id = Constants.AUDIT.PLUGINS.ORPHAN_EXCHANGE;
   readonly title = 'Exchange';
+  readonly description = 'Exchange-qualified mappings for tickers no longer present in TickerRepo';
 
   readonly plugin: IAudit;
 
@@ -48,9 +49,9 @@ export class OrphanExchangeSection extends BaseAuditSection implements IAuditSec
 
   readonly headerFormatter = (results: AuditResult[]): string => {
     if (results.length === 0) {
-      return `<span class="success-badge">✓ No exchanges</span>`;
+      return `<span class="success-badge">✓ No ${this.title.toLowerCase()}</span>`;
     }
-    return `<span class="count-badge">Exchange: ${results.length}</span>`;
+    return `<span class="count-badge">${this.title}: ${results.length}</span>`;
   };
 
   constructor(

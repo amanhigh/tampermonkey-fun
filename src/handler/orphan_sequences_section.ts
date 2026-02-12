@@ -19,6 +19,7 @@ import { Constants } from '../models/constant';
 export class OrphanSequencesSection extends BaseAuditSection implements IAuditSection {
   readonly id = Constants.AUDIT.PLUGINS.ORPHAN_SEQUENCES;
   readonly title = 'Sequences';
+  readonly description = 'Sequence entries (MWD/YR) for tickers no longer present in TickerRepo';
 
   readonly plugin: IAudit;
 
@@ -48,9 +49,9 @@ export class OrphanSequencesSection extends BaseAuditSection implements IAuditSe
 
   readonly headerFormatter = (results: AuditResult[]): string => {
     if (results.length === 0) {
-      return `<span class="success-badge">✓ No sequences</span>`;
+      return `<span class="success-badge">✓ No ${this.title.toLowerCase()}</span>`;
     }
-    return `<span class="count-badge">Sequences: ${results.length}</span>`;
+    return `<span class="count-badge">${this.title}: ${results.length}</span>`;
   };
 
   constructor(

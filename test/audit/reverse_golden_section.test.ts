@@ -152,12 +152,12 @@ describe('ReverseGoldenSection', () => {
       ];
 
       const html = section.headerFormatter(results);
-      expect(html).toBe('ReverseGolden (1)');
+      expect(html).toContain('ReverseGolden Integrity: 1');
     });
 
     test('shows zero count when empty', () => {
       const html = section.headerFormatter([]);
-      expect(html).toBe('ReverseGolden (0)');
+      expect(html).toContain('No reversegolden integrity issues');
     });
   });
 });

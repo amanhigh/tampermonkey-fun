@@ -19,6 +19,7 @@ import { Constants } from '../models/constant';
 export class TradeRiskSection extends BaseAuditSection implements IAuditSection {
   readonly id = Constants.AUDIT.PLUGINS.TRADE_RISK;
   readonly title = 'Trade Risk Multiple';
+  readonly description = 'GTT orders whose risk size is not a valid multiple of the configured risk unit (6400 / 3200)';
 
   readonly plugin: IAudit;
 
@@ -66,9 +67,9 @@ export class TradeRiskSection extends BaseAuditSection implements IAuditSection 
   readonly headerFormatter = (results: AuditResult[]): string => {
     this.allResults = results;
     if (results.length === 0) {
-      return `<span class="success-badge">✓ All trades compliant</span>`;
+      return `<span class="success-badge">✓ No ${this.title.toLowerCase()} issues</span>`;
     }
-    return `<span style="color: darkred">Non-compliant: ${results.length}</span>`;
+    return `<span style="color: darkred">${this.title}: ${results.length}</span>`;
   };
 
   constructor(

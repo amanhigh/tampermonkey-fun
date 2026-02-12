@@ -91,7 +91,7 @@ describe('StaleReviewSection', () => {
 
   describe('headerFormatter', () => {
     test('shows success when no results', () => {
-      expect(section.headerFormatter([])).toContain('No stale tickers');
+      expect(section.headerFormatter([])).toContain('No stale review issues');
     });
 
     test('shows count when results present', () => {

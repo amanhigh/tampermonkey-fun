@@ -117,7 +117,7 @@ describe('TradeRiskSection', () => {
 
   describe('headerFormatter', () => {
     test('shows success when no results', () => {
-      expect(section.headerFormatter([])).toContain('All trades compliant');
+      expect(section.headerFormatter([])).toContain('No trade risk multiple issues');
     });
 
     test('shows count when results present', () => {

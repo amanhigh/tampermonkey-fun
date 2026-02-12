@@ -21,6 +21,7 @@ import { Constants } from '../models/constant';
 export class DuplicatePairIdsSection extends BaseAuditSection implements IAuditSection {
   readonly id = Constants.AUDIT.PLUGINS.DUPLICATE_PAIR_IDS;
   readonly title = 'Duplicate PairIds';
+  readonly description = 'Multiple Investing tickers sharing the same pairId — causes ambiguous alert routing';
 
   readonly plugin: IAudit;
 
@@ -92,9 +93,9 @@ export class DuplicatePairIdsSection extends BaseAuditSection implements IAuditS
 
   readonly headerFormatter = (results: AuditResult[]): string => {
     if (results.length === 0) {
-      return `<span class="success-badge">✓ No duplicate pairIds</span>`;
+      return `<span class="success-badge">✓ No ${this.title.toLowerCase()}</span>`;
     }
-    return `<span class="count-badge">Duplicates: ${results.length}</span>`;
+    return `<span class="count-badge">${this.title}: ${results.length}</span>`;
   };
 
   constructor(
