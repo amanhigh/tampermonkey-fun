@@ -40,11 +40,11 @@ export class DuplicatePairIdsSection extends BaseAuditSection implements IAuditS
     }
   };
 
-  readonly onRightClick = (result: AuditResult): void => {
+  readonly onRightClick = (result: AuditResult): boolean => {
     const investingTickers = result.data?.investingTickers as string[] | undefined;
     const pairId = result.data?.pairId as string | undefined;
     if (!investingTickers || investingTickers.length < 2 || !pairId) {
-      return;
+      return false;
     }
 
     const ranked = this.canonicalRanker.rankInvestingTickers(investingTickers, pairId);
@@ -53,11 +53,12 @@ export class DuplicatePairIdsSection extends BaseAuditSection implements IAuditS
 
     const preview = `Keep: ${canonical.ticker} (score:${canonical.score}) | Remove: ${removals.map((r) => r.ticker).join(', ')}`;
     if (!confirm(preview)) {
-      return;
+      return false;
     }
 
     removals.forEach((r) => this.pairHandler.stopTrackingByInvestingTicker(r.ticker));
     Notifier.success(`⏹ Kept ${canonical.ticker}, removed ${removals.length} duplicate(s) for pairId ${pairId}`);
+    return true;
   };
 
   readonly onFixAll = (results: AuditResult[]): void => {

@@ -62,7 +62,7 @@ describe('DuplicatePairIdsPlugin', () => {
       const results = await plugin.run();
 
       expect(results).toHaveLength(1);
-      expect(results[0].target).toBe('18462');
+      expect(results[0].target).toBe('Voltas Ltd.');
       expect(results[0].code).toBe('DUPLICATE_PAIR_ID');
       expect(results[0].severity).toBe('MEDIUM');
       expect(results[0].status).toBe('FAIL');
@@ -111,8 +111,8 @@ describe('DuplicatePairIdsPlugin', () => {
       const results = await plugin.run();
 
       expect(results).toHaveLength(2);
-      const pairIds = results.map((r) => r.target).sort();
-      expect(pairIds).toEqual(['18185', '18462']);
+      const targets = results.map((r) => r.target).sort();
+      expect(targets).toEqual(['HUL', 'Voltas']);
     });
 
     it('skips entries with null pair info', async () => {

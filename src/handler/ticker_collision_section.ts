@@ -36,10 +36,10 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
     }
   };
 
-  readonly onRightClick = (result: AuditResult): void => {
+  readonly onRightClick = (result: AuditResult): boolean => {
     const tvTickers = result.data?.tvTickers as string[] | undefined;
     if (!tvTickers || tvTickers.length < 2) {
-      return;
+      return false;
     }
 
     const ranked = this.canonicalRanker.rankTvTickers(tvTickers);
@@ -48,13 +48,12 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
 
     const preview = `Keep: ${canonical.ticker} (score:${canonical.score}) | Remove: ${removals.map((r) => r.ticker).join(', ')}`;
     if (!confirm(preview)) {
-      // BUG: On Cancel ticker gets removed from Section.
-      return;
+      return false;
     }
 
-    // HACK: Change to tvTicker or investingTicker not just name ticker.
     removals.forEach((r) => this.pairHandler.stopTrackingByTvTicker(r.ticker));
     Notifier.success(`✓ Kept ${canonical.ticker}, removed ${removals.length} stale alias(es) for ${result.target}`);
+    return true;
   };
 
   readonly onFixAll = (results: AuditResult[]): void => {

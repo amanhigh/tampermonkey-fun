@@ -57,6 +57,7 @@ export const Constants = Object.freeze({
       /** Stale review audit plugin - identifies tickers not opened within configurable review window */
       STALE_REVIEW: 'stale-review',
     }),
+    STALE_REVIEW_THRESHOLD_DAYS: 90,
   },
 
   // UI element colors and styles

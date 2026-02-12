@@ -30,15 +30,16 @@ export class StaleReviewSection extends BaseAuditSection implements IAuditSectio
     this.tickerHandler.openTicker(result.target);
   };
 
-  readonly onRightClick = (result: AuditResult): void => {
+  readonly onRightClick = (result: AuditResult): boolean => {
     const daysSinceOpen = result.data?.daysSinceOpen as number | undefined;
     const label = daysSinceOpen !== undefined && daysSinceOpen >= 0 ? `${daysSinceOpen} days stale` : 'never opened';
 
     if (!confirm(`Stop tracking ${result.target}? (${label})`)) {
-      return;
+      return false;
     }
 
     this.pairHandler.stopTrackingByTvTicker(result.target);
+    return true;
   };
 
   readonly onFixAll = (results: AuditResult[]): void => {

@@ -16,9 +16,9 @@ describe('StaleReviewSection', () => {
     code: 'STALE_TICKER',
     target: tvTicker,
     message: daysSinceOpen >= 0 ? `${tvTicker}: last opened ${daysSinceOpen} days ago` : `${tvTicker}: never opened`,
-    severity: daysSinceOpen < 0 ? 'HIGH' : 'MEDIUM',
+    severity: 'MEDIUM',
     status: 'FAIL',
-    data: { tvTicker, lastOpened: 0, daysSinceOpen, watchCategories: [], flagCategories: [] },
+    data: { tvTicker, lastOpened: 0, daysSinceOpen },
   });
 
   beforeEach(() => {

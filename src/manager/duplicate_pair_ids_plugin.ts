@@ -52,8 +52,7 @@ export class DuplicatePairIdsPlugin extends BaseAuditPlugin {
         results.push({
           pluginId: this.id,
           code: 'DUPLICATE_PAIR_ID',
-          // BUG: Should this be pairName or pairId?
-          target: pairId,
+          target: pairName,
           message: `${pairName} (${pairId}): shared by ${tickers.join(', ')}`,
           severity: 'MEDIUM',
           status: 'FAIL',

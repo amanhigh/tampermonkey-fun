@@ -2,14 +2,12 @@ import { StaleReviewPlugin } from '../../src/manager/stale_review_plugin';
 import { IRecentTickerRepo } from '../../src/repo/recent';
 import { ITickerRepo } from '../../src/repo/ticker';
 import { IWatchManager } from '../../src/manager/watch';
-import { IFlagManager } from '../../src/manager/flag';
 
 describe('StaleReviewPlugin', () => {
   let plugin: StaleReviewPlugin;
   let mockRecentRepo: Partial<IRecentTickerRepo>;
   let mockTickerRepo: Partial<ITickerRepo>;
   let mockWatchManager: Partial<IWatchManager>;
-  let mockFlagManager: Partial<IFlagManager>;
 
   const DAY_MS = 24 * 60 * 60 * 1000;
   const now = Date.now();
@@ -17,14 +15,12 @@ describe('StaleReviewPlugin', () => {
   beforeEach(() => {
     mockRecentRepo = { get: jest.fn().mockReturnValue(undefined) };
     mockTickerRepo = { getAllKeys: jest.fn().mockReturnValue([]) };
-    mockWatchManager = { getCategory: jest.fn().mockReturnValue(new Set()) };
-    mockFlagManager = { getCategory: jest.fn().mockReturnValue(new Set()) };
+    mockWatchManager = { isWatched: jest.fn().mockReturnValue(false) };
 
     plugin = new StaleReviewPlugin(
       mockRecentRepo as IRecentTickerRepo,
       mockTickerRepo as ITickerRepo,
-      mockWatchManager as IWatchManager,
-      mockFlagManager as IFlagManager
+      mockWatchManager as IWatchManager
     );
   });
 
@@ -46,13 +42,13 @@ describe('StaleReviewPlugin', () => {
     expect(results).toEqual([]);
   });
 
-  test('flags tickers never opened as HIGH severity', async () => {
+  test('flags tickers never opened as MEDIUM severity', async () => {
     (mockTickerRepo.getAllKeys as jest.Mock).mockReturnValue(['TCS', 'INFY']);
     (mockRecentRepo.get as jest.Mock).mockReturnValue(undefined);
 
     const results = await plugin.run();
     expect(results).toHaveLength(2);
-    expect(results[0].severity).toBe('HIGH');
+    expect(results[0].severity).toBe('MEDIUM');
     expect(results[0].message).toContain('never opened');
     expect(results[0].data?.daysSinceOpen).toBe(-1);
   });
@@ -75,20 +71,14 @@ describe('StaleReviewPlugin', () => {
     expect(results).toHaveLength(0);
   });
 
-  test('includes watch and flag categories in data', async () => {
-    (mockTickerRepo.getAllKeys as jest.Mock).mockReturnValue(['STALE']);
+  test('skips watched tickers', async () => {
+    (mockTickerRepo.getAllKeys as jest.Mock).mockReturnValue(['WATCHED', 'UNWATCHED']);
     (mockRecentRepo.get as jest.Mock).mockReturnValue(undefined);
-    (mockWatchManager.getCategory as jest.Mock).mockImplementation((i: number) => {
-      return i === 0 ? new Set(['STALE']) : new Set();
-    });
-    (mockFlagManager.getCategory as jest.Mock).mockImplementation((i: number) => {
-      return i === 2 ? new Set(['STALE']) : new Set();
-    });
+    (mockWatchManager.isWatched as jest.Mock).mockImplementation((ticker: string) => ticker === 'WATCHED');
 
     const results = await plugin.run();
     expect(results).toHaveLength(1);
-    expect(results[0].data?.watchCategories).toEqual([0]);
-    expect(results[0].data?.flagCategories).toEqual([2]);
+    expect(results[0].target).toBe('UNWATCHED');
   });
 
   test('respects custom threshold', async () => {
@@ -96,7 +86,6 @@ describe('StaleReviewPlugin', () => {
       mockRecentRepo as IRecentTickerRepo,
       mockTickerRepo as ITickerRepo,
       mockWatchManager as IWatchManager,
-      mockFlagManager as IFlagManager,
       30
     );
 

@@ -41,7 +41,7 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
     this.tickerHandler.openTicker(tvTicker);
   };
 
-  readonly onRightClick = (result: AuditResult) => {
+  readonly onRightClick = (result: AuditResult): boolean => {
     try {
       // Extract order IDs from result data
       const orderIds = result.data?.orderIds as string[] | undefined;
@@ -50,7 +50,7 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
       // Validation
       if (!orderIds || orderIds.length === 0) {
         Notifier.warn('No GTT orders found for this ticker');
-        return;
+        return false;
       }
 
       // Build confirmation message
@@ -62,7 +62,7 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
       // Show confirmation dialog
       if (!this.uiUtil.showConfirm('Delete GTT Orders', message)) {
         Notifier.info('Deletion cancelled');
-        return;
+        return false;
       }
 
       // Show progress notification
@@ -75,8 +75,10 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
 
       // Success notification
       Notifier.success(`Deleted ${orderIds.length} GTT order(s) for ${tvTicker}`);
+      return true;
     } catch (error) {
       Notifier.error(`Failed to delete GTT orders: ${error}`);
+      return false;
     }
   };
 

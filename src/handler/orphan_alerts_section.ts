@@ -43,8 +43,8 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
     Notifier.warn(`${label} — no ticker mapping, cannot navigate`, 3000);
   };
 
-  readonly onRightClick = async (result: AuditResult): Promise<void> => {
-    await this.handleOrphanDeletion(result);
+  readonly onRightClick = async (result: AuditResult): Promise<boolean> => {
+    return this.handleOrphanDeletion(result);
   };
 
   readonly onFixAll = async (results: AuditResult[]): Promise<void> => {
@@ -94,7 +94,7 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
    * Handle deletion of orphan alerts with confirmation
    * @param result - AuditResult with pairId and alertCount in data field
    */
-  private async handleOrphanDeletion(result: AuditResult): Promise<void> {
+  private async handleOrphanDeletion(result: AuditResult): Promise<boolean> {
     try {
       // Extract metadata from result
       const pairId = result.data?.pairId as string | undefined;
@@ -102,14 +102,14 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
 
       if (!pairId) {
         Notifier.warn('Invalid orphan alert result: missing pairId');
-        return;
+        return false;
       }
 
       // Get all alerts for this pairId
       const alerts = this.alertRepo.get(pairId);
       if (!alerts || alerts.length === 0) {
         Notifier.warn(`No alerts found for pairId ${pairId}`);
-        return;
+        return false;
       }
 
       // Build confirmation message
@@ -123,7 +123,7 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
       // Show confirmation dialog
       if (!this.uiUtil.showConfirm('Delete Orphan Alerts', message)) {
         Notifier.info('Deletion cancelled');
-        return;
+        return false;
       }
 
       // Show progress notification
@@ -137,10 +137,12 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
 
       // Success notification
       Notifier.success(`✓ Deleted ${alerts.length} orphan alert(s) for ${pairId}`);
+      return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       Notifier.error(`Failed to delete alerts: ${errorMessage}`);
       console.error('Orphan alert deletion failed:', error);
+      return false;
     }
   }
 }

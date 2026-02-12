@@ -106,6 +106,7 @@ export class AuditRenderer {
 
     const $header = $('<div>')
       .addClass(Constants.AUDIT.CLASSES.SECTION_HEADER)
+      .attr('title', this.section.description ?? '')
       .on('click', () => this.toggleCollapse());
 
     // Expand/collapse icon + header text
@@ -253,6 +254,7 @@ export class AuditRenderer {
       })
       .attr(
         'title',
+        // FIXME: Remove hardcode vary by actual action of section for all Sections.
         `Left: ${this.section.onLeftClick.name || 'Open'} | Right: ${this.section.onRightClick.name || 'Fix'}`
       );
 
@@ -265,7 +267,10 @@ export class AuditRenderer {
     // Right-click: Secondary action (no auto-refresh for speed)
     $button.on('contextmenu', (e) => {
       e.preventDefault();
-      void Promise.resolve(this.section.onRightClick(result)).then(() => {
+      void Promise.resolve(this.section.onRightClick(result)).then((returnValue) => {
+        if (returnValue === false) {
+          return;
+        }
         $button.remove();
         this.removeResultAndUpdateHeader(ticker);
       });
