@@ -1,14 +1,14 @@
 import { OrphanSequencesSection } from '../../src/handler/orphan_sequences_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
-import { IPairHandler } from '../../src/handler/pair';
+import { ISequenceRepo } from '../../src/repo/sequence';
 import { Notifier } from '../../src/util/notify';
 
 describe('OrphanSequencesSection', () => {
   let section: OrphanSequencesSection;
   let mockPlugin: IAudit;
   let mockTickerHandler: Partial<ITickerHandler>;
-  let mockPairHandler: Partial<IPairHandler>;
+  let mockSequenceRepo: Partial<ISequenceRepo>;
   let notifySuccessSpy: jest.SpyInstance;
 
   const createResult = (ticker: string): AuditResult => ({
@@ -33,8 +33,8 @@ describe('OrphanSequencesSection', () => {
       openTicker: jest.fn(),
     };
 
-    mockPairHandler = {
-      stopTrackingByTvTicker: jest.fn(),
+    mockSequenceRepo = {
+      delete: jest.fn(),
     };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
@@ -43,7 +43,7 @@ describe('OrphanSequencesSection', () => {
     section = new OrphanSequencesSection(
       mockPlugin,
       mockTickerHandler as ITickerHandler,
-      mockPairHandler as IPairHandler
+      mockSequenceRepo as ISequenceRepo
     );
   });
 
@@ -82,20 +82,20 @@ describe('OrphanSequencesSection', () => {
   });
 
   describe('onRightClick', () => {
-    test('stops tracking orphan sequence ticker', () => {
+    test('deletes only the orphan sequence entry from SequenceRepo', () => {
       const result = createResult('ORPHAN');
       section.onRightClick(result);
-      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledWith('ORPHAN');
+      expect(mockSequenceRepo.delete).toHaveBeenCalledWith('ORPHAN');
     });
   });
 
   describe('onFixAll', () => {
-    test('stops tracking all orphan sequence tickers', () => {
+    test('deletes all orphan sequence entries from SequenceRepo', () => {
       const results = [createResult('ORPHAN1'), createResult('ORPHAN2')];
       section.onFixAll!(results);
-      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledTimes(2);
-      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledWith('ORPHAN1');
-      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledWith('ORPHAN2');
+      expect(mockSequenceRepo.delete).toHaveBeenCalledTimes(2);
+      expect(mockSequenceRepo.delete).toHaveBeenCalledWith('ORPHAN1');
+      expect(mockSequenceRepo.delete).toHaveBeenCalledWith('ORPHAN2');
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
   });

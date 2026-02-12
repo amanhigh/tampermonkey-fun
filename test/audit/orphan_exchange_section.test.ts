@@ -1,14 +1,14 @@
 import { OrphanExchangeSection } from '../../src/handler/orphan_exchange_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
-import { IPairHandler } from '../../src/handler/pair';
+import { IExchangeRepo } from '../../src/repo/exchange';
 import { Notifier } from '../../src/util/notify';
 
 describe('OrphanExchangeSection', () => {
   let section: OrphanExchangeSection;
   let mockPlugin: IAudit;
   let mockTickerHandler: Partial<ITickerHandler>;
-  let mockPairHandler: Partial<IPairHandler>;
+  let mockExchangeRepo: Partial<IExchangeRepo>;
   let notifySuccessSpy: jest.SpyInstance;
 
   const createResult = (tvTicker: string): AuditResult => ({
@@ -30,7 +30,7 @@ describe('OrphanExchangeSection', () => {
     };
 
     mockTickerHandler = { openTicker: jest.fn() };
-    mockPairHandler = { stopTrackingByTvTicker: jest.fn() };
+    mockExchangeRepo = { delete: jest.fn() };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
     jest.spyOn(Notifier, 'warn').mockImplementation();
@@ -38,7 +38,7 @@ describe('OrphanExchangeSection', () => {
     section = new OrphanExchangeSection(
       mockPlugin,
       mockTickerHandler as ITickerHandler,
-      mockPairHandler as IPairHandler
+      mockExchangeRepo as IExchangeRepo
     );
   });
 
@@ -62,19 +62,19 @@ describe('OrphanExchangeSection', () => {
   });
 
   describe('onRightClick', () => {
-    test('stops tracking orphan exchange ticker', () => {
+    test('deletes only the orphan exchange entry from ExchangeRepo', () => {
       section.onRightClick(createResult('HDFC'));
-      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledWith('HDFC');
+      expect(mockExchangeRepo.delete).toHaveBeenCalledWith('HDFC');
     });
   });
 
   describe('onFixAll', () => {
-    test('stops tracking all orphan exchange tickers', () => {
+    test('deletes all orphan exchange entries from ExchangeRepo', () => {
       const results = [createResult('HDFC'), createResult('TCS')];
       section.onFixAll!(results);
-      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledTimes(2);
-      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledWith('HDFC');
-      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledWith('TCS');
+      expect(mockExchangeRepo.delete).toHaveBeenCalledTimes(2);
+      expect(mockExchangeRepo.delete).toHaveBeenCalledWith('HDFC');
+      expect(mockExchangeRepo.delete).toHaveBeenCalledWith('TCS');
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
   });
