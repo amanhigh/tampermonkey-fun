@@ -418,17 +418,15 @@ describe('AuditHandler', () => {
       expect(mockUIUtil.buildButton).toHaveBeenCalled();
     });
 
-    it('should clear old audit sections before re-rendering', async () => {
+    it('should preserve renderer instances across multiple auditAll calls', async () => {
+      await auditHandler.auditAll();
       await auditHandler.auditAll();
 
-      // Verify that jQuery was called to find sections by class
+      // Verify that jQuery was called to find audit area
       expect($).toHaveBeenCalledWith(`#${Constants.UI.IDS.AREAS.AUDIT}`);
 
-      // Verify that find() was called with the section class to locate old sections
-      expect(mockJQuery.find).toHaveBeenCalledWith(`.${Constants.AUDIT.CLASSES.SECTION}`);
-
-      // Verify that remove() was called to clear old sections
-      expect(mockJQuery.remove).toHaveBeenCalled();
+      // Sections should NOT be cleared — renderers persist and update in-place
+      expect(mockJQuery.find).not.toHaveBeenCalledWith(`.${Constants.AUDIT.CLASSES.SECTION}`);
     });
 
     it('should filter non-watched audit results', async () => {

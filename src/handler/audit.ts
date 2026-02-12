@@ -1,4 +1,4 @@
-import { Constants } from '../models/constant';
+import { AuditId, Constants } from '../models/constant';
 import { AuditSectionRegistry } from '../util/audit_registry';
 import { IUIUtil } from '../util/ui';
 import { AuditRenderer } from '../util/audit_renderer';
@@ -37,6 +37,9 @@ export class AuditHandler implements IAuditHandler {
   // Track whether audits have ever been run (used for initial vs subsequent toggles)
   private auditHasRun: boolean = false;
 
+  // Preserve renderer instances across auditAll() calls to retain collapse state
+  private readonly renderers: Map<string, AuditRenderer> = new Map();
+
   constructor(
     private readonly auditRegistry: AuditSectionRegistry,
     private readonly uiUtil: IUIUtil
@@ -68,11 +71,10 @@ export class AuditHandler implements IAuditHandler {
     //TODO: Remove Plugin Injection and use Section directly
     const results = await alertsSection.plugin.run();
 
-    // Render global refresh button at top of audit area
-    this.renderGlobalRefreshButton();
-
-    // Clear old sections before re-rendering (prevents duplicates on refresh)
-    this.clearAuditSections();
+    // First run: render global refresh button (only once)
+    if (!this.auditHasRun) {
+      this.renderGlobalRefreshButton();
+    }
 
     // Render alerts UI (header + buttons) before GTT audit
     this.auditAlerts(results);
@@ -123,17 +125,23 @@ export class AuditHandler implements IAuditHandler {
   }
 
   /**
-   * Clears all audit sections from the UI
-   * Preserves the global refresh button at the top
-   * Called before re-rendering sections to prevent duplicates
-   * @private
+   * Gets or creates a renderer for a section, preserving collapse state across runs
+   * On first call: creates renderer and appends to DOM
+   * On subsequent calls: returns existing renderer (collapse state preserved)
    */
-  private clearAuditSections(): void {
-    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+  private getOrCreateRenderer(sectionId: AuditId): AuditRenderer {
+    // HACK: Should Renderers be created in Factory?
+    const existing = this.renderers.get(sectionId);
+    if (existing) {
+      return existing;
+    }
 
-    // Remove all audit sections (identified by class)
-    // This does NOT remove the global refresh button
-    $auditArea.find(`.${Constants.AUDIT.CLASSES.SECTION}`).remove();
+    const section = this.auditRegistry.mustGetSection(sectionId);
+    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
+    renderer.render();
+    this.renderers.set(sectionId, renderer);
+    return renderer;
   }
 
   /**
@@ -142,17 +150,7 @@ export class AuditHandler implements IAuditHandler {
    * @param pluginResults Results from AlertsAudit plugin
    */
   private auditAlerts(pluginResults: AuditResult[]): void {
-    // Get section from registry (section contains plugin)
-    const section = this.auditRegistry.mustGetSection(Constants.AUDIT.PLUGINS.ALERTS);
-
-    // Create renderer with section and render
-    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
-
-    // Render initial (empty) section first
-    renderer.render();
-
-    // Set initial plugin results (plugin already handles filtering and sorting)
+    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.ALERTS);
     renderer.setResults(pluginResults);
   }
 
@@ -160,17 +158,7 @@ export class AuditHandler implements IAuditHandler {
    * Run GTT unwatched audit and render section
    */
   private async auditGttOrders(): Promise<void> {
-    // Get section from registry (section contains plugin)
-    const section = this.auditRegistry.mustGetSection(Constants.AUDIT.PLUGINS.GTT_UNWATCHED);
-
-    // Create renderer with section and render
-    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
-
-    // Render initial (empty) section first
-    renderer.render();
-
-    // Now run audit via renderer (this records timestamp and updates display)
+    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.GTT_UNWATCHED);
     await renderer.refresh();
   }
 
@@ -178,17 +166,7 @@ export class AuditHandler implements IAuditHandler {
    * Run Orphan Alerts audit and render section
    */
   private async auditOrphanAlerts(): Promise<void> {
-    // Get section from registry (section contains plugin)
-    const section = this.auditRegistry.mustGetSection(Constants.AUDIT.PLUGINS.ORPHAN_ALERTS);
-
-    // Create renderer with section and render
-    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
-
-    // Render initial (empty) section first
-    renderer.render();
-
-    // Now run audit via renderer (this records timestamp and updates display)
+    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.ORPHAN_ALERTS);
     await renderer.refresh();
   }
 
@@ -196,17 +174,7 @@ export class AuditHandler implements IAuditHandler {
    * Run ReverseGolden audit and render section
    */
   private async auditReverseGolden(): Promise<void> {
-    // Get section from registry (section contains plugin)
-    const section = this.auditRegistry.mustGetSection(Constants.AUDIT.PLUGINS.REVERSE_GOLDEN);
-
-    // Create renderer with section and render
-    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
-
-    // Render initial (empty) section first
-    renderer.render();
-
-    // Now run audit via renderer (this records timestamp and updates display)
+    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.REVERSE_GOLDEN);
     await renderer.refresh();
   }
 
@@ -214,17 +182,7 @@ export class AuditHandler implements IAuditHandler {
    * Run Orphan Sequences audit and render section
    */
   private async auditOrphanSequences(): Promise<void> {
-    // Get section from registry (section contains plugin)
-    const section = this.auditRegistry.mustGetSection(Constants.AUDIT.PLUGINS.ORPHAN_SEQUENCES);
-
-    // Create renderer with section and render
-    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
-
-    // Render initial (empty) section first
-    renderer.render();
-
-    // Now run audit via renderer (this records timestamp and updates display)
+    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.ORPHAN_SEQUENCES);
     await renderer.refresh();
   }
 
@@ -232,17 +190,7 @@ export class AuditHandler implements IAuditHandler {
    * Run Orphan Flags audit and render section
    */
   private async auditOrphanFlags(): Promise<void> {
-    // Get section from registry (section contains plugin)
-    const section = this.auditRegistry.mustGetSection(Constants.AUDIT.PLUGINS.ORPHAN_FLAGS);
-
-    // Create renderer with section and render
-    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
-
-    // Render initial (empty) section first
-    renderer.render();
-
-    // Now run audit via renderer (this records timestamp and updates display)
+    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.ORPHAN_FLAGS);
     await renderer.refresh();
   }
 
@@ -250,17 +198,7 @@ export class AuditHandler implements IAuditHandler {
    * Run Orphan Exchange audit and render section
    */
   private async auditOrphanExchange(): Promise<void> {
-    // Get section from registry (section contains plugin)
-    const section = this.auditRegistry.mustGetSection(Constants.AUDIT.PLUGINS.ORPHAN_EXCHANGE);
-
-    // Create renderer with section and render
-    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
-
-    // Render initial (empty) section first
-    renderer.render();
-
-    // Now run audit via renderer (this records timestamp and updates display)
+    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.ORPHAN_EXCHANGE);
     await renderer.refresh();
   }
 
@@ -268,17 +206,7 @@ export class AuditHandler implements IAuditHandler {
    * Run Duplicate PairIds audit and render section
    */
   private async auditDuplicatePairIds(): Promise<void> {
-    // Get section from registry (section contains plugin)
-    const section = this.auditRegistry.mustGetSection(Constants.AUDIT.PLUGINS.DUPLICATE_PAIR_IDS);
-
-    // Create renderer with section and render
-    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
-
-    // Render initial (empty) section first
-    renderer.render();
-
-    // Now run audit via renderer (this records timestamp and updates display)
+    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.DUPLICATE_PAIR_IDS);
     await renderer.refresh();
   }
 
@@ -286,17 +214,7 @@ export class AuditHandler implements IAuditHandler {
    * Run Ticker Collision audit and render section
    */
   private async auditTickerCollision(): Promise<void> {
-    // Get section from registry (section contains plugin)
-    const section = this.auditRegistry.mustGetSection(Constants.AUDIT.PLUGINS.TICKER_COLLISION);
-
-    // Create renderer with section and render
-    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
-
-    // Render initial (empty) section first
-    renderer.render();
-
-    // Now run audit via renderer (this records timestamp and updates display)
+    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.TICKER_COLLISION);
     await renderer.refresh();
   }
 
@@ -304,17 +222,7 @@ export class AuditHandler implements IAuditHandler {
    * Run Trade Risk audit and render section
    */
   private async auditTradeRisk(): Promise<void> {
-    // Get section from registry (section contains plugin)
-    const section = this.auditRegistry.mustGetSection(Constants.AUDIT.PLUGINS.TRADE_RISK);
-
-    // Create renderer with section and render
-    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
-
-    // Render initial (empty) section first
-    renderer.render();
-
-    // Now run audit via renderer (this records timestamp and updates display)
+    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.TRADE_RISK);
     await renderer.refresh();
   }
 }

@@ -328,24 +328,12 @@ export class AuditRenderer {
       // Record timestamp
       this.lastRunTime = Date.now();
 
-      // Smart expand: expand if issues, collapse if clean
-      this.smartExpand(this.results);
-
       // Rebuild section
       this.updateSectionInDOM();
     } finally {
       this.running = false;
       const $refresh = $(`#audit-refresh-${this.section.id}`);
       this.setRefreshButtonState($refresh, true);
-    }
-  }
-
-  /**
-   * Smart expand/collapse: expand if issues found, collapse if clean
-   */
-  private smartExpand(results: AuditResult[]): void {
-    if (results.length > 0 && this.collapsed) {
-      this.collapsed = false;
     }
   }
 
@@ -375,7 +363,6 @@ export class AuditRenderer {
    */
   public setResults(results: AuditResult[]): void {
     this.results = results;
-    this.smartExpand(results);
     this.updateSectionInDOM();
   }
 
