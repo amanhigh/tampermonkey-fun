@@ -3,6 +3,8 @@ import { AuditSectionRegistry } from '../util/audit_registry';
 import { IUIUtil } from '../util/ui';
 import { AuditRenderer } from '../util/audit_renderer';
 import { AuditResult } from '../models/audit';
+import { IPairHandler } from './pair';
+import { ITickerManager } from '../manager/ticker';
 
 /**
  * Interface for managing audit UI operations
@@ -42,7 +44,9 @@ export class AuditHandler implements IAuditHandler {
 
   constructor(
     private readonly auditRegistry: AuditSectionRegistry,
-    private readonly uiUtil: IUIUtil
+    private readonly uiUtil: IUIUtil,
+    private readonly pairHandler: IPairHandler,
+    private readonly tickerManager: ITickerManager
   ) {}
 
   /**
@@ -71,9 +75,9 @@ export class AuditHandler implements IAuditHandler {
     //TODO: Remove Plugin Injection and use Section directly
     const results = await alertsSection.plugin.run();
 
-    // First run: render global refresh button (only once)
+    // First run: render toolbar buttons (only once)
     if (!this.auditHasRun) {
-      this.renderGlobalRefreshButton();
+      this.renderToolbarButtons();
     }
 
     // Render alerts UI (header + buttons) before GTT audit
@@ -106,24 +110,49 @@ export class AuditHandler implements IAuditHandler {
   }
 
   /**
-   * Renders global refresh button at the top of audit area
-   * Allows user to re-run all audits
-   * Styling is defined in src/style/_audit_section.less
+   * Renders toolbar buttons at the top of audit area:
+   * Refresh All, Stop Tracking, and Map Alert
    */
-  private renderGlobalRefreshButton(): void {
+  private renderToolbarButtons(): void {
     const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    const buttonId = Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH;
+    const refreshId = Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH;
+    const stopTrackId = Constants.UI.IDS.BUTTONS.AUDIT_STOP_TRACKING;
+    const mapAlertId = Constants.UI.IDS.BUTTONS.AUDIT_MAP_ALERT;
 
-    // Remove old button if exists (in case of re-render)
-    $(`#${buttonId}`).remove();
+    // Remove old buttons if exist (in case of re-render)
+    $(`#${refreshId}`).remove();
+    $(`#${stopTrackId}`).remove();
+    $(`#${mapAlertId}`).remove();
 
-    // Create refresh button (styling defined in _audit_section.less)
-    const $button = this.uiUtil.buildButton(buttonId, '🔄 Refresh All Audits', () => {
-      void this.auditAll(); // Re-run all audits
+    // Map Alert button (FR-9.9)
+    // FIXME: Make all Names small with emoji fit in single line for 3 buttons.
+    const $mapAlert = this.uiUtil.buildButton(mapAlertId, '🔗 Map Alert', () => {
+      const ticker = this.tickerManager.getTicker();
+      void this.pairHandler.mapInvestingTicker(ticker);
     });
+    $mapAlert.prependTo($auditArea);
 
-    // Add at top of audit area
-    $button.prependTo($auditArea);
+    // Stop Tracking button (FR-9.8)
+    const $stopTrack = this.uiUtil.buildButton(stopTrackId, '⏹ Stop Tracking', () => {
+      try {
+        const investingTicker = this.tickerManager.getInvestingTicker();
+        if (confirm(`Stop tracking ${investingTicker}?`)) {
+          this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
+        }
+      } catch {
+        const tvTicker = this.tickerManager.getTicker();
+        if (confirm(`Stop tracking ${tvTicker}?`)) {
+          this.pairHandler.stopTrackingByTvTicker(tvTicker);
+        }
+      }
+    });
+    $stopTrack.prependTo($auditArea);
+
+    // Refresh All button
+    const $refresh = this.uiUtil.buildButton(refreshId, '🔄 Refresh All Audits', () => {
+      void this.auditAll();
+    });
+    $refresh.prependTo($auditArea);
   }
 
   /**
