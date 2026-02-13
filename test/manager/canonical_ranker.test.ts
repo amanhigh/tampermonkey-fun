@@ -23,7 +23,7 @@ describe('CanonicalRanker', () => {
     mockWatchManager = { isWatched: jest.fn().mockReturnValue(false) };
     mockRecentRepo = { get: jest.fn().mockReturnValue(undefined) };
     mockSequenceRepo = { has: jest.fn().mockReturnValue(false) };
-    mockExchangeRepo = { has: jest.fn().mockReturnValue(false) };
+    mockExchangeRepo = { has: jest.fn().mockReturnValue(false), get: jest.fn().mockReturnValue(undefined) };
     mockPairRepo = { getPairInfo: jest.fn().mockReturnValue(null) };
     mockSymbolManager = {
       investingToTv: jest.fn().mockReturnValue(null),
@@ -134,6 +134,53 @@ describe('CanonicalRanker', () => {
       const result = ranker.rankTvTickers(['A', 'B']);
       expect(result[0].ticker).toBe('B');
       expect(result[0].isWatched).toBe(true);
+    });
+
+    test('HTML-encoded tickers get penalized below clean aliases', () => {
+      // All map to same investing ticker with same alerts
+      (mockSymbolManager.tvToInvesting as jest.Mock).mockReturnValue('MAHM');
+      (mockPairRepo.getPairInfo as jest.Mock).mockReturnValue(new PairInfo('Mahindra', '18273', 'NSE', 'MAHM'));
+      (mockAlertRepo.get as jest.Mock).mockReturnValue([{ id: '1' }, { id: '2' }]);
+      (mockRecentRepo.get as jest.Mock).mockReturnValue(Date.now());
+
+      const result = ranker.rankTvTickers(['M_M', 'M&M', 'M&amp;M', 'M&amp;AMP;M']);
+
+      // M&M should win (clean, shortest among non-penalized)
+      expect(result[0].ticker).toBe('M&M');
+      // M_M second (clean but longer)
+      expect(result[1].ticker).toBe('M_M');
+      // HTML-encoded tickers last (penalized)
+      expect(result[2].score).toBeLessThan(0);
+      expect(result[3].score).toBeLessThan(0);
+    });
+
+    test('preferred exchange bonus ranks NSE ticker above non-exchange ticker', () => {
+      // PTC has NSE exchange data, PFS does not
+      (mockSymbolManager.tvToInvesting as jest.Mock).mockReturnValue('PTCI');
+      (mockPairRepo.getPairInfo as jest.Mock).mockReturnValue(new PairInfo('PTC India', '123', 'NSE', 'PTCI'));
+      (mockExchangeRepo.has as jest.Mock).mockImplementation((t: string) => t === 'PTC');
+      (mockExchangeRepo.get as jest.Mock).mockImplementation((t: string) => (t === 'PTC' ? 'NSE:PTC' : undefined));
+
+      const result = ranker.rankTvTickers(['PFS', 'PTC']);
+      expect(result[0].ticker).toBe('PTC');
+      expect(result[0].score).toBeGreaterThan(result[1].score);
+    });
+
+    test('non-preferred exchange does not get bonus', () => {
+      (mockExchangeRepo.has as jest.Mock).mockReturnValue(true);
+      (mockExchangeRepo.get as jest.Mock).mockImplementation((t: string) => `BSE:${t}`);
+
+      const result = ranker.rankTvTickers(['A', 'B']);
+      // Both have BSE (non-preferred), same score — no bonus applied
+      expect(result[0].score).toBe(result[1].score);
+    });
+
+    test('tiebreaker prefers shorter ticker name when scores are equal', () => {
+      const result = ranker.rankTvTickers(['LONGNAME', 'SHORT', 'MID']);
+      // All score 0, tiebreaker by length: SHORT (5) < MID (3) < LONGNAME (8)
+      expect(result[0].ticker).toBe('MID');
+      expect(result[1].ticker).toBe('SHORT');
+      expect(result[2].ticker).toBe('LONGNAME');
     });
   });
 });

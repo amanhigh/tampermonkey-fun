@@ -5,6 +5,7 @@ import { ISequenceRepo } from '../repo/sequence';
 import { IExchangeRepo } from '../repo/exchange';
 import { IPairRepo } from '../repo/pair';
 import { ISymbolManager } from './symbol';
+import { Constants } from '../models/constant';
 
 /**
  * Signal scores used to rank a ticker for canonical selection
@@ -64,6 +65,10 @@ export interface CanonicalRankerDeps {
  * 3. Recent open timestamp (×10 if present) — recently viewed
  * 4. Sequence/exchange footprints (×5 each) — has stored preferences
  * 5. Pair mapping presence (×1) — has investing mapping
+ * 6. HTML-encoding penalty (−500) — junk aliases like M&amp;M or M&amp;AMP;M
+ * 7. Preferred exchange bonus (+15) — NSE/NYSE/NASDAQ/CBOE from exchangeRepo
+ * 8. Ampersand fallback (+2) — raw & in ticker hints NSE origin when no exchange data
+ * 9. Tiebreaker: shorter ticker name wins (e.g. M&M over M_M)
  */
 export class CanonicalRanker implements ICanonicalRanker {
   private static readonly WEIGHT_ALERTS = 100;
@@ -72,6 +77,9 @@ export class CanonicalRanker implements ICanonicalRanker {
   private static readonly WEIGHT_SEQUENCE = 5;
   private static readonly WEIGHT_EXCHANGE = 5;
   private static readonly WEIGHT_PAIR = 1;
+  private static readonly PENALTY_HTML_ENCODED = -500;
+  private static readonly BONUS_PREFERRED_EXCHANGE = 15;
+  private static readonly BONUS_AMPERSAND = 2;
 
   private readonly alertRepo: IAlertRepo;
   private readonly watchManager: IWatchManager;
@@ -121,7 +129,6 @@ export class CanonicalRanker implements ICanonicalRanker {
     const signals = tvTickers.map((tvTicker) => {
       const investingTicker = this.symbolManager.tvToInvesting(tvTicker);
       const pairInfo = investingTicker ? this.pairRepo.getPairInfo(investingTicker) : null;
-      // TODO: Prefer NSE aliases by applying an exchange-based bonus once the section stops deleting shared alerts.
       const pairId = pairInfo?.pairId;
       const alertCount = pairId ? this.getAlertCount(pairId) : 0;
       const isWatched = this.watchManager.isWatched(tvTicker);
@@ -141,12 +148,29 @@ export class CanonicalRanker implements ICanonicalRanker {
       });
     });
 
-    return signals.sort((a, b) => b.score - a.score);
+    return signals.sort((a, b) => b.score - a.score || a.ticker.length - b.ticker.length);
   }
 
   private getAlertCount(pairId: string): number {
     const alerts = this.alertRepo.get(pairId);
     return alerts ? alerts.length : 0;
+  }
+
+  private isHtmlEncoded(ticker: string): boolean {
+    return ticker.includes('&amp;') || ticker.includes('&AMP;');
+  }
+
+  private hasRawAmpersand(ticker: string): boolean {
+    return ticker.includes('&') && !this.isHtmlEncoded(ticker);
+  }
+
+  private isPreferredExchange(ticker: string): boolean {
+    const exchangeTicker = this.exchangeRepo.get(ticker);
+    if (!exchangeTicker) {
+      return false;
+    }
+    const exchange = exchangeTicker.split(':')[0];
+    return Constants.EXCHANGE.PREFERRED.includes(exchange);
   }
 
   private buildSignals(signals: Omit<TickerSignals, 'score'>): TickerSignals {
@@ -156,7 +180,10 @@ export class CanonicalRanker implements ICanonicalRanker {
       (signals.recentTimestamp > 0 ? CanonicalRanker.WEIGHT_RECENT : 0) +
       (signals.hasSequence ? CanonicalRanker.WEIGHT_SEQUENCE : 0) +
       (signals.hasExchange ? CanonicalRanker.WEIGHT_EXCHANGE : 0) +
-      (signals.hasPairMapping ? CanonicalRanker.WEIGHT_PAIR : 0);
+      (signals.hasPairMapping ? CanonicalRanker.WEIGHT_PAIR : 0) +
+      (this.isHtmlEncoded(signals.ticker) ? CanonicalRanker.PENALTY_HTML_ENCODED : 0) +
+      (this.isPreferredExchange(signals.ticker) ? CanonicalRanker.BONUS_PREFERRED_EXCHANGE : 0) +
+      (this.hasRawAmpersand(signals.ticker) ? CanonicalRanker.BONUS_AMPERSAND : 0);
 
     return { ...signals, score };
   }

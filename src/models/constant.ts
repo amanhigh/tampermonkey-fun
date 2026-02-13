@@ -262,6 +262,7 @@ export const Constants = Object.freeze({
     TYPES: {
       NSE: 'NSE', // Old Name: NSE_EXCHANGE
     },
+    PREFERRED: ['NSE', 'NYSE', 'NASDAQ'],
   },
 });
 

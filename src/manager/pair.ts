@@ -175,7 +175,7 @@ export class PairManager implements IPairManager {
     const existingTickers = this.pairRepo.findByPairId(selectedPair.pairId);
     const otherTickers = existingTickers.filter((t) => t !== selectedPair.symbol);
     if (otherTickers.length > 0) {
-      const msg = `PairId ${selectedPair.pairId} already mapped to: ${otherTickers.join(', ')}. Replace stale entry?`;
+      const msg = `PairId ${selectedPair.pairId} already mapped to ${otherTickers.join(', ')} (Investing.com). Replace stale entry with ${selectedPair.symbol} (Investing.com)?`;
       if (!confirm(msg)) {
         Notifier.warn(`Mapping blocked: pairId ${selectedPair.pairId} shared by ${otherTickers.join(', ')}`);
         return false;
@@ -187,7 +187,7 @@ export class PairManager implements IPairManager {
     // Guard rail 14.2: Check if this investingTicker is already mapped from another tvTicker
     const existingTvTicker = this.symbolManager.investingToTv(selectedPair.symbol);
     if (existingTvTicker && existingTvTicker !== tvTicker) {
-      const msg = `${selectedPair.symbol} already mapped from tvTicker: ${existingTvTicker}. Replace with ${tvTicker}?`;
+      const msg = `${selectedPair.symbol} (Investing.com) is already mapped to ${existingTvTicker} (TradingView). Replace with ${tvTicker} (TradingView)?`;
       if (!confirm(msg)) {
         Notifier.warn(`Mapping blocked: ${selectedPair.symbol} already mapped from ${existingTvTicker}`);
         return false;
