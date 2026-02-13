@@ -1,7 +1,6 @@
 import { GoldenSection } from '../../src/handler/golden_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
-import { IPairHandler } from '../../src/handler/pair';
 import { ISymbolManager } from '../../src/manager/symbol';
 import { Notifier } from '../../src/util/notify';
 
@@ -9,7 +8,6 @@ describe('GoldenSection', () => {
   let section: GoldenSection;
   let mockPlugin: IAudit;
   let mockTickerHandler: Partial<ITickerHandler>;
-  let mockPairHandler: Partial<IPairHandler>;
   let mockSymbolManager: Partial<ISymbolManager>;
   let notifySuccessSpy: jest.SpyInstance;
   let notifyWarnSpy: jest.SpyInstance;
@@ -32,9 +30,9 @@ describe('GoldenSection', () => {
     };
 
     mockTickerHandler = { openTicker: jest.fn() };
-    mockPairHandler = { stopTrackingByInvestingTicker: jest.fn() };
     mockSymbolManager = {
       investingToTv: jest.fn(),
+      deleteTvTicker: jest.fn(),
     };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
@@ -43,7 +41,6 @@ describe('GoldenSection', () => {
     section = new GoldenSection(
       mockPlugin,
       mockTickerHandler as ITickerHandler,
-      mockPairHandler as IPairHandler,
       mockSymbolManager as ISymbolManager
     );
   });
@@ -77,22 +74,29 @@ describe('GoldenSection', () => {
   });
 
   describe('onRightClick', () => {
-    test('stops tracking investing ticker with cascade cleanup', () => {
+    test('deletes stale tickerRepo entry', () => {
+      (mockSymbolManager.investingToTv as jest.Mock).mockReturnValue('TCS_TV');
       section.onRightClick(createResult('TCS'));
-      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('TCS');
+      expect(mockSymbolManager.investingToTv).toHaveBeenCalledWith('TCS');
+      expect(mockSymbolManager.deleteTvTicker).toHaveBeenCalledWith('TCS_TV');
+      expect(notifySuccessSpy).toHaveBeenCalledWith('✓ Removed stale tickerRepo entry for TCS');
     });
   });
 
   describe('onFixAll', () => {
-    test('bulk-stops tracking all golden integrity violations', () => {
+    test('bulk-deletes stale tickerRepo entries', () => {
+      (mockSymbolManager.investingToTv as jest.Mock)
+        .mockReturnValueOnce('A_TV')
+        .mockReturnValueOnce('B_TV')
+        .mockReturnValueOnce(null); // C has no mapping
+      
       const results = [createResult('A'), createResult('B'), createResult('C')];
       section.onFixAll!(results);
 
-      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledTimes(3);
-      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('A');
-      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('B');
-      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('C');
-      expect(notifySuccessSpy).toHaveBeenCalledWith('✓ Stopped tracking 3 golden integrity violation(s)');
+      expect(mockSymbolManager.deleteTvTicker).toHaveBeenCalledTimes(2);
+      expect(mockSymbolManager.deleteTvTicker).toHaveBeenCalledWith('A_TV');
+      expect(mockSymbolManager.deleteTvTicker).toHaveBeenCalledWith('B_TV');
+      expect(notifySuccessSpy).toHaveBeenCalledWith('✓ Removed 2 stale tickerRepo entry(ies)');
     });
   });
 

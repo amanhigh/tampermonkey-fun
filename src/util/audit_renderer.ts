@@ -254,8 +254,7 @@ export class AuditRenderer {
       })
       .attr(
         'title',
-        // FIXME: Remove hardcode vary by actual action of section for all Sections.
-        `Left: ${this.section.onLeftClick.name || 'Open'} | Right: ${this.section.onRightClick.name || 'Fix'}`
+        `Left: ${this.section.leftActionLabel || 'Open'} | Right: ${this.section.rightActionLabel || 'Fix'}`
       );
 
     // Left-click: Primary action (no auto-refresh on left-click, user may just be viewing)

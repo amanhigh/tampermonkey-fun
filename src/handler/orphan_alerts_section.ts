@@ -27,6 +27,11 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
   readonly id = Constants.AUDIT.PLUGINS.ORPHAN_ALERTS;
   readonly title = 'Alerts';
   readonly description = 'Alerts whose pairId no longer exists in PairRepo — orphaned after pair removal';
+  readonly order = 1;
+
+  // Action labels
+  readonly leftActionLabel = 'View';
+  readonly rightActionLabel = 'Delete';
 
   // Data source (injected directly, not fetched from registry)
   readonly plugin: IAudit;
@@ -112,13 +117,7 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
         return false;
       }
 
-      // Build confirmation message
-      const prices = alerts.map((a) => a.price).join(', ');
-      const message =
-        `Delete ${alertCount || alerts.length} orphan alert(s)?\n\n` +
-        `PairId: ${pairId}\n` +
-        `Prices: ${prices}\n\n` +
-        `This will permanently delete these alerts from Investing.com.`;
+      const message = this.buildDeleteMessage(pairId, alertCount, alerts);
 
       // Show confirmation dialog
       if (!this.uiUtil.showConfirm('Delete Orphan Alerts', message)) {
@@ -144,5 +143,15 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
       console.error('Orphan alert deletion failed:', error);
       return false;
     }
+  }
+
+  private buildDeleteMessage(pairId: string, alertCount: number | undefined, alerts: { price: number }[]): string {
+    const prices = alerts.map((a) => a.price).join(', ');
+    return (
+      `Delete ${alertCount || alerts.length} orphan alert(s)?\n\n` +
+      `PairId: ${pairId}\n` +
+      `Prices: ${prices}\n\n` +
+      `This will permanently delete these alerts from Investing.com.`
+    );
   }
 }

@@ -22,6 +22,7 @@ describe('AuditSectionRegistry', () => {
       const mockSection: IAuditSection = {
         id: Constants.AUDIT.PLUGINS.GTT_UNWATCHED,
         title: 'Test Section',
+        order: 6,
         plugin: mockPlugin,
         headerFormatter: jest.fn().mockReturnValue('Header'),
         buttonColorMapper: jest.fn().mockReturnValue('blue'),
@@ -38,6 +39,7 @@ describe('AuditSectionRegistry', () => {
       const mockSection: IAuditSection = {
         id: Constants.AUDIT.PLUGINS.GTT_UNWATCHED,
         title: 'Test Section',
+        order: 6,
         plugin: {
           id: Constants.AUDIT.PLUGINS.GTT_UNWATCHED,
           title: 'Test Plugin',
@@ -53,7 +55,7 @@ describe('AuditSectionRegistry', () => {
       registry.registerSection(mockSection);
 
       expect(() => registry.registerSection(mockSection)).toThrow(
-        `Duplicate section id: ${Constants.AUDIT.PLUGINS.GTT_UNWATCHED}`
+        `Audit section '${Constants.AUDIT.PLUGINS.GTT_UNWATCHED}' is already registered`
       );
     });
   });
@@ -70,6 +72,7 @@ describe('AuditSectionRegistry', () => {
       const mockSection: IAuditSection = {
         id: Constants.AUDIT.PLUGINS.ALERTS,
         title: 'Test Section',
+        order: 0,
         plugin: mockPlugin,
         headerFormatter: jest.fn().mockReturnValue('Header'),
         buttonColorMapper: jest.fn().mockReturnValue('blue'),
@@ -84,7 +87,7 @@ describe('AuditSectionRegistry', () => {
 
     it('should throw error for unregistered section', () => {
       expect(() => registry.mustGetSection(Constants.AUDIT.PLUGINS.ALERTS)).toThrow(
-        "Section 'alerts' not found in registry"
+        `Audit section '${Constants.AUDIT.PLUGINS.ALERTS}' not found in registry`
       );
     });
   });
@@ -112,6 +115,7 @@ describe('AuditSectionRegistry', () => {
       const mockSection1: IAuditSection = {
         id: Constants.AUDIT.PLUGINS.ALERTS,
         title: 'Section 1',
+        order: 0,
         plugin: mockPlugin1,
         headerFormatter: jest.fn().mockReturnValue('Header 1'),
         buttonColorMapper: jest.fn().mockReturnValue('blue'),
@@ -122,6 +126,7 @@ describe('AuditSectionRegistry', () => {
       const mockSection2: IAuditSection = {
         id: Constants.AUDIT.PLUGINS.GTT_UNWATCHED,
         title: 'Section 2',
+        order: 6,
         plugin: mockPlugin2,
         headerFormatter: jest.fn().mockReturnValue('Header 2'),
         buttonColorMapper: jest.fn().mockReturnValue('red'),

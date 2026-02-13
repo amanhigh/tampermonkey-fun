@@ -26,6 +26,11 @@ export class ReverseGoldenSection extends BaseAuditSection implements IAuditSect
   readonly id = Constants.AUDIT.PLUGINS.REVERSE_GOLDEN;
   readonly title = 'ReverseGolden Integrity';
   readonly description = 'Investing tickers in PairRepo that have no corresponding TradingView ticker in TickerRepo';
+  readonly order = 3;
+
+  // Action labels
+  readonly leftActionLabel = 'Open';
+  readonly rightActionLabel = 'Stop';
 
   // Data source (injected directly, not fetched from registry)
   readonly plugin: IAudit;

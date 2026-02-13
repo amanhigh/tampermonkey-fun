@@ -20,6 +20,11 @@ export class TradeRiskSection extends BaseAuditSection implements IAuditSection 
   readonly id = Constants.AUDIT.PLUGINS.TRADE_RISK;
   readonly title = 'Trade Risk Multiple';
   readonly description = 'GTT orders whose risk size is not a valid multiple of the configured risk unit (6400 / 3200)';
+  readonly order = 10;
+
+  // Action labels
+  readonly leftActionLabel = 'Open';
+  readonly rightActionLabel = 'Delete Order';
 
   readonly plugin: IAudit;
 

@@ -550,13 +550,7 @@ export class Factory {
     goldenSection: () =>
       Factory.getInstance(
         'goldenSection',
-        () =>
-          new GoldenSection(
-            Factory.audit.golden(),
-            Factory.handler.ticker(),
-            Factory.handler.pair(),
-            Factory.manager.symbol()
-          )
+        () => new GoldenSection(Factory.audit.golden(), Factory.handler.ticker(), Factory.manager.symbol())
       ),
 
     // Trade Risk Audit Section (FR-017)

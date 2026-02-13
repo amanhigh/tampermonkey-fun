@@ -21,7 +21,13 @@ import { Constants } from '../models/constant';
 export class DuplicatePairIdsSection extends BaseAuditSection implements IAuditSection {
   readonly id = Constants.AUDIT.PLUGINS.DUPLICATE_PAIR_IDS;
   readonly title = 'Duplicate PairIds';
-  readonly description = 'Multiple Investing tickers sharing the same pairId — causes ambiguous alert routing';
+  readonly description =
+    'Multiple investing tickers sharing the same pairId (e.g., TFCI / Tata Elxsi both using 18421)';
+  readonly order = 4;
+
+  // Action labels
+  readonly leftActionLabel = 'View';
+  readonly rightActionLabel = 'Merge';
 
   readonly plugin: IAudit;
 

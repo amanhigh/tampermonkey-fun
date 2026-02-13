@@ -20,6 +20,11 @@ export class GoldenSection extends BaseAuditSection implements IAuditSection {
   readonly id = Constants.AUDIT.PLUGINS.GOLDEN;
   readonly title = 'Golden Integrity';
   readonly description = 'TradingView tickers in TickerRepo whose Investing counterpart is missing from PairRepo';
+  readonly order = 2;
+
+  // Action labels
+  readonly leftActionLabel = 'Open';
+  readonly rightActionLabel = 'Remove';
 
   readonly plugin: IAudit;
 

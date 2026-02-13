@@ -36,6 +36,7 @@ export interface IPairHandler {
  * Class handling alert mapping functionality
  */
 export class PairHandler implements IPairHandler {
+  // eslint-disable-next-line max-params
   constructor(
     private readonly investingClient: IInvestingClient,
     private readonly pairManager: IPairManager,

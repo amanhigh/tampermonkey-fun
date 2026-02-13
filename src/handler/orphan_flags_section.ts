@@ -20,6 +20,11 @@ export class OrphanFlagsSection extends BaseAuditSection implements IAuditSectio
   readonly id = Constants.AUDIT.PLUGINS.ORPHAN_FLAGS;
   readonly title = 'Flags';
   readonly description = 'Flag category entries for tickers no longer present in TickerRepo';
+  readonly order = 8;
+
+  // Action labels
+  readonly leftActionLabel = 'Open';
+  readonly rightActionLabel = 'Stop';
 
   readonly plugin: IAudit;
 

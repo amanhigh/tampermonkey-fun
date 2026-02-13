@@ -31,6 +31,11 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
   readonly title = 'Alerts Coverage';
   readonly description =
     'Audits alert coverage for every tracked Investing ticker (NO_PAIR / NO_ALERTS / SINGLE_ALERT)';
+  readonly order = 0;
+
+  // Action labels
+  readonly leftActionLabel = 'Open';
+  readonly rightActionLabel = 'Stop';
 
   // Data source (injected directly, not fetched from registry)
   readonly plugin: IAudit;

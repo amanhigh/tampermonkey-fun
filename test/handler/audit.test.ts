@@ -75,6 +75,7 @@ describe('AuditHandler', () => {
     mockAuditRegistry = {
       mustGetSection: jest.fn(),
       listSections: jest.fn().mockReturnValue([]),
+      listSectionsOrdered: jest.fn().mockReturnValue([]),
     } as any;
 
     mockUIUtil = {
@@ -272,7 +273,7 @@ describe('AuditHandler', () => {
       // Verify audit was run - check that global refresh button was created
       expect(mockUIUtil.buildButton).toHaveBeenCalledWith(
         Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH,
-        '🔄 Refresh All Audits',
+        '🔄 Refresh',
         expect.any(Function)
       );
       // Verify section refresh buttons were created (Alerts and GTT)
@@ -1004,7 +1005,7 @@ describe('AuditHandler', () => {
 
       expect(mockUIUtil.buildButton).toHaveBeenCalledWith(
         Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH,
-        '🔄 Refresh All Audits',
+        '🔄 Refresh',
         expect.any(Function)
       );
     });
@@ -1157,6 +1158,22 @@ describe('AuditHandler', () => {
         if (id === 'stale-review') return mockStaleReviewSection;
         throw new Error(`Unknown section: ${id}`);
       });
+
+      // Mock listSectionsOrdered to return sections in order
+      mockAuditRegistry.listSectionsOrdered.mockReturnValue([
+        mockAlertsSection,
+        mockOrphanSection,
+        mockGoldenSection,
+        mockReverseGoldenSection,
+        mockDuplicatePairIdsSection,
+        mockTickerCollisionSection,
+        mockGttSection,
+        mockOrphanSequencesSection,
+        mockOrphanFlagsSection,
+        mockOrphanExchangeSection,
+        mockTradeRiskSection,
+        mockStaleReviewSection,
+      ]);
 
       await auditHandler.auditAll();
 
@@ -1337,6 +1354,22 @@ describe('AuditHandler', () => {
         if (id === 'stale-review') return mockStaleReviewSection;
         throw new Error(`Unknown section: ${id}`);
       });
+
+      // Mock listSectionsOrdered to return sections in order
+      mockAuditRegistry.listSectionsOrdered.mockReturnValue([
+        mockAlertsSection,
+        mockOrphanSection,
+        mockGttSection,
+        mockOrphanSequencesSection,
+        mockOrphanFlagsSection,
+        mockOrphanExchangeSection,
+        mockDuplicatePairIdsSection,
+        mockTickerCollisionSection,
+        mockReverseGoldenSection,
+        mockTradeRiskSection,
+        mockGoldenSection,
+        mockStaleReviewSection,
+      ]);
 
       await auditHandler.auditAll();
 

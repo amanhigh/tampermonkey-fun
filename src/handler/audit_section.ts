@@ -27,6 +27,11 @@ export interface IAuditSection {
   id: string; // Unique section identifier
   title: string; // Display title
   description?: string; // Tooltip shown on header hover
+  order: number; // Execution order (lower = earlier, 0 for special handling)
+
+  // Action labels for button tooltips
+  leftActionLabel?: string; // Label for left-click action (e.g., "Open")
+  rightActionLabel?: string; // Label for right-click action (e.g., "Delete")
 
   // Data source
   // TODO: Make Plugin Private ?

@@ -20,6 +20,11 @@ export class StaleReviewSection extends BaseAuditSection implements IAuditSectio
   readonly id = Constants.AUDIT.PLUGINS.STALE_REVIEW;
   readonly title = 'Stale Review';
   readonly description = 'Tickers not opened within the review window (default 90 days) — candidates for pruning';
+  readonly order = 11;
+
+  // Action labels
+  readonly leftActionLabel = 'Open';
+  readonly rightActionLabel = 'Stop';
 
   readonly plugin: IAudit;
 

@@ -20,6 +20,11 @@ export class OrphanSequencesSection extends BaseAuditSection implements IAuditSe
   readonly id = Constants.AUDIT.PLUGINS.ORPHAN_SEQUENCES;
   readonly title = 'Sequences';
   readonly description = 'Sequence entries (MWD/YR) for tickers no longer present in TickerRepo';
+  readonly order = 7;
+
+  // Action labels
+  readonly leftActionLabel = 'Open';
+  readonly rightActionLabel = 'Delete';
 
   readonly plugin: IAudit;
 

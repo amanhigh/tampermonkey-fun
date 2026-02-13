@@ -20,6 +20,11 @@ export class OrphanExchangeSection extends BaseAuditSection implements IAuditSec
   readonly id = Constants.AUDIT.PLUGINS.ORPHAN_EXCHANGE;
   readonly title = 'Exchange';
   readonly description = 'Exchange-qualified mappings for tickers no longer present in TickerRepo';
+  readonly order = 9;
+
+  // Action labels
+  readonly leftActionLabel = 'Open';
+  readonly rightActionLabel = 'Delete';
 
   readonly plugin: IAudit;
 

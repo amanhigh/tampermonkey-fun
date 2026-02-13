@@ -80,34 +80,33 @@ export class AuditHandler implements IAuditHandler {
       this.renderToolbarButtons();
     }
 
-    // Render alerts UI (header + buttons) before GTT audit
+    // Render alerts UI (header + buttons) before other audits
+    // Alerts has order 0 and uses setResults (not refresh) for special handling
     this.auditAlerts(results);
 
-    // Run GTT audit and render new UI
-    await this.auditGttOrders();
-
-    // Run all remaining audits
-    await this.runRemainingAudits();
+    // Run all remaining audits in order (skipping alerts with order 0)
+    await this.runOrderedAudits();
 
     // Mark audits as run
     this.auditHasRun = true;
   }
 
   /**
-   * Runs all remaining audits in sequence after GTT and Alerts
+   * Runs all audits in order number sequence (FR-9.1, FR-9.10)
+   * Skips alerts (order 0) as it's handled separately with setResults
    */
-  private async runRemainingAudits(): Promise<void> {
-    // FIXME: Lets Ensure we run all audits in the same order as they are registered or have a way to configure it.
-    await this.auditOrphanAlerts();
-    await this.auditGolden();
-    await this.auditReverseGolden();
-    await this.auditDuplicatePairIds();
-    await this.auditTickerCollision();
-    await this.auditOrphanSequences();
-    await this.auditOrphanFlags();
-    await this.auditOrphanExchange();
-    await this.auditTradeRisk();
-    await this.auditStaleReview();
+  private async runOrderedAudits(): Promise<void> {
+    const orderedSections = this.auditRegistry.listSectionsOrdered();
+
+    for (const section of orderedSections) {
+      // Skip alerts section (order 0) - already handled separately
+      if (section.order === 0) {
+        continue;
+      }
+
+      const renderer = this.getOrCreateRenderer(section.id as AuditId);
+      await renderer.refresh();
+    }
   }
 
   /**
@@ -126,15 +125,14 @@ export class AuditHandler implements IAuditHandler {
     $(`#${mapAlertId}`).remove();
 
     // Map Alert button (FR-9.9)
-    // FIXME: Make all Names small with emoji fit in single line for 3 buttons.
-    const $mapAlert = this.uiUtil.buildButton(mapAlertId, '🔗 Map Alert', () => {
+    const $mapAlert = this.uiUtil.buildButton(mapAlertId, '🔗 Map', () => {
       const ticker = this.tickerManager.getTicker();
       void this.pairHandler.mapInvestingTicker(ticker);
     });
     $mapAlert.prependTo($auditArea);
 
     // Stop Tracking button (FR-9.8)
-    const $stopTrack = this.uiUtil.buildButton(stopTrackId, '⏹ Stop Tracking', () => {
+    const $stopTrack = this.uiUtil.buildButton(stopTrackId, '⏹ Stop', () => {
       try {
         const investingTicker = this.tickerManager.getInvestingTicker();
         if (confirm(`Stop tracking ${investingTicker}?`)) {
@@ -150,7 +148,7 @@ export class AuditHandler implements IAuditHandler {
     $stopTrack.prependTo($auditArea);
 
     // Refresh All button
-    const $refresh = this.uiUtil.buildButton(refreshId, '🔄 Refresh All Audits', () => {
+    const $refresh = this.uiUtil.buildButton(refreshId, '🔄 Refresh', () => {
       void this.auditAll();
     });
     $refresh.prependTo($auditArea);
@@ -183,93 +181,5 @@ export class AuditHandler implements IAuditHandler {
   private auditAlerts(pluginResults: AuditResult[]): void {
     const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.ALERTS);
     renderer.setResults(pluginResults);
-  }
-
-  /**
-   * Run GTT unwatched audit and render section
-   */
-  private async auditGttOrders(): Promise<void> {
-    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.GTT_UNWATCHED);
-    await renderer.refresh();
-  }
-
-  /**
-   * Run Orphan Alerts audit and render section
-   */
-  private async auditOrphanAlerts(): Promise<void> {
-    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.ORPHAN_ALERTS);
-    await renderer.refresh();
-  }
-
-  /**
-   * Run ReverseGolden audit and render section
-   */
-  private async auditReverseGolden(): Promise<void> {
-    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.REVERSE_GOLDEN);
-    await renderer.refresh();
-  }
-
-  /**
-   * Run Orphan Sequences audit and render section
-   */
-  private async auditOrphanSequences(): Promise<void> {
-    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.ORPHAN_SEQUENCES);
-    await renderer.refresh();
-  }
-
-  /**
-   * Run Orphan Flags audit and render section
-   */
-  private async auditOrphanFlags(): Promise<void> {
-    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.ORPHAN_FLAGS);
-    await renderer.refresh();
-  }
-
-  /**
-   * Run Orphan Exchange audit and render section
-   */
-  private async auditOrphanExchange(): Promise<void> {
-    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.ORPHAN_EXCHANGE);
-    await renderer.refresh();
-  }
-
-  /**
-   * Run Duplicate PairIds audit and render section
-   */
-  private async auditDuplicatePairIds(): Promise<void> {
-    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.DUPLICATE_PAIR_IDS);
-    await renderer.refresh();
-  }
-
-  /**
-   * Run Ticker Collision audit and render section
-   */
-  private async auditTickerCollision(): Promise<void> {
-    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.TICKER_COLLISION);
-    await renderer.refresh();
-  }
-
-  /**
-   * Run Golden Integrity audit and render section
-   */
-  private async auditGolden(): Promise<void> {
-    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.GOLDEN);
-    await renderer.refresh();
-  }
-
-  /**
-   * Run Trade Risk audit and render section
-   */
-  private async auditTradeRisk(): Promise<void> {
-    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.TRADE_RISK);
-    await renderer.refresh();
-  }
-
-  /**
-   * Run Stale Review audit and render section
-   */
-  private async auditStaleReview(): Promise<void> {
-    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.STALE_REVIEW);
-    await renderer.refresh();
   }
 }

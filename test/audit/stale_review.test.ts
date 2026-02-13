@@ -55,7 +55,7 @@ describe('StaleReviewPlugin', () => {
 
   test('flags tickers opened beyond threshold as MEDIUM severity', async () => {
     (mockTickerRepo.getAllKeys as jest.Mock).mockReturnValue(['OLD']);
-    (mockRecentRepo.get as jest.Mock).mockReturnValue(now - 100 * DAY_MS);
+    (mockRecentRepo.get as jest.Mock).mockReturnValue(now - 200 * DAY_MS);
 
     const results = await plugin.run();
     expect(results).toHaveLength(1);

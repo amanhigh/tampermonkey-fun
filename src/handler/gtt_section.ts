@@ -27,6 +27,11 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
   readonly id = Constants.AUDIT.PLUGINS.GTT_UNWATCHED;
   readonly title = 'GTT Orders';
   readonly description = 'Surfaces GTT orders on tickers absent from active watchlists (Orange / Red / Running)';
+  readonly order = 6;
+
+  // Action labels
+  readonly leftActionLabel = 'Open';
+  readonly rightActionLabel = 'Delete Order';
 
   // Data source (injected directly, not fetched from registry)
   readonly plugin: IAudit;

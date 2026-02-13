@@ -21,6 +21,11 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
   readonly id = Constants.AUDIT.PLUGINS.TICKER_COLLISION;
   readonly title = 'Ticker Collisions';
   readonly description = 'Multiple TradingView tickers mapping to the same Investing ticker — ambiguous reverse lookup';
+  readonly order = 5;
+
+  // Action labels
+  readonly leftActionLabel = 'Open';
+  readonly rightActionLabel = 'Merge';
 
   readonly plugin: IAudit;
 
