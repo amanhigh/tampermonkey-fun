@@ -97,14 +97,15 @@ export class AuditHandler implements IAuditHandler {
    * Runs all remaining audits in sequence after GTT and Alerts
    */
   private async runRemainingAudits(): Promise<void> {
+    // FIXME: Lets Ensure we run all audits in the same order as they are registered or have a way to configure it.
     await this.auditOrphanAlerts();
+    await this.auditGolden();
     await this.auditReverseGolden();
+    await this.auditDuplicatePairIds();
+    await this.auditTickerCollision();
     await this.auditOrphanSequences();
     await this.auditOrphanFlags();
     await this.auditOrphanExchange();
-    await this.auditDuplicatePairIds();
-    await this.auditTickerCollision();
-    await this.auditGolden();
     await this.auditTradeRisk();
     await this.auditStaleReview();
   }

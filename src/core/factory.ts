@@ -437,13 +437,7 @@ export class Factory {
     staleReview: () =>
       Factory.getInstance(
         'auditPlugin_staleReview',
-        () =>
-          new StaleReviewPlugin(
-            Factory.repo.recent(),
-            Factory.repo.ticker(),
-            Factory.manager.watch(),
-            Factory.manager.flag()
-          )
+        () => new StaleReviewPlugin(Factory.repo.recent(), Factory.repo.ticker(), Factory.manager.watch())
       ),
 
     // ===== SECTION CREATION =====
@@ -507,7 +501,7 @@ export class Factory {
       Factory.getInstance(
         'orphanSequencesSection',
         () =>
-          new OrphanSequencesSection(Factory.audit.orphanSequences(), Factory.handler.ticker(), Factory.handler.pair())
+          new OrphanSequencesSection(Factory.audit.orphanSequences(), Factory.handler.ticker(), Factory.repo.sequence())
       ),
 
     // Orphan Flags Audit Section (FR-012)
@@ -522,7 +516,7 @@ export class Factory {
       Factory.getInstance(
         'orphanExchangeSection',
         () =>
-          new OrphanExchangeSection(Factory.audit.orphanExchange(), Factory.handler.ticker(), Factory.handler.pair())
+          new OrphanExchangeSection(Factory.audit.orphanExchange(), Factory.handler.ticker(), Factory.repo.exchange())
       ),
 
     // Duplicate PairIds Audit Section (FR-014)
@@ -556,7 +550,13 @@ export class Factory {
     goldenSection: () =>
       Factory.getInstance(
         'goldenSection',
-        () => new GoldenSection(Factory.audit.golden(), Factory.handler.ticker(), Factory.manager.symbol())
+        () =>
+          new GoldenSection(
+            Factory.audit.golden(),
+            Factory.handler.ticker(),
+            Factory.handler.pair(),
+            Factory.manager.symbol()
+          )
       ),
 
     // Trade Risk Audit Section (FR-017)
@@ -631,7 +631,12 @@ export class Factory {
       Factory.getInstance('auditHandler', () => {
         // Handler receives registry which now contains sections
         // Sections are registered in Factory.audit.registry()
-        return new AuditHandler(Factory.audit.registry(), Factory.util.ui());
+        return new AuditHandler(
+          Factory.audit.registry(),
+          Factory.util.ui(),
+          Factory.handler.pair(),
+          Factory.manager.ticker()
+        );
       }),
     onload: (): IOnLoadHandler =>
       Factory.getInstance(

@@ -4,6 +4,8 @@ import { IUIUtil } from '../../src/util/ui';
 import { AlertState } from '../../src/models/alert';
 import { Constants } from '../../src/models/constant';
 import { AuditResult } from '../../src/models/audit';
+import { IPairHandler } from '../../src/handler/pair';
+import { ITickerManager } from '../../src/manager/ticker';
 
 // Mock jQuery globally for DOM operations
 const mockJQuery = {
@@ -46,6 +48,8 @@ describe('AuditHandler', () => {
   let auditHandler: AuditHandler;
   let mockAuditRegistry: jest.Mocked<AuditSectionRegistry>;
   let mockUIUtil: jest.Mocked<IUIUtil>;
+  let mockPairHandler: jest.Mocked<IPairHandler>;
+  let mockTickerManager: jest.Mocked<ITickerManager>;
 
   beforeEach(() => {
     // Reset jQuery mock
@@ -78,7 +82,18 @@ describe('AuditHandler', () => {
       buildButton: jest.fn().mockReturnValue(mockJQuery),
     } as any;
 
-    auditHandler = new AuditHandler(mockAuditRegistry, mockUIUtil);
+    mockPairHandler = {
+      mapInvestingTicker: jest.fn().mockResolvedValue(undefined),
+      stopTrackingByInvestingTicker: jest.fn(),
+      stopTrackingByTvTicker: jest.fn(),
+    } as any;
+
+    mockTickerManager = {
+      getTicker: jest.fn().mockReturnValue('TCS'),
+      getInvestingTicker: jest.fn().mockReturnValue('TCS_INV'),
+    } as any;
+
+    auditHandler = new AuditHandler(mockAuditRegistry, mockUIUtil, mockPairHandler, mockTickerManager);
   });
 
   describe('auditAllOnFirstRun', () => {
