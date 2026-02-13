@@ -62,6 +62,8 @@ describe('AlertManager', () => {
       investingTickerToPairInfo: jest.fn(),
       stopTrackingByInvestingTicker: jest.fn(),
       stopTrackingByTvTicker: jest.fn(),
+      removePairByInvestingTicker: jest.fn(),
+      checkGuardRails: jest.fn(),
     };
 
     // Mock TickerManager

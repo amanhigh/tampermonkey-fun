@@ -527,9 +527,9 @@ export class Factory {
           new DuplicatePairIdsSection(
             Factory.audit.duplicatePairIds(),
             Factory.handler.ticker(),
-            Factory.handler.pair(),
             Factory.manager.symbol(),
-            Factory.manager.canonicalRanker()
+            Factory.manager.canonicalRanker(),
+            Factory.manager.pair()
           )
       ),
 
@@ -541,8 +541,8 @@ export class Factory {
           new TickerCollisionSection(
             Factory.audit.tickerCollision(),
             Factory.handler.ticker(),
-            Factory.manager.canonicalRanker(),
-            Factory.handler.pair()
+            Factory.manager.symbol(),
+            Factory.manager.canonicalRanker()
           )
       ),
 

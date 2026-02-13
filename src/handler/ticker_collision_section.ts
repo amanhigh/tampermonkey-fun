@@ -4,7 +4,7 @@ import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { ITickerHandler } from './ticker';
 import { ICanonicalRanker } from '../manager/canonical_ranker';
-import { IPairHandler } from './pair';
+import { ISymbolManager } from '../manager/symbol';
 import { Notifier } from '../util/notify';
 import { Constants } from '../models/constant';
 
@@ -35,6 +35,15 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
   readonly onLeftClick = (result: AuditResult) => {
     const tvTickers = result.data?.tvTickers as string[] | undefined;
     if (!tvTickers || tvTickers.length < 2) {
+      // Fallback: try opening via investingTicker or display name
+      const investingTicker = result.data?.investingTicker as string | undefined;
+      if (investingTicker) {
+        const resolved = this.symbolManager.investingToTv(investingTicker);
+        if (resolved) {
+          this.tickerHandler.openTicker(resolved);
+          return;
+        }
+      }
       Notifier.warn(`No tvTicker found for ${result.target}`);
       return;
     }
@@ -58,8 +67,8 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
       return false;
     }
 
-    removals.forEach((r) => this.pairHandler.stopTrackingByTvTicker(r.ticker));
-    Notifier.success(`✓ Kept ${canonical.ticker}, removed ${removals.length} stale alias(es) for ${result.target}`);
+    removals.forEach((r) => this.symbolManager.deleteTvTicker(r.ticker));
+    Notifier.success(`🔗 Kept ${canonical.ticker}, removed ${removals.length} alias(es) for ${result.target}`);
     return true;
   };
 
@@ -89,10 +98,12 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
       if (!plan) {
         return;
       }
-      plan.removals.forEach((r) => this.pairHandler.stopTrackingByTvTicker(r.ticker));
+      for (let i = 1; i < plan.removals.length + 1; i++) {
+        this.symbolManager.deleteTvTicker(plan.removals[i - 1].ticker);
+      }
       totalRemoved += plan.removals.length;
     });
-    Notifier.success(`✓ Removed ${totalRemoved} stale ticker alias(es)`);
+    Notifier.success(`🔗 Removed ${totalRemoved} ticker alias(es)`);
   };
 
   readonly headerFormatter = (results: AuditResult[]): string => {
@@ -105,8 +116,8 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
   constructor(
     plugin: IAudit,
     private readonly tickerHandler: ITickerHandler,
-    private readonly canonicalRanker: ICanonicalRanker,
-    private readonly pairHandler: IPairHandler
+    private readonly symbolManager: ISymbolManager,
+    private readonly canonicalRanker: ICanonicalRanker
   ) {
     super();
     this.plugin = plugin;

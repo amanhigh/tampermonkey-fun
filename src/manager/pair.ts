@@ -9,6 +9,7 @@ import { ISequenceRepo } from '../repo/sequence';
 import { IExchangeRepo } from '../repo/exchange';
 import { IAlertRepo } from '../repo/alert';
 import { IInvestingClient } from '../client/investing';
+import { Notifier } from '../util/notify';
 
 /**
  * Interface for managing pair information and mappings
@@ -47,6 +48,23 @@ export interface IPairManager {
    * @returns True if ticker was removed from any lists, false otherwise
    */
   stopTrackingByTvTicker(tvTicker: string): boolean;
+
+  /**
+   * Removes a duplicate investing ticker alias — deletes only its pairRepo entry.
+   * All other stores (tickerRepo, watchlist, flags, recent, sequence, exchange, alerts)
+   * remain untouched so the canonical ticker has zero data impact.
+   * @param investingTicker The alias investing ticker to remove from pairRepo
+   */
+  removePairByInvestingTicker(investingTicker: string): void;
+
+  /**
+   * Validates guard rails before creating a pair mapping.
+   * Checks for duplicate pairId and conflicting tvTicker alias.
+   * @param selectedPair The pair info to validate
+   * @param tvTicker The current tvTicker being mapped
+   * @returns True if mapping should proceed, false if blocked
+   */
+  checkGuardRails(selectedPair: PairInfo, tvTicker: string): boolean;
 }
 
 /**
@@ -144,6 +162,41 @@ export class PairManager implements IPairManager {
 
     // No investing mapping — still clean up tvTicker-keyed stores
     return this.cleanupTvTickerStores(tvTicker);
+  }
+
+  /** @inheritdoc */
+  removePairByInvestingTicker(investingTicker: string): void {
+    this.pairRepo.delete(investingTicker);
+  }
+
+  /** @inheritdoc */
+  checkGuardRails(selectedPair: PairInfo, tvTicker: string): boolean {
+    // Guard rail 14.1: Check if another investingTicker already has this pairId
+    const existingTickers = this.pairRepo.findByPairId(selectedPair.pairId);
+    const otherTickers = existingTickers.filter((t) => t !== selectedPair.symbol);
+    if (otherTickers.length > 0) {
+      const msg = `PairId ${selectedPair.pairId} already mapped to: ${otherTickers.join(', ')}. Replace stale entry?`;
+      if (!confirm(msg)) {
+        Notifier.warn(`Mapping blocked: pairId ${selectedPair.pairId} shared by ${otherTickers.join(', ')}`);
+        return false;
+      }
+      otherTickers.forEach((t) => this.pairRepo.delete(t));
+      Notifier.info(`Replaced stale entry: ${otherTickers.join(', ')}`);
+    }
+
+    // Guard rail 14.2: Check if this investingTicker is already mapped from another tvTicker
+    const existingTvTicker = this.symbolManager.investingToTv(selectedPair.symbol);
+    if (existingTvTicker && existingTvTicker !== tvTicker) {
+      const msg = `${selectedPair.symbol} already mapped from tvTicker: ${existingTvTicker}. Replace with ${tvTicker}?`;
+      if (!confirm(msg)) {
+        Notifier.warn(`Mapping blocked: ${selectedPair.symbol} already mapped from ${existingTvTicker}`);
+        return false;
+      }
+      this.symbolManager.deleteTvTicker(existingTvTicker);
+      Notifier.info(`Replaced stale tvTicker alias: ${existingTvTicker}`);
+    }
+
+    return true;
   }
 
   /**

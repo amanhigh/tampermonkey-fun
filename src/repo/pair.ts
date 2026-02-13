@@ -26,6 +26,13 @@ export interface IPairRepo extends IMapRepo<string, PairInfo> {
    * @param pairInfo Pair information
    */
   pinPair(investingTicker: string, pairInfo: PairInfo): void;
+
+  /**
+   * Find all investing tickers that share a given pairId
+   * @param pairId The pairId to search for
+   * @returns Array of investing tickers with this pairId
+   */
+  findByPairId(pairId: string): string[];
 }
 
 /**
@@ -104,5 +111,18 @@ export class PairRepo extends MapRepo<string, PairInfo> implements IPairRepo {
    */
   public pinPair(investingTicker: string, pairInfo: PairInfo): void {
     this.set(investingTicker, pairInfo);
+  }
+
+  /**
+   * @inheritdoc
+   */
+  public findByPairId(pairId: string): string[] {
+    const results: string[] = [];
+    this.map.forEach((info, ticker) => {
+      if (info.pairId === pairId) {
+        results.push(ticker);
+      }
+    });
+    return results;
   }
 }

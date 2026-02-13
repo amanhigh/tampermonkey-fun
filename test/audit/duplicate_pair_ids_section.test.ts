@@ -1,8 +1,8 @@
 import { DuplicatePairIdsSection } from '../../src/handler/duplicate_pair_ids_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
-import { IPairHandler } from '../../src/handler/pair';
 import { ISymbolManager } from '../../src/manager/symbol';
+import { IPairManager } from '../../src/manager/pair';
 import { ICanonicalRanker } from '../../src/manager/canonical_ranker';
 import { Notifier } from '../../src/util/notify';
 
@@ -10,8 +10,8 @@ describe('DuplicatePairIdsSection', () => {
   let section: DuplicatePairIdsSection;
   let mockPlugin: IAudit;
   let mockTickerHandler: Partial<ITickerHandler>;
-  let mockPairHandler: Partial<IPairHandler>;
   let mockSymbolManager: Partial<ISymbolManager>;
+  let mockPairManager: Partial<IPairManager>;
   let mockCanonicalRanker: Partial<ICanonicalRanker>;
   let notifySuccessSpy: jest.SpyInstance;
   let notifyWarnSpy: jest.SpyInstance;
@@ -35,8 +35,8 @@ describe('DuplicatePairIdsSection', () => {
     };
 
     mockTickerHandler = { openTicker: jest.fn() };
-    mockPairHandler = { stopTrackingByInvestingTicker: jest.fn() };
     mockSymbolManager = { investingToTv: jest.fn() };
+    mockPairManager = { removePairByInvestingTicker: jest.fn() };
     mockCanonicalRanker = {
       rankInvestingTickers: jest.fn().mockImplementation((tickers: string[]) =>
         tickers.map((t, i) => ({ ticker: t, alertCount: 0, isWatched: false, recentTimestamp: 0, hasSequence: false, hasExchange: false, hasPairMapping: true, score: tickers.length - i }))
@@ -50,9 +50,9 @@ describe('DuplicatePairIdsSection', () => {
     section = new DuplicatePairIdsSection(
       mockPlugin,
       mockTickerHandler as ITickerHandler,
-      mockPairHandler as IPairHandler,
       mockSymbolManager as ISymbolManager,
-      mockCanonicalRanker as ICanonicalRanker
+      mockCanonicalRanker as ICanonicalRanker,
+      mockPairManager as IPairManager
     );
   });
 
@@ -94,21 +94,21 @@ describe('DuplicatePairIdsSection', () => {
     test('ranks tickers and removes lower-ranked aliases after confirmation', () => {
       section.onRightClick(createResult('123', ['CANONICAL', 'DUP1', 'DUP2']));
       expect(mockCanonicalRanker.rankInvestingTickers).toHaveBeenCalledWith(['CANONICAL', 'DUP1', 'DUP2'], '123');
-      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledTimes(2);
-      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('DUP1');
-      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('DUP2');
+      expect(mockPairManager.removePairByInvestingTicker).toHaveBeenCalledTimes(2);
+      expect(mockPairManager.removePairByInvestingTicker).toHaveBeenCalledWith('DUP1');
+      expect(mockPairManager.removePairByInvestingTicker).toHaveBeenCalledWith('DUP2');
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
 
     test('does nothing when less than 2 investingTickers', () => {
       section.onRightClick(createResult('123', ['ONLY']));
-      expect(mockPairHandler.stopTrackingByInvestingTicker).not.toHaveBeenCalled();
+      expect(mockPairManager.removePairByInvestingTicker).not.toHaveBeenCalled();
     });
 
     test('does nothing when user cancels confirmation', () => {
       (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(false);
       section.onRightClick(createResult('123', ['A', 'B', 'C']));
-      expect(mockPairHandler.stopTrackingByInvestingTicker).not.toHaveBeenCalled();
+      expect(mockPairManager.removePairByInvestingTicker).not.toHaveBeenCalled();
     });
   });
 
@@ -120,14 +120,14 @@ describe('DuplicatePairIdsSection', () => {
       ];
       section.onFixAll!(results);
       // Group 1: keeps A, removes B, C. Group 2: keeps D, removes E.
-      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledTimes(3);
+      expect(mockPairManager.removePairByInvestingTicker).toHaveBeenCalledTimes(3);
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
 
     test('does nothing when user cancels confirmation', () => {
       (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(false);
       section.onFixAll!([createResult('123', ['A', 'B'])]);
-      expect(mockPairHandler.stopTrackingByInvestingTicker).not.toHaveBeenCalled();
+      expect(mockPairManager.removePairByInvestingTicker).not.toHaveBeenCalled();
     });
   });
 

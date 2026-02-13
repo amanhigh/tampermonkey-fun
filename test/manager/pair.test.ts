@@ -16,6 +16,7 @@ jest.mock('../../src/util/notify', () => ({
   Notifier: {
     info: jest.fn(),
     success: jest.fn(),
+    warn: jest.fn(),
     red: jest.fn(),
   },
 }));
@@ -50,6 +51,7 @@ describe('PairManager', () => {
       getCount: jest.fn(),
       load: jest.fn(),
       save: jest.fn(),
+      findByPairId: jest.fn(),
     } as unknown as jest.Mocked<IPairRepo>;
 
     // Mock other managers
@@ -57,6 +59,7 @@ describe('PairManager', () => {
       investingToTv: jest.fn(),
       tvToInvesting: jest.fn(),
       removeTvToInvestingMapping: jest.fn(),
+      deleteTvTicker: jest.fn(),
     } as unknown as jest.Mocked<ISymbolManager>;
 
     mockWatchManager = {
@@ -377,6 +380,50 @@ describe('PairManager', () => {
       const result = pairManager.stopTrackingByTvTicker(tvTicker);
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('removePairByInvestingTicker', () => {
+    it('should only delete pairRepo entry — zero impact on everything else', () => {
+      pairManager.removePairByInvestingTicker('TTEX');
+
+      expect(mockPairRepo.delete).toHaveBeenCalledWith('TTEX');
+      expect(mockSymbolManager.removeTvToInvestingMapping).not.toHaveBeenCalled();
+      expect(mockSymbolManager.deleteTvTicker).not.toHaveBeenCalled();
+      expect(mockWatchManager.evictTicker).not.toHaveBeenCalled();
+      expect(mockFlagManager.evictTicker).not.toHaveBeenCalled();
+      expect(mockAlertRepo.get).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('checkGuardRails', () => {
+    it('should pass when no duplicate pairId or conflicting tvTicker', () => {
+      mockPairRepo.findByPairId.mockReturnValue(['TFCI']);
+      mockSymbolManager.investingToTv.mockReturnValue('TTEX');
+      (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(true);
+
+      const pairInfo = new PairInfo('TFCI Ltd', '18421', 'NSE', 'TFCI');
+      const result = pairManager.checkGuardRails(pairInfo, 'TTEX');
+      expect(result).toBe(true);
+    });
+
+    it('should block and warn when duplicate pairId found and user cancels', () => {
+      mockPairRepo.findByPairId.mockReturnValue(['TFCI', 'TATAELXSI']);
+      (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(false);
+
+      const pairInfo = new PairInfo('TFCI Ltd', '18421', 'NSE', 'TFCI');
+      const result = pairManager.checkGuardRails(pairInfo, 'TTEX');
+      expect(result).toBe(false);
+    });
+
+    it('should remove stale entries when duplicate pairId found and user confirms', () => {
+      mockPairRepo.findByPairId.mockReturnValue(['TFCI', 'TATAELXSI']);
+      (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(true);
+
+      const pairInfo = new PairInfo('TFCI Ltd', '18421', 'NSE', 'TFCI');
+      const result = pairManager.checkGuardRails(pairInfo, 'TTEX');
+      expect(result).toBe(true);
+      expect(mockPairRepo.delete).toHaveBeenCalledWith('TATAELXSI');
     });
   });
 

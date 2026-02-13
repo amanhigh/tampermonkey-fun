@@ -1,12 +1,12 @@
 import { PairInfo } from '../models/alert';
 import { ISmartPrompt } from '../util/smart';
 import { IPairManager } from '../manager/pair';
-import { Notifier } from '../util/notify';
 import { IInvestingClient } from '../client/investing';
 import { ISymbolManager } from '../manager/symbol';
 import { IStyleManager } from '../manager/style';
 import { ITickerManager } from '../manager/ticker';
 import { IWatchListHandler } from './watchlist';
+import { Notifier } from '../util/notify';
 
 /**
  * Interface for managing alert mapping operations
@@ -67,6 +67,11 @@ export class PairHandler implements IPairHandler {
     const selectedPair = this.findSelectedPair(pairs, selected);
     if (selectedPair) {
       Notifier.info(`Selected: ${this.formatPair(selectedPair)}`);
+
+      if (!this.checkGuardRails(selectedPair)) {
+        return;
+      }
+
       this.pairManager.createInvestingToPairMapping(selectedPair.symbol, selectedPair);
       this.symbolManager.createTvToInvestingMapping(this.tickerManager.getTicker(), selectedPair.symbol);
       return;
@@ -132,6 +137,17 @@ export class PairHandler implements IPairHandler {
     }
 
     Notifier.success(`⏹ Stopped tracking ${tvTicker}`);
+  }
+
+  /**
+   * Validates guard rails before creating a pair mapping.
+   * Delegates to PairManager for business logic.
+   * @param selectedPair The pair info to validate
+   * @returns True if mapping should proceed, false if blocked
+   */
+  private checkGuardRails(selectedPair: PairInfo): boolean {
+    const tvTicker = this.tickerManager.getTicker();
+    return this.pairManager.checkGuardRails(selectedPair, tvTicker);
   }
 
   /**

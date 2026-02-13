@@ -3,8 +3,8 @@ import { IAuditSection } from './audit_section';
 import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { ITickerHandler } from './ticker';
-import { IPairHandler } from './pair';
 import { ISymbolManager } from '../manager/symbol';
+import { IPairManager } from '../manager/pair';
 import { ICanonicalRanker } from '../manager/canonical_ranker';
 import { Notifier } from '../util/notify';
 import { Constants } from '../models/constant';
@@ -67,8 +67,8 @@ export class DuplicatePairIdsSection extends BaseAuditSection implements IAuditS
       return false;
     }
 
-    removals.forEach((r) => this.pairHandler.stopTrackingByInvestingTicker(r.ticker));
-    Notifier.success(`⏹ Kept ${canonical.ticker}, removed ${removals.length} duplicate(s) for pairId ${pairId}`);
+    removals.forEach((r) => this.pairManager.removePairByInvestingTicker(r.ticker));
+    Notifier.success(`🔗 Kept ${canonical.ticker}, removed ${removals.length} duplicate(s) for pairId ${pairId}`);
     return true;
   };
 
@@ -97,7 +97,9 @@ export class DuplicatePairIdsSection extends BaseAuditSection implements IAuditS
       if (!plan) {
         return;
       }
-      plan.removals.forEach((r) => this.pairHandler.stopTrackingByInvestingTicker(r.ticker));
+      for (let i = 1; i < plan.removals.length + 1; i++) {
+        this.pairManager.removePairByInvestingTicker(plan.removals[i - 1].ticker);
+      }
       totalRemoved += plan.removals.length;
     });
     Notifier.success(`⏹ Stopped tracking ${totalRemoved} duplicate pair(s)`);
@@ -113,9 +115,9 @@ export class DuplicatePairIdsSection extends BaseAuditSection implements IAuditS
   constructor(
     plugin: IAudit,
     private readonly tickerHandler: ITickerHandler,
-    private readonly pairHandler: IPairHandler,
     private readonly symbolManager: ISymbolManager,
-    private readonly canonicalRanker: ICanonicalRanker
+    private readonly canonicalRanker: ICanonicalRanker,
+    private readonly pairManager: IPairManager
   ) {
     super();
     this.plugin = plugin;
