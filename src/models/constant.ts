@@ -27,11 +27,8 @@ export const Constants = Object.freeze({
       /** Orphan alerts audit plugin - identifies alerts without corresponding pairs */
       ORPHAN_ALERTS: 'orphan-alerts',
 
-      /** ReverseGolden Integrity audit plugin (FR-007) - ensures every investingTicker in PairRepo has a corresponding tvTicker in TickerRepo */
-      REVERSE_GOLDEN: 'reverse-golden',
-
-      /** Golden Integrity audit plugin (FR-008) - ensures every tvTicker in TickerRepo resolves to an investingTicker present in PairRepo */
-      GOLDEN: 'golden',
+      /** Integrity audit plugin (FR-007) - ensures every investingTicker in PairRepo has a corresponding tvTicker in TickerRepo */
+      INTEGRITY: 'integrity',
 
       /** GTT unwatched audit plugin & section - identifies and displays unwatched GTT orders */
       GTT_UNWATCHED: 'gtt-unwatched',

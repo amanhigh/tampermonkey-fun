@@ -4,11 +4,13 @@ import { IAlertRepo } from '../../src/repo/alert';
 import { IAlertManager } from '../../src/manager/alert';
 import { IUIUtil } from '../../src/util/ui';
 import { Alert } from '../../src/models/alert';
+import { ITickerHandler } from '../../src/handler/ticker';
 import { Notifier } from '../../src/util/notify';
 
 describe('OrphanAlertsSection', () => {
   let section: OrphanAlertsSection;
   let mockPlugin: IAudit;
+  let mockTickerHandler: Partial<ITickerHandler>;
   let mockAlertRepo: Partial<IAlertRepo>;
   let mockAlertManager: Partial<IAlertManager>;
   let mockUIUtil: Partial<IUIUtil>;
@@ -28,6 +30,11 @@ describe('OrphanAlertsSection', () => {
       title: 'Orphan Alerts',
       validate: jest.fn(),
       run: jest.fn().mockResolvedValue([]),
+    };
+
+    // Mock ticker handler
+    mockTickerHandler = {
+      openTicker: jest.fn(),
     };
 
     // Mock alert repo
@@ -63,7 +70,7 @@ describe('OrphanAlertsSection', () => {
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
     notifyErrorSpy = jest.spyOn(Notifier, 'error').mockImplementation();
 
-    section = new OrphanAlertsSection(mockPlugin, mockAlertRepo as IAlertRepo, mockAlertManager as IAlertManager, mockUIUtil as IUIUtil);
+    section = new OrphanAlertsSection(mockPlugin, mockTickerHandler as ITickerHandler, mockAlertRepo as IAlertRepo, mockAlertManager as IAlertManager, mockUIUtil as IUIUtil);
   });
 
   afterEach(() => {
@@ -87,7 +94,7 @@ describe('OrphanAlertsSection', () => {
       expect(section.plugin).toBe(mockPlugin);
     });
 
-    test('onLeftClick shows warning', () => {
+    test('onLeftClick opens ticker using alert name', () => {
       const result: AuditResult = {
         pluginId: 'orphan-alerts',
         code: 'NO_PAIR_MAPPING',
@@ -100,7 +107,24 @@ describe('OrphanAlertsSection', () => {
 
       section.onLeftClick(result);
 
-      expect(notifyWarnSpy).toHaveBeenCalledWith('JBM Auto — no ticker mapping, cannot navigate', 3000);
+      expect(mockTickerHandler.openTicker).toHaveBeenCalledWith('JBM Auto');
+    });
+
+    test('onLeftClick shows warning when no alert name available', () => {
+      const result: AuditResult = {
+        pluginId: 'orphan-alerts',
+        code: 'NO_PAIR_MAPPING',
+        target: '6393',
+        message: '6393: 1 alert(s) exist but have no corresponding pair',
+        severity: 'HIGH',
+        status: 'FAIL',
+        data: { pairId: '6393', alertCount: 1 },
+      };
+
+      section.onLeftClick(result);
+
+      expect(notifyWarnSpy).toHaveBeenCalledWith('6393 — no name available, cannot navigate', 3000);
+      expect(mockTickerHandler.openTicker).not.toHaveBeenCalled();
     });
 
     test('onRightClick is async function', () => {

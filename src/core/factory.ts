@@ -75,9 +75,8 @@ import { IPicassoHandler, PicassoHandler } from '../handler/picasso';
 import { PicassoApp } from './picasso';
 import { AuditSectionRegistry } from '../util/audit_registry';
 import { AlertsPlugin } from '../manager/alerts_plugin';
-import { GoldenPlugin } from '../manager/golden_plugin';
 import { GttPlugin } from '../manager/gtt_plugin';
-import { ReverseGoldenPlugin } from '../manager/reverse_golden_plugin';
+import { IntegrityPlugin } from '../manager/integrity_plugin';
 import { OrphanAlertsPlugin } from '../manager/orphan_alerts_plugin';
 import { OrphanSequencesPlugin } from '../manager/orphan_sequences_plugin';
 import { OrphanFlagsPlugin } from '../manager/orphan_flags_plugin';
@@ -88,14 +87,13 @@ import { TickerCollisionPlugin } from '../manager/ticker_collision_plugin';
 import { GttAuditSection } from '../handler/gtt_section';
 import { AlertsAuditSection } from '../handler/alerts_section';
 import { OrphanAlertsSection } from '../handler/orphan_alerts_section';
-import { ReverseGoldenSection } from '../handler/reverse_golden_section';
+import { IntegritySection } from '../handler/integrity_section';
 import { OrphanSequencesSection } from '../handler/orphan_sequences_section';
 import { OrphanFlagsSection } from '../handler/orphan_flags_section';
 import { OrphanExchangeSection } from '../handler/orphan_exchange_section';
 import { DuplicatePairIdsSection } from '../handler/duplicate_pair_ids_section';
 import { TickerCollisionSection } from '../handler/ticker_collision_section';
 import { TradeRiskSection } from '../handler/trade_risk_section';
-import { GoldenSection } from '../handler/golden_section';
 import { CanonicalRanker, ICanonicalRanker } from '../manager/canonical_ranker';
 import { StaleReviewPlugin } from '../manager/stale_review_plugin';
 import { StaleReviewSection } from '../handler/stale_review_section';
@@ -371,13 +369,11 @@ export class Factory {
           )
       ),
 
-    // Return a singleton GoldenPlugin instance (FR-008)
-    // NOTE: Registered but not actively used in audit flow (deferred for future use cases)
-    // See Plan.md Task 2.2 for analysis of why this plugin is not integrated
-    golden: () =>
+    // Return a singleton IntegrityPlugin instance (FR-007)
+    integrity: () =>
       Factory.getInstance(
-        'auditPlugin_golden',
-        () => new GoldenPlugin(Factory.manager.pair(), Factory.manager.symbol())
+        'auditPlugin_integrity',
+        () => new IntegrityPlugin(Factory.repo.pair(), Factory.repo.ticker())
       ),
 
     // Return a singleton GttPlugin instance
@@ -385,13 +381,6 @@ export class Factory {
       Factory.getInstance(
         'auditPlugin_gttUnwatched',
         () => new GttPlugin(Factory.repo.kite(), Factory.manager.watch())
-      ),
-
-    // Return a singleton ReverseGoldenPlugin instance (FR-007)
-    reverseGolden: () =>
-      Factory.getInstance(
-        'auditPlugin_reverseGolden',
-        () => new ReverseGoldenPlugin(Factory.repo.pair(), Factory.repo.ticker())
       ),
 
     // Return a singleton OrphanAlertsPlugin instance
@@ -477,20 +466,21 @@ export class Factory {
         () =>
           new OrphanAlertsSection(
             Factory.audit.orphanAlerts(), // ✅ Direct plugin injection
+            Factory.handler.ticker(), // ✅ TickerHandler for opening tickers by name
             Factory.repo.alert(),
             Factory.manager.alert(), // ✅ AlertManager for deletion operations
             Factory.util.ui()
           )
       ),
 
-    // ReverseGolden Audit Section (FR-007) - receives plugin via direct injection
+    // Integrity Audit Section (FR-007) - receives plugin via direct injection
     // Displays pairs without TradingView mappings for cleanup
-    reverseGoldenSection: () =>
+    integritySection: () =>
       Factory.getInstance(
-        'reverseGoldenSection',
+        'integritySection',
         () =>
-          new ReverseGoldenSection(
-            Factory.audit.reverseGolden(), // ✅ Direct plugin injection
+          new IntegritySection(
+            Factory.audit.integrity(), // ✅ Direct plugin injection
             Factory.handler.ticker(), // For opening tickers
             Factory.handler.pair() // ✅ PairHandler handles watchlist repaint
           )
@@ -546,13 +536,6 @@ export class Factory {
           )
       ),
 
-    // Golden Integrity Audit Section (FR-008)
-    goldenSection: () =>
-      Factory.getInstance(
-        'goldenSection',
-        () => new GoldenSection(Factory.audit.golden(), Factory.handler.ticker(), Factory.manager.symbol())
-      ),
-
     // Trade Risk Audit Section (FR-017)
     tradeRiskSection: () =>
       Factory.getInstance(
@@ -577,13 +560,12 @@ export class Factory {
         reg.registerSection(Factory.audit.alertsSection());
         reg.registerSection(Factory.audit.gttSection());
         reg.registerSection(Factory.audit.orphanAlertsSection());
-        reg.registerSection(Factory.audit.reverseGoldenSection());
+        reg.registerSection(Factory.audit.integritySection());
         reg.registerSection(Factory.audit.orphanSequencesSection());
         reg.registerSection(Factory.audit.orphanFlagsSection());
         reg.registerSection(Factory.audit.orphanExchangeSection());
         reg.registerSection(Factory.audit.duplicatePairIdsSection());
         reg.registerSection(Factory.audit.tickerCollisionSection());
-        reg.registerSection(Factory.audit.goldenSection());
         reg.registerSection(Factory.audit.tradeRiskSection());
         reg.registerSection(Factory.audit.staleReviewSection());
 

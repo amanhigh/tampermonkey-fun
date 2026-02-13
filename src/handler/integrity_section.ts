@@ -8,25 +8,22 @@ import { Notifier } from '../util/notify';
 import { Constants } from '../models/constant';
 
 /**
- * ReverseGolden Integrity Audit Section (FR-007)
- * Displays pairs that exist without TradingView ticker mappings
+ * Integrity Audit Section (FR-007)
+ * Displays investingTickers in PairRepo that have no corresponding TradingView ticker in TickerRepo.
+ *
+ * Replaces the former GoldenSection and ReverseGoldenSection which displayed
+ * identical results with different right-click actions.
  *
  * Features:
  * - Left-click: Open ticker in TradingView
- * - Right-click: Remove problematic pair mapping
- * - Pagination: Navigate through large result sets
- *
- * Pattern:
- * - Receives plugin via direct injection (not via registry)
- * - Plugin contains the business logic for finding unmapped pairs
- * - Section defines the UI specification and interaction handlers
+ * - Right-click: Stop tracking with full cascade cleanup
+ * - Fix All: Bulk stop-tracking with confirmation
  */
-export class ReverseGoldenSection extends BaseAuditSection implements IAuditSection {
-  // Identity - shares ID with REVERSE_GOLDEN plugin
-  readonly id = Constants.AUDIT.PLUGINS.REVERSE_GOLDEN;
-  readonly title = 'ReverseGolden Integrity';
+export class IntegritySection extends BaseAuditSection implements IAuditSection {
+  readonly id = Constants.AUDIT.PLUGINS.INTEGRITY;
+  readonly title = 'Integrity';
   readonly description = 'Investing tickers in PairRepo that have no corresponding TradingView ticker in TickerRepo';
-  readonly order = 3;
+  readonly order = 2;
 
   // Action labels
   readonly leftActionLabel = 'Open';
@@ -36,7 +33,7 @@ export class ReverseGoldenSection extends BaseAuditSection implements IAuditSect
   readonly plugin: IAudit;
 
   // Presentation
-  readonly limit = 10; // Show up to 10 unmapped pairs
+  readonly limit = 10;
   readonly context: unknown = undefined;
 
   // Interaction handlers
@@ -58,7 +55,7 @@ export class ReverseGoldenSection extends BaseAuditSection implements IAuditSect
   };
 
   /**
-   * Header formatter showing count of reverse golden violations
+   * Header formatter showing count of integrity violations
    */
   readonly headerFormatter = (results: AuditResult[]): string => {
     if (results.length === 0) {
@@ -69,7 +66,7 @@ export class ReverseGoldenSection extends BaseAuditSection implements IAuditSect
 
   /**
    * Constructor with injected dependencies
-   * @param plugin ReverseGolden audit plugin
+   * @param plugin Integrity audit plugin
    * @param tickerHandler For opening tickers
    * @param pairHandler For cleanup operations (handles watchlist repaint internally)
    */

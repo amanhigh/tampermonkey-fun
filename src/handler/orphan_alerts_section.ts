@@ -4,6 +4,7 @@ import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { IAlertRepo } from '../repo/alert';
 import { IAlertManager } from '../manager/alert';
+import { ITickerHandler } from './ticker';
 import { IUIUtil } from '../util/ui';
 import { Notifier } from '../util/notify';
 import { Constants } from '../models/constant';
@@ -13,7 +14,7 @@ import { Constants } from '../models/constant';
  * Displays alerts that exist without corresponding pair mappings
  *
  * Features:
- * - Left-click: Show notification (cannot open without pair mapping)
+ * - Left-click: Open ticker in TradingView using alert name
  * - Right-click: Delete orphan alerts for this pairId
  * - Pagination: Navigate through large result sets
  *
@@ -43,9 +44,11 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
   // Interaction handlers
   readonly onLeftClick = (result: AuditResult) => {
     const alertName = result.data?.alertName as string | undefined;
-    const pairId = result.data?.pairId as string | undefined;
-    const label = alertName || pairId || result.target;
-    Notifier.warn(`${label} — no ticker mapping, cannot navigate`, 3000);
+    if (alertName) {
+      this.tickerHandler.openTicker(alertName);
+    } else {
+      Notifier.warn(`${result.target} — no name available, cannot navigate`, 3000);
+    }
   };
 
   readonly onRightClick = async (result: AuditResult): Promise<boolean> => {
@@ -87,6 +90,7 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
    */
   constructor(
     plugin: IAudit,
+    private readonly tickerHandler: ITickerHandler,
     private readonly alertRepo: IAlertRepo,
     private readonly alertManager: IAlertManager,
     private readonly uiUtil: IUIUtil
