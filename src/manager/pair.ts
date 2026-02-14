@@ -83,6 +83,7 @@ export class PairManager implements IPairManager {
    * @param alertRepo Repository for alert operations
    * @param investingClient Client for Investing.com alert deletion
    */
+   // eslint-disable-next-line max-params
   constructor(
     private readonly pairRepo: IPairRepo,
     private readonly symbolManager: ISymbolManager,

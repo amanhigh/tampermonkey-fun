@@ -260,7 +260,7 @@ describe('AuditHandler', () => {
       // Verify audit was run - check that global refresh button was created
       expect(mockUIUtil.buildButton).toHaveBeenCalledWith(
         Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH,
-        '🔄 Refresh',
+        '\u{1F504} Refresh',
         expect.any(Function)
       );
       // Verify section refresh buttons were created (Alerts and GTT)
@@ -973,7 +973,7 @@ describe('AuditHandler', () => {
 
       expect(mockUIUtil.buildButton).toHaveBeenCalledWith(
         Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH,
-        '🔄 Refresh',
+        '\u{1F504} Refresh',
         expect.any(Function)
       );
     });

@@ -111,7 +111,7 @@ export class AuditHandler implements IAuditHandler {
 
   /**
    * Renders toolbar buttons at the top of audit area:
-   * Refresh All, Stop Tracking, and Map Alert
+   * Refresh All, Stop Tracking, and Map Alert in a flex row
    */
   private renderToolbarButtons(): void {
     const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
@@ -119,39 +119,44 @@ export class AuditHandler implements IAuditHandler {
     const stopTrackId = Constants.UI.IDS.BUTTONS.AUDIT_STOP_TRACKING;
     const mapAlertId = Constants.UI.IDS.BUTTONS.AUDIT_MAP_ALERT;
 
-    // Remove old buttons if exist (in case of re-render)
-    $(`#${refreshId}`).remove();
-    $(`#${stopTrackId}`).remove();
-    $(`#${mapAlertId}`).remove();
+    // Remove old toolbar if exists (in case of re-render)
+    $auditArea.find('.audit-toolbar').remove();
 
-    // Map Alert button (FR-9.9)
-    const $mapAlert = this.uiUtil.buildButton(mapAlertId, '🔗 Map', () => {
-      const ticker = this.tickerManager.getTicker();
-      void this.pairHandler.mapInvestingTicker(ticker);
-    });
-    $mapAlert.prependTo($auditArea);
-
-    // Stop Tracking button (FR-9.8)
-    const $stopTrack = this.uiUtil.buildButton(stopTrackId, '⏹ Stop', () => {
-      try {
-        const investingTicker = this.tickerManager.getInvestingTicker();
-        if (confirm(`Stop tracking ${investingTicker}?`)) {
-          this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
-        }
-      } catch {
-        const tvTicker = this.tickerManager.getTicker();
-        if (confirm(`Stop tracking ${tvTicker}?`)) {
-          this.pairHandler.stopTrackingByTvTicker(tvTicker);
-        }
-      }
-    });
-    $stopTrack.prependTo($auditArea);
+    const $toolbar = $('<div>').addClass('audit-toolbar');
 
     // Refresh All button
-    const $refresh = this.uiUtil.buildButton(refreshId, '🔄 Refresh', () => {
-      void this.auditAll();
-    });
-    $refresh.prependTo($auditArea);
+    this.uiUtil
+      .buildButton(refreshId, '\u{1F504} Refresh', () => {
+        void this.auditAll();
+      })
+      .appendTo($toolbar);
+
+    // Stop Tracking button (FR-9.8)
+    this.uiUtil
+      .buildButton(stopTrackId, '⏹ Stop', () => {
+        try {
+          const investingTicker = this.tickerManager.getInvestingTicker();
+          if (confirm(`Stop tracking ${investingTicker}?`)) {
+            this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
+          }
+        } catch {
+          const tvTicker = this.tickerManager.getTicker();
+          if (confirm(`Stop tracking ${tvTicker}?`)) {
+            this.pairHandler.stopTrackingByTvTicker(tvTicker);
+          }
+        }
+      })
+      .appendTo($toolbar);
+
+    // Map Alert button (FR-9.9)
+    this.uiUtil
+      .buildButton(mapAlertId, '\u{1F517} Map', () => {
+        const ticker = this.tickerManager.getTicker();
+        void this.pairHandler.mapInvestingTicker(ticker);
+      })
+      .appendTo($toolbar);
+
+    $toolbar.prependTo($auditArea);
   }
 
   /**

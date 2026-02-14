@@ -7,6 +7,10 @@
   background: @modal-bg;
   color: @modal-text;
   border-radius: @modal-radius;
+  border: @modal-border;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  font-family: @modal-font;
   z-index: 10000;
 }
 
@@ -20,13 +24,13 @@
   }
 
   h2 {
-    font-size: 20px;
-    border-bottom: 1px solid #444;
+    font-size: 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 8px;
   }
 
   h3 {
-    font-size: 16px;
+    font-size: 14px;
     margin-top: 20px;
   }
 
@@ -44,12 +48,12 @@
     strong {
       display: inline-block;
       min-width: 24px;
-      background: #333;
+      background: rgba(255, 255, 255, 0.08);
       padding: 2px 6px;
-      border-radius: 3px;
+      border-radius: 4px;
       margin-right: 8px;
       font-family: monospace;
-      font-size: 14px;
+      font-size: 12px;
       color: @modal-text;
     }
   }
