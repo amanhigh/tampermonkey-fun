@@ -25,7 +25,7 @@ describe('SearchUtil', () => {
       searchUtil.youtubeSearch(query);
 
       expect(mockGM.openInTab).toHaveBeenCalledWith(
-        'https://www.youtube.com/results?search_query=javascript tutorials',
+        `https://www.youtube.com/results?search_query=${encodeURIComponent('javascript tutorials')}`,
         true
       );
     });
@@ -35,7 +35,7 @@ describe('SearchUtil', () => {
       searchUtil.youtubeSearch(query);
 
       expect(mockGM.openInTab).toHaveBeenCalledWith(
-        'https://www.youtube.com/results?search_query=test & search!',
+        `https://www.youtube.com/results?search_query=${encodeURIComponent('test & search!')}`,
         true
       );
     });
@@ -52,7 +52,7 @@ describe('SearchUtil', () => {
       searchUtil.youtubeSearch(query);
 
       expect(mockGM.openInTab).toHaveBeenCalledWith(
-        'https://www.youtube.com/results?search_query=multiple word query',
+        `https://www.youtube.com/results?search_query=${encodeURIComponent('multiple word query')}`,
         true
       );
     });
@@ -80,7 +80,7 @@ describe('SearchUtil', () => {
       const query = 'iron man';
       searchUtil.ySearch(query);
 
-      expect(mockGM.openInTab).toHaveBeenCalledWith('https://yts.mx/browse-movies/iron man', true);
+      expect(mockGM.openInTab).toHaveBeenCalledWith(`https://yts.mx/browse-movies/${encodeURIComponent('iron man')}`, true);
     });
 
     test('should handle special characters in movie titles', () => {
@@ -103,7 +103,7 @@ describe('SearchUtil', () => {
       const query = 'ubuntu iso';
       searchUtil.xSearch(query);
 
-      expect(mockGM.openInTab).toHaveBeenCalledWith('https://www.1337x.to/search/ubuntu iso/1/', true);
+      expect(mockGM.openInTab).toHaveBeenCalledWith(`https://www.1337x.to/search/${encodeURIComponent('ubuntu iso')}/1/`, true);
     });
 
     test('should handle queries with special characters', () => {
@@ -134,7 +134,7 @@ describe('SearchUtil', () => {
       searchUtil.xtremeSearch(query);
 
       expect(mockGM.openInTab).toHaveBeenCalledWith(
-        'https://www.airtelxstream.in/search/bollywood movies?q=bollywood movies',
+        `https://www.airtelxstream.in/search/${encodeURIComponent('bollywood movies')}?q=${encodeURIComponent('bollywood movies')}`,
         true
       );
     });
@@ -143,7 +143,7 @@ describe('SearchUtil', () => {
       const query = 'action films';
       searchUtil.xtremeSearch(query);
 
-      const expectedUrl = 'https://www.airtelxstream.in/search/action films?q=action films';
+      const expectedUrl = `https://www.airtelxstream.in/search/${encodeURIComponent('action films')}?q=${encodeURIComponent('action films')}`;
       expect(mockGM.openInTab).toHaveBeenCalledWith(expectedUrl, true);
     });
 
@@ -152,7 +152,7 @@ describe('SearchUtil', () => {
       searchUtil.xtremeSearch(query);
 
       expect(mockGM.openInTab).toHaveBeenCalledWith(
-        'https://www.airtelxstream.in/search/sci-fi & fantasy?q=sci-fi & fantasy',
+        `https://www.airtelxstream.in/search/${encodeURIComponent('sci-fi & fantasy')}?q=${encodeURIComponent('sci-fi & fantasy')}`,
         true
       );
     });
@@ -170,14 +170,14 @@ describe('SearchUtil', () => {
       const query = 'web series';
       searchUtil.bingeSearch(query);
 
-      expect(mockGM.openInTab).toHaveBeenCalledWith('https://www.tataplaybinge.com/search?q=web series', true);
+      expect(mockGM.openInTab).toHaveBeenCalledWith(`https://www.tataplaybinge.com/search?q=${encodeURIComponent('web series')}`, true);
     });
 
     test('should handle movie and series titles', () => {
       const query = 'stranger things';
       searchUtil.bingeSearch(query);
 
-      expect(mockGM.openInTab).toHaveBeenCalledWith('https://www.tataplaybinge.com/search?q=stranger things', true);
+      expect(mockGM.openInTab).toHaveBeenCalledWith(`https://www.tataplaybinge.com/search?q=${encodeURIComponent('stranger things')}`, true);
     });
 
     test('should handle special characters in query', () => {

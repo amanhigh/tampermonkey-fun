@@ -40,28 +40,31 @@ export class SearchUtil implements ISearchUtil {
   /** @inheritdoc */
   public youtubeSearch(query: string): void {
     void GM.openInTab(
-      `https://www.youtube.com/results?search_query=${query}`,
+      `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
       true // openInBackground
     );
   }
 
   /** @inheritdoc */
   public ySearch(query: string): void {
-    void GM.openInTab(`https://yts.mx/browse-movies/${query}`, true);
+    void GM.openInTab(`https://yts.mx/browse-movies/${encodeURIComponent(query)}`, true);
   }
 
   /** @inheritdoc */
   public xSearch(query: string): void {
-    void GM.openInTab(`https://www.1337x.to/search/${query}/1/`, true);
+    void GM.openInTab(`https://www.1337x.to/search/${encodeURIComponent(query)}/1/`, true);
   }
 
   /** @inheritdoc */
   public xtremeSearch(query: string): void {
-    void GM.openInTab(`https://www.airtelxstream.in/search/${query}?q=${query}`, true);
+    void GM.openInTab(
+      `https://www.airtelxstream.in/search/${encodeURIComponent(query)}?q=${encodeURIComponent(query)}`,
+      true
+    );
   }
 
   /** @inheritdoc */
   public bingeSearch(query: string): void {
-    void GM.openInTab(`https://www.tataplaybinge.com/search?q=${query}`, true);
+    void GM.openInTab(`https://www.tataplaybinge.com/search?q=${encodeURIComponent(query)}`, true);
   }
 }

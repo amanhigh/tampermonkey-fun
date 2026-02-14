@@ -14,9 +14,9 @@ import { WaitUtil } from '../../src/util/wait';
 (global as any).KeyboardEvent = class KeyboardEvent extends (global as any).Event {
   constructor(type: string, options: any = {}) {
     super(type, options);
-    this.keyCode = options.keyCode || 0;
+    this.key = options.key || '';
   }
-  keyCode: number;
+  key: string;
 };
 
 // Setup global DOM and jQuery mocks
@@ -273,7 +273,7 @@ describe('WaitUtil', () => {
         expect.objectContaining({
           type: 'keydown',
           bubbles: true,
-          keyCode: 13,
+          key: 'Enter',
         })
       );
     });

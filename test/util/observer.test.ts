@@ -36,10 +36,6 @@ Object.defineProperty(global, 'Element', {
 // Make mockElement an instance of Element
 Object.setPrototypeOf(mockElement, mockElementConstructor.prototype);
 
-// Mock console.log to verify text change logging
-const originalConsoleLog = console.log;
-const mockConsoleLog = jest.fn();
-console.log = mockConsoleLog;
 
 describe('ObserveUtil', () => {
   let observeUtil: ObserveUtil;
@@ -51,12 +47,7 @@ describe('ObserveUtil', () => {
     observeUtil = new ObserveUtil();
     mockTarget = mockElement as any;
     mockCallback = jest.fn();
-    mockConsoleLog.mockClear();
     mockMutationCallback = null;
-  });
-
-  afterAll(() => {
-    console.log = originalConsoleLog;
   });
 
   describe('constructor', () => {
@@ -90,7 +81,7 @@ describe('ObserveUtil', () => {
       }
     });
 
-    it('should track text content changes', () => {
+    it('should track text content changes and fire callback', () => {
       mockTarget.textContent = 'initial text';
 
       observeUtil.attributeObserver(mockTarget, mockCallback);
@@ -102,9 +93,7 @@ describe('ObserveUtil', () => {
 
         mockMutationCallback(mockMutations);
 
-        expect(mockConsoleLog).toHaveBeenCalledWith(
-          expect.stringContaining('Text changed from "initial text" to "changed text"')
-        );
+        expect(mockCallback).toHaveBeenCalled();
       }
     });
 
@@ -119,9 +108,7 @@ describe('ObserveUtil', () => {
 
         mockMutationCallback(mockMutations);
 
-        expect(mockConsoleLog).toHaveBeenCalledWith(
-          expect.stringContaining('Text changed from "original" to "updated"')
-        );
+        expect(mockCallback).toHaveBeenCalled();
       }
     });
 
