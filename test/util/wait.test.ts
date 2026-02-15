@@ -15,8 +15,10 @@ import { WaitUtil } from '../../src/util/wait';
   constructor(type: string, options: any = {}) {
     super(type, options);
     this.key = options.key || '';
+    this.keyCode = options.keyCode || 0;
   }
   key: string;
+  keyCode: number;
 };
 
 // Setup global DOM and jQuery mocks
@@ -273,7 +275,7 @@ describe('WaitUtil', () => {
         expect.objectContaining({
           type: 'keydown',
           bubbles: true,
-          key: 'Enter',
+          keyCode: 13,
         })
       );
     });
