@@ -35,21 +35,21 @@ export class OrphanSequencesPlugin extends BaseAuditPlugin {
 
     const results: AuditResult[] = [];
 
-    this.sequenceRepo.getAllKeys().forEach((ticker: string) => {
-      if (this.symbolManager.isComposite(ticker)) {
+    this.sequenceRepo.getAllKeys().forEach((tvTicker: string) => {
+      if (this.symbolManager.isComposite(tvTicker)) {
         return;
       }
-      if (!this.tickerRepo.has(ticker)) {
-        const sequence = this.sequenceRepo.get(ticker);
+      if (!this.tickerRepo.has(tvTicker)) {
+        const sequence = this.sequenceRepo.get(tvTicker);
         results.push({
           pluginId: this.id,
           code: 'ORPHAN_SEQUENCE',
-          target: ticker,
-          message: `${ticker}: Sequence (${sequence}) exists but ticker not in TickerRepo`,
+          target: tvTicker,
+          message: `${tvTicker}: Sequence (${sequence}) exists but ticker not in TickerRepo`,
           severity: 'MEDIUM',
           status: 'FAIL',
           data: {
-            ticker,
+            tvTicker,
             sequence,
           },
         });

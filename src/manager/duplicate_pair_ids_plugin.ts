@@ -28,7 +28,7 @@ export class DuplicatePairIdsPlugin extends BaseAuditPlugin {
     }
 
     // Group investingTickers by pairId
-    const pairIdToTickers = new Map<string, string[]>();
+    const pairIdToInvestingTickers = new Map<string, string[]>();
 
     this.pairRepo.getAllKeys().forEach((investingTicker: string) => {
       const pair = this.pairRepo.get(investingTicker);
@@ -37,28 +37,29 @@ export class DuplicatePairIdsPlugin extends BaseAuditPlugin {
       }
 
       const pairId = pair.pairId;
-      if (!pairIdToTickers.has(pairId)) {
-        pairIdToTickers.set(pairId, []);
+      if (!pairIdToInvestingTickers.has(pairId)) {
+        pairIdToInvestingTickers.set(pairId, []);
       }
-      pairIdToTickers.get(pairId)!.push(investingTicker);
+      pairIdToInvestingTickers.get(pairId)!.push(investingTicker);
     });
 
     // Emit findings for pairIds with multiple tickers
     const results: AuditResult[] = [];
 
-    pairIdToTickers.forEach((tickers, pairId) => {
-      if (tickers.length > 1) {
-        const pairName = this.pairRepo.get(tickers[0])?.name ?? pairId;
+    pairIdToInvestingTickers.forEach((investingTickers, pairId) => {
+      if (investingTickers.length > 1) {
+        // HACK: Avoid Plugins Using Repo go via Managers.        
+        const pairName = this.pairRepo.get(investingTickers[0])?.name ?? pairId;
         results.push({
           pluginId: this.id,
           code: 'DUPLICATE_PAIR_ID',
           target: pairName,
-          message: `${pairName} (${pairId}): shared by ${tickers.join(', ')}`,
+          message: `${pairName} (${pairId}): shared by ${investingTickers.join(', ')}`,
           severity: 'MEDIUM',
           status: 'FAIL',
           data: {
             pairId,
-            investingTickers: tickers,
+            investingTickers,
             pairName,
           },
         });

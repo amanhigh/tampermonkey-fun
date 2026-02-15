@@ -35,25 +35,25 @@ export class OrphanFlagsPlugin extends BaseAuditPlugin {
     }
 
     const results: AuditResult[] = [];
-    const categoryLists = this.flagRepo.getFlagCategoryLists();
+    const flagLists = this.flagRepo.getFlagCategoryLists();
 
-    categoryLists.getLists().forEach((tickers, categoryIndex) => {
-      tickers.forEach((ticker) => {
+    flagLists.getLists().forEach((tvTickers, categoryIndex) => {
+      tvTickers.forEach((tvTicker) => {
         // Skip formula/composite tickers (containing '/', '*', etc.)
-        if (this.symbolManager.isComposite(ticker)) {
+        if (this.symbolManager.isComposite(tvTicker)) {
           return;
         }
 
-        if (!this.tickerRepo.has(ticker)) {
+        if (!this.tickerRepo.has(tvTicker)) {
           results.push({
             pluginId: this.id,
             code: 'ORPHAN_FLAG',
-            target: ticker,
-            message: `${ticker}: Flag in category ${categoryIndex} but ticker not in TickerRepo`,
+            target: tvTicker,
+            message: `${tvTicker}: Flag in category ${categoryIndex} but ticker not in TickerRepo`,
             severity: 'LOW',
             status: 'FAIL',
             data: {
-              ticker,
+              tvTicker,
               categoryIndex,
             },
           });

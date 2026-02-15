@@ -118,6 +118,7 @@ export class PairRepo extends MapRepo<string, PairInfo> implements IPairRepo {
    */
   public findByPairId(pairId: string): string[] {
     const results: string[] = [];
+    // FIXME: How often this is called do we need to optimize?
     this.map.forEach((info, ticker) => {
       if (info.pairId === pairId) {
         results.push(ticker);
