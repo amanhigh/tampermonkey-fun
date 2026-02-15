@@ -48,7 +48,7 @@ export class DuplicatePairIdsPlugin extends BaseAuditPlugin {
 
     pairIdToInvestingTickers.forEach((investingTickers, pairId) => {
       if (investingTickers.length > 1) {
-        // HACK: Avoid Plugins Using Repo go via Managers.        
+        // HACK: Avoid Plugins Using Repo go via Managers.
         const pairName = this.pairRepo.get(investingTickers[0])?.name ?? pairId;
         results.push({
           pluginId: this.id,

@@ -66,7 +66,7 @@ describe('OrphanSequencesPlugin', () => {
       expect(results[0].code).toBe('ORPHAN_SEQUENCE');
       expect(results[0].severity).toBe('MEDIUM');
       expect(results[0].status).toBe('FAIL');
-      expect(results[0].data).toEqual({ ticker: 'ORPHAN', sequence: SequenceType.MWD });
+      expect(results[0].data).toEqual({ tvTicker: 'ORPHAN', sequence: SequenceType.MWD });
     });
 
     it('emits FAIL only for orphan sequences when some are valid', async () => {

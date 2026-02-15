@@ -85,7 +85,7 @@ describe('OrphanFlagsPlugin', () => {
       expect(results[0].code).toBe('ORPHAN_FLAG');
       expect(results[0].severity).toBe('LOW');
       expect(results[0].status).toBe('FAIL');
-      expect(results[0].data).toEqual({ ticker: 'ORPHAN', categoryIndex: 2 });
+      expect(results[0].data).toEqual({ tvTicker: 'ORPHAN', categoryIndex: 2 });
     });
 
     it('emits FAIL for orphan flags across multiple categories', async () => {
