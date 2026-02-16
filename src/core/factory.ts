@@ -748,7 +748,13 @@ export class Factory {
     sequence: (): ISequenceHandler =>
       Factory.getInstance(
         'sequenceHandler',
-        () => new SequenceHandler(Factory.manager.sequence(), Factory.manager.ticker(), Factory.manager.symbol())
+        () =>
+          new SequenceHandler(
+            Factory.manager.sequence(),
+            Factory.manager.ticker(),
+            Factory.manager.symbol(),
+            Factory.manager.pair()
+          )
       ),
     journal: (): IJournalHandler =>
       Factory.getInstance(

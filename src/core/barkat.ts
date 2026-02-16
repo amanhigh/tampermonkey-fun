@@ -70,7 +70,7 @@ export class Barkat {
   // TODO: Remove suppressed Errors for eslint
   // eslint-disable-next-line max-lines-per-function
   private setupTradingViewUI() {
-    const $area = this.uiUtil.buildArea(Constants.UI.IDS.AREAS.MAIN, '76%', '6%');
+    const $area = this.uiUtil.buildArea(Constants.UI.IDS.AREAS.MAIN, '70%', '6%');
     $area.appendTo('body');
 
     // TODO: Move UI Build Logic to Handlers
