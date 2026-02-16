@@ -53,9 +53,9 @@ export class SyncUtil implements ISyncUtil {
       const $waitOn = $(`#${this.waitId}`);
 
       if (!$waitOn.hasClass(mutexId)) {
-        this._initiateMutex($waitOn, mutexId, dataId, timeout, callback);
+        this.initiateMutex($waitOn, mutexId, dataId, timeout, callback);
       } else {
-        this._extendTimeout($waitOn, dataId, timeout);
+        this.extendTimeout($waitOn, dataId, timeout);
       }
     } catch (error) {
       console.error('waitOn error:', error);
@@ -66,25 +66,19 @@ export class SyncUtil implements ISyncUtil {
    * Initiates a new mutex lock
    * @private
    */
-  private _initiateMutex(
-    $waitOn: JQuery,
-    mutexId: string,
-    dataId: string,
-    timeout: number,
-    callback: () => void
-  ): void {
+  private initiateMutex($waitOn: JQuery, mutexId: string, dataId: string, timeout: number, callback: () => void): void {
     $waitOn.toggleClass(mutexId);
     $waitOn.data(dataId, timeout); //Start filling timeout Bucket.
 
     const waitPeriod = timeout / 2;
-    this._startMutexMonitor($waitOn, mutexId, dataId, timeout, waitPeriod, callback);
+    this.startMutexMonitor($waitOn, mutexId, dataId, timeout, waitPeriod, callback);
   }
 
   /**
    * Starts monitoring the mutex
    * @private
    */
-  private _startMutexMonitor(
+  private startMutexMonitor(
     $waitOn: JQuery,
     mutexId: string,
     dataId: string,
@@ -113,7 +107,7 @@ export class SyncUtil implements ISyncUtil {
    * Extends the timeout for an existing mutex
    * @private
    */
-  private _extendTimeout($waitOn: JQuery, dataId: string, timeout: number): void {
+  private extendTimeout($waitOn: JQuery, dataId: string, timeout: number): void {
     const newTimeout = ($waitOn.data(dataId) as number) + timeout; //Add to Timeout Bucket
     $waitOn.data(dataId, newTimeout);
     // console.debug('Mutex Filled: ', id, newTimeout);

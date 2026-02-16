@@ -21,10 +21,18 @@ export abstract class BaseKiteOrder {
 }
 
 /**
+ * GTT order type — single-leg buy or two-leg OCO (stop + target)
+ */
+export enum OrderType {
+  SINGLE = 'single',
+  TWO_LEG = 'two-leg',
+}
+
+/**
  * Represents a GTT order with symbol, quantity, type, and price information
  */
 export class Order extends BaseKiteOrder {
-  type: string;
+  type: OrderType;
   id: string;
   prices: number[];
 
@@ -32,11 +40,11 @@ export class Order extends BaseKiteOrder {
    * Creates a new Order instance
    * @param sym Trading symbol for the order
    * @param qty Order quantity
-   * @param type Order type (e.g., 'single', 'two-leg')
+   * @param type Order type (single-leg buy or two-leg OCO)
    * @param id Unique order identifier
    * @param prices Array of trigger prices for the order
    */
-  constructor(sym: string, qty: number, type: string, id: string, prices: number[]) {
+  constructor(sym: string, qty: number, type: OrderType, id: string, prices: number[]) {
     super(sym, qty);
     this.type = type;
     this.id = id;
@@ -146,7 +154,7 @@ export interface GttApiCondition {
 export interface GttApiData {
   status: string;
   orders: GttApiOrder[];
-  type: string;
+  type: OrderType;
   id: string;
   condition: GttApiCondition;
 }

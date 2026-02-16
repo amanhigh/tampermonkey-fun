@@ -67,9 +67,17 @@ export interface ISymbolManager {
    */
   isComposite(symbol: string): boolean;
 
-  // TODO: #B Audit & Clean all mappings, eg. Pair, Ticker, Exchange etc by Matching each Repo
+  /**
+   * Removes mapping between TradingView ticker and Exchange ticker
+   * @param tvTicker TradingView ticker
+   */
+  removeTvToExchangeTickerMapping(tvTicker: string): void;
 
-  // TODO: Audit Tickers not reviewed from Long Time.
+  /**
+   * Deletes a TradingView ticker entry from the ticker repository
+   * @param tvTicker TradingView ticker
+   */
+  deleteTvTicker(tvTicker: string): void;
 }
 
 /*
@@ -159,6 +167,16 @@ export class SymbolManager implements ISymbolManager {
   /** @inheritdoc */
   public isComposite(symbol: string): boolean {
     return this.COMPOSITE_CHARACTERS.some((char) => symbol.includes(char));
+  }
+
+  /** @inheritdoc */
+  removeTvToExchangeTickerMapping(tvTicker: string): void {
+    this.exchangeRepo.delete(tvTicker);
+  }
+
+  /** @inheritdoc */
+  deleteTvTicker(tvTicker: string): void {
+    this.tickerRepo.delete(tvTicker);
   }
 
   /**

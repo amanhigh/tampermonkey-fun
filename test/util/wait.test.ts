@@ -14,8 +14,10 @@ import { WaitUtil } from '../../src/util/wait';
 (global as any).KeyboardEvent = class KeyboardEvent extends (global as any).Event {
   constructor(type: string, options: any = {}) {
     super(type, options);
+    this.key = options.key || '';
     this.keyCode = options.keyCode || 0;
   }
+  key: string;
   keyCode: number;
 };
 

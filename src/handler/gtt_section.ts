@@ -3,7 +3,8 @@ import { IAudit, AuditResult } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { ITickerHandler } from './ticker';
 import { IKiteManager } from '../manager/kite';
-import { AUDIT_IDS } from '../models/audit_ids';
+import { IUIUtil } from '../util/ui';
+import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 
 /**
@@ -23,8 +24,14 @@ import { Notifier } from '../util/notify';
  */
 export class GttAuditSection extends BaseAuditSection implements IAuditSection {
   // Identity - shares ID with GTT_UNWATCHED plugin
-  readonly id = AUDIT_IDS.GTT_UNWATCHED;
+  readonly id = Constants.AUDIT.PLUGINS.GTT_UNWATCHED;
   readonly title = 'GTT Orders';
+  readonly description = 'Surfaces GTT orders on tickers absent from active watchlists (Orange / Red / Running)';
+  readonly order = 6;
+
+  // Action labels
+  readonly leftActionLabel = 'Open';
+  readonly rightActionLabel = 'Delete Order';
 
   // Data source (injected directly, not fetched from registry)
   readonly plugin: IAudit;
@@ -39,7 +46,7 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
     this.tickerHandler.openTicker(tvTicker);
   };
 
-  readonly onRightClick = (result: AuditResult) => {
+  readonly onRightClick = (result: AuditResult): boolean => {
     try {
       // Extract order IDs from result data
       const orderIds = result.data?.orderIds as string[] | undefined;
@@ -48,7 +55,7 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
       // Validation
       if (!orderIds || orderIds.length === 0) {
         Notifier.warn('No GTT orders found for this ticker');
-        return;
+        return false;
       }
 
       // Build confirmation message
@@ -58,9 +65,9 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
         `This will permanently delete these orders from Kite.`;
 
       // Show confirmation dialog
-      if (!confirm(message)) {
+      if (!this.uiUtil.showConfirm('Delete GTT Orders', message)) {
         Notifier.info('Deletion cancelled');
-        return;
+        return false;
       }
 
       // Show progress notification
@@ -73,16 +80,32 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
 
       // Success notification
       Notifier.success(`Deleted ${orderIds.length} GTT order(s) for ${tvTicker}`);
+      return true;
     } catch (error) {
       Notifier.error(`Failed to delete GTT orders: ${error}`);
+      return false;
     }
+  };
+
+  readonly onFixAll = (results: AuditResult[]) => {
+    let totalDeleted = 0;
+    results.forEach((result) => {
+      const orderIds = result.data?.orderIds as string[] | undefined;
+      if (orderIds && orderIds.length > 0) {
+        orderIds.forEach((orderId) => {
+          this.kiteManager.deleteOrder(orderId);
+        });
+        totalDeleted += orderIds.length;
+      }
+    });
+    Notifier.success(`Deleted ${totalDeleted} GTT order(s) for ${results.length} ticker(s)`);
   };
 
   readonly headerFormatter = (auditResults: AuditResult[]) => {
     if (auditResults.length === 0) {
-      return `<span class="success-badge">✓ All orders watched</span>`;
+      return `<span class="success-badge">✓ All ${this.title.toLowerCase()} watched</span>`;
     }
-    return `<span class="count-badge">Unwatched: ${auditResults.length}</span>`;
+    return `<span class="count-badge">${this.title}: ${auditResults.length}</span>`;
   };
 
   /**
@@ -94,7 +117,8 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
   constructor(
     plugin: IAudit,
     private readonly tickerHandler: ITickerHandler,
-    private readonly kiteManager: IKiteManager
+    private readonly kiteManager: IKiteManager,
+    private readonly uiUtil: IUIUtil
   ) {
     super();
     this.plugin = plugin;

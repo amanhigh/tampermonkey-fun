@@ -225,6 +225,19 @@ describe('TickerRepo', () => {
       expect(tickerRepo.getTvTicker('apple-2')).toBe('AAPL');
     });
 
+    it('should overwrite reverse map when multiple TV tickers map to same investing ticker', () => {
+      tickerRepo.set('AAPL', 'apple-inc');
+      tickerRepo.set('APPLE', 'apple-inc');
+      // 1:1 reverse map: last set wins
+      expect(tickerRepo.getTvTicker('apple-inc')).toBe('APPLE');
+    });
+
+    it('should remove reverse map entry on delete', () => {
+      tickerRepo.set('AAPL', 'apple-inc');
+      tickerRepo.delete('AAPL');
+      expect(tickerRepo.getTvTicker('apple-inc')).toBeNull();
+    });
+
     it('should handle case sensitivity', () => {
       tickerRepo.set('aapl', 'apple');
       expect(tickerRepo.getInvestingTicker('AAPL')).toBeNull();
@@ -237,8 +250,9 @@ describe('TickerRepo', () => {
       tickerRepo.set('empty-value', '');
       expect(tickerRepo.get('')).toBe('empty-key');
       expect(tickerRepo.get('empty-value')).toBe('');
-      expect(tickerRepo.getTvTicker('empty-key')).toBeNull(); // Empty string value is falsy, returns null
-      expect(tickerRepo.getTvTicker('')).toBe('empty-value'); // There is a mapping for empty string key
+      // Empty string tvTicker stored in reverse map but || null treats '' as falsy
+      expect(tickerRepo.getTvTicker('empty-key')).toBeNull();
+      expect(tickerRepo.getTvTicker('')).toBe('empty-value');
     });
 
     it('should handle special characters in tickers', () => {

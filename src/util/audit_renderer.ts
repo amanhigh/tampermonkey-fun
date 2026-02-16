@@ -20,7 +20,7 @@ import { IAuditSection } from '../handler/audit_section';
  * - Created at runtime by handlers, not by Factory (transient, not singleton)
  */
 export class AuditRenderer {
-  private collapsed: boolean = false;
+  private collapsed: boolean = true;
   private results: AuditResult[] = [];
   private running: boolean = false;
   private currentPage: number = 0;
@@ -106,12 +106,25 @@ export class AuditRenderer {
 
     const $header = $('<div>')
       .addClass(Constants.AUDIT.CLASSES.SECTION_HEADER)
+      .attr('title', this.section.description ?? '')
       .on('click', () => this.toggleCollapse());
 
     // Expand/collapse icon + header text
     $('<span>').addClass(Constants.AUDIT.CLASSES.HEADER_ICON).html(icon).appendTo($header);
 
     $('<span>').addClass(Constants.AUDIT.CLASSES.HEADER_TEXT).html(fullHeaderText).appendTo($header);
+
+    // Fix All button (only when section declares onFixAll and has results)
+    if (this.section.onFixAll && this.results.length > 0) {
+      const $fixAll = this.uiUtil
+        .buildButton(`audit-fixall-${this.section.id}`, '🔧 Fix All', () => {
+          void this.handleFixAll();
+        })
+        .addClass(Constants.AUDIT.CLASSES.SECTION_REFRESH);
+
+      this.setRefreshButtonState($fixAll, !this.running);
+      $fixAll.appendTo($header);
+    }
 
     // Refresh button
     const $refresh = this.uiUtil
@@ -138,8 +151,11 @@ export class AuditRenderer {
       return $body;
     }
 
-    // Get paginated results
+    // Clamp currentPage to valid range after results change
     const totalPages = this.getTotalPages();
+    if (this.currentPage >= totalPages) {
+      this.currentPage = Math.max(0, totalPages - 1);
+    }
     const displayResults = this.getPaginatedResults();
 
     // Add buttons
@@ -238,7 +254,7 @@ export class AuditRenderer {
       })
       .attr(
         'title',
-        `Left: ${this.section.onLeftClick.name || 'Open'} | Right: ${this.section.onRightClick.name || 'Fix'}`
+        `Left: ${this.section.leftActionLabel || 'Open'} | Right: ${this.section.rightActionLabel || 'Fix'}`
       );
 
     // Left-click: Primary action (no auto-refresh on left-click, user may just be viewing)
@@ -250,7 +266,10 @@ export class AuditRenderer {
     // Right-click: Secondary action (no auto-refresh for speed)
     $button.on('contextmenu', (e) => {
       e.preventDefault();
-      void Promise.resolve(this.section.onRightClick(result)).then(() => {
+      void Promise.resolve(this.section.onRightClick(result)).then((returnValue) => {
+        if (returnValue === false) {
+          return;
+        }
         $button.remove();
         this.removeResultAndUpdateHeader(ticker);
       });
@@ -313,9 +332,6 @@ export class AuditRenderer {
       // Record timestamp
       this.lastRunTime = Date.now();
 
-      // Smart expand: expand if issues, collapse if clean
-      this.smartExpand(this.results);
-
       // Rebuild section
       this.updateSectionInDOM();
     } finally {
@@ -326,12 +342,24 @@ export class AuditRenderer {
   }
 
   /**
-   * Smart expand/collapse: expand if issues found, collapse if clean
+   * Handle "Fix All" workflow with confirmation before executing bulk action
    */
-  private smartExpand(results: AuditResult[]): void {
-    if (results.length > 0 && this.collapsed) {
-      this.collapsed = false;
+  private async handleFixAll(): Promise<void> {
+    if (!this.section.onFixAll || this.results.length === 0) {
+      return;
     }
+
+    const confirmed = this.uiUtil.showConfirm(
+      `Fix All: ${this.section.title}`,
+      `This will apply the fix action to all ${this.results.length} item(s).`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    await Promise.resolve(this.section.onFixAll(this.results));
+    await this.refresh();
   }
 
   /**
@@ -339,7 +367,6 @@ export class AuditRenderer {
    */
   public setResults(results: AuditResult[]): void {
     this.results = results;
-    this.smartExpand(results);
     this.updateSectionInDOM();
   }
 

@@ -1,11 +1,12 @@
 import { PairInfo } from '../models/alert';
 import { ISmartPrompt } from '../util/smart';
 import { IPairManager } from '../manager/pair';
-import { Notifier } from '../util/notify';
 import { IInvestingClient } from '../client/investing';
 import { ISymbolManager } from '../manager/symbol';
+import { IStyleManager } from '../manager/style';
 import { ITickerManager } from '../manager/ticker';
 import { IWatchListHandler } from './watchlist';
+import { Notifier } from '../util/notify';
 
 /**
  * Interface for managing alert mapping operations
@@ -19,23 +20,31 @@ export interface IPairHandler {
   mapInvestingTicker(investingTicker: string, exchange?: string): Promise<void>;
 
   /**
-   * Deletes pair mapping information
-   * @param investingTicker The investing.com ticker symbol to unmap
+   * Stops tracking an investing ticker — full cascade cleanup + UI notification
+   * @param investingTicker The investing.com ticker symbol to stop tracking
    */
-  deletePairInfo(investingTicker: string): void;
+  stopTrackingByInvestingTicker(investingTicker: string): void;
+
+  /**
+   * Stops tracking a TV ticker — resolves and performs full cascade cleanup + UI notification
+   * @param tvTicker The TradingView ticker to stop tracking
+   */
+  stopTrackingByTvTicker(tvTicker: string): void;
 }
 
 /**
  * Class handling alert mapping functionality
  */
 export class PairHandler implements IPairHandler {
+  // eslint-disable-next-line max-params
   constructor(
     private readonly investingClient: IInvestingClient,
     private readonly pairManager: IPairManager,
     private readonly smartPrompt: ISmartPrompt,
     private readonly tickerManager: ITickerManager,
     private readonly symbolManager: ISymbolManager,
-    private readonly watchListHandler: IWatchListHandler
+    private readonly watchListHandler: IWatchListHandler,
+    private readonly styleManager: IStyleManager
   ) {}
 
   /**
@@ -58,6 +67,11 @@ export class PairHandler implements IPairHandler {
     const selectedPair = this.findSelectedPair(pairs, selected);
     if (selectedPair) {
       Notifier.info(`Selected: ${this.formatPair(selectedPair)}`);
+
+      if (!this.checkGuardRails(selectedPair)) {
+        return;
+      }
+
       this.pairManager.createInvestingToPairMapping(selectedPair.symbol, selectedPair);
       this.symbolManager.createTvToInvestingMapping(this.tickerManager.getTicker(), selectedPair.symbol);
       return;
@@ -90,23 +104,60 @@ export class PairHandler implements IPairHandler {
   }
 
   /**
-   * Deletes pair mapping information
-   * @param investingTicker The investing.com ticker symbol to unmap
+   * Stops tracking an investing ticker — full cascade cleanup + UI notification
+   * @param investingTicker The investing.com ticker symbol to stop tracking
    */
-  public deletePairInfo(investingTicker: string): void {
-    // Delegate all cleanup logic to manager and get result
-    const cleanedFromLists = this.pairManager.deletePairInfo(investingTicker);
+  public stopTrackingByInvestingTicker(investingTicker: string): void {
+    // Clear chart drawings if currently viewing the ticker being untracked
+    this.clearChartIfCurrentTicker(investingTicker);
 
-    // Handle notification based on cleanup result
-    const tvTicker = this.symbolManager.investingToTv(investingTicker);
-
-    // FIXME: Unflag Ticker if Flagged.
+    const cleanedFromLists = this.pairManager.stopTrackingByInvestingTicker(investingTicker);
 
     if (cleanedFromLists) {
       this.watchListHandler.onWatchListChange();
-      Notifier.info(`🗑️ Cleaned ${tvTicker} from Lists (Watch/Flag)`);
     }
 
-    Notifier.success(`Unmapped ${investingTicker}`);
+    Notifier.success(`⏹ Stopped tracking ${investingTicker}`);
+  }
+
+  /**
+   * Stops tracking a TV ticker — resolves and performs full cascade cleanup + UI notification
+   * @param tvTicker The TradingView ticker to stop tracking
+   */
+  public stopTrackingByTvTicker(tvTicker: string): void {
+    // Clear chart drawings if currently viewing the ticker being untracked
+    if (this.tickerManager.getTicker() === tvTicker) {
+      this.styleManager.clearAll();
+    }
+
+    const cleanedFromLists = this.pairManager.stopTrackingByTvTicker(tvTicker);
+
+    if (cleanedFromLists) {
+      this.watchListHandler.onWatchListChange();
+    }
+
+    Notifier.success(`⏹ Stopped tracking ${tvTicker}`);
+  }
+
+  /**
+   * Validates guard rails before creating a pair mapping.
+   * Delegates to PairManager for business logic.
+   * @param selectedPair The pair info to validate
+   * @returns True if mapping should proceed, false if blocked
+   */
+  private checkGuardRails(selectedPair: PairInfo): boolean {
+    const tvTicker = this.tickerManager.getTicker();
+    return this.pairManager.checkGuardRails(selectedPair, tvTicker);
+  }
+
+  /**
+   * Clears chart drawings if the current chart shows a ticker mapped to the investing ticker
+   * @param investingTicker Investing.com ticker being untracked
+   */
+  private clearChartIfCurrentTicker(investingTicker: string): void {
+    const tvTicker = this.symbolManager.investingToTv(investingTicker);
+    if (this.tickerManager.getTicker() === tvTicker) {
+      this.styleManager.clearAll();
+    }
   }
 }

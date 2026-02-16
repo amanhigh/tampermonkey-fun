@@ -4,15 +4,17 @@ import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { IAlertRepo } from '../repo/alert';
 import { IAlertManager } from '../manager/alert';
+import { ITickerHandler } from './ticker';
+import { IUIUtil } from '../util/ui';
 import { Notifier } from '../util/notify';
-import { AUDIT_IDS } from '../models/audit_ids';
+import { Constants } from '../models/constant';
 
 /**
  * Orphan Alerts Audit Section
  * Displays alerts that exist without corresponding pair mappings
  *
  * Features:
- * - Left-click: Show notification (cannot open without pair mapping)
+ * - Left-click: Open ticker in TradingView using alert name
  * - Right-click: Delete orphan alerts for this pairId
  * - Pagination: Navigate through large result sets
  *
@@ -23,8 +25,14 @@ import { AUDIT_IDS } from '../models/audit_ids';
  */
 export class OrphanAlertsSection extends BaseAuditSection implements IAuditSection {
   // Identity - shares ID with ORPHAN_ALERTS plugin
-  readonly id = AUDIT_IDS.ORPHAN_ALERTS;
-  readonly title = 'Orphan Alerts';
+  readonly id = Constants.AUDIT.PLUGINS.ORPHAN_ALERTS;
+  readonly title = 'Alerts';
+  readonly description = 'Alerts whose pairId no longer exists in PairRepo — orphaned after pair removal';
+  readonly order = 1;
+
+  // Action labels
+  readonly leftActionLabel = 'View';
+  readonly rightActionLabel = 'Delete';
 
   // Data source (injected directly, not fetched from registry)
   readonly plugin: IAudit;
@@ -35,19 +43,43 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
 
   // Interaction handlers
   readonly onLeftClick = (result: AuditResult) => {
-    const pairId = result.target;
-    Notifier.warn(`Cannot open ${pairId} - no pair mapping exists`, 3000);
+    const alertName = result.data?.alertName as string | undefined;
+    if (alertName) {
+      this.tickerHandler.openTicker(alertName);
+    } else {
+      Notifier.warn(`${result.target} — no name available, cannot navigate`, 3000);
+    }
   };
 
-  readonly onRightClick = async (result: AuditResult): Promise<void> => {
-    await this.handleOrphanDeletion(result);
+  readonly onRightClick = async (result: AuditResult): Promise<boolean> => {
+    return this.handleOrphanDeletion(result);
+  };
+
+  readonly onFixAll = async (results: AuditResult[]): Promise<void> => {
+    let totalDeleted = 0;
+    for (const result of results) {
+      const pairId = result.data?.pairId as string | undefined;
+      if (!pairId) {
+        continue;
+      }
+
+      const alerts = this.alertRepo.get(pairId);
+      if (!alerts || alerts.length === 0) {
+        continue;
+      }
+
+      await Promise.all(alerts.map(async (alert) => this.alertManager.deleteAlert(alert)));
+      this.alertRepo.delete(pairId);
+      totalDeleted += alerts.length;
+    }
+    Notifier.success(`✓ Deleted ${totalDeleted} orphan alert(s) for ${results.length} pair(s)`);
   };
 
   readonly headerFormatter = (auditResults: AuditResult[]) => {
     if (auditResults.length === 0) {
-      return `<span class="success-badge">✓ No orphan alerts</span>`;
+      return `<span class="success-badge">✓ No ${this.title.toLowerCase()}</span>`;
     }
-    return `<span style="color: darkred">Orphans: ${auditResults.length}</span>`;
+    return `<span style="color: darkred">${this.title}: ${auditResults.length}</span>`;
   };
 
   /**
@@ -58,8 +90,10 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
    */
   constructor(
     plugin: IAudit,
+    private readonly tickerHandler: ITickerHandler,
     private readonly alertRepo: IAlertRepo,
-    private readonly alertManager: IAlertManager
+    private readonly alertManager: IAlertManager,
+    private readonly uiUtil: IUIUtil
   ) {
     super();
     this.plugin = plugin;
@@ -69,7 +103,7 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
    * Handle deletion of orphan alerts with confirmation
    * @param result - AuditResult with pairId and alertCount in data field
    */
-  private async handleOrphanDeletion(result: AuditResult): Promise<void> {
+  private async handleOrphanDeletion(result: AuditResult): Promise<boolean> {
     try {
       // Extract metadata from result
       const pairId = result.data?.pairId as string | undefined;
@@ -77,28 +111,22 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
 
       if (!pairId) {
         Notifier.warn('Invalid orphan alert result: missing pairId');
-        return;
+        return false;
       }
 
       // Get all alerts for this pairId
       const alerts = this.alertRepo.get(pairId);
       if (!alerts || alerts.length === 0) {
         Notifier.warn(`No alerts found for pairId ${pairId}`);
-        return;
+        return false;
       }
 
-      // Build confirmation message
-      const prices = alerts.map((a) => a.price).join(', ');
-      const message =
-        `Delete ${alertCount || alerts.length} orphan alert(s)?\n\n` +
-        `PairId: ${pairId}\n` +
-        `Prices: ${prices}\n\n` +
-        `This will permanently delete these alerts from Investing.com.`;
+      const message = this.buildDeleteMessage(pairId, alertCount, alerts);
 
       // Show confirmation dialog
-      if (!confirm(message)) {
+      if (!this.uiUtil.showConfirm('Delete Orphan Alerts', message)) {
         Notifier.info('Deletion cancelled');
-        return;
+        return false;
       }
 
       // Show progress notification
@@ -112,10 +140,22 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
 
       // Success notification
       Notifier.success(`✓ Deleted ${alerts.length} orphan alert(s) for ${pairId}`);
+      return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       Notifier.error(`Failed to delete alerts: ${errorMessage}`);
       console.error('Orphan alert deletion failed:', error);
+      return false;
     }
+  }
+
+  private buildDeleteMessage(pairId: string, alertCount: number | undefined, alerts: { price: number }[]): string {
+    const prices = alerts.map((a) => a.price).join(', ');
+    return (
+      `Delete ${alertCount || alerts.length} orphan alert(s)?\n\n` +
+      `PairId: ${pairId}\n` +
+      `Prices: ${prices}\n\n` +
+      `This will permanently delete these alerts from Investing.com.`
+    );
   }
 }

@@ -30,6 +30,8 @@ describe('AlertFeedManager', () => {
       removeTvToInvestingMapping: jest.fn(),
       createTvToExchangeTickerMapping: jest.fn(),
       isComposite: jest.fn(),
+      removeTvToExchangeTickerMapping: jest.fn(),
+      deleteTvTicker: jest.fn(),
     };
 
     // Mock WatchManager

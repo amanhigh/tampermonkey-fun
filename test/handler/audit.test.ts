@@ -4,6 +4,8 @@ import { IUIUtil } from '../../src/util/ui';
 import { AlertState } from '../../src/models/alert';
 import { Constants } from '../../src/models/constant';
 import { AuditResult } from '../../src/models/audit';
+import { IPairHandler } from '../../src/handler/pair';
+import { ITickerManager } from '../../src/manager/ticker';
 
 // Mock jQuery globally for DOM operations
 const mockJQuery = {
@@ -46,6 +48,8 @@ describe('AuditHandler', () => {
   let auditHandler: AuditHandler;
   let mockAuditRegistry: jest.Mocked<AuditSectionRegistry>;
   let mockUIUtil: jest.Mocked<IUIUtil>;
+  let mockPairHandler: jest.Mocked<IPairHandler>;
+  let mockTickerManager: jest.Mocked<ITickerManager>;
 
   beforeEach(() => {
     // Reset jQuery mock
@@ -71,6 +75,7 @@ describe('AuditHandler', () => {
     mockAuditRegistry = {
       mustGetSection: jest.fn(),
       listSections: jest.fn().mockReturnValue([]),
+      listSectionsOrdered: jest.fn().mockReturnValue([]),
     } as any;
 
     mockUIUtil = {
@@ -78,7 +83,18 @@ describe('AuditHandler', () => {
       buildButton: jest.fn().mockReturnValue(mockJQuery),
     } as any;
 
-    auditHandler = new AuditHandler(mockAuditRegistry, mockUIUtil);
+    mockPairHandler = {
+      mapInvestingTicker: jest.fn().mockResolvedValue(undefined),
+      stopTrackingByInvestingTicker: jest.fn(),
+      stopTrackingByTvTicker: jest.fn(),
+    } as any;
+
+    mockTickerManager = {
+      getTicker: jest.fn().mockReturnValue('TCS'),
+      getInvestingTicker: jest.fn().mockReturnValue('TCS_INV'),
+    } as any;
+
+    auditHandler = new AuditHandler(mockAuditRegistry, mockUIUtil, mockPairHandler, mockTickerManager);
   });
 
   describe('auditAllOnFirstRun', () => {
@@ -124,11 +140,96 @@ describe('AuditHandler', () => {
         onRightClick: jest.fn(),
       } as any;
 
-      const mockUnmappedPairsSection = {
-        id: 'unmapped-pairs',
-        title: 'Unmapped Pairs',
+      const mockIntegritySection = {
+        id: 'integrity',
+        title: 'Integrity',
         plugin: mockPlugin,
         headerFormatter: jest.fn().mockReturnValue('Unmapped Pairs'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      // Create mock sections for remaining plugins
+      const mockOrphanSequencesSection = {
+        id: 'orphan-sequences',
+        title: 'Orphan Sequences',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Orphan Sequences'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockOrphanFlagsSection = {
+        id: 'orphan-flags',
+        title: 'Orphan Flags',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Orphan Flags'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockOrphanExchangeSection = {
+        id: 'orphan-exchange',
+        title: 'Orphan Exchange',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Orphan Exchange'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockDuplicatePairIdsSection = {
+        id: 'duplicate-pair-ids',
+        title: 'Duplicate PairIds',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Duplicate PairIds'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockTickerCollisionSection = {
+        id: 'ticker-collision',
+        title: 'Ticker Collisions',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Ticker Collisions'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockTradeRiskSection = {
+        id: 'trade-risk',
+        title: 'Trade Risk Multiple',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Trade Risk Multiple'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockStaleReviewSection = {
+        id: 'stale-review',
+        title: 'Stale Review',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Stale Review'),
         buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
         limit: 10,
         context: undefined,
@@ -141,7 +242,14 @@ describe('AuditHandler', () => {
         if (id === 'alerts') return mockAlertsSection;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
-        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
+        if (id === 'integrity') return mockIntegritySection;
+        if (id === 'orphan-sequences') return mockOrphanSequencesSection;
+        if (id === 'orphan-flags') return mockOrphanFlagsSection;
+        if (id === 'orphan-exchange') return mockOrphanExchangeSection;
+        if (id === 'duplicate-pair-ids') return mockDuplicatePairIdsSection;
+        if (id === 'ticker-collision') return mockTickerCollisionSection;
+        if (id === 'trade-risk') return mockTradeRiskSection;
+        if (id === 'stale-review') return mockStaleReviewSection;
         throw new Error(`Unknown section: ${id}`);
       });
     });
@@ -152,7 +260,7 @@ describe('AuditHandler', () => {
       // Verify audit was run - check that global refresh button was created
       expect(mockUIUtil.buildButton).toHaveBeenCalledWith(
         Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH,
-        '🔄 Refresh All Audits',
+        '\u{1F504} Refresh',
         expect.any(Function)
       );
       // Verify section refresh buttons were created (Alerts and GTT)
@@ -223,11 +331,96 @@ describe('AuditHandler', () => {
       } as any;
 
       // Mock Unmapped Pairs section
-      const mockUnmappedPairsSection = {
-        id: 'unmapped-pairs',
-        title: 'Unmapped Pairs',
+      const mockIntegritySection = {
+        id: 'integrity',
+        title: 'Integrity',
         plugin: mockPlugin,
         headerFormatter: jest.fn().mockReturnValue('Unmapped Pairs'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      // Create mock sections for remaining plugins
+      const mockOrphanSequencesSection = {
+        id: 'orphan-sequences',
+        title: 'Orphan Sequences',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Orphan Sequences'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockOrphanFlagsSection = {
+        id: 'orphan-flags',
+        title: 'Orphan Flags',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Orphan Flags'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockOrphanExchangeSection = {
+        id: 'orphan-exchange',
+        title: 'Orphan Exchange',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Orphan Exchange'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockDuplicatePairIdsSection = {
+        id: 'duplicate-pair-ids',
+        title: 'Duplicate PairIds',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Duplicate PairIds'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockTickerCollisionSection = {
+        id: 'ticker-collision',
+        title: 'Ticker Collisions',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Ticker Collisions'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockTradeRiskSection = {
+        id: 'trade-risk',
+        title: 'Trade Risk Multiple',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Trade Risk Multiple'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockStaleReviewSection = {
+        id: 'stale-review',
+        title: 'Stale Review',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Stale Review'),
         buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
         limit: 10,
         context: undefined,
@@ -240,7 +433,14 @@ describe('AuditHandler', () => {
         if (id === 'alerts') return mockAlertsSection;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
-        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
+        if (id === 'integrity') return mockIntegritySection;
+        if (id === 'orphan-sequences') return mockOrphanSequencesSection;
+        if (id === 'orphan-flags') return mockOrphanFlagsSection;
+        if (id === 'orphan-exchange') return mockOrphanExchangeSection;
+        if (id === 'duplicate-pair-ids') return mockDuplicatePairIdsSection;
+        if (id === 'ticker-collision') return mockTickerCollisionSection;
+        if (id === 'trade-risk') return mockTradeRiskSection;
+        if (id === 'stale-review') return mockStaleReviewSection;
         throw new Error(`Unknown section: ${id}`);
       });
     });
@@ -260,17 +460,15 @@ describe('AuditHandler', () => {
       expect(mockUIUtil.buildButton).toHaveBeenCalled();
     });
 
-    it('should clear old audit sections before re-rendering', async () => {
+    it('should preserve renderer instances across multiple auditAll calls', async () => {
+      await auditHandler.auditAll();
       await auditHandler.auditAll();
 
-      // Verify that jQuery was called to find sections by class
+      // Verify that jQuery was called to find audit area
       expect($).toHaveBeenCalledWith(`#${Constants.UI.IDS.AREAS.AUDIT}`);
 
-      // Verify that find() was called with the section class to locate old sections
-      expect(mockJQuery.find).toHaveBeenCalledWith(`.${Constants.AUDIT.CLASSES.SECTION}`);
-
-      // Verify that remove() was called to clear old sections
-      expect(mockJQuery.remove).toHaveBeenCalled();
+      // Sections should NOT be cleared — renderers persist and update in-place
+      expect(mockJQuery.find).not.toHaveBeenCalledWith(`.${Constants.AUDIT.CLASSES.SECTION}`);
     });
 
     it('should filter non-watched audit results', async () => {
@@ -320,12 +518,12 @@ describe('AuditHandler', () => {
         id: 'gtt-unwatched',
         title: 'GTT Orders',
         plugin: mockPlugin,
-        headerFormatter: jest.fn(),
-        buttonColorMapper: jest.fn(),
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
+        headerFormatter: jest.fn().mockReturnValue('GTT Orders'),
+        buttonColorMapper: jest.fn().mockReturnValue('gold'),
         limit: 10,
         context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
       } as any;
       const mockOrphanSection = {
         id: 'orphan-alerts',
@@ -338,9 +536,9 @@ describe('AuditHandler', () => {
         limit: 10,
         context: undefined,
       } as any;
-      const mockUnmappedPairsSection = {
-        id: 'unmapped-pairs',
-        title: 'Unmapped Pairs',
+      const mockIntegritySection = {
+        id: 'integrity',
+        title: 'Integrity',
         plugin: mockPlugin,
         headerFormatter: jest.fn(),
         buttonColorMapper: jest.fn(),
@@ -349,11 +547,104 @@ describe('AuditHandler', () => {
         limit: 10,
         context: undefined,
       } as any;
+
+      // Create mock sections for remaining plugins
+      const mockOrphanSequencesSection = {
+        id: 'orphan-sequences',
+        title: 'Orphan Sequences',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Orphan Sequences'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockOrphanFlagsSection = {
+        id: 'orphan-flags',
+        title: 'Orphan Flags',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Orphan Flags'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockOrphanExchangeSection = {
+        id: 'orphan-exchange',
+        title: 'Orphan Exchange',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Orphan Exchange'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockDuplicatePairIdsSection = {
+        id: 'duplicate-pair-ids',
+        title: 'Duplicate PairIds',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Duplicate PairIds'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockTickerCollisionSection = {
+        id: 'ticker-collision',
+        title: 'Ticker Collisions',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Ticker Collisions'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockTradeRiskSection = {
+        id: 'trade-risk',
+        title: 'Trade Risk Multiple',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Trade Risk Multiple'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockStaleReviewSection = {
+        id: 'stale-review',
+        title: 'Stale Review',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Stale Review'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
       mockAuditRegistry.mustGetSection.mockImplementation((id: string) => {
         if (id === 'alerts') return mockAlertsSectionWithResults;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
-        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
+        if (id === 'integrity') return mockIntegritySection;
+        if (id === 'orphan-sequences') return mockOrphanSequencesSection;
+        if (id === 'orphan-flags') return mockOrphanFlagsSection;
+        if (id === 'orphan-exchange') return mockOrphanExchangeSection;
+        if (id === 'duplicate-pair-ids') return mockDuplicatePairIdsSection;
+        if (id === 'ticker-collision') return mockTickerCollisionSection;
+        if (id === 'trade-risk') return mockTradeRiskSection;
+        if (id === 'stale-review') return mockStaleReviewSection;
         throw new Error(`Unknown section: ${id}`);
       });
 
@@ -410,9 +701,9 @@ describe('AuditHandler', () => {
         limit: 10,
         context: undefined,
       } as any;
-      const mockUnmappedPairsSection = {
-        id: 'unmapped-pairs',
-        title: 'Unmapped Pairs',
+      const mockIntegritySection = {
+        id: 'integrity',
+        title: 'Integrity',
         plugin: mockPlugin,
         headerFormatter: jest.fn(),
         buttonColorMapper: jest.fn(),
@@ -421,11 +712,104 @@ describe('AuditHandler', () => {
         limit: 10,
         context: undefined,
       } as any;
+
+      // Create mock sections for remaining plugins
+      const mockOrphanSequencesSection = {
+        id: 'orphan-sequences',
+        title: 'Orphan Sequences',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Orphan Sequences'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockOrphanFlagsSection = {
+        id: 'orphan-flags',
+        title: 'Orphan Flags',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Orphan Flags'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockOrphanExchangeSection = {
+        id: 'orphan-exchange',
+        title: 'Orphan Exchange',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Orphan Exchange'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockDuplicatePairIdsSection = {
+        id: 'duplicate-pair-ids',
+        title: 'Duplicate PairIds',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Duplicate PairIds'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockTickerCollisionSection = {
+        id: 'ticker-collision',
+        title: 'Ticker Collisions',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Ticker Collisions'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockTradeRiskSection = {
+        id: 'trade-risk',
+        title: 'Trade Risk Multiple',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Trade Risk Multiple'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockStaleReviewSection = {
+        id: 'stale-review',
+        title: 'Stale Review',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Stale Review'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
       mockAuditRegistry.mustGetSection.mockImplementation((id: string) => {
         if (id === 'alerts') return mockAlertsSectionWithResults;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
-        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
+        if (id === 'integrity') return mockIntegritySection;
+        if (id === 'orphan-sequences') return mockOrphanSequencesSection;
+        if (id === 'orphan-flags') return mockOrphanFlagsSection;
+        if (id === 'orphan-exchange') return mockOrphanExchangeSection;
+        if (id === 'duplicate-pair-ids') return mockDuplicatePairIdsSection;
+        if (id === 'ticker-collision') return mockTickerCollisionSection;
+        if (id === 'trade-risk') return mockTradeRiskSection;
+        if (id === 'stale-review') return mockStaleReviewSection;
         throw new Error(`Unknown section: ${id}`);
       });
 
@@ -473,9 +857,9 @@ describe('AuditHandler', () => {
         limit: 10,
         context: undefined,
       } as any;
-      const mockUnmappedPairsSection = {
-        id: 'unmapped-pairs',
-        title: 'Unmapped Pairs',
+      const mockIntegritySection = {
+        id: 'integrity',
+        title: 'Integrity',
         plugin: mockPlugin,
         headerFormatter: jest.fn(),
         buttonColorMapper: jest.fn(),
@@ -484,11 +868,104 @@ describe('AuditHandler', () => {
         limit: 10,
         context: undefined,
       } as any;
+
+      // Create mock sections for remaining plugins
+      const mockOrphanSequencesSection = {
+        id: 'orphan-sequences',
+        title: 'Orphan Sequences',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Orphan Sequences'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockOrphanFlagsSection = {
+        id: 'orphan-flags',
+        title: 'Orphan Flags',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Orphan Flags'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockOrphanExchangeSection = {
+        id: 'orphan-exchange',
+        title: 'Orphan Exchange',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Orphan Exchange'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockDuplicatePairIdsSection = {
+        id: 'duplicate-pair-ids',
+        title: 'Duplicate PairIds',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Duplicate PairIds'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockTickerCollisionSection = {
+        id: 'ticker-collision',
+        title: 'Ticker Collisions',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Ticker Collisions'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockTradeRiskSection = {
+        id: 'trade-risk',
+        title: 'Trade Risk Multiple',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Trade Risk Multiple'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockStaleReviewSection = {
+        id: 'stale-review',
+        title: 'Stale Review',
+        plugin: mockPlugin,
+        headerFormatter: jest.fn().mockReturnValue('Stale Review'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
       mockAuditRegistry.mustGetSection.mockImplementation((id: string) => {
         if (id === 'alerts') return mockAlertsSection;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
-        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
+        if (id === 'integrity') return mockIntegritySection;
+        if (id === 'orphan-sequences') return mockOrphanSequencesSection;
+        if (id === 'orphan-flags') return mockOrphanFlagsSection;
+        if (id === 'orphan-exchange') return mockOrphanExchangeSection;
+        if (id === 'duplicate-pair-ids') return mockDuplicatePairIdsSection;
+        if (id === 'ticker-collision') return mockTickerCollisionSection;
+        if (id === 'trade-risk') return mockTradeRiskSection;
+        if (id === 'stale-review') return mockStaleReviewSection;
         throw new Error(`Unknown section: ${id}`);
       });
 
@@ -496,7 +973,7 @@ describe('AuditHandler', () => {
 
       expect(mockUIUtil.buildButton).toHaveBeenCalledWith(
         Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH,
-        '🔄 Refresh All Audits',
+        '\u{1F504} Refresh',
         expect.any(Function)
       );
     });
@@ -537,24 +1014,131 @@ describe('AuditHandler', () => {
         limit: 10,
         context: undefined,
       } as any;
-      const mockUnmappedPairsSection = {
-        id: 'unmapped-pairs',
-        title: 'Unmapped Pairs',
+      const mockOrphanSequencesSection = {
+        id: 'orphan-sequences',
+        title: 'Orphan Sequences',
         plugin: { run: jest.fn().mockResolvedValue([]) },
-        headerFormatter: jest.fn(),
-        buttonColorMapper: jest.fn(),
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
+        headerFormatter: jest.fn().mockReturnValue('Orphan Sequences'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
         limit: 10,
         context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
       } as any;
+
+      const mockOrphanFlagsSection = {
+        id: 'orphan-flags',
+        title: 'Orphan Flags',
+        plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('Orphan Flags'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockOrphanExchangeSection = {
+        id: 'orphan-exchange',
+        title: 'Orphan Exchange',
+        plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('Orphan Exchange'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockDuplicatePairIdsSection = {
+        id: 'duplicate-pair-ids',
+        title: 'Duplicate PairIds',
+        plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('Duplicate PairIds'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockTickerCollisionSection = {
+        id: 'ticker-collision',
+        title: 'Ticker Collisions',
+        plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('Ticker Collisions'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockIntegritySection = {
+        id: 'integrity',
+        title: 'Integrity',
+        plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('Integrity'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockTradeRiskSection = {
+        id: 'trade-risk',
+        title: 'Trade Risk Multiple',
+        plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('Trade Risk Multiple'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockStaleReviewSection = {
+        id: 'stale-review',
+        title: 'Stale Review',
+        plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('Stale Review'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
       mockAuditRegistry.mustGetSection.mockImplementation((id: string) => {
         if (id === 'alerts') return mockAlertsSection;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
-        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
+        if (id === 'integrity') return mockIntegritySection;
+        if (id === 'orphan-sequences') return mockOrphanSequencesSection;
+        if (id === 'orphan-flags') return mockOrphanFlagsSection;
+        if (id === 'orphan-exchange') return mockOrphanExchangeSection;
+        if (id === 'duplicate-pair-ids') return mockDuplicatePairIdsSection;
+        if (id === 'ticker-collision') return mockTickerCollisionSection;
+        if (id === 'trade-risk') return mockTradeRiskSection;
+        if (id === 'stale-review') return mockStaleReviewSection;
         throw new Error(`Unknown section: ${id}`);
       });
+
+      // Mock listSectionsOrdered to return sections in order
+      mockAuditRegistry.listSectionsOrdered.mockReturnValue([
+        mockAlertsSection,
+        mockOrphanSection,
+        mockIntegritySection,
+        mockDuplicatePairIdsSection,
+        mockTickerCollisionSection,
+        mockGttSection,
+        mockOrphanSequencesSection,
+        mockOrphanFlagsSection,
+        mockOrphanExchangeSection,
+        mockTradeRiskSection,
+        mockStaleReviewSection,
+      ]);
 
       await auditHandler.auditAll();
 
@@ -609,11 +1193,97 @@ describe('AuditHandler', () => {
         onLeftClick: jest.fn(),
         onRightClick: jest.fn(),
       } as any;
-      const mockUnmappedPairsSection = {
-        id: 'unmapped-pairs',
-        title: 'Unmapped Pairs',
+
+      // Create mock sections for remaining plugins
+      const mockOrphanSequencesSection = {
+        id: 'orphan-sequences',
+        title: 'Orphan Sequences',
         plugin: { run: jest.fn().mockResolvedValue([]) },
-        headerFormatter: jest.fn().mockReturnValue('Unmapped Pairs'),
+        headerFormatter: jest.fn().mockReturnValue('Orphan Sequences'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockOrphanFlagsSection = {
+        id: 'orphan-flags',
+        title: 'Orphan Flags',
+        plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('Orphan Flags'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockOrphanExchangeSection = {
+        id: 'orphan-exchange',
+        title: 'Orphan Exchange',
+        plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('Orphan Exchange'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockDuplicatePairIdsSection = {
+        id: 'duplicate-pair-ids',
+        title: 'Duplicate PairIds',
+        plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('Duplicate PairIds'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockTickerCollisionSection = {
+        id: 'ticker-collision',
+        title: 'Ticker Collisions',
+        plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('Ticker Collisions'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockIntegritySection = {
+        id: 'integrity',
+        title: 'Integrity',
+        plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('Integrity'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockTradeRiskSection = {
+        id: 'trade-risk',
+        title: 'Trade Risk Multiple',
+        plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('Trade Risk Multiple'),
+        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
+        limit: 10,
+        context: undefined,
+        onLeftClick: jest.fn(),
+        onRightClick: jest.fn(),
+      } as any;
+
+      const mockStaleReviewSection = {
+        id: 'stale-review',
+        title: 'Stale Review',
+        plugin: { run: jest.fn().mockResolvedValue([]) },
+        headerFormatter: jest.fn().mockReturnValue('Stale Review'),
         buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
         limit: 10,
         context: undefined,
@@ -626,9 +1296,31 @@ describe('AuditHandler', () => {
         if (id === 'alerts') return mockAlertsSection;
         if (id === 'gtt-unwatched') return mockGttSection;
         if (id === 'orphan-alerts') return mockOrphanSection;
-        if (id === 'unmapped-pairs') return mockUnmappedPairsSection;
+        if (id === 'integrity') return mockIntegritySection;
+        if (id === 'orphan-sequences') return mockOrphanSequencesSection;
+        if (id === 'orphan-flags') return mockOrphanFlagsSection;
+        if (id === 'orphan-exchange') return mockOrphanExchangeSection;
+        if (id === 'duplicate-pair-ids') return mockDuplicatePairIdsSection;
+        if (id === 'ticker-collision') return mockTickerCollisionSection;
+        if (id === 'trade-risk') return mockTradeRiskSection;
+        if (id === 'stale-review') return mockStaleReviewSection;
         throw new Error(`Unknown section: ${id}`);
       });
+
+      // Mock listSectionsOrdered to return sections in order
+      mockAuditRegistry.listSectionsOrdered.mockReturnValue([
+        mockAlertsSection,
+        mockOrphanSection,
+        mockGttSection,
+        mockOrphanSequencesSection,
+        mockOrphanFlagsSection,
+        mockOrphanExchangeSection,
+        mockDuplicatePairIdsSection,
+        mockTickerCollisionSection,
+        mockIntegritySection,
+        mockTradeRiskSection,
+        mockStaleReviewSection,
+      ]);
 
       await auditHandler.auditAll();
 

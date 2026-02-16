@@ -16,6 +16,8 @@ const mockSymbolManager: jest.Mocked<ISymbolManager> = {
   removeTvToInvestingMapping: jest.fn(),
   createTvToExchangeTickerMapping: jest.fn(),
   isComposite: jest.fn(),
+  removeTvToExchangeTickerMapping: jest.fn(),
+  deleteTvTicker: jest.fn(),
 };
 
 const mockKiteClient: jest.Mocked<IKiteClient> = {

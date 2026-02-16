@@ -79,4 +79,27 @@ describe('PairRepo - Critical Specific Logic', () => {
       expect(pairRepo.getPairInfo('NONEXISTENT')).toBeNull();
     });
   });
+
+  describe('findByPairId', () => {
+    it('should return all investing tickers sharing a pairId', () => {
+      pairRepo.pinPair('TFCI', new PairInfo('TFCI Ltd', '18421', 'NSE', 'TFCI'));
+      pairRepo.pinPair('TATAELXSI', new PairInfo('Tata Elxsi', '18421', 'NSE', 'TATAELXSI'));
+      pairRepo.pinPair('HDFC', new PairInfo('HDFC Bank', '999', 'NSE', 'HDFC'));
+
+      const result = pairRepo.findByPairId('18421');
+      expect(result).toHaveLength(2);
+      expect(result).toContain('TFCI');
+      expect(result).toContain('TATAELXSI');
+    });
+
+    it('should return empty array when no tickers match', () => {
+      pairRepo.pinPair('HDFC', new PairInfo('HDFC Bank', '999', 'NSE', 'HDFC'));
+      expect(pairRepo.findByPairId('NONEXISTENT')).toEqual([]);
+    });
+
+    it('should return single ticker when only one matches', () => {
+      pairRepo.pinPair('HDFC', new PairInfo('HDFC Bank', '999', 'NSE', 'HDFC'));
+      expect(pairRepo.findByPairId('999')).toEqual(['HDFC']);
+    });
+  });
 });

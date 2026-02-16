@@ -81,11 +81,14 @@ export class Notifier {
 
       const containerStyles: Partial<CSSStyleDeclaration> = {
         position: 'fixed',
-        top: '40%',
-        right: '20%',
-        maxWidth: '300px',
+        top: '12px',
+        right: '12px',
+        maxWidth: '340px',
         zIndex: '10000',
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
       };
 
       Object.assign(container.style, containerStyles);
@@ -108,15 +111,19 @@ export class Notifier {
     const messageElement = document.createElement('div');
 
     const messageStyles: Partial<CSSStyleDeclaration> = {
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      backgroundColor: 'rgba(22, 22, 30, 0.94)',
       color: color,
-      fontSize: '14px',
-      padding: '10px 15px',
-      marginBottom: '10px',
-      borderRadius: '4px',
-      boxShadow: '0 2px 5px rgba(0, 0, 0, 0.2)',
+      fontSize: '12px',
+      fontWeight: '500',
+      letterSpacing: '0.02em',
+      padding: '10px 14px',
+      borderRadius: '6px',
+      border: '1px solid rgba(255, 255, 255, 0.1)',
+      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
+      backdropFilter: 'blur(8px)',
       opacity: '0',
-      transition: 'opacity 0.3s ease-in-out',
+      transition: 'opacity 0.25s ease, transform 0.25s ease',
+      transform: 'translateX(20px)',
     };
 
     Object.assign(messageElement.style, messageStyles);
@@ -135,15 +142,17 @@ export class Notifier {
     // Show animation
     setTimeout(() => {
       element.style.opacity = '1';
+      element.style.transform = 'translateX(0)';
     }, 10);
 
     // Hide and cleanup
     setTimeout(() => {
       element.style.opacity = '0';
+      element.style.transform = 'translateX(20px)';
 
       setTimeout(() => {
         if (!this.container) {
-          throw new Error('Container was unexpectedly removed');
+          return;
         }
 
         if (element.parentNode === this.container) {

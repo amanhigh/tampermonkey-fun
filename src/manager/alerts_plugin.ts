@@ -5,7 +5,7 @@ import { IAlertManager } from './alert';
 import { IWatchManager } from './watch';
 import { ISymbolManager } from './symbol';
 import { AlertState } from '../models/alert';
-import { AUDIT_IDS } from '../models/audit_ids';
+import { Constants } from '../models/constant';
 
 /**
  * Alerts audit plugin: classifies tickers using existing managers
@@ -18,7 +18,7 @@ import { AUDIT_IDS } from '../models/audit_ids';
  * - Returns only FAIL status results (issues that need attention)
  */
 export class AlertsPlugin extends BaseAuditPlugin {
-  public readonly id = AUDIT_IDS.ALERTS;
+  public readonly id = Constants.AUDIT.PLUGINS.ALERTS;
   public readonly title = 'Alerts Coverage';
 
   constructor(

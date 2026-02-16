@@ -34,6 +34,13 @@ export interface ISequenceManager {
    * @returns Current freeze state after toggle
    */
   toggleFreezeSequence(): void;
+
+  /**
+   * Deletes a sequence entry for the given ticker
+   * Used for cleaning up orphan sequence entries
+   * @param tvTicker TradingView ticker to delete sequence for
+   */
+  deleteSequence(tvTicker: string): void;
 }
 
 /**
@@ -100,6 +107,15 @@ export class SequenceManager implements ISequenceManager {
       this._frozenSequence = this.getCurrentSequence();
       Notifier.message(`FreezeSequence: ${this._frozenSequence}`, Color.ROYAL_BLUE);
     }
+  }
+
+  /**
+   * Deletes a sequence entry for the given ticker
+   * Used for cleaning up orphan sequence entries
+   * @param tvTicker TradingView ticker to delete sequence for
+   */
+  deleteSequence(tvTicker: string): void {
+    this.sequenceRepo.delete(tvTicker);
   }
 
   /**

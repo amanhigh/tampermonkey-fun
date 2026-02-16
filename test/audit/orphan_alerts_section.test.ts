@@ -2,15 +2,18 @@ import { OrphanAlertsSection } from '../../src/handler/orphan_alerts_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { IAlertRepo } from '../../src/repo/alert';
 import { IAlertManager } from '../../src/manager/alert';
+import { IUIUtil } from '../../src/util/ui';
 import { Alert } from '../../src/models/alert';
+import { ITickerHandler } from '../../src/handler/ticker';
 import { Notifier } from '../../src/util/notify';
 
 describe('OrphanAlertsSection', () => {
   let section: OrphanAlertsSection;
   let mockPlugin: IAudit;
+  let mockTickerHandler: Partial<ITickerHandler>;
   let mockAlertRepo: Partial<IAlertRepo>;
   let mockAlertManager: Partial<IAlertManager>;
-  let confirmMock: jest.Mock;
+  let mockUIUtil: Partial<IUIUtil>;
   let notifyWarnSpy: jest.SpyInstance;
   let notifyInfoSpy: jest.SpyInstance;
   let notifySuccessSpy: jest.SpyInstance;
@@ -27,6 +30,11 @@ describe('OrphanAlertsSection', () => {
       title: 'Orphan Alerts',
       validate: jest.fn(),
       run: jest.fn().mockResolvedValue([]),
+    };
+
+    // Mock ticker handler
+    mockTickerHandler = {
+      openTicker: jest.fn(),
     };
 
     // Mock alert repo
@@ -51,9 +59,10 @@ describe('OrphanAlertsSection', () => {
       deleteAlert: jest.fn().mockResolvedValue(undefined),
     };
 
-    // Mock global confirm
-    confirmMock = jest.fn().mockReturnValue(false);
-    (global as any).confirm = confirmMock;
+    // Mock UIUtil
+    mockUIUtil = {
+      showConfirm: jest.fn().mockReturnValue(false),
+    };
 
     // Mock Notifier methods
     notifyWarnSpy = jest.spyOn(Notifier, 'warn').mockImplementation();
@@ -61,12 +70,11 @@ describe('OrphanAlertsSection', () => {
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
     notifyErrorSpy = jest.spyOn(Notifier, 'error').mockImplementation();
 
-    section = new OrphanAlertsSection(mockPlugin, mockAlertRepo as IAlertRepo, mockAlertManager as IAlertManager);
+    section = new OrphanAlertsSection(mockPlugin, mockTickerHandler as ITickerHandler, mockAlertRepo as IAlertRepo, mockAlertManager as IAlertManager, mockUIUtil as IUIUtil);
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
-    delete (global as any).confirm;
   });
 
   describe('Section Properties', () => {
@@ -75,7 +83,7 @@ describe('OrphanAlertsSection', () => {
     });
 
     test('has correct title', () => {
-      expect(section.title).toBe('Orphan Alerts');
+      expect(section.title).toBe('Alerts');
     });
 
     test('has correct limit', () => {
@@ -86,7 +94,7 @@ describe('OrphanAlertsSection', () => {
       expect(section.plugin).toBe(mockPlugin);
     });
 
-    test('onLeftClick shows warning', () => {
+    test('onLeftClick opens ticker using alert name', () => {
       const result: AuditResult = {
         pluginId: 'orphan-alerts',
         code: 'NO_PAIR_MAPPING',
@@ -94,12 +102,29 @@ describe('OrphanAlertsSection', () => {
         message: '6393: 6 alert(s) exist but have no corresponding pair',
         severity: 'HIGH',
         status: 'FAIL',
-        data: { pairId: '6393', alertCount: 6 },
+        data: { pairId: '6393', alertName: 'JBM Auto', alertCount: 6 },
       };
 
       section.onLeftClick(result);
 
-      expect(notifyWarnSpy).toHaveBeenCalledWith('Cannot open 6393 - no pair mapping exists', 3000);
+      expect(mockTickerHandler.openTicker).toHaveBeenCalledWith('JBM Auto');
+    });
+
+    test('onLeftClick shows warning when no alert name available', () => {
+      const result: AuditResult = {
+        pluginId: 'orphan-alerts',
+        code: 'NO_PAIR_MAPPING',
+        target: '6393',
+        message: '6393: 1 alert(s) exist but have no corresponding pair',
+        severity: 'HIGH',
+        status: 'FAIL',
+        data: { pairId: '6393', alertCount: 1 },
+      };
+
+      section.onLeftClick(result);
+
+      expect(notifyWarnSpy).toHaveBeenCalledWith('6393 — no name available, cannot navigate', 3000);
+      expect(mockTickerHandler.openTicker).not.toHaveBeenCalled();
     });
 
     test('onRightClick is async function', () => {
@@ -131,7 +156,7 @@ describe('OrphanAlertsSection', () => {
       };
 
       (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
-      confirmMock.mockReturnValue(true);
+      (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(true);
 
       await section.onRightClick(result);
 
@@ -151,7 +176,7 @@ describe('OrphanAlertsSection', () => {
       };
 
       (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
-      confirmMock.mockReturnValue(false);
+      (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(false);
 
       await section.onRightClick(result);
 
@@ -172,7 +197,7 @@ describe('OrphanAlertsSection', () => {
       };
 
       (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
-      confirmMock.mockReturnValue(true);
+      (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(true);
 
       await section.onRightClick(result);
 
@@ -195,7 +220,7 @@ describe('OrphanAlertsSection', () => {
       };
 
       (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
-      confirmMock.mockReturnValue(true);
+      (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(true);
 
       await section.onRightClick(result);
 
@@ -215,7 +240,7 @@ describe('OrphanAlertsSection', () => {
       };
 
       (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
-      confirmMock.mockReturnValue(true);
+      (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(true);
 
       await section.onRightClick(result);
 
@@ -254,7 +279,7 @@ describe('OrphanAlertsSection', () => {
       };
 
       (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
-      confirmMock.mockReturnValue(true);
+      (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(true);
       (mockAlertManager.deleteAlert as jest.Mock).mockRejectedValue(new Error('API Error: Cannot delete alert'));
 
       await section.onRightClick(result);
@@ -276,13 +301,14 @@ describe('OrphanAlertsSection', () => {
       };
 
       (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
-      confirmMock.mockReturnValue(false);
+      (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(false);
 
       await section.onRightClick(result);
 
-      expect(confirmMock).toHaveBeenCalledWith(expect.stringContaining('Delete 2 orphan alert(s)?'));
-      expect(confirmMock).toHaveBeenCalledWith(expect.stringContaining('PairId: 6393'));
-      expect(confirmMock).toHaveBeenCalledWith(expect.stringContaining('391.92, 404.4'));
+      expect(mockUIUtil.showConfirm).toHaveBeenCalledWith(
+        'Delete Orphan Alerts',
+        expect.stringContaining('Delete 2 orphan alert(s)?')
+      );
     });
 
     test('handles missing pairId in data field', async () => {
@@ -315,11 +341,91 @@ describe('OrphanAlertsSection', () => {
       };
 
       (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
-      confirmMock.mockReturnValue(true);
+      (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(true);
 
       await section.onRightClick(result);
 
       expect(notifyInfoSpy).toHaveBeenCalledWith('Deleting 1 alert(s)...');
+    });
+  });
+
+  describe('Fix All Handler', () => {
+    test('deletes all orphan alerts for all pairs', async () => {
+      const alerts1 = [createMockAlert('6393', 391.92), createMockAlert('6393', 404.4)];
+      const alerts2 = [createMockAlert('6394', 100.0)];
+      const results: AuditResult[] = [
+        {
+          pluginId: 'orphan-alerts',
+          code: 'NO_PAIR_MAPPING',
+          target: '6393',
+          message: '6393: 2 alert(s)',
+          severity: 'HIGH',
+          status: 'FAIL',
+          data: { pairId: '6393', alertCount: 2 },
+        },
+        {
+          pluginId: 'orphan-alerts',
+          code: 'NO_PAIR_MAPPING',
+          target: '6394',
+          message: '6394: 1 alert(s)',
+          severity: 'HIGH',
+          status: 'FAIL',
+          data: { pairId: '6394', alertCount: 1 },
+        },
+      ];
+
+      (mockAlertRepo.get as jest.Mock).mockImplementation((pairId: string) => {
+        if (pairId === '6393') return alerts1;
+        if (pairId === '6394') return alerts2;
+        return [];
+      });
+
+      await section.onFixAll!(results);
+
+      expect(mockAlertManager.deleteAlert).toHaveBeenCalledTimes(3);
+      expect(mockAlertRepo.delete).toHaveBeenCalledWith('6393');
+      expect(mockAlertRepo.delete).toHaveBeenCalledWith('6394');
+      expect(notifySuccessSpy).toHaveBeenCalledWith('✓ Deleted 3 orphan alert(s) for 2 pair(s)');
+    });
+
+    test('skips results with missing pairId', async () => {
+      const results: AuditResult[] = [
+        {
+          pluginId: 'orphan-alerts',
+          code: 'NO_PAIR_MAPPING',
+          target: '6393',
+          message: '6393: 1 alert(s)',
+          severity: 'HIGH',
+          status: 'FAIL',
+          data: { alertCount: 1 }, // missing pairId
+        },
+      ];
+
+      await section.onFixAll!(results);
+
+      expect(mockAlertRepo.get).not.toHaveBeenCalled();
+      expect(mockAlertManager.deleteAlert).not.toHaveBeenCalled();
+    });
+
+    test('skips pairs with no alerts found', async () => {
+      const results: AuditResult[] = [
+        {
+          pluginId: 'orphan-alerts',
+          code: 'NO_PAIR_MAPPING',
+          target: '6393',
+          message: '6393: 0 alert(s)',
+          severity: 'HIGH',
+          status: 'FAIL',
+          data: { pairId: '6393', alertCount: 0 },
+        },
+      ];
+
+      (mockAlertRepo.get as jest.Mock).mockReturnValue([]);
+
+      await section.onFixAll!(results);
+
+      expect(mockAlertManager.deleteAlert).not.toHaveBeenCalled();
+      expect(mockAlertRepo.delete).not.toHaveBeenCalled();
     });
   });
 
@@ -343,7 +449,7 @@ describe('OrphanAlertsSection', () => {
   describe('Header Formatter', () => {
     test('shows success message when no results', () => {
       const html = section.headerFormatter([]);
-      expect(html).toContain('No orphan alerts');
+      expect(html).toContain('No alerts');
       expect(html).toContain('success-badge');
     });
 
@@ -365,12 +471,12 @@ describe('OrphanAlertsSection', () => {
           message: '6394: 2 alert(s) exist but have no corresponding pair',
           severity: 'HIGH',
           status: 'FAIL',
-          data: { pairId: '6394', alertCount: 2 },
+          data: { pairId: '6394', alertCount: 1 },
         },
       ];
 
       const html = section.headerFormatter(results);
-      expect(html).toContain('Orphans: 2');
+      expect(html).toContain('Alerts: 2');
       expect(html).toContain('darkred');
     });
   });

@@ -1,5 +1,6 @@
 import { ISequenceManager } from '../manager/sequence';
 import { ITickerManager } from '../manager/ticker';
+import { ISymbolManager } from '../manager/symbol';
 import { Constants } from '../models/constant';
 import { SequenceType } from '../models/trading';
 
@@ -31,7 +32,8 @@ export interface ISequenceHandler {
 export class SequenceHandler implements ISequenceHandler {
   constructor(
     private readonly sequenceManager: ISequenceManager,
-    private readonly tickerManager: ITickerManager
+    private readonly tickerManager: ITickerManager,
+    private readonly symbolManager: ISymbolManager
   ) {}
 
   /** @inheritdoc */
@@ -45,12 +47,19 @@ export class SequenceHandler implements ISequenceHandler {
   displaySequence(): void {
     const sequence = this.sequenceManager.getCurrentSequence();
     const tvTicker = this.tickerManager.getTicker();
+    const investingTicker = this.symbolManager.tvToInvesting(tvTicker);
 
-    const message = `${tvTicker}:${sequence}`;
+    // Show investingTicker when unmapped, otherwise show tvTicker
+    const displayTicker = investingTicker || tvTicker;
+    const message = `${displayTicker}:${sequence}`;
     const $displayInput = $(`#${Constants.UI.IDS.INPUTS.DISPLAY}`);
     $displayInput.val(message);
-    if (sequence === SequenceType.YR) {
+
+    // Background colors: maroon for unmapped, blue for YR sequence, black otherwise
+    if (!investingTicker) {
       $displayInput.css('background-color', 'maroon');
+    } else if (sequence === SequenceType.YR) {
+      $displayInput.css('background-color', 'blue');
     } else {
       $displayInput.css('background-color', 'black');
     }

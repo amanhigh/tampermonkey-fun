@@ -20,6 +20,41 @@ export const Constants = Object.freeze({
       HEADER_ICON: 'header-icon', // Expand/collapse icon
       HEADER_TEXT: 'header-text', // Header text with timestamp
     },
+    PLUGINS: Object.freeze({
+      /** Alerts audit plugin - analyzes trading alerts */
+      ALERTS: 'alerts',
+
+      /** Orphan alerts audit plugin - identifies alerts without corresponding pairs */
+      ORPHAN_ALERTS: 'orphan-alerts',
+
+      /** Integrity audit plugin (FR-007) - ensures every investingTicker in PairRepo has a corresponding tvTicker in TickerRepo */
+      INTEGRITY: 'integrity',
+
+      /** GTT unwatched audit plugin & section - identifies and displays unwatched GTT orders */
+      GTT_UNWATCHED: 'gtt-unwatched',
+
+      /** Orphan sequences audit plugin - identifies sequence entries without corresponding tickers */
+      ORPHAN_SEQUENCES: 'orphan-sequences',
+
+      /** Orphan flags audit plugin - identifies flag entries without corresponding tickers */
+      ORPHAN_FLAGS: 'orphan-flags',
+
+      /** Orphan exchange audit plugin - identifies exchange mappings without corresponding tickers */
+      ORPHAN_EXCHANGE: 'orphan-exchange',
+
+      /** Duplicate pair IDs audit plugin - identifies multiple investing tickers sharing the same pairId */
+      DUPLICATE_PAIR_IDS: 'duplicate-pair-ids',
+
+      /** Ticker collision audit plugin - identifies reverse map collisions in TickerRepo */
+      TICKER_COLLISION: 'ticker-collision',
+
+      /** Trade risk multiple audit plugin - identifies trades with non-standard risk multiples */
+      TRADE_RISK: 'trade-risk',
+
+      /** Stale review audit plugin - identifies tickers not opened within configurable review window */
+      STALE_REVIEW: 'stale-review',
+    }),
+    STALE_REVIEW_THRESHOLD_DAYS: 180,
   },
 
   // UI element colors and styles
@@ -62,6 +97,8 @@ export const Constants = Object.freeze({
         HOOK: 'aman-hook', // Add this line
         RECENT: 'aman-recent', // Old Name: recentId
         AUDIT_GLOBAL_REFRESH: 'aman-audit-global-refresh', // Global refresh button for all audits
+        AUDIT_STOP_TRACKING: 'aman-audit-stop-tracking', // Stop tracking button in audit toolbar
+        AUDIT_MAP_ALERT: 'aman-audit-map-alert', // Map alert button in audit toolbar
       },
       CHECKBOXES: {
         SWIFT: 'aman-swift', // Old Name: swiftId
@@ -143,6 +180,7 @@ export const Constants = Object.freeze({
   TRADING: {
     ORDER: {
       RISK_LIMIT: 6400, // Old name: orderRiskLimit
+      RISK_TOLERANCE: 0.01, // ±1% rounding tolerance for risk multiple validation
     },
     PROMPT: {
       REASONS: [
@@ -221,5 +259,11 @@ export const Constants = Object.freeze({
     TYPES: {
       NSE: 'NSE', // Old Name: NSE_EXCHANGE
     },
+    PREFERRED: ['NSE', 'NYSE', 'NASDAQ'],
   },
 });
+
+/**
+ * Type for audit plugin IDs - ensures only valid IDs can be used
+ */
+export type AuditId = (typeof Constants.AUDIT.PLUGINS)[keyof typeof Constants.AUDIT.PLUGINS];

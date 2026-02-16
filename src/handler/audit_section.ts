@@ -26,20 +26,27 @@ export interface IAuditSection {
   // Identity
   id: string; // Unique section identifier
   title: string; // Display title
+  description?: string; // Tooltip shown on header hover
+  order: number; // Execution order (lower = earlier, 0 for special handling)
+
+  // Action labels for button tooltips
+  leftActionLabel?: string; // Label for left-click action (e.g., "Open")
+  rightActionLabel?: string; // Label for right-click action (e.g., "Delete")
 
   // Data source
-  // HACK: Make Plugin Private ?
+  // TODO: Make Plugin Private ?
   plugin: IAudit; // Audit plugin to run
 
-  // FIXME: Collapse Section If Everything Okay by default
   // Presentation
   headerFormatter: (results: AuditResult[], context?: unknown) => string; // Custom header HTML
   buttonColorMapper: (result: AuditResult, context?: unknown) => string; // Maps result to button color (required)
 
   // Interaction handlers
+  // TODO: Standardize to use Promise<void> ?
   onLeftClick: (result: AuditResult) => void | Promise<void>; // Primary action (e.g., open in TV)
-  onRightClick: (result: AuditResult) => void | Promise<void>; // Secondary action (e.g., add to watchlist)
+  onRightClick: (result: AuditResult) => boolean | void | Promise<boolean | void>; // Secondary action — return false to cancel button removal
   onMiddleClick?: (result: AuditResult) => void | Promise<void>; // Optional middle-click action
+  onFixAll?: (results: AuditResult[]) => void | Promise<void>; // Optional bulk-action handler for "Fix All" workflow
 
   // Display options
   limit?: number; // Items per page (0 or undefined = no pagination)

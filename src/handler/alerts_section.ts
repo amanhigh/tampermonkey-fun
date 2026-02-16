@@ -7,7 +7,7 @@ import { ISymbolManager } from '../manager/symbol';
 import { IPairHandler } from './pair';
 import { Notifier } from '../util/notify';
 import { AlertState } from '../models/alert';
-import { AUDIT_IDS } from '../models/audit_ids';
+import { Constants } from '../models/constant';
 
 /**
  * Alerts Audit Section
@@ -27,8 +27,15 @@ import { AUDIT_IDS } from '../models/audit_ids';
  */
 export class AlertsAuditSection extends BaseAuditSection implements IAuditSection {
   // Identity - shares ID with ALERTS plugin
-  readonly id = AUDIT_IDS.ALERTS;
+  readonly id = Constants.AUDIT.PLUGINS.ALERTS;
   readonly title = 'Alerts Coverage';
+  readonly description =
+    'Audits alert coverage for every tracked Investing ticker (NO_PAIR / NO_ALERTS / SINGLE_ALERT)';
+  readonly order = 0;
+
+  // Action labels
+  readonly leftActionLabel = 'Open';
+  readonly rightActionLabel = 'Stop';
 
   // Data source (injected directly, not fetched from registry)
   readonly plugin: IAudit;
@@ -46,8 +53,14 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
 
   readonly onRightClick = (result: AuditResult) => {
     const investingTicker = result.target;
-    this.pairHandler.deletePairInfo(investingTicker);
-    Notifier.red(`❌ Removed mapping for ${investingTicker}`);
+    this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
+  };
+
+  readonly onFixAll = (results: AuditResult[]) => {
+    results.forEach((result) => {
+      this.pairHandler.stopTrackingByInvestingTicker(result.target);
+    });
+    Notifier.success(`⏹ Stopped tracking ${results.length} ticker(s)`);
   };
 
   readonly headerFormatter = (auditResults: AuditResult[]) => {

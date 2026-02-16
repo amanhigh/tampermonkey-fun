@@ -16,6 +16,7 @@ export interface ISmartPrompt {
  */
 export class SmartPrompt implements ISmartPrompt {
   private modal: HTMLDivElement | null = null;
+  private escapeHandler: ((event: KeyboardEvent) => void) | null = null;
 
   // UI Component Classes
   private static readonly CLASSES = {
@@ -42,9 +43,7 @@ export class SmartPrompt implements ISmartPrompt {
     button.onclick = () => {
       const selectedOverride = this.getSelectedOverride();
       callback(selectedOverride ? `${text}-${selectedOverride}` : text);
-      if (this.modal) {
-        this.modal.style.display = 'none';
-      }
+      this.destroyModal();
     };
     return button;
   }
@@ -59,9 +58,7 @@ export class SmartPrompt implements ISmartPrompt {
     textBox.onkeydown = (event) => {
       if (event.key === 'Enter') {
         callback(textBox.value);
-        if (this.modal) {
-          this.modal.style.display = 'none';
-        }
+        this.destroyModal();
       }
     };
     return textBox;
@@ -97,6 +94,7 @@ export class SmartPrompt implements ISmartPrompt {
   /** @inheritdoc */
   public async showModal(reasons: string[], overrides: string[] = []): Promise<string> {
     return new Promise((resolve) => {
+      this.destroyModal();
       this.modal = this.createModal();
       document.body.appendChild(this.modal);
 
@@ -131,13 +129,23 @@ export class SmartPrompt implements ISmartPrompt {
       const keydownHandler = (event: KeyboardEvent) => {
         if (event.key === 'Escape') {
           resolve('');
-          if (this.modal) {
-            this.modal.style.display = 'none';
-          }
+          this.destroyModal();
         }
       };
+      this.escapeHandler = keydownHandler;
       window.addEventListener('keydown', keydownHandler);
     });
+  }
+
+  private destroyModal(): void {
+    if (this.escapeHandler) {
+      window.removeEventListener('keydown', this.escapeHandler);
+      this.escapeHandler = null;
+    }
+    if (this.modal && this.modal.parentNode) {
+      this.modal.parentNode.removeChild(this.modal);
+    }
+    this.modal = null;
   }
 
   private resetRadioState(): void {

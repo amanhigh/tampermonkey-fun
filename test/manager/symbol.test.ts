@@ -87,7 +87,7 @@ describe('SymbolManager', () => {
   });
 
   describe('removeTvToInvestingMapping', () => {
-    it('should delete mapping if tv ticker found', () => {
+    it('should delete TV ticker for investing ticker', () => {
       tickerRepoMock.getTvTicker.mockReturnValue('TV_TICKER');
       symbolManager.removeTvToInvestingMapping('INVESTING_TICKER');
       expect(tickerRepoMock.getTvTicker).toHaveBeenCalledWith('INVESTING_TICKER');

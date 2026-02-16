@@ -8,6 +8,7 @@ import { IWatchManager } from '../manager/watch';
 import { ITradingViewWatchlistManager } from '../manager/watchlist';
 import { Notifier } from '../util/notify';
 import { ISyncUtil } from '../util/sync';
+import { IUIUtil } from '../util/ui';
 import { ITickerManager } from '../manager/ticker';
 import { IAlertFeedManager } from '../manager/alertfeed';
 
@@ -57,7 +58,8 @@ export class WatchListHandler implements IWatchListHandler {
     private readonly syncUtil: ISyncUtil,
     private readonly watchManager: IWatchManager,
     private readonly tickerManager: ITickerManager,
-    private readonly alertFeedManager: IAlertFeedManager
+    private readonly alertFeedManager: IAlertFeedManager,
+    private readonly uiUtil: IUIUtil
   ) {}
 
   /** @inheritdoc */
@@ -110,7 +112,10 @@ export class WatchListHandler implements IWatchListHandler {
    * @private
    */
   private executeCleanupWithConfirmation(currentTickers: string[], count: number): void {
-    const confirmDeletion = confirm(`🚨 Potential Deletions: ${count}. Proceed with cleanup?`);
+    const confirmDeletion = this.uiUtil.showConfirm(
+      'Watchlist Cleanup',
+      `🚨 Potential Deletions: ${count}. Proceed with cleanup?`
+    );
     if (confirmDeletion) {
       this.executeCleanup(currentTickers);
     } else {

@@ -82,9 +82,6 @@ export class ObserveUtil implements IObserveUtil {
         childList: true,
       });
 
-      // Later, you can stop observing
-      //observer.disconnect();
-
       return observer;
     } catch (error) {
       throw new Error(`Failed to create node observer: ${error}`);

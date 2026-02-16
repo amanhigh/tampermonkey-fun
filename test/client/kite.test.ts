@@ -1,5 +1,5 @@
 import { KiteClient, IKiteClient } from '../../src/client/kite';
-import { CreateGttRequest, GttApiResponse } from '../../src/models/kite';
+import { CreateGttRequest, GttApiResponse, OrderType } from '../../src/models/kite';
 
 // Mock the BaseClient's makeRequest method
 jest.mock('../../src/client/base', () => {
@@ -309,7 +309,7 @@ describe('KiteClient', () => {
                 quantity: 1,
               },
             ],
-            type: 'single',
+            type: OrderType.SINGLE,
             id: 'gtt_123456',
             condition: {
               trigger_values: [2500],
@@ -371,14 +371,14 @@ describe('KiteClient', () => {
             {
               status: 'active',
               orders: [{ tradingsymbol: 'RELIANCE', quantity: 1 }],
-              type: 'single',
+              type: OrderType.SINGLE,
               id: 'gtt_123',
               condition: { trigger_values: [2500] },
             },
             {
               status: 'triggered',
               orders: [{ tradingsymbol: 'INFY', quantity: 5 }],
-              type: 'single',
+              type: OrderType.SINGLE,
               id: 'gtt_456',
               condition: { trigger_values: [1600] },
             },
@@ -840,7 +840,7 @@ describe('KiteClient', () => {
               // Missing required fields
               status: undefined as any,
               orders: [],
-              type: '',
+              type: '' as any,
               id: '',
               condition: { trigger_values: [] },
             },

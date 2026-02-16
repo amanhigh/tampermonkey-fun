@@ -68,6 +68,14 @@ export interface IUIUtil {
    * @returns HTML string with colored text
    */
   colorText(text: string, color: string): string;
+
+  /**
+   * Shows a browser confirm dialog with title and message
+   * @param title - The dialog title/message to display
+   * @param message - Optional detailed message
+   * @returns True if user confirmed, false otherwise
+   */
+  showConfirm(title: string, message?: string): boolean;
 }
 
 export class UIUtil implements IUIUtil {
@@ -146,5 +154,12 @@ export class UIUtil implements IUIUtil {
   /** @inheritdoc */
   public colorText(text: string, color: string): string {
     return `<span style="color: ${color};">${text}</span>`;
+  }
+
+  /** @inheritdoc */
+  public showConfirm(title: string, message?: string): boolean {
+    // HACK: Duplicate merge with Confirm ?
+    const fullMessage = message ? `${title}\n\n${message}` : title;
+    return confirm(fullMessage);
   }
 }

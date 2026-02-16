@@ -67,14 +67,13 @@ export class Barkat {
     }
   }
 
-  // TASK Remove suppressed Errors for eslint
+  // TODO: Remove suppressed Errors for eslint
   // eslint-disable-next-line max-lines-per-function
   private setupTradingViewUI() {
-    // FIXME: #B Layout and Color Improvements
     const $area = this.uiUtil.buildArea(Constants.UI.IDS.AREAS.MAIN, '76%', '6%');
     $area.appendTo('body');
 
-    // TASK Move UI Build Logic to Handlers
+    // TODO: Move UI Build Logic to Handlers
     this.uiUtil
       .buildWrapper(Constants.UI.IDS.AREAS.TOP)
       .appendTo($area)

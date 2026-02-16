@@ -22,7 +22,6 @@ import { IPairRepo, PairRepo } from '../repo/pair';
 import { IExchangeRepo, ExchangeRepo } from '../repo/exchange';
 import { ITickerRepo, TickerRepo } from '../repo/ticker';
 import { ISequenceRepo, SequenceRepo } from '../repo/sequence';
-import { IAuditRepo, AuditRepo } from '../repo/audit';
 import { IRecentTickerRepo, RecentTickerRepo } from '../repo/recent';
 import { IAlertRepo, AlertRepo } from '../repo/alert';
 
@@ -30,7 +29,6 @@ import { IAlertRepo, AlertRepo } from '../repo/alert';
 import { ITimeFrameManager, TimeFrameManager } from '../manager/timeframe';
 import { IJournalManager, JournalManager } from '../manager/journal';
 import { IAlertManager, AlertManager } from '../manager/alert';
-import { IAuditManager, AuditManager } from '../manager/audit';
 import { ITradingViewWatchlistManager, TradingViewWatchlistManager } from '../manager/watchlist';
 import { ITradingViewScreenerManager, TradingViewScreenerManager } from '../manager/screener';
 import { ISequenceManager, SequenceManager } from '../manager/sequence';
@@ -77,14 +75,28 @@ import { IPicassoHandler, PicassoHandler } from '../handler/picasso';
 import { PicassoApp } from './picasso';
 import { AuditSectionRegistry } from '../util/audit_registry';
 import { AlertsPlugin } from '../manager/alerts_plugin';
-import { TvMappingPlugin } from '../manager/tv_mapping_plugin';
 import { GttPlugin } from '../manager/gtt_plugin';
-import { UnmappedPairsPlugin } from '../manager/unmapped_pairs_plugin';
+import { IntegrityPlugin } from '../manager/integrity_plugin';
 import { OrphanAlertsPlugin } from '../manager/orphan_alerts_plugin';
+import { OrphanSequencesPlugin } from '../manager/orphan_sequences_plugin';
+import { OrphanFlagsPlugin } from '../manager/orphan_flags_plugin';
+import { OrphanExchangePlugin } from '../manager/orphan_exchange_plugin';
+import { DuplicatePairIdsPlugin } from '../manager/duplicate_pair_ids_plugin';
+import { TradeRiskPlugin } from '../manager/trade_risk_plugin';
+import { TickerCollisionPlugin } from '../manager/ticker_collision_plugin';
 import { GttAuditSection } from '../handler/gtt_section';
 import { AlertsAuditSection } from '../handler/alerts_section';
 import { OrphanAlertsSection } from '../handler/orphan_alerts_section';
-import { UnmappedPairsSection } from '../handler/unmapped_pairs_section';
+import { IntegritySection } from '../handler/integrity_section';
+import { OrphanSequencesSection } from '../handler/orphan_sequences_section';
+import { OrphanFlagsSection } from '../handler/orphan_flags_section';
+import { OrphanExchangeSection } from '../handler/orphan_exchange_section';
+import { DuplicatePairIdsSection } from '../handler/duplicate_pair_ids_section';
+import { TickerCollisionSection } from '../handler/ticker_collision_section';
+import { TradeRiskSection } from '../handler/trade_risk_section';
+import { CanonicalRanker, ICanonicalRanker } from '../manager/canonical_ranker';
+import { StaleReviewPlugin } from '../manager/stale_review_plugin';
+import { StaleReviewSection } from '../handler/stale_review_section';
 
 /**
  * Project Architecture Overview
@@ -174,7 +186,6 @@ export class Factory {
     exchange: (): IExchangeRepo => Factory.getInstance('exchangeRepo', () => new ExchangeRepo(Factory.repo.cron())),
     ticker: (): ITickerRepo => Factory.getInstance('tickerRepo', () => new TickerRepo(Factory.repo.cron())),
     sequence: (): ISequenceRepo => Factory.getInstance('sequenceRepo', () => new SequenceRepo(Factory.repo.cron())),
-    audit: (): IAuditRepo => Factory.getInstance('auditRepo', () => new AuditRepo(Factory.repo.cron())),
     fno: (): IFnoRepo => Factory.getInstance('fnoRepo', () => new FnoRepo(Factory.repo.cron())),
     kite: (): IKiteRepo => Factory.getInstance('kiteRepo', () => new KiteRepo()),
     recent: (): IRecentTickerRepo => Factory.getInstance('recentRepo', () => new RecentTickerRepo(Factory.repo.cron())),
@@ -203,8 +214,6 @@ export class Factory {
       ),
 
     imdb: (): IImdbManager => Factory.getInstance('imdbManager', () => new ImdbManager(Factory.repo.imdb())),
-
-    audit: (): IAuditManager => Factory.getInstance('auditManager', () => new AuditManager(Factory.repo.audit())),
 
     watchlist: (): ITradingViewWatchlistManager =>
       Factory.getInstance(
@@ -290,7 +299,12 @@ export class Factory {
             Factory.manager.symbol(),
             Factory.manager.watch(),
             Factory.manager.flag(),
-            Factory.manager.alertFeed()
+            Factory.manager.alertFeed(),
+            Factory.repo.recent(),
+            Factory.repo.sequence(),
+            Factory.repo.exchange(),
+            Factory.repo.alert(),
+            Factory.client.investing()
           )
       ),
 
@@ -312,6 +326,20 @@ export class Factory {
       Factory.getInstance(
         'alertFeedManager',
         () => new AlertFeedManager(Factory.manager.symbol(), Factory.manager.watch(), Factory.manager.recent())
+      ),
+    canonicalRanker: (): ICanonicalRanker =>
+      Factory.getInstance(
+        'canonicalRanker',
+        () =>
+          new CanonicalRanker({
+            alertRepo: Factory.repo.alert(),
+            watchManager: Factory.manager.watch(),
+            recentRepo: Factory.repo.recent(),
+            sequenceRepo: Factory.repo.sequence(),
+            exchangeRepo: Factory.repo.exchange(),
+            pairRepo: Factory.repo.pair(),
+            symbolManager: Factory.manager.symbol(),
+          })
       ),
   };
 
@@ -341,13 +369,11 @@ export class Factory {
           )
       ),
 
-    // Return a singleton TvMappingPlugin instance
-    // NOTE: Registered but not actively used in audit flow (deferred for future use cases)
-    // See Plan.md Task 2.2 for analysis of why this plugin is not integrated
-    tvMapping: () =>
+    // Return a singleton IntegrityPlugin instance (FR-007)
+    integrity: () =>
       Factory.getInstance(
-        'auditPlugin_tvmapping',
-        () => new TvMappingPlugin(Factory.manager.pair(), Factory.manager.symbol())
+        'auditPlugin_integrity',
+        () => new IntegrityPlugin(Factory.repo.pair(), Factory.repo.ticker())
       ),
 
     // Return a singleton GttPlugin instance
@@ -357,18 +383,50 @@ export class Factory {
         () => new GttPlugin(Factory.repo.kite(), Factory.manager.watch())
       ),
 
-    // Return a singleton UnmappedPairsPlugin instance
-    unmappedPairs: () =>
-      Factory.getInstance(
-        'auditPlugin_unmappedPairs',
-        () => new UnmappedPairsPlugin(Factory.repo.pair(), Factory.repo.ticker())
-      ),
-
     // Return a singleton OrphanAlertsPlugin instance
     orphanAlerts: () =>
       Factory.getInstance(
         'auditPlugin_orphanAlerts',
         () => new OrphanAlertsPlugin(Factory.repo.alert(), Factory.repo.pair())
+      ),
+
+    // Return a singleton OrphanSequencesPlugin instance
+    orphanSequences: () =>
+      Factory.getInstance(
+        'auditPlugin_orphanSequences',
+        () => new OrphanSequencesPlugin(Factory.repo.sequence(), Factory.repo.ticker(), Factory.manager.symbol())
+      ),
+
+    // Return a singleton OrphanFlagsPlugin instance
+    orphanFlags: () =>
+      Factory.getInstance(
+        'auditPlugin_orphanFlags',
+        () => new OrphanFlagsPlugin(Factory.repo.flag(), Factory.repo.ticker(), Factory.manager.symbol())
+      ),
+
+    // Return a singleton OrphanExchangePlugin instance
+    orphanExchange: () =>
+      Factory.getInstance(
+        'auditPlugin_orphanExchange',
+        () => new OrphanExchangePlugin(Factory.repo.exchange(), Factory.repo.ticker())
+      ),
+
+    // Return a singleton DuplicatePairIdsPlugin instance
+    duplicatePairIds: () =>
+      Factory.getInstance('auditPlugin_duplicatePairIds', () => new DuplicatePairIdsPlugin(Factory.repo.pair())),
+
+    // Return a singleton TickerCollisionPlugin instance
+    tickerCollision: () =>
+      Factory.getInstance('auditPlugin_tickerCollision', () => new TickerCollisionPlugin(Factory.repo.ticker())),
+
+    // Return a singleton TradeRiskPlugin instance
+    tradeRisk: () => Factory.getInstance('auditPlugin_tradeRisk', () => new TradeRiskPlugin(Factory.repo.kite())),
+
+    // Return a singleton StaleReviewPlugin instance (FR-016)
+    staleReview: () =>
+      Factory.getInstance(
+        'auditPlugin_staleReview',
+        () => new StaleReviewPlugin(Factory.repo.recent(), Factory.repo.ticker(), Factory.manager.watch())
       ),
 
     // ===== SECTION CREATION =====
@@ -381,7 +439,8 @@ export class Factory {
           new GttAuditSection(
             Factory.audit.gttUnwatched(), // ✅ Direct plugin injection
             Factory.handler.ticker(),
-            Factory.manager.kite() // ✅ KiteManager for GTT order deletion
+            Factory.manager.kite(), // ✅ KiteManager for GTT order deletion
+            Factory.util.ui()
           )
       ),
 
@@ -407,35 +466,108 @@ export class Factory {
         () =>
           new OrphanAlertsSection(
             Factory.audit.orphanAlerts(), // ✅ Direct plugin injection
+            Factory.handler.ticker(), // ✅ TickerHandler for opening tickers by name
             Factory.repo.alert(),
-            Factory.manager.alert() // ✅ AlertManager for deletion operations
+            Factory.manager.alert(), // ✅ AlertManager for deletion operations
+            Factory.util.ui()
           )
       ),
 
-    // Unmapped Pairs Audit Section - receives plugin via direct injection
+    // Integrity Audit Section (FR-007) - receives plugin via direct injection
     // Displays pairs without TradingView mappings for cleanup
-    unmappedPairsSection: () =>
+    integritySection: () =>
       Factory.getInstance(
-        'unmappedPairsSection',
+        'integritySection',
         () =>
-          new UnmappedPairsSection(
-            Factory.audit.unmappedPairs(), // ✅ Direct plugin injection
+          new IntegritySection(
+            Factory.audit.integrity(), // ✅ Direct plugin injection
             Factory.handler.ticker(), // For opening tickers
             Factory.handler.pair() // ✅ PairHandler handles watchlist repaint
           )
       ),
 
+    // Orphan Sequences Audit Section (FR-011)
+    orphanSequencesSection: () =>
+      Factory.getInstance(
+        'orphanSequencesSection',
+        () =>
+          new OrphanSequencesSection(Factory.audit.orphanSequences(), Factory.handler.ticker(), Factory.repo.sequence())
+      ),
+
+    // Orphan Flags Audit Section (FR-012)
+    orphanFlagsSection: () =>
+      Factory.getInstance(
+        'orphanFlagsSection',
+        () => new OrphanFlagsSection(Factory.audit.orphanFlags(), Factory.handler.ticker(), Factory.handler.pair())
+      ),
+
+    // Orphan Exchange Audit Section (FR-013)
+    orphanExchangeSection: () =>
+      Factory.getInstance(
+        'orphanExchangeSection',
+        () =>
+          new OrphanExchangeSection(Factory.audit.orphanExchange(), Factory.handler.ticker(), Factory.repo.exchange())
+      ),
+
+    // Duplicate PairIds Audit Section (FR-014)
+    duplicatePairIdsSection: () =>
+      Factory.getInstance(
+        'duplicatePairIdsSection',
+        () =>
+          new DuplicatePairIdsSection(
+            Factory.audit.duplicatePairIds(),
+            Factory.handler.ticker(),
+            Factory.manager.symbol(),
+            Factory.manager.canonicalRanker(),
+            Factory.manager.pair()
+          )
+      ),
+
+    // Ticker Collision Audit Section (FR-015)
+    tickerCollisionSection: () =>
+      Factory.getInstance(
+        'tickerCollisionSection',
+        () =>
+          new TickerCollisionSection(
+            Factory.audit.tickerCollision(),
+            Factory.handler.ticker(),
+            Factory.manager.symbol(),
+            Factory.manager.canonicalRanker()
+          )
+      ),
+
+    // Trade Risk Audit Section (FR-017)
+    tradeRiskSection: () =>
+      Factory.getInstance(
+        'tradeRiskSection',
+        () => new TradeRiskSection(Factory.audit.tradeRisk(), Factory.handler.ticker(), Factory.manager.kite())
+      ),
+
+    // Stale Review Audit Section (FR-016)
+    staleReviewSection: () =>
+      Factory.getInstance(
+        'staleReviewSection',
+        () => new StaleReviewSection(Factory.audit.staleReview(), Factory.handler.ticker(), Factory.handler.pair())
+      ),
+
     // ===== REGISTRY =====
-    // Build registry by registering sections only
+    // Build registry by registering all sections
     registry: () =>
       Factory.getInstance('auditRegistry', () => {
         const reg = new AuditSectionRegistry();
 
-        // Register sections (primary responsibility)
+        // Register all sections
         reg.registerSection(Factory.audit.alertsSection());
         reg.registerSection(Factory.audit.gttSection());
         reg.registerSection(Factory.audit.orphanAlertsSection());
-        reg.registerSection(Factory.audit.unmappedPairsSection());
+        reg.registerSection(Factory.audit.integritySection());
+        reg.registerSection(Factory.audit.orphanSequencesSection());
+        reg.registerSection(Factory.audit.orphanFlagsSection());
+        reg.registerSection(Factory.audit.orphanExchangeSection());
+        reg.registerSection(Factory.audit.duplicatePairIdsSection());
+        reg.registerSection(Factory.audit.tickerCollisionSection());
+        reg.registerSection(Factory.audit.tradeRiskSection());
+        reg.registerSection(Factory.audit.staleReviewSection());
 
         return reg;
       }),
@@ -475,7 +607,12 @@ export class Factory {
       Factory.getInstance('auditHandler', () => {
         // Handler receives registry which now contains sections
         // Sections are registered in Factory.audit.registry()
-        return new AuditHandler(Factory.audit.registry(), Factory.util.ui());
+        return new AuditHandler(
+          Factory.audit.registry(),
+          Factory.util.ui(),
+          Factory.handler.pair(),
+          Factory.manager.ticker()
+        );
       }),
     onload: (): IOnLoadHandler =>
       Factory.getInstance(
@@ -585,7 +722,8 @@ export class Factory {
             Factory.util.sync(),
             Factory.manager.watch(),
             Factory.manager.ticker(),
-            Factory.manager.alertFeed()
+            Factory.manager.alertFeed(),
+            Factory.util.ui()
           )
       ),
     pair: (): IPairHandler =>
@@ -598,7 +736,8 @@ export class Factory {
             Factory.util.smart(),
             Factory.manager.ticker(),
             Factory.manager.symbol(),
-            Factory.handler.watchlist()
+            Factory.handler.watchlist(),
+            Factory.manager.style()
           )
       ),
     flag: (): IFlagHandler =>
@@ -609,7 +748,7 @@ export class Factory {
     sequence: (): ISequenceHandler =>
       Factory.getInstance(
         'sequenceHandler',
-        () => new SequenceHandler(Factory.manager.sequence(), Factory.manager.ticker())
+        () => new SequenceHandler(Factory.manager.sequence(), Factory.manager.ticker(), Factory.manager.symbol())
       ),
     journal: (): IJournalHandler =>
       Factory.getInstance(

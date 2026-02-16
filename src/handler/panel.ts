@@ -7,7 +7,7 @@ export interface IPanelHandler {
 }
 
 enum PanelAction {
-  DELETE_PAIR = 'Delete Pair Info',
+  STOP_TRACKING = 'Stop Tracking',
 }
 
 export class PanelHandler implements IPanelHandler {
@@ -26,18 +26,20 @@ export class PanelHandler implements IPanelHandler {
   }
 
   private handlePanelAction(action: PanelAction): void {
-    let searchTicker = '';
     try {
-      searchTicker = this.tickerManager.getInvestingTicker();
-    } catch (error) {
-      searchTicker = this.tickerManager.getTicker();
-      console.warn('Using TV Ticker Instead', error);
-    }
-
-    switch (action) {
-      case PanelAction.DELETE_PAIR:
-        this.pairHandler.deletePairInfo(searchTicker);
-        break;
+      const investingTicker = this.tickerManager.getInvestingTicker();
+      switch (action) {
+        case PanelAction.STOP_TRACKING:
+          this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
+          break;
+      }
+    } catch {
+      const tvTicker = this.tickerManager.getTicker();
+      switch (action) {
+        case PanelAction.STOP_TRACKING:
+          this.pairHandler.stopTrackingByTvTicker(tvTicker);
+          break;
+      }
     }
   }
 }

@@ -1,12 +1,10 @@
-import { Constants } from '../models/constant';
-import { AlertState } from '../models/alert';
-import { Color } from '../models/color';
+import { AuditId, Constants } from '../models/constant';
 import { AuditSectionRegistry } from '../util/audit_registry';
-import { AUDIT_IDS } from '../models/audit_ids';
 import { IUIUtil } from '../util/ui';
-import { Notifier } from '../util/notify';
 import { AuditRenderer } from '../util/audit_renderer';
 import { AuditResult } from '../models/audit';
+import { IPairHandler } from './pair';
+import { ITickerManager } from '../manager/ticker';
 
 /**
  * Interface for managing audit UI operations
@@ -41,9 +39,14 @@ export class AuditHandler implements IAuditHandler {
   // Track whether audits have ever been run (used for initial vs subsequent toggles)
   private auditHasRun: boolean = false;
 
+  // Preserve renderer instances across auditAll() calls to retain collapse state
+  private readonly renderers: Map<string, AuditRenderer> = new Map();
+
   constructor(
     private readonly auditRegistry: AuditSectionRegistry,
-    private readonly uiUtil: IUIUtil
+    private readonly uiUtil: IUIUtil,
+    private readonly pairHandler: IPairHandler,
+    private readonly tickerManager: ITickerManager
   ) {}
 
   /**
@@ -66,80 +69,113 @@ export class AuditHandler implements IAuditHandler {
    */
   public async auditAll(): Promise<void> {
     // Get Alerts section from registry (section contains plugin)
-    const alertsSection = this.auditRegistry.mustGetSection(AUDIT_IDS.ALERTS);
+    const alertsSection = this.auditRegistry.mustGetSection(Constants.AUDIT.PLUGINS.ALERTS);
 
     // Run section's plugin to get audit results
     //TODO: Remove Plugin Injection and use Section directly
     const results = await alertsSection.plugin.run();
 
-    // Calculate counts from results for notification
-    const noAlertsCount = results.filter((r) => r.code === AlertState.NO_ALERTS).length;
-    const singleAlertCount = results.filter((r) => r.code === AlertState.SINGLE_ALERT).length;
-    const noPairCount = results.filter((r) => r.code === AlertState.NO_PAIR).length;
+    // First run: render toolbar buttons (only once)
+    if (!this.auditHasRun) {
+      this.renderToolbarButtons();
+    }
 
-    // Format and show notification (handler controls UI)
-    const summary =
-      `Audit Results: ` +
-      `${singleAlertCount} SINGLE_ALERT, ` +
-      `${noAlertsCount} NO_ALERTS, ` +
-      `${noPairCount} NO_PAIR`;
-    Notifier.message(summary, Color.PURPLE, 10000);
-
-    // Render global refresh button at top of audit area
-    this.renderGlobalRefreshButton();
-
-    // Clear old sections before re-rendering (prevents duplicates on refresh)
-    this.clearAuditSections();
-
-    // Render alerts UI (header + buttons) before GTT audit
+    // Render alerts UI (header + buttons) before other audits
+    // Alerts has order 0 and uses setResults (not refresh) for special handling
     this.auditAlerts(results);
 
-    // Run GTT audit and render new UI
-    await this.auditGttOrders();
-
-    // Run Orphan Alerts audit and render section
-    await this.auditOrphanAlerts();
-
-    // Run Unmapped Pairs audit and render section
-    await this.auditUnmappedPairs();
+    // Run all remaining audits in order (skipping alerts with order 0)
+    await this.runOrderedAudits();
 
     // Mark audits as run
     this.auditHasRun = true;
   }
 
   /**
-   * Renders global refresh button at the top of audit area
-   * Allows user to re-run all audits
-   * Styling is defined in src/style/_audit_section.less
+   * Runs all audits in order number sequence (FR-9.1, FR-9.10)
+   * Skips alerts (order 0) as it's handled separately with setResults
    */
-  private renderGlobalRefreshButton(): void {
-    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    const buttonId = Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH;
+  private async runOrderedAudits(): Promise<void> {
+    const orderedSections = this.auditRegistry.listSectionsOrdered();
 
-    // Remove old button if exists (in case of re-render)
-    $(`#${buttonId}`).remove();
+    for (const section of orderedSections) {
+      // Skip alerts section (order 0) - already handled separately
+      if (section.order === 0) {
+        continue;
+      }
 
-    // Create refresh button (styling defined in _audit_section.less)
-    const $button = this.uiUtil.buildButton(buttonId, '🔄 Refresh All Audits', () => {
-      void this.auditAll(); // Re-run all audits
-    });
-
-    // Add at top of audit area
-    $button.prependTo($auditArea);
+      const renderer = this.getOrCreateRenderer(section.id as AuditId);
+      await renderer.refresh();
+    }
   }
 
   /**
-   * Clears all audit sections from the UI
-   * Preserves the global refresh button at the top
-   * Called before re-rendering sections to prevent duplicates
-   * @private
+   * Renders toolbar buttons at the top of audit area:
+   * Refresh All, Stop Tracking, and Map Alert in a flex row
    */
-  private clearAuditSections(): void {
+  private renderToolbarButtons(): void {
     const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+    const refreshId = Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH;
+    const stopTrackId = Constants.UI.IDS.BUTTONS.AUDIT_STOP_TRACKING;
+    const mapAlertId = Constants.UI.IDS.BUTTONS.AUDIT_MAP_ALERT;
 
-    // Remove all audit sections (identified by class)
-    // This does NOT remove the global refresh button
-    $auditArea.find(`.${Constants.AUDIT.CLASSES.SECTION}`).remove();
+    // Remove old toolbar if exists (in case of re-render)
+    $auditArea.find('.audit-toolbar').remove();
+
+    const $toolbar = $('<div>').addClass('audit-toolbar');
+
+    // Refresh All button
+    this.uiUtil
+      .buildButton(refreshId, '\u{1F504} Refresh', () => {
+        void this.auditAll();
+      })
+      .appendTo($toolbar);
+
+    // Stop Tracking button (FR-9.8)
+    this.uiUtil
+      .buildButton(stopTrackId, '⏹ Stop', () => {
+        try {
+          const investingTicker = this.tickerManager.getInvestingTicker();
+          if (confirm(`Stop tracking ${investingTicker}?`)) {
+            this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
+          }
+        } catch {
+          const tvTicker = this.tickerManager.getTicker();
+          if (confirm(`Stop tracking ${tvTicker}?`)) {
+            this.pairHandler.stopTrackingByTvTicker(tvTicker);
+          }
+        }
+      })
+      .appendTo($toolbar);
+
+    // Map Alert button (FR-9.9)
+    this.uiUtil
+      .buildButton(mapAlertId, '\u{1F517} Map', () => {
+        const ticker = this.tickerManager.getTicker();
+        void this.pairHandler.mapInvestingTicker(ticker);
+      })
+      .appendTo($toolbar);
+
+    $toolbar.prependTo($auditArea);
+  }
+
+  /**
+   * Gets or creates a renderer for a section, preserving collapse state across runs
+   * On first call: creates renderer and appends to DOM
+   * On subsequent calls: returns existing renderer (collapse state preserved)
+   */
+  private getOrCreateRenderer(sectionId: AuditId): AuditRenderer {
+    const existing = this.renderers.get(sectionId);
+    if (existing) {
+      return existing;
+    }
+
+    const section = this.auditRegistry.mustGetSection(sectionId);
+    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
+    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
+    renderer.render();
+    this.renderers.set(sectionId, renderer);
+    return renderer;
   }
 
   /**
@@ -148,71 +184,7 @@ export class AuditHandler implements IAuditHandler {
    * @param pluginResults Results from AlertsAudit plugin
    */
   private auditAlerts(pluginResults: AuditResult[]): void {
-    // Get section from registry (section contains plugin)
-    const section = this.auditRegistry.mustGetSection(AUDIT_IDS.ALERTS);
-
-    // Create renderer with section and render
-    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
-
-    // Render initial (empty) section first
-    renderer.render();
-
-    // Set initial plugin results (plugin already handles filtering and sorting)
+    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.ALERTS);
     renderer.setResults(pluginResults);
-  }
-
-  /**
-   * Run GTT unwatched audit and render section
-   */
-  private async auditGttOrders(): Promise<void> {
-    // Get section from registry (section contains plugin)
-    const section = this.auditRegistry.mustGetSection(AUDIT_IDS.GTT_UNWATCHED);
-
-    // Create renderer with section and render
-    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
-
-    // Render initial (empty) section first
-    renderer.render();
-
-    // Now run audit via renderer (this records timestamp and updates display)
-    await renderer.refresh();
-  }
-
-  /**
-   * Run Orphan Alerts audit and render section
-   */
-  private async auditOrphanAlerts(): Promise<void> {
-    // Get section from registry (section contains plugin)
-    const section = this.auditRegistry.mustGetSection(AUDIT_IDS.ORPHAN_ALERTS);
-
-    // Create renderer with section and render
-    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
-
-    // Render initial (empty) section first
-    renderer.render();
-
-    // Now run audit via renderer (this records timestamp and updates display)
-    await renderer.refresh();
-  }
-
-  /**
-   * Run Unmapped Pairs audit and render section
-   */
-  private async auditUnmappedPairs(): Promise<void> {
-    // Get section from registry (section contains plugin)
-    const section = this.auditRegistry.mustGetSection(AUDIT_IDS.UNMAPPED_PAIRS);
-
-    // Create renderer with section and render
-    const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    const renderer = new AuditRenderer(section, this.uiUtil, $auditArea);
-
-    // Render initial (empty) section first
-    renderer.render();
-
-    // Now run audit via renderer (this records timestamp and updates display)
-    await renderer.refresh();
   }
 }

@@ -1,16 +1,22 @@
-import { PairInfo } from '../../src/models/alert';
+import { Alert, PairInfo } from '../../src/models/alert';
 import { IPairManager, PairManager } from '../../src/manager/pair';
 import { IPairRepo } from '../../src/repo/pair';
 import { ISymbolManager } from '../../src/manager/symbol';
 import { IWatchManager } from '../../src/manager/watch';
 import { IFlagManager } from '../../src/manager/flag';
 import { IAlertFeedManager } from '../../src/manager/alertfeed';
+import { IRecentTickerRepo } from '../../src/repo/recent';
+import { ISequenceRepo } from '../../src/repo/sequence';
+import { IExchangeRepo } from '../../src/repo/exchange';
+import { IAlertRepo } from '../../src/repo/alert';
+import { IInvestingClient } from '../../src/client/investing';
 
 // Mock Notifier to avoid DOM issues in tests
 jest.mock('../../src/util/notify', () => ({
   Notifier: {
     info: jest.fn(),
     success: jest.fn(),
+    warn: jest.fn(),
     red: jest.fn(),
   },
 }));
@@ -22,6 +28,11 @@ describe('PairManager', () => {
   let mockWatchManager: jest.Mocked<IWatchManager>;
   let mockFlagManager: jest.Mocked<IFlagManager>;
   let mockAlertFeedManager: jest.Mocked<IAlertFeedManager>;
+  let mockRecentRepo: jest.Mocked<IRecentTickerRepo>;
+  let mockSequenceRepo: jest.Mocked<ISequenceRepo>;
+  let mockExchangeRepo: jest.Mocked<IExchangeRepo>;
+  let mockAlertRepo: jest.Mocked<IAlertRepo>;
+  let mockInvestingClient: jest.Mocked<IInvestingClient>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -40,12 +51,15 @@ describe('PairManager', () => {
       getCount: jest.fn(),
       load: jest.fn(),
       save: jest.fn(),
+      findByPairId: jest.fn(),
     } as unknown as jest.Mocked<IPairRepo>;
 
     // Mock other managers
     mockSymbolManager = {
       investingToTv: jest.fn(),
+      tvToInvesting: jest.fn(),
       removeTvToInvestingMapping: jest.fn(),
+      deleteTvTicker: jest.fn(),
     } as unknown as jest.Mocked<ISymbolManager>;
 
     mockWatchManager = {
@@ -64,12 +78,38 @@ describe('PairManager', () => {
       createAlertFeedEvent: jest.fn(),
     } as unknown as jest.Mocked<IAlertFeedManager>;
 
+    mockRecentRepo = {
+      delete: jest.fn(),
+    } as unknown as jest.Mocked<IRecentTickerRepo>;
+
+    mockSequenceRepo = {
+      delete: jest.fn(),
+    } as unknown as jest.Mocked<ISequenceRepo>;
+
+    mockExchangeRepo = {
+      delete: jest.fn(),
+    } as unknown as jest.Mocked<IExchangeRepo>;
+
+    mockAlertRepo = {
+      get: jest.fn(),
+      delete: jest.fn(),
+    } as unknown as jest.Mocked<IAlertRepo>;
+
+    mockInvestingClient = {
+      deleteAlert: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<IInvestingClient>;
+
     pairManager = new PairManager(
       mockPairRepo,
       mockSymbolManager,
       mockWatchManager,
       mockFlagManager,
-      mockAlertFeedManager
+      mockAlertFeedManager,
+      mockRecentRepo,
+      mockSequenceRepo,
+      mockExchangeRepo,
+      mockAlertRepo,
+      mockInvestingClient
     );
   });
 
@@ -160,11 +200,11 @@ describe('PairManager', () => {
     });
   });
 
-  describe('deletePairInfo', () => {
+  describe('stopTrackingByInvestingTicker', () => {
     it('should delete pair info through repository', () => {
       const investingTicker = 'HDFC';
 
-      pairManager.deletePairInfo(investingTicker);
+      pairManager.stopTrackingByInvestingTicker(investingTicker);
 
       expect(mockPairRepo.delete).toHaveBeenCalledWith(investingTicker);
     });
@@ -172,9 +212,8 @@ describe('PairManager', () => {
     it('should handle deletion of non-existent ticker', () => {
       const nonExistentTicker = 'NONEXISTENT';
 
-      // Should not throw error
       expect(() => {
-        pairManager.deletePairInfo(nonExistentTicker);
+        pairManager.stopTrackingByInvestingTicker(nonExistentTicker);
       }).not.toThrow();
 
       expect(mockPairRepo.delete).toHaveBeenCalledWith(nonExistentTicker);
@@ -184,7 +223,7 @@ describe('PairManager', () => {
       const tickers = ['HDFC', 'RELIANCE', 'TCS'];
 
       tickers.forEach((ticker) => {
-        pairManager.deletePairInfo(ticker);
+        pairManager.stopTrackingByInvestingTicker(ticker);
       });
 
       expect(mockPairRepo.delete).toHaveBeenCalledTimes(3);
@@ -197,79 +236,194 @@ describe('PairManager', () => {
       const investingTicker = 'HDFC';
       const tvTicker = 'TV:HDFC';
 
-      // Mock symbol manager to return tvTicker
       mockSymbolManager.investingToTv.mockReturnValue(tvTicker);
-      
-      // Mock managers to return true for eviction
       mockWatchManager.evictTicker.mockReturnValue(true);
       mockFlagManager.evictTicker.mockReturnValue(true);
 
-      const result = pairManager.deletePairInfo(investingTicker);
+      const result = pairManager.stopTrackingByInvestingTicker(investingTicker);
 
-      // Verify cleanup methods were called
       expect(mockWatchManager.evictTicker).toHaveBeenCalledWith(tvTicker);
       expect(mockFlagManager.evictTicker).toHaveBeenCalledWith(tvTicker);
       expect(mockSymbolManager.removeTvToInvestingMapping).toHaveBeenCalledWith(investingTicker);
       expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith(tvTicker);
-      expect(result).toBe(true); // Both returned true, so combined result is true
+      expect(mockRecentRepo.delete).toHaveBeenCalledWith(tvTicker);
+      expect(mockSequenceRepo.delete).toHaveBeenCalledWith(tvTicker);
+      expect(mockExchangeRepo.delete).toHaveBeenCalledWith(tvTicker);
+      expect(result).toBe(true);
     });
 
-    it('should skip cleanup when tvTicker does not exist', () => {
+    it('should skip cleanup when no TV ticker exists', () => {
       const investingTicker = 'HDFC';
 
-      // Mock symbol manager to return null
       mockSymbolManager.investingToTv.mockReturnValue(null);
 
-      const result = pairManager.deletePairInfo(investingTicker);
+      const result = pairManager.stopTrackingByInvestingTicker(investingTicker);
 
-      // Verify cleanup methods were NOT called
       expect(mockWatchManager.evictTicker).not.toHaveBeenCalled();
       expect(mockFlagManager.evictTicker).not.toHaveBeenCalled();
       expect(mockAlertFeedManager.createAlertFeedEvent).not.toHaveBeenCalled();
-      
-      // Verify other operations still happened
+      expect(mockRecentRepo.delete).not.toHaveBeenCalled();
+      expect(mockSequenceRepo.delete).not.toHaveBeenCalled();
+      expect(mockExchangeRepo.delete).not.toHaveBeenCalled();
+
       expect(mockPairRepo.delete).toHaveBeenCalledWith(investingTicker);
       expect(mockSymbolManager.removeTvToInvestingMapping).toHaveBeenCalledWith(investingTicker);
-      expect(result).toBe(false); // No cleanup happened
+      expect(result).toBe(false);
     });
 
     it('should return true when at least one cleanup succeeds', () => {
       const investingTicker = 'HDFC';
       const tvTicker = 'TV:HDFC';
 
-      // Mock symbol manager to return tvTicker
       mockSymbolManager.investingToTv.mockReturnValue(tvTicker);
-      
-      // Mock watchlist eviction to return false (ticker not found)
       mockWatchManager.evictTicker.mockReturnValue(false);
-      // Mock flag eviction to return true (ticker found and removed)
       mockFlagManager.evictTicker.mockReturnValue(true);
 
-      const result = pairManager.deletePairInfo(investingTicker);
+      const result = pairManager.stopTrackingByInvestingTicker(investingTicker);
 
-      // Verify both cleanup methods were called regardless of return value
       expect(mockWatchManager.evictTicker).toHaveBeenCalledWith(tvTicker);
       expect(mockFlagManager.evictTicker).toHaveBeenCalledWith(tvTicker);
-      expect(result).toBe(true); // At least one was true, so combined result is true
+      expect(result).toBe(true);
     });
 
     it('should return false when both cleanups fail', () => {
       const investingTicker = 'HDFC';
       const tvTicker = 'TV:HDFC';
 
-      // Mock symbol manager to return tvTicker
       mockSymbolManager.investingToTv.mockReturnValue(tvTicker);
-      
-      // Mock both evictions to return false (ticker not found)
       mockWatchManager.evictTicker.mockReturnValue(false);
       mockFlagManager.evictTicker.mockReturnValue(false);
 
-      const result = pairManager.deletePairInfo(investingTicker);
+      const result = pairManager.stopTrackingByInvestingTicker(investingTicker);
 
-      // Verify both cleanup methods were called regardless of return value
       expect(mockWatchManager.evictTicker).toHaveBeenCalledWith(tvTicker);
       expect(mockFlagManager.evictTicker).toHaveBeenCalledWith(tvTicker);
-      expect(result).toBe(false); // Both were false, so combined result is false
+      expect(result).toBe(false);
+    });
+
+    it('should delete alerts when pairInfo exists', () => {
+      const investingTicker = 'HDFC';
+      const pairInfo = new PairInfo('HDFC', '123', 'NSE', 'HDFC');
+      const alerts = [new Alert('a1', '123', 100), new Alert('a2', '123', 200)];
+
+      mockPairRepo.getPairInfo.mockReturnValue(pairInfo);
+      mockAlertRepo.get.mockReturnValue(alerts);
+
+      pairManager.stopTrackingByInvestingTicker(investingTicker);
+
+      expect(mockAlertRepo.get).toHaveBeenCalledWith('123');
+      expect(mockInvestingClient.deleteAlert).toHaveBeenCalledTimes(2);
+      expect(mockAlertRepo.delete).toHaveBeenCalledWith('123');
+    });
+
+    it('should skip alert deletion when no pairInfo', () => {
+      const investingTicker = 'HDFC';
+
+      mockPairRepo.getPairInfo.mockReturnValue(null);
+
+      pairManager.stopTrackingByInvestingTicker(investingTicker);
+
+      expect(mockAlertRepo.get).not.toHaveBeenCalled();
+      expect(mockInvestingClient.deleteAlert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('stopTrackingByTvTicker', () => {
+    it('should delegate to stopTrackingByInvestingTicker when investing mapping exists', () => {
+      const tvTicker = 'HDFC';
+      const investingTicker = 'INV:HDFC';
+
+      mockSymbolManager.tvToInvesting.mockReturnValue(investingTicker);
+      mockSymbolManager.investingToTv.mockReturnValue(tvTicker);
+      mockWatchManager.evictTicker.mockReturnValue(true);
+      mockFlagManager.evictTicker.mockReturnValue(false);
+
+      const result = pairManager.stopTrackingByTvTicker(tvTicker);
+
+      expect(mockSymbolManager.tvToInvesting).toHaveBeenCalledWith(tvTicker);
+      expect(mockPairRepo.delete).toHaveBeenCalledWith(investingTicker);
+      expect(mockSymbolManager.removeTvToInvestingMapping).toHaveBeenCalledWith(investingTicker);
+      expect(mockWatchManager.evictTicker).toHaveBeenCalledWith(tvTicker);
+      expect(result).toBe(true);
+    });
+
+    it('should cleanup tvTicker stores when no investing mapping', () => {
+      const tvTicker = 'ORPHAN_TV';
+
+      mockSymbolManager.tvToInvesting.mockReturnValue(null);
+      mockWatchManager.evictTicker.mockReturnValue(false);
+      mockFlagManager.evictTicker.mockReturnValue(true);
+
+      const result = pairManager.stopTrackingByTvTicker(tvTicker);
+
+      // Should NOT touch pair repo or symbol mapping
+      expect(mockPairRepo.delete).not.toHaveBeenCalled();
+      expect(mockSymbolManager.removeTvToInvestingMapping).not.toHaveBeenCalled();
+
+      // Should still clean tvTicker-keyed stores
+      expect(mockWatchManager.evictTicker).toHaveBeenCalledWith(tvTicker);
+      expect(mockFlagManager.evictTicker).toHaveBeenCalledWith(tvTicker);
+      expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith(tvTicker);
+      expect(mockRecentRepo.delete).toHaveBeenCalledWith(tvTicker);
+      expect(mockSequenceRepo.delete).toHaveBeenCalledWith(tvTicker);
+      expect(mockExchangeRepo.delete).toHaveBeenCalledWith(tvTicker);
+      expect(result).toBe(true);
+    });
+
+    it('should return false when no investing mapping and no list cleanup', () => {
+      const tvTicker = 'ORPHAN_TV';
+
+      mockSymbolManager.tvToInvesting.mockReturnValue(null);
+      mockWatchManager.evictTicker.mockReturnValue(false);
+      mockFlagManager.evictTicker.mockReturnValue(false);
+
+      const result = pairManager.stopTrackingByTvTicker(tvTicker);
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('removePairByInvestingTicker', () => {
+    it('should only delete pairRepo entry — zero impact on everything else', () => {
+      pairManager.removePairByInvestingTicker('TTEX');
+
+      expect(mockPairRepo.delete).toHaveBeenCalledWith('TTEX');
+      expect(mockSymbolManager.removeTvToInvestingMapping).not.toHaveBeenCalled();
+      expect(mockSymbolManager.deleteTvTicker).not.toHaveBeenCalled();
+      expect(mockWatchManager.evictTicker).not.toHaveBeenCalled();
+      expect(mockFlagManager.evictTicker).not.toHaveBeenCalled();
+      expect(mockAlertRepo.get).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('checkGuardRails', () => {
+    it('should pass when no duplicate pairId or conflicting tvTicker', () => {
+      mockPairRepo.findByPairId.mockReturnValue(['TFCI']);
+      mockSymbolManager.investingToTv.mockReturnValue('TTEX');
+      (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(true);
+
+      const pairInfo = new PairInfo('TFCI Ltd', '18421', 'NSE', 'TFCI');
+      const result = pairManager.checkGuardRails(pairInfo, 'TTEX');
+      expect(result).toBe(true);
+    });
+
+    it('should block and warn when duplicate pairId found and user cancels', () => {
+      mockPairRepo.findByPairId.mockReturnValue(['TFCI', 'TATAELXSI']);
+      (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(false);
+
+      const pairInfo = new PairInfo('TFCI Ltd', '18421', 'NSE', 'TFCI');
+      const result = pairManager.checkGuardRails(pairInfo, 'TTEX');
+      expect(result).toBe(false);
+    });
+
+    it('should remove stale entries when duplicate pairId found and user confirms', () => {
+      mockPairRepo.findByPairId.mockReturnValue(['TFCI', 'TATAELXSI']);
+      (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(true);
+
+      const pairInfo = new PairInfo('TFCI Ltd', '18421', 'NSE', 'TFCI');
+      const result = pairManager.checkGuardRails(pairInfo, 'TTEX');
+      expect(result).toBe(true);
+      expect(mockPairRepo.delete).toHaveBeenCalledWith('TATAELXSI');
     });
   });
 
@@ -295,7 +449,7 @@ describe('PairManager', () => {
       expect(allTickers).toContain(investingTicker);
 
       // Delete mapping
-      pairManager.deletePairInfo(investingTicker);
+      pairManager.stopTrackingByInvestingTicker(investingTicker);
       expect(mockPairRepo.delete).toHaveBeenCalledWith(investingTicker);
     });
 
@@ -335,7 +489,7 @@ describe('PairManager', () => {
       }).toThrow('Repository error');
 
       expect(() => {
-        pairManager.deletePairInfo(investingTicker);
+        pairManager.stopTrackingByInvestingTicker(investingTicker);
       }).toThrow('Repository error');
     });
   });
