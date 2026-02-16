@@ -61,7 +61,8 @@ export interface ISymbolManager {
   createTvToExchangeTickerMapping(tvTicker: string, exchange: string): void;
 
   /**
-   * Checks if symbol is a composite symbol containing special characters like '/' or '*'
+   * Checks if symbol is a composite symbol containing special characters like '/', '*', '-', ':'
+   * or matching special-case composite tickers
    * @param symbol Symbol to check
    * @returns True if symbol is composite
    */
@@ -104,7 +105,13 @@ export class SymbolManager implements ISymbolManager {
    * Special characters that indicate a composite symbol
    * @private
    */
-  private readonly COMPOSITE_CHARACTERS = ['/', '*'];
+  private readonly COMPOSITE_CHARACTERS = ['/', '*', '-', ':'];
+
+  /**
+   * Tickers that should always be treated as composite despite lacking separators
+   * @private
+   */
+  private readonly SPECIAL_COMPOSITE_TICKERS = new Set(['GOLDSILVER', 'BTC.D']);
 
   /**
    * Initializes the SymbolManager with reverse mappings
@@ -166,6 +173,11 @@ export class SymbolManager implements ISymbolManager {
 
   /** @inheritdoc */
   public isComposite(symbol: string): boolean {
+    const normalized = symbol.toUpperCase();
+    if (this.SPECIAL_COMPOSITE_TICKERS.has(normalized)) {
+      return true;
+    }
+
     return this.COMPOSITE_CHARACTERS.some((char) => symbol.includes(char));
   }
 
