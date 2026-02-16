@@ -33,7 +33,6 @@ export class AlertsPlugin extends BaseAuditPlugin {
   async run(targets?: string[]): Promise<AuditResult[]> {
     const investingTickers = targets && targets.length > 0 ? targets : this.pairManager.getAllInvestingTickers();
     const results: AuditResult[] = [];
-    // TODO: Add Prerun Hooks,need to referesh Alerts for correct Data.
     // FIXME: Add To Watchlist should run Audit for Current Ticker.
 
     investingTickers.forEach((investingTicker: string) => {

@@ -37,7 +37,7 @@ export class PanelHandler implements IPanelHandler {
       const tvTicker = this.tickerManager.getTicker();
       switch (action) {
         case PanelAction.STOP_TRACKING:
-          // BUG: Stop Tracking should involve both Investing and TV Tickers for Manual Buttons.
+          // TODO: Stop Tracking should involve both Investing and TV Tickers for Manual Buttons.
           this.pairHandler.stopTrackingByTvTicker(tvTicker);
           break;
       }

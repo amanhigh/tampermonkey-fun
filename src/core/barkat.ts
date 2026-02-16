@@ -67,7 +67,7 @@ export class Barkat {
     }
   }
 
-  // TODO: Remove suppressed Errors for eslint
+  // FIXME: Remove suppressed Errors for eslint, refactor large function
   // eslint-disable-next-line max-lines-per-function
   private setupTradingViewUI() {
     const $area = this.uiUtil.buildArea(Constants.UI.IDS.AREAS.MAIN, '70%', '6%');
