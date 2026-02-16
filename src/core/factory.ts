@@ -413,7 +413,7 @@ export class Factory {
 
     // Return a singleton DuplicatePairIdsPlugin instance
     duplicatePairIds: () =>
-      Factory.getInstance('auditPlugin_duplicatePairIds', () => new DuplicatePairIdsPlugin(Factory.repo.pair())),
+      Factory.getInstance('auditPlugin_duplicatePairIds', () => new DuplicatePairIdsPlugin(Factory.manager.pair())),
 
     // Return a singleton TickerCollisionPlugin instance
     tickerCollision: () =>

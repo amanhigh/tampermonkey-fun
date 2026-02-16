@@ -158,7 +158,6 @@ export class UIUtil implements IUIUtil {
 
   /** @inheritdoc */
   public showConfirm(title: string, message?: string): boolean {
-    // HACK: Duplicate merge with Confirm ?
     const fullMessage = message ? `${title}\n\n${message}` : title;
     return confirm(fullMessage);
   }

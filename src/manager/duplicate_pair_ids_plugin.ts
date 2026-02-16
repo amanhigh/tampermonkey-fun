@@ -1,6 +1,6 @@
 import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
-import { IPairRepo } from '../repo/pair';
+import { IPairManager } from './pair';
 import { Constants } from '../models/constant';
 
 /**
@@ -12,7 +12,7 @@ export class DuplicatePairIdsPlugin extends BaseAuditPlugin {
   public readonly id = Constants.AUDIT.PLUGINS.DUPLICATE_PAIR_IDS;
   public readonly title = 'Duplicate PairIds';
 
-  constructor(private readonly pairRepo: IPairRepo) {
+  constructor(private readonly pairManager: IPairManager) {
     super();
   }
 
@@ -30,8 +30,8 @@ export class DuplicatePairIdsPlugin extends BaseAuditPlugin {
     // Group investingTickers by pairId
     const pairIdToInvestingTickers = new Map<string, string[]>();
 
-    this.pairRepo.getAllKeys().forEach((investingTicker: string) => {
-      const pair = this.pairRepo.get(investingTicker);
+    this.pairManager.getAllInvestingTickers().forEach((investingTicker: string) => {
+      const pair = this.pairManager.investingTickerToPairInfo(investingTicker);
       if (!pair) {
         return;
       }
@@ -48,8 +48,7 @@ export class DuplicatePairIdsPlugin extends BaseAuditPlugin {
 
     pairIdToInvestingTickers.forEach((investingTickers, pairId) => {
       if (investingTickers.length > 1) {
-        // HACK: Avoid Plugins Using Repo go via Managers.
-        const pairName = this.pairRepo.get(investingTickers[0])?.name ?? pairId;
+        const pairName = this.pairManager.investingTickerToPairInfo(investingTickers[0])?.name ?? pairId;
         results.push({
           pluginId: this.id,
           code: 'DUPLICATE_PAIR_ID',
