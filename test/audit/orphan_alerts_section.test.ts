@@ -1,17 +1,15 @@
 import { OrphanAlertsSection } from '../../src/handler/orphan_alerts_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
-import { IAlertRepo } from '../../src/repo/alert';
+import { ITickerHandler } from '../../src/handler/ticker';
 import { IAlertManager } from '../../src/manager/alert';
 import { IUIUtil } from '../../src/util/ui';
-import { Alert } from '../../src/models/alert';
-import { ITickerHandler } from '../../src/handler/ticker';
 import { Notifier } from '../../src/util/notify';
+import { Alert } from '../../src/models/alert';
 
 describe('OrphanAlertsSection', () => {
   let section: OrphanAlertsSection;
   let mockPlugin: IAudit;
   let mockTickerHandler: Partial<ITickerHandler>;
-  let mockAlertRepo: Partial<IAlertRepo>;
   let mockAlertManager: Partial<IAlertManager>;
   let mockUIUtil: Partial<IUIUtil>;
   let notifyWarnSpy: jest.SpyInstance;
@@ -37,28 +35,11 @@ describe('OrphanAlertsSection', () => {
       openTicker: jest.fn(),
     };
 
-    // Mock alert repo
-    mockAlertRepo = {
-      get: jest.fn(),
-      set: jest.fn(),
-      delete: jest.fn(),
-      getAllKeys: jest.fn(),
-      clear: jest.fn(),
-      getCount: jest.fn(),
-      has: jest.fn(),
-      addAlert: jest.fn(),
-      getSortedAlerts: jest.fn(),
-      removeAlert: jest.fn(),
-      hasAlerts: jest.fn(),
-      getAlertCount: jest.fn(),
-      createAlertClickEvent: jest.fn(),
-    };
-
     // Mock alert manager
     mockAlertManager = {
-      deleteAlert: jest.fn().mockResolvedValue(undefined),
-      getAlertsByPairId: jest.fn().mockReturnValue([]),
+      getAlertsByPairId: jest.fn(),
       deleteAlertsByPairId: jest.fn(),
+      deleteAlert: jest.fn(),
     };
 
     // Mock UIUtil
@@ -157,12 +138,12 @@ describe('OrphanAlertsSection', () => {
         data: { pairId: '6393', alertCount: 2 },
       };
 
-      (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
+      (mockAlertManager.getAlertsByPairId as jest.Mock).mockReturnValue(alerts);
       (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(true);
 
       await section.onRightClick(result);
 
-      expect(mockAlertRepo.get).toHaveBeenCalledWith('6393');
+      expect(mockAlertManager.getAlertsByPairId).toHaveBeenCalledWith('6393');
     });
 
     test('cancels deletion when user declines confirmation', async () => {
@@ -177,7 +158,7 @@ describe('OrphanAlertsSection', () => {
         data: { pairId: '6393', alertCount: 1 },
       };
 
-      (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
+      (mockAlertManager.getAlertsByPairId as jest.Mock).mockReturnValue(alerts);
       (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(false);
 
       await section.onRightClick(result);
@@ -198,7 +179,7 @@ describe('OrphanAlertsSection', () => {
         data: { pairId: '6393', alertCount: 3 },
       };
 
-      (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
+      (mockAlertManager.getAlertsByPairId as jest.Mock).mockReturnValue(alerts);
       (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(true);
 
       await section.onRightClick(result);
@@ -221,12 +202,12 @@ describe('OrphanAlertsSection', () => {
         data: { pairId: '6393', alertCount: 1 },
       };
 
-      (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
+      (mockAlertManager.getAlertsByPairId as jest.Mock).mockReturnValue(alerts);
       (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(true);
 
       await section.onRightClick(result);
 
-      expect(mockAlertRepo.delete).toHaveBeenCalledWith('6393');
+      expect(mockAlertManager.deleteAlertsByPairId).toHaveBeenCalledWith('6393');
     });
 
     test('shows success notification after deletion', async () => {
@@ -241,7 +222,7 @@ describe('OrphanAlertsSection', () => {
         data: { pairId: '6393', alertCount: 1 },
       };
 
-      (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
+      (mockAlertManager.getAlertsByPairId as jest.Mock).mockReturnValue(alerts);
       (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(true);
 
       await section.onRightClick(result);
@@ -260,7 +241,7 @@ describe('OrphanAlertsSection', () => {
         data: { pairId: '6393', alertCount: 0 },
       };
 
-      (mockAlertRepo.get as jest.Mock).mockReturnValue([]);
+      (mockAlertManager.getAlertsByPairId as jest.Mock).mockReturnValue([]);
 
       await section.onRightClick(result);
 
@@ -280,14 +261,14 @@ describe('OrphanAlertsSection', () => {
         data: { pairId: '6393', alertCount: 1 },
       };
 
-      (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
+      (mockAlertManager.getAlertsByPairId as jest.Mock).mockReturnValue(alerts);
       (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(true);
       (mockAlertManager.deleteAlert as jest.Mock).mockRejectedValue(new Error('API Error: Cannot delete alert'));
 
       await section.onRightClick(result);
 
       expect(notifyErrorSpy).toHaveBeenCalledWith('Failed to delete alerts: API Error: Cannot delete alert');
-      expect(mockAlertRepo.delete).not.toHaveBeenCalled();
+      expect(mockAlertManager.deleteAlertsByPairId).not.toHaveBeenCalled();
     });
 
     test('shows confirmation with alert details and prices', async () => {
@@ -302,7 +283,7 @@ describe('OrphanAlertsSection', () => {
         data: { pairId: '6393', alertCount: 2 },
       };
 
-      (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
+      (mockAlertManager.getAlertsByPairId as jest.Mock).mockReturnValue(alerts);
       (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(false);
 
       await section.onRightClick(result);
@@ -327,7 +308,7 @@ describe('OrphanAlertsSection', () => {
       await section.onRightClick(result);
 
       expect(notifyWarnSpy).toHaveBeenCalledWith('Invalid orphan alert result: missing pairId');
-      expect(mockAlertRepo.get).not.toHaveBeenCalled();
+      expect(mockAlertManager.getAlertsByPairId).not.toHaveBeenCalled();
     });
 
     test('shows progress notification during deletion', async () => {
@@ -342,7 +323,7 @@ describe('OrphanAlertsSection', () => {
         data: { pairId: '6393', alertCount: 1 },
       };
 
-      (mockAlertRepo.get as jest.Mock).mockReturnValue(alerts);
+      (mockAlertManager.getAlertsByPairId as jest.Mock).mockReturnValue(alerts);
       (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(true);
 
       await section.onRightClick(result);
@@ -405,7 +386,7 @@ describe('OrphanAlertsSection', () => {
 
       await section.onFixAll!(results);
 
-      expect(mockAlertRepo.get).not.toHaveBeenCalled();
+      expect(mockAlertManager.getAlertsByPairId).not.toHaveBeenCalled();
       expect(mockAlertManager.deleteAlert).not.toHaveBeenCalled();
     });
 

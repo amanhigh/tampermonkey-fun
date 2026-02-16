@@ -1,14 +1,14 @@
 import { OrphanExchangeSection } from '../../src/handler/orphan_exchange_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
-import { IExchangeManager } from '../../src/manager/exchange';
+import { ISymbolManager } from '../../src/manager/symbol';
 import { Notifier } from '../../src/util/notify';
 
 describe('OrphanExchangeSection', () => {
   let section: OrphanExchangeSection;
   let mockPlugin: IAudit;
   let mockTickerHandler: Partial<ITickerHandler>;
-  let mockExchangeRepo: Partial<IExchangeManager>;
+  let mockSymbolManager: Partial<ISymbolManager>;
   let notifySuccessSpy: jest.SpyInstance;
 
   const createResult = (tvTicker: string): AuditResult => ({
@@ -30,9 +30,9 @@ describe('OrphanExchangeSection', () => {
     };
 
     mockTickerHandler = { openTicker: jest.fn() };
-    mockExchangeRepo = { 
-      deleteExchangeMapping: jest.fn(),
-      getExchangeTicker: jest.fn()
+    mockSymbolManager = {
+      removeTvToExchangeTickerMapping: jest.fn(),
+      tvToExchangeTicker: jest.fn(),
     };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
@@ -41,7 +41,7 @@ describe('OrphanExchangeSection', () => {
     section = new OrphanExchangeSection(
       mockPlugin,
       mockTickerHandler as ITickerHandler,
-      mockExchangeRepo as IExchangeManager
+      mockSymbolManager as ISymbolManager
     );
   });
 
@@ -67,7 +67,7 @@ describe('OrphanExchangeSection', () => {
   describe('onRightClick', () => {
     test('deletes only the orphan exchange entry from ExchangeRepo', () => {
       section.onRightClick(createResult('HDFC'));
-      expect(mockExchangeRepo.deleteExchangeMapping).toHaveBeenCalledWith('HDFC');
+      expect(mockSymbolManager.removeTvToExchangeTickerMapping).toHaveBeenCalledWith('HDFC');
     });
   });
 
@@ -75,9 +75,9 @@ describe('OrphanExchangeSection', () => {
     test('deletes all orphan exchange entries from ExchangeRepo', () => {
       const results = [createResult('HDFC'), createResult('TCS')];
       section.onFixAll!(results);
-      expect(mockExchangeRepo.deleteExchangeMapping).toHaveBeenCalledTimes(2);
-      expect(mockExchangeRepo.deleteExchangeMapping).toHaveBeenCalledWith('HDFC');
-      expect(mockExchangeRepo.deleteExchangeMapping).toHaveBeenCalledWith('TCS');
+      expect(mockSymbolManager.removeTvToExchangeTickerMapping).toHaveBeenCalledTimes(2);
+      expect(mockSymbolManager.removeTvToExchangeTickerMapping).toHaveBeenCalledWith('HDFC');
+      expect(mockSymbolManager.removeTvToExchangeTickerMapping).toHaveBeenCalledWith('TCS');
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
   });

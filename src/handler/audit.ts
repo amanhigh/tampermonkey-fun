@@ -138,6 +138,7 @@ export class AuditHandler implements IAuditHandler {
         try {
           const investingTicker = this.tickerManager.getInvestingTicker();
           if (confirm(`Stop tracking ${investingTicker}?`)) {
+            // BUG 1.1: Stop tracking does not verify/remove existing flag state; flagged tickers stay highlighted
             this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
           }
         } catch {
