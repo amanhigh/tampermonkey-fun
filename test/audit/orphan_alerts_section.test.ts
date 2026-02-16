@@ -57,6 +57,8 @@ describe('OrphanAlertsSection', () => {
     // Mock alert manager
     mockAlertManager = {
       deleteAlert: jest.fn().mockResolvedValue(undefined),
+      getAlertsByPairId: jest.fn().mockReturnValue([]),
+      deleteAlertsByPairId: jest.fn(),
     };
 
     // Mock UIUtil
@@ -70,7 +72,7 @@ describe('OrphanAlertsSection', () => {
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
     notifyErrorSpy = jest.spyOn(Notifier, 'error').mockImplementation();
 
-    section = new OrphanAlertsSection(mockPlugin, mockTickerHandler as ITickerHandler, mockAlertRepo as IAlertRepo, mockAlertManager as IAlertManager, mockUIUtil as IUIUtil);
+    section = new OrphanAlertsSection(mockPlugin, mockTickerHandler as ITickerHandler, mockAlertManager as IAlertManager, mockUIUtil as IUIUtil);
   });
 
   afterEach(() => {
@@ -374,7 +376,7 @@ describe('OrphanAlertsSection', () => {
         },
       ];
 
-      (mockAlertRepo.get as jest.Mock).mockImplementation((pairId: string) => {
+      (mockAlertManager.getAlertsByPairId as jest.Mock).mockImplementation((pairId: string) => {
         if (pairId === '6393') return alerts1;
         if (pairId === '6394') return alerts2;
         return [];
@@ -383,8 +385,8 @@ describe('OrphanAlertsSection', () => {
       await section.onFixAll!(results);
 
       expect(mockAlertManager.deleteAlert).toHaveBeenCalledTimes(3);
-      expect(mockAlertRepo.delete).toHaveBeenCalledWith('6393');
-      expect(mockAlertRepo.delete).toHaveBeenCalledWith('6394');
+      expect(mockAlertManager.deleteAlertsByPairId).toHaveBeenCalledWith('6393');
+      expect(mockAlertManager.deleteAlertsByPairId).toHaveBeenCalledWith('6394');
       expect(notifySuccessSpy).toHaveBeenCalledWith('✓ Deleted 3 orphan alert(s) for 2 pair(s)');
     });
 
@@ -420,12 +422,12 @@ describe('OrphanAlertsSection', () => {
         },
       ];
 
-      (mockAlertRepo.get as jest.Mock).mockReturnValue([]);
+      (mockAlertManager.getAlertsByPairId as jest.Mock).mockReturnValue([]);
 
       await section.onFixAll!(results);
 
       expect(mockAlertManager.deleteAlert).not.toHaveBeenCalled();
-      expect(mockAlertRepo.delete).not.toHaveBeenCalled();
+      expect(mockAlertManager.deleteAlertsByPairId).not.toHaveBeenCalled();
     });
   });
 

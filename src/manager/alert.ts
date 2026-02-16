@@ -56,6 +56,19 @@ export interface IAlertManager {
   reloadAlerts(): Promise<number>;
 
   /**
+   * Retrieve alerts belonging to the given pairId from local repository
+   * @param pairId Pair identifier
+   * @returns Array of alerts or null when none exist
+   */
+  getAlertsByPairId(pairId: string): Alert[] | null;
+
+  /**
+   * Delete all alerts belonging to a specific pairId from local repository
+   * @param pairId Pair identifier
+   */
+  deleteAlertsByPairId(pairId: string): void;
+
+  /**
    * Creates alert click event for ticker operations
    * @param tvTicker TradingView ticker or null for mapping
    * @param investingTicker Investing ticker or null for direct open
@@ -80,6 +93,17 @@ export class AlertManager implements IAlertManager {
   getAlerts(): Alert[] | null {
     const investingTicker = this.tickerManager.getInvestingTicker();
     return this.getAlertsForInvestingTicker(investingTicker);
+  }
+
+  /** @inheritdoc */
+  getAlertsByPairId(pairId: string): Alert[] | null {
+    const alerts = this.alertRepo.get(pairId);
+    return alerts ?? null;
+  }
+
+  /** @inheritdoc */
+  deleteAlertsByPairId(pairId: string): void {
+    this.alertRepo.delete(pairId);
   }
 
   /**

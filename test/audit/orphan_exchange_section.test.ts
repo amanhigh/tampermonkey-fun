@@ -1,14 +1,14 @@
 import { OrphanExchangeSection } from '../../src/handler/orphan_exchange_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
-import { IExchangeRepo } from '../../src/repo/exchange';
+import { IExchangeManager } from '../../src/manager/exchange';
 import { Notifier } from '../../src/util/notify';
 
 describe('OrphanExchangeSection', () => {
   let section: OrphanExchangeSection;
   let mockPlugin: IAudit;
   let mockTickerHandler: Partial<ITickerHandler>;
-  let mockExchangeRepo: Partial<IExchangeRepo>;
+  let mockExchangeRepo: Partial<IExchangeManager>;
   let notifySuccessSpy: jest.SpyInstance;
 
   const createResult = (tvTicker: string): AuditResult => ({
@@ -30,7 +30,10 @@ describe('OrphanExchangeSection', () => {
     };
 
     mockTickerHandler = { openTicker: jest.fn() };
-    mockExchangeRepo = { delete: jest.fn() };
+    mockExchangeRepo = { 
+      deleteExchangeMapping: jest.fn(),
+      getExchangeTicker: jest.fn()
+    };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
     jest.spyOn(Notifier, 'warn').mockImplementation();
@@ -38,7 +41,7 @@ describe('OrphanExchangeSection', () => {
     section = new OrphanExchangeSection(
       mockPlugin,
       mockTickerHandler as ITickerHandler,
-      mockExchangeRepo as IExchangeRepo
+      mockExchangeRepo as IExchangeManager
     );
   });
 
@@ -64,7 +67,7 @@ describe('OrphanExchangeSection', () => {
   describe('onRightClick', () => {
     test('deletes only the orphan exchange entry from ExchangeRepo', () => {
       section.onRightClick(createResult('HDFC'));
-      expect(mockExchangeRepo.delete).toHaveBeenCalledWith('HDFC');
+      expect(mockExchangeRepo.deleteExchangeMapping).toHaveBeenCalledWith('HDFC');
     });
   });
 
@@ -72,9 +75,9 @@ describe('OrphanExchangeSection', () => {
     test('deletes all orphan exchange entries from ExchangeRepo', () => {
       const results = [createResult('HDFC'), createResult('TCS')];
       section.onFixAll!(results);
-      expect(mockExchangeRepo.delete).toHaveBeenCalledTimes(2);
-      expect(mockExchangeRepo.delete).toHaveBeenCalledWith('HDFC');
-      expect(mockExchangeRepo.delete).toHaveBeenCalledWith('TCS');
+      expect(mockExchangeRepo.deleteExchangeMapping).toHaveBeenCalledTimes(2);
+      expect(mockExchangeRepo.deleteExchangeMapping).toHaveBeenCalledWith('HDFC');
+      expect(mockExchangeRepo.deleteExchangeMapping).toHaveBeenCalledWith('TCS');
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
   });

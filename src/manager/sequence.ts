@@ -41,6 +41,13 @@ export interface ISequenceManager {
    * @param tvTicker TradingView ticker to delete sequence for
    */
   deleteSequence(tvTicker: string): void;
+
+  /**
+   * Retrieve raw sequence data stored for a ticker (if any)
+   * @param tvTicker TradingView ticker
+   * @returns Stored sequence string or undefined
+   */
+  getSequence(tvTicker: string): string | undefined;
 }
 
 /**
@@ -116,6 +123,15 @@ export class SequenceManager implements ISequenceManager {
    */
   deleteSequence(tvTicker: string): void {
     this.sequenceRepo.delete(tvTicker);
+  }
+
+  /**
+   * Retrieve raw sequence data stored for a ticker (if any)
+   * @param tvTicker TradingView ticker
+   * @returns Stored sequence string or undefined
+   */
+  getSequence(tvTicker: string): string | undefined {
+    return this.sequenceRepo.get(tvTicker);
   }
 
   /**

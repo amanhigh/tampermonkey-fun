@@ -127,6 +127,7 @@ export class AuditHandler implements IAuditHandler {
     // Refresh All button
     this.uiUtil
       .buildButton(refreshId, '\u{1F504} Refresh', () => {
+        // BUG: Refresh button runs audits but does not update ticker text box/display header
         void this.auditAll();
       })
       .appendTo($toolbar);
@@ -152,6 +153,7 @@ export class AuditHandler implements IAuditHandler {
     this.uiUtil
       .buildButton(mapAlertId, '\u{1F517} Map', () => {
         const ticker = this.tickerManager.getTicker();
+        // BUG: Mapping from toolbar does not refresh ticker/alerts to show new mapping state
         void this.pairHandler.mapInvestingTicker(ticker);
       })
       .appendTo($toolbar);

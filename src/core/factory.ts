@@ -139,6 +139,7 @@ export class Factory {
             Factory.handler.audit()
           )
       ),
+
     imdb: (): ImdbApp =>
       Factory.getInstance(
         'imdbApp',
@@ -467,7 +468,6 @@ export class Factory {
           new OrphanAlertsSection(
             Factory.audit.orphanAlerts(), // ✅ Direct plugin injection
             Factory.handler.ticker(), // ✅ TickerHandler for opening tickers by name
-            Factory.repo.alert(),
             Factory.manager.alert(), // ✅ AlertManager for deletion operations
             Factory.util.ui()
           )
@@ -491,7 +491,11 @@ export class Factory {
       Factory.getInstance(
         'orphanSequencesSection',
         () =>
-          new OrphanSequencesSection(Factory.audit.orphanSequences(), Factory.handler.ticker(), Factory.repo.sequence())
+          new OrphanSequencesSection(
+            Factory.audit.orphanSequences(),
+            Factory.handler.ticker(),
+            Factory.manager.sequence()
+          )
       ),
 
     // Orphan Flags Audit Section (FR-012)
@@ -506,7 +510,7 @@ export class Factory {
       Factory.getInstance(
         'orphanExchangeSection',
         () =>
-          new OrphanExchangeSection(Factory.audit.orphanExchange(), Factory.handler.ticker(), Factory.repo.exchange())
+          new OrphanExchangeSection(Factory.audit.orphanExchange(), Factory.handler.ticker(), Factory.manager.symbol())
       ),
 
     // Duplicate PairIds Audit Section (FR-014)
