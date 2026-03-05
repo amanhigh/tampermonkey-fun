@@ -19,9 +19,22 @@ export class PanelHandler implements IPanelHandler {
 
   public async showPanel(): Promise<void> {
     const actions = Object.values(PanelAction);
-    const selected = await this.smartPrompt.showModal(actions);
-    if (selected && selected !== 'Cancel') {
-      this.handlePanelAction(selected as PanelAction);
+    const response = await this.smartPrompt.showModal(actions);
+
+    // Handle cancel - user explicitly cancelled
+    if (response.type === 'cancel') {
+      return;
+    }
+
+    // Handle none - not applicable for panel actions, treat as cancel
+    if (response.type === 'none') {
+      return;
+    }
+
+    // Handle reason - should be a PanelAction
+    if (response.type === 'reason') {
+      const action = response.value as PanelAction;
+      this.handlePanelAction(action);
     }
   }
 

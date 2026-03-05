@@ -94,8 +94,8 @@ describe('SmartPrompt', () => {
 
       smartPrompt.showModal(reasons);
 
-      // Should create: modal div + 3 reason buttons + override container + text input + cancel button
-      expect(mockDocument.createElement).toHaveBeenCalledTimes(7);
+      // Should create: modal div + 3 reason buttons + override container + text input + cancel button + none button
+      expect(mockDocument.createElement).toHaveBeenCalledTimes(8);
     });
 
     it('should create radio buttons for overrides', () => {
@@ -156,7 +156,7 @@ describe('SmartPrompt', () => {
 
       const createCalls = mockDocument.createElement.mock.calls;
       const buttonCalls = createCalls.filter((call: any) => call[0] === 'button');
-      expect(buttonCalls.length).toBeGreaterThanOrEqual(3); // 2 reasons + cancel
+      expect(buttonCalls.length).toBeGreaterThanOrEqual(4); // 2 reasons + cancel + none
     });
 
     it('should create text input with correct properties', () => {

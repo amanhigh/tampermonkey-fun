@@ -1,7 +1,7 @@
 /**
  * Smart prompt response types
  */
-export type SmartPromptResponse = 
+export type SmartPromptResponse =
   | { type: 'cancel'; value: null }
   | { type: 'none'; value: 'none' }
   | { type: 'reason'; value: string };

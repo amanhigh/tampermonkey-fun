@@ -5,6 +5,7 @@
 import { IJournalManager } from '../manager/journal';
 import { ISmartPrompt } from '../util/smart';
 import { IUIUtil } from '../util/ui';
+import { Notifier } from '../util/notify';
 import { Constants } from '../models/constant';
 import { JournalType } from '../models/trading';
 import { TickerManager } from '../manager/ticker';
@@ -57,7 +58,14 @@ export class JournalHandler implements IJournalHandler {
   public async handleRecordJournal(type: JournalType): Promise<void> {
     const reason = await this.showReasonModal();
 
-    if (!reason) {
+    // Handle cancel - user explicitly cancelled
+    if (reason === null) {
+      return;
+    }
+
+    // REJECTED requires a reason, SET/RESULT can have empty reason
+    if (type === JournalType.REJECTED && reason === '') {
+      Notifier.warn('Rejected entries require a reason. Please provide a reason or cancel.');
       return;
     }
 
@@ -91,16 +99,23 @@ export class JournalHandler implements IJournalHandler {
     try {
       await this.tvManager.setSwiftKeysState(false);
 
-      const reason = await this.smartPrompt.showModal(
+      const response = await this.smartPrompt.showModal(
         Constants.TRADING.PROMPT.REASONS,
         Constants.TRADING.PROMPT.OVERRIDES
       );
 
-      if (!reason || reason === 'Cancel') {
+      // Handle cancel - user explicitly cancelled
+      if (response.type === 'cancel') {
         return null;
       }
 
-      return reason;
+      // Handle none - user chose no reason (valid for SET/RESULT, not for REJECTED)
+      if (response.type === 'none') {
+        return ''; // Empty string for no reason
+      }
+
+      // Handle reason - user provided a valid reason
+      return response.value;
     } catch (error) {
       throw new Error(`Failed to show reason modal: ${error}`);
     } finally {
