@@ -1,4 +1,12 @@
 /**
+ * Smart prompt response types
+ */
+export type SmartPromptResponse = 
+  | { type: 'cancel'; value: null }
+  | { type: 'none'; value: 'none' }
+  | { type: 'reason'; value: string };
+
+/**
  * Interface for smart prompt utility operations
  */
 export interface ISmartPrompt {
@@ -6,9 +14,12 @@ export interface ISmartPrompt {
    * Shows a modal dialog with customizable buttons and options
    * @param reasons - Array of reason buttons to display
    * @param overrides - Optional array of override radio buttons
-   * @returns Promise that resolves with the selected value
+   * @returns Promise that resolves with SmartPromptResponse:
+   * - { type: 'cancel', value: null } if user cancelled (Cancel button only)
+   * - { type: 'none', value: 'none' } if user chose none/empty (None button or Escape key)
+   * - { type: 'reason', value: string } if user selected a reason or entered text
    */
-  showModal(reasons: string[], overrides?: string[]): Promise<string>;
+  showModal(reasons: string[], overrides?: string[]): Promise<SmartPromptResponse>;
 }
 
 /**
@@ -34,7 +45,7 @@ export class SmartPrompt implements ISmartPrompt {
     return modal;
   }
 
-  private createButton(text: string, id: string, callback: (value: string) => void): HTMLButtonElement {
+  private createButton(text: string, id: string, callback: (response: SmartPromptResponse) => void): HTMLButtonElement {
     const button = document.createElement('button');
     button.id = id;
     button.innerHTML = text;
@@ -42,13 +53,40 @@ export class SmartPrompt implements ISmartPrompt {
 
     button.onclick = () => {
       const selectedOverride = this.getSelectedOverride();
-      callback(selectedOverride ? `${text}-${selectedOverride}` : text);
+      const value = selectedOverride ? `${text}-${selectedOverride}` : text;
+      callback({ type: 'reason', value });
       this.destroyModal();
     };
     return button;
   }
 
-  private createTextBox(id: string, callback: (value: string) => void): HTMLInputElement {
+  private createCancelButton(id: string, callback: (response: SmartPromptResponse) => void): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.id = id;
+    button.innerHTML = 'Cancel';
+    button.className = SmartPrompt.CLASSES.MODAL_BUTTON;
+
+    button.onclick = () => {
+      callback({ type: 'cancel', value: null });
+      this.destroyModal();
+    };
+    return button;
+  }
+
+  private createNoneButton(id: string, callback: (response: SmartPromptResponse) => void): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.id = id;
+    button.innerHTML = 'None';
+    button.className = SmartPrompt.CLASSES.MODAL_BUTTON;
+
+    button.onclick = () => {
+      callback({ type: 'none', value: 'none' });
+      this.destroyModal();
+    };
+    return button;
+  }
+
+  private createTextBox(id: string, callback: (response: SmartPromptResponse) => void): HTMLInputElement {
     const textBox = document.createElement('input');
     textBox.id = id;
     textBox.type = 'text';
@@ -57,7 +95,12 @@ export class SmartPrompt implements ISmartPrompt {
 
     textBox.onkeydown = (event) => {
       if (event.key === 'Enter') {
-        callback(textBox.value);
+        const value = textBox.value.trim();
+        if (value === '') {
+          callback({ type: 'none', value: 'none' });
+        } else {
+          callback({ type: 'reason', value });
+        }
         this.destroyModal();
       }
     };
@@ -92,7 +135,7 @@ export class SmartPrompt implements ISmartPrompt {
   }
 
   /** @inheritdoc */
-  public async showModal(reasons: string[], overrides: string[] = []): Promise<string> {
+  public async showModal(reasons: string[], overrides: string[] = []): Promise<SmartPromptResponse> {
     return new Promise((resolve) => {
       this.destroyModal();
       this.modal = this.createModal();
@@ -121,14 +164,17 @@ export class SmartPrompt implements ISmartPrompt {
       const textBox = this.createTextBox('smart-text', resolve);
       this.modal.appendChild(textBox);
 
-      const cancelButton = this.createButton('Cancel', 'smart-cancel', resolve);
+      const cancelButton = this.createCancelButton('smart-cancel', resolve);
       this.modal.appendChild(cancelButton);
+
+      const noneButton = this.createNoneButton('smart-none', resolve);
+      this.modal.appendChild(noneButton);
 
       this.modal.style.display = 'block';
 
       const keydownHandler = (event: KeyboardEvent) => {
         if (event.key === 'Escape') {
-          resolve('');
+          resolve({ type: 'none', value: 'none' });
           this.destroyModal();
         }
       };
