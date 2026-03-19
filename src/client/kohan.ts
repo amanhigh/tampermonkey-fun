@@ -58,7 +58,7 @@ export class KohanClient extends BaseClient implements IKohanClient {
    */
   async recordTicker(journalTag: string): Promise<void> {
     try {
-      await this.makeRequest<void>(`/ticker/${journalTag}/record`);
+      await this.makeRequest<void>(`/os/ticker/${journalTag}/record`);
     } catch (error) {
       throw new Error(`Failed to record ticker: ${(error as Error).message}`);
     }
@@ -71,7 +71,7 @@ export class KohanClient extends BaseClient implements IKohanClient {
    */
   async getClip(): Promise<string> {
     try {
-      return await this.makeRequest<string>('/clip');
+      return await this.makeRequest<string>('/os/clip/');
     } catch (error) {
       throw new Error(`Failed to get clip: ${(error as Error).message}`);
     }
@@ -85,7 +85,7 @@ export class KohanClient extends BaseClient implements IKohanClient {
    */
   async enableSubmap(submap: string): Promise<void> {
     try {
-      await this.makeRequest<void>('/submap/enable', {
+      await this.makeRequest<void>('/os/submap/enable', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({ submap }),
@@ -103,7 +103,7 @@ export class KohanClient extends BaseClient implements IKohanClient {
    */
   async disableSubmap(submap: string): Promise<void> {
     try {
-      await this.makeRequest<void>('/submap/disable', {
+      await this.makeRequest<void>('/os/submap/disable', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({ submap }),
