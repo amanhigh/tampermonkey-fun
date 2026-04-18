@@ -9,11 +9,13 @@ import { ICommandInputHandler } from '../handler/command';
 import { IKiteHandler } from '../handler/kite';
 import { ITickerHandler } from '../handler/ticker';
 import { IAlertFeedHandler } from '../handler/alertfeed';
+import { IAlertManager } from '../manager/alert';
 import { JournalType } from '../models/trading';
 import { IGlobalErrorHandler } from '../handler/error';
 import { IPanelHandler } from '../handler/panel';
 import { ITradingViewManager } from '../manager/tv';
 import { IAuditHandler } from '../handler/audit';
+import { AlertClickAction } from '../models/events';
 import { Factory } from './factory';
 
 export class Barkat {
@@ -29,6 +31,7 @@ export class Barkat {
     private readonly kiteHandler: IKiteHandler,
     private readonly tickerHandler: ITickerHandler,
     private readonly alertFeedHandler: IAlertFeedHandler,
+    private readonly alertManager: IAlertManager,
     private readonly panelHandler: IPanelHandler,
     private readonly tvManager: ITradingViewManager,
     private readonly auditHandler: IAuditHandler
@@ -80,9 +83,8 @@ export class Barkat {
         return;
       }
 
-      console.info('Opening TradingView ticker from localhost review queue', ticker);
-      this.tickerHandler.openTicker(ticker);
-      alert(`Opening ${ticker} on TradingView`); // Alert to confirm click action in localhost testing
+      console.info('Publishing alert clicked event for localhost review queue', ticker);
+      void this.alertManager.createAlertClickEvent(ticker, AlertClickAction.OPEN);
     });
   }
 

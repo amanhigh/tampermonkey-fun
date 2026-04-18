@@ -134,6 +134,7 @@ export class Factory {
             Factory.handler.kite(),
             Factory.handler.ticker(),
             Factory.handler.alertFeed(),
+            Factory.manager.alert(),
             Factory.handler.panel(),
             Factory.manager.tv(),
             Factory.handler.audit()
