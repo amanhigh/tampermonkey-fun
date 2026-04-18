@@ -132,9 +132,9 @@ export const Constants = Object.freeze({
       CLOSE: 'button[data-name="close"]', // Old name: orderPanelCloseSelector
       GTT_BUTTON: '[data-role="gtt-button"]',
       INPUTS: {
-        ENTRY_PRICE: 'input[data-property-id="Risk/RewardlongEntryPrice"]',
-        PROFIT_PRICE: 'input[data-property-id="Risk/RewardlongProfitLevelPrice"]',
-        STOP_PRICE: 'input[data-property-id="Risk/RewardlongStopLevelPrice"]',
+        ENTRY_PRICE: 'input[data-property-id*="EntryPrice"]',
+        PROFIT_PRICE: 'input[data-property-id*="ProfitLevelPrice"]',
+        STOP_PRICE: 'input[data-property-id*="StopLevelPrice"]',
       },
     },
     SCREENER: {
