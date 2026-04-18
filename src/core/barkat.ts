@@ -62,6 +62,20 @@ export class Barkat {
 
   private setupLocalhost(): void {
     console.info('Barkat localhost detected');
+    document.addEventListener('click', (event) => {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+
+      const reviewLink = event.target.closest('a[href^="/journal/"]');
+
+      if (!reviewLink) {
+        return;
+      }
+
+      alert('Review Ticker clicked: ' + (reviewLink.textContent?.trim() ?? reviewLink.getAttribute('href')));
+      console.log('TO Review Ticker clicked', reviewLink.textContent?.trim() ?? reviewLink.getAttribute('href'));
+    });
   }
 
   initialize(): void {
