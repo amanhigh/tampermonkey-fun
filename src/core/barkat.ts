@@ -73,8 +73,16 @@ export class Barkat {
         return;
       }
 
-      alert('Review Ticker clicked: ' + (reviewLink.textContent?.trim() ?? reviewLink.getAttribute('href')));
-      console.log('TO Review Ticker clicked', reviewLink.textContent?.trim() ?? reviewLink.getAttribute('href'));
+      const ticker =
+        reviewLink.querySelector('span.font-semibold')?.textContent?.trim() ?? reviewLink.textContent?.trim();
+
+      if (!ticker) {
+        return;
+      }
+
+      console.info('Opening TradingView ticker from localhost review queue', ticker);
+      this.tickerHandler.openTicker(ticker);
+      alert(`Opening ${ticker} on TradingView`); // Alert to confirm click action in localhost testing
     });
   }
 
