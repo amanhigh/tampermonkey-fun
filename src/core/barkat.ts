@@ -46,6 +46,10 @@ export class Barkat {
     return window.location.host.includes('kite.zerodha.com');
   }
 
+  private isLocalhostSite(): boolean {
+    return window.location.host.includes('localhost');
+  }
+
   private setupInvestingUI(): void {
     this.alertFeedHandler.initialize();
     console.info('Investing UI setup');
@@ -56,9 +60,16 @@ export class Barkat {
     console.info('Kite UI setup');
   }
 
+  private setupLocalhost(): void {
+    console.info('Barkat localhost detected');
+  }
+
   initialize(): void {
+    console.info('Initializing Barkat');
     this.errorHandler.registerGlobalErrorHandlers();
-    if (this.isInvestingSite()) {
+    if (this.isLocalhostSite()) {
+      this.setupLocalhost();
+    } else if (this.isInvestingSite()) {
       this.setupInvestingUI();
     } else if (this.isTradingViewSite()) {
       this.setupTradingViewUI();
