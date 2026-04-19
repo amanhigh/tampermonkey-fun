@@ -170,6 +170,11 @@ export const Constants = Object.freeze({
       ALERT_DATA: 'div.alertNotifData > a',
       ALERT_TITLE: '.alertDataTitle',
     },
+    JOURNAL: {
+      REVIEW_LINK: 'a[href^="/journal/"]',
+      CURRENT_TICKER: 'h2.text-3xl',
+      REVIEW_TICKER: 'span.font-semibold[x-text="item.ticker"]',
+    },
     SIDEBAR: {
       DELETE_ARROW: 'div [data-name="removeAllDrawingTools"] button[class^=arrow]', // Old Name: deleteArrowSelector
       DELETE_DRAWING: 'div [data-name="remove-drawing-tools"]', // Old Name: deleteDrawingSelector

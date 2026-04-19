@@ -11,6 +11,8 @@ import { JournalType } from '../models/trading';
 import { TickerManager } from '../manager/ticker';
 import { ITradingViewManager } from '../manager/tv';
 import { IStyleManager } from '../manager/style';
+import { IAlertManager } from '../manager/alert';
+import { AlertClickAction } from '../models/events';
 
 /**
  * Interface for managing journal entry operations at UI/Event level
@@ -34,19 +36,32 @@ export interface IJournalHandler {
    * Shows reason prompt modal and copies formatted text to clipboard
    */
   handleJournalReasonPrompt(): Promise<void>;
+
+  /**
+   * Handles opening a reviewed journal ticker in TradingView via alert click event.
+   * @param event Optional click event used to infer the clicked review item
+   */
+  handleReviewJournal(event?: Event): void;
+
+  /**
+   * Registers localhost review handlers and action button.
+   */
+  registerJournalReviewHandler(): void;
 }
 
 /**
  * Handles journal operations and user interactions
  */
 export class JournalHandler implements IJournalHandler {
+  // eslint-disable-next-line max-params
   constructor(
     private readonly tickerManager: TickerManager,
     private readonly journalManager: IJournalManager,
     private readonly smartPrompt: ISmartPrompt,
     private readonly uiUtil: IUIUtil,
     private readonly tvManager: ITradingViewManager,
-    private readonly styleManager: IStyleManager
+    private readonly styleManager: IStyleManager,
+    private readonly alertManager: IAlertManager
   ) {}
 
   /** @inheritdoc */
@@ -86,6 +101,39 @@ export class JournalHandler implements IJournalHandler {
     const text = this.journalManager.createReasonText(reason);
     this.tvManager.clipboardCopy(text);
     this.styleManager.selectToolbar(Constants.DOM.TOOLBARS.TEXT);
+  }
+
+  /** @inheritdoc */
+  public handleReviewJournal(event?: Event): void {
+    const ticker = this.extractReviewTicker(event);
+    if (!ticker) {
+      return;
+    }
+
+    void this.alertManager.createAlertClickEvent(ticker, AlertClickAction.OPEN);
+  }
+
+  /** @inheritdoc */
+  public registerJournalReviewHandler(): void {
+    document.querySelectorAll(Constants.DOM.JOURNAL.REVIEW_LINK).forEach((reviewLink) => {
+      reviewLink.addEventListener('click', (event) => {
+        void this.handleReviewJournal(event);
+      });
+    });
+  }
+
+  private extractReviewTicker(event?: Event): string | null {
+    if (typeof Element !== 'undefined' && event?.target instanceof Element) {
+      const reviewLink = event.target.closest('a[href^="/journal/"]');
+      return (
+        reviewLink?.querySelector(Constants.DOM.JOURNAL.REVIEW_TICKER)?.textContent?.trim() ??
+        reviewLink?.querySelector('span.font-semibold')?.textContent?.trim() ??
+        document.querySelector(Constants.DOM.JOURNAL.CURRENT_TICKER)?.textContent?.trim() ??
+        null
+      );
+    }
+
+    return document.querySelector(Constants.DOM.JOURNAL.CURRENT_TICKER)?.textContent?.trim() || null;
   }
 
   /**

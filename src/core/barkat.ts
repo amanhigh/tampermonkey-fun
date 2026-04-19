@@ -9,13 +9,11 @@ import { ICommandInputHandler } from '../handler/command';
 import { IKiteHandler } from '../handler/kite';
 import { ITickerHandler } from '../handler/ticker';
 import { IAlertFeedHandler } from '../handler/alertfeed';
-import { IAlertManager } from '../manager/alert';
 import { JournalType } from '../models/trading';
 import { IGlobalErrorHandler } from '../handler/error';
 import { IPanelHandler } from '../handler/panel';
 import { ITradingViewManager } from '../manager/tv';
 import { IAuditHandler } from '../handler/audit';
-import { AlertClickAction } from '../models/events';
 import { Factory } from './factory';
 
 export class Barkat {
@@ -31,7 +29,6 @@ export class Barkat {
     private readonly kiteHandler: IKiteHandler,
     private readonly tickerHandler: ITickerHandler,
     private readonly alertFeedHandler: IAlertFeedHandler,
-    private readonly alertManager: IAlertManager,
     private readonly panelHandler: IPanelHandler,
     private readonly tvManager: ITradingViewManager,
     private readonly auditHandler: IAuditHandler
@@ -65,27 +62,7 @@ export class Barkat {
 
   private setupLocalhost(): void {
     console.info('Barkat localhost detected');
-    document.addEventListener('click', (event) => {
-      if (!(event.target instanceof Element)) {
-        return;
-      }
-
-      const reviewLink = event.target.closest('a[href^="/journal/"]');
-
-      if (!reviewLink) {
-        return;
-      }
-
-      const ticker =
-        reviewLink.querySelector('span.font-semibold')?.textContent?.trim() ?? reviewLink.textContent?.trim();
-
-      if (!ticker) {
-        return;
-      }
-
-      console.info('Publishing alert clicked event for localhost review queue', ticker);
-      void this.alertManager.createAlertClickEvent(ticker, AlertClickAction.OPEN);
-    });
+    this.journalHandler.registerJournalReviewHandler();
   }
 
   initialize(): void {
