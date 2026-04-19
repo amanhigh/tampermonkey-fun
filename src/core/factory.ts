@@ -139,6 +139,7 @@ export class Factory {
             Factory.handler.audit()
           )
       ),
+
     imdb: (): ImdbApp =>
       Factory.getInstance(
         'imdbApp',
@@ -413,7 +414,7 @@ export class Factory {
 
     // Return a singleton DuplicatePairIdsPlugin instance
     duplicatePairIds: () =>
-      Factory.getInstance('auditPlugin_duplicatePairIds', () => new DuplicatePairIdsPlugin(Factory.repo.pair())),
+      Factory.getInstance('auditPlugin_duplicatePairIds', () => new DuplicatePairIdsPlugin(Factory.manager.pair())),
 
     // Return a singleton TickerCollisionPlugin instance
     tickerCollision: () =>
@@ -467,7 +468,6 @@ export class Factory {
           new OrphanAlertsSection(
             Factory.audit.orphanAlerts(), // ✅ Direct plugin injection
             Factory.handler.ticker(), // ✅ TickerHandler for opening tickers by name
-            Factory.repo.alert(),
             Factory.manager.alert(), // ✅ AlertManager for deletion operations
             Factory.util.ui()
           )
@@ -491,7 +491,11 @@ export class Factory {
       Factory.getInstance(
         'orphanSequencesSection',
         () =>
-          new OrphanSequencesSection(Factory.audit.orphanSequences(), Factory.handler.ticker(), Factory.repo.sequence())
+          new OrphanSequencesSection(
+            Factory.audit.orphanSequences(),
+            Factory.handler.ticker(),
+            Factory.manager.sequence()
+          )
       ),
 
     // Orphan Flags Audit Section (FR-012)
@@ -506,7 +510,7 @@ export class Factory {
       Factory.getInstance(
         'orphanExchangeSection',
         () =>
-          new OrphanExchangeSection(Factory.audit.orphanExchange(), Factory.handler.ticker(), Factory.repo.exchange())
+          new OrphanExchangeSection(Factory.audit.orphanExchange(), Factory.handler.ticker(), Factory.manager.symbol())
       ),
 
     // Duplicate PairIds Audit Section (FR-014)
@@ -748,7 +752,13 @@ export class Factory {
     sequence: (): ISequenceHandler =>
       Factory.getInstance(
         'sequenceHandler',
-        () => new SequenceHandler(Factory.manager.sequence(), Factory.manager.ticker(), Factory.manager.symbol())
+        () =>
+          new SequenceHandler(
+            Factory.manager.sequence(),
+            Factory.manager.ticker(),
+            Factory.manager.symbol(),
+            Factory.manager.pair()
+          )
       ),
     journal: (): IJournalHandler =>
       Factory.getInstance(
@@ -760,7 +770,8 @@ export class Factory {
             Factory.util.smart(),
             Factory.util.ui(),
             Factory.manager.tv(),
-            Factory.manager.style()
+            Factory.manager.style(),
+            Factory.manager.alert()
           )
       ),
     imdb: (): IImdbHandler =>

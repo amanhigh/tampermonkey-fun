@@ -2,7 +2,6 @@ import { AuditResult } from '../models/audit';
 import { IAuditSection } from './audit_section';
 import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
-import { IAlertRepo } from '../repo/alert';
 import { IAlertManager } from '../manager/alert';
 import { ITickerHandler } from './ticker';
 import { IUIUtil } from '../util/ui';
@@ -63,13 +62,13 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
         continue;
       }
 
-      const alerts = this.alertRepo.get(pairId);
+      const alerts = this.alertManager.getAlertsByPairId(pairId);
       if (!alerts || alerts.length === 0) {
         continue;
       }
 
       await Promise.all(alerts.map(async (alert) => this.alertManager.deleteAlert(alert)));
-      this.alertRepo.delete(pairId);
+      this.alertManager.deleteAlertsByPairId(pairId);
       totalDeleted += alerts.length;
     }
     Notifier.success(`✓ Deleted ${totalDeleted} orphan alert(s) for ${results.length} pair(s)`);
@@ -85,13 +84,11 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
   /**
    * Creates an Orphan Alerts audit section
    * @param plugin - IAudit plugin for orphan alerts (injected directly)
-   * @param alertRepo - Repository for alert operations
-   * @param alertManager - Manager for alert deletion operations
+   * @param alertManager - Manager for alert operations
    */
   constructor(
     plugin: IAudit,
     private readonly tickerHandler: ITickerHandler,
-    private readonly alertRepo: IAlertRepo,
     private readonly alertManager: IAlertManager,
     private readonly uiUtil: IUIUtil
   ) {
@@ -115,7 +112,7 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
       }
 
       // Get all alerts for this pairId
-      const alerts = this.alertRepo.get(pairId);
+      const alerts = this.alertManager.getAlertsByPairId(pairId);
       if (!alerts || alerts.length === 0) {
         Notifier.warn(`No alerts found for pairId ${pairId}`);
         return false;
@@ -135,8 +132,8 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
       // Delete each alert from Investing.com via AlertManager
       await Promise.all(alerts.map(async (alert) => this.alertManager.deleteAlert(alert)));
 
-      // Remove from local repo
-      this.alertRepo.delete(pairId);
+      // Remove from local store via manager
+      this.alertManager.deleteAlertsByPairId(pairId);
 
       // Success notification
       Notifier.success(`✓ Deleted ${alerts.length} orphan alert(s) for ${pairId}`);

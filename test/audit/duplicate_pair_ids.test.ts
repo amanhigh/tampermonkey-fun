@@ -1,18 +1,18 @@
 import { DuplicatePairIdsPlugin } from '../../src/manager/duplicate_pair_ids_plugin';
-import { IPairRepo } from '../../src/repo/pair';
+import { IPairManager } from '../../src/manager/pair';
 import { PairInfo } from '../../src/models/alert';
 
 describe('DuplicatePairIdsPlugin', () => {
   let plugin: DuplicatePairIdsPlugin;
-  let pairRepo: jest.Mocked<IPairRepo>;
+  let pairManager: jest.Mocked<IPairManager>;
 
   beforeEach(() => {
-    pairRepo = {
-      getAllKeys: jest.fn(),
-      get: jest.fn(),
+    pairManager = {
+      getAllInvestingTickers: jest.fn(),
+      investingTickerToPairInfo: jest.fn(),
     } as any;
 
-    plugin = new DuplicatePairIdsPlugin(pairRepo);
+    plugin = new DuplicatePairIdsPlugin(pairManager);
   });
 
   describe('validate', () => {
@@ -25,7 +25,7 @@ describe('DuplicatePairIdsPlugin', () => {
 
   describe('run', () => {
     it('returns empty array when no pairs exist', async () => {
-      pairRepo.getAllKeys.mockReturnValue([]);
+      pairManager.getAllInvestingTickers.mockReturnValue([]);
 
       const results = await plugin.run();
 
@@ -33,8 +33,8 @@ describe('DuplicatePairIdsPlugin', () => {
     });
 
     it('returns empty array when all pairIds are unique', async () => {
-      pairRepo.getAllKeys.mockReturnValue(['HDFC', 'TCS', 'INFY']);
-      pairRepo.get.mockImplementation((key: string) => {
+      pairManager.getAllInvestingTickers.mockReturnValue(['HDFC', 'TCS', 'INFY']);
+      pairManager.investingTickerToPairInfo.mockImplementation((key: string) => {
         switch (key) {
           case 'HDFC':
             return new PairInfo('HDFC Bank', '100', 'NSE', 'HDFC');
@@ -43,7 +43,7 @@ describe('DuplicatePairIdsPlugin', () => {
           case 'INFY':
             return new PairInfo('Infosys', '300', 'NSE', 'INFY');
         }
-        return undefined;
+        return null;
       });
 
       const results = await plugin.run();
@@ -52,11 +52,11 @@ describe('DuplicatePairIdsPlugin', () => {
     });
 
     it('emits FAIL for duplicate pairId shared by two tickers', async () => {
-      pairRepo.getAllKeys.mockReturnValue(['VOLTAS', 'VOLT']);
-      pairRepo.get.mockImplementation((key: string) => {
+      pairManager.getAllInvestingTickers.mockReturnValue(['VOLTAS', 'VOLT']);
+      pairManager.investingTickerToPairInfo.mockImplementation((key: string) => {
         if (key === 'VOLTAS') return new PairInfo('Voltas Ltd.', '18462', 'NSE', 'VOLTAS');
         if (key === 'VOLT') return new PairInfo('Voltas Ltd.', '18462', 'NSE', 'VOLT');
-        return undefined;
+        return null;
       });
 
       const results = await plugin.run();
@@ -74,8 +74,8 @@ describe('DuplicatePairIdsPlugin', () => {
     });
 
     it('emits FAIL for pairId shared by three tickers', async () => {
-      pairRepo.getAllKeys.mockReturnValue(['AEGISCHEM', 'AEGISLOG', 'AEGS']);
-      pairRepo.get.mockReturnValue(new PairInfo('Aegis Logistics', '947157', 'NSE', 'AEGS'));
+      pairManager.getAllInvestingTickers.mockReturnValue(['AEGISCHEM', 'AEGISLOG', 'AEGS']);
+      pairManager.investingTickerToPairInfo.mockReturnValue(new PairInfo('Aegis Logistics', '947157', 'NSE', 'AEGS'));
 
       const results = await plugin.run();
 
@@ -91,8 +91,8 @@ describe('DuplicatePairIdsPlugin', () => {
     });
 
     it('emits multiple FAILs for multiple duplicate groups', async () => {
-      pairRepo.getAllKeys.mockReturnValue(['VOLTAS', 'VOLT', 'HDFC', 'HLL', 'UNIQUE']);
-      pairRepo.get.mockImplementation((key: string) => {
+      pairManager.getAllInvestingTickers.mockReturnValue(['VOLTAS', 'VOLT', 'HDFC', 'HLL', 'UNIQUE']);
+      pairManager.investingTickerToPairInfo.mockImplementation((key: string) => {
         switch (key) {
           case 'VOLTAS':
             return new PairInfo('Voltas', '18462', 'NSE', 'VOLTAS');
@@ -105,7 +105,7 @@ describe('DuplicatePairIdsPlugin', () => {
           case 'UNIQUE':
             return new PairInfo('Unique', '99999', 'NSE', 'UNIQUE');
         }
-        return undefined;
+        return null;
       });
 
       const results = await plugin.run();
@@ -116,10 +116,10 @@ describe('DuplicatePairIdsPlugin', () => {
     });
 
     it('skips entries with null pair info', async () => {
-      pairRepo.getAllKeys.mockReturnValue(['VALID', 'NULL_PAIR']);
-      pairRepo.get.mockImplementation((key: string) => {
+      pairManager.getAllInvestingTickers.mockReturnValue(['VALID', 'NULL_PAIR']);
+      pairManager.investingTickerToPairInfo.mockImplementation((key: string) => {
         if (key === 'VALID') return new PairInfo('Valid', '100', 'NSE', 'VALID');
-        return undefined;
+        return null;
       });
 
       const results = await plugin.run();
@@ -132,8 +132,8 @@ describe('DuplicatePairIdsPlugin', () => {
     });
 
     it('verifies correct AuditResult structure', async () => {
-      pairRepo.getAllKeys.mockReturnValue(['A', 'B']);
-      pairRepo.get.mockReturnValue(new PairInfo('Test', '123', 'NSE', 'TEST'));
+      pairManager.getAllInvestingTickers.mockReturnValue(['A', 'B']);
+      pairManager.investingTickerToPairInfo.mockReturnValue(new PairInfo('Test', '123', 'NSE', 'TEST'));
 
       const results = await plugin.run();
 

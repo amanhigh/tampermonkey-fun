@@ -1,6 +1,7 @@
 import { ISequenceManager } from '../manager/sequence';
 import { ITickerManager } from '../manager/ticker';
 import { ISymbolManager } from '../manager/symbol';
+import { IPairManager } from '../manager/pair';
 import { Constants } from '../models/constant';
 import { SequenceType } from '../models/trading';
 
@@ -33,7 +34,8 @@ export class SequenceHandler implements ISequenceHandler {
   constructor(
     private readonly sequenceManager: ISequenceManager,
     private readonly tickerManager: ITickerManager,
-    private readonly symbolManager: ISymbolManager
+    private readonly symbolManager: ISymbolManager,
+    private readonly pairManager: IPairManager
   ) {}
 
   /** @inheritdoc */
@@ -51,7 +53,16 @@ export class SequenceHandler implements ISequenceHandler {
 
     // Show investingTicker when unmapped, otherwise show tvTicker
     const displayTicker = investingTicker || tvTicker;
-    const message = `${displayTicker}:${sequence}`;
+    let message = `${displayTicker}:${sequence}`;
+
+    // Add pair name after sequence if mapped
+    if (investingTicker) {
+      const pairInfo = this.pairManager.investingTickerToPairInfo(investingTicker);
+      if (pairInfo && pairInfo.name) {
+        message += `:${pairInfo.name}`;
+      }
+    }
+
     const $displayInput = $(`#${Constants.UI.IDS.INPUTS.DISPLAY}`);
     $displayInput.val(message);
 

@@ -50,7 +50,7 @@ describe('KohanClient', () => {
 
       await kohanClient.recordTicker('AAPL');
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/ticker/AAPL/record');
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/ticker/AAPL/record');
     });
 
     it('should handle ticker with special characters', async () => {
@@ -59,7 +59,7 @@ describe('KohanClient', () => {
       const specialTicker = 'BRK.A';
       await kohanClient.recordTicker(specialTicker);
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/ticker/BRK.A/record');
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/ticker/BRK.A/record');
     });
 
     it('should handle ticker with numbers', async () => {
@@ -68,7 +68,7 @@ describe('KohanClient', () => {
       const numericTicker = 'STOCK123';
       await kohanClient.recordTicker(numericTicker);
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/ticker/STOCK123/record');
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/ticker/STOCK123/record');
     });
 
     it('should handle ticker with hyphens and underscores', async () => {
@@ -77,7 +77,7 @@ describe('KohanClient', () => {
       const hyphenatedTicker = 'TEST-STOCK_ABC';
       await kohanClient.recordTicker(hyphenatedTicker);
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/ticker/TEST-STOCK_ABC/record');
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/ticker/TEST-STOCK_ABC/record');
     });
 
     it('should handle empty ticker string', async () => {
@@ -85,7 +85,7 @@ describe('KohanClient', () => {
 
       await kohanClient.recordTicker('');
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/ticker//record');
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/ticker//record');
     });
 
     it('should handle long ticker names', async () => {
@@ -94,7 +94,7 @@ describe('KohanClient', () => {
       const longTicker = 'VERYLONGTICKERNAMETHATSHOULDSTILLWORK';
       await kohanClient.recordTicker(longTicker);
 
-      expect(mockMakeRequest).toHaveBeenCalledWith(`/ticker/${longTicker}/record`);
+      expect(mockMakeRequest).toHaveBeenCalledWith(`/os/ticker/${longTicker}/record`);
     });
 
     it('should handle ticker with spaces (URL encoding handled by HTTP client)', async () => {
@@ -103,7 +103,7 @@ describe('KohanClient', () => {
       const spaceTicker = 'TICK ER';
       await kohanClient.recordTicker(spaceTicker);
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/ticker/TICK ER/record');
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/ticker/TICK ER/record');
     });
 
     it('should use GET method by default', async () => {
@@ -111,7 +111,7 @@ describe('KohanClient', () => {
 
       await kohanClient.recordTicker('TEST');
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/ticker/TEST/record');
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/ticker/TEST/record');
       // Verify no method or other options were passed (defaults to GET)
       expect(mockMakeRequest).toHaveBeenCalledTimes(1);
       expect(mockMakeRequest.mock.calls[0]).toHaveLength(1);
@@ -125,7 +125,7 @@ describe('KohanClient', () => {
 
       const result = await kohanClient.getClip();
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/clip');
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/clip/');
       expect(result).toBe(clipboardData);
     });
 
@@ -179,7 +179,7 @@ describe('KohanClient', () => {
 
       await kohanClient.getClip();
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/clip');
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/clip/');
       expect(mockMakeRequest).toHaveBeenCalledTimes(1);
       expect(mockMakeRequest.mock.calls[0]).toHaveLength(1);
     });
@@ -191,7 +191,7 @@ describe('KohanClient', () => {
 
       await kohanClient.enableSubmap('swiftkeys');
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/submap/enable', {
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/submap/enable', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({ submap: 'swiftkeys' }),
@@ -204,7 +204,7 @@ describe('KohanClient', () => {
       const submapName = 'navigation-keys';
       await kohanClient.enableSubmap(submapName);
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/submap/enable', {
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/submap/enable', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({ submap: submapName }),
@@ -216,7 +216,7 @@ describe('KohanClient', () => {
 
       await kohanClient.enableSubmap('');
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/submap/enable', {
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/submap/enable', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({ submap: '' }),
@@ -229,7 +229,7 @@ describe('KohanClient', () => {
       const specialSubmap = 'test-submap_v2.0';
       await kohanClient.enableSubmap(specialSubmap);
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/submap/enable', {
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/submap/enable', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({ submap: specialSubmap }),
@@ -242,7 +242,7 @@ describe('KohanClient', () => {
       const spacedSubmap = 'my custom submap';
       await kohanClient.enableSubmap(spacedSubmap);
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/submap/enable', {
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/submap/enable', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({ submap: spacedSubmap }),
@@ -275,7 +275,7 @@ describe('KohanClient', () => {
 
       await kohanClient.disableSubmap('swiftkeys');
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/submap/disable', {
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/submap/disable', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({ submap: 'swiftkeys' }),
@@ -288,7 +288,7 @@ describe('KohanClient', () => {
       const submapName = 'debug-mode';
       await kohanClient.disableSubmap(submapName);
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/submap/disable', {
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/submap/disable', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({ submap: submapName }),
@@ -300,7 +300,7 @@ describe('KohanClient', () => {
 
       await kohanClient.disableSubmap('');
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/submap/disable', {
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/submap/disable', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({ submap: '' }),
@@ -313,7 +313,7 @@ describe('KohanClient', () => {
       const numericSubmap = '12345';
       await kohanClient.disableSubmap(numericSubmap);
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/submap/disable', {
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/submap/disable', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({ submap: numericSubmap }),
@@ -326,7 +326,7 @@ describe('KohanClient', () => {
       const longSubmap = 'very-long-submap-name-that-should-still-be-handled-correctly';
       await kohanClient.disableSubmap(longSubmap);
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/submap/disable', {
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/submap/disable', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({ submap: longSubmap }),

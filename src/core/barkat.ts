@@ -46,6 +46,10 @@ export class Barkat {
     return window.location.host.includes('kite.zerodha.com');
   }
 
+  private isLocalhostSite(): boolean {
+    return window.location.host.includes('localhost');
+  }
+
   private setupInvestingUI(): void {
     this.alertFeedHandler.initialize();
     console.info('Investing UI setup');
@@ -56,9 +60,17 @@ export class Barkat {
     console.info('Kite UI setup');
   }
 
+  private setupLocalhost(): void {
+    console.info('Barkat localhost detected');
+    this.journalHandler.registerJournalReviewHandler();
+  }
+
   initialize(): void {
+    console.info('Initializing Barkat');
     this.errorHandler.registerGlobalErrorHandlers();
-    if (this.isInvestingSite()) {
+    if (this.isLocalhostSite()) {
+      this.setupLocalhost();
+    } else if (this.isInvestingSite()) {
       this.setupInvestingUI();
     } else if (this.isTradingViewSite()) {
       this.setupTradingViewUI();
@@ -67,10 +79,10 @@ export class Barkat {
     }
   }
 
-  // TODO: Remove suppressed Errors for eslint
+  // FIXME: Remove suppressed Errors for eslint, refactor large function
   // eslint-disable-next-line max-lines-per-function
   private setupTradingViewUI() {
-    const $area = this.uiUtil.buildArea(Constants.UI.IDS.AREAS.MAIN, '76%', '6%');
+    const $area = this.uiUtil.buildArea(Constants.UI.IDS.AREAS.MAIN, '70%', '6%');
     $area.appendTo('body');
 
     // TODO: Move UI Build Logic to Handlers
@@ -138,6 +150,7 @@ export class Barkat {
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.ALERTS).appendTo($area);
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.ORDERS).appendTo($area);
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.JOURNAL).hide().appendTo($area);
+    // BUG 3.1: Toolbar lives inside journal wrapper so it disappears when journal collapses; move toolbar outside for persistent access
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.AUDIT).hide().appendTo($area);
     this.journalUI();
     this.kiteHandler.setupGttRefreshListener();
@@ -147,6 +160,7 @@ export class Barkat {
   }
 
   journalUI() {
+    // BUG 3.2: Journal toolbar is bespoke; combine with journal left-click toolbar and build via shared util with short emoji labels to save space
     this.uiUtil
       .buildWrapper(`${Constants.UI.IDS.AREAS.JOURNAL}-type`)
       .appendTo(`#${Constants.UI.IDS.AREAS.JOURNAL}`)

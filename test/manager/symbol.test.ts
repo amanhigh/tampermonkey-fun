@@ -112,6 +112,10 @@ describe('SymbolManager', () => {
     it('should return true for symbols with composite characters', () => {
       expect(symbolManager.isComposite('A/B')).toBe(true);
       expect(symbolManager.isComposite('A*B')).toBe(true);
+      expect(symbolManager.isComposite('A-B')).toBe(true);
+      expect(symbolManager.isComposite('A:B')).toBe(true);
+      expect(symbolManager.isComposite('GOLDSILVER')).toBe(true);
+      expect(symbolManager.isComposite('BTC.D')).toBe(true);
     });
 
     it('should return false for symbols without composite characters', () => {

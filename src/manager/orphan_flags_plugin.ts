@@ -40,6 +40,7 @@ export class OrphanFlagsPlugin extends BaseAuditPlugin {
     flagLists.getLists().forEach((tvTickers, categoryIndex) => {
       tvTickers.forEach((tvTicker) => {
         // Skip formula/composite tickers (containing '/', '*', etc.)
+        // BUG 2.1: Composite spreads with '-' or ':' still leak into Flags because isComposite only checks '/', '*'
         if (this.symbolManager.isComposite(tvTicker)) {
           return;
         }

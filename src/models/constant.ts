@@ -132,9 +132,9 @@ export const Constants = Object.freeze({
       CLOSE: 'button[data-name="close"]', // Old name: orderPanelCloseSelector
       GTT_BUTTON: '[data-role="gtt-button"]',
       INPUTS: {
-        ENTRY_PRICE: 'input[data-property-id="Risk/RewardlongEntryPrice"]',
-        PROFIT_PRICE: 'input[data-property-id="Risk/RewardlongProfitLevelPrice"]',
-        STOP_PRICE: 'input[data-property-id="Risk/RewardlongStopLevelPrice"]',
+        ENTRY_PRICE: 'input[data-property-id*="EntryPrice"]',
+        PROFIT_PRICE: 'input[data-property-id*="ProfitLevelPrice"]',
+        STOP_PRICE: 'input[data-property-id*="StopLevelPrice"]',
       },
     },
     SCREENER: {
@@ -169,6 +169,11 @@ export const Constants = Object.freeze({
       FLOATING_WRAPPER: 'div.floatingAlertWrapper',
       ALERT_DATA: 'div.alertNotifData > a',
       ALERT_TITLE: '.alertDataTitle',
+    },
+    JOURNAL: {
+      REVIEW_LINK: 'a[href^="/journal/"]',
+      CURRENT_TICKER: 'h2.text-3xl',
+      REVIEW_TICKER: 'span.font-semibold[x-text="item.ticker"]',
     },
     SIDEBAR: {
       DELETE_ARROW: 'div [data-name="removeAllDrawingTools"] button[class^=arrow]', // Old Name: deleteArrowSelector

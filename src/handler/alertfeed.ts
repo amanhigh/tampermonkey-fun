@@ -89,6 +89,7 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     const investingTicker = this.extractTickerFromAlertName(alertName);
 
     const action = event.ctrlKey ? AlertClickAction.MAP : AlertClickAction.OPEN;
+    // HACK: Generic Event to Open/Map Ticker, can be extended in future for more actions
     void this.alertManager.createAlertClickEvent(investingTicker, action);
   }
 

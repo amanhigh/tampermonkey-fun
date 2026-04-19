@@ -89,6 +89,7 @@ export class PaintManager implements IPaintManager {
 
   /** @inheritdoc */
   resetColors(selector: string): void {
+    // BUG: After Adding to Watchlist Ticker Name (Header) not painted.
     // Reset element colors to default
     this.paintSymbols(selector, null, { color: Constants.UI.COLORS.DEFAULT }, true);
 

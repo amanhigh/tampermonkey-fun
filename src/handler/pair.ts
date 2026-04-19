@@ -57,24 +57,35 @@ export class PairHandler implements IPairHandler {
 
     const pairs = await this.investingClient.fetchSymbolData(searchQuery);
     const options = this.formatPairOptions(pairs);
-    const selected = await this.smartPrompt.showModal(options.slice(0, 10));
+    const response = await this.smartPrompt.showModal(options.slice(0, 10));
 
-    if (!selected) {
-      Notifier.warn(`Invalid selection for ${searchQuery} on ${exchange}, cant map Pair.`);
+    // Handle cancel - user explicitly cancelled
+    if (response.type === 'cancel') {
       return;
     }
 
-    const selectedPair = this.findSelectedPair(pairs, selected);
-    if (selectedPair) {
-      Notifier.info(`Selected: ${this.formatPair(selectedPair)}`);
-
-      if (!this.checkGuardRails(selectedPair)) {
-        return;
-      }
-
-      this.pairManager.createInvestingToPairMapping(selectedPair.symbol, selectedPair);
-      this.symbolManager.createTvToInvestingMapping(this.tickerManager.getTicker(), selectedPair.symbol);
+    // Handle none - not applicable for pair selection, treat as cancel
+    if (response.type === 'none') {
       return;
+    }
+
+    // Handle reason - should be a valid pair option
+    if (response.type === 'reason') {
+      const selected = response.value;
+      const selectedPair = this.findSelectedPair(pairs, selected);
+      if (selectedPair) {
+        Notifier.info(`Selected: ${this.formatPair(selectedPair)}`);
+
+        if (!this.checkGuardRails(selectedPair)) {
+          return;
+        }
+
+        this.pairManager.createInvestingToPairMapping(selectedPair.symbol, selectedPair);
+        this.symbolManager.createTvToInvestingMapping(this.tickerManager.getTicker(), selectedPair.symbol);
+        return;
+      } else {
+        Notifier.warn(`Invalid selection for ${searchQuery} on ${exchange}, cant map Pair.`);
+      }
     }
   }
 
