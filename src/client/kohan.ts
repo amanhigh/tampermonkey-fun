@@ -46,7 +46,7 @@ export class KohanClient extends BaseClient implements IKohanClient {
    * Creates an instance of KohanClient
    * @param baseUrl - Base URL for Kohan API
    */
-  constructor(baseUrl: string = 'http://localhost:9010/v1') {
+  constructor(baseUrl: string = 'http://localhost:9010/v1/api') {
     super(baseUrl);
   }
 
