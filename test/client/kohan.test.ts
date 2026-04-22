@@ -34,7 +34,7 @@ describe('KohanClient', () => {
   describe('constructor', () => {
     it('should create instance with default base URL', () => {
       const client = new KohanClient();
-      expect(client.getBaseUrl()).toBe('http://localhost:9010/v1');
+      expect(client.getBaseUrl()).toBe('http://localhost:9010/v1/api');
     });
 
     it('should create instance with custom base URL', () => {
@@ -115,6 +115,53 @@ describe('KohanClient', () => {
       // Verify no method or other options were passed (defaults to GET)
       expect(mockMakeRequest).toHaveBeenCalledTimes(1);
       expect(mockMakeRequest.mock.calls[0]).toHaveLength(1);
+    });
+  });
+
+  describe('screenshot flow', () => {
+    it('should POST rejected screenshot request with ordered timeframes and return image metadata', async () => {
+      const apiResponse = {
+        images: [
+          { timeframe: 'TMN', file_name: 'TCS.TMN.rejected_20240422_0930.png' },
+          { timeframe: 'MN', file_name: 'TCS.MN.rejected_20240422_0930.png' },
+          { timeframe: 'WK', file_name: 'TCS.WK.rejected_20240422_0930.png' },
+          { timeframe: 'D', file_name: 'TCS.D.rejected_20240422_0930.png' },
+        ],
+      };
+
+      mockMakeRequest.mockResolvedValue(apiResponse);
+
+      const result = await (kohanClient as any).takeJournalScreenshots({
+        ticker: 'TCS',
+        sequence: 'MWD',
+        type: 'REJECTED',
+        timeframes: ['TMN', 'MN', 'WK', 'D'],
+      });
+
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/screenshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        data: JSON.stringify({
+          ticker: 'TCS',
+          sequence: 'MWD',
+          type: 'REJECTED',
+          timeframes: ['TMN', 'MN', 'WK', 'D'],
+        }),
+      });
+      expect(result).toEqual(apiResponse);
+    });
+
+    it('should wrap screenshot API failures with a descriptive error', async () => {
+      mockMakeRequest.mockRejectedValue(new Error('503 Service Unavailable'));
+
+      await expect(
+        (kohanClient as any).takeJournalScreenshots({
+          ticker: 'TCS',
+          sequence: 'YR',
+          type: 'REJECTED',
+          timeframes: ['SMN', 'TMN', 'MN', 'WK'],
+        })
+      ).rejects.toThrow('Failed to take journal screenshots: 503 Service Unavailable');
     });
   });
 
