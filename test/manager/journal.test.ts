@@ -237,8 +237,8 @@ describe('JournalManager', () => {
       expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
         1,
         expect.objectContaining({
-          file_name: expect.stringMatching(/^TCS\.tmn\.rejected_\d{8}_\d{4}\.png$/),
-          save_path: '~/Downloads',
+          file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_1_tmn_rejected\.png$/),
+          save_path: '/home/aman/Pictures',
           type: 'FULL',
           window: 'TradingView',
         })
@@ -246,8 +246,8 @@ describe('JournalManager', () => {
       expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({
-          file_name: expect.stringMatching(/^TCS\.mn\.rejected_\d{8}_\d{4}\.png$/),
-          save_path: '~/Downloads',
+          file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_2_mn_rejected\.png$/),
+          save_path: '/home/aman/Pictures',
           type: 'FULL',
           window: 'TradingView',
         })
@@ -255,8 +255,8 @@ describe('JournalManager', () => {
       expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
         3,
         expect.objectContaining({
-          file_name: expect.stringMatching(/^TCS\.wk\.rejected_\d{8}_\d{4}\.png$/),
-          save_path: '~/Downloads',
+          file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_3_wk_rejected\.png$/),
+          save_path: '/home/aman/Pictures',
           type: 'FULL',
           window: 'TradingView',
         })
@@ -264,17 +264,17 @@ describe('JournalManager', () => {
       expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
         4,
         expect.objectContaining({
-          file_name: expect.stringMatching(/^TCS\.d\.rejected_\d{8}_\d{4}\.png$/),
-          save_path: '~/Downloads',
+          file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_4_d_rejected\.png$/),
+          save_path: '/home/aman/Pictures',
           type: 'FULL',
           window: 'TradingView',
         })
       );
       expect(result).toHaveLength(4);
-      expect(result[0].file_name).toMatch(/^TCS\.tmn\.rejected_\d{8}_\d{4}\.png$/);
-      expect(result[1].file_name).toMatch(/^TCS\.mn\.rejected_\d{8}_\d{4}\.png$/);
-      expect(result[2].file_name).toMatch(/^TCS\.wk\.rejected_\d{8}_\d{4}\.png$/);
-      expect(result[3].file_name).toMatch(/^TCS\.d\.rejected_\d{8}_\d{4}\.png$/);
+      expect(result[0].file_name).toMatch(/^TCS_\d{8}_\d{4}_1_tmn_rejected\.png$/);
+      expect(result[1].file_name).toMatch(/^TCS_\d{8}_\d{4}_2_mn_rejected\.png$/);
+      expect(result[2].file_name).toMatch(/^TCS_\d{8}_\d{4}_3_wk_rejected\.png$/);
+      expect(result[3].file_name).toMatch(/^TCS_\d{8}_\d{4}_4_d_rejected\.png$/);
     });
 
     it('should resolve YR to SMN, TMN, MN, WK and preserve returned metadata', async () => {
@@ -310,8 +310,8 @@ describe('JournalManager', () => {
       expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
         1,
         expect.objectContaining({
-          file_name: expect.stringMatching(/^TCS\.smn\.rejected_\d{8}_\d{4}\.png$/),
-          save_path: '~/Downloads',
+          file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_1_smn_rejected\.png$/),
+          save_path: '/home/aman/Pictures',
           type: 'FULL',
           window: 'TradingView',
         })
@@ -319,8 +319,8 @@ describe('JournalManager', () => {
       expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({
-          file_name: expect.stringMatching(/^TCS\.tmn\.rejected_\d{8}_\d{4}\.png$/),
-          save_path: '~/Downloads',
+          file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_2_tmn_rejected\.png$/),
+          save_path: '/home/aman/Pictures',
           type: 'FULL',
           window: 'TradingView',
         })
@@ -328,8 +328,8 @@ describe('JournalManager', () => {
       expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
         3,
         expect.objectContaining({
-          file_name: expect.stringMatching(/^TCS\.mn\.rejected_\d{8}_\d{4}\.png$/),
-          save_path: '~/Downloads',
+          file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_3_mn_rejected\.png$/),
+          save_path: '/home/aman/Pictures',
           type: 'FULL',
           window: 'TradingView',
         })
@@ -337,8 +337,8 @@ describe('JournalManager', () => {
       expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
         4,
         expect.objectContaining({
-          file_name: expect.stringMatching(/^TCS\.wk\.rejected_\d{8}_\d{4}\.png$/),
-          save_path: '~/Downloads',
+          file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_4_wk_rejected\.png$/),
+          save_path: '/home/aman/Pictures',
           type: 'FULL',
           window: 'TradingView',
         })

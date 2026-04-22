@@ -81,12 +81,14 @@ export class JournalManager implements IJournalManager {
 
     for (const position of [0, 1, 2, 3]) {
       this.timeframeManager.applyTimeFrame(position);
+      await this.waitForScreenshotUpdate();
       const timeframe = this.sequenceManager.sequenceToTimeFrameConfig(sequence, position).symbol;
+      const order = position + 1;
 
-      const fileName = `${ticker.toUpperCase()}.${timeframe.toLowerCase()}.${screenshotType}_${this.getScreenshotTimestamp()}.png`;
+      const fileName = `${ticker.toUpperCase()}_${this.getScreenshotTimestamp()}_${order}_${timeframe.toLowerCase()}_${screenshotType}.png`;
       const screenshot = await this.kohanClient.screenshot({
         file_name: fileName,
-        save_path: '~/Downloads',
+        save_path: '/home/aman/Pictures',
         type: 'FULL',
         window: 'TradingView',
       });
@@ -123,5 +125,9 @@ export class JournalManager implements IJournalManager {
     const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
     const time = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
     return `${date}_${time}`;
+  }
+
+  private async waitForScreenshotUpdate(): Promise<void> {
+    await new Promise<void>((resolve) => setTimeout(resolve, 200));
   }
 }
