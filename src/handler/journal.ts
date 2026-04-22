@@ -5,10 +5,10 @@
 import { IJournalManager } from '../manager/journal';
 import { ISmartPrompt } from '../util/smart';
 import { IUIUtil } from '../util/ui';
-import { Notifier } from '../util/notify';
 import { Constants } from '../models/constant';
 import { JournalType } from '../models/trading';
 import { TickerManager } from '../manager/ticker';
+import { Notifier } from '../util/notify';
 import { ITradingViewManager } from '../manager/tv';
 import { IStyleManager } from '../manager/style';
 import { IAlertManager } from '../manager/alert';
@@ -85,6 +85,13 @@ export class JournalHandler implements IJournalHandler {
     }
 
     const ticker = this.tickerManager.getTicker();
+
+    if (type === JournalType.REJECTED) {
+      await this.journalManager.screenshotTicker(ticker, type).catch((error) => {
+        throw new Error(`Failed to take screenshot journal entry: ${error}`);
+      });
+    }
+
     return this.journalManager.createEntry(ticker, type, reason).catch((error) => {
       throw new Error(`Failed to record journal entry: ${error}`);
     });
