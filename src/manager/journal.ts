@@ -3,6 +3,7 @@ import { ISequenceManager } from './sequence';
 import { Notifier } from '../util/notify';
 import { IKohanClient } from '../client/kohan';
 import { ITimeFrameManager } from './timeframe';
+import { ScreenshotResponse } from '../models/kohan';
 
 /**
  * Interface for managing trading journal operations
@@ -29,6 +30,14 @@ export interface IJournalManager {
    * @returns Formatted journal tag (e.g., "HGS.yr.rejected.oe")
    */
   createEntry(ticker: string, type: JournalType, reason: string): Promise<void>;
+
+  /**
+   * Takes screenshots for the given ticker using the configured sequence order.
+   * @param ticker Trading symbol to capture
+   * @param type Screenshot purpose/type used in filenames
+   * @returns Promise resolving with screenshot metadata
+   */
+  screenshotTicker(ticker: string, type: string): Promise<ScreenshotResponse[]>;
 
   /**
    * Creates formatted text combining symbol and reason for clipboard copying
@@ -60,6 +69,34 @@ export class JournalManager implements IJournalManager {
   }
 
   /**
+   * Takes screenshots for a journal using the sequence-defined timeframe order.
+   * @param ticker Trading symbol to capture
+   * @param type Screenshot purpose/type used in filenames
+   * @returns Promise resolving with screenshot metadata
+   */
+  public async screenshotTicker(ticker: string, type: string): Promise<ScreenshotResponse[]> {
+    const sequence = this.sequenceManager.getCurrentSequence();
+    const screenshots: ScreenshotResponse[] = [];
+    const screenshotType = type.toLowerCase();
+
+    for (const position of [0, 1, 2, 3]) {
+      this.timeframeManager.applyTimeFrame(position);
+      const timeframe = this.sequenceManager.sequenceToTimeFrameConfig(sequence, position).symbol;
+
+      const fileName = `${ticker.toUpperCase()}.${timeframe.toLowerCase()}.${screenshotType}_${this.getScreenshotTimestamp()}.png`;
+      const screenshot = await this.kohanClient.screenshot({
+        file_name: fileName,
+        save_path: '~/Downloads',
+        type: 'FULL',
+        window: 'TradingView',
+      });
+      screenshots.push(screenshot);
+    }
+
+    return screenshots;
+  }
+
+  /**
    * Creates a journal entry tag used for naming trading journal images
    * @private
    */
@@ -79,5 +116,12 @@ export class JournalManager implements IJournalManager {
   createReasonText(reason: string): string {
     const timeframe = this.timeframeManager.getCurrentTimeFrameConfig().symbol;
     return `${timeframe} - ${reason}`;
+  }
+
+  private getScreenshotTimestamp(): string {
+    const now = new Date();
+    const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    const time = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+    return `${date}_${time}`;
   }
 }

@@ -7,6 +7,7 @@ import { IStyleManager } from '../../src/manager/style';
 import { TickerManager } from '../../src/manager/ticker';
 import { IAlertManager } from '../../src/manager/alert';
 import { AlertClickAction } from '../../src/models/events';
+import { JournalType } from '../../src/models/trading';
 
 describe('JournalHandler', () => {
   let journalHandler: JournalHandler;
@@ -28,6 +29,7 @@ describe('JournalHandler', () => {
     mockJournalManager = {
       createEntry: jest.fn(),
       createReasonText: jest.fn(),
+      screenshotTicker: jest.fn(),
     } as unknown as jest.Mocked<IJournalManager>;
 
     mockSmartPrompt = {
@@ -106,6 +108,21 @@ describe('JournalHandler', () => {
       journalHandler.handleReviewJournal(event);
 
       expect(mockAlertManager.createAlertClickEvent).toHaveBeenCalledWith('MSFT', AlertClickAction.OPEN);
+    });
+  });
+
+  describe('handleRecordJournal', () => {
+    it('should route REJECTED journal to screenshot ticker flow', async () => {
+      mockTickerManager.getTicker.mockReturnValue('TCS');
+      (mockJournalManager.screenshotTicker as jest.Mock).mockResolvedValue([
+        { file_name: 'TCS.tmn.rejected_20240422_0930.png', relative_path: '~/Downloads/TCS.tmn.rejected_20240422_0930.png', full_path: '/home/aman/Downloads/TCS.tmn.rejected_20240422_0930.png' },
+      ]);
+
+      await journalHandler.handleRecordJournal(JournalType.REJECTED);
+
+      expect(mockJournalManager.screenshotTicker).toHaveBeenCalledWith('TCS', 'rejected');
+      expect(mockJournalManager.createEntry).not.toHaveBeenCalled();
+      expect(mockSmartPrompt.showModal).not.toHaveBeenCalled();
     });
   });
 

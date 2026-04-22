@@ -121,7 +121,7 @@ describe('KohanClient', () => {
   describe('screenshot flow', () => {
     it('should POST a screenshot request and return screenshot metadata', async () => {
       const apiResponse = {
-        file_name: 'TCS.TMN.Rejected_20240422_0930.png',
+        file_name: 'TCS.tmn.rejected_20240422_0930.png',
         relative_path: './TCS.TMN.Rejected_20240422_0930.png',
         full_path: '/captures/TCS.TMN.Rejected_20240422_0930.png',
       };
@@ -129,7 +129,7 @@ describe('KohanClient', () => {
       mockMakeRequest.mockResolvedValue(apiResponse);
 
       const result = await (kohanClient as any).screenshot({
-        file_name: 'TCS.TMN.Rejected_20240422_0930.png',
+        file_name: 'TCS.tmn.rejected_20240422_0930.png',
         save_path: '~/Downloads',
         type: 'FULL',
         window: 'TradingView',
@@ -139,7 +139,7 @@ describe('KohanClient', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({
-          file_name: 'TCS.TMN.Rejected_20240422_0930.png',
+          file_name: 'TCS.tmn.rejected_20240422_0930.png',
           save_path: '~/Downloads',
           type: 'FULL',
           window: 'TradingView',
@@ -153,7 +153,7 @@ describe('KohanClient', () => {
 
       await expect(
         (kohanClient as any).screenshot({
-          file_name: 'TCS.SMN.Rejected_20240422_1015.png',
+          file_name: 'TCS.smn.rejected_20240422_1015.png',
           save_path: '~/Downloads',
           type: 'FULL',
         })

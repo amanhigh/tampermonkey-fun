@@ -190,6 +190,171 @@ describe('JournalManager', () => {
     });
   });
 
+  describe('screenshot ticker flow', () => {
+    beforeEach(() => {
+      (mockKohanClient as any).screenshot = jest.fn();
+    });
+
+    it('should resolve MWD to TMN, MN, WK, D and call screenshot four times', async () => {
+      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+      mockSequenceManager.sequenceToTimeFrameConfig.mockImplementation((sequence, position) => {
+        const configs: Record<string, TimeFrameConfig[]> = {
+          MWD: [
+            new TimeFrameConfig('TMN', 't', 5),
+            new TimeFrameConfig('MN', 'vh', 4),
+            new TimeFrameConfig('WK', 'h', 3),
+            new TimeFrameConfig('D', 'i', 2),
+          ],
+          YR: [
+            new TimeFrameConfig('SMN', 'i', 6),
+            new TimeFrameConfig('TMN', 't', 5),
+            new TimeFrameConfig('MN', 'vh', 4),
+            new TimeFrameConfig('WK', 'h', 3),
+          ],
+        };
+
+        return configs[sequence][position];
+      });
+      (mockKohanClient as any).screenshot.mockImplementation(({ file_name }: { file_name: string }) =>
+        Promise.resolve({
+          file_name,
+          relative_path: `~/Downloads/${file_name}`,
+          full_path: `/home/aman/Downloads/${file_name}`,
+        })
+      );
+
+      const result = await (journalManager as any).screenshotTicker('TCS', 'Rejected');
+
+      expect(mockSequenceManager.getCurrentSequence).toHaveBeenCalled();
+      expect(mockTimeFrameManager.applyTimeFrame).toHaveBeenNthCalledWith(1, 0);
+      expect(mockTimeFrameManager.applyTimeFrame).toHaveBeenNthCalledWith(2, 1);
+      expect(mockTimeFrameManager.applyTimeFrame).toHaveBeenNthCalledWith(3, 2);
+      expect(mockTimeFrameManager.applyTimeFrame).toHaveBeenNthCalledWith(4, 3);
+      expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenNthCalledWith(1, SequenceType.MWD, 0);
+      expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenNthCalledWith(2, SequenceType.MWD, 1);
+      expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenNthCalledWith(3, SequenceType.MWD, 2);
+      expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenNthCalledWith(4, SequenceType.MWD, 3);
+      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          file_name: expect.stringMatching(/^TCS\.tmn\.rejected_\d{8}_\d{4}\.png$/),
+          save_path: '~/Downloads',
+          type: 'FULL',
+          window: 'TradingView',
+        })
+      );
+      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          file_name: expect.stringMatching(/^TCS\.mn\.rejected_\d{8}_\d{4}\.png$/),
+          save_path: '~/Downloads',
+          type: 'FULL',
+          window: 'TradingView',
+        })
+      );
+      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+        3,
+        expect.objectContaining({
+          file_name: expect.stringMatching(/^TCS\.wk\.rejected_\d{8}_\d{4}\.png$/),
+          save_path: '~/Downloads',
+          type: 'FULL',
+          window: 'TradingView',
+        })
+      );
+      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+        4,
+        expect.objectContaining({
+          file_name: expect.stringMatching(/^TCS\.d\.rejected_\d{8}_\d{4}\.png$/),
+          save_path: '~/Downloads',
+          type: 'FULL',
+          window: 'TradingView',
+        })
+      );
+      expect(result).toHaveLength(4);
+      expect(result[0].file_name).toMatch(/^TCS\.tmn\.rejected_\d{8}_\d{4}\.png$/);
+      expect(result[1].file_name).toMatch(/^TCS\.mn\.rejected_\d{8}_\d{4}\.png$/);
+      expect(result[2].file_name).toMatch(/^TCS\.wk\.rejected_\d{8}_\d{4}\.png$/);
+      expect(result[3].file_name).toMatch(/^TCS\.d\.rejected_\d{8}_\d{4}\.png$/);
+    });
+
+    it('should resolve YR to SMN, TMN, MN, WK and preserve returned metadata', async () => {
+      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.YR);
+      mockSequenceManager.sequenceToTimeFrameConfig.mockImplementation((sequence, position) => {
+        const configs: Record<string, TimeFrameConfig[]> = {
+          MWD: [
+            new TimeFrameConfig('TMN', 't', 5),
+            new TimeFrameConfig('MN', 'vh', 4),
+            new TimeFrameConfig('WK', 'h', 3),
+            new TimeFrameConfig('D', 'i', 2),
+          ],
+          YR: [
+            new TimeFrameConfig('SMN', 'i', 6),
+            new TimeFrameConfig('TMN', 't', 5),
+            new TimeFrameConfig('MN', 'vh', 4),
+            new TimeFrameConfig('WK', 'h', 3),
+          ],
+        };
+
+        return configs[sequence][position];
+      });
+      (mockKohanClient as any).screenshot.mockImplementation(({ file_name }: { file_name: string }) =>
+        Promise.resolve({
+          file_name,
+          relative_path: `~/Downloads/${file_name}`,
+          full_path: `/home/aman/Downloads/${file_name}`,
+        })
+      );
+
+      const result = await (journalManager as any).screenshotTicker('TCS', 'Rejected');
+
+      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          file_name: expect.stringMatching(/^TCS\.smn\.rejected_\d{8}_\d{4}\.png$/),
+          save_path: '~/Downloads',
+          type: 'FULL',
+          window: 'TradingView',
+        })
+      );
+      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          file_name: expect.stringMatching(/^TCS\.tmn\.rejected_\d{8}_\d{4}\.png$/),
+          save_path: '~/Downloads',
+          type: 'FULL',
+          window: 'TradingView',
+        })
+      );
+      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+        3,
+        expect.objectContaining({
+          file_name: expect.stringMatching(/^TCS\.mn\.rejected_\d{8}_\d{4}\.png$/),
+          save_path: '~/Downloads',
+          type: 'FULL',
+          window: 'TradingView',
+        })
+      );
+      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+        4,
+        expect.objectContaining({
+          file_name: expect.stringMatching(/^TCS\.wk\.rejected_\d{8}_\d{4}\.png$/),
+          save_path: '~/Downloads',
+          type: 'FULL',
+          window: 'TradingView',
+        })
+      );
+      expect(result).toHaveLength(4);
+    });
+
+    it('should abort when screenshot fails', async () => {
+      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+      mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(new TimeFrameConfig('TMN', 't', 5));
+      (mockKohanClient as any).screenshot.mockRejectedValue(new Error('screenshot failed'));
+
+      await expect((journalManager as any).screenshotTicker('TCS', 'Rejected')).rejects.toThrow('screenshot failed');
+    });
+  });
+
   describe('createReasonText', () => {
     it('should create formatted reason text with current timeframe', () => {
       const testReason = 'breakout';
