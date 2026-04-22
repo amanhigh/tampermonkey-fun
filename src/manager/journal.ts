@@ -3,7 +3,7 @@ import { ISequenceManager } from './sequence';
 import { Notifier } from '../util/notify';
 import { IKohanClient } from '../client/kohan';
 import { ITimeFrameManager } from './timeframe';
-import { ScreenshotResponse } from '../models/kohan';
+import { CreateJournalInput, CreateJournalRequest, JournalRecord, ScreenshotResponse } from '../models/kohan';
 
 /**
  * Interface for managing trading journal operations
@@ -30,6 +30,13 @@ export interface IJournalManager {
    * @returns Formatted journal tag (e.g., "HGS.yr.rejected.oe")
    */
   createEntry(ticker: string, type: JournalType, reason: string): Promise<void>;
+
+  /**
+   * Creates a journal through the new Journal API.
+   * @param input Journal creation input
+   * @returns Promise resolving with created journal data
+   */
+  createJournal(input: CreateJournalInput): Promise<JournalRecord>;
 
   /**
    * Takes screenshots for the given ticker using the configured sequence order.
@@ -66,6 +73,25 @@ export class JournalManager implements IJournalManager {
     const journalTag = this.createJournalTag(ticker, type, reason);
     await this.kohanClient.recordTicker(journalTag);
     Notifier.success(`Journal entry created: ${journalTag}`);
+  }
+
+  /** @inheritdoc */
+  public async createJournal(input: CreateJournalInput): Promise<JournalRecord> {
+    const request: CreateJournalRequest = {
+      ticker: input.ticker.toUpperCase(),
+      sequence: this.sequenceManager.getCurrentSequence() as CreateJournalRequest['sequence'],
+      type: 'REJECTED',
+      status: 'FAIL',
+      images: input.screenshots.map((screenshot) => ({
+        timeframe: this.extractTimeframe(screenshot.file_name),
+        file_name: screenshot.file_name,
+      })),
+      tags: this.parseReasonTags(input.reason),
+    };
+
+    const journal = await this.kohanClient.createJournal(request);
+    Notifier.success(`Journal created: ${journal.ticker} ${journal.type} ${journal.status}`);
+    return journal;
   }
 
   /**
@@ -124,5 +150,29 @@ export class JournalManager implements IJournalManager {
     const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
     const time = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
     return `${date}_${time}`;
+  }
+
+  private extractTimeframe(fileName: string): 'DL' | 'WK' | 'MN' | 'TMN' | 'SMN' | 'YR' {
+    const nameWithoutExt = fileName.replace(/\.[^.]+$/, '');
+    const parts = nameWithoutExt.split('_');
+    const timeframe = parts[parts.length - 2]?.toUpperCase();
+    return (timeframe === 'D' ? 'DL' : timeframe) as 'DL' | 'WK' | 'MN' | 'TMN' | 'SMN' | 'YR';
+  }
+
+  private parseReasonTags(reason: string): CreateJournalRequest['tags'] {
+    if (!reason) {
+      return undefined;
+    }
+
+    const [tag, ...overrideParts] = reason.split('-');
+    const override = overrideParts.join('-');
+
+    return [
+      {
+        tag,
+        type: 'REASON',
+        ...(override ? { override } : {}),
+      },
+    ];
   }
 }

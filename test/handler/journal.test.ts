@@ -29,6 +29,7 @@ describe('JournalHandler', () => {
     mockJournalManager = {
       createEntry: jest.fn(),
       createReasonText: jest.fn(),
+      createJournal: jest.fn(),
       screenshotTicker: jest.fn(),
     } as unknown as jest.Mocked<IJournalManager>;
 
@@ -114,15 +115,28 @@ describe('JournalHandler', () => {
   describe('handleRecordJournal', () => {
     it('should route REJECTED journal to screenshot ticker flow', async () => {
       mockTickerManager.getTicker.mockReturnValue('TCS');
+      mockSmartPrompt.showModal.mockResolvedValue({ type: 'reason', value: 'oe' });
       (mockJournalManager.screenshotTicker as jest.Mock).mockResolvedValue([
         { file_name: 'TCS.tmn.rejected_20240422_0930.png', relative_path: '~/Downloads/TCS.tmn.rejected_20240422_0930.png', full_path: '/home/aman/Downloads/TCS.tmn.rejected_20240422_0930.png' },
       ]);
+      (mockJournalManager.createJournal as jest.Mock).mockResolvedValue({
+        id: 'jrn_1',
+        ticker: 'TCS',
+        sequence: 'MWD',
+        type: 'REJECTED',
+        status: 'FAIL',
+        created_at: '2026-04-22T00:00:00Z',
+      });
 
       await journalHandler.handleRecordJournal(JournalType.REJECTED);
 
       expect(mockJournalManager.screenshotTicker).toHaveBeenCalledWith('TCS', 'rejected');
+      expect(mockJournalManager.createJournal).toHaveBeenCalledWith({
+        ticker: 'TCS',
+        reason: 'oe',
+        screenshots: [{ file_name: 'TCS.tmn.rejected_20240422_0930.png', relative_path: '~/Downloads/TCS.tmn.rejected_20240422_0930.png', full_path: '/home/aman/Downloads/TCS.tmn.rejected_20240422_0930.png' }],
+      });
       expect(mockJournalManager.createEntry).not.toHaveBeenCalled();
-      expect(mockSmartPrompt.showModal).not.toHaveBeenCalled();
     });
   });
 

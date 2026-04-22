@@ -87,9 +87,14 @@ export class JournalHandler implements IJournalHandler {
     const ticker = this.tickerManager.getTicker();
 
     if (type === JournalType.REJECTED) {
-      await this.journalManager.screenshotTicker(ticker, type).catch((error) => {
+      const screenshots = await this.journalManager.screenshotTicker(ticker, type).catch((error) => {
         throw new Error(`Failed to take screenshot journal entry: ${error}`);
       });
+
+      await this.journalManager.createJournal({ ticker, reason, screenshots }).catch((error) => {
+        throw new Error(`Failed to record journal entry: ${error}`);
+      });
+      return;
     }
 
     return this.journalManager.createEntry(ticker, type, reason).catch((error) => {

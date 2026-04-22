@@ -1,5 +1,5 @@
 import { BaseClient, IBaseClient } from './base';
-import { ScreenshotRequest, ScreenshotResponse } from '../models/kohan';
+import { CreateJournalRequest, JournalRecord, KohanEnvelope, ScreenshotRequest, ScreenshotResponse } from '../models/kohan';
 
 /**
  * KohanClient handles interactions with the local Kohan API
@@ -21,6 +21,14 @@ export interface IKohanClient extends IBaseClient {
    * @throws Error when taking journal screenshots fails
    */
   screenshot(request: ScreenshotRequest): Promise<ScreenshotResponse>;
+
+  /**
+   * Create a journal through the V1 journal API.
+   * @param request - Journal creation request payload
+   * @returns Promise resolving with created journal data
+   * @throws Error when creating the journal fails
+   */
+  createJournal(request: CreateJournalRequest): Promise<JournalRecord>;
 
   /**
    * Retrieve clipboard data from the API
@@ -81,13 +89,28 @@ export class KohanClient extends BaseClient implements IKohanClient {
    */
   async screenshot(request: ScreenshotRequest): Promise<ScreenshotResponse> {
     try {
-      return await this.makeRequest<ScreenshotResponse>('/os/screenshot', {
+      const response = await this.makeRequest<KohanEnvelope<ScreenshotResponse>>('/os/screenshot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify(request),
       });
+      return response.data;
     } catch (error) {
       throw new Error(`Failed to take journal screenshots: ${(error as Error).message}`);
+    }
+  }
+
+  /** @inheritdoc */
+  async createJournal(request: CreateJournalRequest): Promise<JournalRecord> {
+    try {
+      const response = await this.makeRequest<KohanEnvelope<JournalRecord>>('/journals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        data: JSON.stringify(request),
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to create journal: ${(error as Error).message}`);
     }
   }
 
