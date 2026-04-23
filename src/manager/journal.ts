@@ -3,7 +3,13 @@ import { ISequenceManager } from './sequence';
 import { Notifier } from '../util/notify';
 import { IKohanClient } from '../client/kohan';
 import { ITimeFrameManager } from './timeframe';
-import { CreateJournalInput, CreateJournalRequest, JournalApiTimeframe, JournalRecord, ScreenshotResponse } from '../models/kohan';
+import {
+  CreateJournalInput,
+  CreateJournalRequest,
+  JournalApiTimeframe,
+  JournalRecord,
+  ScreenshotResponse,
+} from '../models/kohan';
 import { Constants } from '../models/constant';
 import { JournalOpenEvent } from '../models/events';
 

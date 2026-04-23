@@ -238,7 +238,7 @@ describe('SequenceManager', () => {
       // MWD[3] = DAILY
       const expected = Constants.TIME.SEQUENCE_TYPES.FRAMES[TimeFrame.DAILY];
       expect(result).toBe(expected);
-      expect(result.symbol).toBe('D');
+      expect(result.symbol).toBe('DL');
       expect(result.toolbar).toBe(2);
     });
 
@@ -462,7 +462,7 @@ describe('SequenceManager', () => {
       expect(mwdConfigs[0].symbol).toBe('TMN');
       expect(mwdConfigs[1].symbol).toBe('MN');
       expect(mwdConfigs[2].symbol).toBe('WK');
-      expect(mwdConfigs[3].symbol).toBe('D');
+      expect(mwdConfigs[3].symbol).toBe('DL');
 
       // Test complete YR sequence
       const yrConfigs = [
