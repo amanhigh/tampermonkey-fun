@@ -242,7 +242,7 @@ export const Constants = Object.freeze({
       DEFAULT: SequenceType.MWD,
       HIGH: SequenceType.YR,
       FRAMES: {
-        [TimeFrame.DAILY]: new TimeFrameConfig('D', 'I', 2),
+        [TimeFrame.DAILY]: new TimeFrameConfig('DL', 'I', 2),
         [TimeFrame.WEEKLY]: new TimeFrameConfig('WK', 'H', 3),
         [TimeFrame.MONTHLY]: new TimeFrameConfig('MN', 'VH', 4),
         [TimeFrame.THREE_MONTHLY]: new TimeFrameConfig('TMN', 'T', 5),

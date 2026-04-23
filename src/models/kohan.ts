@@ -7,7 +7,7 @@ export type JournalApiType = 'REJECTED' | 'TAKEN';
 export type JournalApiStatus = 'SET' | 'RUNNING' | 'SUCCESS' | 'FAIL' | 'MISSED' | 'JUST_LOSS' | 'BROKEN';
 
 export type JournalApiSequence = 'MWD' | 'YR' | 'WDH';
-
+// HACK: Unify Types in Frontend with Frontend Models
 export type JournalApiTimeframe = 'DL' | 'WK' | 'MN' | 'TMN' | 'SMN' | 'YR';
 
 export type JournalTagType = 'REASON' | 'MANAGEMENT' | 'DIRECTION';
@@ -30,7 +30,7 @@ export interface ScreenshotRequest {
 export interface ScreenshotResponse {
   file_name: string;
   full_path: string;
-  timeframe: JournalApiTimeframe;
+  timeframe?: JournalApiTimeframe;
 }
 
 export interface CreateJournalImageRequest {

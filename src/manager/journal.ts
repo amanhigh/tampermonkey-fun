@@ -91,7 +91,7 @@ export class JournalManager implements IJournalManager {
       type: 'REJECTED',
       status: 'FAIL',
       images: input.screenshots.map((screenshot) => ({
-        timeframe: screenshot.timeframe,
+        timeframe: screenshot.timeframe as JournalApiTimeframe,
         file_name: screenshot.file_name,
       })),
       tags: this.parseReasonTags(input.reason),
@@ -121,7 +121,7 @@ export class JournalManager implements IJournalManager {
     for (const position of [0, 1, 2, 3]) {
       this.timeframeManager.applyTimeFrame(position);
       const config = this.sequenceManager.sequenceToTimeFrameConfig(sequence, position);
-      const timeframe = this.toApiTimeframe(config.symbol);
+      const timeframe = config.symbol;
       const order = position + 1;
 
       const fileName = `${ticker.toUpperCase()}_${this.getScreenshotTimestamp()}_${order}_${timeframe.toLowerCase()}_${screenshotType}.png`;
@@ -132,7 +132,7 @@ export class JournalManager implements IJournalManager {
         window: 'TradingView',
         notify: false,
       });
-      screenshot.timeframe = timeframe;
+      screenshot.timeframe = timeframe as JournalApiTimeframe;
       screenshots.push(screenshot);
     }
 
@@ -166,14 +166,6 @@ export class JournalManager implements IJournalManager {
     const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
     const time = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
     return `${date}_${time}`;
-  }
-
-  private toApiTimeframe(symbol: string): JournalApiTimeframe {
-    const upper = symbol.toUpperCase();
-    if (upper === 'D') {
-      return 'DL';
-    }
-    return upper as JournalApiTimeframe;
   }
 
   private parseReasonTags(reason: string): CreateJournalRequest['tags'] {
