@@ -236,7 +236,7 @@ describe('JournalManager', () => {
           { file_name: 'TCS_20240101_1200_1_tmn_rejected.png', full_path: '/path/1', timeframe: 'TMN' as const },
           { file_name: 'TCS_20240101_1200_2_mn_rejected.png', full_path: '/path/2', timeframe: 'MN' as const },
           { file_name: 'TCS_20240101_1200_3_wk_rejected.png', full_path: '/path/3', timeframe: 'WK' as const },
-          { file_name: 'TCS_20240101_1200_4_d_rejected.png', full_path: '/path/4', timeframe: 'DL' as const },
+          { file_name: 'TCS_20240101_1200_4_dl_rejected.png', full_path: '/path/4', timeframe: 'DL' as const },
         ],
       };
 
@@ -252,7 +252,7 @@ describe('JournalManager', () => {
             { timeframe: 'TMN', file_name: 'TCS_20240101_1200_1_tmn_rejected.png' },
             { timeframe: 'MN', file_name: 'TCS_20240101_1200_2_mn_rejected.png' },
             { timeframe: 'WK', file_name: 'TCS_20240101_1200_3_wk_rejected.png' },
-            { timeframe: 'DL', file_name: 'TCS_20240101_1200_4_d_rejected.png' },
+            { timeframe: 'DL', file_name: 'TCS_20240101_1200_4_dl_rejected.png' },
           ],
         })
       );
@@ -537,7 +537,7 @@ describe('JournalManager', () => {
 
       const result = journalManager.createReasonText(testReason);
 
-      expect(result).toBe('D - test-reason_123');
+      expect(result).toBe('DL - test-reason_123');
     });
 
     it('should handle reason with spaces', () => {
@@ -545,7 +545,7 @@ describe('JournalManager', () => {
 
       const result = journalManager.createReasonText(testReason);
 
-      expect(result).toBe('D - volume breakout');
+      expect(result).toBe('DL - volume breakout');
     });
 
     it('should use different timeframe symbols', () => {
@@ -571,7 +571,7 @@ describe('JournalManager', () => {
 
       const result = journalManager.createReasonText(longReason);
 
-      expect(result).toBe(`D - ${longReason}`);
+      expect(result).toBe(`DL - ${longReason}`);
     });
 
     it('should handle unicode characters in reason', () => {
@@ -579,7 +579,7 @@ describe('JournalManager', () => {
 
       const result = journalManager.createReasonText(unicodeReason);
 
-      expect(result).toBe(`D - ${unicodeReason}`);
+      expect(result).toBe(`DL - ${unicodeReason}`);
     });
 
     it('should call getCurrentTimeFrameConfig exactly once', () => {
@@ -652,7 +652,7 @@ describe('JournalManager', () => {
 
     it('should handle reason text creation with different timeframes', () => {
       const testCases = [
-        { symbol: 'D', expected: 'D - test' },
+        { symbol: 'DL', expected: 'DL - test' },
         { symbol: 'W', expected: 'W - test' },
         { symbol: 'M', expected: 'M - test' },
         { symbol: '3M', expected: '3M - test' },
