@@ -5,6 +5,7 @@ import { ITimeFrameManager } from '../../src/manager/timeframe';
 import { JournalType, SequenceType } from '../../src/models/trading';
 import { TimeFrameConfig } from '../../src/models/trading';
 import { Notifier } from '../../src/util/notify';
+import { Constants } from '../../src/models/constant';
 
 // Mock Notifier to avoid DOM issues
 jest.mock('../../src/util/notify', () => ({
@@ -21,11 +22,14 @@ describe('JournalManager', () => {
   let mockSequenceManager: jest.Mocked<ISequenceManager>;
   let mockKohanClient: jest.Mocked<IKohanClient>;
   let mockTimeFrameManager: jest.Mocked<ITimeFrameManager>;
+  let mockGMSetValue: jest.Mock;
 
-  const mockTimeFrameConfig = new TimeFrameConfig('D', 'daily-style', 1);
+  const mockTimeFrameConfig = new TimeFrameConfig('DL', 'daily-style', 1);
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGMSetValue = jest.fn().mockResolvedValue(undefined);
+    (global as any).GM = { setValue: mockGMSetValue };
 
     // Mock SequenceManager
     mockSequenceManager = {
@@ -45,6 +49,20 @@ describe('JournalManager', () => {
       recordTicker: jest.fn().mockResolvedValue(undefined),
       getClip: jest.fn().mockResolvedValue('clipboard-data'),
       enableSubmap: jest.fn().mockResolvedValue(undefined),
+      createJournal: jest.fn().mockResolvedValue({
+        id: 'jrn_123',
+        ticker: 'TEST',
+        sequence: 'MWD',
+        type: 'REJECTED',
+        status: 'FAIL',
+        created_at: '2024-01-01T00:00:00Z',
+      }),
+      screenshot: jest.fn().mockImplementation(({ file_name }: { file_name: string }) =>
+        Promise.resolve({
+          file_name,
+          full_path: `/home/aman/Downloads/${file_name}`,
+        })
+      ),
     } as unknown as jest.Mocked<IKohanClient>;
 
     // Mock TimeFrameManager
@@ -190,20 +208,328 @@ describe('JournalManager', () => {
     });
   });
 
+  describe('publishJournalOpenEvent', () => {
+    it('should persist journal open event with journal id', async () => {
+      await journalManager.publishJournalOpenEvent('jrn_999');
+
+      expect(mockGMSetValue).toHaveBeenCalledWith(
+        Constants.STORAGE.EVENTS.JOURNAL_OPEN,
+        expect.stringMatching(/"journalId":"jrn_999"/)
+      );
+    });
+
+    it('should propagate GM errors', async () => {
+      mockGMSetValue.mockRejectedValue(new Error('storage unavailable'));
+
+      await expect(journalManager.publishJournalOpenEvent('jrn_999')).rejects.toThrow('storage unavailable');
+    });
+  });
+
+  describe('createJournal', () => {
+    it('should create journal with screenshots mapped to API timeframes', async () => {
+      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+
+      const input = {
+        ticker: 'TCS',
+        reason: 'oe',
+        screenshots: [
+          { file_name: 'TCS_20240101_1200_1_tmn_rejected.png', full_path: '/path/1', timeframe: 'TMN' as const },
+          { file_name: 'TCS_20240101_1200_2_mn_rejected.png', full_path: '/path/2', timeframe: 'MN' as const },
+          { file_name: 'TCS_20240101_1200_3_wk_rejected.png', full_path: '/path/3', timeframe: 'WK' as const },
+          { file_name: 'TCS_20240101_1200_4_dl_rejected.png', full_path: '/path/4', timeframe: 'DL' as const },
+        ],
+      };
+
+      await journalManager.createJournal(input);
+
+      expect(mockKohanClient.createJournal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ticker: 'TCS',
+          sequence: 'MWD',
+          type: 'REJECTED',
+          status: 'FAIL',
+          images: [
+            { timeframe: 'TMN', file_name: 'TCS_20240101_1200_1_tmn_rejected.png' },
+            { timeframe: 'MN', file_name: 'TCS_20240101_1200_2_mn_rejected.png' },
+            { timeframe: 'WK', file_name: 'TCS_20240101_1200_3_wk_rejected.png' },
+            { timeframe: 'DL', file_name: 'TCS_20240101_1200_4_dl_rejected.png' },
+          ],
+        })
+      );
+    });
+
+    it('should parse reason tags with override', async () => {
+      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.YR);
+
+      const input = {
+        ticker: 'HGS',
+        reason: 'oe-override-value',
+        screenshots: [
+          { file_name: 'HGS_20240101_1200_1_smn_rejected.png', full_path: '/path/1', timeframe: 'SMN' as const },
+        ],
+      };
+
+      await journalManager.createJournal(input);
+
+      expect(mockKohanClient.createJournal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tags: [{ tag: 'oe', type: 'REASON', override: 'override-value' }],
+        })
+      );
+    });
+
+    it('should handle screenshots without reason', async () => {
+      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+
+      const input = {
+        ticker: 'AAPL',
+        reason: '',
+        screenshots: [
+          { file_name: 'AAPL_20240101_1200_1_tmn_rejected.png', full_path: '/path/1', timeframe: 'TMN' as const },
+        ],
+      };
+
+      await journalManager.createJournal(input);
+
+      expect(mockKohanClient.createJournal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tags: undefined,
+        })
+      );
+    });
+
+    it('should return created journal record', async () => {
+      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+      const mockRecord = {
+        id: 'jrn_456',
+        ticker: 'INFY',
+        sequence: 'MWD' as const,
+        type: 'REJECTED' as const,
+        status: 'FAIL' as const,
+        created_at: '2024-01-01T00:00:00Z',
+      };
+      mockKohanClient.createJournal.mockResolvedValue(mockRecord);
+
+      const result = await journalManager.createJournal({
+        ticker: 'INFY',
+        reason: 'test',
+        screenshots: [
+          { file_name: 'INFY_20240101_1200_1_tmn_rejected.png', full_path: '/path/1', timeframe: 'TMN' as const },
+        ],
+      });
+
+      expect(result).toEqual(mockRecord);
+    });
+
+    it('should propagate client errors', async () => {
+      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+      mockKohanClient.createJournal.mockRejectedValue(new Error('journal api error'));
+
+      await expect(
+        journalManager.createJournal({
+          ticker: 'FAIL',
+          reason: 'test',
+          screenshots: [
+            { file_name: 'FAIL_20240101_1200_1_tmn_rejected.png', full_path: '/path/1', timeframe: 'TMN' as const },
+          ],
+        })
+      ).rejects.toThrow('journal api error');
+    });
+  });
+
+  describe('screenshot ticker flow', () => {
+    beforeEach(() => {
+      (mockKohanClient as any).screenshot = jest.fn();
+    });
+
+    it('should resolve MWD to TMN, MN, WK, D and call screenshot four times', async () => {
+      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+      mockSequenceManager.sequenceToTimeFrameConfig.mockImplementation((sequence, position) => {
+        const configs: Record<string, TimeFrameConfig[]> = {
+          MWD: [
+            new TimeFrameConfig('TMN', 't', 5),
+            new TimeFrameConfig('MN', 'vh', 4),
+            new TimeFrameConfig('WK', 'h', 3),
+            new TimeFrameConfig('DL', 'i', 2),
+          ],
+          YR: [
+            new TimeFrameConfig('SMN', 'i', 6),
+            new TimeFrameConfig('TMN', 't', 5),
+            new TimeFrameConfig('MN', 'vh', 4),
+            new TimeFrameConfig('WK', 'h', 3),
+          ],
+        };
+
+        return configs[sequence][position];
+      });
+      (mockKohanClient as any).screenshot.mockImplementation(({ file_name }: { file_name: string }) =>
+        Promise.resolve({
+          file_name,
+          full_path: `/home/aman/Downloads/${file_name}`,
+        })
+      );
+
+      const result = await (journalManager as any).screenshotTicker('TCS', 'Rejected');
+
+      expect(mockSequenceManager.getCurrentSequence).toHaveBeenCalled();
+      expect(mockTimeFrameManager.applyTimeFrame).toHaveBeenNthCalledWith(1, 0);
+      expect(mockTimeFrameManager.applyTimeFrame).toHaveBeenNthCalledWith(2, 1);
+      expect(mockTimeFrameManager.applyTimeFrame).toHaveBeenNthCalledWith(3, 2);
+      expect(mockTimeFrameManager.applyTimeFrame).toHaveBeenNthCalledWith(4, 3);
+      expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenNthCalledWith(1, SequenceType.MWD, 0);
+      expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenNthCalledWith(2, SequenceType.MWD, 1);
+      expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenNthCalledWith(3, SequenceType.MWD, 2);
+      expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenNthCalledWith(4, SequenceType.MWD, 3);
+      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_1_tmn_rejected\.png$/),
+          directory_type: 'JOURNAL',
+          type: 'FULL',
+          notify: false,
+          window: 'TradingView',
+        })
+      );
+      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_2_mn_rejected\.png$/),
+          directory_type: 'JOURNAL',
+          type: 'FULL',
+          notify: false,
+          window: 'TradingView',
+        })
+      );
+      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+        3,
+        expect.objectContaining({
+          file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_3_wk_rejected\.png$/),
+          directory_type: 'JOURNAL',
+          type: 'FULL',
+          notify: false,
+          window: 'TradingView',
+        })
+      );
+      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+        4,
+        expect.objectContaining({
+          file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_4_dl_rejected\.png$/),
+          directory_type: 'JOURNAL',
+          type: 'FULL',
+          notify: false,
+          window: 'TradingView',
+        })
+      );
+      expect(result).toHaveLength(4);
+      expect(result[0].file_name).toMatch(/^TCS_\d{8}_\d{4}_1_tmn_rejected\.png$/);
+      expect(result[1].file_name).toMatch(/^TCS_\d{8}_\d{4}_2_mn_rejected\.png$/);
+      expect(result[2].file_name).toMatch(/^TCS_\d{8}_\d{4}_3_wk_rejected\.png$/);
+      expect(result[3].file_name).toMatch(/^TCS_\d{8}_\d{4}_4_dl_rejected\.png$/);
+      expect(result[0].timeframe).toBe('TMN');
+      expect(result[1].timeframe).toBe('MN');
+      expect(result[2].timeframe).toBe('WK');
+      expect(result[3].timeframe).toBe('DL');
+    });
+
+    it('should resolve YR to SMN, TMN, MN, WK and preserve returned metadata', async () => {
+      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.YR);
+      mockSequenceManager.sequenceToTimeFrameConfig.mockImplementation((sequence, position) => {
+        const configs: Record<string, TimeFrameConfig[]> = {
+          MWD: [
+            new TimeFrameConfig('TMN', 't', 5),
+            new TimeFrameConfig('MN', 'vh', 4),
+            new TimeFrameConfig('WK', 'h', 3),
+            new TimeFrameConfig('DL', 'i', 2),
+          ],
+          YR: [
+            new TimeFrameConfig('SMN', 'i', 6),
+            new TimeFrameConfig('TMN', 't', 5),
+            new TimeFrameConfig('MN', 'vh', 4),
+            new TimeFrameConfig('WK', 'h', 3),
+          ],
+        };
+
+        return configs[sequence][position];
+      });
+      (mockKohanClient as any).screenshot.mockImplementation(({ file_name }: { file_name: string }) =>
+        Promise.resolve({
+          file_name,
+          full_path: `/home/aman/Downloads/${file_name}`,
+        })
+      );
+
+      const result = await (journalManager as any).screenshotTicker('TCS', 'Rejected');
+
+      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_1_smn_rejected\.png$/),
+          directory_type: 'JOURNAL',
+          type: 'FULL',
+          notify: false,
+          window: 'TradingView',
+        })
+      );
+      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_2_tmn_rejected\.png$/),
+          directory_type: 'JOURNAL',
+          type: 'FULL',
+          notify: false,
+          window: 'TradingView',
+        })
+      );
+      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+        3,
+        expect.objectContaining({
+          file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_3_mn_rejected\.png$/),
+          directory_type: 'JOURNAL',
+          type: 'FULL',
+          notify: false,
+          window: 'TradingView',
+        })
+      );
+      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+        4,
+        expect.objectContaining({
+          file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_4_wk_rejected\.png$/),
+          directory_type: 'JOURNAL',
+          type: 'FULL',
+          notify: false,
+          window: 'TradingView',
+        })
+      );
+      expect(result).toHaveLength(4);
+      expect(result[0].timeframe).toBe('SMN');
+      expect(result[1].timeframe).toBe('TMN');
+      expect(result[2].timeframe).toBe('MN');
+      expect(result[3].timeframe).toBe('WK');
+    });
+
+    it('should abort when screenshot fails', async () => {
+      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+      mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(new TimeFrameConfig('TMN', 't', 5));
+      (mockKohanClient as any).screenshot.mockRejectedValue(new Error('screenshot failed'));
+
+      await expect((journalManager as any).screenshotTicker('TCS', 'Rejected')).rejects.toThrow('screenshot failed');
+    });
+  });
+
   describe('createReasonText', () => {
     it('should create formatted reason text with current timeframe', () => {
       const testReason = 'breakout';
 
       const result = journalManager.createReasonText(testReason);
 
-      expect(result).toBe('D - breakout');
+      expect(result).toBe('DL - breakout');
       expect(mockTimeFrameManager.getCurrentTimeFrameConfig).toHaveBeenCalled();
     });
 
     it('should handle empty reason', () => {
       const result = journalManager.createReasonText('');
 
-      expect(result).toBe('D - ');
+      expect(result).toBe('DL - ');
     });
 
     it('should handle reason with special characters', () => {
@@ -211,7 +537,7 @@ describe('JournalManager', () => {
 
       const result = journalManager.createReasonText(testReason);
 
-      expect(result).toBe('D - test-reason_123');
+      expect(result).toBe('DL - test-reason_123');
     });
 
     it('should handle reason with spaces', () => {
@@ -219,7 +545,7 @@ describe('JournalManager', () => {
 
       const result = journalManager.createReasonText(testReason);
 
-      expect(result).toBe('D - volume breakout');
+      expect(result).toBe('DL - volume breakout');
     });
 
     it('should use different timeframe symbols', () => {
@@ -245,7 +571,7 @@ describe('JournalManager', () => {
 
       const result = journalManager.createReasonText(longReason);
 
-      expect(result).toBe(`D - ${longReason}`);
+      expect(result).toBe(`DL - ${longReason}`);
     });
 
     it('should handle unicode characters in reason', () => {
@@ -253,7 +579,7 @@ describe('JournalManager', () => {
 
       const result = journalManager.createReasonText(unicodeReason);
 
-      expect(result).toBe(`D - ${unicodeReason}`);
+      expect(result).toBe(`DL - ${unicodeReason}`);
     });
 
     it('should call getCurrentTimeFrameConfig exactly once', () => {
@@ -326,7 +652,7 @@ describe('JournalManager', () => {
 
     it('should handle reason text creation with different timeframes', () => {
       const testCases = [
-        { symbol: 'D', expected: 'D - test' },
+        { symbol: 'DL', expected: 'DL - test' },
         { symbol: 'W', expected: 'W - test' },
         { symbol: 'M', expected: 'M - test' },
         { symbol: '3M', expected: '3M - test' },

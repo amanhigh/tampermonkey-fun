@@ -7,6 +7,8 @@ import { IStyleManager } from '../../src/manager/style';
 import { TickerManager } from '../../src/manager/ticker';
 import { IAlertManager } from '../../src/manager/alert';
 import { AlertClickAction } from '../../src/models/events';
+import { JournalType } from '../../src/models/trading';
+import { Constants } from '../../src/models/constant';
 
 describe('JournalHandler', () => {
   let journalHandler: JournalHandler;
@@ -19,6 +21,11 @@ describe('JournalHandler', () => {
   let mockAlertManager: jest.Mocked<IAlertManager>;
   let mockDocument: { querySelector: jest.Mock; querySelectorAll: jest.Mock };
   let mockReviewLink: { addEventListener: jest.Mock };
+  let mockJournalOpenListener: (
+    _keyName: string,
+    _oldValue: unknown,
+    newValue: unknown
+  ) => void;
 
   beforeEach(() => {
     mockTickerManager = {
@@ -28,6 +35,9 @@ describe('JournalHandler', () => {
     mockJournalManager = {
       createEntry: jest.fn(),
       createReasonText: jest.fn(),
+      createJournal: jest.fn(),
+      publishJournalOpenEvent: jest.fn(),
+      screenshotTicker: jest.fn(),
     } as unknown as jest.Mocked<IJournalManager>;
 
     mockSmartPrompt = {
@@ -63,6 +73,14 @@ describe('JournalHandler', () => {
     (global as any).document = mockDocument;
     (global as any).Element = class {
       closest = jest.fn();
+    };
+    (global as any).GM_addValueChangeListener = jest.fn((_, listener) => {
+      mockJournalOpenListener = listener;
+    });
+    (global as any).window = {
+      location: {
+        assign: jest.fn(),
+      },
     };
 
     journalHandler = new JournalHandler(
@@ -109,6 +127,36 @@ describe('JournalHandler', () => {
     });
   });
 
+  describe('handleRecordJournal', () => {
+    it('should route REJECTED journal to screenshot ticker flow', async () => {
+      mockTickerManager.getTicker.mockReturnValue('TCS');
+      mockSmartPrompt.showModal.mockResolvedValue({ type: 'reason', value: 'oe' });
+      (mockJournalManager.screenshotTicker as jest.Mock).mockResolvedValue([
+        { file_name: 'TCS.tmn.rejected_20240422_0930.png', full_path: '/home/aman/Downloads/TCS.tmn.rejected_20240422_0930.png' },
+      ]);
+      (mockJournalManager.createJournal as jest.Mock).mockResolvedValue({
+        id: 'jrn_1',
+        ticker: 'TCS',
+        sequence: 'MWD',
+        type: 'REJECTED',
+        status: 'FAIL',
+        created_at: '2026-04-22T00:00:00Z',
+      });
+      (mockJournalManager.publishJournalOpenEvent as jest.Mock).mockResolvedValue(undefined);
+
+      await journalHandler.handleRecordJournal(JournalType.REJECTED);
+
+      expect(mockJournalManager.screenshotTicker).toHaveBeenCalledWith('TCS', 'rejected');
+      expect(mockJournalManager.createJournal).toHaveBeenCalledWith({
+        ticker: 'TCS',
+        reason: 'oe',
+        screenshots: [{ file_name: 'TCS.tmn.rejected_20240422_0930.png', full_path: '/home/aman/Downloads/TCS.tmn.rejected_20240422_0930.png' }],
+      });
+      expect(mockJournalManager.publishJournalOpenEvent).toHaveBeenCalledWith('jrn_1');
+      expect(mockJournalManager.createEntry).not.toHaveBeenCalled();
+    });
+  });
+
   describe('registerJournalReviewHandler', () => {
     it('should install click listener and open ticker button once', () => {
       mockDocument.querySelectorAll.mockReturnValue([mockReviewLink]);
@@ -117,6 +165,21 @@ describe('JournalHandler', () => {
 
       expect(mockDocument.querySelectorAll).toHaveBeenCalledWith('a[href^="/journal/"]');
       expect(mockReviewLink.addEventListener).toHaveBeenCalledWith('click', expect.any(Function));
+    });
+  });
+
+  describe('registerOpenJournalHandler', () => {
+    it('should install journal open listener and navigate to the review page', () => {
+      journalHandler.registerOpenJournalHandler();
+
+      expect((global as any).GM_addValueChangeListener).toHaveBeenCalledWith(
+        Constants.STORAGE.EVENTS.JOURNAL_OPEN,
+        expect.any(Function)
+      );
+
+      mockJournalOpenListener(Constants.STORAGE.EVENTS.JOURNAL_OPEN, undefined, JSON.stringify({ journalId: 'jrn_123' }));
+
+      expect((global as any).window.location.assign).toHaveBeenCalledWith('/journal/jrn_123');
     });
   });
 });

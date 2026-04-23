@@ -229,6 +229,7 @@ export const Constants = Object.freeze({
     EVENTS: {
       ALERT_FEED_UPDATE: 'alertFeedEvent', // Old Name: tvWatchChangeEvent
       ALERT_CLICKED: 'alertClickedEvent', // Old Name: alertClickedEvent
+      JOURNAL_OPEN: 'journalOpenEvent',
       GTT_REFERSH: 'gttRefereshEvent', // Old Name: gttOrderEvent
       GTT_CREATE: 'gttCreateEvent', // Old Name: gttRequest
       GTT_DELETE: 'gttDeleteEvent',
@@ -241,7 +242,7 @@ export const Constants = Object.freeze({
       DEFAULT: SequenceType.MWD,
       HIGH: SequenceType.YR,
       FRAMES: {
-        [TimeFrame.DAILY]: new TimeFrameConfig('D', 'I', 2),
+        [TimeFrame.DAILY]: new TimeFrameConfig('DL', 'I', 2),
         [TimeFrame.WEEKLY]: new TimeFrameConfig('WK', 'H', 3),
         [TimeFrame.MONTHLY]: new TimeFrameConfig('MN', 'VH', 4),
         [TimeFrame.THREE_MONTHLY]: new TimeFrameConfig('TMN', 'T', 5),
@@ -257,6 +258,11 @@ export const Constants = Object.freeze({
 
   MISC: {
     RESET_FEED: 'Reset',
+  },
+
+  // External service endpoints
+  KOHAN: {
+    BASE_URL: 'http://localhost:9091/v1/api',
   },
 
   // Exchange and market related constants

@@ -1,4 +1,5 @@
 import { KohanClient, IKohanClient } from '../../src/client/kohan';
+import { Constants } from '../../src/models/constant';
 
 // Mock the BaseClient's makeRequest method
 jest.mock('../../src/client/base', () => {
@@ -34,7 +35,7 @@ describe('KohanClient', () => {
   describe('constructor', () => {
     it('should create instance with default base URL', () => {
       const client = new KohanClient();
-      expect(client.getBaseUrl()).toBe('http://localhost:9010/v1');
+      expect(client.getBaseUrl()).toBe(Constants.KOHAN.BASE_URL);
     });
 
     it('should create instance with custom base URL', () => {
@@ -115,6 +116,53 @@ describe('KohanClient', () => {
       // Verify no method or other options were passed (defaults to GET)
       expect(mockMakeRequest).toHaveBeenCalledTimes(1);
       expect(mockMakeRequest.mock.calls[0]).toHaveLength(1);
+    });
+  });
+
+  describe('screenshot flow', () => {
+    it('should POST a screenshot request and return screenshot metadata', async () => {
+      const apiEnvelope = {
+        status: 'success',
+        data: {
+          file_name: 'TCS.tmn.rejected_20240422_0930.png',
+          full_path: '/captures/TCS.TMN.Rejected_20240422_0930.png',
+        },
+      };
+
+      mockMakeRequest.mockResolvedValue(apiEnvelope as any);
+
+      const result = await (kohanClient as any).screenshot({
+        file_name: 'TCS.tmn.rejected_20240422_0930.png',
+        directory_type: 'JOURNAL',
+        type: 'FULL',
+        notify: false,
+        window: 'TradingView',
+      });
+
+      expect(mockMakeRequest).toHaveBeenCalledWith('/os/screenshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        data: JSON.stringify({
+          file_name: 'TCS.tmn.rejected_20240422_0930.png',
+          directory_type: 'JOURNAL',
+          type: 'FULL',
+          notify: false,
+          window: 'TradingView',
+        }),
+      });
+      expect(result).toEqual(apiEnvelope.data);
+    });
+
+    it('should wrap screenshot API failures with a descriptive error', async () => {
+      mockMakeRequest.mockRejectedValue(new Error('503 Service Unavailable'));
+
+      await expect(
+        (kohanClient as any).screenshot({
+          file_name: 'TCS.smn.rejected_20240422_1015.png',
+          directory_type: 'JOURNAL',
+          type: 'FULL',
+        })
+      ).rejects.toThrow('Failed to take journal screenshots: 503 Service Unavailable');
     });
   });
 
