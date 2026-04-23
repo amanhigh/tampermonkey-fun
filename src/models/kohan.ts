@@ -30,6 +30,7 @@ export interface ScreenshotRequest {
 export interface ScreenshotResponse {
   file_name: string;
   full_path: string;
+  timeframe: JournalApiTimeframe;
 }
 
 export interface CreateJournalImageRequest {

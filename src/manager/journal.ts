@@ -3,7 +3,7 @@ import { ISequenceManager } from './sequence';
 import { Notifier } from '../util/notify';
 import { IKohanClient } from '../client/kohan';
 import { ITimeFrameManager } from './timeframe';
-import { CreateJournalInput, CreateJournalRequest, JournalRecord, ScreenshotResponse } from '../models/kohan';
+import { CreateJournalInput, CreateJournalRequest, JournalApiTimeframe, JournalRecord, ScreenshotResponse } from '../models/kohan';
 import { Constants } from '../models/constant';
 import { JournalOpenEvent } from '../models/events';
 
@@ -91,7 +91,7 @@ export class JournalManager implements IJournalManager {
       type: 'REJECTED',
       status: 'FAIL',
       images: input.screenshots.map((screenshot) => ({
-        timeframe: this.extractTimeframe(screenshot.file_name),
+        timeframe: screenshot.timeframe,
         file_name: screenshot.file_name,
       })),
       tags: this.parseReasonTags(input.reason),
@@ -120,7 +120,8 @@ export class JournalManager implements IJournalManager {
 
     for (const position of [0, 1, 2, 3]) {
       this.timeframeManager.applyTimeFrame(position);
-      const timeframe = this.sequenceManager.sequenceToTimeFrameConfig(sequence, position).symbol;
+      const config = this.sequenceManager.sequenceToTimeFrameConfig(sequence, position);
+      const timeframe = this.toApiTimeframe(config.symbol);
       const order = position + 1;
 
       const fileName = `${ticker.toUpperCase()}_${this.getScreenshotTimestamp()}_${order}_${timeframe.toLowerCase()}_${screenshotType}.png`;
@@ -131,6 +132,7 @@ export class JournalManager implements IJournalManager {
         window: 'TradingView',
         notify: false,
       });
+      screenshot.timeframe = timeframe;
       screenshots.push(screenshot);
     }
 
@@ -166,22 +168,12 @@ export class JournalManager implements IJournalManager {
     return `${date}_${time}`;
   }
 
-  private extractTimeframe(fileName: string): 'DL' | 'WK' | 'MN' | 'TMN' | 'SMN' | 'YR' {
-    // HACK: Introduce Type for Timeframe Codes.
-    const nameWithoutExt = fileName.replace(/\.[^.]+$/, '');
-    const parts = nameWithoutExt.split('_');
-    const rawTimeframe = parts[parts.length - 2]?.toUpperCase();
-
-    if (!rawTimeframe) {
-      throw new Error(`Unable to determine timeframe for screenshot: ${fileName}`);
-    }
-
-    if (rawTimeframe === 'D') {
-      // BUG: Change 'D' to 'DL' for daily timeframe to match expected API values.
+  private toApiTimeframe(symbol: string): JournalApiTimeframe {
+    const upper = symbol.toUpperCase();
+    if (upper === 'D') {
       return 'DL';
     }
-
-    return rawTimeframe as 'DL' | 'WK' | 'MN' | 'TMN' | 'SMN' | 'YR';
+    return upper as JournalApiTimeframe;
   }
 
   private parseReasonTags(reason: string): CreateJournalRequest['tags'] {
