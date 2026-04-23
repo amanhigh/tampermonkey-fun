@@ -259,6 +259,11 @@ export const Constants = Object.freeze({
     RESET_FEED: 'Reset',
   },
 
+  // External service endpoints
+  KOHAN: {
+    BASE_URL: 'http://localhost:9091/v1/api',
+  },
+
   // Exchange and market related constants
   EXCHANGE: {
     TYPES: {

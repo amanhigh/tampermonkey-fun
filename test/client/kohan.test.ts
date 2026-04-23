@@ -1,4 +1,5 @@
 import { KohanClient, IKohanClient } from '../../src/client/kohan';
+import { Constants } from '../../src/models/constant';
 
 // Mock the BaseClient's makeRequest method
 jest.mock('../../src/client/base', () => {
@@ -34,7 +35,7 @@ describe('KohanClient', () => {
   describe('constructor', () => {
     it('should create instance with default base URL', () => {
       const client = new KohanClient();
-      expect(client.getBaseUrl()).toBe('http://localhost:9010/v1/api');
+      expect(client.getBaseUrl()).toBe(Constants.KOHAN.BASE_URL);
     });
 
     it('should create instance with custom base URL', () => {

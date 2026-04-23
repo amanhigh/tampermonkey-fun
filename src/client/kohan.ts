@@ -1,5 +1,12 @@
 import { BaseClient, IBaseClient } from './base';
-import { CreateJournalRequest, JournalRecord, KohanEnvelope, ScreenshotRequest, ScreenshotResponse } from '../models/kohan';
+import {
+  CreateJournalRequest,
+  JournalRecord,
+  KohanEnvelope,
+  ScreenshotRequest,
+  ScreenshotResponse,
+} from '../models/kohan';
+import { Constants } from '../models/constant';
 
 /**
  * KohanClient handles interactions with the local Kohan API
@@ -63,7 +70,7 @@ export class KohanClient extends BaseClient implements IKohanClient {
    * Creates an instance of KohanClient
    * @param baseUrl - Base URL for Kohan API
    */
-  constructor(baseUrl: string = 'http://localhost:9010/v1/api') {
+  constructor(baseUrl: string = Constants.KOHAN.BASE_URL) {
     super(baseUrl);
   }
 
