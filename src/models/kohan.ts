@@ -1,5 +1,7 @@
 export type ScreenshotType = 'FULL' | 'REGION';
 
+export type ScreenshotDirectoryType = 'JOURNAL' | 'DOWNLOAD';
+
 export type JournalApiType = 'REJECTED' | 'TAKEN';
 
 export type JournalApiStatus = 'SET' | 'RUNNING' | 'SUCCESS' | 'FAIL' | 'MISSED' | 'JUST_LOSS' | 'BROKEN';
@@ -19,7 +21,7 @@ export interface KohanEnvelope<T> {
 
 export interface ScreenshotRequest {
   file_name: string;
-  save_path: string;
+  directory_type: ScreenshotDirectoryType;
   type: ScreenshotType;
   window?: string;
   notify?: boolean;
@@ -27,7 +29,6 @@ export interface ScreenshotRequest {
 
 export interface ScreenshotResponse {
   file_name: string;
-  relative_path: string;
   full_path: string;
 }
 

@@ -117,7 +117,7 @@ describe('JournalHandler', () => {
       mockTickerManager.getTicker.mockReturnValue('TCS');
       mockSmartPrompt.showModal.mockResolvedValue({ type: 'reason', value: 'oe' });
       (mockJournalManager.screenshotTicker as jest.Mock).mockResolvedValue([
-        { file_name: 'TCS.tmn.rejected_20240422_0930.png', relative_path: '~/Downloads/TCS.tmn.rejected_20240422_0930.png', full_path: '/home/aman/Downloads/TCS.tmn.rejected_20240422_0930.png' },
+        { file_name: 'TCS.tmn.rejected_20240422_0930.png', full_path: '/home/aman/Downloads/TCS.tmn.rejected_20240422_0930.png' },
       ]);
       (mockJournalManager.createJournal as jest.Mock).mockResolvedValue({
         id: 'jrn_1',
@@ -134,7 +134,7 @@ describe('JournalHandler', () => {
       expect(mockJournalManager.createJournal).toHaveBeenCalledWith({
         ticker: 'TCS',
         reason: 'oe',
-        screenshots: [{ file_name: 'TCS.tmn.rejected_20240422_0930.png', relative_path: '~/Downloads/TCS.tmn.rejected_20240422_0930.png', full_path: '/home/aman/Downloads/TCS.tmn.rejected_20240422_0930.png' }],
+        screenshots: [{ file_name: 'TCS.tmn.rejected_20240422_0930.png', full_path: '/home/aman/Downloads/TCS.tmn.rejected_20240422_0930.png' }],
       });
       expect(mockJournalManager.createEntry).not.toHaveBeenCalled();
     });

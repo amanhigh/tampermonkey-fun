@@ -113,9 +113,10 @@ export class JournalManager implements IJournalManager {
       const fileName = `${ticker.toUpperCase()}_${this.getScreenshotTimestamp()}_${order}_${timeframe.toLowerCase()}_${screenshotType}.png`;
       const screenshot = await this.kohanClient.screenshot({
         file_name: fileName,
-        save_path: '/home/aman/Pictures',
+        directory_type: 'JOURNAL',
         type: 'FULL',
         window: 'TradingView',
+        notify: false,
       });
       screenshots.push(screenshot);
     }
@@ -153,10 +154,21 @@ export class JournalManager implements IJournalManager {
   }
 
   private extractTimeframe(fileName: string): 'DL' | 'WK' | 'MN' | 'TMN' | 'SMN' | 'YR' {
+    // HACK: Introduce Type for Timeframe Codes.
     const nameWithoutExt = fileName.replace(/\.[^.]+$/, '');
     const parts = nameWithoutExt.split('_');
-    const timeframe = parts[parts.length - 2]?.toUpperCase();
-    return (timeframe === 'D' ? 'DL' : timeframe) as 'DL' | 'WK' | 'MN' | 'TMN' | 'SMN' | 'YR';
+    const rawTimeframe = parts[parts.length - 2]?.toUpperCase();
+
+    if (!rawTimeframe) {
+      throw new Error(`Unable to determine timeframe for screenshot: ${fileName}`);
+    }
+
+    if (rawTimeframe === 'D') {
+      // BUG: Change 'D' to 'DL' for daily timeframe to match expected API values.
+      return 'DL';
+    }
+
+    return rawTimeframe as 'DL' | 'WK' | 'MN' | 'TMN' | 'SMN' | 'YR';
   }
 
   private parseReasonTags(reason: string): CreateJournalRequest['tags'] {
@@ -166,13 +178,12 @@ export class JournalManager implements IJournalManager {
 
     const [tag, ...overrideParts] = reason.split('-');
     const override = overrideParts.join('-');
+    const tagRequest = {
+      tag,
+      type: 'REASON' as const,
+      ...(override ? { override } : {}),
+    };
 
-    return [
-      {
-        tag,
-        type: 'REASON',
-        ...(override ? { override } : {}),
-      },
-    ];
+    return [tagRequest];
   }
 }

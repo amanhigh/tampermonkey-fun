@@ -120,18 +120,21 @@ describe('KohanClient', () => {
 
   describe('screenshot flow', () => {
     it('should POST a screenshot request and return screenshot metadata', async () => {
-      const apiResponse = {
-        file_name: 'TCS.tmn.rejected_20240422_0930.png',
-        relative_path: './TCS.TMN.Rejected_20240422_0930.png',
-        full_path: '/captures/TCS.TMN.Rejected_20240422_0930.png',
+      const apiEnvelope = {
+        status: 'success',
+        data: {
+          file_name: 'TCS.tmn.rejected_20240422_0930.png',
+          full_path: '/captures/TCS.TMN.Rejected_20240422_0930.png',
+        },
       };
 
-      mockMakeRequest.mockResolvedValue(apiResponse);
+      mockMakeRequest.mockResolvedValue(apiEnvelope as any);
 
       const result = await (kohanClient as any).screenshot({
         file_name: 'TCS.tmn.rejected_20240422_0930.png',
-        save_path: '~/Downloads',
+        directory_type: 'JOURNAL',
         type: 'FULL',
+        notify: false,
         window: 'TradingView',
       });
 
@@ -140,12 +143,13 @@ describe('KohanClient', () => {
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({
           file_name: 'TCS.tmn.rejected_20240422_0930.png',
-          save_path: '~/Downloads',
+          directory_type: 'JOURNAL',
           type: 'FULL',
+          notify: false,
           window: 'TradingView',
         }),
       });
-      expect(result).toEqual(apiResponse);
+      expect(result).toEqual(apiEnvelope.data);
     });
 
     it('should wrap screenshot API failures with a descriptive error', async () => {
@@ -154,7 +158,7 @@ describe('KohanClient', () => {
       await expect(
         (kohanClient as any).screenshot({
           file_name: 'TCS.smn.rejected_20240422_1015.png',
-          save_path: '~/Downloads',
+          directory_type: 'JOURNAL',
           type: 'FULL',
         })
       ).rejects.toThrow('Failed to take journal screenshots: 503 Service Unavailable');

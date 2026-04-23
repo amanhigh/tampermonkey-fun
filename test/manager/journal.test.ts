@@ -218,7 +218,6 @@ describe('JournalManager', () => {
       (mockKohanClient as any).screenshot.mockImplementation(({ file_name }: { file_name: string }) =>
         Promise.resolve({
           file_name,
-          relative_path: `~/Downloads/${file_name}`,
           full_path: `/home/aman/Downloads/${file_name}`,
         })
       );
@@ -238,8 +237,9 @@ describe('JournalManager', () => {
         1,
         expect.objectContaining({
           file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_1_tmn_rejected\.png$/),
-          save_path: '/home/aman/Pictures',
+          directory_type: 'JOURNAL',
           type: 'FULL',
+          notify: false,
           window: 'TradingView',
         })
       );
@@ -247,8 +247,9 @@ describe('JournalManager', () => {
         2,
         expect.objectContaining({
           file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_2_mn_rejected\.png$/),
-          save_path: '/home/aman/Pictures',
+          directory_type: 'JOURNAL',
           type: 'FULL',
+          notify: false,
           window: 'TradingView',
         })
       );
@@ -256,8 +257,9 @@ describe('JournalManager', () => {
         3,
         expect.objectContaining({
           file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_3_wk_rejected\.png$/),
-          save_path: '/home/aman/Pictures',
+          directory_type: 'JOURNAL',
           type: 'FULL',
+          notify: false,
           window: 'TradingView',
         })
       );
@@ -265,8 +267,9 @@ describe('JournalManager', () => {
         4,
         expect.objectContaining({
           file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_4_d_rejected\.png$/),
-          save_path: '/home/aman/Pictures',
+          directory_type: 'JOURNAL',
           type: 'FULL',
+          notify: false,
           window: 'TradingView',
         })
       );
@@ -300,7 +303,6 @@ describe('JournalManager', () => {
       (mockKohanClient as any).screenshot.mockImplementation(({ file_name }: { file_name: string }) =>
         Promise.resolve({
           file_name,
-          relative_path: `~/Downloads/${file_name}`,
           full_path: `/home/aman/Downloads/${file_name}`,
         })
       );
@@ -311,8 +313,9 @@ describe('JournalManager', () => {
         1,
         expect.objectContaining({
           file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_1_smn_rejected\.png$/),
-          save_path: '/home/aman/Pictures',
+          directory_type: 'JOURNAL',
           type: 'FULL',
+          notify: false,
           window: 'TradingView',
         })
       );
@@ -320,8 +323,9 @@ describe('JournalManager', () => {
         2,
         expect.objectContaining({
           file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_2_tmn_rejected\.png$/),
-          save_path: '/home/aman/Pictures',
+          directory_type: 'JOURNAL',
           type: 'FULL',
+          notify: false,
           window: 'TradingView',
         })
       );
@@ -329,8 +333,9 @@ describe('JournalManager', () => {
         3,
         expect.objectContaining({
           file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_3_mn_rejected\.png$/),
-          save_path: '/home/aman/Pictures',
+          directory_type: 'JOURNAL',
           type: 'FULL',
+          notify: false,
           window: 'TradingView',
         })
       );
@@ -338,8 +343,9 @@ describe('JournalManager', () => {
         4,
         expect.objectContaining({
           file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_4_wk_rejected\.png$/),
-          save_path: '/home/aman/Pictures',
+          directory_type: 'JOURNAL',
           type: 'FULL',
+          notify: false,
           window: 'TradingView',
         })
       );
