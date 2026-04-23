@@ -5,6 +5,7 @@ import { ITimeFrameManager } from '../../src/manager/timeframe';
 import { JournalType, SequenceType } from '../../src/models/trading';
 import { TimeFrameConfig } from '../../src/models/trading';
 import { Notifier } from '../../src/util/notify';
+import { Constants } from '../../src/models/constant';
 
 // Mock Notifier to avoid DOM issues
 jest.mock('../../src/util/notify', () => ({
@@ -21,11 +22,14 @@ describe('JournalManager', () => {
   let mockSequenceManager: jest.Mocked<ISequenceManager>;
   let mockKohanClient: jest.Mocked<IKohanClient>;
   let mockTimeFrameManager: jest.Mocked<ITimeFrameManager>;
+  let mockGMSetValue: jest.Mock;
 
   const mockTimeFrameConfig = new TimeFrameConfig('D', 'daily-style', 1);
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGMSetValue = jest.fn().mockResolvedValue(undefined);
+    (global as any).GM = { setValue: mockGMSetValue };
 
     // Mock SequenceManager
     mockSequenceManager = {
@@ -187,6 +191,23 @@ describe('JournalManager', () => {
 
       const expectedTag = `${testTicker}.yr.result.${longReason}`;
       expect(mockKohanClient.recordTicker).toHaveBeenCalledWith(expectedTag);
+    });
+  });
+
+  describe('publishJournalOpenEvent', () => {
+    it('should persist journal open event with journal id', async () => {
+      await journalManager.publishJournalOpenEvent('jrn_999');
+
+      expect(mockGMSetValue).toHaveBeenCalledWith(
+        Constants.STORAGE.EVENTS.JOURNAL_OPEN,
+        expect.stringMatching(/"journalId":"jrn_999"/)
+      );
+    });
+
+    it('should propagate GM errors', async () => {
+      mockGMSetValue.mockRejectedValue(new Error('storage unavailable'));
+
+      await expect(journalManager.publishJournalOpenEvent('jrn_999')).rejects.toThrow('storage unavailable');
     });
   });
 

@@ -31,3 +31,17 @@ export class AlertClicked extends BaseEvent {
     return new AlertClicked(parsed.ticker, parsed.action as AlertClickAction);
   }
 }
+
+export class JournalOpenEvent extends BaseEvent {
+  constructor(
+    readonly journalId: string,
+    readonly timestamp: number = Date.now()
+  ) {
+    super();
+  }
+
+  public static fromString(data: string): JournalOpenEvent {
+    const parsed = JSON.parse(data) as { journalId: string };
+    return new JournalOpenEvent(parsed.journalId);
+  }
+}

@@ -229,6 +229,7 @@ export const Constants = Object.freeze({
     EVENTS: {
       ALERT_FEED_UPDATE: 'alertFeedEvent', // Old Name: tvWatchChangeEvent
       ALERT_CLICKED: 'alertClickedEvent', // Old Name: alertClickedEvent
+      JOURNAL_OPEN: 'journalOpenEvent',
       GTT_REFERSH: 'gttRefereshEvent', // Old Name: gttOrderEvent
       GTT_CREATE: 'gttCreateEvent', // Old Name: gttRequest
       GTT_DELETE: 'gttDeleteEvent',

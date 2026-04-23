@@ -4,6 +4,8 @@ import { Notifier } from '../util/notify';
 import { IKohanClient } from '../client/kohan';
 import { ITimeFrameManager } from './timeframe';
 import { CreateJournalInput, CreateJournalRequest, JournalRecord, ScreenshotResponse } from '../models/kohan';
+import { Constants } from '../models/constant';
+import { JournalOpenEvent } from '../models/events';
 
 /**
  * Interface for managing trading journal operations
@@ -52,6 +54,12 @@ export interface IJournalManager {
    * @returns Formatted text (e.g., "HGS - oe")
    */
   createReasonText(reason: string): string;
+
+  /**
+   * Publishes an open-journal event for localhost review tabs.
+   * @param journalId Created journal identifier
+   */
+  publishJournalOpenEvent(journalId: string): Promise<void>;
 }
 
 /**
@@ -92,6 +100,11 @@ export class JournalManager implements IJournalManager {
     const journal = await this.kohanClient.createJournal(request);
     Notifier.success(`Journal created: ${journal.ticker} ${journal.type} ${journal.status}`);
     return journal;
+  }
+
+  /** @inheritdoc */
+  public async publishJournalOpenEvent(journalId: string): Promise<void> {
+    await GM.setValue(Constants.STORAGE.EVENTS.JOURNAL_OPEN, new JournalOpenEvent(journalId).stringify());
   }
 
   /**

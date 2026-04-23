@@ -8,6 +8,7 @@ import { TickerManager } from '../../src/manager/ticker';
 import { IAlertManager } from '../../src/manager/alert';
 import { AlertClickAction } from '../../src/models/events';
 import { JournalType } from '../../src/models/trading';
+import { Constants } from '../../src/models/constant';
 
 describe('JournalHandler', () => {
   let journalHandler: JournalHandler;
@@ -20,6 +21,11 @@ describe('JournalHandler', () => {
   let mockAlertManager: jest.Mocked<IAlertManager>;
   let mockDocument: { querySelector: jest.Mock; querySelectorAll: jest.Mock };
   let mockReviewLink: { addEventListener: jest.Mock };
+  let mockJournalOpenListener: (
+    _keyName: string,
+    _oldValue: unknown,
+    newValue: unknown
+  ) => void;
 
   beforeEach(() => {
     mockTickerManager = {
@@ -30,6 +36,7 @@ describe('JournalHandler', () => {
       createEntry: jest.fn(),
       createReasonText: jest.fn(),
       createJournal: jest.fn(),
+      publishJournalOpenEvent: jest.fn(),
       screenshotTicker: jest.fn(),
     } as unknown as jest.Mocked<IJournalManager>;
 
@@ -66,6 +73,14 @@ describe('JournalHandler', () => {
     (global as any).document = mockDocument;
     (global as any).Element = class {
       closest = jest.fn();
+    };
+    (global as any).GM_addValueChangeListener = jest.fn((_, listener) => {
+      mockJournalOpenListener = listener;
+    });
+    (global as any).window = {
+      location: {
+        assign: jest.fn(),
+      },
     };
 
     journalHandler = new JournalHandler(
@@ -127,6 +142,7 @@ describe('JournalHandler', () => {
         status: 'FAIL',
         created_at: '2026-04-22T00:00:00Z',
       });
+      (mockJournalManager.publishJournalOpenEvent as jest.Mock).mockResolvedValue(undefined);
 
       await journalHandler.handleRecordJournal(JournalType.REJECTED);
 
@@ -136,6 +152,7 @@ describe('JournalHandler', () => {
         reason: 'oe',
         screenshots: [{ file_name: 'TCS.tmn.rejected_20240422_0930.png', full_path: '/home/aman/Downloads/TCS.tmn.rejected_20240422_0930.png' }],
       });
+      expect(mockJournalManager.publishJournalOpenEvent).toHaveBeenCalledWith('jrn_1');
       expect(mockJournalManager.createEntry).not.toHaveBeenCalled();
     });
   });
@@ -148,6 +165,21 @@ describe('JournalHandler', () => {
 
       expect(mockDocument.querySelectorAll).toHaveBeenCalledWith('a[href^="/journal/"]');
       expect(mockReviewLink.addEventListener).toHaveBeenCalledWith('click', expect.any(Function));
+    });
+  });
+
+  describe('registerOpenJournalHandler', () => {
+    it('should install journal open listener and navigate to the review page', () => {
+      journalHandler.registerOpenJournalHandler();
+
+      expect((global as any).GM_addValueChangeListener).toHaveBeenCalledWith(
+        Constants.STORAGE.EVENTS.JOURNAL_OPEN,
+        expect.any(Function)
+      );
+
+      mockJournalOpenListener(Constants.STORAGE.EVENTS.JOURNAL_OPEN, undefined, JSON.stringify({ journalId: 'jrn_123' }));
+
+      expect((global as any).window.location.assign).toHaveBeenCalledWith('/journal/jrn_123');
     });
   });
 });

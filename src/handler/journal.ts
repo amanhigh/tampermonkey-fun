@@ -12,7 +12,7 @@ import { Notifier } from '../util/notify';
 import { ITradingViewManager } from '../manager/tv';
 import { IStyleManager } from '../manager/style';
 import { IAlertManager } from '../manager/alert';
-import { AlertClickAction } from '../models/events';
+import { AlertClickAction, JournalOpenEvent } from '../models/events';
 
 /**
  * Interface for managing journal entry operations at UI/Event level
@@ -47,6 +47,11 @@ export interface IJournalHandler {
    * Registers localhost review handlers and action button.
    */
   registerJournalReviewHandler(): void;
+
+  /**
+   * Registers localhost journal-open listener.
+   */
+  registerOpenJournalHandler(): void;
 }
 
 /**
@@ -91,8 +96,12 @@ export class JournalHandler implements IJournalHandler {
         throw new Error(`Failed to take screenshot journal entry: ${error}`);
       });
 
-      await this.journalManager.createJournal({ ticker, reason, screenshots }).catch((error) => {
+      const journal = await this.journalManager.createJournal({ ticker, reason, screenshots }).catch((error) => {
         throw new Error(`Failed to record journal entry: ${error}`);
+      });
+
+      await this.journalManager.publishJournalOpenEvent(journal.id).catch((error) => {
+        throw new Error(`Failed to publish journal open event: ${error}`);
       });
       return;
     }
@@ -132,6 +141,19 @@ export class JournalHandler implements IJournalHandler {
         void this.handleReviewJournal(event);
       });
     });
+  }
+
+  /** @inheritdoc */
+  public registerOpenJournalHandler(): void {
+    GM_addValueChangeListener(
+      Constants.STORAGE.EVENTS.JOURNAL_OPEN,
+      (_keyName: string, _oldValue: unknown, newValue: unknown) => {
+        if (newValue && typeof newValue === 'string') {
+          const journalOpenEvent = JournalOpenEvent.fromString(newValue);
+          window.location.assign(`/journal/${journalOpenEvent.journalId}`);
+        }
+      }
+    );
   }
 
   private extractReviewTicker(event?: Event): string | null {
