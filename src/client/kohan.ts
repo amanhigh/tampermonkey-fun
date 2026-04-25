@@ -16,7 +16,7 @@ import { Constants } from '../models/constant';
 
 /**
  * KohanClient handles interactions with the local Kohan API
- * Provides methods for recording tickers and retrieving clipboard data
+ * Provides methods for taking screenshots, creating journals, and managing journal sub-resources.
  */
 export interface IKohanClient extends IBaseClient {
   /**
@@ -92,7 +92,7 @@ export interface IKohanClient extends IBaseClient {
 
 /**
  * KohanClient handles interactions with the local Kohan API
- * Provides methods for recording tickers and retrieving clipboard data
+ * Provides methods for taking screenshots, creating journals, and managing journal sub-resources.
  */
 export class KohanClient extends BaseClient implements IKohanClient {
   /**
@@ -140,12 +140,24 @@ export class KohanClient extends BaseClient implements IKohanClient {
   async listJournals(params: JournalQueryParams): Promise<JournalListResponse> {
     try {
       const query = new URLSearchParams();
-      if (params.ticker) query.set('ticker', params.ticker);
-      if (params.type) query.set('type', params.type);
-      if (params.status) query.set('status', params.status);
-      if (params.limit) query.set('limit', String(params.limit));
-      if (params['sort-by']) query.set('sort-by', params['sort-by']);
-      if (params['sort-order']) query.set('sort-order', params['sort-order']);
+      if (params.ticker) {
+        query.set('ticker', params.ticker);
+      }
+      if (params.type) {
+        query.set('type', params.type);
+      }
+      if (params.status) {
+        query.set('status', params.status);
+      }
+      if (params.limit) {
+        query.set('limit', String(params.limit));
+      }
+      if (params['sort-by']) {
+        query.set('sort-by', params['sort-by']);
+      }
+      if (params['sort-order']) {
+        query.set('sort-order', params['sort-order']);
+      }
 
       return await this.makeRequest<JournalListResponse>(`/journals?${query.toString()}`);
     } catch (error) {
