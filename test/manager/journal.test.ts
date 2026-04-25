@@ -442,29 +442,19 @@ describe('JournalManager', () => {
   });
 
   describe('screenshotChecklist', () => {
-    it('should capture REGION checklist screenshot with top timeframe metadata', async () => {
-      const topTimeframeConfig = new TimeFrameConfig('TMN', 't', 5);
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
-      mockSequenceManager.sequenceToTimeFrameConfig.mockImplementation((_sequence: unknown, position: number) => {
-        expect(position).toBe(0);
-        return topTimeframeConfig;
-      });
-
+    it('should capture REGION checklist screenshot with DL timeframe metadata', async () => {
       const result = await (journalManager as any).screenshotChecklist('TCS', 'set');
 
-      expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenCalledWith(SequenceType.MWD, 0);
       expect(mockKohanClient.screenshot).toHaveBeenCalledWith({
         file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_checklist_set\.png$/),
         directory_type: 'JOURNAL',
         type: 'REGION',
         notify: false,
       });
-      expect(result.timeframe).toBe('TMN');
+      expect(result.timeframe).toBe('DL');
     });
 
     it('should propagate checklist screenshot errors', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
-      mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(new TimeFrameConfig('TMN', 't', 5));
       (mockKohanClient as any).screenshot.mockRejectedValue(new Error('screenshot failed'));
 
       await expect((journalManager as any).screenshotChecklist('TCS', 'set')).rejects.toThrow('screenshot failed');

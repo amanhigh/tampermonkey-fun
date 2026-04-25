@@ -210,12 +210,10 @@ export class JournalManager implements IJournalManager {
 
   /** @inheritdoc */
   public async screenshotChecklist(ticker: string, type: string): Promise<ScreenshotResponse> {
-    const sequence = this.sequenceManager.getCurrentSequence();
     const screenshotType = type.toLowerCase();
 
-    // Use top timeframe config (position 0) for image metadata
-    const config = this.sequenceManager.sequenceToTimeFrameConfig(sequence, 0);
-    const timeframe = config.symbol;
+    // Use DL timeframe for checklist image metadata
+    const timeframe = 'DL' as JournalApiTimeframe;
 
     // Build filename: TICKER_YYYYMMDD_HHMM_checklist_type.png
     const fileName = `${ticker.toUpperCase()}_${this.getScreenshotTimestamp()}_checklist_${screenshotType}.png`;
