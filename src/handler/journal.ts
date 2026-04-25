@@ -13,6 +13,7 @@ import { ITradingViewManager } from '../manager/tv';
 import { IStyleManager } from '../manager/style';
 import { IAlertManager } from '../manager/alert';
 import { AlertClickAction, JournalOpenEvent } from '../models/events';
+import { CreateJournalNoteRequest } from '../models/kohan';
 
 /**
  * Interface for managing journal entry operations at UI/Event level
@@ -78,36 +79,101 @@ export class JournalHandler implements IJournalHandler {
   public async handleRecordJournal(type: JournalType): Promise<void> {
     const reason = await this.showReasonModal();
 
-    // Handle cancel - user explicitly cancelled
-    if (reason === null) {
-      return;
-    }
-
-    // REJECTED requires a reason, SET/RESULT can have empty reason
-    if (type === JournalType.REJECTED && reason === '') {
-      Notifier.warn('Rejected entries require a reason. Please provide a reason or cancel.');
+    if (reason === null || this.shouldAbortRejected(type, reason)) {
       return;
     }
 
     const ticker = this.tickerManager.getTicker();
 
     if (type === JournalType.REJECTED) {
-      const screenshots = await this.journalManager.screenshotTicker(ticker, type).catch((error) => {
-        throw new Error(`Failed to take screenshot journal entry: ${error}`);
-      });
+      await this.handleRejectedJournal(ticker, reason, type);
+      return;
+    }
 
-      const journal = await this.journalManager.createJournal({ ticker, reason, screenshots }).catch((error) => {
-        throw new Error(`Failed to record journal entry: ${error}`);
-      });
-
-      await this.journalManager.publishJournalOpenEvent(journal.id).catch((error) => {
-        throw new Error(`Failed to publish journal open event: ${error}`);
-      });
+    if (type === JournalType.SET) {
+      await this.handleSetupJournal(ticker, reason, type);
       return;
     }
 
     return this.journalManager.createEntry(ticker, type, reason).catch((error) => {
       throw new Error(`Failed to record journal entry: ${error}`);
+    });
+  }
+
+  private shouldAbortRejected(type: JournalType, reason: string): boolean {
+    if (type !== JournalType.REJECTED || reason !== '') {
+      return false;
+    }
+
+    Notifier.warn('Rejected entries require a reason. Please provide a reason or cancel.');
+    return true;
+  }
+
+  private async handleRejectedJournal(ticker: string, reason: string, type: JournalType): Promise<void> {
+    const screenshots = await this.takeJournalScreenshots(ticker, type);
+    const journal = await this.journalManager
+      .createJournal({ ticker, reason, screenshots, type: 'REJECTED', status: 'FAIL' })
+      .catch((error) => {
+      throw new Error(`Failed to record journal entry: ${error}`);
+    });
+
+    await this.publishJournalOpenEvent(journal.id);
+  }
+
+  private async handleSetupJournal(ticker: string, reason: string, type: JournalType): Promise<void> {
+    const note = await this.showSetupNoteModal();
+    if (note === null || this.shouldAbortSetup(note)) {
+      return;
+    }
+
+    const screenshots = await this.takeJournalScreenshots(ticker, type);
+    const journal = await this.journalManager
+      .createJournal({
+        ticker,
+        reason,
+        screenshots,
+        type: 'TAKEN',
+        status: 'SET',
+        notes: this.createSetupNotes(note),
+      })
+      .catch((error) => {
+        throw new Error(`Failed to record journal entry: ${error}`);
+      });
+
+    await this.publishJournalOpenEvent(journal.id);
+  }
+
+  private shouldAbortSetup(note: string): boolean {
+    if (note.trim() !== '') {
+      return false;
+    }
+
+    Notifier.warn('Setup entries require a note. Please provide a note or cancel.');
+    return true;
+  }
+
+  private createSetupNotes(note: string): CreateJournalNoteRequest[] {
+    return [
+      {
+        status: 'SET',
+        content: note,
+        format: 'MARKDOWN',
+      },
+    ];
+  }
+
+  private async takeJournalScreenshots(
+    ticker: string,
+    type: JournalType
+  ): Promise<Awaited<ReturnType<IJournalManager['screenshotTicker']>>> {
+    return this.journalManager.screenshotTicker(ticker, type).catch((error) => {
+      throw new Error(`Failed to take screenshot journal entry: ${error}`);
+    });
+  }
+
+  private async publishJournalOpenEvent(journalId: string): Promise<void> {
+    await this.journalManager.publishJournalOpenEvent(journalId).catch((error) => {
+      throw new Error(`Failed to publish journal open event: ${error}`);
     });
   }
 
@@ -200,6 +266,22 @@ export class JournalHandler implements IJournalHandler {
       return response.value;
     } catch (error) {
       throw new Error(`Failed to show reason modal: ${error}`);
+    } finally {
+      await this.tvManager.setSwiftKeysState(true);
+    }
+  }
+
+  private async showSetupNoteModal(): Promise<string | null> {
+    try {
+      await this.tvManager.setSwiftKeysState(false);
+
+      return await this.smartPrompt.showTextareaModal(
+        'Trade Setup Note',
+        Constants.TRADING.PROMPT.TRADE_INFO,
+        'Save Note'
+      );
+    } catch (error) {
+      throw new Error(`Failed to show setup note modal: ${error}`);
     } finally {
       await this.tvManager.setSwiftKeysState(true);
     }

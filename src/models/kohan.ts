@@ -67,6 +67,12 @@ export interface CreateJournalInput {
   reason: string;
   /** Captured screenshots to attach to the journal. */
   screenshots: ScreenshotResponse[];
+  /** Journal API type to create. */
+  type: JournalApiType;
+  /** Journal API status to assign. */
+  status: JournalApiStatus;
+  /** Optional notes to attach on journal creation. */
+  notes?: CreateJournalNoteRequest[];
 }
 
 export interface JournalImageRecord extends CreateJournalImageRequest {

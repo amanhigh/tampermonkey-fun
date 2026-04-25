@@ -94,13 +94,14 @@ export class JournalManager implements IJournalManager {
     const request: CreateJournalRequest = {
       ticker: input.ticker.toUpperCase(),
       sequence: this.sequenceManager.getCurrentSequence() as CreateJournalRequest['sequence'],
-      type: 'REJECTED',
-      status: 'FAIL',
+      type: input.type,
+      status: input.status,
       images: input.screenshots.map((screenshot) => ({
         timeframe: screenshot.timeframe as JournalApiTimeframe,
         file_name: screenshot.file_name,
       })),
       tags: this.parseReasonTags(input.reason),
+      notes: input.notes,
     };
 
     const journal = await this.kohanClient.createJournal(request);

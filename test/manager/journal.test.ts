@@ -232,6 +232,8 @@ describe('JournalManager', () => {
       const input = {
         ticker: 'TCS',
         reason: 'oe',
+        type: 'REJECTED' as const,
+        status: 'FAIL' as const,
         screenshots: [
           { file_name: 'TCS_20240101_1200_1_tmn_rejected.png', full_path: '/path/1', timeframe: 'TMN' as const },
           { file_name: 'TCS_20240101_1200_2_mn_rejected.png', full_path: '/path/2', timeframe: 'MN' as const },
@@ -264,6 +266,8 @@ describe('JournalManager', () => {
       const input = {
         ticker: 'HGS',
         reason: 'oe-override-value',
+        type: 'REJECTED' as const,
+        status: 'FAIL' as const,
         screenshots: [
           { file_name: 'HGS_20240101_1200_1_smn_rejected.png', full_path: '/path/1', timeframe: 'SMN' as const },
         ],
@@ -284,6 +288,8 @@ describe('JournalManager', () => {
       const input = {
         ticker: 'AAPL',
         reason: '',
+        type: 'REJECTED' as const,
+        status: 'FAIL' as const,
         screenshots: [
           { file_name: 'AAPL_20240101_1200_1_tmn_rejected.png', full_path: '/path/1', timeframe: 'TMN' as const },
         ],
@@ -294,6 +300,41 @@ describe('JournalManager', () => {
       expect(mockKohanClient.createJournal).toHaveBeenCalledWith(
         expect.objectContaining({
           tags: undefined,
+        })
+      );
+    });
+
+    it('should create TAKEN setup journal with markdown note', async () => {
+      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+
+      await journalManager.createJournal({
+        ticker: 'AAPL',
+        reason: 'oe',
+        screenshots: [{ file_name: 'AAPL_20240101_1200_1_tmn_set.png', full_path: '/path/1', timeframe: 'TMN' as const }],
+        type: 'TAKEN',
+        status: 'SET',
+        notes: [
+          {
+            status: 'SET',
+            content: Constants.TRADING.PROMPT.TRADE_INFO,
+            format: 'MARKDOWN',
+          },
+        ],
+      });
+
+      expect(mockKohanClient.createJournal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ticker: 'AAPL',
+          sequence: 'MWD',
+          type: 'TAKEN',
+          status: 'SET',
+          notes: [
+            {
+              status: 'SET',
+              content: Constants.TRADING.PROMPT.TRADE_INFO,
+              format: 'MARKDOWN',
+            },
+          ],
         })
       );
     });
@@ -313,6 +354,8 @@ describe('JournalManager', () => {
       const result = await journalManager.createJournal({
         ticker: 'INFY',
         reason: 'test',
+        type: 'REJECTED' as const,
+        status: 'FAIL' as const,
         screenshots: [
           { file_name: 'INFY_20240101_1200_1_tmn_rejected.png', full_path: '/path/1', timeframe: 'TMN' as const },
         ],
@@ -329,6 +372,8 @@ describe('JournalManager', () => {
         journalManager.createJournal({
           ticker: 'FAIL',
           reason: 'test',
+          type: 'REJECTED' as const,
+          status: 'FAIL' as const,
           screenshots: [
             { file_name: 'FAIL_20240101_1200_1_tmn_rejected.png', full_path: '/path/1', timeframe: 'TMN' as const },
           ],

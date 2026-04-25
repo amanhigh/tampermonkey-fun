@@ -10,6 +10,18 @@ import { AlertClickAction } from '../../src/models/events';
 import { JournalType } from '../../src/models/trading';
 import { Constants } from '../../src/models/constant';
 
+jest.mock('../../src/util/notify', () => ({
+  Notifier: {
+    warn: jest.fn(),
+    success: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+    red: jest.fn(),
+    yellow: jest.fn(),
+    green: jest.fn(),
+  },
+}));
+
 describe('JournalHandler', () => {
   let journalHandler: JournalHandler;
   let mockTickerManager: jest.Mocked<TickerManager>;
@@ -42,6 +54,7 @@ describe('JournalHandler', () => {
 
     mockSmartPrompt = {
       showModal: jest.fn(),
+      showTextareaModal: jest.fn(),
     } as unknown as jest.Mocked<ISmartPrompt>;
 
     mockUiUtil = {
@@ -150,10 +163,94 @@ describe('JournalHandler', () => {
       expect(mockJournalManager.createJournal).toHaveBeenCalledWith({
         ticker: 'TCS',
         reason: 'oe',
+        type: 'REJECTED',
+        status: 'FAIL',
         screenshots: [{ file_name: 'TCS.tmn.rejected_20240422_0930.png', full_path: '/home/aman/Downloads/TCS.tmn.rejected_20240422_0930.png' }],
       });
       expect(mockJournalManager.publishJournalOpenEvent).toHaveBeenCalledWith('jrn_1');
       expect(mockJournalManager.createEntry).not.toHaveBeenCalled();
+    });
+
+    it('should route SET journal to taken setup flow with required note', async () => {
+      mockTickerManager.getTicker.mockReturnValue('TCS');
+      mockSmartPrompt.showModal.mockResolvedValue({ type: 'reason', value: 'oe' });
+      mockSmartPrompt.showTextareaModal.mockResolvedValue(Constants.TRADING.PROMPT.TRADE_INFO);
+      (mockJournalManager.screenshotTicker as jest.Mock).mockResolvedValue([
+        { file_name: 'TCS_20240422_0930_1_tmn_set.png', full_path: '/home/aman/Downloads/TCS_20240422_0930_1_tmn_set.png' },
+      ]);
+      (mockJournalManager.createJournal as jest.Mock).mockResolvedValue({
+        id: 'jrn_2',
+        ticker: 'TCS',
+        sequence: 'MWD',
+        type: 'TAKEN',
+        status: 'SET',
+        created_at: '2026-04-22T00:00:00Z',
+      });
+      (mockJournalManager.publishJournalOpenEvent as jest.Mock).mockResolvedValue(undefined);
+
+      await journalHandler.handleRecordJournal(JournalType.SET);
+
+      expect(mockSmartPrompt.showTextareaModal).toHaveBeenCalledWith(
+        'Trade Setup Note',
+        Constants.TRADING.PROMPT.TRADE_INFO,
+        'Save Note'
+      );
+      expect(mockJournalManager.screenshotTicker).toHaveBeenCalledWith('TCS', 'set');
+      expect(mockJournalManager.createJournal).toHaveBeenCalledWith({
+        ticker: 'TCS',
+        reason: 'oe',
+        screenshots: [{ file_name: 'TCS_20240422_0930_1_tmn_set.png', full_path: '/home/aman/Downloads/TCS_20240422_0930_1_tmn_set.png' }],
+        type: 'TAKEN',
+        status: 'SET',
+        notes: [
+          {
+            status: 'SET',
+            content: Constants.TRADING.PROMPT.TRADE_INFO,
+            format: 'MARKDOWN',
+          },
+        ],
+      });
+      expect(mockJournalManager.publishJournalOpenEvent).toHaveBeenCalledWith('jrn_2');
+      expect(mockJournalManager.createEntry).not.toHaveBeenCalled();
+    });
+
+    it('should abort SET journal flow when setup note popup is cancelled', async () => {
+      mockTickerManager.getTicker.mockReturnValue('TCS');
+      mockSmartPrompt.showModal.mockResolvedValue({ type: 'reason', value: 'oe' });
+      mockSmartPrompt.showTextareaModal.mockResolvedValue(null);
+
+      await journalHandler.handleRecordJournal(JournalType.SET);
+
+      expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
+      expect(mockJournalManager.createJournal).not.toHaveBeenCalled();
+      expect(mockJournalManager.publishJournalOpenEvent).not.toHaveBeenCalled();
+      expect(mockJournalManager.createEntry).not.toHaveBeenCalled();
+    });
+
+    it('should abort SET journal flow when setup note is empty', async () => {
+      mockTickerManager.getTicker.mockReturnValue('TCS');
+      mockSmartPrompt.showModal.mockResolvedValue({ type: 'reason', value: 'oe' });
+      mockSmartPrompt.showTextareaModal.mockResolvedValue('   ');
+
+      await journalHandler.handleRecordJournal(JournalType.SET);
+
+      expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
+      expect(mockJournalManager.createJournal).not.toHaveBeenCalled();
+      expect(mockJournalManager.publishJournalOpenEvent).not.toHaveBeenCalled();
+      expect(mockJournalManager.createEntry).not.toHaveBeenCalled();
+    });
+
+    it('should keep RESULT journal on legacy createEntry flow', async () => {
+      mockTickerManager.getTicker.mockReturnValue('TCS');
+      mockSmartPrompt.showModal.mockResolvedValue({ type: 'reason', value: 'oe' });
+      (mockJournalManager.createEntry as jest.Mock).mockResolvedValue(undefined);
+
+      await journalHandler.handleRecordJournal(JournalType.RESULT);
+
+      expect(mockJournalManager.createEntry).toHaveBeenCalledWith('TCS', JournalType.RESULT, 'oe');
+      expect(mockSmartPrompt.showTextareaModal).not.toHaveBeenCalled();
+      expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
+      expect(mockJournalManager.createJournal).not.toHaveBeenCalled();
     });
   });
 

@@ -210,6 +210,18 @@ export const Constants = Object.freeze({
         'WOW', // Waiting WoW
       ], // Old name: reasons
       OVERRIDES: ['egf', 'int', 'lc', 'loc', 'doji', 'big', 'pn', 'tc', 'cfl', 'acm', 'adv'], // Old name: overrides
+      TRADE_INFO: `Trends
+HTF - Up
+MTF - Up
+TTF - Up
+
+Plan: Longs @ TTF DZ
+
+Obstacles:
+-
+
+Support:
+-`,
     },
     ZONES: {
       // Old name: ZoneType - Moved from EXCHANGE as suggested
