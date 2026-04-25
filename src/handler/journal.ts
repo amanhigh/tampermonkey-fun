@@ -13,7 +13,7 @@ import { ITradingViewManager } from '../manager/tv';
 import { IStyleManager } from '../manager/style';
 import { IAlertManager } from '../manager/alert';
 import { AlertClickAction, JournalOpenEvent } from '../models/events';
-import { CreateJournalNoteRequest, ScreenshotResponse } from '../models/kohan';
+import { CreateJournalNoteRequest, JournalResultStatus, ScreenshotResponse } from '../models/kohan';
 
 /**
  * Interface for managing journal entry operations at UI/Event level
@@ -77,10 +77,15 @@ export class JournalHandler implements IJournalHandler {
 
   /** @inheritdoc */
   public async handleRecordJournal(type: JournalType): Promise<void> {
-    // SET flow: reason prompt is handled inside handleSetupJournal after checklist screenshot
     if (type === JournalType.SET) {
       const ticker = this.tickerManager.getTicker();
       await this.handleSetupJournal(ticker, type);
+      return;
+    }
+
+    if (type === JournalType.RESULT) {
+      const ticker = this.tickerManager.getTicker();
+      await this.handleResultJournal(ticker);
       return;
     }
 
@@ -101,10 +106,6 @@ export class JournalHandler implements IJournalHandler {
       await this.handleRejectedJournal(ticker, reason, type);
       return;
     }
-
-    return this.journalManager.createEntry(ticker, type, reason).catch((error) => {
-      throw new Error(`Failed to record journal entry: ${error}`);
-    });
   }
 
   private async handleRejectedJournal(ticker: string, reason: string, type: JournalType): Promise<void> {
@@ -197,6 +198,50 @@ export class JournalHandler implements IJournalHandler {
       });
 
     await this.publishJournalOpenEvent(journal.id);
+  }
+
+  private async handleResultJournal(ticker: string): Promise<void> {
+    // Step 1: Find running journal
+    let runningJournal = null;
+    try {
+      runningJournal = await this.journalManager.findRunningJournal(ticker);
+    } catch (error) {
+      Notifier.warn(`Failed to find running journal: ${(error as Error).message}`);
+      return;
+    }
+
+    if (!runningJournal) {
+      Notifier.warn(`No running journal found for ${ticker}. Result cannot be captured.`);
+      return;
+    }
+
+    // Step 2: Ask for result status
+    const status = await this.showResultStatusModal();
+
+    if (status === null) {
+      return;
+    }
+
+    // Step 3: Ask for reason
+    const reason = await this.showReasonModal();
+
+    if (reason === null) {
+      return;
+    }
+
+    // Step 4: Take result screenshots
+    const screenshots = await this.takeJournalScreenshots(ticker, JournalType.RESULT);
+
+    // Step 5: Add images, tags, and update status
+    await this.journalManager.addJournalImages(runningJournal.id, screenshots);
+
+    if (reason) {
+      await this.journalManager.addReasonTags(runningJournal.id, reason);
+    }
+
+    await this.journalManager.updateJournalStatus(runningJournal.id, status);
+
+    await this.publishJournalOpenEvent(runningJournal.id);
   }
 
   private async publishJournalOpenEvent(journalId: string): Promise<void> {
@@ -310,6 +355,28 @@ export class JournalHandler implements IJournalHandler {
       );
     } catch (error) {
       throw new Error(`Failed to show setup note modal: ${error}`);
+    } finally {
+      await this.tvManager.setSwiftKeysState(true);
+    }
+  }
+
+  private async showResultStatusModal(): Promise<JournalResultStatus | null> {
+    try {
+      await this.tvManager.setSwiftKeysState(false);
+
+      const response = await this.smartPrompt.showModal(['SUCCESS', 'FAIL', 'MISSED']);
+
+      if (response.type === 'cancel') {
+        return null;
+      }
+
+      if (response.type === 'none') {
+        return null;
+      }
+
+      return response.value as JournalResultStatus;
+    } catch (error) {
+      throw new Error(`Failed to show result status modal: ${error}`);
     } finally {
       await this.tvManager.setSwiftKeysState(true);
     }

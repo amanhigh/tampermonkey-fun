@@ -46,12 +46,15 @@ describe('JournalHandler', () => {
     } as unknown as jest.Mocked<TickerManager>;
 
     mockJournalManager = {
-      createEntry: jest.fn(),
       createReasonText: jest.fn(),
       createJournal: jest.fn(),
-      publishJournalOpenEvent: jest.fn(),
+      publishJournalOpenEvent: jest.fn().mockResolvedValue(undefined),
       screenshotTicker: jest.fn(),
       screenshotChecklist: jest.fn(),
+      findRunningJournal: jest.fn(),
+      addJournalImages: jest.fn().mockResolvedValue(undefined),
+      addReasonTags: jest.fn().mockResolvedValue(undefined),
+      updateJournalStatus: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<IJournalManager>;
 
     mockSmartPrompt = {
@@ -170,7 +173,6 @@ describe('JournalHandler', () => {
         screenshots: [{ file_name: 'TCS.tmn.rejected_20240422_0930.png', full_path: '/home/aman/Downloads/TCS.tmn.rejected_20240422_0930.png' }],
       });
       expect(mockJournalManager.publishJournalOpenEvent).toHaveBeenCalledWith('jrn_1');
-      expect(mockJournalManager.createEntry).not.toHaveBeenCalled();
     });
 
     it('should route SET journal to taken setup flow with required note', async () => {
@@ -228,7 +230,6 @@ describe('JournalHandler', () => {
         ],
       });
       expect(mockJournalManager.publishJournalOpenEvent).toHaveBeenCalledWith('jrn_2');
-      expect(mockJournalManager.createEntry).not.toHaveBeenCalled();
     });
 
     it('should abort SET journal flow when setup note popup is cancelled', async () => {
@@ -241,7 +242,6 @@ describe('JournalHandler', () => {
       expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
       expect(mockJournalManager.createJournal).not.toHaveBeenCalled();
       expect(mockJournalManager.publishJournalOpenEvent).not.toHaveBeenCalled();
-      expect(mockJournalManager.createEntry).not.toHaveBeenCalled();
     });
 
     it('should abort SET journal flow when setup note is empty', async () => {
@@ -254,7 +254,6 @@ describe('JournalHandler', () => {
       expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
       expect(mockJournalManager.createJournal).not.toHaveBeenCalled();
       expect(mockJournalManager.publishJournalOpenEvent).not.toHaveBeenCalled();
-      expect(mockJournalManager.createEntry).not.toHaveBeenCalled();
     });
 
     it('should abort SET journal flow when checklist region screenshot returns 409', async () => {
@@ -270,7 +269,6 @@ describe('JournalHandler', () => {
       expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
       expect(mockJournalManager.createJournal).not.toHaveBeenCalled();
       expect(mockJournalManager.publishJournalOpenEvent).not.toHaveBeenCalled();
-      expect(mockJournalManager.createEntry).not.toHaveBeenCalled();
     });
 
     it('should abort SET journal flow when reason prompt is cancelled after checklist screenshot', async () => {
@@ -289,20 +287,77 @@ describe('JournalHandler', () => {
       expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
       expect(mockJournalManager.createJournal).not.toHaveBeenCalled();
       expect(mockJournalManager.publishJournalOpenEvent).not.toHaveBeenCalled();
-      expect(mockJournalManager.createEntry).not.toHaveBeenCalled();
     });
 
-    it('should keep RESULT journal on legacy createEntry flow', async () => {
+    it('should route RESULT journal via running journal flow', async () => {
       mockTickerManager.getTicker.mockReturnValue('TCS');
-      mockSmartPrompt.showModal.mockResolvedValue({ type: 'reason', value: 'oe' });
-      (mockJournalManager.createEntry as jest.Mock).mockResolvedValue(undefined);
+      (mockJournalManager.findRunningJournal as jest.Mock).mockResolvedValue({
+        id: 'jrn_running',
+        ticker: 'TCS',
+        type: 'TAKEN',
+        status: 'RUNNING',
+      });
+      // Status -> reason prompts
+      mockSmartPrompt.showModal
+        .mockResolvedValueOnce({ type: 'reason', value: 'SUCCESS' })
+        .mockResolvedValueOnce({ type: 'reason', value: 'oe' });
+      (mockJournalManager.screenshotTicker as jest.Mock).mockResolvedValue([
+        { file_name: 'TCS_20240422_0930_1_tmn_result.png', full_path: '/path/1', timeframe: 'TMN' },
+      ]);
 
       await journalHandler.handleRecordJournal(JournalType.RESULT);
 
-      expect(mockJournalManager.createEntry).toHaveBeenCalledWith('TCS', JournalType.RESULT, 'oe');
-      expect(mockSmartPrompt.showTextareaModal).not.toHaveBeenCalled();
+      expect(mockJournalManager.findRunningJournal).toHaveBeenCalledWith('TCS');
+      expect(mockSmartPrompt.showModal).toHaveBeenNthCalledWith(1, ['SUCCESS', 'FAIL', 'MISSED']);
+      expect(mockSmartPrompt.showModal).toHaveBeenNthCalledWith(2, Constants.TRADING.PROMPT.REASONS, Constants.TRADING.PROMPT.OVERRIDES);
+      expect(mockJournalManager.screenshotTicker).toHaveBeenCalledWith('TCS', 'result');
+      expect(mockJournalManager.addJournalImages).toHaveBeenCalledWith('jrn_running', [
+        { file_name: 'TCS_20240422_0930_1_tmn_result.png', full_path: '/path/1', timeframe: 'TMN' },
+      ]);
+      expect(mockJournalManager.addReasonTags).toHaveBeenCalledWith('jrn_running', 'oe');
+      expect(mockJournalManager.updateJournalStatus).toHaveBeenCalledWith('jrn_running', 'SUCCESS');
+      expect(mockJournalManager.publishJournalOpenEvent).toHaveBeenCalledWith('jrn_running');
+    });
+
+    it('should abort RESULT flow when no running journal found', async () => {
+      mockTickerManager.getTicker.mockReturnValue('TCS');
+      (mockJournalManager.findRunningJournal as jest.Mock).mockResolvedValue(null);
+
+      await journalHandler.handleRecordJournal(JournalType.RESULT);
+
+      expect(Notifier.warn).toHaveBeenCalledWith('No running journal found for TCS. Result cannot be captured.');
+      expect(mockSmartPrompt.showModal).not.toHaveBeenCalled();
       expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
-      expect(mockJournalManager.createJournal).not.toHaveBeenCalled();
+      expect(mockJournalManager.addJournalImages).not.toHaveBeenCalled();
+      expect(mockJournalManager.updateJournalStatus).not.toHaveBeenCalled();
+    });
+
+    it('should abort RESULT flow when status prompt is cancelled', async () => {
+      mockTickerManager.getTicker.mockReturnValue('TCS');
+      (mockJournalManager.findRunningJournal as jest.Mock).mockResolvedValue({
+        id: 'jrn_running', ticker: 'TCS', type: 'TAKEN', status: 'RUNNING',
+      });
+      mockSmartPrompt.showModal.mockResolvedValue({ type: 'cancel', value: null });
+
+      await journalHandler.handleRecordJournal(JournalType.RESULT);
+
+      expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
+      expect(mockJournalManager.updateJournalStatus).not.toHaveBeenCalled();
+    });
+
+    it('should abort RESULT flow when reason prompt is cancelled', async () => {
+      mockTickerManager.getTicker.mockReturnValue('TCS');
+      (mockJournalManager.findRunningJournal as jest.Mock).mockResolvedValue({
+        id: 'jrn_running', ticker: 'TCS', type: 'TAKEN', status: 'RUNNING',
+      });
+      mockSmartPrompt.showModal
+        .mockResolvedValueOnce({ type: 'reason', value: 'SUCCESS' })
+        .mockResolvedValueOnce({ type: 'cancel', value: null });
+
+      await journalHandler.handleRecordJournal(JournalType.RESULT);
+
+      expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
+      expect(mockJournalManager.updateJournalStatus).not.toHaveBeenCalled();
     });
   });
 

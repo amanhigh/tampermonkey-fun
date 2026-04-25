@@ -2,9 +2,8 @@ import { JournalManager, IJournalManager } from '../../src/manager/journal';
 import { ISequenceManager } from '../../src/manager/sequence';
 import { IKohanClient } from '../../src/client/kohan';
 import { ITimeFrameManager } from '../../src/manager/timeframe';
-import { JournalType, SequenceType } from '../../src/models/trading';
+import { SequenceType } from '../../src/models/trading';
 import { TimeFrameConfig } from '../../src/models/trading';
-import { Notifier } from '../../src/util/notify';
 import { Constants } from '../../src/models/constant';
 
 // Mock Notifier to avoid DOM issues
@@ -46,9 +45,13 @@ describe('JournalManager', () => {
 
     // Mock KohanClient
     mockKohanClient = {
-      recordTicker: jest.fn().mockResolvedValue(undefined),
+      listJournals: jest.fn(),
+      addJournalImage: jest.fn(),
+      addJournalTag: jest.fn(),
+      updateJournalStatus: jest.fn(),
       getClip: jest.fn().mockResolvedValue('clipboard-data'),
       enableSubmap: jest.fn().mockResolvedValue(undefined),
+      disableSubmap: jest.fn().mockResolvedValue(undefined),
       createJournal: jest.fn().mockResolvedValue({
         id: 'jrn_123',
         ticker: 'TEST',
@@ -82,129 +85,6 @@ describe('JournalManager', () => {
     it('should initialize with correct dependency interfaces', () => {
       const manager = new JournalManager(mockSequenceManager, mockKohanClient, mockTimeFrameManager);
       expect(manager).toBeDefined();
-    });
-  });
-
-  describe('createEntry', () => {
-    const testTicker = 'AAPL';
-    const testReason = 'breakout';
-
-    it('should create journal entry with SET type', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.YR);
-
-      await journalManager.createEntry(testTicker, JournalType.SET, testReason);
-
-      const expectedTag = `${testTicker}.yr.${JournalType.SET}.${testReason}`;
-      expect(mockKohanClient.recordTicker).toHaveBeenCalledWith(expectedTag);
-      expect(Notifier.success).toHaveBeenCalledWith(`Journal entry created: ${expectedTag}`);
-    });
-
-    it('should create journal entry with RESULT type', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
-
-      await journalManager.createEntry(testTicker, JournalType.RESULT, testReason);
-
-      const expectedTag = `${testTicker}.mwd.${JournalType.RESULT}.${testReason}`;
-      expect(mockKohanClient.recordTicker).toHaveBeenCalledWith(expectedTag);
-      expect(Notifier.success).toHaveBeenCalledWith(`Journal entry created: ${expectedTag}`);
-    });
-
-    it('should create journal entry with REJECTED type', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
-
-      await journalManager.createEntry(testTicker, JournalType.REJECTED, testReason);
-
-      const expectedTag = `${testTicker}.mwd.${JournalType.REJECTED}.${testReason}`;
-      expect(mockKohanClient.recordTicker).toHaveBeenCalledWith(expectedTag);
-      expect(Notifier.success).toHaveBeenCalledWith(`Journal entry created: ${expectedTag}`);
-    });
-
-    it('should handle empty reason string by excluding it from tag', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
-
-      await journalManager.createEntry(testTicker, JournalType.SET, '');
-
-      const expectedTag = `${testTicker}.mwd.${JournalType.SET}`;
-      expect(mockKohanClient.recordTicker).toHaveBeenCalledWith(expectedTag);
-      expect(Notifier.success).toHaveBeenCalledWith(`Journal entry created: ${expectedTag}`);
-    });
-
-    it('should handle "Cancel" reason by excluding it from tag', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.YR);
-
-      await journalManager.createEntry(testTicker, JournalType.RESULT, 'Cancel');
-
-      const expectedTag = `${testTicker}.yr.${JournalType.RESULT}`;
-      expect(mockKohanClient.recordTicker).toHaveBeenCalledWith(expectedTag);
-      expect(Notifier.success).toHaveBeenCalledWith(`Journal entry created: ${expectedTag}`);
-    });
-
-    it('should handle undefined reason by excluding it from tag', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
-
-      await journalManager.createEntry(testTicker, JournalType.REJECTED, undefined as any);
-
-      const expectedTag = `${testTicker}.mwd.${JournalType.REJECTED}`;
-      expect(mockKohanClient.recordTicker).toHaveBeenCalledWith(expectedTag);
-      expect(Notifier.success).toHaveBeenCalledWith(`Journal entry created: ${expectedTag}`);
-    });
-
-    it('should lowercase sequence type in tag', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.YR);
-
-      await journalManager.createEntry('GOOGL', JournalType.SET, 'momentum');
-
-      const expectedTag = 'GOOGL.yr.set.momentum';
-      expect(mockKohanClient.recordTicker).toHaveBeenCalledWith(expectedTag);
-    });
-
-    it('should handle special characters in ticker symbol', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
-
-      await journalManager.createEntry('BRK-B', JournalType.RESULT, 'test');
-
-      const expectedTag = 'BRK-B.mwd.result.test';
-      expect(mockKohanClient.recordTicker).toHaveBeenCalledWith(expectedTag);
-    });
-
-    it('should handle special characters in reason', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
-
-      await journalManager.createEntry('AAPL', JournalType.SET, 'test-reason_1');
-
-      const expectedTag = 'AAPL.mwd.set.test-reason_1';
-      expect(mockKohanClient.recordTicker).toHaveBeenCalledWith(expectedTag);
-    });
-
-    it('should propagate client errors', async () => {
-      const clientError = new Error('Client connection failed');
-      mockKohanClient.recordTicker.mockRejectedValue(clientError);
-
-      await expect(journalManager.createEntry(testTicker, JournalType.SET, testReason)).rejects.toThrow(
-        'Client connection failed'
-      );
-
-      expect(Notifier.success).not.toHaveBeenCalled();
-    });
-
-    it('should handle very long ticker names', async () => {
-      const longTicker = 'A'.repeat(50);
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
-
-      await journalManager.createEntry(longTicker, JournalType.SET, 'reason');
-
-      const expectedTag = `${longTicker}.mwd.set.reason`;
-      expect(mockKohanClient.recordTicker).toHaveBeenCalledWith(expectedTag);
-    });
-
-    it('should handle very long reason codes', async () => {
-      const longReason = 'reason'.repeat(20);
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.YR);
-
-      await journalManager.createEntry(testTicker, JournalType.RESULT, longReason);
-
-      const expectedTag = `${testTicker}.yr.result.${longReason}`;
-      expect(mockKohanClient.recordTicker).toHaveBeenCalledWith(expectedTag);
     });
   });
 
@@ -664,128 +544,130 @@ describe('JournalManager', () => {
     });
   });
 
-  describe('createJournalTag (private method testing)', () => {
-    it('should create correct tag structure', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+  describe('findRunningJournal', () => {
+    it('should return the latest TAKEN/RUNNING journal for ticker', async () => {
+      const mockJournal = { id: 'jrn_running', ticker: 'TCS', type: 'TAKEN', status: 'RUNNING' };
+      mockKohanClient.listJournals.mockResolvedValue({
+        journals: [mockJournal as any],
+        metadata: { total: 1, offset: 0, limit: 5 },
+      });
 
-      await journalManager.createEntry('TEST', JournalType.SET, 'reason');
+      const result = await journalManager.findRunningJournal('TCS');
 
-      // Verify the tag was created correctly through the recordTicker call
-      expect(mockKohanClient.recordTicker).toHaveBeenCalledWith('TEST.mwd.set.reason');
+      expect(mockKohanClient.listJournals).toHaveBeenCalledWith({
+        ticker: 'TCS',
+        type: 'TAKEN',
+        status: 'RUNNING',
+        limit: 5,
+        'sort-by': 'created_at',
+        'sort-order': 'desc',
+      });
+      expect(result).toEqual(mockJournal);
     });
 
-    it('should handle all journal types correctly', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.YR);
+    it('should return null when no running journal exists', async () => {
+      mockKohanClient.listJournals.mockResolvedValue({
+        journals: [],
+        metadata: { total: 0, offset: 0, limit: 5 },
+      });
 
-      // Test SET type
-      await journalManager.createEntry('STOCK1', JournalType.SET, 'setup');
-      expect(mockKohanClient.recordTicker).toHaveBeenLastCalledWith('STOCK1.yr.set.setup');
+      const result = await journalManager.findRunningJournal('TCS');
 
-      // Test RESULT type
-      await journalManager.createEntry('STOCK2', JournalType.RESULT, 'profit');
-      expect(mockKohanClient.recordTicker).toHaveBeenLastCalledWith('STOCK2.yr.result.profit');
-
-      // Test REJECTED type
-      await journalManager.createEntry('STOCK3', JournalType.REJECTED, 'nosetup');
-      expect(mockKohanClient.recordTicker).toHaveBeenLastCalledWith('STOCK3.yr.rejected.nosetup');
+      expect(result).toBeNull();
     });
 
-    it('should handle both sequence types correctly', async () => {
-      // Test MWD sequence
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
-      await journalManager.createEntry('STOCK1', JournalType.SET, 'reason1');
-      expect(mockKohanClient.recordTicker).toHaveBeenLastCalledWith('STOCK1.mwd.set.reason1');
+    it('should throw when multiple running journals exist', async () => {
+      const journal1 = { id: 'jrn_1', ticker: 'TCS', type: 'TAKEN', status: 'RUNNING' };
+      const journal2 = { id: 'jrn_2', ticker: 'TCS', type: 'TAKEN', status: 'RUNNING' };
+      mockKohanClient.listJournals.mockResolvedValue({
+        journals: [journal1 as any, journal2 as any],
+        metadata: { total: 2, offset: 0, limit: 5 },
+      });
 
-      // Test YR sequence
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.YR);
-      await journalManager.createEntry('STOCK2', JournalType.RESULT, 'reason2');
-      expect(mockKohanClient.recordTicker).toHaveBeenLastCalledWith('STOCK2.yr.result.reason2');
+      await expect(journalManager.findRunningJournal('TCS')).rejects.toThrow(
+        'Multiple running journals found for TCS. Using the most recent.'
+      );
     });
   });
 
-  describe('Integration Tests', () => {
-    it('should handle complete workflow from entry creation to notification', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
-      mockKohanClient.recordTicker.mockResolvedValue(undefined);
-
-      const ticker = 'INTEGRATION_TEST';
-      const type = JournalType.SET;
-      const reason = 'complete_workflow';
-
-      await journalManager.createEntry(ticker, type, reason);
-
-      // Verify sequence was retrieved
-      expect(mockSequenceManager.getCurrentSequence).toHaveBeenCalled();
-
-      // Verify client was called with correct tag
-      const expectedTag = 'INTEGRATION_TEST.mwd.set.complete_workflow';
-      expect(mockKohanClient.recordTicker).toHaveBeenCalledWith(expectedTag);
-
-      // Verify success notification
-      expect(Notifier.success).toHaveBeenCalledWith(`Journal entry created: ${expectedTag}`);
-    });
-
-    it('should handle reason text creation with different timeframes', () => {
-      const testCases = [
-        { symbol: 'DL', expected: 'DL - test' },
-        { symbol: 'W', expected: 'W - test' },
-        { symbol: 'M', expected: 'M - test' },
-        { symbol: '3M', expected: '3M - test' },
+  describe('addJournalImages', () => {
+    it('should add each screenshot as an image to the journal', async () => {
+      const journalId = 'jrn_123';
+      const screenshots = [
+        { file_name: 'img1.png', full_path: '/path/1', timeframe: 'TMN' as const },
+        { file_name: 'img2.png', full_path: '/path/2', timeframe: 'MN' as const },
       ];
 
-      testCases.forEach(({ symbol, expected }) => {
-        const timeFrameConfig = new TimeFrameConfig(symbol, 'style', 1);
-        mockTimeFrameManager.getCurrentTimeFrameConfig.mockReturnValue(timeFrameConfig);
+      await journalManager.addJournalImages(journalId, screenshots as any);
 
-        const result = journalManager.createReasonText('test');
-        expect(result).toBe(expected);
+      expect(mockKohanClient.addJournalImage).toHaveBeenCalledTimes(2);
+      expect(mockKohanClient.addJournalImage).toHaveBeenNthCalledWith(1, journalId, {
+        timeframe: 'TMN',
+        file_name: 'img1.png',
+      });
+      expect(mockKohanClient.addJournalImage).toHaveBeenNthCalledWith(2, journalId, {
+        timeframe: 'MN',
+        file_name: 'img2.png',
+      });
+    });
+  });
+
+  describe('addReasonTags', () => {
+    it('should parse reason and add tags to the journal', async () => {
+      const journalId = 'jrn_123';
+
+      await journalManager.addReasonTags(journalId, 'oe');
+
+      expect(mockKohanClient.addJournalTag).toHaveBeenCalledWith(journalId, {
+        tag: 'oe',
+        type: 'REASON',
       });
     });
 
-    it('should handle error scenarios gracefully', async () => {
-      const networkError = new Error('Network timeout');
-      mockKohanClient.recordTicker.mockRejectedValue(networkError);
+    it('should parse reason with override and add tag', async () => {
+      const journalId = 'jrn_123';
 
-      await expect(journalManager.createEntry('ERROR_TEST', JournalType.RESULT, 'fail')).rejects.toThrow(
-        'Network timeout'
-      );
+      await journalManager.addReasonTags(journalId, 'oe-loc');
 
-      // Verify no success notification was sent
-      expect(Notifier.success).not.toHaveBeenCalled();
+      expect(mockKohanClient.addJournalTag).toHaveBeenCalledWith(journalId, {
+        tag: 'oe',
+        type: 'REASON',
+        override: 'loc',
+      });
     });
 
-    it('should maintain tag format consistency across different scenarios', async () => {
-      const testScenarios = [
-        {
-          ticker: 'AAPL',
-          sequence: SequenceType.MWD,
-          type: JournalType.SET,
-          reason: 'breakout',
-          expected: 'AAPL.mwd.set.breakout',
-        },
-        {
-          ticker: 'GOOGL',
-          sequence: SequenceType.YR,
-          type: JournalType.RESULT,
-          reason: 'target_hit',
-          expected: 'GOOGL.yr.result.target_hit',
-        },
-        {
-          ticker: 'MSFT',
-          sequence: SequenceType.MWD,
-          type: JournalType.REJECTED,
-          reason: '',
-          expected: 'MSFT.mwd.rejected',
-        },
-      ];
+    it('should skip empty reason', async () => {
+      const journalId = 'jrn_123';
 
-      for (const scenario of testScenarios) {
-        mockSequenceManager.getCurrentSequence.mockReturnValue(scenario.sequence);
+      await journalManager.addReasonTags(journalId, '');
 
-        await journalManager.createEntry(scenario.ticker, scenario.type, scenario.reason);
+      expect(mockKohanClient.addJournalTag).not.toHaveBeenCalled();
+    });
+  });
 
-        expect(mockKohanClient.recordTicker).toHaveBeenLastCalledWith(scenario.expected);
-      }
+  describe('updateJournalStatus', () => {
+    it('should patch journal status with SUCCESS', async () => {
+      const journalId = 'jrn_123';
+
+      await journalManager.updateJournalStatus(journalId, 'SUCCESS');
+
+      expect(mockKohanClient.updateJournalStatus).toHaveBeenCalledWith(journalId, { status: 'SUCCESS' });
+    });
+
+    it('should patch journal status with FAIL', async () => {
+      const journalId = 'jrn_123';
+
+      await journalManager.updateJournalStatus(journalId, 'FAIL');
+
+      expect(mockKohanClient.updateJournalStatus).toHaveBeenCalledWith(journalId, { status: 'FAIL' });
+    });
+
+    it('should patch journal status with MISSED', async () => {
+      const journalId = 'jrn_123';
+
+      await journalManager.updateJournalStatus(journalId, 'MISSED');
+
+      expect(mockKohanClient.updateJournalStatus).toHaveBeenCalledWith(journalId, { status: 'MISSED' });
     });
   });
 });
