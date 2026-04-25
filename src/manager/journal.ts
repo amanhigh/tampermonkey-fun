@@ -55,6 +55,15 @@ export interface IJournalManager {
   screenshotTicker(ticker: string, type: string): Promise<ScreenshotResponse[]>;
 
   /**
+   * Captures a single region screenshot for the trade checklist image.
+   * Uses the top timeframe config for image metadata but labels the file as checklist.
+   * @param ticker Trading symbol to capture
+   * @param type Screenshot purpose/type used in filenames
+   * @returns Promise resolving with checklist screenshot metadata
+   */
+  screenshotChecklist(ticker: string, type: string): Promise<ScreenshotResponse>;
+
+  /**
    * Creates formatted text combining symbol and reason for clipboard copying
    * @param reason - Trading reason code
    * @returns Formatted text (e.g., "HGS - oe")
@@ -144,6 +153,29 @@ export class JournalManager implements IJournalManager {
     }
 
     return screenshots;
+  }
+
+  /** @inheritdoc */
+  public async screenshotChecklist(ticker: string, type: string): Promise<ScreenshotResponse> {
+    const sequence = this.sequenceManager.getCurrentSequence();
+    const screenshotType = type.toLowerCase();
+
+    // Use top timeframe config (position 0) for image metadata
+    const config = this.sequenceManager.sequenceToTimeFrameConfig(sequence, 0);
+    const timeframe = config.symbol;
+
+    // Build filename: TICKER_YYYYMMDD_HHMM_checklist_type.png
+    const fileName = `${ticker.toUpperCase()}_${this.getScreenshotTimestamp()}_checklist_${screenshotType}.png`;
+
+    const screenshot = await this.kohanClient.screenshot({
+      file_name: fileName,
+      directory_type: 'JOURNAL',
+      type: 'REGION',
+      notify: false,
+    });
+
+    screenshot.timeframe = timeframe as JournalApiTimeframe;
+    return screenshot;
   }
 
   /**
