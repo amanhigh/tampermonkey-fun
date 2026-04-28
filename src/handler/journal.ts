@@ -289,7 +289,7 @@ export class JournalHandler implements IJournalHandler {
       (_keyName: string, _oldValue: unknown, newValue: unknown) => {
         if (newValue && typeof newValue === 'string') {
           const journalOpenEvent = JournalOpenEvent.fromString(newValue);
-          window.location.assign(`/journal/${journalOpenEvent.journalId}`);
+          window.location.replace(`/journal/${journalOpenEvent.journalId}`);
         }
       }
     );
