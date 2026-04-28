@@ -45,80 +45,6 @@ describe('KohanClient', () => {
     });
   });
 
-  describe('recordTicker', () => {
-    it('should record ticker successfully', async () => {
-      mockMakeRequest.mockResolvedValue(undefined);
-
-      await kohanClient.recordTicker('AAPL');
-
-      expect(mockMakeRequest).toHaveBeenCalledWith('/os/ticker/AAPL/record');
-    });
-
-    it('should handle ticker with special characters', async () => {
-      mockMakeRequest.mockResolvedValue(undefined);
-
-      const specialTicker = 'BRK.A';
-      await kohanClient.recordTicker(specialTicker);
-
-      expect(mockMakeRequest).toHaveBeenCalledWith('/os/ticker/BRK.A/record');
-    });
-
-    it('should handle ticker with numbers', async () => {
-      mockMakeRequest.mockResolvedValue(undefined);
-
-      const numericTicker = 'STOCK123';
-      await kohanClient.recordTicker(numericTicker);
-
-      expect(mockMakeRequest).toHaveBeenCalledWith('/os/ticker/STOCK123/record');
-    });
-
-    it('should handle ticker with hyphens and underscores', async () => {
-      mockMakeRequest.mockResolvedValue(undefined);
-
-      const hyphenatedTicker = 'TEST-STOCK_ABC';
-      await kohanClient.recordTicker(hyphenatedTicker);
-
-      expect(mockMakeRequest).toHaveBeenCalledWith('/os/ticker/TEST-STOCK_ABC/record');
-    });
-
-    it('should handle empty ticker string', async () => {
-      mockMakeRequest.mockResolvedValue(undefined);
-
-      await kohanClient.recordTicker('');
-
-      expect(mockMakeRequest).toHaveBeenCalledWith('/os/ticker//record');
-    });
-
-    it('should handle long ticker names', async () => {
-      mockMakeRequest.mockResolvedValue(undefined);
-
-      const longTicker = 'VERYLONGTICKERNAMETHATSHOULDSTILLWORK';
-      await kohanClient.recordTicker(longTicker);
-
-      expect(mockMakeRequest).toHaveBeenCalledWith(`/os/ticker/${longTicker}/record`);
-    });
-
-    it('should handle ticker with spaces (URL encoding handled by HTTP client)', async () => {
-      mockMakeRequest.mockResolvedValue(undefined);
-
-      const spaceTicker = 'TICK ER';
-      await kohanClient.recordTicker(spaceTicker);
-
-      expect(mockMakeRequest).toHaveBeenCalledWith('/os/ticker/TICK ER/record');
-    });
-
-    it('should use GET method by default', async () => {
-      mockMakeRequest.mockResolvedValue(undefined);
-
-      await kohanClient.recordTicker('TEST');
-
-      expect(mockMakeRequest).toHaveBeenCalledWith('/os/ticker/TEST/record');
-      // Verify no method or other options were passed (defaults to GET)
-      expect(mockMakeRequest).toHaveBeenCalledTimes(1);
-      expect(mockMakeRequest.mock.calls[0]).toHaveLength(1);
-    });
-  });
-
   describe('screenshot flow', () => {
     it('should POST a screenshot request and return screenshot metadata', async () => {
       const apiEnvelope = {
@@ -438,60 +364,6 @@ describe('KohanClient', () => {
   });
 
   describe('error handling', () => {
-    describe('recordTicker errors', () => {
-      it('should wrap API errors with descriptive message', async () => {
-        const apiError = new Error('Connection refused');
-        mockMakeRequest.mockRejectedValue(apiError);
-
-        await expect(kohanClient.recordTicker('AAPL')).rejects.toThrow('Failed to record ticker: Connection refused');
-      });
-
-      it('should handle service unavailable errors', async () => {
-        const serviceError = new Error('503 Service Unavailable: Service temporarily down');
-        mockMakeRequest.mockRejectedValue(serviceError);
-
-        await expect(kohanClient.recordTicker('TEST')).rejects.toThrow(
-          'Failed to record ticker: 503 Service Unavailable: Service temporarily down'
-        );
-      });
-
-      it('should handle network timeout errors', async () => {
-        const timeoutError = new Error('Network error: Request timeout');
-        mockMakeRequest.mockRejectedValue(timeoutError);
-
-        await expect(kohanClient.recordTicker('TIMEOUT')).rejects.toThrow(
-          'Failed to record ticker: Network error: Request timeout'
-        );
-      });
-
-      it('should handle 404 errors for unknown tickers', async () => {
-        const notFoundError = new Error('404 Not Found: Ticker not recognized');
-        mockMakeRequest.mockRejectedValue(notFoundError);
-
-        await expect(kohanClient.recordTicker('UNKNOWN')).rejects.toThrow(
-          'Failed to record ticker: 404 Not Found: Ticker not recognized'
-        );
-      });
-
-      it('should handle malformed response errors', async () => {
-        const parseError = new Error('Failed to parse response: Invalid response format');
-        mockMakeRequest.mockRejectedValue(parseError);
-
-        await expect(kohanClient.recordTicker('MALFORMED')).rejects.toThrow(
-          'Failed to record ticker: Failed to parse response: Invalid response format'
-        );
-      });
-
-      it('should handle server internal errors', async () => {
-        const serverError = new Error('500 Internal Server Error: Database connection failed');
-        mockMakeRequest.mockRejectedValue(serverError);
-
-        await expect(kohanClient.recordTicker('SERVER_ERROR')).rejects.toThrow(
-          'Failed to record ticker: 500 Internal Server Error: Database connection failed'
-        );
-      });
-    });
-
     describe('getClip errors', () => {
       it('should wrap API errors with descriptive message', async () => {
         const apiError = new Error('Connection refused');
@@ -660,8 +532,8 @@ describe('KohanClient', () => {
         const dnsError = new Error('Network error: ENOTFOUND');
         mockMakeRequest.mockRejectedValue(dnsError);
 
-        await expect(kohanClient.recordTicker('DNS_FAIL')).rejects.toThrow(
-          'Failed to record ticker: Network error: ENOTFOUND'
+        await expect(kohanClient.getClip()).rejects.toThrow(
+          'Failed to get clip: Network error: ENOTFOUND'
         );
       });
 
@@ -694,8 +566,8 @@ describe('KohanClient', () => {
         const sslError = new Error('Network error: CERT_HAS_EXPIRED');
         mockMakeRequest.mockRejectedValue(sslError);
 
-        await expect(kohanClient.recordTicker('SSL_ERROR')).rejects.toThrow(
-          'Failed to record ticker: Network error: CERT_HAS_EXPIRED'
+        await expect(kohanClient.getClip()).rejects.toThrow(
+          'Failed to get clip: Network error: CERT_HAS_EXPIRED'
         );
       });
 
@@ -714,8 +586,8 @@ describe('KohanClient', () => {
         const serviceDownError = new Error('Network error: Connection refused - Is Kohan service running?');
         mockMakeRequest.mockRejectedValue(serviceDownError);
 
-        await expect(kohanClient.recordTicker('SERVICE_DOWN')).rejects.toThrow(
-          'Failed to record ticker: Network error: Connection refused - Is Kohan service running?'
+        await expect(kohanClient.getClip()).rejects.toThrow(
+          'Failed to get clip: Network error: Connection refused - Is Kohan service running?'
         );
       });
 

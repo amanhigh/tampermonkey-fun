@@ -1,25 +1,54 @@
 import { BaseClient, IBaseClient } from './base';
 import {
+  CreateJournalImageRequest,
   CreateJournalRequest,
+  CreateJournalTagRequest,
+  JournalListResponse,
+  JournalQueryParams,
   JournalRecord,
   KohanEnvelope,
   ScreenshotRequest,
   ScreenshotResponse,
+  UpdateJournalStatusRequest,
+  UpdateJournalStatusResponse,
 } from '../models/kohan';
 import { Constants } from '../models/constant';
 
 /**
  * KohanClient handles interactions with the local Kohan API
- * Provides methods for recording tickers and retrieving clipboard data
+ * Provides methods for taking screenshots, creating journals, and managing journal sub-resources.
  */
 export interface IKohanClient extends IBaseClient {
   /**
-   * Record a ticker via the API
-   * @param journalTag - Ticker symbol to record
-   * @returns Promise resolving with the API response
-   * @throws Error when recording ticker fails
+   * List journals matching query parameters.
+   * @param params Query parameters for filtering journals
+   * @returns Promise resolving with paginated journal list
    */
-  recordTicker(journalTag: string): Promise<void>;
+  listJournals(params: JournalQueryParams): Promise<JournalListResponse>;
+
+  /**
+   * Add an image to an existing journal.
+   * @param journalId Journal external ID
+   * @param image Image request payload
+   * @returns Promise resolving with created image record
+   */
+  addJournalImage(journalId: string, image: CreateJournalImageRequest): Promise<JournalRecord>;
+
+  /**
+   * Add a tag to an existing journal.
+   * @param journalId Journal external ID
+   * @param tag Tag request payload
+   * @returns Promise resolving with created tag record
+   */
+  addJournalTag(journalId: string, tag: CreateJournalTagRequest): Promise<JournalRecord>;
+
+  /**
+   * Update a journal's status.
+   * @param journalId Journal external ID
+   * @param status New status value
+   * @returns Promise resolving with update response
+   */
+  updateJournalStatus(journalId: string, status: UpdateJournalStatusRequest): Promise<UpdateJournalStatusResponse>;
 
   /**
    * Take journal screenshots via the API
@@ -63,7 +92,7 @@ export interface IKohanClient extends IBaseClient {
 
 /**
  * KohanClient handles interactions with the local Kohan API
- * Provides methods for recording tickers and retrieving clipboard data
+ * Provides methods for taking screenshots, creating journals, and managing journal sub-resources.
  */
 export class KohanClient extends BaseClient implements IKohanClient {
   /**
@@ -72,20 +101,6 @@ export class KohanClient extends BaseClient implements IKohanClient {
    */
   constructor(baseUrl: string = Constants.KOHAN.BASE_URL) {
     super(baseUrl);
-  }
-
-  /**
-   * Record a ticker via the API
-   * @param journalTag - Ticker symbol to record
-   * @returns Promise resolving with the API response
-   * @throws Error when recording ticker fails
-   */
-  async recordTicker(journalTag: string): Promise<void> {
-    try {
-      await this.makeRequest<void>(`/os/ticker/${journalTag}/record`);
-    } catch (error) {
-      throw new Error(`Failed to record ticker: ${(error as Error).message}`);
-    }
   }
 
   /**
@@ -118,6 +133,77 @@ export class KohanClient extends BaseClient implements IKohanClient {
       return response.data;
     } catch (error) {
       throw new Error(`Failed to create journal: ${(error as Error).message}`);
+    }
+  }
+
+  /** @inheritdoc */
+  async listJournals(params: JournalQueryParams): Promise<JournalListResponse> {
+    try {
+      const query = new URLSearchParams();
+      if (params.ticker) {
+        query.set('ticker', params.ticker);
+      }
+      if (params.type) {
+        query.set('type', params.type);
+      }
+      if (params.status) {
+        query.set('status', params.status);
+      }
+      if (params.limit) {
+        query.set('limit', String(params.limit));
+      }
+      if (params['sort-by']) {
+        query.set('sort-by', params['sort-by']);
+      }
+      if (params['sort-order']) {
+        query.set('sort-order', params['sort-order']);
+      }
+
+      return await this.makeRequest<JournalListResponse>(`/journals?${query.toString()}`);
+    } catch (error) {
+      throw new Error(`Failed to list journals: ${(error as Error).message}`);
+    }
+  }
+
+  /** @inheritdoc */
+  async addJournalImage(journalId: string, image: CreateJournalImageRequest): Promise<JournalRecord> {
+    try {
+      return await this.makeRequest<JournalRecord>(`/journals/${journalId}/images`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        data: JSON.stringify(image),
+      });
+    } catch (error) {
+      throw new Error(`Failed to add journal image: ${(error as Error).message}`);
+    }
+  }
+
+  /** @inheritdoc */
+  async addJournalTag(journalId: string, tag: CreateJournalTagRequest): Promise<JournalRecord> {
+    try {
+      return await this.makeRequest<JournalRecord>(`/journals/${journalId}/tags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        data: JSON.stringify(tag),
+      });
+    } catch (error) {
+      throw new Error(`Failed to add journal tag: ${(error as Error).message}`);
+    }
+  }
+
+  /** @inheritdoc */
+  async updateJournalStatus(
+    journalId: string,
+    status: UpdateJournalStatusRequest
+  ): Promise<UpdateJournalStatusResponse> {
+    try {
+      return await this.makeRequest<UpdateJournalStatusResponse>(`/journals/${journalId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        data: JSON.stringify(status),
+      });
+    } catch (error) {
+      throw new Error(`Failed to update journal status: ${(error as Error).message}`);
     }
   }
 
