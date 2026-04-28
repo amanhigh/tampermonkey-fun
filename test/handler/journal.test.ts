@@ -98,6 +98,7 @@ describe('JournalHandler', () => {
     (global as any).window = {
       location: {
         assign: jest.fn(),
+        replace: jest.fn(),
       },
     };
 
@@ -383,7 +384,7 @@ describe('JournalHandler', () => {
 
       mockJournalOpenListener(Constants.STORAGE.EVENTS.JOURNAL_OPEN, undefined, JSON.stringify({ journalId: 'jrn_123' }));
 
-      expect((global as any).window.location.assign).toHaveBeenCalledWith('/journal/jrn_123');
+      expect((global as any).window.location.replace).toHaveBeenCalledWith('/journal/jrn_123');
     });
   });
 });
