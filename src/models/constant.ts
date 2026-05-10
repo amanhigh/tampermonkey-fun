@@ -3,6 +3,12 @@ import { SequenceMap, SequenceType, TimeFrameConfig, TimeFrame, TimeFrameMap } f
 /**
  * Application-wide constants organized by domain and functionality
  */
+
+/** Kohan backend port configuration */
+const KOHAN_PORTS = {
+  DEV: 9091,
+  PROD: 9010,
+} as const;
 export const Constants = Object.freeze({
   // Audit Configuration
   AUDIT: {
@@ -274,7 +280,8 @@ Support:
 
   // External service endpoints
   KOHAN: {
-    BASE_URL: 'http://localhost:9091/v1/api',
+    PORTS: KOHAN_PORTS,
+    BASE_URL: `http://localhost:${KOHAN_PORTS.PROD}/v1/api`,
   },
 
   // Exchange and market related constants
