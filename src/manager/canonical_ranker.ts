@@ -14,7 +14,7 @@ export interface TickerSignals {
   ticker: string;
   alertCount: number;
   isWatched: boolean;
-  recentTimestamp: number;
+  isRecent: boolean;
   hasSequence: boolean;
   hasExchange: boolean;
   hasPairMapping: boolean;
@@ -105,7 +105,7 @@ export class CanonicalRanker implements ICanonicalRanker {
       const tvTicker = this.symbolManager.investingToTv(investingTicker);
       const alertCount = this.getAlertCount(pairId);
       const isWatched = tvTicker ? this.watchManager.isWatched(tvTicker) : false;
-      const recentTimestamp = tvTicker ? (this.recentManager.getLastOpenedTimestamp(tvTicker) ?? 0) : 0;
+      const isRecent = tvTicker ? this.recentManager.isRecent(tvTicker) : false;
       const hasSequence = tvTicker ? this.sequenceRepo.has(tvTicker) : false;
       const hasExchange = tvTicker ? this.exchangeRepo.has(tvTicker) : false;
       const hasPairMapping = tvTicker !== null;
@@ -114,7 +114,7 @@ export class CanonicalRanker implements ICanonicalRanker {
         ticker: investingTicker,
         alertCount,
         isWatched,
-        recentTimestamp,
+        isRecent,
         hasSequence,
         hasExchange,
         hasPairMapping,
@@ -132,7 +132,7 @@ export class CanonicalRanker implements ICanonicalRanker {
       const pairId = pairInfo?.pairId;
       const alertCount = pairId ? this.getAlertCount(pairId) : 0;
       const isWatched = this.watchManager.isWatched(tvTicker);
-      const recentTimestamp = this.recentManager.getLastOpenedTimestamp(tvTicker) ?? 0;
+      const isRecent = this.recentManager.isRecent(tvTicker);
       const hasSequence = this.sequenceRepo.has(tvTicker);
       const hasExchange = this.exchangeRepo.has(tvTicker);
       const hasPairMapping = investingTicker !== null;
@@ -141,7 +141,7 @@ export class CanonicalRanker implements ICanonicalRanker {
         ticker: tvTicker,
         alertCount,
         isWatched,
-        recentTimestamp,
+        isRecent,
         hasSequence,
         hasExchange,
         hasPairMapping,
@@ -177,7 +177,7 @@ export class CanonicalRanker implements ICanonicalRanker {
     const score =
       signals.alertCount * CanonicalRanker.WEIGHT_ALERTS +
       (signals.isWatched ? CanonicalRanker.WEIGHT_WATCHED : 0) +
-      (signals.recentTimestamp > 0 ? CanonicalRanker.WEIGHT_RECENT : 0) +
+      (signals.isRecent ? CanonicalRanker.WEIGHT_RECENT : 0) +
       (signals.hasSequence ? CanonicalRanker.WEIGHT_SEQUENCE : 0) +
       (signals.hasExchange ? CanonicalRanker.WEIGHT_EXCHANGE : 0) +
       (signals.hasPairMapping ? CanonicalRanker.WEIGHT_PAIR : 0) +

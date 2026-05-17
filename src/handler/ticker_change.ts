@@ -51,7 +51,7 @@ export class TickerChangeHandler implements ITickerChangeHandler {
   private recordRecentTicker(): void {
     const tvTicker = this.tickerManager.getTicker();
     if (!this.recentManager.isRecent(tvTicker)) {
-      this.recentManager.addTicker(tvTicker);
+      this.recentManager.markRecent(tvTicker);
 
       // Paint if TV ticker is not in watchlist
       if (!this.watchManager.isWatched(tvTicker)) {

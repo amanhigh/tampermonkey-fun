@@ -9,11 +9,8 @@ describe('StaleReviewPlugin', () => {
   let mockTickerRepo: Partial<ITickerRepo>;
   let mockWatchManager: Partial<IWatchManager>;
 
-  const DAY_MS = 24 * 60 * 60 * 1000;
-  const now = Date.now();
-
   beforeEach(() => {
-    mockRecentManager = { getLastOpenedTimestamp: jest.fn().mockReturnValue(0) };
+    mockRecentManager = { isRecent: jest.fn().mockReturnValue(true) };
     mockTickerRepo = { getAllKeys: jest.fn().mockReturnValue([]) };
     mockWatchManager = { isWatched: jest.fn().mockReturnValue(false) };
 
@@ -42,30 +39,19 @@ describe('StaleReviewPlugin', () => {
     expect(results).toEqual([]);
   });
 
-  test('flags tickers never opened as MEDIUM severity', async () => {
+  test('flags tickers that are not recent (stale) as MEDIUM severity', async () => {
     (mockTickerRepo.getAllKeys as jest.Mock).mockReturnValue(['TCS', 'INFY']);
-    (mockRecentManager.getLastOpenedTimestamp as jest.Mock).mockReturnValue(undefined);
+    (mockRecentManager.isRecent as jest.Mock).mockReturnValue(false);
 
     const results = await plugin.run();
     expect(results).toHaveLength(2);
     expect(results[0].severity).toBe('MEDIUM');
-    expect(results[0].message).toContain('never opened');
-    expect(results[0].data?.daysSinceOpen).toBe(-1);
+    expect(results[0].message).toContain('not recently opened');
   });
 
-  test('flags tickers opened beyond threshold as MEDIUM severity', async () => {
-    (mockTickerRepo.getAllKeys as jest.Mock).mockReturnValue(['OLD']);
-    (mockRecentManager.getLastOpenedTimestamp as jest.Mock).mockReturnValue(now - 200 * DAY_MS);
-
-    const results = await plugin.run();
-    expect(results).toHaveLength(1);
-    expect(results[0].severity).toBe('MEDIUM');
-    expect(results[0].data?.daysSinceOpen).toBeGreaterThanOrEqual(99);
-  });
-
-  test('skips tickers opened within threshold', async () => {
+  test('skips tickers that are recent', async () => {
     (mockTickerRepo.getAllKeys as jest.Mock).mockReturnValue(['FRESH']);
-    (mockRecentManager.getLastOpenedTimestamp as jest.Mock).mockReturnValue(now - 10 * DAY_MS);
+    (mockRecentManager.isRecent as jest.Mock).mockReturnValue(true);
 
     const results = await plugin.run();
     expect(results).toHaveLength(0);
@@ -73,15 +59,17 @@ describe('StaleReviewPlugin', () => {
 
   test('skips watched tickers', async () => {
     (mockTickerRepo.getAllKeys as jest.Mock).mockReturnValue(['WATCHED', 'UNWATCHED']);
-    (mockRecentManager.getLastOpenedTimestamp as jest.Mock).mockReturnValue(undefined);
     (mockWatchManager.isWatched as jest.Mock).mockImplementation((ticker: string) => ticker === 'WATCHED');
+    (mockRecentManager.isRecent as jest.Mock)
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(false);
 
     const results = await plugin.run();
     expect(results).toHaveLength(1);
     expect(results[0].target).toBe('UNWATCHED');
   });
 
-  test('respects custom threshold', async () => {
+  test('respects custom threshold via isRecent sinceMs option', async () => {
     const customPlugin = new StaleReviewPlugin(
       mockRecentManager as IRecentManager,
       mockTickerRepo as ITickerRepo,
@@ -90,12 +78,13 @@ describe('StaleReviewPlugin', () => {
     );
 
     (mockTickerRepo.getAllKeys as jest.Mock).mockReturnValue(['A']);
-    // 50 days ago — stale for 30-day threshold, not for 90-day
-    (mockRecentManager.getLastOpenedTimestamp as jest.Mock).mockReturnValue(now - 50 * DAY_MS);
+    (mockRecentManager.isRecent as jest.Mock).mockReturnValue(false);
 
     const customResults = await customPlugin.run();
     expect(customResults).toHaveLength(1);
 
+    // Default plugin with 180-day threshold — isRecent returns true (not stale)
+    (mockRecentManager.isRecent as jest.Mock).mockReturnValue(true);
     const defaultResults = await plugin.run();
     expect(defaultResults).toHaveLength(0);
   });

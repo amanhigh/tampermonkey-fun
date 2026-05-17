@@ -1,6 +1,7 @@
 import { JournalManager, IJournalManager } from '../../src/manager/journal';
 import { ISequenceManager } from '../../src/manager/sequence';
-import { IKohanClient } from '../../src/client/kohan';
+import { IJournalClient } from '../../src/client/journal';
+import { IOsClient } from '../../src/client/os';
 import { ITimeFrameManager } from '../../src/manager/timeframe';
 import { SequenceType } from '../../src/models/trading';
 import { TimeFrameConfig } from '../../src/models/trading';
@@ -19,7 +20,8 @@ jest.mock('../../src/util/notify', () => ({
 describe('JournalManager', () => {
   let journalManager: IJournalManager;
   let mockSequenceManager: jest.Mocked<ISequenceManager>;
-  let mockKohanClient: jest.Mocked<IKohanClient>;
+  let mockJournalClient: jest.Mocked<IJournalClient>;
+  let mockOsClient: jest.Mocked<IOsClient>;
   let mockTimeFrameManager: jest.Mocked<ITimeFrameManager>;
   let mockGMSetValue: jest.Mock;
 
@@ -43,15 +45,12 @@ describe('JournalManager', () => {
       isFrozen: jest.fn(),
     } as unknown as jest.Mocked<ISequenceManager>;
 
-    // Mock KohanClient
-    mockKohanClient = {
+    // Mock JournalClient
+    mockJournalClient = {
       listJournals: jest.fn(),
       addJournalImage: jest.fn(),
       addJournalTag: jest.fn(),
       updateJournalStatus: jest.fn(),
-      getClip: jest.fn().mockResolvedValue('clipboard-data'),
-      enableSubmap: jest.fn().mockResolvedValue(undefined),
-      disableSubmap: jest.fn().mockResolvedValue(undefined),
       createJournal: jest.fn().mockResolvedValue({
         id: 'jrn_123',
         ticker: 'TEST',
@@ -60,13 +59,22 @@ describe('JournalManager', () => {
         status: 'FAIL',
         created_at: '2024-01-01T00:00:00Z',
       }),
+      getBaseUrl: jest.fn(),
+    } as unknown as jest.Mocked<IJournalClient>;
+
+    // Mock OsClient
+    mockOsClient = {
       screenshot: jest.fn().mockImplementation(({ file_name }: { file_name: string }) =>
         Promise.resolve({
           file_name,
           full_path: `/home/aman/Downloads/${file_name}`,
         })
       ),
-    } as unknown as jest.Mocked<IKohanClient>;
+      getClip: jest.fn().mockResolvedValue('clipboard-data'),
+      enableSubmap: jest.fn().mockResolvedValue(undefined),
+      disableSubmap: jest.fn().mockResolvedValue(undefined),
+      getBaseUrl: jest.fn(),
+    } as unknown as jest.Mocked<IOsClient>;
 
     // Mock TimeFrameManager
     mockTimeFrameManager = {
@@ -74,7 +82,7 @@ describe('JournalManager', () => {
       getCurrentTimeFrameConfig: jest.fn().mockReturnValue(mockTimeFrameConfig),
     } as unknown as jest.Mocked<ITimeFrameManager>;
 
-    journalManager = new JournalManager(mockSequenceManager, mockKohanClient, mockTimeFrameManager);
+    journalManager = new JournalManager(mockSequenceManager, mockJournalClient, mockOsClient, mockTimeFrameManager);
   });
 
   describe('Constructor', () => {
@@ -83,7 +91,7 @@ describe('JournalManager', () => {
     });
 
     it('should initialize with correct dependency interfaces', () => {
-      const manager = new JournalManager(mockSequenceManager, mockKohanClient, mockTimeFrameManager);
+      const manager = new JournalManager(mockSequenceManager, mockJournalClient, mockOsClient, mockTimeFrameManager);
       expect(manager).toBeDefined();
     });
   });
@@ -124,7 +132,7 @@ describe('JournalManager', () => {
 
       await journalManager.createJournal(input);
 
-      expect(mockKohanClient.createJournal).toHaveBeenCalledWith(
+      expect(mockJournalClient.createJournal).toHaveBeenCalledWith(
         expect.objectContaining({
           ticker: 'TCS',
           sequence: 'MWD',
@@ -155,7 +163,7 @@ describe('JournalManager', () => {
 
       await journalManager.createJournal(input);
 
-      expect(mockKohanClient.createJournal).toHaveBeenCalledWith(
+      expect(mockJournalClient.createJournal).toHaveBeenCalledWith(
         expect.objectContaining({
           tags: [{ tag: 'oe', type: 'REASON', override: 'override-value' }],
         })
@@ -177,7 +185,7 @@ describe('JournalManager', () => {
 
       await journalManager.createJournal(input);
 
-      expect(mockKohanClient.createJournal).toHaveBeenCalledWith(
+      expect(mockJournalClient.createJournal).toHaveBeenCalledWith(
         expect.objectContaining({
           tags: undefined,
         })
@@ -202,7 +210,7 @@ describe('JournalManager', () => {
         ],
       });
 
-      expect(mockKohanClient.createJournal).toHaveBeenCalledWith(
+      expect(mockJournalClient.createJournal).toHaveBeenCalledWith(
         expect.objectContaining({
           ticker: 'AAPL',
           sequence: 'MWD',
@@ -229,7 +237,7 @@ describe('JournalManager', () => {
         status: 'FAIL' as const,
         created_at: '2024-01-01T00:00:00Z',
       };
-      mockKohanClient.createJournal.mockResolvedValue(mockRecord);
+      mockJournalClient.createJournal.mockResolvedValue(mockRecord);
 
       const result = await journalManager.createJournal({
         ticker: 'INFY',
@@ -246,7 +254,7 @@ describe('JournalManager', () => {
 
     it('should propagate client errors', async () => {
       mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
-      mockKohanClient.createJournal.mockRejectedValue(new Error('journal api error'));
+      mockJournalClient.createJournal.mockRejectedValue(new Error('journal api error'));
 
       await expect(
         journalManager.createJournal({
@@ -264,7 +272,7 @@ describe('JournalManager', () => {
 
   describe('screenshot ticker flow', () => {
     beforeEach(() => {
-      (mockKohanClient as any).screenshot = jest.fn();
+      (mockOsClient as any).screenshot = jest.fn();
     });
 
     it('should resolve MWD to TMN, MN, WK, D and call screenshot four times', async () => {
@@ -287,7 +295,7 @@ describe('JournalManager', () => {
 
         return configs[sequence][position];
       });
-      (mockKohanClient as any).screenshot.mockImplementation(({ file_name }: { file_name: string }) =>
+      (mockOsClient as any).screenshot.mockImplementation(({ file_name }: { file_name: string }) =>
         Promise.resolve({
           file_name,
           full_path: `/home/aman/Downloads/${file_name}`,
@@ -305,7 +313,7 @@ describe('JournalManager', () => {
       expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenNthCalledWith(2, SequenceType.MWD, 1);
       expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenNthCalledWith(3, SequenceType.MWD, 2);
       expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenNthCalledWith(4, SequenceType.MWD, 3);
-      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+      expect((mockOsClient as any).screenshot).toHaveBeenNthCalledWith(
         1,
         expect.objectContaining({
           file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_1_tmn_rejected\.png$/),
@@ -315,7 +323,7 @@ describe('JournalManager', () => {
           window: 'TradingView',
         })
       );
-      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+      expect((mockOsClient as any).screenshot).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({
           file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_2_mn_rejected\.png$/),
@@ -325,7 +333,7 @@ describe('JournalManager', () => {
           window: 'TradingView',
         })
       );
-      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+      expect((mockOsClient as any).screenshot).toHaveBeenNthCalledWith(
         3,
         expect.objectContaining({
           file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_3_wk_rejected\.png$/),
@@ -335,7 +343,7 @@ describe('JournalManager', () => {
           window: 'TradingView',
         })
       );
-      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+      expect((mockOsClient as any).screenshot).toHaveBeenNthCalledWith(
         4,
         expect.objectContaining({
           file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_4_dl_rejected\.png$/),
@@ -376,7 +384,7 @@ describe('JournalManager', () => {
 
         return configs[sequence][position];
       });
-      (mockKohanClient as any).screenshot.mockImplementation(({ file_name }: { file_name: string }) =>
+      (mockOsClient as any).screenshot.mockImplementation(({ file_name }: { file_name: string }) =>
         Promise.resolve({
           file_name,
           full_path: `/home/aman/Downloads/${file_name}`,
@@ -385,7 +393,7 @@ describe('JournalManager', () => {
 
       const result = await (journalManager as any).screenshotTicker('TCS', 'Rejected');
 
-      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+      expect((mockOsClient as any).screenshot).toHaveBeenNthCalledWith(
         1,
         expect.objectContaining({
           file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_1_smn_rejected\.png$/),
@@ -395,7 +403,7 @@ describe('JournalManager', () => {
           window: 'TradingView',
         })
       );
-      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+      expect((mockOsClient as any).screenshot).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({
           file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_2_tmn_rejected\.png$/),
@@ -405,7 +413,7 @@ describe('JournalManager', () => {
           window: 'TradingView',
         })
       );
-      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+      expect((mockOsClient as any).screenshot).toHaveBeenNthCalledWith(
         3,
         expect.objectContaining({
           file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_3_mn_rejected\.png$/),
@@ -415,7 +423,7 @@ describe('JournalManager', () => {
           window: 'TradingView',
         })
       );
-      expect((mockKohanClient as any).screenshot).toHaveBeenNthCalledWith(
+      expect((mockOsClient as any).screenshot).toHaveBeenNthCalledWith(
         4,
         expect.objectContaining({
           file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_4_wk_rejected\.png$/),
@@ -435,7 +443,7 @@ describe('JournalManager', () => {
     it('should abort when screenshot fails', async () => {
       mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
       mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(new TimeFrameConfig('TMN', 't', 5));
-      (mockKohanClient as any).screenshot.mockRejectedValue(new Error('screenshot failed'));
+      (mockOsClient as any).screenshot.mockRejectedValue(new Error('screenshot failed'));
 
       await expect((journalManager as any).screenshotTicker('TCS', 'Rejected')).rejects.toThrow('screenshot failed');
     });
@@ -445,7 +453,7 @@ describe('JournalManager', () => {
     it('should capture REGION checklist screenshot with DL timeframe metadata', async () => {
       const result = await (journalManager as any).screenshotChecklist('TCS', 'set');
 
-      expect(mockKohanClient.screenshot).toHaveBeenCalledWith({
+      expect(mockOsClient.screenshot).toHaveBeenCalledWith({
         file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_checklist_set\.png$/),
         directory_type: 'JOURNAL',
         type: 'REGION',
@@ -455,7 +463,7 @@ describe('JournalManager', () => {
     });
 
     it('should propagate checklist screenshot errors', async () => {
-      (mockKohanClient as any).screenshot.mockRejectedValue(new Error('screenshot failed'));
+      (mockOsClient as any).screenshot.mockRejectedValue(new Error('screenshot failed'));
 
       await expect((journalManager as any).screenshotChecklist('TCS', 'set')).rejects.toThrow('screenshot failed');
     });
@@ -537,14 +545,14 @@ describe('JournalManager', () => {
   describe('findRunningJournal', () => {
     it('should return the latest TAKEN/RUNNING journal for ticker', async () => {
       const mockJournal = { id: 'jrn_running', ticker: 'TCS', type: 'TAKEN', status: 'RUNNING' };
-      mockKohanClient.listJournals.mockResolvedValue({
+      mockJournalClient.listJournals.mockResolvedValue({
         journals: [mockJournal as any],
         metadata: { total: 1, offset: 0, limit: 5 },
       });
 
       const result = await journalManager.findRunningJournal('TCS');
 
-      expect(mockKohanClient.listJournals).toHaveBeenCalledWith({
+      expect(mockJournalClient.listJournals).toHaveBeenCalledWith({
         ticker: 'TCS',
         type: 'TAKEN',
         status: 'RUNNING',
@@ -556,7 +564,7 @@ describe('JournalManager', () => {
     });
 
     it('should return null when no running journal exists', async () => {
-      mockKohanClient.listJournals.mockResolvedValue({
+      mockJournalClient.listJournals.mockResolvedValue({
         journals: [],
         metadata: { total: 0, offset: 0, limit: 5 },
       });
@@ -569,7 +577,7 @@ describe('JournalManager', () => {
     it('should throw when multiple running journals exist', async () => {
       const journal1 = { id: 'jrn_1', ticker: 'TCS', type: 'TAKEN', status: 'RUNNING' };
       const journal2 = { id: 'jrn_2', ticker: 'TCS', type: 'TAKEN', status: 'RUNNING' };
-      mockKohanClient.listJournals.mockResolvedValue({
+      mockJournalClient.listJournals.mockResolvedValue({
         journals: [journal1 as any, journal2 as any],
         metadata: { total: 2, offset: 0, limit: 5 },
       });
@@ -590,12 +598,12 @@ describe('JournalManager', () => {
 
       await journalManager.addJournalImages(journalId, screenshots as any);
 
-      expect(mockKohanClient.addJournalImage).toHaveBeenCalledTimes(2);
-      expect(mockKohanClient.addJournalImage).toHaveBeenNthCalledWith(1, journalId, {
+      expect(mockJournalClient.addJournalImage).toHaveBeenCalledTimes(2);
+      expect(mockJournalClient.addJournalImage).toHaveBeenNthCalledWith(1, journalId, {
         timeframe: 'TMN',
         file_name: 'img1.png',
       });
-      expect(mockKohanClient.addJournalImage).toHaveBeenNthCalledWith(2, journalId, {
+      expect(mockJournalClient.addJournalImage).toHaveBeenNthCalledWith(2, journalId, {
         timeframe: 'MN',
         file_name: 'img2.png',
       });
@@ -608,7 +616,7 @@ describe('JournalManager', () => {
 
       await journalManager.addReasonTags(journalId, 'oe');
 
-      expect(mockKohanClient.addJournalTag).toHaveBeenCalledWith(journalId, {
+      expect(mockJournalClient.addJournalTag).toHaveBeenCalledWith(journalId, {
         tag: 'oe',
         type: 'REASON',
       });
@@ -619,7 +627,7 @@ describe('JournalManager', () => {
 
       await journalManager.addReasonTags(journalId, 'oe-loc');
 
-      expect(mockKohanClient.addJournalTag).toHaveBeenCalledWith(journalId, {
+      expect(mockJournalClient.addJournalTag).toHaveBeenCalledWith(journalId, {
         tag: 'oe',
         type: 'REASON',
         override: 'loc',
@@ -631,7 +639,7 @@ describe('JournalManager', () => {
 
       await journalManager.addReasonTags(journalId, '');
 
-      expect(mockKohanClient.addJournalTag).not.toHaveBeenCalled();
+      expect(mockJournalClient.addJournalTag).not.toHaveBeenCalled();
     });
   });
 
@@ -641,7 +649,7 @@ describe('JournalManager', () => {
 
       await journalManager.updateJournalStatus(journalId, 'SUCCESS');
 
-      expect(mockKohanClient.updateJournalStatus).toHaveBeenCalledWith(journalId, { status: 'SUCCESS' });
+      expect(mockJournalClient.updateJournalStatus).toHaveBeenCalledWith(journalId, { status: 'SUCCESS' });
     });
 
     it('should patch journal status with FAIL', async () => {
@@ -649,7 +657,7 @@ describe('JournalManager', () => {
 
       await journalManager.updateJournalStatus(journalId, 'FAIL');
 
-      expect(mockKohanClient.updateJournalStatus).toHaveBeenCalledWith(journalId, { status: 'FAIL' });
+      expect(mockJournalClient.updateJournalStatus).toHaveBeenCalledWith(journalId, { status: 'FAIL' });
     });
 
     it('should patch journal status with MISSED', async () => {
@@ -657,7 +665,7 @@ describe('JournalManager', () => {
 
       await journalManager.updateJournalStatus(journalId, 'MISSED');
 
-      expect(mockKohanClient.updateJournalStatus).toHaveBeenCalledWith(journalId, { status: 'MISSED' });
+      expect(mockJournalClient.updateJournalStatus).toHaveBeenCalledWith(journalId, { status: 'MISSED' });
     });
   });
 });

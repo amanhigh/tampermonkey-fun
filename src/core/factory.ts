@@ -133,7 +133,6 @@ export class Factory {
             Factory.handler.journal(),
             Factory.handler.command(),
             Factory.handler.kite(),
-            Factory.handler.ticker(),
             Factory.handler.alertFeed(),
             Factory.handler.panel(),
             Factory.manager.tv(),
@@ -303,7 +302,6 @@ export class Factory {
             Factory.manager.watch(),
             Factory.manager.flag(),
             Factory.manager.alertFeed(),
-            Factory.manager.recent(),
             Factory.repo.sequence(),
             Factory.repo.exchange(),
             Factory.repo.alert(),
@@ -318,7 +316,7 @@ export class Factory {
       Factory.getInstance('flagManager', () => new FlagManager(Factory.repo.flag(), Factory.manager.paint())),
 
     recent: (): IRecentManager =>
-      Factory.getInstance('recentManager', () => new RecentManager(Factory.client.ticker(), Factory.manager.paint())),
+      Factory.getInstance('recentManager', () => new RecentManager(Factory.client.ticker())),
     journal: (): IJournalManager =>
       Factory.getInstance(
         'journalManager',
@@ -668,15 +666,7 @@ export class Factory {
     ticker: (): ITickerHandler =>
       Factory.getInstance(
         'tickerHandler',
-        () =>
-          new TickerHandler(
-            Factory.manager.recent(),
-            Factory.manager.ticker(),
-            Factory.manager.symbol(),
-            Factory.manager.screener(),
-            Factory.manager.alertFeed(),
-            Factory.handler.pair()
-          )
+        () => new TickerHandler(Factory.manager.ticker(), Factory.manager.symbol(), Factory.handler.pair())
       ),
 
     tickerChange: (): ITickerChangeHandler =>

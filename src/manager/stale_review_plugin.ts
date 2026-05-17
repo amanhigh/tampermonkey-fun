@@ -46,25 +46,18 @@ export class StaleReviewPlugin extends BaseAuditPlugin {
         return;
       }
 
-      const lastOpened = this.recentManager.getLastOpenedTimestamp(tvTicker) ?? 0;
+      const isStale = !this.recentManager.isRecent(tvTicker, { sinceMs: cutoff });
 
-      if (lastOpened < cutoff) {
-        const daysSinceOpen = lastOpened > 0 ? Math.floor((now - lastOpened) / (24 * 60 * 60 * 1000)) : -1;
-
-        const message =
-          daysSinceOpen >= 0 ? `${tvTicker}: last opened ${daysSinceOpen} days ago` : `${tvTicker}: never opened`;
-
+      if (isStale) {
         results.push({
           pluginId: this.id,
           code: 'STALE_TICKER',
           target: tvTicker,
-          message,
+          message: `${tvTicker}: not recently opened`,
           severity: 'MEDIUM',
           status: 'FAIL',
           data: {
             tvTicker,
-            lastOpened,
-            daysSinceOpen,
           },
         });
       }

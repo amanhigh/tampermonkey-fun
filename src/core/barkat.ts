@@ -7,7 +7,6 @@ import { IAlertHandler } from '../handler/alert';
 import { IJournalHandler } from '../handler/journal';
 import { ICommandInputHandler } from '../handler/command';
 import { IKiteHandler } from '../handler/kite';
-import { ITickerHandler } from '../handler/ticker';
 import { IAlertFeedHandler } from '../handler/alertfeed';
 import { JournalType } from '../models/trading';
 import { IGlobalErrorHandler } from '../handler/error';
@@ -27,7 +26,6 @@ export class Barkat {
     private readonly journalHandler: IJournalHandler,
     private readonly commandHandler: ICommandInputHandler,
     private readonly kiteHandler: IKiteHandler,
-    private readonly tickerHandler: ITickerHandler,
     private readonly alertFeedHandler: IAlertFeedHandler,
     private readonly panelHandler: IPanelHandler,
     private readonly tvManager: ITradingViewManager,
@@ -130,11 +128,6 @@ export class Barkat {
               this.uiUtil.toggleUI(auditAreaId);
             });
           })
-      )
-      .append(
-        this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.RECENT, 'X', () => {
-          this.tickerHandler.resetRecent();
-        })
       )
       .append(this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.SUMMARY));
 

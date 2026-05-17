@@ -21,7 +21,7 @@ describe('CanonicalRanker', () => {
   beforeEach(() => {
     mockAlertRepo = { get: jest.fn().mockReturnValue(undefined) };
     mockWatchManager = { isWatched: jest.fn().mockReturnValue(false) };
-    mockRecentManager = { getLastOpenedTimestamp: jest.fn().mockReturnValue(0) };
+    mockRecentManager = { isRecent: jest.fn().mockReturnValue(false) };
     mockSequenceRepo = { has: jest.fn().mockReturnValue(false) };
     mockExchangeRepo = { has: jest.fn().mockReturnValue(false), get: jest.fn().mockReturnValue(undefined) };
     mockPairRepo = { getPairInfo: jest.fn().mockReturnValue(null) };
@@ -79,13 +79,13 @@ describe('CanonicalRanker', () => {
       (mockSymbolManager.investingToTv as jest.Mock)
         .mockReturnValueOnce('A_TV')
         .mockReturnValueOnce('B_TV');
-      (mockRecentManager.getLastOpenedTimestamp as jest.Mock)
-        .mockReturnValueOnce(Date.now())
-        .mockReturnValueOnce(undefined);
+      (mockRecentManager.isRecent as jest.Mock)
+        .mockReturnValueOnce(true)
+        .mockReturnValueOnce(false);
 
       const result = ranker.rankInvestingTickers(['A', 'B'], '123');
       expect(result[0].ticker).toBe('A');
-      expect(result[0].recentTimestamp).toBeGreaterThan(0);
+      expect(result[0].isRecent).toBe(true);
     });
 
     test('preserves original order when scores are equal', () => {
@@ -127,9 +127,9 @@ describe('CanonicalRanker', () => {
       (mockWatchManager.isWatched as jest.Mock)
         .mockReturnValueOnce(false)
         .mockReturnValueOnce(true);
-      (mockRecentManager.getLastOpenedTimestamp as jest.Mock)
-        .mockReturnValueOnce(undefined)
-        .mockReturnValueOnce(Date.now());
+      (mockRecentManager.isRecent as jest.Mock)
+        .mockReturnValueOnce(false)
+        .mockReturnValueOnce(true);
 
       const result = ranker.rankTvTickers(['A', 'B']);
       expect(result[0].ticker).toBe('B');
@@ -141,7 +141,7 @@ describe('CanonicalRanker', () => {
       (mockSymbolManager.tvToInvesting as jest.Mock).mockReturnValue('MAHM');
       (mockPairRepo.getPairInfo as jest.Mock).mockReturnValue(new PairInfo('Mahindra', '18273', 'NSE', 'MAHM'));
       (mockAlertRepo.get as jest.Mock).mockReturnValue([{ id: '1' }, { id: '2' }]);
-      (mockRecentManager.getLastOpenedTimestamp as jest.Mock).mockReturnValue(Date.now());
+      (mockRecentManager.isRecent as jest.Mock).mockReturnValue(true);
 
       const result = ranker.rankTvTickers(['M_M', 'M&M', 'M&amp;M', 'M&amp;AMP;M']);
 
