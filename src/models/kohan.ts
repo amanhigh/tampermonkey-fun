@@ -12,6 +12,9 @@ export type JournalApiTimeframe = 'DL' | 'WK' | 'MN' | 'TMN' | 'SMN' | 'YR';
 
 export type JournalTagType = 'REASON' | 'MANAGEMENT' | 'DIRECTION';
 
+/** Result journal statuses available for user selection when recording a trade result. */
+export type JournalResultStatus = 'SUCCESS' | 'FAIL' | 'MISSED';
+
 export type JournalNoteFormat = 'MARKDOWN' | 'PLAINTEXT';
 
 export interface KohanEnvelope<T> {
@@ -67,6 +70,12 @@ export interface CreateJournalInput {
   reason: string;
   /** Captured screenshots to attach to the journal. */
   screenshots: ScreenshotResponse[];
+  /** Journal API type to create. */
+  type: JournalApiType;
+  /** Journal API status to assign. */
+  status: JournalApiStatus;
+  /** Optional notes to attach on journal creation. */
+  notes?: CreateJournalNoteRequest[];
 }
 
 export interface JournalImageRecord extends CreateJournalImageRequest {
@@ -91,6 +100,38 @@ export interface JournalNoteRecord {
   content: string;
   format: JournalNoteFormat;
   created_at: string;
+}
+
+/** Query parameters for listing journals. */
+export interface JournalQueryParams {
+  ticker?: string;
+  type?: JournalApiType;
+  status?: JournalApiStatus;
+  limit?: number;
+  'sort-by'?: string;
+  'sort-order'?: string;
+}
+
+/** Paginated journal list response. */
+export interface JournalListResponse {
+  journals: JournalRecord[];
+  metadata: {
+    total: number;
+    offset: number;
+    limit: number;
+  };
+}
+
+/** Request body for updating a journal's status. */
+export interface UpdateJournalStatusRequest {
+  status: JournalResultStatus;
+}
+
+/** Response from updating journal status. */
+export interface UpdateJournalStatusResponse {
+  id: string;
+  status: string;
+  reviewed_at?: string;
 }
 
 export interface JournalRecord {

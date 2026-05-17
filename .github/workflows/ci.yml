@@ -20,14 +20,19 @@ jobs:
         node-version: 20.x
         cache: 'npm'
         
+    - name: Install just
+      uses: taiki-e/install-action@v2
+      with:
+        tool: just
+        
     - name: Setup environment
-      run: make prepare
+      run: just prepare
       
     - name: Build and lint
-      run: make build
+      run: just build
       
     - name: Run tests
-      run: make test
+      run: just test
       
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4

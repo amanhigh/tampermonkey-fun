@@ -68,12 +68,15 @@ describe('TradingViewManager', () => {
     };
 
     mockKohanClient = {
-      recordTicker: jest.fn(),
       screenshot: jest.fn(),
       createJournal: jest.fn(),
       getClip: jest.fn(),
       enableSubmap: jest.fn().mockResolvedValue(undefined),
       disableSubmap: jest.fn().mockResolvedValue(undefined),
+      listJournals: jest.fn(),
+      addJournalImage: jest.fn(),
+      addJournalTag: jest.fn(),
+      updateJournalStatus: jest.fn(),
       getBaseUrl: jest.fn(),
     };
 

@@ -10,16 +10,16 @@
 ## Development Commands
 
 ### Userscript Building
-- `make experiment`: Build experiment script for debugging (outputs to `dist/index.dev.user.js`)
-- `make barkat`: Build Barkat userscript
-- `make imdb`: Build IMDB userscript  
-- `make picasso`: Build Picasso userscript
+- `just experiment`: Build experiment script for debugging (outputs to `dist/index.dev.user.js`)
+- `just barkat`: Build Barkat userscript
+- `just imdb`: Build IMDB userscript  
+- `just picasso`: Build Picasso userscript
 
 ### Project Management
-- `make prepare`: One-time NPM setup
-- `make clean`: Remove dist and node_modules
-- `make reset`: Clean and rebuild everything
-- `npm run analyze`: Build with bundle analyzer
+- `just prepare`: One-time NPM setup
+- `just clean`: Remove dist and node_modules
+- `just reset`: Clean and rebuild everything
+- `just analyze`: Build with bundle analyzer
 
 ## Architecture Overview
 
@@ -43,9 +43,9 @@ This is a TypeScript-based Tampermonkey/Greasemonkey userscript development envi
 
 ### Development Workflow
 1. Modify experiment entry point in `src/core/experiment.ts`
-2. Run `make setup` to build and start live reload
+2. Run `just setup` to build and start live reload
 3. Load `dist/index.dev.user.js` in Tampermonkey with file:// require for hot reloading
-4. For production: uncomment entry point in target core file, run specific make command, copy `dist/index.prod.user.js`
+4. For production: uncomment entry point in target core file, run specific just command, copy `dist/index.prod.user.js`
 
 ### Testing
 - Jest configuration with TypeScript support

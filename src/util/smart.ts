@@ -20,6 +20,15 @@ export interface ISmartPrompt {
    * - { type: 'reason', value: string } if user selected a reason or entered text
    */
   showModal(reasons: string[], overrides?: string[]): Promise<SmartPromptResponse>;
+
+  /**
+   * Shows a textarea modal dialog with default text and explicit save/cancel actions.
+   * @param title Title shown above the textarea
+   * @param defaultValue Initial textarea value
+   * @param submitLabel Label for the submit button
+   * @returns Promise resolving with trimmed text or null when cancelled
+   */
+  showTextareaModal(title: string, defaultValue: string, submitLabel?: string): Promise<string | null>;
 }
 
 /**
@@ -33,8 +42,10 @@ export class SmartPrompt implements ISmartPrompt {
   private static readonly CLASSES = {
     MODAL: 'aman-modal',
     MODAL_CONTENT: 'aman-modal-content',
+    MODAL_TITLE: 'aman-modal-title',
     MODAL_BUTTON: 'aman-modal-button',
     MODAL_INPUT: 'aman-modal-input',
+    MODAL_TEXTAREA: 'aman-modal-textarea',
     MODAL_RADIO_LABEL: 'aman-modal-radio-label',
   };
 
@@ -105,6 +116,21 @@ export class SmartPrompt implements ISmartPrompt {
       }
     };
     return textBox;
+  }
+
+  private createTitle(text: string): HTMLHeadingElement {
+    const title = document.createElement('h3');
+    title.className = SmartPrompt.CLASSES.MODAL_TITLE;
+    title.textContent = text;
+    return title;
+  }
+
+  private createTextarea(id: string, defaultValue: string): HTMLTextAreaElement {
+    const textArea = document.createElement('textarea');
+    textArea.id = id;
+    textArea.className = `${SmartPrompt.CLASSES.MODAL_INPUT} ${SmartPrompt.CLASSES.MODAL_TEXTAREA}`;
+    textArea.value = defaultValue;
+    return textArea;
   }
 
   private createRadioButton(text: string, id: string): HTMLLabelElement {
@@ -178,6 +204,56 @@ export class SmartPrompt implements ISmartPrompt {
           this.destroyModal();
         }
       };
+      this.escapeHandler = keydownHandler;
+      window.addEventListener('keydown', keydownHandler);
+    });
+  }
+
+  /** @inheritdoc */
+  public async showTextareaModal(title: string, defaultValue: string, submitLabel = 'Save'): Promise<string | null> {
+    return new Promise((resolve) => {
+      this.destroyModal();
+      this.modal = this.createModal();
+      document.body.appendChild(this.modal);
+
+      if (!this.modal) {
+        throw new Error('Modal not initialized');
+      }
+
+      this.modal.appendChild(this.createTitle(title));
+
+      const textArea = this.createTextarea('smart-textarea', defaultValue);
+      this.modal.appendChild(textArea);
+
+      const buttonContainer = document.createElement('div');
+      buttonContainer.className = SmartPrompt.CLASSES.MODAL_CONTENT;
+
+      const saveButton = document.createElement('button');
+      saveButton.id = 'smart-textarea-save';
+      saveButton.innerHTML = submitLabel;
+      saveButton.className = SmartPrompt.CLASSES.MODAL_BUTTON;
+      saveButton.onclick = () => {
+        resolve(textArea.value.trim());
+        this.destroyModal();
+      };
+
+      const cancelButton = this.createCancelButton('smart-textarea-cancel', (response) => {
+        resolve(response.value);
+      });
+
+      buttonContainer.appendChild(saveButton);
+      buttonContainer.appendChild(cancelButton);
+      this.modal.appendChild(buttonContainer);
+      this.modal.style.display = 'block';
+      textArea.focus();
+
+      const keydownHandler = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          resolve(null);
+          this.destroyModal();
+        }
+      };
+
       this.escapeHandler = keydownHandler;
       window.addEventListener('keydown', keydownHandler);
     });
