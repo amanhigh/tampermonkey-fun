@@ -1,7 +1,7 @@
 // ── Alert Ticker Types ──
 
 /** Full Alert ticker record returned by the API (matches go-fun models/barkat/alert_ticker.go AlertTicker). */
-export interface AlertTickerRecord {
+export interface AlertTicker {
   symbol: string;
   pair_id: string;
   name: string;
@@ -31,7 +31,7 @@ export interface AlertTickerQueryParams {
 
 /** Paginated Alert ticker list response. */
 export interface AlertTickerListResponse {
-  alert_tickers: AlertTickerRecord[];
+  alert_tickers: AlertTicker[];
   metadata: {
     total: number;
     offset: number;

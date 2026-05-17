@@ -2,31 +2,31 @@ import { BaseClient, IBaseClient } from './base';
 import {
   AlertTickerListResponse,
   AlertTickerQueryParams,
-  AlertTickerRecord,
+  AlertTicker,
   CreateAlertTickerRequest,
 } from '../models/alert_ticker';
 import { KohanEnvelope } from '../models/journal';
 import { Constants } from '../models/constant';
 
 /**
- * TickerAlertClient handles Alert ticker (Investing.com identity) CRUD and listing
+ * AlertTickerClient handles Alert ticker (Investing.com identity) CRUD and listing
  * operations against the Kohan backend. Covers Section 2.2.2 from the PRD.
  */
-export interface ITickerAlertClient extends IBaseClient {
+export interface IAlertTickerClient extends IBaseClient {
   /**
    * Create an Alert ticker under a primary ticker.
    * @param ticker - Parent primary ticker identity
    * @param data - Alert ticker creation payload
    * @returns Promise resolving with created Alert ticker
    */
-  createAlertTicker(ticker: string, data: CreateAlertTickerRequest): Promise<AlertTickerRecord>;
+  createAlertTicker(ticker: string, data: CreateAlertTickerRequest): Promise<AlertTicker>;
 
   /**
    * Retrieve one Alert ticker by symbol.
    * @param symbol - Alert ticker symbol
    * @returns Promise resolving with Alert ticker record
    */
-  getAlertTicker(symbol: string): Promise<AlertTickerRecord>;
+  getAlertTicker(symbol: string): Promise<AlertTicker>;
 
   /**
    * Delete one Alert ticker by symbol.
@@ -40,15 +40,15 @@ export interface ITickerAlertClient extends IBaseClient {
    * @param params - Query parameters (offset/limit are overridden)
    * @returns Promise resolving with all matching alert ticker records
    */
-  listAlertTickers(params: AlertTickerQueryParams): Promise<AlertTickerRecord[]>;
+  listAlertTickers(params: AlertTickerQueryParams): Promise<AlertTicker[]>;
 }
 
 /**
- * TickerAlertClient handles Alert ticker CRUD and listing against the Kohan backend.
+ * AlertTickerClient handles Alert ticker CRUD and listing against the Kohan backend.
  */
-export class TickerAlertClient extends BaseClient implements ITickerAlertClient {
+export class AlertTickerClient extends BaseClient implements IAlertTickerClient {
   /**
-   * Creates an instance of TickerAlertClient.
+   * Creates an instance of AlertTickerClient.
    * @param baseUrl - Base URL for Kohan API (defaults to Constants.KOHAN.BASE_URL)
    */
   constructor(baseUrl: string = Constants.KOHAN.BASE_URL) {
@@ -56,9 +56,9 @@ export class TickerAlertClient extends BaseClient implements ITickerAlertClient 
   }
 
   /** @inheritdoc */
-  async createAlertTicker(ticker: string, data: CreateAlertTickerRequest): Promise<AlertTickerRecord> {
+  async createAlertTicker(ticker: string, data: CreateAlertTickerRequest): Promise<AlertTicker> {
     try {
-      const response = await this.makeRequest<KohanEnvelope<AlertTickerRecord>>(
+      const response = await this.makeRequest<KohanEnvelope<AlertTicker>>(
         `/tickers/${encodeURIComponent(ticker)}/alert-tickers`,
         {
           method: 'POST',
@@ -73,9 +73,9 @@ export class TickerAlertClient extends BaseClient implements ITickerAlertClient 
   }
 
   /** @inheritdoc */
-  async getAlertTicker(symbol: string): Promise<AlertTickerRecord> {
+  async getAlertTicker(symbol: string): Promise<AlertTicker> {
     try {
-      const response = await this.makeRequest<KohanEnvelope<AlertTickerRecord>>(
+      const response = await this.makeRequest<KohanEnvelope<AlertTicker>>(
         `/alert-tickers/${encodeURIComponent(symbol)}`
       );
       return response.data;
@@ -96,11 +96,11 @@ export class TickerAlertClient extends BaseClient implements ITickerAlertClient 
   }
 
   /** @inheritdoc */
-  async listAlertTickers(params: AlertTickerQueryParams): Promise<AlertTickerRecord[]> {
+  async listAlertTickers(params: AlertTickerQueryParams): Promise<AlertTicker[]> {
     const limit = Constants.KOHAN.PAGE_LIMIT;
     let offset = 0;
     let total = 0;
-    const all: AlertTickerRecord[] = [];
+    const all: AlertTicker[] = [];
 
     try {
       do {
@@ -139,7 +139,7 @@ export class TickerAlertClient extends BaseClient implements ITickerAlertClient 
    */
   private buildAlertTickerQuery(params: AlertTickerQueryParams): URLSearchParams {
     const query = new URLSearchParams();
-    TickerAlertClient.setQueryParams(query, [
+    AlertTickerClient.setQueryParams(query, [
       ['symbol', params.symbol],
       ['ticker', params.ticker],
       ['pair-id', params['pair-id']],

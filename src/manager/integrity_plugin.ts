@@ -1,31 +1,28 @@
 import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
-import { IPairRepo } from '../repo/pair';
+import { IAlertTickerClient } from '../client/alert_ticker';
 import { ITickerRepo } from '../repo/ticker';
 import { Constants } from '../models/constant';
 
 /**
- * Integrity Audit plugin (FR-007): ensures every investingTicker in PairRepo
+ * Integrity Audit plugin (FR-007): ensures every alert ticker on the backend
  * has a corresponding tvTicker in TickerRepo.
  * Surfaces unmapped pairs that block alert creation and chart navigation.
  * Emits FAIL results only (no PASS records).
- *
- * Replaces the former GoldenPlugin and ReverseGoldenPlugin which detected
- * the same failures independently.
  */
 export class IntegrityPlugin extends BaseAuditPlugin {
   public readonly id = Constants.AUDIT.PLUGINS.INTEGRITY;
   public readonly title = 'Integrity';
 
   constructor(
-    private readonly pairRepo: IPairRepo,
+    private readonly alertTickerClient: IAlertTickerClient,
     private readonly tickerRepo: ITickerRepo
   ) {
     super();
   }
 
   /**
-   * Runs integrity audit by checking all pairs for TV ticker mapping.
+   * Runs integrity audit by checking all alert tickers for TV ticker mapping.
    * Audits entire repository — targets parameter not supported.
    * @throws Error if targets array is provided
    * @returns Promise resolving to array of audit results for unmapped pairs
@@ -38,17 +35,17 @@ export class IntegrityPlugin extends BaseAuditPlugin {
     const results: AuditResult[] = [];
     const seenPairIds = new Set<string>();
 
-    this.pairRepo.getAllKeys().forEach((investingTicker: string) => {
-      const pairInfo = this.pairRepo.getPairInfo(investingTicker);
-      if (!pairInfo) {
-        return;
-      }
+    const alertTickers = await this.alertTickerClient.listAlertTickers({});
+
+    alertTickers.forEach((record) => {
+      const investingTicker = record.symbol;
+      const pairId = record.pair_id;
 
       // Skip if we've already processed this pairId (deduplicate aliases)
-      if (seenPairIds.has(pairInfo.pairId)) {
+      if (seenPairIds.has(pairId)) {
         return;
       }
-      seenPairIds.add(pairInfo.pairId);
+      seenPairIds.add(pairId);
 
       const tvTicker = this.tickerRepo.getTvTicker(investingTicker);
       if (!tvTicker) {
@@ -61,7 +58,7 @@ export class IntegrityPlugin extends BaseAuditPlugin {
           status: 'FAIL',
           data: {
             investingTicker,
-            pairId: pairInfo.pairId,
+            pairId,
           },
         });
       }

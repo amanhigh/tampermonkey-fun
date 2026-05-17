@@ -1,4 +1,4 @@
-import { TickerAlertClient, ITickerAlertClient } from '../../src/client/ticker_alert';
+import { AlertTickerClient, IAlertTickerClient } from '../../src/client/alert_ticker';
 import { Constants } from '../../src/models/constant';
 
 // Mock the BaseClient's makeRequest method
