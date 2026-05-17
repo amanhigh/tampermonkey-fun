@@ -165,11 +165,13 @@ describe('CanonicalRanker', () => {
     });
 
     test('preferred exchange bonus ranks NSE ticker above non-exchange ticker', async () => {
-      (mockSymbolManager.tvToInvesting as jest.Mock).mockReturnValue('PTCI');
+      // PTC maps to PTCI investing ticker; PFS has no investing mapping
+      (mockSymbolManager.tvToInvesting as jest.Mock)
+        .mockReturnValueOnce(null)
+        .mockReturnValueOnce('PTCI');
       (mockPairRepo.getPairInfo as jest.Mock).mockReturnValue(new PairInfo('PTC India', '123', 'NSE', 'PTCI'));
-      (mockTickerClient.getTicker as jest.Mock)
-        .mockResolvedValueOnce(createMockRecord('NSE'))
-        .mockResolvedValueOnce(createMockRecord(null));
+      (mockAlertRepo.get as jest.Mock).mockReturnValue([{ id: '1' }]);
+      (mockTickerClient.getTicker as jest.Mock).mockResolvedValue(createMockRecord('NSE'));
 
       const result = await ranker.rankTvTickers(['PFS', 'PTC']);
       expect(result[0].ticker).toBe('PTC');

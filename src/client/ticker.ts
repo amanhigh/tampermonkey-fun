@@ -32,9 +32,10 @@ export interface ITickerClient extends IBaseClient {
   getTicker(ticker: string): Promise<TickerRecord>;
 
   /**
-   * Replace mutable primary ticker metadata.
+   * Update mutable primary ticker metadata. Accepts only the fields to change;
+   * missing fields are merged from the current backend record.
    * @param ticker - Primary ticker identity
-   * @param data - Update payload (exchange, timeframes, type, state, trend, is_fno)
+   * @param data - Partial update payload (exchange, timeframes, type, state, trend, is_fno)
    * @returns Promise resolving with updated ticker
    */
   updateTicker(ticker: string, data: TickerUpdateRequest): Promise<TickerRecord>;
@@ -103,10 +104,14 @@ export class TickerClient extends BaseClient implements ITickerClient {
   /** @inheritdoc */
   async updateTicker(ticker: string, data: TickerUpdateRequest): Promise<TickerRecord> {
     try {
+      // Fetch current record to merge partial update fields
+      const record = await this.getTicker(ticker);
+      // Build full mutable payload by overlaying only provided fields
+      const fullData = this.buildFullUpdatePayload(record, data);
       const response = await this.makeRequest<KohanEnvelope<TickerRecord>>(`/tickers/${encodeURIComponent(ticker)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        data: JSON.stringify(data),
+        data: JSON.stringify(fullData),
       });
       return response.data;
     } catch (error) {
@@ -161,6 +166,24 @@ export class TickerClient extends BaseClient implements ITickerClient {
     } catch (error) {
       throw new Error(`Failed to list all tickers: ${(error as Error).message}`);
     }
+  }
+
+  /**
+   * Merge a partial TickerUpdateRequest into the current TickerRecord to produce
+   * the full mutable payload the backend PUT endpoint expects.
+   *
+   * Fields that are `undefined` in the partial request are kept from the record.
+   * Explicit `null` on `exchange` is preserved (clears exchange on backend).
+   */
+  private buildFullUpdatePayload(record: TickerRecord, partial: TickerUpdateRequest): Required<TickerUpdateRequest> {
+    return {
+      exchange: partial.exchange !== undefined ? partial.exchange : record.exchange,
+      timeframes: partial.timeframes ?? record.timeframes,
+      type: partial.type ?? record.type,
+      state: partial.state ?? record.state,
+      trend: partial.trend ?? record.trend,
+      is_fno: partial.is_fno ?? record.is_fno,
+    };
   }
 
   // ── Private Helpers ──

@@ -44,14 +44,16 @@ export interface CreateTickerRequest {
   is_fno?: boolean;
 }
 
-/** Request body for PUT /v1/api/tickers/{ticker} (update mutable fields). */
+/** Request body for PUT /v1/api/tickers/{ticker} (update mutable fields).
+ * All fields are optional; only provided fields are merged into the current record.
+ */
 export interface TickerUpdateRequest {
   exchange?: string | null;
-  timeframes: TickerTimeframe[];
-  type: TickerType;
-  state: TickerState;
-  trend: TickerTrend;
-  is_fno: boolean;
+  timeframes?: TickerTimeframe[];
+  type?: TickerType;
+  state?: TickerState;
+  trend?: TickerTrend;
+  is_fno?: boolean;
 }
 
 /** Request body for PATCH /v1/api/tickers/{ticker} (last_opened_at only). */

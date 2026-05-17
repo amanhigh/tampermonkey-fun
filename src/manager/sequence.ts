@@ -1,7 +1,7 @@
 import { Constants } from '../models/constant';
 import { TimeFrameConfig, SequenceType, TimeFrame } from '../models/trading';
 import { ITickerClient } from '../client/ticker';
-import { TickerTimeframe, TickerUpdateRequest } from '../models/ticker';
+import { TickerTimeframe } from '../models/ticker';
 import { Notifier } from '../util/notify';
 import { Color } from '../models/color';
 import { ITickerManager } from './ticker';
@@ -80,8 +80,8 @@ export class SequenceManager implements ISequenceManager {
     try {
       const record = await this.tickerClient.getTicker(ticker);
       return record.timeframes.includes('DL' as TickerTimeframe) ? SequenceType.MWD : SequenceType.YR;
-    } catch {
-      // Default to MWD when backend read fails
+    } catch (error) {
+      Notifier.warn(`getCurrentSequence: ${(error as Error).message}. Defaulting to MWD.`);
       return SequenceType.MWD;
     }
   }
@@ -93,20 +93,11 @@ export class SequenceManager implements ISequenceManager {
     const sequence = currentSequence === SequenceType.YR ? SequenceType.MWD : SequenceType.YR;
     const newTimeframes = SEQUENCE_TO_TIMEFRAMES[sequence];
 
-    // Try to persist to backend — silently fail if ticker doesn't exist yet
+    // Persist to backend — updateTicker merges with current record internally
     try {
-      const record = await this.tickerClient.getTicker(tvTicker);
-      const update: TickerUpdateRequest = {
-        exchange: record.exchange,
-        timeframes: newTimeframes,
-        type: record.type,
-        state: record.state,
-        trend: record.trend,
-        is_fno: record.is_fno,
-      };
-      await this.tickerClient.updateTicker(tvTicker, update);
-    } catch {
-      // Ticker not yet in backend or read failure — skip backend persistence
+      await this.tickerClient.updateTicker(tvTicker, { timeframes: newTimeframes });
+    } catch (error) {
+      Notifier.warn(`flipSequence: ${(error as Error).message}. Skipping backend persistence.`);
     }
   }
 

@@ -1,6 +1,6 @@
 import { ITickerRepo } from '../repo/ticker';
 import { ITickerClient } from '../client/ticker';
-import { TickerUpdateRequest } from '../models/ticker';
+import { Notifier } from '../util/notify';
 
 /**
  * Interface for managing symbol mappings and transformations across trading platforms
@@ -152,7 +152,8 @@ export class SymbolManager implements ISymbolManager {
         return `${record.exchange}:${tvTicker}`;
       }
       return tvTicker;
-    } catch {
+    } catch (error) {
+      Notifier.warn(`tvToExchangeTicker: ${(error as Error).message}. Returning raw ticker.`);
       return tvTicker;
     }
   }
@@ -175,18 +176,9 @@ export class SymbolManager implements ISymbolManager {
   /** @inheritdoc */
   async setExchange(tvTicker: string, exchange: string | null): Promise<void> {
     try {
-      const record = await this.tickerClient.getTicker(tvTicker);
-      const update: TickerUpdateRequest = {
-        exchange,
-        timeframes: record.timeframes,
-        type: record.type,
-        state: record.state,
-        trend: record.trend,
-        is_fno: record.is_fno,
-      };
-      await this.tickerClient.updateTicker(tvTicker, update);
-    } catch {
-      // Ticker not yet in backend — silently ignore
+      await this.tickerClient.updateTicker(tvTicker, { exchange });
+    } catch (error) {
+      Notifier.warn(`setExchange: ${(error as Error).message}. Skipping backend update.`);
     }
   }
 

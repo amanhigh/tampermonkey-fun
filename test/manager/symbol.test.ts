@@ -3,6 +3,13 @@ import { ITickerRepo } from '../../src/repo/ticker';
 import { ITickerClient } from '../../src/client/ticker';
 import { TickerRecord } from '../../src/models/ticker';
 
+// Mock Notifier to avoid DOM issues
+jest.mock('../../src/util/notify', () => ({
+  Notifier: {
+    warn: jest.fn(),
+  },
+}));
+
 describe('SymbolManager', () => {
   let symbolManager: ISymbolManager;
   let tickerRepoMock: jest.Mocked<ITickerRepo>;
@@ -142,57 +149,26 @@ describe('SymbolManager', () => {
 
   describe('setExchange', () => {
     it('should update backend ticker exchange to a value', async () => {
-      tickerClientMock.getTicker.mockResolvedValue(createMockRecord({
-        ticker: 'TV_TICKER',
-        exchange: null,
-        timeframes: ['MN', 'WK', 'DL'],
-        type: 'EQUITY',
-        state: 'WATCHED',
-        trend: 'UPTREND',
-        is_fno: false,
-      }));
-
       await symbolManager.setExchange('TV_TICKER', 'NSE');
 
+      // updateTicker receives only the changed field; merge happens internally
       expect(tickerClientMock.updateTicker).toHaveBeenCalledWith('TV_TICKER', {
         exchange: 'NSE',
-        timeframes: ['MN', 'WK', 'DL'],
-        type: 'EQUITY',
-        state: 'WATCHED',
-        trend: 'UPTREND',
-        is_fno: false,
       });
     });
 
     it('should clear backend ticker exchange to null', async () => {
-      tickerClientMock.getTicker.mockResolvedValue(createMockRecord({
-        ticker: 'TV_TICKER',
-        exchange: 'NSE',
-        timeframes: ['MN', 'WK', 'DL'],
-        type: 'EQUITY',
-        state: 'WATCHED',
-        trend: 'UPTREND',
-        is_fno: false,
-      }));
-
       await symbolManager.setExchange('TV_TICKER', null);
 
       expect(tickerClientMock.updateTicker).toHaveBeenCalledWith('TV_TICKER', {
         exchange: null,
-        timeframes: ['MN', 'WK', 'DL'],
-        type: 'EQUITY',
-        state: 'WATCHED',
-        trend: 'UPTREND',
-        is_fno: false,
       });
     });
 
-    it('should silently handle backend read failure', async () => {
-      tickerClientMock.getTicker.mockRejectedValue(new Error('Not found'));
+    it('should silently handle backend update failure', async () => {
+      tickerClientMock.updateTicker.mockRejectedValue(new Error('Backend error'));
 
-      await symbolManager.setExchange('UNKNOWN', 'NSE');
-
-      expect(tickerClientMock.updateTicker).not.toHaveBeenCalled();
+      await expect(symbolManager.setExchange('UNKNOWN', 'NSE')).resolves.toBeUndefined();
     });
   });
 

@@ -5,7 +5,7 @@ import { SequenceType, TimeFrame } from '../../src/models/trading';
 import { Constants } from '../../src/models/constant';
 import { Notifier } from '../../src/util/notify';
 import { Color } from '../../src/models/color';
-import { TickerRecord, TickerUpdateRequest } from '../../src/models/ticker';
+import { TickerRecord } from '../../src/models/ticker';
 
 // Mock Notifier to avoid DOM issues
 jest.mock('../../src/util/notify', () => ({
@@ -128,15 +128,10 @@ describe('SequenceManager', () => {
 
       await sequenceManager.flipSequence();
 
-      const expectedUpdate: TickerUpdateRequest = {
-        exchange: 'NASDAQ',
+      // updateTicker receives only the changed field; it merges internally
+      expect(mockTickerClient.updateTicker).toHaveBeenCalledWith('GOOGL', {
         timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'],
-        type: 'EQUITY',
-        state: 'WATCHED',
-        trend: 'UPTREND',
-        is_fno: false,
-      };
-      expect(mockTickerClient.updateTicker).toHaveBeenCalledWith('GOOGL', expectedUpdate);
+      });
     });
 
     it('should flip from YR timeframes to MWD timeframes', async () => {
@@ -153,24 +148,22 @@ describe('SequenceManager', () => {
 
       await sequenceManager.flipSequence();
 
-      const expectedUpdate: TickerUpdateRequest = {
-        exchange: 'NASDAQ',
+      expect(mockTickerClient.updateTicker).toHaveBeenCalledWith('MSFT', {
         timeframes: ['MN', 'WK', 'DL'],
-        type: 'EQUITY',
-        state: 'WATCHED',
-        trend: 'UPTREND',
-        is_fno: false,
-      };
-      expect(mockTickerClient.updateTicker).toHaveBeenCalledWith('MSFT', expectedUpdate);
+      });
     });
 
-    it('should silently handle backend read failure on flip', async () => {
+    it('should silently handle backend update failure on flip', async () => {
+      // getCurrentSequence fails → returns MWD default → flip computes YR timeframes
       mockTickerClient.getTicker.mockRejectedValue(new Error('Not found'));
       mockTickerManager.getTicker.mockReturnValue('NONEXISTENT');
 
-      // Should not throw
+      // updateTicker is called but its internal GET also fails — the catch in
+      // flipSequence swallows the error
       await expect(sequenceManager.flipSequence()).resolves.toBeUndefined();
-      expect(mockTickerClient.updateTicker).not.toHaveBeenCalled();
+      expect(mockTickerClient.updateTicker).toHaveBeenCalledWith('NONEXISTENT', {
+        timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'],
+      });
     });
 
     it('should work with frozen sequences', async () => {
@@ -193,17 +186,11 @@ describe('SequenceManager', () => {
       mockTickerClient.getTicker.mockClear();
       await sequenceManager.flipSequence();
 
-      const expectedUpdate: TickerUpdateRequest = {
-        exchange: 'NASDAQ',
+      // With freeze active, getCurrentSequence returns frozen value, but flipSequence
+      // still calls updateTicker with partial timeframes
+      expect(mockTickerClient.updateTicker).toHaveBeenCalledWith('TSLA', {
         timeframes: ['MN', 'WK', 'DL'],
-        type: 'EQUITY',
-        state: 'WATCHED',
-        trend: 'UPTREND',
-        is_fno: false,
-      };
-      // With freeze active, getCurrentSequence returns frozen value, but flipSequence still fetches from backend for the full record
-      expect(mockTickerClient.getTicker).toHaveBeenCalledWith('TSLA');
-      expect(mockTickerClient.updateTicker).toHaveBeenCalledWith('TSLA', expectedUpdate);
+      });
     });
   });
 
