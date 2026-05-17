@@ -1,25 +1,26 @@
 import { IntegrityPlugin } from '../../src/manager/integrity_plugin';
-import { IPairRepo } from '../../src/repo/pair';
+import { IAlertTickerClient } from '../../src/client/alert_ticker';
 import { ITickerRepo } from '../../src/repo/ticker';
-import { PairInfo } from '../../src/models/alert';
+import { AlertTicker } from '../../src/models/alert_ticker';
 
 describe('IntegrityPlugin', () => {
   let plugin: IntegrityPlugin;
-  let pairRepo: jest.Mocked<IPairRepo>;
+  let alertTickerClient: jest.Mocked<IAlertTickerClient>;
   let tickerRepo: jest.Mocked<ITickerRepo>;
 
   beforeEach(() => {
-    pairRepo = {
-      getAllKeys: jest.fn(),
-      get: jest.fn(),
-      getPairInfo: jest.fn(),
+    alertTickerClient = {
+      listAlertTickers: jest.fn(),
+      getAlertTicker: jest.fn(),
+      createAlertTicker: jest.fn(),
+      deleteAlertTicker: jest.fn(),
     } as any;
 
     tickerRepo = {
       getTvTicker: jest.fn(),
     } as any;
 
-    plugin = new IntegrityPlugin(pairRepo, tickerRepo);
+    plugin = new IntegrityPlugin(alertTickerClient, tickerRepo);
   });
 
   describe('validate', () => {
@@ -31,21 +32,19 @@ describe('IntegrityPlugin', () => {
   });
 
   describe('run', () => {
-    it('returns empty array when no pairs exist', async () => {
-      pairRepo.getAllKeys.mockReturnValue([]);
+    it('returns empty array when no alert tickers exist', async () => {
+      alertTickerClient.listAlertTickers.mockResolvedValue([]);
 
       const results = await plugin.run();
 
       expect(results).toEqual([]);
-      expect(pairRepo.getAllKeys).toHaveBeenCalledTimes(1);
     });
 
-    it('returns empty array when all pairs have TV mappings', async () => {
-      const pair1 = new PairInfo('AAPL', 'pair1', 'NSE', 'AAPL');
-      const pair2 = new PairInfo('MSFT', 'pair2', 'NSE', 'MSFT');
-
-      pairRepo.getAllKeys.mockReturnValue(['AAPL', 'MSFT']);
-      pairRepo.getPairInfo.mockImplementation((t: string) => (t === 'AAPL' ? pair1 : pair2));
+    it('returns empty array when all alert tickers have TV mappings', async () => {
+      alertTickerClient.listAlertTickers.mockResolvedValue([
+        { symbol: 'AAPL', pair_id: 'pair1', name: 'AAPL', exchange: 'NSE' } as AlertTicker,
+        { symbol: 'MSFT', pair_id: 'pair2', name: 'MSFT', exchange: 'NSE' } as AlertTicker,
+      ]);
       tickerRepo.getTvTicker.mockReturnValue('MAPPED_TV');
 
       const results = await plugin.run();
@@ -54,11 +53,10 @@ describe('IntegrityPlugin', () => {
       expect(tickerRepo.getTvTicker).toHaveBeenCalledTimes(2);
     });
 
-    it('emits FAIL for pair without TV mapping', async () => {
-      const pair = new PairInfo('TSLA', 'pair1', 'NSE', 'TSLA');
-
-      pairRepo.getAllKeys.mockReturnValue(['TSLA']);
-      pairRepo.getPairInfo.mockReturnValue(pair);
+    it('emits FAIL for alert ticker without TV mapping', async () => {
+      alertTickerClient.listAlertTickers.mockResolvedValue([
+        { symbol: 'TSLA', pair_id: 'pair1', name: 'TSLA', exchange: 'NSE' } as AlertTicker,
+      ]);
       tickerRepo.getTvTicker.mockReturnValue(null);
 
       const results = await plugin.run();
@@ -73,17 +71,12 @@ describe('IntegrityPlugin', () => {
       expect(results[0].data).toEqual({ investingTicker: 'TSLA', pairId: 'pair1' });
     });
 
-    it('emits FAIL only for unmapped pairs when some are mapped', async () => {
-      const pair1 = new PairInfo('AAPL', 'p1', 'NSE', 'AAPL');
-      const pair2 = new PairInfo('TSLA', 'p2', 'NSE', 'TSLA');
-      const pair3 = new PairInfo('MSFT', 'p3', 'NSE', 'MSFT');
-
-      pairRepo.getAllKeys.mockReturnValue(['AAPL', 'TSLA', 'MSFT']);
-      pairRepo.getPairInfo.mockImplementation((t: string) => {
-        if (t === 'AAPL') return pair1;
-        if (t === 'TSLA') return pair2;
-        return pair3;
-      });
+    it('emits FAIL only for unmapped tickers when some are mapped', async () => {
+      alertTickerClient.listAlertTickers.mockResolvedValue([
+        { symbol: 'AAPL', pair_id: 'p1', name: 'AAPL', exchange: 'NSE' } as AlertTicker,
+        { symbol: 'TSLA', pair_id: 'p2', name: 'TSLA', exchange: 'NSE' } as AlertTicker,
+        { symbol: 'MSFT', pair_id: 'p3', name: 'MSFT', exchange: 'NSE' } as AlertTicker,
+      ]);
       tickerRepo.getTvTicker.mockImplementation((t: string) => (t === 'TSLA' ? null : 'TV'));
 
       const results = await plugin.run();
@@ -96,20 +89,11 @@ describe('IntegrityPlugin', () => {
       await expect(plugin.run(['TSLA'])).rejects.toThrow('does not support targeted mode');
     });
 
-    it('skips pairs with null pairInfo', async () => {
-      pairRepo.getAllKeys.mockReturnValue(['GHOST']);
-      pairRepo.getPairInfo.mockReturnValue(null);
-
-      const results = await plugin.run();
-
-      expect(results).toEqual([]);
-    });
-
     it('deduplicates by pairId — only first alias checked', async () => {
-      const pair = new PairInfo('Oracle', '274', 'NYSE', 'ORCL');
-
-      pairRepo.getAllKeys.mockReturnValue(['ORCL', 'ORCL_ALIAS']);
-      pairRepo.getPairInfo.mockReturnValue(pair);
+      alertTickerClient.listAlertTickers.mockResolvedValue([
+        { symbol: 'ORCL', pair_id: '274', name: 'Oracle', exchange: 'NYSE' } as AlertTicker,
+        { symbol: 'ORCL_ALIAS', pair_id: '274', name: 'Oracle', exchange: 'NYSE' } as AlertTicker,
+      ]);
       tickerRepo.getTvTicker.mockReturnValue(null);
 
       const results = await plugin.run();

@@ -31,12 +31,12 @@ export class AlertTickerManager implements IAlertTickerManager {
   constructor(private readonly tickerAlertClient: IAlertTickerClient) {}
 
   /** @inheritdoc */
-  createAlertTicker(tvTicker: string, data: CreateAlertTickerRequest): Promise<AlertTicker> {
+  async createAlertTicker(tvTicker: string, data: CreateAlertTickerRequest): Promise<AlertTicker> {
     return this.tickerAlertClient.createAlertTicker(tvTicker, data);
   }
 
   /** @inheritdoc */
-  getAlertTickers(tvTicker: string): Promise<AlertTicker[]> {
+  async getAlertTickers(tvTicker: string): Promise<AlertTicker[]> {
     return this.tickerAlertClient.listAlertTickers({ ticker: tvTicker });
   }
 }

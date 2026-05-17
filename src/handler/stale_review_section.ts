@@ -35,7 +35,7 @@ export class StaleReviewSection extends BaseAuditSection implements IAuditSectio
     void this.tickerHandler.openTicker(result.target);
   };
 
-  readonly onRightClick = (result: AuditResult): boolean => {
+  readonly onRightClick = async (result: AuditResult): Promise<boolean> => {
     const daysSinceOpen = result.data?.daysSinceOpen as number | undefined;
     const label = daysSinceOpen !== undefined && daysSinceOpen >= 0 ? `${daysSinceOpen} days stale` : 'never opened';
 
@@ -43,18 +43,18 @@ export class StaleReviewSection extends BaseAuditSection implements IAuditSectio
       return false;
     }
 
-    this.pairHandler.stopTrackingByTvTicker(result.target);
+    await this.pairHandler.stopTrackingByTvTicker(result.target);
     return true;
   };
 
-  readonly onFixAll = (results: AuditResult[]): void => {
+  readonly onFixAll = async (results: AuditResult[]): Promise<void> => {
     if (!confirm(`Stop tracking ${results.length} stale ticker(s)?`)) {
       return;
     }
 
-    results.forEach((result) => {
-      this.pairHandler.stopTrackingByTvTicker(result.target);
-    });
+    for (const result of results) {
+      await this.pairHandler.stopTrackingByTvTicker(result.target);
+    }
     Notifier.success(`⏹ Stopped tracking ${results.length} stale ticker(s)`);
   };
 

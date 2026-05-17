@@ -12,7 +12,7 @@ export type TickerState = 'WATCHED' | 'READY' | 'BLACKLIST';
 /** Trend classification. */
 export type TickerTrend = 'UPTREND' | 'SIDEWAYS' | 'DOWNTREND';
 
-import { AlertTickerRecord } from './alert_ticker';
+import { AlertTicker } from './alert_ticker';
 
 // ── Primary Ticker Types ──
 
@@ -28,7 +28,7 @@ export interface TickerRecord {
   is_fno: boolean;
   created_at: string;
   updated_at: string;
-  alert_tickers?: AlertTickerRecord[];
+  alert_tickers?: AlertTicker[];
   alert_ticker_count?: number;
 }
 

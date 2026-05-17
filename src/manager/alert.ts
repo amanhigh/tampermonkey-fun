@@ -1,9 +1,10 @@
 import { IInvestingClient } from '../client/investing';
 import { Alert, PairInfo } from '../models/alert';
+import { AlertTicker } from '../models/alert_ticker';
 import { IAlertRepo } from '../repo/alert';
 import { AlertClicked, AlertClickAction } from '../models/events';
 import { Notifier } from '../util/notify';
-import { IPairManager } from './pair';
+import { IAlertTickerManager } from './alert_ticker';
 import { ITickerManager } from './ticker';
 import { ITradingViewManager } from './tv';
 
@@ -13,21 +14,21 @@ import { ITradingViewManager } from './tv';
 export interface IAlertManager {
   /**
    * Get all alerts for current trading view ticker
-   * @returns Array of alerts sorted by price
+   * @returns Promise resolving to array of alerts sorted by price, or null if no alert ticker
    */
-  getAlerts(): Alert[] | null;
+  getAlerts(): Promise<Alert[] | null>;
 
   /**
    * Get all alerts for Investing.com ticker
    * @param investingTicker Investing.com ticker
-   * @returns Array of alerts sorted by price, or null if no pair info found
+   * @returns Promise resolving to array of alerts sorted by price, or null if no pair info found
    */
-  getAlertsForInvestingTicker(investingTicker: string): Alert[] | null;
+  getAlertsForInvestingTicker(investingTicker: string): Promise<Alert[] | null>;
 
   /**
    * Create alert for current trading view ticker
    * @param price Alert price
-   * @throws Error If pair info not found for current ticker
+   * @throws Error If no alert ticker found for current ticker
    */
   createAlertForCurrentTicker(price: number): Promise<PairInfo>;
 
@@ -70,27 +71,24 @@ export interface IAlertManager {
 
   /**
    * Creates alert click event for ticker operations
-   * @param tvTicker TradingView ticker or null for mapping
-   * @param investingTicker Investing ticker or null for direct open
-   * @returns Promise resolving when event is created
    */
   createAlertClickEvent(tvTicker: string | null, investingTicker: string | null): Promise<void>;
 }
 
 /**
- * Manages alert operations for trading
+ * Manages alert operations for trading using backend Alert Tickers for pair resolution.
  */
 export class AlertManager implements IAlertManager {
   constructor(
     private readonly alertRepo: IAlertRepo,
-    private readonly pairManager: IPairManager,
+    private readonly alertTickerManager: IAlertTickerManager,
     private readonly tickerManager: ITickerManager,
     private readonly investingClient: IInvestingClient,
     private readonly tradingViewManager: ITradingViewManager
   ) {}
 
   /** @inheritdoc */
-  getAlerts(): Alert[] | null {
+  async getAlerts(): Promise<Alert[] | null> {
     const investingTicker = this.tickerManager.getInvestingTicker();
     return this.getAlertsForInvestingTicker(investingTicker);
   }
@@ -107,16 +105,32 @@ export class AlertManager implements IAlertManager {
   }
 
   /**
-   * Create alert via Investing.com and store in local repo if successful
-   * @param investingTicker Investing.com ticker
-   * @param price Alert price
+   * Get the first Alert Ticker for the current TV ticker, or null if none.
    * @private
    */
-  private async createAlert(investingTicker: string, price: number): Promise<PairInfo> {
-    const pairInfo = this.pairManager.investingTickerToPairInfo(investingTicker);
-    if (!pairInfo) {
-      throw new Error(`No pair info found for ticker: ${investingTicker}`);
+  private async getFirstAlertTicker(): Promise<AlertTicker | null> {
+    const tvTicker = this.tickerManager.getTicker();
+    const tickers = await this.alertTickerManager.getAlertTickers(tvTicker);
+    return tickers[0] ?? null;
+  }
+
+  /**
+   * Create alert via Investing.com and store in local repo if successful
+   */
+  private async createAlert(price: number): Promise<PairInfo> {
+    const tvTicker = this.tickerManager.getTicker();
+    const tickers = await this.alertTickerManager.getAlertTickers(tvTicker);
+    const alertTicker = tickers[0];
+    if (!alertTicker) {
+      throw new Error(`No alert ticker found for ${tvTicker}`);
     }
+
+    const pairInfo = new PairInfo(
+      alertTicker.name,
+      alertTicker.pair_id,
+      alertTicker.exchange ?? '',
+      alertTicker.symbol
+    );
 
     try {
       const ltp = this.tradingViewManager.getLastTradedPrice();
@@ -125,15 +139,12 @@ export class AlertManager implements IAlertManager {
       this.alertRepo.addAlert(pairInfo.pairId, alert);
       return pairInfo;
     } catch {
-      throw new Error(`Failed to create alert for ${investingTicker} at price ${price}`);
+      throw new Error(`Failed to create alert for ${alertTicker.symbol} at price ${price}`);
     }
   }
 
   /**
    * Load alerts from HTML content into repository
-   * @param html HTML content containing alert items
-   * @returns Number of alerts loaded
-   * @private
    */
   private reloadFromHtml(html: string): number {
     let count = 0;
@@ -153,8 +164,7 @@ export class AlertManager implements IAlertManager {
           this.alertRepo.addAlert(pairId, alert);
           count++;
         } else {
-          const fallbackName = this.pairManager.investingTickerToPairInfo(pairId)?.name;
-          console.warn('Invalid alert:', fallbackName, alert);
+          console.warn('Invalid alert:', pairId, alert);
         }
       });
 
@@ -163,13 +173,12 @@ export class AlertManager implements IAlertManager {
 
   /** @inheritdoc */
   async createAlertForCurrentTicker(price: number): Promise<PairInfo> {
-    const investingTicker = this.tickerManager.getInvestingTicker();
-    return this.createAlert(investingTicker, price);
+    return this.createAlert(price);
   }
 
   /** @inheritdoc */
   async deleteAllAlerts(): Promise<void> {
-    const pairInfo = this.getCurrentPairInfo();
+    const pairInfo = await this.getCurrentPairInfo();
     const alerts = this.alertRepo.getSortedAlerts(pairInfo.pairId);
     if (!alerts) {
       Notifier.warn('No alerts (Pair) found to delete');
@@ -180,7 +189,7 @@ export class AlertManager implements IAlertManager {
 
   /** @inheritdoc */
   async deleteAlertsByPrice(targetPrice: number): Promise<void> {
-    const pairInfo = this.getCurrentPairInfo();
+    const pairInfo = await this.getCurrentPairInfo();
     const tolerance = targetPrice * 0.03;
     const alerts = this.alertRepo.getSortedAlerts(pairInfo.pairId);
     if (!alerts) {
@@ -213,36 +222,38 @@ export class AlertManager implements IAlertManager {
     this.alertRepo.clear();
     const html = await this.investingClient.getAllAlerts();
     const count = this.reloadFromHtml(html);
-
     return count;
   }
 
   /** @inheritdoc */
-  public getAlertsForInvestingTicker(investingTicker: string): Alert[] | null {
-    const pairInfo = this.pairManager.investingTickerToPairInfo(investingTicker);
-    if (!pairInfo) {
+  async getAlertsForInvestingTicker(investingTicker: string): Promise<Alert[] | null> {
+    // For now get current TV ticker's alert tickers and match by symbol.
+    // With the two-method manager we rely on the current-TV context.
+    const tvTicker = this.tickerManager.getTicker();
+    const tickers = await this.alertTickerManager.getAlertTickers(tvTicker);
+    const alertTicker = tickers.find((t) => t.symbol === investingTicker) ?? tickers[0];
+    if (!alertTicker) {
       return null;
     }
-    return this.alertRepo.getSortedAlerts(pairInfo.pairId);
+    return this.alertRepo.getSortedAlerts(alertTicker.pair_id);
   }
 
   /** @inheritdoc */
-  public async createAlertClickEvent(investingTicker: string, action: AlertClickAction): Promise<void> {
+  async createAlertClickEvent(investingTicker: string, action: AlertClickAction): Promise<void> {
     const event = new AlertClicked(investingTicker, action);
     await this.alertRepo.createAlertClickEvent(event);
   }
 
   /**
-   * Get pair info for current ticker
+   * Get pair info for current ticker using the first Alert Ticker
    * @private
-   * @returns PairInfo or null if not found
    */
-  private getCurrentPairInfo(): PairInfo {
-    const investingTicker = this.tickerManager.getInvestingTicker();
-    const pairInfo = this.pairManager.investingTickerToPairInfo(investingTicker);
-    if (!pairInfo) {
-      throw new Error(`No Pair Info found for ${investingTicker}`);
+  private async getCurrentPairInfo(): Promise<PairInfo> {
+    const alertTicker = await this.getFirstAlertTicker();
+    if (!alertTicker) {
+      const tvTicker = this.tickerManager.getTicker();
+      throw new Error(`No Alert Ticker found for ${tvTicker}`);
     }
-    return pairInfo;
+    return new PairInfo(alertTicker.name, alertTicker.pair_id, alertTicker.exchange ?? '', alertTicker.symbol);
   }
 }

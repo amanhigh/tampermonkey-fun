@@ -2,12 +2,12 @@ import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
 import { Alert } from '../models/alert';
 import { IAlertRepo } from '../repo/alert';
-import { IPairRepo } from '../repo/pair';
+import { IAlertTickerClient } from '../client/alert_ticker';
 import { Constants } from '../models/constant';
 
 /**
  * Orphan Alerts Audit plugin: identifies alerts without corresponding pairs.
- * Checks if each alert's pairId has a corresponding pair in the pair repository.
+ * Checks if each alert's pairId has a corresponding alert ticker in the backend.
  * Emits FAIL results only for alerts with no matching pair.
  */
 export class OrphanAlertsPlugin extends BaseAuditPlugin {
@@ -16,7 +16,7 @@ export class OrphanAlertsPlugin extends BaseAuditPlugin {
 
   constructor(
     private readonly alertRepo: IAlertRepo,
-    private readonly pairRepo: IPairRepo
+    private readonly alertTickerClient: IAlertTickerClient
   ) {
     super();
   }
@@ -32,11 +32,11 @@ export class OrphanAlertsPlugin extends BaseAuditPlugin {
       throw new Error('Orphan alerts audit does not support targeted mode');
     }
 
-    // Build set of valid pairIds from pairs
+    // Build set of valid pairIds from backend alert tickers
     const validPairIds = new Set<string>();
-    this.pairRepo.getAllKeys().forEach((investingTicker: string) => {
-      const pair = this.pairRepo.get(investingTicker)!;
-      validPairIds.add(pair.pairId);
+    const alertTickers = await this.alertTickerClient.listAlertTickers({});
+    alertTickers.forEach((record) => {
+      validPairIds.add(record.pair_id);
     });
 
     const results: AuditResult[] = [];
