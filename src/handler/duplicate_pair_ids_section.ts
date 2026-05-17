@@ -34,31 +34,31 @@ export class DuplicatePairIdsSection extends BaseAuditSection implements IAuditS
   readonly limit = 10;
   readonly context: unknown = undefined;
 
-  readonly onLeftClick = (result: AuditResult) => {
+  readonly onLeftClick = async (result: AuditResult): Promise<void> => {
     const investingTickers = result.data?.investingTickers as string[] | undefined;
     const pairId = result.data?.pairId as string | undefined;
     if (!investingTickers || investingTickers.length < 2 || !pairId) {
       return;
     }
 
-    const ranked = this.canonicalRanker.rankInvestingTickers(investingTickers, pairId);
+    const ranked = await this.canonicalRanker.rankInvestingTickers(investingTickers, pairId);
     const canonical = ranked[0];
     const tvTicker = this.symbolManager.investingToTv(canonical.ticker);
     if (tvTicker) {
-      this.tickerHandler.openTicker(tvTicker);
+      await this.tickerHandler.openTicker(tvTicker);
     } else {
       Notifier.warn(`No tvTicker found for ${canonical.ticker}`);
     }
   };
 
-  readonly onRightClick = (result: AuditResult): boolean => {
+  readonly onRightClick = async (result: AuditResult): Promise<boolean> => {
     const investingTickers = result.data?.investingTickers as string[] | undefined;
     const pairId = result.data?.pairId as string | undefined;
     if (!investingTickers || investingTickers.length < 2 || !pairId) {
       return false;
     }
 
-    const ranked = this.canonicalRanker.rankInvestingTickers(investingTickers, pairId);
+    const ranked = await this.canonicalRanker.rankInvestingTickers(investingTickers, pairId);
     const canonical = ranked[0];
     const removals = ranked.slice(1);
 
@@ -72,22 +72,24 @@ export class DuplicatePairIdsSection extends BaseAuditSection implements IAuditS
     return true;
   };
 
-  readonly onFixAll = (results: AuditResult[]): void => {
+  readonly onFixAll = async (results: AuditResult[]): Promise<void> => {
     const summaryLines: string[] = [];
     let totalRemoved = 0;
 
-    const plans = results.map((result) => {
-      const investingTickers = result.data?.investingTickers as string[] | undefined;
-      const pairId = result.data?.pairId as string | undefined;
-      if (!investingTickers || investingTickers.length < 2 || !pairId) {
-        return null;
-      }
-      const ranked = this.canonicalRanker.rankInvestingTickers(investingTickers, pairId);
-      const canonical = ranked[0];
-      const removals = ranked.slice(1);
-      summaryLines.push(`${pairId}: keep ${canonical.ticker}, remove ${removals.map((r) => r.ticker).join(', ')}`);
-      return { canonical, removals };
-    });
+    const plans = await Promise.all(
+      results.map(async (result) => {
+        const investingTickers = result.data?.investingTickers as string[] | undefined;
+        const pairId = result.data?.pairId as string | undefined;
+        if (!investingTickers || investingTickers.length < 2 || !pairId) {
+          return null;
+        }
+        const ranked = await this.canonicalRanker.rankInvestingTickers(investingTickers, pairId);
+        const canonical = ranked[0];
+        const removals = ranked.slice(1);
+        summaryLines.push(`${pairId}: keep ${canonical.ticker}, remove ${removals.map((r) => r.ticker).join(', ')}`);
+        return { canonical, removals };
+      })
+    );
 
     if (!confirm(`Fix All Duplicates:\n${summaryLines.join('\n')}`)) {
       return;

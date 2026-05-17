@@ -26,6 +26,9 @@ describe('DuplicatePairIdsSection', () => {
     data: { pairId, investingTickers },
   });
 
+  const mockRankResponse = (tickers: string[]) =>
+    Promise.resolve(tickers.map((t, i) => ({ ticker: t, alertCount: 0, isWatched: false, isRecent: false, hasExchange: false, hasPairMapping: true, score: tickers.length - i })));
+
   beforeEach(() => {
     mockPlugin = {
       id: 'duplicate-pair-ids',
@@ -34,13 +37,11 @@ describe('DuplicatePairIdsSection', () => {
       run: jest.fn().mockResolvedValue([]),
     };
 
-    mockTickerHandler = { openTicker: jest.fn() };
+    mockTickerHandler = { openTicker: jest.fn().mockResolvedValue(undefined) };
     mockSymbolManager = { investingToTv: jest.fn() };
     mockPairManager = { removePairByInvestingTicker: jest.fn() };
     mockCanonicalRanker = {
-      rankInvestingTickers: jest.fn().mockImplementation((tickers: string[]) =>
-        tickers.map((t, i) => ({ ticker: t, alertCount: 0, isWatched: false, isRecent: false, hasExchange: false, hasPairMapping: true, score: tickers.length - i }))
-      ),
+      rankInvestingTickers: jest.fn().mockImplementation((tickers: string[]) => mockRankResponse(tickers)),
     };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
@@ -69,30 +70,30 @@ describe('DuplicatePairIdsSection', () => {
   });
 
   describe('onLeftClick', () => {
-    test('opens canonical investingTicker resolved tvTicker via CanonicalRanker', () => {
+    test('opens canonical investingTicker resolved tvTicker via CanonicalRanker', async () => {
       (mockSymbolManager.investingToTv as jest.Mock).mockReturnValue('HDFC_TV');
-      section.onLeftClick(createResult('123', ['HDFC', 'HDF']));
+      await section.onLeftClick(createResult('123', ['HDFC', 'HDF']));
       expect(mockCanonicalRanker.rankInvestingTickers).toHaveBeenCalledWith(['HDFC', 'HDF'], '123');
       expect(mockSymbolManager.investingToTv).toHaveBeenCalledWith('HDFC');
       expect(mockTickerHandler.openTicker).toHaveBeenCalledWith('HDFC_TV');
     });
 
-    test('shows warning when canonical ticker has no tvTicker mapping', () => {
+    test('shows warning when canonical ticker has no tvTicker mapping', async () => {
       (mockSymbolManager.investingToTv as jest.Mock).mockReturnValue(null);
-      section.onLeftClick(createResult('123', ['HDFC', 'HDF']));
+      await section.onLeftClick(createResult('123', ['HDFC', 'HDF']));
       expect(notifyWarnSpy).toHaveBeenCalled();
     });
 
-    test('does nothing when less than 2 investingTickers', () => {
-      section.onLeftClick(createResult('123', ['ONLY']));
+    test('does nothing when less than 2 investingTickers', async () => {
+      await section.onLeftClick(createResult('123', ['ONLY']));
       expect(mockCanonicalRanker.rankInvestingTickers).not.toHaveBeenCalled();
       expect(mockTickerHandler.openTicker).not.toHaveBeenCalled();
     });
   });
 
   describe('onRightClick', () => {
-    test('ranks tickers and removes lower-ranked aliases after confirmation', () => {
-      section.onRightClick(createResult('123', ['CANONICAL', 'DUP1', 'DUP2']));
+    test('ranks tickers and removes lower-ranked aliases after confirmation', async () => {
+      await section.onRightClick(createResult('123', ['CANONICAL', 'DUP1', 'DUP2']));
       expect(mockCanonicalRanker.rankInvestingTickers).toHaveBeenCalledWith(['CANONICAL', 'DUP1', 'DUP2'], '123');
       expect(mockPairManager.removePairByInvestingTicker).toHaveBeenCalledTimes(2);
       expect(mockPairManager.removePairByInvestingTicker).toHaveBeenCalledWith('DUP1');
@@ -100,33 +101,33 @@ describe('DuplicatePairIdsSection', () => {
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
 
-    test('does nothing when less than 2 investingTickers', () => {
-      section.onRightClick(createResult('123', ['ONLY']));
+    test('does nothing when less than 2 investingTickers', async () => {
+      await section.onRightClick(createResult('123', ['ONLY']));
       expect(mockPairManager.removePairByInvestingTicker).not.toHaveBeenCalled();
     });
 
-    test('does nothing when user cancels confirmation', () => {
+    test('does nothing when user cancels confirmation', async () => {
       (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(false);
-      section.onRightClick(createResult('123', ['A', 'B', 'C']));
+      await section.onRightClick(createResult('123', ['A', 'B', 'C']));
       expect(mockPairManager.removePairByInvestingTicker).not.toHaveBeenCalled();
     });
   });
 
   describe('onFixAll', () => {
-    test('ranks and removes all lower-ranked aliases across groups after confirmation', () => {
+    test('ranks and removes all lower-ranked aliases across groups after confirmation', async () => {
       const results = [
         createResult('123', ['A', 'B', 'C']),
         createResult('456', ['D', 'E']),
       ];
-      section.onFixAll!(results);
+      await section.onFixAll!(results);
       // Group 1: keeps A, removes B, C. Group 2: keeps D, removes E.
       expect(mockPairManager.removePairByInvestingTicker).toHaveBeenCalledTimes(3);
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
 
-    test('does nothing when user cancels confirmation', () => {
+    test('does nothing when user cancels confirmation', async () => {
       (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(false);
-      section.onFixAll!([createResult('123', ['A', 'B'])]);
+      await section.onFixAll!([createResult('123', ['A', 'B'])]);
       expect(mockPairManager.removePairByInvestingTicker).not.toHaveBeenCalled();
     });
   });

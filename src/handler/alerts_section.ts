@@ -48,7 +48,7 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
   readonly onLeftClick = (result: AuditResult) => {
     const investingTicker = result.target;
     const tvTicker = this.tryMapTvTicker(investingTicker);
-    this.tickerHandler.openTicker(tvTicker);
+    void this.tickerHandler.openTicker(tvTicker);
   };
 
   readonly onRightClick = (result: AuditResult) => {

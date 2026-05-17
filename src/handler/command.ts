@@ -111,7 +111,7 @@ export class CommandInputHandler implements ICommandInputHandler {
   }
 
   private processTickerInput(ticker: string): void {
-    this.tickerHandler.openTicker(ticker);
+    void this.tickerHandler.openTicker(ticker);
     this.clearInputField();
   }
 

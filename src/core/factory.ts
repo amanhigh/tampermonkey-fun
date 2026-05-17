@@ -22,7 +22,6 @@ import { RepoCron, IRepoCron } from '../repo/cron';
 import { IFlagRepo, FlagRepo } from '../repo/flag';
 import { IWatchlistRepo, Watchlistrepo } from '../repo/watch';
 import { IPairRepo, PairRepo } from '../repo/pair';
-import { IExchangeRepo, ExchangeRepo } from '../repo/exchange';
 import { ITickerRepo, TickerRepo } from '../repo/ticker';
 import { IAlertRepo, AlertRepo } from '../repo/alert';
 
@@ -79,7 +78,6 @@ import { GttPlugin } from '../manager/gtt_plugin';
 import { IntegrityPlugin } from '../manager/integrity_plugin';
 import { OrphanAlertsPlugin } from '../manager/orphan_alerts_plugin';
 import { OrphanFlagsPlugin } from '../manager/orphan_flags_plugin';
-import { OrphanExchangePlugin } from '../manager/orphan_exchange_plugin';
 import { DuplicatePairIdsPlugin } from '../manager/duplicate_pair_ids_plugin';
 import { TradeRiskPlugin } from '../manager/trade_risk_plugin';
 import { TickerCollisionPlugin } from '../manager/ticker_collision_plugin';
@@ -88,7 +86,6 @@ import { AlertsAuditSection } from '../handler/alerts_section';
 import { OrphanAlertsSection } from '../handler/orphan_alerts_section';
 import { IntegritySection } from '../handler/integrity_section';
 import { OrphanFlagsSection } from '../handler/orphan_flags_section';
-import { OrphanExchangeSection } from '../handler/orphan_exchange_section';
 import { DuplicatePairIdsSection } from '../handler/duplicate_pair_ids_section';
 import { TickerCollisionSection } from '../handler/ticker_collision_section';
 import { TradeRiskSection } from '../handler/trade_risk_section';
@@ -184,7 +181,6 @@ export class Factory {
     watch: (): IWatchlistRepo => Factory.getInstance('watchRepo', () => new Watchlistrepo(Factory.repo.cron())),
     alert: (): IAlertRepo => Factory.getInstance('alertRepo', () => new AlertRepo(Factory.repo.cron())),
     pair: (): IPairRepo => Factory.getInstance('pairRepo', () => new PairRepo(Factory.repo.cron())),
-    exchange: (): IExchangeRepo => Factory.getInstance('exchangeRepo', () => new ExchangeRepo(Factory.repo.cron())),
     ticker: (): ITickerRepo => Factory.getInstance('tickerRepo', () => new TickerRepo(Factory.repo.cron())),
     kite: (): IKiteRepo => Factory.getInstance('kiteRepo', () => new KiteRepo()),
     imdb: (): IImdbRepo => Factory.getInstance('imdbRepo', () => new ImdbRepo()),
@@ -280,7 +276,7 @@ export class Factory {
       ),
 
     symbol: (): ISymbolManager =>
-      Factory.getInstance('symbolManager', () => new SymbolManager(Factory.repo.ticker(), Factory.repo.exchange())),
+      Factory.getInstance('symbolManager', () => new SymbolManager(Factory.repo.ticker(), Factory.client.ticker())),
 
     tv: (): ITradingViewManager =>
       Factory.getInstance(
@@ -298,7 +294,6 @@ export class Factory {
             Factory.manager.watch(),
             Factory.manager.flag(),
             Factory.manager.alertFeed(),
-            Factory.repo.exchange(),
             Factory.repo.alert(),
             Factory.client.investing()
           )
@@ -337,7 +332,7 @@ export class Factory {
             alertRepo: Factory.repo.alert(),
             watchManager: Factory.manager.watch(),
             recentManager: Factory.manager.recent(),
-            exchangeRepo: Factory.repo.exchange(),
+            tickerClient: Factory.client.ticker(),
             pairRepo: Factory.repo.pair(),
             symbolManager: Factory.manager.symbol(),
           })
@@ -396,13 +391,6 @@ export class Factory {
       Factory.getInstance(
         'auditPlugin_orphanFlags',
         () => new OrphanFlagsPlugin(Factory.repo.flag(), Factory.repo.ticker(), Factory.manager.symbol())
-      ),
-
-    // Return a singleton OrphanExchangePlugin instance
-    orphanExchange: () =>
-      Factory.getInstance(
-        'auditPlugin_orphanExchange',
-        () => new OrphanExchangePlugin(Factory.repo.exchange(), Factory.repo.ticker())
       ),
 
     // Return a singleton DuplicatePairIdsPlugin instance
@@ -486,14 +474,6 @@ export class Factory {
         () => new OrphanFlagsSection(Factory.audit.orphanFlags(), Factory.handler.ticker(), Factory.handler.pair())
       ),
 
-    // Orphan Exchange Audit Section (FR-013)
-    orphanExchangeSection: () =>
-      Factory.getInstance(
-        'orphanExchangeSection',
-        () =>
-          new OrphanExchangeSection(Factory.audit.orphanExchange(), Factory.handler.ticker(), Factory.manager.symbol())
-      ),
-
     // Duplicate PairIds Audit Section (FR-014)
     duplicatePairIdsSection: () =>
       Factory.getInstance(
@@ -547,7 +527,6 @@ export class Factory {
         reg.registerSection(Factory.audit.orphanAlertsSection());
         reg.registerSection(Factory.audit.integritySection());
         reg.registerSection(Factory.audit.orphanFlagsSection());
-        reg.registerSection(Factory.audit.orphanExchangeSection());
         reg.registerSection(Factory.audit.duplicatePairIdsSection());
         reg.registerSection(Factory.audit.tickerCollisionSection());
         reg.registerSection(Factory.audit.tradeRiskSection());

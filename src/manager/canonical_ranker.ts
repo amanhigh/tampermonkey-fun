@@ -1,7 +1,7 @@
 import { IAlertRepo } from '../repo/alert';
 import { IWatchManager } from './watch';
 import { IRecentManager } from './recent';
-import { IExchangeRepo } from '../repo/exchange';
+import { ITickerClient } from '../client/ticker';
 import { IPairRepo } from '../repo/pair';
 import { ISymbolManager } from './symbol';
 import { Constants } from '../models/constant';
@@ -28,17 +28,17 @@ export interface ICanonicalRanker {
    * First element is the canonical (highest score).
    * @param investingTickers Investing tickers to rank
    * @param pairId The shared pairId
-   * @returns Sorted TickerSignals array (highest score first)
+   * @returns Promise resolving to sorted TickerSignals array (highest score first)
    */
-  rankInvestingTickers(investingTickers: string[], pairId: string): TickerSignals[];
+  rankInvestingTickers(investingTickers: string[], pairId: string): Promise<TickerSignals[]>;
 
   /**
    * Rank tvTickers sharing an investingTicker and return sorted by score descending.
    * First element is the canonical (highest score).
    * @param tvTickers TV tickers to rank
-   * @returns Sorted TickerSignals array (highest score first)
+   * @returns Promise resolving to sorted TickerSignals array (highest score first)
    */
-  rankTvTickers(tvTickers: string[]): TickerSignals[];
+  rankTvTickers(tvTickers: string[]): Promise<TickerSignals[]>;
 }
 
 /**
@@ -48,7 +48,7 @@ export interface CanonicalRankerDeps {
   alertRepo: IAlertRepo;
   watchManager: IWatchManager;
   recentManager: IRecentManager;
-  exchangeRepo: IExchangeRepo;
+  tickerClient: ITickerClient;
   pairRepo: IPairRepo;
   symbolManager: ISymbolManager;
 }
@@ -60,10 +60,10 @@ export interface CanonicalRankerDeps {
  * 1. Alert count (×100) — tickers with alerts are most valuable
  * 2. Watchlist membership (×50) — actively monitored tickers
  * 3. Recent open timestamp (×10 if present) — recently viewed
- * 4. Exchange footprints (×5) — has stored preferences
+ * 4. Exchange footprints (×5) — has stored exchange
  * 5. Pair mapping presence (×1) — has investing mapping
  * 6. HTML-encoding penalty (−500) — junk aliases like M&amp;M or M&amp;AMP;M
- * 7. Preferred exchange bonus (+15) — NSE/NYSE/NASDAQ/CBOE from exchangeRepo
+ * 7. Preferred exchange bonus (+15) — NSE/NYSE/NASDAQ/CBOE from backend ticker.exchange
  * 8. Ampersand fallback (+2) — raw & in ticker hints NSE origin when no exchange data
  * 9. Tiebreaker: shorter ticker name wins (e.g. M&M over M_M)
  */
@@ -80,7 +80,7 @@ export class CanonicalRanker implements ICanonicalRanker {
   private readonly alertRepo: IAlertRepo;
   private readonly watchManager: IWatchManager;
   private readonly recentManager: IRecentManager;
-  private readonly exchangeRepo: IExchangeRepo;
+  private readonly tickerClient: ITickerClient;
   private readonly pairRepo: IPairRepo;
   private readonly symbolManager: ISymbolManager;
 
@@ -88,57 +88,74 @@ export class CanonicalRanker implements ICanonicalRanker {
     this.alertRepo = deps.alertRepo;
     this.watchManager = deps.watchManager;
     this.recentManager = deps.recentManager;
-    this.exchangeRepo = deps.exchangeRepo;
+    this.tickerClient = deps.tickerClient;
     this.pairRepo = deps.pairRepo;
     this.symbolManager = deps.symbolManager;
   }
 
   /** @inheritdoc */
-  rankInvestingTickers(investingTickers: string[], pairId: string): TickerSignals[] {
-    const signals = investingTickers.map((investingTicker) => {
-      const tvTicker = this.symbolManager.investingToTv(investingTicker);
-      const alertCount = this.getAlertCount(pairId);
-      const isWatched = tvTicker ? this.watchManager.isWatched(tvTicker) : false;
-      const isRecent = tvTicker ? this.recentManager.isRecent(tvTicker, Constants.RECENT_CUTOFF_MS) : false;
-      const hasExchange = tvTicker ? this.exchangeRepo.has(tvTicker) : false;
-      const hasPairMapping = tvTicker !== null;
+  async rankInvestingTickers(investingTickers: string[], pairId: string): Promise<TickerSignals[]> {
+    const signals = await Promise.all(
+      investingTickers.map(async (investingTicker) => {
+        const tvTicker = this.symbolManager.investingToTv(investingTicker);
+        const alertCount = this.getAlertCount(pairId);
+        const isWatched = tvTicker ? this.watchManager.isWatched(tvTicker) : false;
+        const isRecent = tvTicker ? this.recentManager.isRecent(tvTicker, Constants.RECENT_CUTOFF_MS) : false;
+        const hasExchange = tvTicker ? await this.hasExchange(tvTicker) : false;
+        const hasPairMapping = tvTicker !== null;
 
-      return this.buildSignals({
-        ticker: investingTicker,
-        alertCount,
-        isWatched,
-        isRecent,
-        hasExchange,
-        hasPairMapping,
-      });
-    });
+        return this.buildSignals({
+          ticker: investingTicker,
+          alertCount,
+          isWatched,
+          isRecent,
+          hasExchange,
+          hasPairMapping,
+        });
+      })
+    );
 
     return signals.sort((a, b) => b.score - a.score);
   }
 
   /** @inheritdoc */
-  rankTvTickers(tvTickers: string[]): TickerSignals[] {
-    const signals = tvTickers.map((tvTicker) => {
-      const investingTicker = this.symbolManager.tvToInvesting(tvTicker);
-      const pairInfo = investingTicker ? this.pairRepo.getPairInfo(investingTicker) : null;
-      const pairId = pairInfo?.pairId;
-      const alertCount = pairId ? this.getAlertCount(pairId) : 0;
-      const isWatched = this.watchManager.isWatched(tvTicker);
-      const isRecent = this.recentManager.isRecent(tvTicker, Constants.RECENT_CUTOFF_MS);
-      const hasExchange = this.exchangeRepo.has(tvTicker);
-      const hasPairMapping = investingTicker !== null;
+  async rankTvTickers(tvTickers: string[]): Promise<TickerSignals[]> {
+    const signals = await Promise.all(
+      tvTickers.map(async (tvTicker) => {
+        const investingTicker = this.symbolManager.tvToInvesting(tvTicker);
+        const pairInfo = investingTicker ? this.pairRepo.getPairInfo(investingTicker) : null;
+        const pairId = pairInfo?.pairId;
+        const alertCount = pairId ? this.getAlertCount(pairId) : 0;
+        const isWatched = this.watchManager.isWatched(tvTicker);
+        const isRecent = this.recentManager.isRecent(tvTicker, Constants.RECENT_CUTOFF_MS);
+        const hasExchange = await this.hasExchange(tvTicker);
+        const hasPairMapping = investingTicker !== null;
 
-      return this.buildSignals({
-        ticker: tvTicker,
-        alertCount,
-        isWatched,
-        isRecent,
-        hasExchange,
-        hasPairMapping,
-      });
-    });
+        return this.buildSignals({
+          ticker: tvTicker,
+          alertCount,
+          isWatched,
+          isRecent,
+          hasExchange,
+          hasPairMapping,
+        });
+      })
+    );
 
     return signals.sort((a, b) => b.score - a.score || a.ticker.length - b.ticker.length);
+  }
+
+  /**
+   * Check if a ticker has an exchange stored in backend.
+   * @private
+   */
+  private async hasExchange(tvTicker: string): Promise<boolean> {
+    try {
+      const record = await this.tickerClient.getTicker(tvTicker);
+      return record.exchange !== null && record.exchange !== undefined;
+    } catch {
+      return false;
+    }
   }
 
   private getAlertCount(pairId: string): number {
@@ -154,16 +171,23 @@ export class CanonicalRanker implements ICanonicalRanker {
     return ticker.includes('&') && !this.isHtmlEncoded(ticker);
   }
 
-  private isPreferredExchange(ticker: string): boolean {
-    const exchangeTicker = this.exchangeRepo.get(ticker);
-    if (!exchangeTicker) {
+  /**
+   * Check if backend ticker exchange is a preferred exchange.
+   * @private
+   */
+  private async isPreferredExchange(ticker: string): Promise<boolean> {
+    try {
+      const record = await this.tickerClient.getTicker(ticker);
+      if (!record.exchange) {
+        return false;
+      }
+      return Constants.EXCHANGE.PREFERRED.includes(record.exchange);
+    } catch {
       return false;
     }
-    const exchange = exchangeTicker.split(':')[0];
-    return Constants.EXCHANGE.PREFERRED.includes(exchange);
   }
 
-  private buildSignals(signals: Omit<TickerSignals, 'score'>): TickerSignals {
+  private async buildSignals(signals: Omit<TickerSignals, 'score'>): Promise<TickerSignals> {
     const score =
       signals.alertCount * CanonicalRanker.WEIGHT_ALERTS +
       (signals.isWatched ? CanonicalRanker.WEIGHT_WATCHED : 0) +
@@ -171,7 +195,7 @@ export class CanonicalRanker implements ICanonicalRanker {
       (signals.hasExchange ? CanonicalRanker.WEIGHT_EXCHANGE : 0) +
       (signals.hasPairMapping ? CanonicalRanker.WEIGHT_PAIR : 0) +
       (this.isHtmlEncoded(signals.ticker) ? CanonicalRanker.PENALTY_HTML_ENCODED : 0) +
-      (this.isPreferredExchange(signals.ticker) ? CanonicalRanker.BONUS_PREFERRED_EXCHANGE : 0) +
+      ((await this.isPreferredExchange(signals.ticker)) ? CanonicalRanker.BONUS_PREFERRED_EXCHANGE : 0) +
       (this.hasRawAmpersand(signals.ticker) ? CanonicalRanker.BONUS_AMPERSAND : 0);
 
     return { ...signals, score };

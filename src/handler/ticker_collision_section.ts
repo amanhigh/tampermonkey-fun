@@ -32,7 +32,7 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
   readonly limit = 10;
   readonly context: unknown = undefined;
 
-  readonly onLeftClick = (result: AuditResult) => {
+  readonly onLeftClick = async (result: AuditResult): Promise<void> => {
     const tvTickers = result.data?.tvTickers as string[] | undefined;
     if (!tvTickers || tvTickers.length < 2) {
       // Fallback: try opening via investingTicker or display name
@@ -40,7 +40,7 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
       if (investingTicker) {
         const resolved = this.symbolManager.investingToTv(investingTicker);
         if (resolved) {
-          this.tickerHandler.openTicker(resolved);
+          await this.tickerHandler.openTicker(resolved);
           return;
         }
       }
@@ -48,17 +48,17 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
       return;
     }
 
-    const ranked = this.canonicalRanker.rankTvTickers(tvTickers);
-    this.tickerHandler.openTicker(ranked[0].ticker);
+    const ranked = await this.canonicalRanker.rankTvTickers(tvTickers);
+    await this.tickerHandler.openTicker(ranked[0].ticker);
   };
 
-  readonly onRightClick = (result: AuditResult): boolean => {
+  readonly onRightClick = async (result: AuditResult): Promise<boolean> => {
     const tvTickers = result.data?.tvTickers as string[] | undefined;
     if (!tvTickers || tvTickers.length < 2) {
       return false;
     }
 
-    const ranked = this.canonicalRanker.rankTvTickers(tvTickers);
+    const ranked = await this.canonicalRanker.rankTvTickers(tvTickers);
     const canonical = ranked[0];
     const removals = ranked.slice(1);
 
@@ -72,23 +72,25 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
     return true;
   };
 
-  readonly onFixAll = (results: AuditResult[]): void => {
+  readonly onFixAll = async (results: AuditResult[]): Promise<void> => {
     const summaryLines: string[] = [];
     let totalRemoved = 0;
 
-    const plans = results.map((result) => {
-      const tvTickers = result.data?.tvTickers as string[] | undefined;
-      if (!tvTickers || tvTickers.length < 2) {
-        return null;
-      }
-      const ranked = this.canonicalRanker.rankTvTickers(tvTickers);
-      const canonical = ranked[0];
-      const removals = ranked.slice(1);
-      summaryLines.push(
-        `${result.target}: keep ${canonical.ticker}, remove ${removals.map((r) => r.ticker).join(', ')}`
-      );
-      return { removals };
-    });
+    const plans = await Promise.all(
+      results.map(async (result) => {
+        const tvTickers = result.data?.tvTickers as string[] | undefined;
+        if (!tvTickers || tvTickers.length < 2) {
+          return null;
+        }
+        const ranked = await this.canonicalRanker.rankTvTickers(tvTickers);
+        const canonical = ranked[0];
+        const removals = ranked.slice(1);
+        summaryLines.push(
+          `${result.target}: keep ${canonical.ticker}, remove ${removals.map((r) => r.ticker).join(', ')}`
+        );
+        return { removals };
+      })
+    );
 
     if (!confirm(`Fix All Collisions:\n${summaryLines.join('\n')}`)) {
       return;

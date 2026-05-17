@@ -32,7 +32,7 @@ export class StaleReviewSection extends BaseAuditSection implements IAuditSectio
   readonly context: unknown = undefined;
 
   readonly onLeftClick = (result: AuditResult) => {
-    this.tickerHandler.openTicker(result.target);
+    void this.tickerHandler.openTicker(result.target);
   };
 
   readonly onRightClick = (result: AuditResult): boolean => {

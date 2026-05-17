@@ -28,9 +28,9 @@ describe('AlertFeedManager', () => {
       tvToExchangeTicker: jest.fn(),
       createTvToInvestingMapping: jest.fn(),
       removeTvToInvestingMapping: jest.fn(),
-      createTvToExchangeTickerMapping: jest.fn(),
+      setExchange: jest.fn(),
       isComposite: jest.fn(),
-      removeTvToExchangeTickerMapping: jest.fn(),
+
       deleteTvTicker: jest.fn(),
     };
 

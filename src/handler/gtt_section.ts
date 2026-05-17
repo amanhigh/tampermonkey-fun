@@ -43,7 +43,7 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
   // Interaction handlers
   readonly onLeftClick = (result: AuditResult) => {
     const tvTicker = result.target;
-    this.tickerHandler.openTicker(tvTicker);
+    void this.tickerHandler.openTicker(tvTicker);
   };
 
   readonly onRightClick = (result: AuditResult): boolean => {

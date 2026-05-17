@@ -34,7 +34,7 @@ export class OrphanFlagsSection extends BaseAuditSection implements IAuditSectio
   readonly onLeftClick = (result: AuditResult) => {
     const tvTicker = result.target;
     if (tvTicker) {
-      this.tickerHandler.openTicker(tvTicker);
+      void this.tickerHandler.openTicker(tvTicker);
     } else {
       Notifier.warn(`No tvTicker found for ${result.target}`);
     }

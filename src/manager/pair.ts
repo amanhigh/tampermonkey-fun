@@ -4,7 +4,6 @@ import { ISymbolManager } from './symbol';
 import { IWatchManager } from './watch';
 import { IFlagManager } from './flag';
 import { IAlertFeedManager } from './alertfeed';
-import { IExchangeRepo } from '../repo/exchange';
 import { IAlertRepo } from '../repo/alert';
 import { IInvestingClient } from '../client/investing';
 import { Notifier } from '../util/notify';
@@ -49,7 +48,7 @@ export interface IPairManager {
 
   /**
    * Removes a duplicate investing ticker alias — deletes only its pairRepo entry.
-   * All other stores (tickerRepo, watchlist, flags, recent, exchange, alerts)
+   * All other stores (tickerRepo, watchlist, flags, recent, alerts)
    * remain untouched so the canonical ticker has zero data impact.
    * @param investingTicker The alias investing ticker to remove from pairRepo
    */
@@ -75,7 +74,6 @@ export class PairManager implements IPairManager {
    * @param watchManager Manager for watchlist operations
    * @param flagManager Manager for flag operations
    * @param alertFeedManager Manager for alert feed operations
-   * @param exchangeRepo Repository for exchange operations
    * @param alertRepo Repository for alert operations
    * @param investingClient Client for Investing.com alert deletion
    */
@@ -86,7 +84,6 @@ export class PairManager implements IPairManager {
     private readonly watchManager: IWatchManager,
     private readonly flagManager: IFlagManager,
     private readonly alertFeedManager: IAlertFeedManager,
-    private readonly exchangeRepo: IExchangeRepo,
     private readonly alertRepo: IAlertRepo,
     private readonly investingClient: IInvestingClient
   ) {}
@@ -195,7 +192,7 @@ export class PairManager implements IPairManager {
   }
 
   /**
-   * Cleans up all tvTicker-keyed stores (watchlist, flags, alertfeed, exchange)
+   * Cleans up all tvTicker-keyed stores (watchlist, flags, alertfeed)
    * @param tvTicker TradingView ticker to clean up
    * @returns True if ticker was removed from any lists, false otherwise
    */
@@ -204,7 +201,6 @@ export class PairManager implements IPairManager {
     const flagsRemoved = this.flagManager.evictTicker(tvTicker);
 
     void this.alertFeedManager.createAlertFeedEvent(tvTicker);
-    this.exchangeRepo.delete(tvTicker);
 
     return watchlistRemoved || flagsRemoved;
   }

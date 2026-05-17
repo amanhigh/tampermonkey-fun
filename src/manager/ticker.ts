@@ -32,10 +32,11 @@ export interface ITickerManager {
   getInvestingTicker(): string;
 
   /**
-   * Opens specified ticker in TradingView
+   * Opens specified ticker in TradingView.
+   * Qualifies ticker with exchange prefix from backend before navigating.
    * @param ticker - Ticker to open
    */
-  openTicker(ticker: string): void;
+  openTicker(ticker: string): Promise<void>;
 
   /**
    * Gets currently selected tickers from watchlist and screener
@@ -46,14 +47,14 @@ export interface ITickerManager {
   /**
    * Opens current ticker relative to its benchmark
    */
-  openBenchmarkTicker(): void;
+  openBenchmarkTicker(): Promise<void>;
 
   /**
    * Navigates through visible tickers in either screener or watchlist
    * @param step - Number of steps to move (positive for forward, negative for backward)
    * @throws Error When no visible tickers are available
    */
-  navigateTickers(step: number): void;
+  navigateTickers(step: number): Promise<void>;
 }
 
 /**
@@ -103,8 +104,8 @@ export class TickerManager implements ITickerManager {
   }
 
   /** @inheritdoc */
-  openTicker(ticker: string): void {
-    const exchangeTicker = this.symbolManager.tvToExchangeTicker(ticker);
+  async openTicker(ticker: string): Promise<void> {
+    const exchangeTicker = await this.symbolManager.tvToExchangeTicker(ticker);
     this.waitUtil.waitClick(Constants.DOM.BASIC.TICKER);
     this.waitUtil.waitInput(Constants.DOM.POPUPS.SEARCH, exchangeTicker);
   }
@@ -119,7 +120,7 @@ export class TickerManager implements ITickerManager {
   }
 
   /** @inheritdoc */
-  openBenchmarkTicker(): void {
+  async openBenchmarkTicker(): Promise<void> {
     const ticker = this.getTicker();
     const exchange = this.getCurrentExchange();
 
@@ -138,11 +139,11 @@ export class TickerManager implements ITickerManager {
         benchmark = 'XAUUSD';
     }
 
-    this.openTicker(`${ticker}/${benchmark}`);
+    await this.openTicker(`${ticker}/${benchmark}`);
   }
 
   /** @inheritdoc */
-  navigateTickers(step: number): void {
+  async navigateTickers(step: number): Promise<void> {
     const currentTicker = this.getTicker();
     const visibleTickers = this.getVisibleTickers();
 
@@ -152,7 +153,7 @@ export class TickerManager implements ITickerManager {
 
     const nextTicker = this.calculateNextTicker(currentTicker, visibleTickers, step);
 
-    this.openTicker(nextTicker);
+    await this.openTicker(nextTicker);
   }
 
   /**

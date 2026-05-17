@@ -1,5 +1,6 @@
 import { ITickerRepo } from '../repo/ticker';
-import { IExchangeRepo } from '../repo/exchange';
+import { ITickerClient } from '../client/ticker';
+import { TickerUpdateRequest } from '../models/ticker';
 
 /**
  * Interface for managing symbol mappings and transformations across trading platforms
@@ -34,11 +35,13 @@ export interface ISymbolManager {
   investingToTv(investingTicker: string): string | null;
 
   /**
-   * Maps TradingView ticker to Exchange ticker
+   * Maps TradingView ticker to Exchange ticker using backend ticker data.
+   * Returns "EXCHANGE:ticker" when backend has exchange, otherwise raw ticker.
+   * Falls back to raw ticker when backend read fails.
    * @param tvTicker TradingView ticker
-   * @returns Exchange qualified ticker or original ticker
+   * @returns Promise resolving to exchange qualified ticker or original ticker
    */
-  tvToExchangeTicker(tvTicker: string): string;
+  tvToExchangeTicker(tvTicker: string): Promise<string>;
 
   /**
    * Creates mapping between TradingView and Investing tickers
@@ -54,11 +57,12 @@ export interface ISymbolManager {
   removeTvToInvestingMapping(investingTicker: string): void;
 
   /**
-   * Creates mapping between TradingView ticker and Exchange
+   * Sets or clears the exchange on the backend ticker record.
+   * Fetches current ticker, sets exchange field to the given value (null to clear), updates backend.
    * @param tvTicker TradingView ticker
-   * @param exchange Exchange identifier (e.g., "NSE")
+   * @param exchange Exchange identifier (e.g. "NSE") or null to clear
    */
-  createTvToExchangeTickerMapping(tvTicker: string, exchange: string): void;
+  setExchange(tvTicker: string, exchange: string | null): Promise<void>;
 
   /**
    * Checks if symbol is a composite symbol containing special characters like '/', '*', '-', ':'
@@ -67,12 +71,6 @@ export interface ISymbolManager {
    * @returns True if symbol is composite
    */
   isComposite(symbol: string): boolean;
-
-  /**
-   * Removes mapping between TradingView ticker and Exchange ticker
-   * @param tvTicker TradingView ticker
-   */
-  removeTvToExchangeTickerMapping(tvTicker: string): void;
 
   /**
    * Deletes a TradingView ticker entry from the ticker repository
@@ -116,11 +114,11 @@ export class SymbolManager implements ISymbolManager {
   /**
    * Initializes the SymbolManager with reverse mappings
    * @param tickerRepo Repository for ticker mappings
-   * @param exchangeRepo Repository for exchange mappings
+   * @param tickerClient Client for backend ticker operations
    */
   constructor(
     private readonly tickerRepo: ITickerRepo,
-    private readonly exchangeRepo: IExchangeRepo
+    private readonly tickerClient: ITickerClient
   ) {
     this.tvToKiteSymbolMap = this.generateTvToKiteSymbolMap();
     Object.freeze(this.tvToKiteSymbolMap);
@@ -147,8 +145,16 @@ export class SymbolManager implements ISymbolManager {
   }
 
   /** @inheritdoc */
-  tvToExchangeTicker(tvTicker: string): string {
-    return this.exchangeRepo.getExchangeTicker(tvTicker);
+  async tvToExchangeTicker(tvTicker: string): Promise<string> {
+    try {
+      const record = await this.tickerClient.getTicker(tvTicker);
+      if (record.exchange) {
+        return `${record.exchange}:${tvTicker}`;
+      }
+      return tvTicker;
+    } catch {
+      return tvTicker;
+    }
   }
 
   /** @inheritdoc */
@@ -167,8 +173,21 @@ export class SymbolManager implements ISymbolManager {
   }
 
   /** @inheritdoc */
-  createTvToExchangeTickerMapping(tvTicker: string, exchange: string): void {
-    this.exchangeRepo.pinExchange(tvTicker, exchange);
+  async setExchange(tvTicker: string, exchange: string | null): Promise<void> {
+    try {
+      const record = await this.tickerClient.getTicker(tvTicker);
+      const update: TickerUpdateRequest = {
+        exchange,
+        timeframes: record.timeframes,
+        type: record.type,
+        state: record.state,
+        trend: record.trend,
+        is_fno: record.is_fno,
+      };
+      await this.tickerClient.updateTicker(tvTicker, update);
+    } catch {
+      // Ticker not yet in backend — silently ignore
+    }
   }
 
   /** @inheritdoc */
@@ -179,11 +198,6 @@ export class SymbolManager implements ISymbolManager {
     }
 
     return this.COMPOSITE_CHARACTERS.some((char) => symbol.includes(char));
-  }
-
-  /** @inheritdoc */
-  removeTvToExchangeTickerMapping(tvTicker: string): void {
-    this.exchangeRepo.delete(tvTicker);
   }
 
   /** @inheritdoc */

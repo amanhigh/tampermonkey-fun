@@ -128,7 +128,7 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
         'q',
         {
           description: 'Relative Chart',
-          action: () => this.tickerManager.openBenchmarkTicker(),
+          action: () => void this.tickerManager.openBenchmarkTicker(),
         },
       ],
       [
@@ -146,14 +146,14 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
         't',
         {
           description: 'Navigate Previous',
-          action: () => this.tickerManager.navigateTickers(-1),
+          action: () => void this.tickerManager.navigateTickers(-1),
         },
       ],
       [
         'd',
         {
           description: 'Navigate Next',
-          action: () => this.tickerManager.navigateTickers(1),
+          action: () => void this.tickerManager.navigateTickers(1),
         },
       ],
     ]);

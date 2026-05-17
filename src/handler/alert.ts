@@ -226,8 +226,9 @@ export class AlertHandler implements IAlertHandler {
       // Map current exchange to current TV ticker
       const ticker = this.tickerManager.getTicker();
       const exchange = this.tickerManager.getCurrentExchange();
-      this.symbolManager.createTvToExchangeTickerMapping(ticker, exchange);
-      Notifier.success(`Mapped ${ticker} to ${exchange}`);
+      void this.symbolManager.setExchange(ticker, exchange).then(() => {
+        Notifier.success(`Mapped ${ticker} to ${exchange}`);
+      });
     } else {
       void this.createHighAlert();
     }
@@ -262,9 +263,9 @@ export class AlertHandler implements IAlertHandler {
         const tvTicker = this.symbolManager.investingToTv(event.investingTicker);
         if (!tvTicker) {
           Notifier.warn(`Unmapped: ${event.investingTicker}`);
-          this.tickerHandler.openTicker(event.investingTicker);
+          void this.tickerHandler.openTicker(event.investingTicker);
         } else {
-          this.tickerHandler.openTicker(tvTicker);
+          void this.tickerHandler.openTicker(tvTicker);
         }
         break;
       default:

@@ -1,11 +1,26 @@
 import { SymbolManager, ISymbolManager } from '../../src/manager/symbol';
 import { ITickerRepo } from '../../src/repo/ticker';
-import { IExchangeRepo } from '../../src/repo/exchange';
+import { ITickerClient } from '../../src/client/ticker';
+import { TickerRecord } from '../../src/models/ticker';
 
 describe('SymbolManager', () => {
   let symbolManager: ISymbolManager;
   let tickerRepoMock: jest.Mocked<ITickerRepo>;
-  let exchangeRepoMock: jest.Mocked<IExchangeRepo>;
+  let tickerClientMock: jest.Mocked<ITickerClient>;
+
+  const createMockRecord = (overrides: Partial<TickerRecord> = {}): TickerRecord => ({
+    ticker: 'TV_TICKER',
+    exchange: 'NSE',
+    timeframes: ['MN', 'WK', 'DL'],
+    type: 'EQUITY',
+    state: 'WATCHED',
+    trend: 'UPTREND',
+    last_opened_at: '2024-01-01T00:00:00Z',
+    is_fno: false,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    ...overrides,
+  });
 
   beforeEach(() => {
     tickerRepoMock = {
@@ -15,12 +30,17 @@ describe('SymbolManager', () => {
       delete: jest.fn(),
     } as any;
 
-    exchangeRepoMock = {
-      getExchangeTicker: jest.fn(),
-      pinExchange: jest.fn(),
-    } as any;
+    tickerClientMock = {
+      getTicker: jest.fn(),
+      updateTicker: jest.fn().mockResolvedValue(undefined),
+      listAllTickers: jest.fn(),
+      createTicker: jest.fn(),
+      patchTickerLastOpened: jest.fn(),
+      deleteTicker: jest.fn(),
+      getBaseUrl: jest.fn(),
+    } as unknown as jest.Mocked<ITickerClient>;
 
-    symbolManager = new SymbolManager(tickerRepoMock, exchangeRepoMock);
+    symbolManager = new SymbolManager(tickerRepoMock, tickerClientMock);
   });
 
   describe('kiteToTv', () => {
@@ -72,10 +92,29 @@ describe('SymbolManager', () => {
   });
 
   describe('tvToExchangeTicker', () => {
-    it('should return exchange ticker from repo', () => {
-      exchangeRepoMock.getExchangeTicker.mockReturnValue('EXCHANGE_TICKER');
-      expect(symbolManager.tvToExchangeTicker('TV_TICKER')).toBe('EXCHANGE_TICKER');
-      expect(exchangeRepoMock.getExchangeTicker).toHaveBeenCalledWith('TV_TICKER');
+    it('should return "EXCHANGE:ticker" when backend has exchange', async () => {
+      tickerClientMock.getTicker.mockResolvedValue(createMockRecord({ exchange: 'NSE' }));
+
+      const result = await symbolManager.tvToExchangeTicker('TV_TICKER');
+
+      expect(result).toBe('NSE:TV_TICKER');
+      expect(tickerClientMock.getTicker).toHaveBeenCalledWith('TV_TICKER');
+    });
+
+    it('should return raw ticker when backend exchange is null', async () => {
+      tickerClientMock.getTicker.mockResolvedValue(createMockRecord({ exchange: null }));
+
+      const result = await symbolManager.tvToExchangeTicker('TV_TICKER');
+
+      expect(result).toBe('TV_TICKER');
+    });
+
+    it('should return raw ticker when backend read fails', async () => {
+      tickerClientMock.getTicker.mockRejectedValue(new Error('Not found'));
+
+      const result = await symbolManager.tvToExchangeTicker('TV_TICKER');
+
+      expect(result).toBe('TV_TICKER');
     });
   });
 
@@ -101,10 +140,59 @@ describe('SymbolManager', () => {
     });
   });
 
-  describe('createTvToExchangeTickerMapping', () => {
-    it('should pin exchange in repo', () => {
-      symbolManager.createTvToExchangeTickerMapping('TV_TICKER', 'NSE');
-      expect(exchangeRepoMock.pinExchange).toHaveBeenCalledWith('TV_TICKER', 'NSE');
+  describe('setExchange', () => {
+    it('should update backend ticker exchange to a value', async () => {
+      tickerClientMock.getTicker.mockResolvedValue(createMockRecord({
+        ticker: 'TV_TICKER',
+        exchange: null,
+        timeframes: ['MN', 'WK', 'DL'],
+        type: 'EQUITY',
+        state: 'WATCHED',
+        trend: 'UPTREND',
+        is_fno: false,
+      }));
+
+      await symbolManager.setExchange('TV_TICKER', 'NSE');
+
+      expect(tickerClientMock.updateTicker).toHaveBeenCalledWith('TV_TICKER', {
+        exchange: 'NSE',
+        timeframes: ['MN', 'WK', 'DL'],
+        type: 'EQUITY',
+        state: 'WATCHED',
+        trend: 'UPTREND',
+        is_fno: false,
+      });
+    });
+
+    it('should clear backend ticker exchange to null', async () => {
+      tickerClientMock.getTicker.mockResolvedValue(createMockRecord({
+        ticker: 'TV_TICKER',
+        exchange: 'NSE',
+        timeframes: ['MN', 'WK', 'DL'],
+        type: 'EQUITY',
+        state: 'WATCHED',
+        trend: 'UPTREND',
+        is_fno: false,
+      }));
+
+      await symbolManager.setExchange('TV_TICKER', null);
+
+      expect(tickerClientMock.updateTicker).toHaveBeenCalledWith('TV_TICKER', {
+        exchange: null,
+        timeframes: ['MN', 'WK', 'DL'],
+        type: 'EQUITY',
+        state: 'WATCHED',
+        trend: 'UPTREND',
+        is_fno: false,
+      });
+    });
+
+    it('should silently handle backend read failure', async () => {
+      tickerClientMock.getTicker.mockRejectedValue(new Error('Not found'));
+
+      await symbolManager.setExchange('UNKNOWN', 'NSE');
+
+      expect(tickerClientMock.updateTicker).not.toHaveBeenCalled();
     });
   });
 

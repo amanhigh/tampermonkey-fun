@@ -44,7 +44,7 @@ export class OrphanAlertsSection extends BaseAuditSection implements IAuditSecti
   readonly onLeftClick = (result: AuditResult) => {
     const alertName = result.data?.alertName as string | undefined;
     if (alertName) {
-      this.tickerHandler.openTicker(alertName);
+      void this.tickerHandler.openTicker(alertName);
     } else {
       Notifier.warn(`${result.target} — no name available, cannot navigate`, 3000);
     }

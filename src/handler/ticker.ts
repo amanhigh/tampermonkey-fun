@@ -8,16 +8,17 @@ import { IPairHandler } from './pair';
  */
 export interface ITickerHandler {
   /**
-   * Opens specified ticker symbol
+   * Opens specified ticker symbol in TradingView.
+   * Exchange-qualifies the ticker via backend before navigating.
    * @param ticker Ticker symbol to open
    */
-  openTicker(ticker: string): void;
+  openTicker(ticker: string): Promise<void>;
 
   /**
    * Processes command strings for ticker operations
    * @param command The command string to process
    */
-  processCommand(action: string, value: string): void;
+  processCommand(action: string, value: string): Promise<void>;
 }
 
 /**
@@ -31,22 +32,23 @@ export class TickerHandler implements ITickerHandler {
   ) {}
 
   /** @inheritdoc */
-  public openTicker(ticker: string): void {
-    const exchangeTicker = this.symbolManager.tvToExchangeTicker(ticker);
-    this.tickerManager.openTicker(exchangeTicker);
+  public async openTicker(ticker: string): Promise<void> {
+    const exchangeTicker = await this.symbolManager.tvToExchangeTicker(ticker);
+    await this.tickerManager.openTicker(exchangeTicker);
     Notifier.success(`Opened ${exchangeTicker}`);
   }
 
-  processCommand(action: string, value: string): void {
+  /** @inheritdoc */
+  async processCommand(action: string, value: string): Promise<void> {
     switch (action.toUpperCase()) {
       case 'E': {
         const ticker = this.tickerManager.getTicker();
-        this.symbolManager.createTvToExchangeTickerMapping(ticker, value);
+        await this.symbolManager.setExchange(ticker, value);
         Notifier.success(`Mapped ${ticker} to Exchange ${value}`);
         break;
       }
       case 'P': {
-        void this.pairHandler.mapInvestingTicker(value);
+        await this.pairHandler.mapInvestingTicker(value);
         break;
       }
       default:

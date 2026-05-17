@@ -39,7 +39,7 @@ export class IntegritySection extends BaseAuditSection implements IAuditSection 
   // Interaction handlers
   readonly onLeftClick = (result: AuditResult) => {
     const investingTicker = result.target;
-    this.tickerHandler.openTicker(investingTicker);
+    void this.tickerHandler.openTicker(investingTicker);
   };
 
   readonly onRightClick = (result: AuditResult): void => {

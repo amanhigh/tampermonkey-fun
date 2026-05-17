@@ -42,9 +42,6 @@ export const Constants = Object.freeze({
       /** Orphan flags audit plugin - identifies flag entries without corresponding tickers */
       ORPHAN_FLAGS: 'orphan-flags',
 
-      /** Orphan exchange audit plugin - identifies exchange mappings without corresponding tickers */
-      ORPHAN_EXCHANGE: 'orphan-exchange',
-
       /** Duplicate pair IDs audit plugin - identifies multiple investing tickers sharing the same pairId */
       DUPLICATE_PAIR_IDS: 'duplicate-pair-ids',
 
