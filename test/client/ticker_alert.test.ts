@@ -98,9 +98,9 @@ describe('TickerAlertClient', () => {
     });
   });
 
-  // ── listAllAlertTickers (auto-paginating) ──
+  // ── listAlertTickers (auto-paginating) ──
 
-  describe('listAllAlertTickers', () => {
+  describe('listAlertTickers', () => {
     it('should return all alert tickers from single page when total <= 100', async () => {
       mockMakeRequest.mockResolvedValue({
         status: 'success',
@@ -112,7 +112,7 @@ describe('TickerAlertClient', () => {
         },
       });
 
-      const result = await tickerAlertClient.listAllAlertTickers({ symbol: 'MCIX' });
+      const result = await tickerAlertClient.listAlertTickers({ symbol: 'MCIX' });
 
       expect(result).toHaveLength(1);
       expect(mockMakeRequest).toHaveBeenCalledTimes(1);
@@ -140,7 +140,7 @@ describe('TickerAlertClient', () => {
           },
         });
 
-      const result = await tickerAlertClient.listAllAlertTickers({});
+      const result = await tickerAlertClient.listAlertTickers({});
 
       expect(result).toHaveLength(150);
       expect(mockMakeRequest).toHaveBeenCalledTimes(2);
@@ -152,7 +152,7 @@ describe('TickerAlertClient', () => {
         data: { alert_tickers: [], metadata: { total: 0, offset: 0, limit: 100 } },
       });
 
-      const result = await tickerAlertClient.listAllAlertTickers({});
+      const result = await tickerAlertClient.listAlertTickers({});
 
       expect(result).toEqual([]);
       expect(mockMakeRequest).toHaveBeenCalledTimes(1);
@@ -182,10 +182,10 @@ describe('TickerAlertClient', () => {
       await expect(tickerAlertClient.deleteAlertTicker('UNKNOWN')).rejects.toThrow('Failed to delete Alert ticker: 404 Not Found');
     });
 
-    it('should wrap listAllAlertTickers errors', async () => {
+    it('should wrap listAlertTickers errors', async () => {
       mockMakeRequest.mockRejectedValue(new Error('500 Internal Server Error'));
 
-      await expect(tickerAlertClient.listAllAlertTickers({})).rejects.toThrow('Failed to list all Alert tickers: 500 Internal Server Error');
+      await expect(tickerAlertClient.listAlertTickers({})).rejects.toThrow('Failed to list all Alert tickers: 500 Internal Server Error');
     });
   });
 });

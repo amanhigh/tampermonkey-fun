@@ -40,7 +40,7 @@ export interface ITickerAlertClient extends IBaseClient {
    * @param params - Query parameters (offset/limit are overridden)
    * @returns Promise resolving with all matching alert ticker records
    */
-  listAllAlertTickers(params: AlertTickerQueryParams): Promise<AlertTickerRecord[]>;
+  listAlertTickers(params: AlertTickerQueryParams): Promise<AlertTickerRecord[]>;
 }
 
 /**
@@ -96,7 +96,7 @@ export class TickerAlertClient extends BaseClient implements ITickerAlertClient 
   }
 
   /** @inheritdoc */
-  async listAllAlertTickers(params: AlertTickerQueryParams): Promise<AlertTickerRecord[]> {
+  async listAlertTickers(params: AlertTickerQueryParams): Promise<AlertTickerRecord[]> {
     const limit = Constants.KOHAN.PAGE_LIMIT;
     let offset = 0;
     let total = 0;
