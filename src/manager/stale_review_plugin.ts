@@ -1,6 +1,6 @@
 import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
-import { IRecentTickerRepo } from '../repo/recent';
+import { IRecentManager } from './recent';
 import { ITickerRepo } from '../repo/ticker';
 import { IWatchManager } from './watch';
 import { Constants } from '../models/constant';
@@ -17,7 +17,7 @@ export class StaleReviewPlugin extends BaseAuditPlugin {
   public readonly title = 'Stale Review';
 
   constructor(
-    private readonly recentRepo: IRecentTickerRepo,
+    private readonly recentManager: IRecentManager,
     private readonly tickerRepo: ITickerRepo,
     private readonly watchManager: IWatchManager,
     private readonly thresholdDays: number = Constants.AUDIT.STALE_REVIEW_THRESHOLD_DAYS
@@ -46,7 +46,7 @@ export class StaleReviewPlugin extends BaseAuditPlugin {
         return;
       }
 
-      const lastOpened = this.recentRepo.get(tvTicker) ?? 0;
+      const lastOpened = this.recentManager.getLastOpenedTimestamp(tvTicker) ?? 0;
 
       if (lastOpened < cutoff) {
         const daysSinceOpen = lastOpened > 0 ? Math.floor((now - lastOpened) / (24 * 60 * 60 * 1000)) : -1;

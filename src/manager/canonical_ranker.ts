@@ -1,6 +1,6 @@
 import { IAlertRepo } from '../repo/alert';
 import { IWatchManager } from './watch';
-import { IRecentTickerRepo } from '../repo/recent';
+import { IRecentManager } from './recent';
 import { ISequenceRepo } from '../repo/sequence';
 import { IExchangeRepo } from '../repo/exchange';
 import { IPairRepo } from '../repo/pair';
@@ -49,7 +49,7 @@ export interface ICanonicalRanker {
 export interface CanonicalRankerDeps {
   alertRepo: IAlertRepo;
   watchManager: IWatchManager;
-  recentRepo: IRecentTickerRepo;
+  recentManager: IRecentManager;
   sequenceRepo: ISequenceRepo;
   exchangeRepo: IExchangeRepo;
   pairRepo: IPairRepo;
@@ -83,7 +83,7 @@ export class CanonicalRanker implements ICanonicalRanker {
 
   private readonly alertRepo: IAlertRepo;
   private readonly watchManager: IWatchManager;
-  private readonly recentRepo: IRecentTickerRepo;
+  private readonly recentManager: IRecentManager;
   private readonly sequenceRepo: ISequenceRepo;
   private readonly exchangeRepo: IExchangeRepo;
   private readonly pairRepo: IPairRepo;
@@ -92,7 +92,7 @@ export class CanonicalRanker implements ICanonicalRanker {
   constructor(deps: CanonicalRankerDeps) {
     this.alertRepo = deps.alertRepo;
     this.watchManager = deps.watchManager;
-    this.recentRepo = deps.recentRepo;
+    this.recentManager = deps.recentManager;
     this.sequenceRepo = deps.sequenceRepo;
     this.exchangeRepo = deps.exchangeRepo;
     this.pairRepo = deps.pairRepo;
@@ -105,7 +105,7 @@ export class CanonicalRanker implements ICanonicalRanker {
       const tvTicker = this.symbolManager.investingToTv(investingTicker);
       const alertCount = this.getAlertCount(pairId);
       const isWatched = tvTicker ? this.watchManager.isWatched(tvTicker) : false;
-      const recentTimestamp = tvTicker ? (this.recentRepo.get(tvTicker) ?? 0) : 0;
+      const recentTimestamp = tvTicker ? (this.recentManager.getLastOpenedTimestamp(tvTicker) ?? 0) : 0;
       const hasSequence = tvTicker ? this.sequenceRepo.has(tvTicker) : false;
       const hasExchange = tvTicker ? this.exchangeRepo.has(tvTicker) : false;
       const hasPairMapping = tvTicker !== null;
@@ -132,7 +132,7 @@ export class CanonicalRanker implements ICanonicalRanker {
       const pairId = pairInfo?.pairId;
       const alertCount = pairId ? this.getAlertCount(pairId) : 0;
       const isWatched = this.watchManager.isWatched(tvTicker);
-      const recentTimestamp = this.recentRepo.get(tvTicker) ?? 0;
+      const recentTimestamp = this.recentManager.getLastOpenedTimestamp(tvTicker) ?? 0;
       const hasSequence = this.sequenceRepo.has(tvTicker);
       const hasExchange = this.exchangeRepo.has(tvTicker);
       const hasPairMapping = investingTicker !== null;

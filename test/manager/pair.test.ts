@@ -5,7 +5,7 @@ import { ISymbolManager } from '../../src/manager/symbol';
 import { IWatchManager } from '../../src/manager/watch';
 import { IFlagManager } from '../../src/manager/flag';
 import { IAlertFeedManager } from '../../src/manager/alertfeed';
-import { IRecentTickerRepo } from '../../src/repo/recent';
+import { IRecentManager } from '../../src/manager/recent';
 import { ISequenceRepo } from '../../src/repo/sequence';
 import { IExchangeRepo } from '../../src/repo/exchange';
 import { IAlertRepo } from '../../src/repo/alert';
@@ -28,7 +28,7 @@ describe('PairManager', () => {
   let mockWatchManager: jest.Mocked<IWatchManager>;
   let mockFlagManager: jest.Mocked<IFlagManager>;
   let mockAlertFeedManager: jest.Mocked<IAlertFeedManager>;
-  let mockRecentRepo: jest.Mocked<IRecentTickerRepo>;
+  let mockRecentManager: jest.Mocked<IRecentManager>;
   let mockSequenceRepo: jest.Mocked<ISequenceRepo>;
   let mockExchangeRepo: jest.Mocked<IExchangeRepo>;
   let mockAlertRepo: jest.Mocked<IAlertRepo>;
@@ -78,9 +78,9 @@ describe('PairManager', () => {
       createAlertFeedEvent: jest.fn(),
     } as unknown as jest.Mocked<IAlertFeedManager>;
 
-    mockRecentRepo = {
-      delete: jest.fn(),
-    } as unknown as jest.Mocked<IRecentTickerRepo>;
+    mockRecentManager = {
+      removeRecentTicker: jest.fn(),
+    } as unknown as jest.Mocked<IRecentManager>;
 
     mockSequenceRepo = {
       delete: jest.fn(),
@@ -105,7 +105,7 @@ describe('PairManager', () => {
       mockWatchManager,
       mockFlagManager,
       mockAlertFeedManager,
-      mockRecentRepo,
+      mockRecentManager,
       mockSequenceRepo,
       mockExchangeRepo,
       mockAlertRepo,

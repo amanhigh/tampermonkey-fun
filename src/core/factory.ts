@@ -23,7 +23,6 @@ import { IPairRepo, PairRepo } from '../repo/pair';
 import { IExchangeRepo, ExchangeRepo } from '../repo/exchange';
 import { ITickerRepo, TickerRepo } from '../repo/ticker';
 import { ISequenceRepo, SequenceRepo } from '../repo/sequence';
-import { IRecentTickerRepo, RecentTickerRepo } from '../repo/recent';
 import { IAlertRepo, AlertRepo } from '../repo/alert';
 
 // Manager Layer Imports
@@ -189,7 +188,6 @@ export class Factory {
     ticker: (): ITickerRepo => Factory.getInstance('tickerRepo', () => new TickerRepo(Factory.repo.cron())),
     sequence: (): ISequenceRepo => Factory.getInstance('sequenceRepo', () => new SequenceRepo(Factory.repo.cron())),
     kite: (): IKiteRepo => Factory.getInstance('kiteRepo', () => new KiteRepo()),
-    recent: (): IRecentTickerRepo => Factory.getInstance('recentRepo', () => new RecentTickerRepo(Factory.repo.cron())),
     imdb: (): IImdbRepo => Factory.getInstance('imdbRepo', () => new ImdbRepo()),
   };
 
@@ -301,7 +299,7 @@ export class Factory {
             Factory.manager.watch(),
             Factory.manager.flag(),
             Factory.manager.alertFeed(),
-            Factory.repo.recent(),
+            Factory.manager.recent(),
             Factory.repo.sequence(),
             Factory.repo.exchange(),
             Factory.repo.alert(),
@@ -316,7 +314,7 @@ export class Factory {
       Factory.getInstance('flagManager', () => new FlagManager(Factory.repo.flag(), Factory.manager.paint())),
 
     recent: (): IRecentManager =>
-      Factory.getInstance('recentManager', () => new RecentManager(Factory.repo.recent(), Factory.manager.paint())),
+      Factory.getInstance('recentManager', () => new RecentManager(Factory.client.ticker(), Factory.manager.paint())),
     journal: (): IJournalManager =>
       Factory.getInstance(
         'journalManager',
@@ -335,7 +333,7 @@ export class Factory {
           new CanonicalRanker({
             alertRepo: Factory.repo.alert(),
             watchManager: Factory.manager.watch(),
-            recentRepo: Factory.repo.recent(),
+            recentManager: Factory.manager.recent(),
             sequenceRepo: Factory.repo.sequence(),
             exchangeRepo: Factory.repo.exchange(),
             pairRepo: Factory.repo.pair(),
@@ -427,7 +425,7 @@ export class Factory {
     staleReview: () =>
       Factory.getInstance(
         'auditPlugin_staleReview',
-        () => new StaleReviewPlugin(Factory.repo.recent(), Factory.repo.ticker(), Factory.manager.watch())
+        () => new StaleReviewPlugin(Factory.manager.recent(), Factory.repo.ticker(), Factory.manager.watch())
       ),
 
     // ===== SECTION CREATION =====

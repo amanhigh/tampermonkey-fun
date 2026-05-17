@@ -4,7 +4,7 @@ import { ISymbolManager } from './symbol';
 import { IWatchManager } from './watch';
 import { IFlagManager } from './flag';
 import { IAlertFeedManager } from './alertfeed';
-import { IRecentTickerRepo } from '../repo/recent';
+import { IRecentManager } from './recent';
 import { ISequenceRepo } from '../repo/sequence';
 import { IExchangeRepo } from '../repo/exchange';
 import { IAlertRepo } from '../repo/alert';
@@ -77,7 +77,7 @@ export class PairManager implements IPairManager {
    * @param watchManager Manager for watchlist operations
    * @param flagManager Manager for flag operations
    * @param alertFeedManager Manager for alert feed operations
-   * @param recentRepo Repository for recent ticker operations
+   * @param recentManager Manager for recent ticker operations
    * @param sequenceRepo Repository for sequence operations
    * @param exchangeRepo Repository for exchange operations
    * @param alertRepo Repository for alert operations
@@ -90,7 +90,7 @@ export class PairManager implements IPairManager {
     private readonly watchManager: IWatchManager,
     private readonly flagManager: IFlagManager,
     private readonly alertFeedManager: IAlertFeedManager,
-    private readonly recentRepo: IRecentTickerRepo,
+    private readonly recentManager: IRecentManager,
     private readonly sequenceRepo: ISequenceRepo,
     private readonly exchangeRepo: IExchangeRepo,
     private readonly alertRepo: IAlertRepo,
@@ -210,7 +210,7 @@ export class PairManager implements IPairManager {
     const flagsRemoved = this.flagManager.evictTicker(tvTicker);
 
     void this.alertFeedManager.createAlertFeedEvent(tvTicker);
-    this.recentRepo.delete(tvTicker);
+    this.recentManager.removeRecentTicker(tvTicker);
     this.sequenceRepo.delete(tvTicker);
     this.exchangeRepo.delete(tvTicker);
 

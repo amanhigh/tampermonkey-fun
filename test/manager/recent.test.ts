@@ -1,29 +1,30 @@
 import { RecentManager, IRecentManager } from '../../src/manager/recent';
-import { IRecentTickerRepo } from '../../src/repo/recent';
 import { IPaintManager } from '../../src/manager/paint';
+import { ITickerClient } from '../../src/client/ticker';
+import { TickerListResponse } from '../../src/models/ticker';
 import { Constants } from '../../src/models/constant';
 
 describe('RecentManager', () => {
   let recentManager: IRecentManager;
-  let mockRecentRepo: jest.Mocked<IRecentTickerRepo>;
+  let mockClient: jest.Mocked<ITickerClient>;
   let mockPaintManager: jest.Mocked<IPaintManager>;
+
+  const mockTickerListResponse: TickerListResponse = {
+    tickers: [
+      { ticker: 'RELIANCE', last_opened_at: '2026-05-05T10:30:00Z', exchange: null, timeframes: ['MN', 'WK', 'DL'], type: 'EQUITY', state: 'WATCHED', trend: 'UPTREND', is_fno: false, created_at: '2026-05-05T10:30:00Z', updated_at: '2026-05-05T10:30:00Z' },
+      { ticker: 'TCS', last_opened_at: '2026-05-04T10:30:00Z', exchange: null, timeframes: ['MN', 'WK', 'DL'], type: 'EQUITY', state: 'WATCHED', trend: 'SIDEWAYS', is_fno: false, created_at: '2026-05-04T10:30:00Z', updated_at: '2026-05-04T10:30:00Z' },
+    ],
+    metadata: { total: 2, offset: 0, limit: 500 },
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Mock RecentTickerRepo (MapRepo-based: tvTicker -> timestamp)
-    mockRecentRepo = {
-      set: jest.fn(),
-      get: jest.fn(),
-      has: jest.fn(),
-      clear: jest.fn(),
-      delete: jest.fn(),
-      getCount: jest.fn(),
-      getAllKeys: jest.fn(),
-      getAllTickersAsSet: jest.fn(),
-      load: jest.fn(),
-      save: jest.fn(),
-    } as jest.Mocked<IRecentTickerRepo>;
+    // Mock TickerClient
+    mockClient = {
+      listTickers: jest.fn().mockResolvedValue(mockTickerListResponse),
+      patchTickerLastOpened: jest.fn().mockResolvedValue({} as any),
+    } as unknown as jest.Mocked<ITickerClient>;
 
     // Mock PaintManager
     mockPaintManager = {
@@ -33,7 +34,7 @@ describe('RecentManager', () => {
       paintFNOMarking: jest.fn(),
     } as jest.Mocked<IPaintManager>;
 
-    recentManager = new RecentManager(mockRecentRepo, mockPaintManager);
+    recentManager = new RecentManager(mockClient, mockPaintManager);
   });
 
   describe('constructor', () => {
@@ -41,230 +42,127 @@ describe('RecentManager', () => {
       expect(recentManager).toBeDefined();
       expect(recentManager).toBeInstanceOf(RecentManager);
     });
-  });
 
-  describe('addTicker', () => {
-    it('should add ticker to recent repository', () => {
-      const ticker = 'NSE:RELIANCE';
-
-      recentManager.addTicker(ticker);
-
-      expect(mockRecentRepo.set).toHaveBeenCalledWith(ticker, expect.any(Number));
-      expect(mockRecentRepo.set).toHaveBeenCalledTimes(1);
-    });
-
-    it('should handle empty ticker string', () => {
-      const ticker = '';
-
-      recentManager.addTicker(ticker);
-
-      expect(mockRecentRepo.set).toHaveBeenCalledWith(ticker, expect.any(Number));
-    });
-
-    it('should handle multiple tickers', () => {
-      const tickers = ['NSE:RELIANCE', 'NSE:TCS', 'NSE:HDFC'];
-
-      tickers.forEach((ticker) => recentManager.addTicker(ticker));
-
-      expect(mockRecentRepo.set).toHaveBeenCalledTimes(3);
-      tickers.forEach((ticker) => {
-        expect(mockRecentRepo.set).toHaveBeenCalledWith(ticker, expect.any(Number));
+    it('should trigger cache load from backend on construction', () => {
+      expect(mockClient.listTickers).toHaveBeenCalledWith({
+        'sort-by': 'last_opened_at',
+        'sort-order': 'desc',
+        limit: 500,
       });
     });
   });
 
-  describe('isRecent', () => {
-    it('should return true when ticker exists in recent repo', () => {
-      const ticker = 'NSE:TCS';
-      mockRecentRepo.has.mockReturnValue(true);
-
-      const result = recentManager.isRecent(ticker);
-
-      expect(result).toBe(true);
-      expect(mockRecentRepo.has).toHaveBeenCalledWith(ticker);
-    });
-
-    it('should return false when ticker does not exist in recent repo', () => {
-      const ticker = 'NSE:UNKNOWN';
-      mockRecentRepo.has.mockReturnValue(false);
-
-      const result = recentManager.isRecent(ticker);
-
-      expect(result).toBe(false);
-      expect(mockRecentRepo.has).toHaveBeenCalledWith(ticker);
+  describe('addTicker', () => {
+    it('should add ticker to cache and fire backend patch', () => {
+      const ticker = 'RELIANCE';
+      recentManager.addTicker(ticker);
+      expect(recentManager.isRecent(ticker)).toBe(true);
+      expect(mockClient.patchTickerLastOpened).toHaveBeenCalledWith(ticker, {
+        last_opened_at: expect.any(String),
+      });
     });
 
     it('should handle empty ticker string', () => {
       const ticker = '';
-      mockRecentRepo.has.mockReturnValue(false);
+      recentManager.addTicker(ticker);
+      expect(recentManager.isRecent(ticker)).toBe(true);
+    });
 
-      const result = recentManager.isRecent(ticker);
+    it('should handle multiple tickers', () => {
+      const tickers = ['RELIANCE', 'TCS', 'HDFC'];
+      tickers.forEach((t) => recentManager.addTicker(t));
+      expect(mockClient.patchTickerLastOpened).toHaveBeenCalledTimes(3);
+    });
+  });
 
-      expect(result).toBe(false);
-      expect(mockRecentRepo.has).toHaveBeenCalledWith(ticker);
+  describe('isRecent', () => {
+    it('should return true when ticker exists in cache', () => {
+      recentManager.addTicker('TCS');
+      expect(recentManager.isRecent('TCS')).toBe(true);
+    });
+
+    it('should return false when ticker does not exist in cache', () => {
+      expect(recentManager.isRecent('UNKNOWN')).toBe(false);
+    });
+
+    it('should return false for empty ticker string when not cached', () => {
+      expect(recentManager.isRecent('')).toBe(false);
+    });
+  });
+
+  describe('getLastOpenedTimestamp', () => {
+    it('should return timestamp for cached ticker', () => {
+      recentManager.addTicker('RELIANCE');
+      expect(recentManager.getLastOpenedTimestamp('RELIANCE')).toBeGreaterThan(0);
+    });
+
+    it('should return 0 for unknown ticker', () => {
+      expect(recentManager.getLastOpenedTimestamp('UNKNOWN')).toBe(0);
+    });
+  });
+
+  describe('removeRecentTicker', () => {
+    it('should remove ticker from cache', () => {
+      recentManager.addTicker('RELIANCE');
+      expect(recentManager.isRecent('RELIANCE')).toBe(true);
+      recentManager.removeRecentTicker('RELIANCE');
+      expect(recentManager.isRecent('RELIANCE')).toBe(false);
+    });
+
+    it('should not throw when removing non-existent ticker', () => {
+      expect(() => recentManager.removeRecentTicker('UNKNOWN')).not.toThrow();
     });
   });
 
   describe('clearRecent', () => {
-    it('should clear all recent tickers from repository', () => {
+    it('should clear all tickers from cache', () => {
+      recentManager.addTicker('RELIANCE');
+      recentManager.addTicker('TCS');
+      expect(recentManager.isRecent('RELIANCE')).toBe(true);
       recentManager.clearRecent();
-
-      expect(mockRecentRepo.clear).toHaveBeenCalledTimes(1);
+      expect(recentManager.isRecent('RELIANCE')).toBe(false);
+      expect(recentManager.isRecent('TCS')).toBe(false);
     });
 
-    it('should not throw error when repository is already empty', () => {
+    it('should not throw when cache is already empty', () => {
       expect(() => recentManager.clearRecent()).not.toThrow();
-      expect(mockRecentRepo.clear).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('paintRecent', () => {
     it('should paint recent tickers with correct color and selector', () => {
-      const recentTickers = new Set(['NSE:RELIANCE', 'NSE:TCS']);
-      mockRecentRepo.getAllTickersAsSet.mockReturnValue(recentTickers);
-
+      recentManager.addTicker('RELIANCE');
       recentManager.paintRecent();
-
-      expect(mockRecentRepo.getAllTickersAsSet).toHaveBeenCalledTimes(1);
-      expect(mockPaintManager.paintSymbols).toHaveBeenCalledWith(Constants.DOM.SCREENER.SYMBOL, recentTickers, {
-        color: Constants.UI.COLORS.LIST[1],
-      });
-      expect(mockPaintManager.paintSymbols).toHaveBeenCalledTimes(1);
-    });
-
-    it('should paint empty set when no recent tickers', () => {
-      const emptySet = new Set<string>();
-      mockRecentRepo.getAllTickersAsSet.mockReturnValue(emptySet);
-
-      recentManager.paintRecent();
-
-      expect(mockRecentRepo.getAllTickersAsSet).toHaveBeenCalledTimes(1);
-      expect(mockPaintManager.paintSymbols).toHaveBeenCalledWith(Constants.DOM.SCREENER.SYMBOL, emptySet, {
-        color: Constants.UI.COLORS.LIST[1],
-      });
-    });
-
-    it('should use correct screener selector from constants', () => {
-      const recentTickers = new Set(['NSE:HDFC']);
-      mockRecentRepo.getAllTickersAsSet.mockReturnValue(recentTickers);
-
-      recentManager.paintRecent();
-
       expect(mockPaintManager.paintSymbols).toHaveBeenCalledWith(
         Constants.DOM.SCREENER.SYMBOL,
         expect.any(Set),
-        expect.any(Object)
+        { color: Constants.UI.COLORS.LIST[1] }
       );
     });
 
-    it('should use second color from color list (index 1)', () => {
-      const recentTickers = new Set(['NSE:WIPRO']);
-      mockRecentRepo.getAllTickersAsSet.mockReturnValue(recentTickers);
-
+    it('should paint empty set when no recent tickers', () => {
       recentManager.paintRecent();
-
-      const expectedColor = Constants.UI.COLORS.LIST[1];
-      expect(mockPaintManager.paintSymbols).toHaveBeenCalledWith(expect.any(String), expect.any(Set), {
-        color: expectedColor,
-      });
-    });
-  });
-
-  describe('integration scenarios', () => {
-    it('should handle complete workflow of adding, checking, and painting', () => {
-      const ticker = 'NSE:INFY';
-      const recentSet = new Set([ticker]);
-
-      // Add ticker
-      recentManager.addTicker(ticker);
-
-      // Mock repo state after addition
-      mockRecentRepo.has.mockReturnValue(true);
-      mockRecentRepo.getAllTickersAsSet.mockReturnValue(recentSet);
-
-      // Check if recent
-      const isRecent = recentManager.isRecent(ticker);
-
-      // Paint recent
-      recentManager.paintRecent();
-
-      // Verify all operations
-      expect(mockRecentRepo.set).toHaveBeenCalledWith(ticker, expect.any(Number));
-      expect(isRecent).toBe(true);
-      expect(mockRecentRepo.has).toHaveBeenCalledWith(ticker);
-      expect(mockPaintManager.paintSymbols).toHaveBeenCalledWith(Constants.DOM.SCREENER.SYMBOL, recentSet, {
-        color: Constants.UI.COLORS.LIST[1],
-      });
-    });
-
-    it('should handle multiple tickers with clear operation', () => {
-      const tickers = ['NSE:RELIANCE', 'NSE:TCS', 'NSE:HDFC'];
-
-      // Add multiple tickers
-      tickers.forEach((ticker) => recentManager.addTicker(ticker));
-
-      // Clear all
-      recentManager.clearRecent();
-
-      // Mock empty state after clear
-      mockRecentRepo.has.mockReturnValue(false);
-      mockRecentRepo.getAllTickersAsSet.mockReturnValue(new Set());
-
-      // Check if any ticker is still recent
-      const isAnyRecent = tickers.some((ticker) => recentManager.isRecent(ticker));
-
-      expect(mockRecentRepo.set).toHaveBeenCalledTimes(3);
-      expect(mockRecentRepo.clear).toHaveBeenCalledTimes(1);
-      expect(isAnyRecent).toBe(false);
+      expect(mockPaintManager.paintSymbols).toHaveBeenCalledWith(
+        Constants.DOM.SCREENER.SYMBOL,
+        new Set(),
+        { color: Constants.UI.COLORS.LIST[1] }
+      );
     });
   });
 
   describe('error handling', () => {
-    it('should handle repository set errors gracefully', () => {
-      const error = new Error('Repository set failed');
-      mockRecentRepo.set.mockImplementation(() => {
-        throw error;
-      });
-
-      expect(() => recentManager.addTicker('NSE:TEST')).toThrow('Repository set failed');
+    it('should handle backend listTickers failure gracefully', () => {
+      mockClient.listTickers.mockRejectedValue(new Error('Backend unavailable'));
+      const resilientManager = new RecentManager(mockClient, mockPaintManager);
+      expect(resilientManager.isRecent('RELIANCE')).toBe(false);
+      expect(resilientManager.getLastOpenedTimestamp('RELIANCE')).toBe(0);
     });
 
-    it('should handle repository has errors gracefully', () => {
-      const error = new Error('Repository has failed');
-      mockRecentRepo.has.mockImplementation(() => {
-        throw error;
-      });
-
-      expect(() => recentManager.isRecent('NSE:TEST')).toThrow('Repository has failed');
-    });
-
-    it('should handle repository clear errors gracefully', () => {
-      const error = new Error('Repository clear failed');
-      mockRecentRepo.clear.mockImplementation(() => {
-        throw error;
-      });
-
-      expect(() => recentManager.clearRecent()).toThrow('Repository clear failed');
-    });
-
-    it('should handle paint manager errors gracefully', () => {
-      const error = new Error('Paint failed');
-      mockRecentRepo.getAllTickersAsSet.mockReturnValue(new Set(['NSE:TEST']));
-      mockPaintManager.paintSymbols.mockImplementation(() => {
-        throw error;
-      });
-
-      expect(() => recentManager.paintRecent()).toThrow('Paint failed');
-      expect(mockRecentRepo.getAllTickersAsSet).toHaveBeenCalled();
-    });
-
-    it('should handle repository getAllTickersAsSet errors gracefully', () => {
-      const error = new Error('Repository getAllTickersAsSet failed');
-      mockRecentRepo.getAllTickersAsSet.mockImplementation(() => {
-        throw error;
-      });
-
-      expect(() => recentManager.paintRecent()).toThrow('Repository getAllTickersAsSet failed');
+    it('should handle patchTickerLastOpened failure gracefully', () => {
+      mockClient.patchTickerLastOpened.mockRejectedValue(new Error('Patch failed'));
+      const ticker = 'RELIANCE';
+      expect(() => recentManager.addTicker(ticker)).not.toThrow();
+      expect(recentManager.isRecent(ticker)).toBe(true);
     });
   });
 });
