@@ -35,7 +35,7 @@ describe('TickerCollisionSection', () => {
     mockTickerHandler = { openTicker: jest.fn() };
     mockCanonicalRanker = {
       rankTvTickers: jest.fn().mockImplementation((tickers: string[]) =>
-        tickers.map((t, i) => ({ ticker: t, alertCount: 0, isWatched: false, recentTimestamp: 0, hasSequence: false, hasExchange: false, hasPairMapping: true, score: tickers.length - i }))
+        tickers.map((t, i) => ({ ticker: t, alertCount: 0, isWatched: false, isRecent: false, hasExchange: false, hasPairMapping: true, score: tickers.length - i }))
       ),
     };
     mockSymbolManager = { investingToTv: jest.fn(), deleteTvTicker: jest.fn() };

@@ -2,7 +2,6 @@ import { CanonicalRanker } from '../../src/manager/canonical_ranker';
 import { IAlertRepo } from '../../src/repo/alert';
 import { IWatchManager } from '../../src/manager/watch';
 import { IRecentManager } from '../../src/manager/recent';
-import { ISequenceRepo } from '../../src/repo/sequence';
 import { IExchangeRepo } from '../../src/repo/exchange';
 import { IPairRepo } from '../../src/repo/pair';
 import { ISymbolManager } from '../../src/manager/symbol';
@@ -13,7 +12,6 @@ describe('CanonicalRanker', () => {
   let mockAlertRepo: Partial<IAlertRepo>;
   let mockWatchManager: Partial<IWatchManager>;
   let mockRecentManager: Partial<IRecentManager>;
-  let mockSequenceRepo: Partial<ISequenceRepo>;
   let mockExchangeRepo: Partial<IExchangeRepo>;
   let mockPairRepo: Partial<IPairRepo>;
   let mockSymbolManager: Partial<ISymbolManager>;
@@ -22,7 +20,6 @@ describe('CanonicalRanker', () => {
     mockAlertRepo = { get: jest.fn().mockReturnValue(undefined) };
     mockWatchManager = { isWatched: jest.fn().mockReturnValue(false) };
     mockRecentManager = { isRecent: jest.fn().mockReturnValue(false) };
-    mockSequenceRepo = { has: jest.fn().mockReturnValue(false) };
     mockExchangeRepo = { has: jest.fn().mockReturnValue(false), get: jest.fn().mockReturnValue(undefined) };
     mockPairRepo = { getPairInfo: jest.fn().mockReturnValue(null) };
     mockSymbolManager = {
@@ -34,7 +31,6 @@ describe('CanonicalRanker', () => {
       alertRepo: mockAlertRepo as IAlertRepo,
       watchManager: mockWatchManager as IWatchManager,
       recentManager: mockRecentManager as IRecentManager,
-      sequenceRepo: mockSequenceRepo as ISequenceRepo,
       exchangeRepo: mockExchangeRepo as IExchangeRepo,
       pairRepo: mockPairRepo as IPairRepo,
       symbolManager: mockSymbolManager as ISymbolManager,
@@ -108,21 +104,17 @@ describe('CanonicalRanker', () => {
       expect(result[0].score).toBeGreaterThan(result[1].score);
     });
 
-    test('ticker with sequence and exchange ranks higher', () => {
-      (mockSequenceRepo.has as jest.Mock)
-        .mockReturnValueOnce(true)
-        .mockReturnValueOnce(false);
+    test('ticker with exchange ranks higher', () => {
       (mockExchangeRepo.has as jest.Mock)
         .mockReturnValueOnce(true)
         .mockReturnValueOnce(false);
 
       const result = ranker.rankTvTickers(['A', 'B']);
       expect(result[0].ticker).toBe('A');
-      expect(result[0].hasSequence).toBe(true);
       expect(result[0].hasExchange).toBe(true);
     });
 
-    test('fallback ordering when no alerts — uses watchlist, recent, sequence, exchange', () => {
+    test('fallback ordering when no alerts — uses watchlist, recent, exchange', () => {
       // No alerts for either
       (mockWatchManager.isWatched as jest.Mock)
         .mockReturnValueOnce(false)

@@ -74,8 +74,8 @@ export class PairManager implements IPairManager {
    * @param symbolManager Manager for symbol mappings
    * @param watchManager Manager for watchlist operations
    * @param flagManager Manager for flag operations
-    * @param alertFeedManager Manager for alert feed operations
-    * @param exchangeRepo Repository for exchange operations
+   * @param alertFeedManager Manager for alert feed operations
+   * @param exchangeRepo Repository for exchange operations
    * @param alertRepo Repository for alert operations
    * @param investingClient Client for Investing.com alert deletion
    */

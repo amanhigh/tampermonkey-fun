@@ -256,7 +256,7 @@ export class Factory {
     sequence: (): ISequenceManager =>
       Factory.getInstance(
         'sequenceManager',
-        () => new SequenceManager(Factory.repo.sequence(), Factory.manager.ticker())
+        () => new SequenceManager(Factory.client.ticker(), Factory.manager.ticker())
       ),
 
     paint: (): IPaintManager => Factory.getInstance('paintManager', () => new PaintManager()),
@@ -298,7 +298,6 @@ export class Factory {
             Factory.manager.watch(),
             Factory.manager.flag(),
             Factory.manager.alertFeed(),
-            Factory.repo.sequence(),
             Factory.repo.exchange(),
             Factory.repo.alert(),
             Factory.client.investing()
@@ -338,7 +337,6 @@ export class Factory {
             alertRepo: Factory.repo.alert(),
             watchManager: Factory.manager.watch(),
             recentManager: Factory.manager.recent(),
-            sequenceRepo: Factory.repo.sequence(),
             exchangeRepo: Factory.repo.exchange(),
             pairRepo: Factory.repo.pair(),
             symbolManager: Factory.manager.symbol(),
@@ -391,13 +389,6 @@ export class Factory {
       Factory.getInstance(
         'auditPlugin_orphanAlerts',
         () => new OrphanAlertsPlugin(Factory.repo.alert(), Factory.repo.pair())
-      ),
-
-    // Return a singleton OrphanSequencesPlugin instance
-    orphanSequences: () =>
-      Factory.getInstance(
-        'auditPlugin_orphanSequences',
-        () => new OrphanSequencesPlugin(Factory.repo.sequence(), Factory.repo.ticker(), Factory.manager.symbol())
       ),
 
     // Return a singleton OrphanFlagsPlugin instance
@@ -488,18 +479,6 @@ export class Factory {
           )
       ),
 
-    // Orphan Sequences Audit Section (FR-011)
-    orphanSequencesSection: () =>
-      Factory.getInstance(
-        'orphanSequencesSection',
-        () =>
-          new OrphanSequencesSection(
-            Factory.audit.orphanSequences(),
-            Factory.handler.ticker(),
-            Factory.manager.sequence()
-          )
-      ),
-
     // Orphan Flags Audit Section (FR-012)
     orphanFlagsSection: () =>
       Factory.getInstance(
@@ -567,7 +546,6 @@ export class Factory {
         reg.registerSection(Factory.audit.gttSection());
         reg.registerSection(Factory.audit.orphanAlertsSection());
         reg.registerSection(Factory.audit.integritySection());
-        reg.registerSection(Factory.audit.orphanSequencesSection());
         reg.registerSection(Factory.audit.orphanFlagsSection());
         reg.registerSection(Factory.audit.orphanExchangeSection());
         reg.registerSection(Factory.audit.duplicatePairIdsSection());

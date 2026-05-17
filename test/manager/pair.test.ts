@@ -5,7 +5,6 @@ import { ISymbolManager } from '../../src/manager/symbol';
 import { IWatchManager } from '../../src/manager/watch';
 import { IFlagManager } from '../../src/manager/flag';
 import { IAlertFeedManager } from '../../src/manager/alertfeed';
-import { ISequenceRepo } from '../../src/repo/sequence';
 import { IExchangeRepo } from '../../src/repo/exchange';
 import { IAlertRepo } from '../../src/repo/alert';
 import { IInvestingClient } from '../../src/client/investing';
@@ -27,7 +26,6 @@ describe('PairManager', () => {
   let mockWatchManager: jest.Mocked<IWatchManager>;
   let mockFlagManager: jest.Mocked<IFlagManager>;
   let mockAlertFeedManager: jest.Mocked<IAlertFeedManager>;
-  let mockSequenceRepo: jest.Mocked<ISequenceRepo>;
   let mockExchangeRepo: jest.Mocked<IExchangeRepo>;
   let mockAlertRepo: jest.Mocked<IAlertRepo>;
   let mockInvestingClient: jest.Mocked<IInvestingClient>;
@@ -76,10 +74,6 @@ describe('PairManager', () => {
       createAlertFeedEvent: jest.fn(),
     } as unknown as jest.Mocked<IAlertFeedManager>;
 
-    mockSequenceRepo = {
-      delete: jest.fn(),
-    } as unknown as jest.Mocked<ISequenceRepo>;
-
     mockExchangeRepo = {
       delete: jest.fn(),
     } as unknown as jest.Mocked<IExchangeRepo>;
@@ -99,7 +93,6 @@ describe('PairManager', () => {
       mockWatchManager,
       mockFlagManager,
       mockAlertFeedManager,
-      mockSequenceRepo,
       mockExchangeRepo,
       mockAlertRepo,
       mockInvestingClient
@@ -239,7 +232,6 @@ describe('PairManager', () => {
       expect(mockFlagManager.evictTicker).toHaveBeenCalledWith(tvTicker);
       expect(mockSymbolManager.removeTvToInvestingMapping).toHaveBeenCalledWith(investingTicker);
       expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith(tvTicker);
-      expect(mockSequenceRepo.delete).toHaveBeenCalledWith(tvTicker);
       expect(mockExchangeRepo.delete).toHaveBeenCalledWith(tvTicker);
       expect(result).toBe(true);
     });
@@ -254,7 +246,6 @@ describe('PairManager', () => {
       expect(mockWatchManager.evictTicker).not.toHaveBeenCalled();
       expect(mockFlagManager.evictTicker).not.toHaveBeenCalled();
       expect(mockAlertFeedManager.createAlertFeedEvent).not.toHaveBeenCalled();
-      expect(mockSequenceRepo.delete).not.toHaveBeenCalled();
       expect(mockExchangeRepo.delete).not.toHaveBeenCalled();
 
       expect(mockPairRepo.delete).toHaveBeenCalledWith(investingTicker);
@@ -355,7 +346,6 @@ describe('PairManager', () => {
       expect(mockWatchManager.evictTicker).toHaveBeenCalledWith(tvTicker);
       expect(mockFlagManager.evictTicker).toHaveBeenCalledWith(tvTicker);
       expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith(tvTicker);
-      expect(mockSequenceRepo.delete).toHaveBeenCalledWith(tvTicker);
       expect(mockExchangeRepo.delete).toHaveBeenCalledWith(tvTicker);
       expect(result).toBe(true);
     });

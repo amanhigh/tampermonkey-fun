@@ -39,7 +39,7 @@ describe('DuplicatePairIdsSection', () => {
     mockPairManager = { removePairByInvestingTicker: jest.fn() };
     mockCanonicalRanker = {
       rankInvestingTickers: jest.fn().mockImplementation((tickers: string[]) =>
-        tickers.map((t, i) => ({ ticker: t, alertCount: 0, isWatched: false, recentTimestamp: 0, hasSequence: false, hasExchange: false, hasPairMapping: true, score: tickers.length - i }))
+        tickers.map((t, i) => ({ ticker: t, alertCount: 0, isWatched: false, isRecent: false, hasExchange: false, hasPairMapping: true, score: tickers.length - i }))
       ),
     };
 

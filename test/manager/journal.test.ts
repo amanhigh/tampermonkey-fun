@@ -34,15 +34,10 @@ describe('JournalManager', () => {
 
     // Mock SequenceManager
     mockSequenceManager = {
-      getCurrentSequence: jest.fn().mockReturnValue(SequenceType.MWD),
-      flipSequence: jest.fn(),
+      getCurrentSequence: jest.fn().mockResolvedValue(SequenceType.MWD),
+      flipSequence: jest.fn().mockResolvedValue(undefined),
       sequenceToTimeFrameConfig: jest.fn(),
-      getSequence: jest.fn(),
-      applySequence: jest.fn(),
-      setSequence: jest.fn(),
-      freezeSequence: jest.fn(),
-      thawSequence: jest.fn(),
-      isFrozen: jest.fn(),
+      toggleFreezeSequence: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<ISequenceManager>;
 
     // Mock JournalClient
@@ -78,7 +73,7 @@ describe('JournalManager', () => {
 
     // Mock TimeFrameManager
     mockTimeFrameManager = {
-      applyTimeFrame: jest.fn().mockReturnValue(true),
+      applyTimeFrame: jest.fn().mockResolvedValue(true),
       getCurrentTimeFrameConfig: jest.fn().mockReturnValue(mockTimeFrameConfig),
     } as unknown as jest.Mocked<ITimeFrameManager>;
 
@@ -115,7 +110,7 @@ describe('JournalManager', () => {
 
   describe('createJournal', () => {
     it('should create journal with screenshots mapped to API timeframes', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
 
       const input = {
         ticker: 'TCS',
@@ -149,7 +144,7 @@ describe('JournalManager', () => {
     });
 
     it('should parse reason tags with override', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.YR);
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.YR);
 
       const input = {
         ticker: 'HGS',
@@ -171,7 +166,7 @@ describe('JournalManager', () => {
     });
 
     it('should handle screenshots without reason', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
 
       const input = {
         ticker: 'AAPL',
@@ -193,7 +188,7 @@ describe('JournalManager', () => {
     });
 
     it('should create TAKEN setup journal with markdown note', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
 
       await journalManager.createJournal({
         ticker: 'AAPL',
@@ -228,7 +223,7 @@ describe('JournalManager', () => {
     });
 
     it('should return created journal record', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       const mockRecord = {
         id: 'jrn_456',
         ticker: 'INFY',
@@ -253,7 +248,7 @@ describe('JournalManager', () => {
     });
 
     it('should propagate client errors', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockJournalClient.createJournal.mockRejectedValue(new Error('journal api error'));
 
       await expect(
@@ -276,7 +271,7 @@ describe('JournalManager', () => {
     });
 
     it('should resolve MWD to TMN, MN, WK, D and call screenshot four times', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockSequenceManager.sequenceToTimeFrameConfig.mockImplementation((sequence, position) => {
         const configs: Record<string, TimeFrameConfig[]> = {
           MWD: [
@@ -365,7 +360,7 @@ describe('JournalManager', () => {
     });
 
     it('should resolve YR to SMN, TMN, MN, WK and preserve returned metadata', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.YR);
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.YR);
       mockSequenceManager.sequenceToTimeFrameConfig.mockImplementation((sequence, position) => {
         const configs: Record<string, TimeFrameConfig[]> = {
           MWD: [
@@ -441,7 +436,7 @@ describe('JournalManager', () => {
     });
 
     it('should abort when screenshot fails', async () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(new TimeFrameConfig('TMN', 't', 5));
       (mockOsClient as any).screenshot.mockRejectedValue(new Error('screenshot failed'));
 

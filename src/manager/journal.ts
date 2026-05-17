@@ -181,7 +181,7 @@ export class JournalManager implements IJournalManager {
     const screenshotType = type.toLowerCase();
 
     for (const position of [0, 1, 2, 3]) {
-      this.timeframeManager.applyTimeFrame(position);
+      await this.timeframeManager.applyTimeFrame(position);
       const config = this.sequenceManager.sequenceToTimeFrameConfig(sequence, position);
       const timeframe = config.symbol;
       const order = position + 1;

@@ -39,9 +39,6 @@ export const Constants = Object.freeze({
       /** GTT unwatched audit plugin & section - identifies and displays unwatched GTT orders */
       GTT_UNWATCHED: 'gtt-unwatched',
 
-      /** Orphan sequences audit plugin - identifies sequence entries without corresponding tickers */
-      ORPHAN_SEQUENCES: 'orphan-sequences',
-
       /** Orphan flags audit plugin - identifies flag entries without corresponding tickers */
       ORPHAN_FLAGS: 'orphan-flags',
 

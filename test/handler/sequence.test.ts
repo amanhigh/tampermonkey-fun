@@ -23,9 +23,10 @@ describe('SequenceHandler', () => {
 
   beforeEach(() => {
     mockSequenceManager = {
-      getCurrentSequence: jest.fn(),
-      flipSequence: jest.fn(),
-      toggleFreezeSequence: jest.fn(),
+      getCurrentSequence: jest.fn().mockResolvedValue(SequenceType.MWD),
+      flipSequence: jest.fn().mockResolvedValue(undefined),
+      sequenceToTimeFrameConfig: jest.fn(),
+      toggleFreezeSequence: jest.fn().mockResolvedValue(undefined),
     } as any;
 
     mockTickerManager = {
@@ -56,41 +57,65 @@ describe('SequenceHandler', () => {
   });
 
   describe('displaySequence', () => {
-    it('should display ticker:sequence when ticker is not mapped', () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+    it('should display ticker:sequence when ticker is not mapped', async () => {
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockTickerManager.getTicker.mockReturnValue('TVTICKER');
       mockSymbolManager.tvToInvesting.mockReturnValue(null);
 
-      sequenceHandler.displaySequence();
+      await sequenceHandler.displaySequence();
 
       expect(mockDisplayInput.val).toHaveBeenCalledWith('TVTICKER:MWD');
       expect(mockDisplayInput.css).toHaveBeenCalledWith('background-color', 'maroon');
     });
 
-    it('should display ticker:sequence:PairName when ticker is mapped with pair name', () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.YR);
+    it('should display ticker:sequence:PairName when ticker is mapped with pair name', async () => {
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.YR);
       mockTickerManager.getTicker.mockReturnValue('TVTICKER');
       mockSymbolManager.tvToInvesting.mockReturnValue('INVESTINGTICKER');
       mockPairManager.investingTickerToPairInfo.mockReturnValue(
         new PairInfo('NIFTY 50', '123', 'NSE', 'NIFTY')
       );
 
-      sequenceHandler.displaySequence();
+      await sequenceHandler.displaySequence();
 
       expect(mockDisplayInput.val).toHaveBeenCalledWith('INVESTINGTICKER:YR:NIFTY 50');
       expect(mockDisplayInput.css).toHaveBeenCalledWith('background-color', 'blue');
     });
 
-    it('should display ticker:sequence when ticker is mapped but no pair name', () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+    it('should display ticker:sequence when ticker is mapped but no pair name', async () => {
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockTickerManager.getTicker.mockReturnValue('TVTICKER');
       mockSymbolManager.tvToInvesting.mockReturnValue('INVESTINGTICKER');
       mockPairManager.investingTickerToPairInfo.mockReturnValue(null);
 
-      sequenceHandler.displaySequence();
+      await sequenceHandler.displaySequence();
 
       expect(mockDisplayInput.val).toHaveBeenCalledWith('INVESTINGTICKER:MWD');
       expect(mockDisplayInput.css).toHaveBeenCalledWith('background-color', 'black');
+    });
+  });
+
+  describe('handleSequenceSwitch', () => {
+    it('should flip sequence and display', async () => {
+      mockSequenceManager.flipSequence.mockResolvedValue(undefined);
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
+      mockTickerManager.getTicker.mockReturnValue('TVTICKER');
+      mockSymbolManager.tvToInvesting.mockReturnValue(null);
+
+      await sequenceHandler.handleSequenceSwitch();
+
+      expect(mockSequenceManager.flipSequence).toHaveBeenCalled();
+      expect(mockDisplayInput.val).toHaveBeenCalled();
+    });
+  });
+
+  describe('toggleFreezeSequence', () => {
+    it('should delegate to sequence manager', async () => {
+      mockSequenceManager.toggleFreezeSequence.mockResolvedValue(undefined);
+
+      await sequenceHandler.toggleFreezeSequence();
+
+      expect(mockSequenceManager.toggleFreezeSequence).toHaveBeenCalled();
     });
   });
 });

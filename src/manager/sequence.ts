@@ -76,16 +76,13 @@ export class SequenceManager implements ISequenceManager {
     }
 
     const ticker = this.tickerManager.getTicker();
-    const exchange = this.tickerManager.getCurrentExchange();
 
     try {
       const record = await this.tickerClient.getTicker(ticker);
-      return record.timeframes.includes('DL' as TickerTimeframe)
-        ? SequenceType.MWD
-        : SequenceType.YR;
+      return record.timeframes.includes('DL' as TickerTimeframe) ? SequenceType.MWD : SequenceType.YR;
     } catch {
-      // Fall back to exchange default when backend read fails
-      return this._getDefaultSequence(exchange);
+      // Default to MWD when backend read fails
+      return SequenceType.MWD;
     }
   }
 
@@ -135,15 +132,5 @@ export class SequenceManager implements ISequenceManager {
       this._frozenSequence = await this.getCurrentSequence();
       Notifier.message(`FreezeSequence: ${this._frozenSequence}`, Color.ROYAL_BLUE);
     }
-  }
-
-  /**
-   * Get default sequence based on exchange
-   * @private
-   * @param exchange Exchange identifier
-   * @returns Default sequence (MWD or YR)
-   */
-  private _getDefaultSequence(exchange: string): SequenceType {
-    return exchange === Constants.EXCHANGE.TYPES.NSE ? SequenceType.MWD : SequenceType.YR;
   }
 }
