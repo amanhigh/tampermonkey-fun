@@ -1,5 +1,6 @@
 import { BaseClient, IBaseClient } from './base';
-import { JournalApiTimeframe, KohanEnvelope, ScreenshotRequest, ScreenshotResponse } from '../models/kohan';
+import { JournalApiTimeframe, KohanEnvelope } from '../models/journal';
+import { ScreenshotRequest, ScreenshotResponse } from '../models/os';
 import { Constants } from '../models/constant';
 
 /**

@@ -9,7 +9,7 @@ import {
   KohanEnvelope,
   UpdateJournalStatusRequest,
   UpdateJournalStatusResponse,
-} from '../models/kohan';
+} from '../models/journal';
 import { Constants } from '../models/constant';
 
 /**

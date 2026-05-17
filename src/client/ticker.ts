@@ -7,7 +7,7 @@ import {
   TickerRecord,
   TickerUpdateRequest,
 } from '../models/ticker';
-import { KohanEnvelope } from '../models/kohan';
+import { KohanEnvelope } from '../models/journal';
 import { Constants } from '../models/constant';
 
 /**

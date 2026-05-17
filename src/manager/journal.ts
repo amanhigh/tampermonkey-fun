@@ -11,8 +11,8 @@ import {
   JournalApiTimeframe,
   JournalRecord,
   JournalResultStatus,
-  ScreenshotResponse,
-} from '../models/kohan';
+} from '../models/journal';
+import { ScreenshotResponse } from '../models/os';
 import { Constants } from '../models/constant';
 import { JournalOpenEvent } from '../models/events';
 

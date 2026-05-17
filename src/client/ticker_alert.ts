@@ -5,7 +5,7 @@ import {
   AlertTickerRecord,
   CreateAlertTickerRequest,
 } from '../models/alert_ticker';
-import { KohanEnvelope } from '../models/kohan';
+import { KohanEnvelope } from '../models/journal';
 import { Constants } from '../models/constant';
 
 /**

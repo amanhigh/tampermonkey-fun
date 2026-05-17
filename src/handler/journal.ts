@@ -14,7 +14,8 @@ import { ITradingViewManager } from '../manager/tv';
 import { IStyleManager } from '../manager/style';
 import { IAlertManager } from '../manager/alert';
 import { AlertClickAction, JournalOpenEvent } from '../models/events';
-import { CreateJournalNoteRequest, JournalResultStatus, ScreenshotResponse } from '../models/kohan';
+import { CreateJournalNoteRequest, JournalResultStatus } from '../models/journal';
+import { ScreenshotResponse } from '../models/os';
 
 /**
  * Interface for managing journal entry operations at UI/Event level
