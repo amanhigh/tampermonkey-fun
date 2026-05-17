@@ -1,11 +1,11 @@
 import { StaleReviewPlugin } from '../../src/manager/stale_review_plugin';
-import { IRecentTickerRepo } from '../../src/repo/recent';
+import { IRecentManager } from '../../src/manager/recent';
 import { ITickerRepo } from '../../src/repo/ticker';
 import { IWatchManager } from '../../src/manager/watch';
 
 describe('StaleReviewPlugin', () => {
   let plugin: StaleReviewPlugin;
-  let mockRecentRepo: Partial<IRecentTickerRepo>;
+  let mockRecentManager: Partial<IRecentManager>;
   let mockTickerRepo: Partial<ITickerRepo>;
   let mockWatchManager: Partial<IWatchManager>;
 
@@ -13,12 +13,12 @@ describe('StaleReviewPlugin', () => {
   const now = Date.now();
 
   beforeEach(() => {
-    mockRecentRepo = { get: jest.fn().mockReturnValue(undefined) };
+    mockRecentManager = { getLastOpenedTimestamp: jest.fn().mockReturnValue(0) };
     mockTickerRepo = { getAllKeys: jest.fn().mockReturnValue([]) };
     mockWatchManager = { isWatched: jest.fn().mockReturnValue(false) };
 
     plugin = new StaleReviewPlugin(
-      mockRecentRepo as IRecentTickerRepo,
+      mockRecentManager as IRecentManager,
       mockTickerRepo as ITickerRepo,
       mockWatchManager as IWatchManager
     );

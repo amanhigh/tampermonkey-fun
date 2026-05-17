@@ -64,6 +64,14 @@ export interface ITickerClient extends IBaseClient {
    */
   listTickers(params: TickerQueryParams): Promise<TickerListResponse>;
 
+  /**
+   * List ALL tickers matching filters, auto-paginating through all pages.
+   * Backend enforces limit=100 max per page; this method handles the loop.
+   * @param params - Query parameters (offset/limit are overridden)
+   * @returns Promise resolving with all matching ticker records
+   */
+  listAllTickers(params: TickerQueryParams): Promise<TickerRecord[]>;
+
   // ── Alert Ticker APIs (2.2.2) ──
 
   /**
@@ -180,6 +188,29 @@ export class TickerClient extends BaseClient implements ITickerClient {
       return response.data;
     } catch (error) {
       throw new Error(`Failed to list tickers: ${(error as Error).message}`);
+    }
+  }
+
+  /** @inheritdoc */
+  async listAllTickers(params: TickerQueryParams): Promise<TickerRecord[]> {
+    const limit = 100;
+    let offset = 0;
+    let total = 0;
+    const all: TickerRecord[] = [];
+
+    try {
+      do {
+        const query = this.buildTickerQuery({ ...params, limit, offset });
+        const response = await this.makeRequest<KohanEnvelope<TickerListResponse>>(`/tickers?${query.toString()}`);
+        const data = response.data;
+        all.push(...data.tickers);
+        total = data.metadata.total;
+        offset += limit;
+      } while (offset < total);
+
+      return all;
+    } catch (error) {
+      throw new Error(`Failed to list all tickers: ${(error as Error).message}`);
     }
   }
 

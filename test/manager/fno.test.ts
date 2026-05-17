@@ -1,23 +1,20 @@
 import { FnoManager, IFnoManager } from '../../src/manager/fno';
 import { ITickerClient } from '../../src/client/ticker';
-import { TickerListResponse } from '../../src/models/ticker';
+import { TickerRecord } from '../../src/models/ticker';
 
 describe('FnoManager', () => {
   let fnoManager: IFnoManager;
   let mockClient: jest.Mocked<ITickerClient>;
 
-  const mockTickerListResponse: TickerListResponse = {
-    tickers: [
-      { ticker: 'NIFTY', is_fno: true, exchange: 'NSE', timeframes: ['MN', 'WK', 'DL'], type: 'INDEX', state: 'WATCHED', trend: 'UPTREND', last_opened_at: '2026-05-05T10:30:00Z', created_at: '2026-05-05T10:30:00Z', updated_at: '2026-05-05T10:30:00Z' },
-      { ticker: 'BANKNIFTY', is_fno: true, exchange: 'NSE', timeframes: ['MN', 'WK', 'DL'], type: 'INDEX', state: 'WATCHED', trend: 'SIDEWAYS', last_opened_at: '2026-05-05T10:30:00Z', created_at: '2026-05-05T10:30:00Z', updated_at: '2026-05-05T10:30:00Z' },
-      { ticker: 'RELIANCE', is_fno: true, exchange: 'NSE', timeframes: ['MN', 'WK', 'DL'], type: 'EQUITY', state: 'WATCHED', trend: 'UPTREND', last_opened_at: '2026-05-05T10:30:00Z', created_at: '2026-05-05T10:30:00Z', updated_at: '2026-05-05T10:30:00Z' },
-    ],
-    metadata: { total: 3, offset: 0, limit: 500 },
-  };
+  const mockFnoTickers: TickerRecord[] = [
+    { ticker: 'NIFTY', is_fno: true, exchange: 'NSE', timeframes: ['MN', 'WK', 'DL'], type: 'INDEX', state: 'WATCHED', trend: 'UPTREND', last_opened_at: '2026-05-05T10:30:00Z', created_at: '2026-05-05T10:30:00Z', updated_at: '2026-05-05T10:30:00Z' },
+    { ticker: 'BANKNIFTY', is_fno: true, exchange: 'NSE', timeframes: ['MN', 'WK', 'DL'], type: 'INDEX', state: 'WATCHED', trend: 'SIDEWAYS', last_opened_at: '2026-05-05T10:30:00Z', created_at: '2026-05-05T10:30:00Z', updated_at: '2026-05-05T10:30:00Z' },
+    { ticker: 'RELIANCE', is_fno: true, exchange: 'NSE', timeframes: ['MN', 'WK', 'DL'], type: 'EQUITY', state: 'WATCHED', trend: 'UPTREND', last_opened_at: '2026-05-05T10:30:00Z', created_at: '2026-05-05T10:30:00Z', updated_at: '2026-05-05T10:30:00Z' },
+  ];
 
   beforeEach(() => {
     mockClient = {
-      listTickers: jest.fn().mockResolvedValue(mockTickerListResponse),
+      listAllTickers: jest.fn().mockResolvedValue(mockFnoTickers),
     } as unknown as jest.Mocked<ITickerClient>;
 
     fnoManager = new FnoManager(mockClient);
