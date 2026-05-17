@@ -8,7 +8,6 @@ import { ISyncUtil } from '../util/sync';
 import { IWatchManager } from '../manager/watch';
 import { IAlertFeedManager } from '../manager/alertfeed';
 import { ITradingViewScreenerManager } from '../manager/screener';
-import { Constants } from '../models/constant';
 
 export interface ITickerChangeHandler {
   onTickerChange(): void;
@@ -51,13 +50,11 @@ export class TickerChangeHandler implements ITickerChangeHandler {
 
   private recordRecentTicker(): void {
     const tvTicker = this.tickerManager.getTicker();
-    if (!this.recentManager.isRecent(tvTicker, Constants.RECENT_CUTOFF_MS)) {
-      this.recentManager.markRecent(tvTicker);
+    this.recentManager.markRecent(tvTicker);
 
-      // Paint if TV ticker is not in watchlist
-      if (!this.watchManager.isWatched(tvTicker)) {
-        void this.alertFeedManager.createAlertFeedEvent(tvTicker);
-      }
+    // Paint if TV ticker is not in watchlist
+    if (!this.watchManager.isWatched(tvTicker)) {
+      void this.alertFeedManager.createAlertFeedEvent(tvTicker);
     }
   }
 }
