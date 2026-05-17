@@ -3,6 +3,7 @@ import { InvestingClient, IInvestingClient } from '../client/investing';
 import { IImdbHandler, ImdbHandler } from '../handler/imdb';
 import { KiteClient, IKiteClient } from '../client/kite';
 import { KohanClient, IKohanClient } from '../client/kohan';
+import { TickerClient, ITickerClient } from '../client/ticker';
 import { UIUtil, IUIUtil } from '../util/ui';
 import { ObserveUtil, IObserveUtil } from '../util/observer';
 import { SearchUtil, ISearchUtil } from '../util/search';
@@ -157,6 +158,7 @@ export class Factory {
     investing: (): IInvestingClient => Factory.getInstance('investingClient', () => new InvestingClient()),
     kite: (): IKiteClient => Factory.getInstance('kiteClient', () => new KiteClient()),
     kohan: (): IKohanClient => Factory.getInstance('kohanClient', () => new KohanClient()),
+    ticker: (): ITickerClient => Factory.getInstance('tickerClient', () => new TickerClient()),
   };
 
   /**

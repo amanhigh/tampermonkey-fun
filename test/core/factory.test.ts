@@ -40,3 +40,49 @@ describe('Factory Integration - Cyclic Dependency Detection', () => {
     expect(() => Factory.app.barkat()).not.toThrow();
   });
 });
+
+describe('Factory Client Providers', () => {
+  beforeEach(() => {
+    (Factory as any).instances = {};
+  });
+
+  it('should provide singleton InvestingClient', () => {
+    const investing = Factory.client.investing();
+    expect(investing).toBeDefined();
+    expect(investing.getBaseUrl()).toBe('https://in.investing.com');
+
+    // Verify singleton behavior
+    const investingAgain = Factory.client.investing();
+    expect(investing).toBe(investingAgain);
+  });
+
+  it('should provide singleton KiteClient', () => {
+    const kite = Factory.client.kite();
+    expect(kite).toBeDefined();
+    expect(kite.getBaseUrl()).toBe('https://kite.zerodha.com/oms/gtt');
+
+    // Verify singleton behavior
+    const kiteAgain = Factory.client.kite();
+    expect(kite).toBe(kiteAgain);
+  });
+
+  it('should provide singleton KohanClient', () => {
+    const kohan = Factory.client.kohan();
+    expect(kohan).toBeDefined();
+    expect(kohan.getBaseUrl()).toBe('http://localhost:9010/v1/api');
+
+    // Verify singleton behavior
+    const kohanAgain = Factory.client.kohan();
+    expect(kohan).toBe(kohanAgain);
+  });
+
+  it('should provide singleton TickerClient', () => {
+    const ticker = Factory.client.ticker();
+    expect(ticker).toBeDefined();
+    expect(ticker.getBaseUrl()).toBe('http://localhost:9010/v1/api');
+
+    // Verify singleton behavior
+    const tickerAgain = Factory.client.ticker();
+    expect(ticker).toBe(tickerAgain);
+  });
+});
