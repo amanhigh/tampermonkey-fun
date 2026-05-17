@@ -1,4 +1,5 @@
 import { JournalHandler } from '../../src/handler/journal';
+import { IOsClient } from '../../src/client/os';
 import { IJournalManager } from '../../src/manager/journal';
 import { ISmartPrompt } from '../../src/util/smart';
 import { IUIUtil } from '../../src/util/ui';

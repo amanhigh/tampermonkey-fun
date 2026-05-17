@@ -36,15 +36,6 @@ export interface IJournalManager {
   screenshotTicker(ticker: string, type: string): Promise<ScreenshotResponse[]>;
 
   /**
-   * Captures a single region screenshot for the trade checklist image.
-   * Uses the top timeframe config for image metadata but labels the file as checklist.
-   * @param ticker Trading symbol to capture
-   * @param type Screenshot purpose/type used in filenames
-   * @returns Promise resolving with checklist screenshot metadata
-   */
-  screenshotChecklist(ticker: string, type: string): Promise<ScreenshotResponse>;
-
-  /**
    * Finds the latest TAKEN/RUNNING journal for a ticker.
    * @param ticker Trading symbol to search for
    * @returns Promise resolving with the running journal or null if none found
@@ -208,27 +199,6 @@ export class JournalManager implements IJournalManager {
     }
 
     return screenshots;
-  }
-
-  /** @inheritdoc */
-  public async screenshotChecklist(ticker: string, type: string): Promise<ScreenshotResponse> {
-    const screenshotType = type.toLowerCase();
-
-    // Use DL timeframe for checklist image metadata
-    const timeframe = 'DL' as JournalApiTimeframe;
-
-    // Build filename: TICKER_YYYYMMDD_HHMM_checklist_type.png
-    const fileName = `${ticker.toUpperCase()}_${this.getScreenshotTimestamp()}_checklist_${screenshotType}.png`;
-
-    const screenshot = await this.osClient.screenshot({
-      file_name: fileName,
-      directory_type: 'JOURNAL',
-      type: 'REGION',
-      notify: false,
-    });
-
-    screenshot.timeframe = timeframe as JournalApiTimeframe;
-    return screenshot;
   }
 
   /** @inheritdoc */

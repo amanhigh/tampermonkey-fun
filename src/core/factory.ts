@@ -764,6 +764,7 @@ export class Factory {
         () =>
           new JournalHandler(
             Factory.manager.ticker() as TickerManager,
+            Factory.client.os(),
             Factory.manager.journal(),
             Factory.util.smart(),
             Factory.util.ui(),

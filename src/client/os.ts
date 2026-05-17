@@ -1,5 +1,5 @@
 import { BaseClient, IBaseClient } from './base';
-import { KohanEnvelope, ScreenshotRequest, ScreenshotResponse } from '../models/kohan';
+import { JournalApiTimeframe, KohanEnvelope, ScreenshotRequest, ScreenshotResponse } from '../models/kohan';
 import { Constants } from '../models/constant';
 
 /**
@@ -13,6 +13,15 @@ export interface IOsClient extends IBaseClient {
    * @returns Promise resolving with captured screenshot metadata
    */
   screenshot(request: ScreenshotRequest): Promise<ScreenshotResponse>;
+
+  /**
+   * Captures a REGION screenshot for trade checklist images.
+   * Builds a timestamped filename and labels the image with DL timeframe metadata.
+   * @param ticker - Trading symbol to capture
+   * @param type - Screenshot purpose/type used in filenames (e.g. 'set')
+   * @returns Promise resolving with checklist screenshot metadata
+   */
+  screenshotRegion(ticker: string, type: string): Promise<ScreenshotResponse>;
 
   /**
    * Retrieve clipboard data from the OS API.
@@ -57,6 +66,26 @@ export class OsClient extends BaseClient implements IOsClient {
     } catch (error) {
       throw new Error(`Failed to take journal screenshots: ${(error as Error).message}`);
     }
+  }
+
+  /** @inheritdoc */
+  async screenshotRegion(ticker: string, type: string): Promise<ScreenshotResponse> {
+    const screenshotType = type.toLowerCase();
+    const timeframe = 'DL' as JournalApiTimeframe;
+    const now = new Date();
+    const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    const time = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+    const timestamp = `${date}_${time}`;
+    const fileName = `${ticker.toUpperCase()}_${timestamp}_checklist_${screenshotType}.png`;
+
+    const screenshot = await this.screenshot({
+      file_name: fileName,
+      directory_type: 'JOURNAL',
+      type: 'REGION',
+      notify: false,
+    });
+    screenshot.timeframe = timeframe;
+    return screenshot;
   }
 
   /** @inheritdoc */
