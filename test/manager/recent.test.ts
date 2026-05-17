@@ -1,6 +1,7 @@
 import { RecentManager, IRecentManager } from '../../src/manager/recent';
 import { ITickerClient } from '../../src/client/ticker';
 import { TickerRecord } from '../../src/models/ticker';
+import { Constants } from '../../src/models/constant';
 
 describe('RecentManager', () => {
   let recentManager: IRecentManager;
@@ -41,7 +42,7 @@ describe('RecentManager', () => {
     it('should add ticker to cache and fire backend patch', () => {
       const ticker = 'RELIANCE';
       recentManager.markRecent(ticker);
-      expect(recentManager.isRecent(ticker)).toBe(true);
+      expect(recentManager.isRecent(ticker, Constants.RECENT_CUTOFF_MS)).toBe(true);
       expect(mockClient.patchTickerLastOpened).toHaveBeenCalledWith(ticker, {
         last_opened_at: expect.any(String),
       });
@@ -50,7 +51,7 @@ describe('RecentManager', () => {
     it('should handle empty ticker string', () => {
       const ticker = '';
       recentManager.markRecent(ticker);
-      expect(recentManager.isRecent(ticker)).toBe(true);
+      expect(recentManager.isRecent(ticker, Constants.RECENT_CUTOFF_MS)).toBe(true);
     });
 
     it('should handle multiple tickers', () => {
@@ -61,31 +62,27 @@ describe('RecentManager', () => {
   });
 
   describe('isRecent', () => {
-    it('should return true when ticker exists in cache', () => {
+    it('should return true when ticker was marked within cutOffPeriod', () => {
       recentManager.markRecent('TCS');
-      expect(recentManager.isRecent('TCS')).toBe(true);
+      expect(recentManager.isRecent('TCS', Constants.RECENT_CUTOFF_MS)).toBe(true);
+    });
+
+    it('should return true with very large cutOffPeriod (effectively always)', () => {
+      recentManager.markRecent('TCS');
+      expect(recentManager.isRecent('TCS', Number.MAX_SAFE_INTEGER)).toBe(true);
     });
 
     it('should return false when ticker does not exist in cache', () => {
-      expect(recentManager.isRecent('UNKNOWN')).toBe(false);
+      expect(recentManager.isRecent('UNKNOWN', Constants.RECENT_CUTOFF_MS)).toBe(false);
     });
 
     it('should return false for empty ticker string when not cached', () => {
-      expect(recentManager.isRecent('')).toBe(false);
+      expect(recentManager.isRecent('', Constants.RECENT_CUTOFF_MS)).toBe(false);
     });
 
-    it('should return false when ticker timestamp is older than sinceMs cutoff', () => {
-      recentManager.markRecent('OLD');
-      const recentTimestamp = Date.now();
-      // Use a cutoff in the future so the ticker appears stale
-      expect(recentManager.isRecent('OLD', { sinceMs: recentTimestamp + 10000 })).toBe(false);
-    });
-
-    it('should return true when ticker timestamp is newer than sinceMs cutoff', () => {
-      recentManager.markRecent('FRESH');
-      const recentTimestamp = Date.now();
-      // Use a cutoff in the past so the ticker appears recent
-      expect(recentManager.isRecent('FRESH', { sinceMs: recentTimestamp - 10000 })).toBe(true);
+    it('should return false for negative cutOffPeriod (impossible window)', () => {
+      recentManager.markRecent('NOW');
+      expect(recentManager.isRecent('NOW', -1)).toBe(false);
     });
   });
 
@@ -93,14 +90,14 @@ describe('RecentManager', () => {
     it('should handle backend listAllTickers failure gracefully', () => {
       mockClient.listAllTickers.mockRejectedValue(new Error('Backend unavailable'));
       const resilientManager = new RecentManager(mockClient);
-      expect(resilientManager.isRecent('RELIANCE')).toBe(false);
+      expect(resilientManager.isRecent('RELIANCE', Constants.RECENT_CUTOFF_MS)).toBe(false);
     });
 
     it('should handle patchTickerLastOpened failure gracefully', () => {
       mockClient.patchTickerLastOpened.mockRejectedValue(new Error('Patch failed'));
       const ticker = 'RELIANCE';
       expect(() => recentManager.markRecent(ticker)).not.toThrow();
-      expect(recentManager.isRecent(ticker)).toBe(true);
+      expect(recentManager.isRecent(ticker, Constants.RECENT_CUTOFF_MS)).toBe(true);
     });
   });
 });

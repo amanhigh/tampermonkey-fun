@@ -105,7 +105,7 @@ export class CanonicalRanker implements ICanonicalRanker {
       const tvTicker = this.symbolManager.investingToTv(investingTicker);
       const alertCount = this.getAlertCount(pairId);
       const isWatched = tvTicker ? this.watchManager.isWatched(tvTicker) : false;
-      const isRecent = tvTicker ? this.recentManager.isRecent(tvTicker) : false;
+      const isRecent = tvTicker ? this.recentManager.isRecent(tvTicker, Constants.RECENT_CUTOFF_MS) : false;
       const hasSequence = tvTicker ? this.sequenceRepo.has(tvTicker) : false;
       const hasExchange = tvTicker ? this.exchangeRepo.has(tvTicker) : false;
       const hasPairMapping = tvTicker !== null;
@@ -132,7 +132,7 @@ export class CanonicalRanker implements ICanonicalRanker {
       const pairId = pairInfo?.pairId;
       const alertCount = pairId ? this.getAlertCount(pairId) : 0;
       const isWatched = this.watchManager.isWatched(tvTicker);
-      const isRecent = this.recentManager.isRecent(tvTicker);
+      const isRecent = this.recentManager.isRecent(tvTicker, Constants.RECENT_CUTOFF_MS);
       const hasSequence = this.sequenceRepo.has(tvTicker);
       const hasExchange = this.exchangeRepo.has(tvTicker);
       const hasPairMapping = investingTicker !== null;

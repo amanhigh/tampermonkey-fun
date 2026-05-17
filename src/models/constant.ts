@@ -284,6 +284,9 @@ Support:
     PAGE_LIMIT: 100,
   },
 
+  // Recent ticker configuration
+  RECENT_CUTOFF_MS: 7 * 24 * 60 * 60 * 1000, // 7 days — default "recent" window,
+
   // Exchange and market related constants
   EXCHANGE: {
     TYPES: {

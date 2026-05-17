@@ -102,7 +102,7 @@ describe('AlertFeedManager', () => {
       });
       expect(mockSymbolManager.investingToTv).toHaveBeenCalledWith('TCS');
       expect(mockWatchManager.isWatched).toHaveBeenCalledWith('NSE:TCS');
-      expect(mockRecentManager.isRecent).toHaveBeenCalledWith('NSE:TCS');
+      expect(mockRecentManager.isRecent).toHaveBeenCalledWith('NSE:TCS', Constants.RECENT_CUTOFF_MS);
     });
 
     it('should return MAPPED state when ticker is mapped but not watched or recent', () => {
@@ -118,7 +118,7 @@ describe('AlertFeedManager', () => {
       });
       expect(mockSymbolManager.investingToTv).toHaveBeenCalledWith('HDFC');
       expect(mockWatchManager.isWatched).toHaveBeenCalledWith('NSE:HDFC');
-      expect(mockRecentManager.isRecent).toHaveBeenCalledWith('NSE:HDFC');
+      expect(mockRecentManager.isRecent).toHaveBeenCalledWith('NSE:HDFC', Constants.RECENT_CUTOFF_MS);
     });
   });
 
@@ -201,7 +201,7 @@ describe('AlertFeedManager', () => {
       expect(mockSymbolManager.tvToInvesting).toHaveBeenCalledWith(tvTicker);
       expect(mockSymbolManager.investingToTv).toHaveBeenCalledWith(investingTicker);
       expect(mockWatchManager.isWatched).toHaveBeenCalledWith(tvTicker);
-      expect(mockRecentManager.isRecent).toHaveBeenCalledWith(tvTicker);
+      expect(mockRecentManager.isRecent).toHaveBeenCalledWith(tvTicker, Constants.RECENT_CUTOFF_MS);
 
       // Verify event was stored
       expect(GM.setValue).toHaveBeenCalledTimes(1);

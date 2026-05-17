@@ -35,18 +35,15 @@ export class StaleReviewPlugin extends BaseAuditPlugin {
       throw new Error('Stale review audit does not support targeted mode');
     }
 
-    const now = Date.now();
-    const thresholdMs = this.thresholdDays * 24 * 60 * 60 * 1000;
-    const cutoff = now - thresholdMs;
-
     const results: AuditResult[] = [];
+    const cutOffPeriod = this.thresholdDays * 24 * 60 * 60 * 1000;
 
     this.tickerRepo.getAllKeys().forEach((tvTicker: string) => {
       if (this.watchManager.isWatched(tvTicker)) {
         return;
       }
 
-      const isStale = !this.recentManager.isRecent(tvTicker, { sinceMs: cutoff });
+      const isStale = !this.recentManager.isRecent(tvTicker, cutOffPeriod);
 
       if (isStale) {
         results.push({

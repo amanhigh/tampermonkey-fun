@@ -1,17 +1,6 @@
 import { ITickerClient } from '../client/ticker';
 
 /**
- * Options for isRecent lookup
- */
-export interface IsRecentOptions {
-  /**
-   * If set, ticker is only considered recent if its last-opened
-   * timestamp is more recent than this epoch-ms threshold.
-   */
-  sinceMs?: number;
-}
-
-/**
  * Interface for managing recent ticker data operations.
  * Backed by TickerClient — reads/writes TickerRecord.last_opened_at.
  */
@@ -23,11 +12,11 @@ export interface IRecentManager {
   markRecent(tvTicker: string): void;
 
   /**
-   * Check if ticker exists in recent list (sync, from cache).
+   * Check if ticker was opened within cutOffPeriod ms (sync, from cache).
    * @param tvTicker Ticker to check
-   * @param options Optional filter (e.g. sinceMs for stale cutoff)
+   * @param cutOffPeriod Max age in ms to be considered recent, e.g. 7 * 24 * 60 * 60 * 1000
    */
-  isRecent(tvTicker: string, options?: IsRecentOptions): boolean;
+  isRecent(tvTicker: string, cutOffPeriod: number): boolean;
 }
 
 /**
@@ -82,14 +71,11 @@ export class RecentManager implements IRecentManager {
   }
 
   /** @inheritdoc */
-  public isRecent(tvTicker: string, options?: IsRecentOptions): boolean {
+  public isRecent(tvTicker: string, cutOffPeriod: number): boolean {
     const timestamp = this.cache.get(tvTicker);
     if (timestamp === undefined) {
       return false;
     }
-    if (options?.sinceMs !== undefined) {
-      return timestamp > options.sinceMs;
-    }
-    return true;
+    return Date.now() - timestamp <= cutOffPeriod;
   }
 }
