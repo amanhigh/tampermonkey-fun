@@ -145,6 +145,7 @@ export class TickerClient extends BaseClient implements ITickerClient {
     let offset = 0;
     let total = 0;
     const all: TickerRecord[] = [];
+    // HACK: Generic pagination helper in BaseClient instead of copy/paste in each method that needs it ?
 
     try {
       do {
