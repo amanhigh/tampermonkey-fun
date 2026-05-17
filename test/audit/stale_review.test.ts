@@ -44,7 +44,7 @@ describe('StaleReviewPlugin', () => {
 
   test('flags tickers never opened as MEDIUM severity', async () => {
     (mockTickerRepo.getAllKeys as jest.Mock).mockReturnValue(['TCS', 'INFY']);
-    (mockRecentRepo.get as jest.Mock).mockReturnValue(undefined);
+    (mockRecentManager.getLastOpenedTimestamp as jest.Mock).mockReturnValue(undefined);
 
     const results = await plugin.run();
     expect(results).toHaveLength(2);
@@ -55,7 +55,7 @@ describe('StaleReviewPlugin', () => {
 
   test('flags tickers opened beyond threshold as MEDIUM severity', async () => {
     (mockTickerRepo.getAllKeys as jest.Mock).mockReturnValue(['OLD']);
-    (mockRecentRepo.get as jest.Mock).mockReturnValue(now - 200 * DAY_MS);
+    (mockRecentManager.getLastOpenedTimestamp as jest.Mock).mockReturnValue(now - 200 * DAY_MS);
 
     const results = await plugin.run();
     expect(results).toHaveLength(1);
@@ -65,7 +65,7 @@ describe('StaleReviewPlugin', () => {
 
   test('skips tickers opened within threshold', async () => {
     (mockTickerRepo.getAllKeys as jest.Mock).mockReturnValue(['FRESH']);
-    (mockRecentRepo.get as jest.Mock).mockReturnValue(now - 10 * DAY_MS);
+    (mockRecentManager.getLastOpenedTimestamp as jest.Mock).mockReturnValue(now - 10 * DAY_MS);
 
     const results = await plugin.run();
     expect(results).toHaveLength(0);
@@ -73,7 +73,7 @@ describe('StaleReviewPlugin', () => {
 
   test('skips watched tickers', async () => {
     (mockTickerRepo.getAllKeys as jest.Mock).mockReturnValue(['WATCHED', 'UNWATCHED']);
-    (mockRecentRepo.get as jest.Mock).mockReturnValue(undefined);
+    (mockRecentManager.getLastOpenedTimestamp as jest.Mock).mockReturnValue(undefined);
     (mockWatchManager.isWatched as jest.Mock).mockImplementation((ticker: string) => ticker === 'WATCHED');
 
     const results = await plugin.run();
@@ -83,7 +83,7 @@ describe('StaleReviewPlugin', () => {
 
   test('respects custom threshold', async () => {
     const customPlugin = new StaleReviewPlugin(
-      mockRecentRepo as IRecentTickerRepo,
+      mockRecentManager as IRecentManager,
       mockTickerRepo as ITickerRepo,
       mockWatchManager as IWatchManager,
       30
@@ -91,7 +91,7 @@ describe('StaleReviewPlugin', () => {
 
     (mockTickerRepo.getAllKeys as jest.Mock).mockReturnValue(['A']);
     // 50 days ago — stale for 30-day threshold, not for 90-day
-    (mockRecentRepo.get as jest.Mock).mockReturnValue(now - 50 * DAY_MS);
+    (mockRecentManager.getLastOpenedTimestamp as jest.Mock).mockReturnValue(now - 50 * DAY_MS);
 
     const customResults = await customPlugin.run();
     expect(customResults).toHaveLength(1);

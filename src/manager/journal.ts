@@ -1,10 +1,11 @@
 import { ISequenceManager } from './sequence';
-import { Notifier } from '../util/notify';
-import { IKohanClient } from '../client/kohan';
 import { ITimeFrameManager } from './timeframe';
+import { Notifier } from '../util/notify';
+import { IJournalClient } from '../client/journal';
+import { IOsClient } from '../client/os';
 import {
-  CreateJournalImageRequest,
   CreateJournalInput,
+  CreateJournalImageRequest,
   CreateJournalRequest,
   CreateJournalTagRequest,
   JournalApiTimeframe,
@@ -95,7 +96,8 @@ export class JournalManager implements IJournalManager {
    */
   constructor(
     private readonly sequenceManager: ISequenceManager,
-    private readonly kohanClient: IKohanClient,
+    private readonly journalClient: IJournalClient,
+    private readonly osClient: IOsClient,
     private readonly timeframeManager: ITimeFrameManager
   ) {}
 
@@ -114,7 +116,7 @@ export class JournalManager implements IJournalManager {
       notes: input.notes,
     };
 
-    const journal = await this.kohanClient.createJournal(request);
+    const journal = await this.journalClient.createJournal(request);
     Notifier.success(`Journal created: ${journal.ticker} ${journal.type} ${journal.status}`);
     return journal;
   }
@@ -122,7 +124,7 @@ export class JournalManager implements IJournalManager {
   /** @inheritdoc */
   public async findRunningJournal(ticker: string): Promise<JournalRecord | null> {
     try {
-      const response = await this.kohanClient.listJournals({
+      const response = await this.journalClient.listJournals({
         ticker,
         type: 'TAKEN',
         status: 'RUNNING',
@@ -148,7 +150,7 @@ export class JournalManager implements IJournalManager {
         timeframe: screenshot.timeframe as JournalApiTimeframe,
         file_name: screenshot.file_name,
       };
-      await this.kohanClient.addJournalImage(journalId, image);
+      await this.journalClient.addJournalImage(journalId, image);
     }
   }
 
@@ -161,14 +163,14 @@ export class JournalManager implements IJournalManager {
     const tags = this.toReasonTagRequest(reason);
     if (tags) {
       for (const tag of tags) {
-        await this.kohanClient.addJournalTag(journalId, tag);
+        await this.journalClient.addJournalTag(journalId, tag);
       }
     }
   }
 
   /** @inheritdoc */
   public async updateJournalStatus(journalId: string, status: JournalResultStatus): Promise<void> {
-    await this.kohanClient.updateJournalStatus(journalId, { status });
+    await this.journalClient.updateJournalStatus(journalId, { status });
   }
 
   /** @inheritdoc */
@@ -194,7 +196,7 @@ export class JournalManager implements IJournalManager {
       const order = position + 1;
 
       const fileName = `${ticker.toUpperCase()}_${this.getScreenshotTimestamp()}_${order}_${timeframe.toLowerCase()}_${screenshotType}.png`;
-      const screenshot = await this.kohanClient.screenshot({
+      const screenshot = await this.osClient.screenshot({
         file_name: fileName,
         directory_type: 'JOURNAL',
         type: 'FULL',
@@ -218,7 +220,7 @@ export class JournalManager implements IJournalManager {
     // Build filename: TICKER_YYYYMMDD_HHMM_checklist_type.png
     const fileName = `${ticker.toUpperCase()}_${this.getScreenshotTimestamp()}_checklist_${screenshotType}.png`;
 
-    const screenshot = await this.kohanClient.screenshot({
+    const screenshot = await this.osClient.screenshot({
       file_name: fileName,
       directory_type: 'JOURNAL',
       type: 'REGION',

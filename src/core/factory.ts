@@ -2,8 +2,10 @@
 import { InvestingClient, IInvestingClient } from '../client/investing';
 import { IImdbHandler, ImdbHandler } from '../handler/imdb';
 import { KiteClient, IKiteClient } from '../client/kite';
-import { KohanClient, IKohanClient } from '../client/kohan';
+import { JournalClient, IJournalClient } from '../client/journal';
+import { OsClient, IOsClient } from '../client/os';
 import { TickerClient, ITickerClient } from '../client/ticker';
+import { TickerAlertClient, ITickerAlertClient } from '../client/ticker_alert';
 import { UIUtil, IUIUtil } from '../util/ui';
 import { ObserveUtil, IObserveUtil } from '../util/observer';
 import { SearchUtil, ISearchUtil } from '../util/search';
@@ -155,8 +157,10 @@ export class Factory {
   public static client = {
     investing: (): IInvestingClient => Factory.getInstance('investingClient', () => new InvestingClient()),
     kite: (): IKiteClient => Factory.getInstance('kiteClient', () => new KiteClient()),
-    kohan: (): IKohanClient => Factory.getInstance('kohanClient', () => new KohanClient()),
+    journal: (): IJournalClient => Factory.getInstance('journalClient', () => new JournalClient()),
+    os: (): IOsClient => Factory.getInstance('osClient', () => new OsClient()),
     ticker: (): ITickerClient => Factory.getInstance('tickerClient', () => new TickerClient()),
+    tickerAlert: (): ITickerAlertClient => Factory.getInstance('tickerAlertClient', () => new TickerAlertClient()),
   };
 
   /**
@@ -286,7 +290,7 @@ export class Factory {
     tv: (): ITradingViewManager =>
       Factory.getInstance(
         'tvManager',
-        () => new TradingViewManager(Factory.util.wait(), Factory.repo.cron(), Factory.client.kohan())
+        () => new TradingViewManager(Factory.util.wait(), Factory.repo.cron(), Factory.client.os())
       ),
 
     pair: (): IPairManager =>
@@ -318,7 +322,13 @@ export class Factory {
     journal: (): IJournalManager =>
       Factory.getInstance(
         'journalManager',
-        () => new JournalManager(Factory.manager.sequence(), Factory.client.kohan(), Factory.manager.timeFrame())
+        () =>
+          new JournalManager(
+            Factory.manager.sequence(),
+            Factory.client.journal(),
+            Factory.client.os(),
+            Factory.manager.timeFrame()
+          )
       ),
     fno: (): IFnoManager => Factory.getInstance('fnoManager', () => new FnoManager(Factory.client.ticker())),
     alertFeed: (): IAlertFeedManager =>

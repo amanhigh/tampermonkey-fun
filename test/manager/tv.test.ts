@@ -1,7 +1,7 @@
 import { TradingViewManager } from '../../src/manager/tv';
 import { WaitUtil } from '../../src/util/wait';
 import { IRepoCron } from '../../src/repo/cron';
-import { IKohanClient } from '../../src/client/kohan';
+import { IOsClient } from '../../src/client/os';
 import { Constants } from '../../src/models/constant';
 
 // Mock Notifier to avoid DOM issues
@@ -49,7 +49,7 @@ describe('TradingViewManager', () => {
   let manager: TradingViewManager;
   let mockWaitUtil: jest.Mocked<WaitUtil>;
   let mockRepoCron: jest.Mocked<IRepoCron>;
-  let mockKohanClient: jest.Mocked<IKohanClient>;
+  let mockOsClient: jest.Mocked<IOsClient>;
 
   beforeEach(() => {
     jest.clearAllMocks();

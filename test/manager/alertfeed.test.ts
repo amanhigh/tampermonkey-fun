@@ -50,6 +50,8 @@ describe('AlertFeedManager', () => {
     mockRecentManager = {
       addTicker: jest.fn(),
       isRecent: jest.fn(),
+      getLastOpenedTimestamp: jest.fn(),
+      removeRecentTicker: jest.fn(),
       clearRecent: jest.fn(),
       paintRecent: jest.fn(),
     };

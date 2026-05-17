@@ -31,7 +31,7 @@ describe('FnoManager', () => {
     });
 
     it('should trigger cache load from backend on construction', () => {
-      expect(mockClient.listTickers).toHaveBeenCalledWith({ 'is-fno': true, limit: 500 });
+      expect(mockClient.listAllTickers).toHaveBeenCalledWith({ 'is-fno': true });
     });
   });
 
@@ -45,7 +45,7 @@ describe('FnoManager', () => {
     });
 
     it('should return false for empty cache when backend fails', () => {
-      mockClient.listTickers.mockRejectedValue(new Error('Backend unavailable'));
+      mockClient.listAllTickers.mockRejectedValue(new Error('Backend unavailable'));
       const emptyManager = new FnoManager(mockClient);
       expect(emptyManager.isFno('NIFTY')).toBe(false);
     });
@@ -64,7 +64,7 @@ describe('FnoManager', () => {
     });
 
     it('should return empty set when cache is empty', () => {
-      mockClient.listTickers.mockResolvedValue({ tickers: [], metadata: { total: 0, offset: 0, limit: 500 } });
+      mockClient.listAllTickers.mockResolvedValue([]);
       const emptyManager = new FnoManager(mockClient);
       expect(emptyManager.getAllFnoTickers()).toEqual(new Set());
     });

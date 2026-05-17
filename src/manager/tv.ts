@@ -2,7 +2,7 @@ import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 import { IWaitUtil } from '../util/wait';
 import { IRepoCron } from '../repo/cron';
-import { IKohanClient } from '../client/kohan';
+import { IOsClient } from '../client/os';
 
 // Price and validation related constants
 const PRICE_REGEX = /-?\d{1,3}(?:,\d{3})*(?:\.\d+)?/;
@@ -84,7 +84,7 @@ export class TradingViewManager implements ITradingViewManager {
   constructor(
     private readonly waitUtil: IWaitUtil,
     private readonly repoCron: IRepoCron,
-    private readonly kohanClient: IKohanClient
+    private readonly osClient: IOsClient
   ) {}
 
   public startAutoSave(): void {
@@ -183,9 +183,9 @@ export class TradingViewManager implements ITradingViewManager {
 
       // Control Hyprland submap via HTTP API
       if (enabled) {
-        await this.kohanClient.enableSubmap('swiftkeys');
+        await this.osClient.enableSubmap('swiftkeys');
       } else {
-        await this.kohanClient.disableSubmap('swiftkeys');
+        await this.osClient.disableSubmap('swiftkeys');
       }
     } catch (error) {
       throw new Error(`SwiftKey state change failed: ${(error as Error).message}`);

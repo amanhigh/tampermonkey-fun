@@ -282,6 +282,7 @@ Support:
   KOHAN: {
     PORTS: KOHAN_PORTS,
     BASE_URL: `http://localhost:${KOHAN_PORTS.DEV}/v1/api`,
+    PAGE_LIMIT: 100,
   },
 
   // Exchange and market related constants

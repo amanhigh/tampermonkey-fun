@@ -246,7 +246,7 @@ describe('PairManager', () => {
       expect(mockFlagManager.evictTicker).toHaveBeenCalledWith(tvTicker);
       expect(mockSymbolManager.removeTvToInvestingMapping).toHaveBeenCalledWith(investingTicker);
       expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith(tvTicker);
-      expect(mockRecentRepo.delete).toHaveBeenCalledWith(tvTicker);
+      expect(mockRecentManager.removeRecentTicker).toHaveBeenCalledWith(tvTicker);
       expect(mockSequenceRepo.delete).toHaveBeenCalledWith(tvTicker);
       expect(mockExchangeRepo.delete).toHaveBeenCalledWith(tvTicker);
       expect(result).toBe(true);
@@ -262,7 +262,7 @@ describe('PairManager', () => {
       expect(mockWatchManager.evictTicker).not.toHaveBeenCalled();
       expect(mockFlagManager.evictTicker).not.toHaveBeenCalled();
       expect(mockAlertFeedManager.createAlertFeedEvent).not.toHaveBeenCalled();
-      expect(mockRecentRepo.delete).not.toHaveBeenCalled();
+      expect(mockRecentManager.removeRecentTicker).not.toHaveBeenCalled();
       expect(mockSequenceRepo.delete).not.toHaveBeenCalled();
       expect(mockExchangeRepo.delete).not.toHaveBeenCalled();
 
@@ -364,7 +364,7 @@ describe('PairManager', () => {
       expect(mockWatchManager.evictTicker).toHaveBeenCalledWith(tvTicker);
       expect(mockFlagManager.evictTicker).toHaveBeenCalledWith(tvTicker);
       expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith(tvTicker);
-      expect(mockRecentRepo.delete).toHaveBeenCalledWith(tvTicker);
+      expect(mockRecentManager.removeRecentTicker).toHaveBeenCalledWith(tvTicker);
       expect(mockSequenceRepo.delete).toHaveBeenCalledWith(tvTicker);
       expect(mockExchangeRepo.delete).toHaveBeenCalledWith(tvTicker);
       expect(result).toBe(true);

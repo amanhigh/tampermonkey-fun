@@ -1,7 +1,7 @@
 import { RecentManager, IRecentManager } from '../../src/manager/recent';
 import { IPaintManager } from '../../src/manager/paint';
 import { ITickerClient } from '../../src/client/ticker';
-import { TickerListResponse } from '../../src/models/ticker';
+import { TickerRecord } from '../../src/models/ticker';
 import { Constants } from '../../src/models/constant';
 
 describe('RecentManager', () => {
@@ -9,20 +9,17 @@ describe('RecentManager', () => {
   let mockClient: jest.Mocked<ITickerClient>;
   let mockPaintManager: jest.Mocked<IPaintManager>;
 
-  const mockTickerListResponse: TickerListResponse = {
-    tickers: [
-      { ticker: 'RELIANCE', last_opened_at: '2026-05-05T10:30:00Z', exchange: null, timeframes: ['MN', 'WK', 'DL'], type: 'EQUITY', state: 'WATCHED', trend: 'UPTREND', is_fno: false, created_at: '2026-05-05T10:30:00Z', updated_at: '2026-05-05T10:30:00Z' },
-      { ticker: 'TCS', last_opened_at: '2026-05-04T10:30:00Z', exchange: null, timeframes: ['MN', 'WK', 'DL'], type: 'EQUITY', state: 'WATCHED', trend: 'SIDEWAYS', is_fno: false, created_at: '2026-05-04T10:30:00Z', updated_at: '2026-05-04T10:30:00Z' },
-    ],
-    metadata: { total: 2, offset: 0, limit: 500 },
-  };
+  const mockRecentTickers: TickerRecord[] = [
+    { ticker: 'RELIANCE', last_opened_at: '2026-05-05T10:30:00Z', exchange: null, timeframes: ['MN', 'WK', 'DL'], type: 'EQUITY', state: 'WATCHED', trend: 'UPTREND', is_fno: false, created_at: '2026-05-05T10:30:00Z', updated_at: '2026-05-05T10:30:00Z' },
+    { ticker: 'TCS', last_opened_at: '2026-05-04T10:30:00Z', exchange: null, timeframes: ['MN', 'WK', 'DL'], type: 'EQUITY', state: 'WATCHED', trend: 'SIDEWAYS', is_fno: false, created_at: '2026-05-04T10:30:00Z', updated_at: '2026-05-04T10:30:00Z' },
+  ];
 
   beforeEach(() => {
     jest.clearAllMocks();
 
     // Mock TickerClient
     mockClient = {
-      listTickers: jest.fn().mockResolvedValue(mockTickerListResponse),
+      listAllTickers: jest.fn().mockResolvedValue(mockRecentTickers),
       patchTickerLastOpened: jest.fn().mockResolvedValue({} as any),
     } as unknown as jest.Mocked<ITickerClient>;
 
@@ -44,10 +41,9 @@ describe('RecentManager', () => {
     });
 
     it('should trigger cache load from backend on construction', () => {
-      expect(mockClient.listTickers).toHaveBeenCalledWith({
+      expect(mockClient.listAllTickers).toHaveBeenCalledWith({
         'sort-by': 'last_opened_at',
         'sort-order': 'desc',
-        limit: 500,
       });
     });
   });
@@ -151,8 +147,8 @@ describe('RecentManager', () => {
   });
 
   describe('error handling', () => {
-    it('should handle backend listTickers failure gracefully', () => {
-      mockClient.listTickers.mockRejectedValue(new Error('Backend unavailable'));
+    it('should handle backend listAllTickers failure gracefully', () => {
+      mockClient.listAllTickers.mockRejectedValue(new Error('Backend unavailable'));
       const resilientManager = new RecentManager(mockClient, mockPaintManager);
       expect(resilientManager.isRecent('RELIANCE')).toBe(false);
       expect(resilientManager.getLastOpenedTimestamp('RELIANCE')).toBe(0);
