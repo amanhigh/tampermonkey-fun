@@ -69,6 +69,7 @@ describe('TradingViewManager', () => {
 
     mockOsClient = {
       screenshot: jest.fn(),
+      screenshotRegion: jest.fn(),
       getClip: jest.fn(),
       enableSubmap: jest.fn().mockResolvedValue(undefined),
       disableSubmap: jest.fn().mockResolvedValue(undefined),

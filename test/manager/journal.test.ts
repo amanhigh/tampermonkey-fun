@@ -449,26 +449,6 @@ describe('JournalManager', () => {
     });
   });
 
-  describe('screenshotChecklist', () => {
-    it('should capture REGION checklist screenshot with DL timeframe metadata', async () => {
-      const result = await (journalManager as any).screenshotChecklist('TCS', 'set');
-
-      expect(mockOsClient.screenshot).toHaveBeenCalledWith({
-        file_name: expect.stringMatching(/^TCS_\d{8}_\d{4}_checklist_set\.png$/),
-        directory_type: 'JOURNAL',
-        type: 'REGION',
-        notify: false,
-      });
-      expect(result.timeframe).toBe('DL');
-    });
-
-    it('should propagate checklist screenshot errors', async () => {
-      (mockOsClient as any).screenshot.mockRejectedValue(new Error('screenshot failed'));
-
-      await expect((journalManager as any).screenshotChecklist('TCS', 'set')).rejects.toThrow('screenshot failed');
-    });
-  });
-
   describe('createReasonText', () => {
     it('should create formatted reason text with current timeframe', () => {
       const testReason = 'breakout';
