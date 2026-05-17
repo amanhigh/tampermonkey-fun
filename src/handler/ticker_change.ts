@@ -36,7 +36,7 @@ export class TickerChangeHandler implements ITickerChangeHandler {
       // Update UI components
       this.headerManager.paintHeader();
       this.recordRecentTicker();
-      this.sequenceHandler.displaySequence();
+      void this.sequenceHandler.displaySequence();
 
       // Update Screener
       if (this.screenManager.isScreenerVisible()) {

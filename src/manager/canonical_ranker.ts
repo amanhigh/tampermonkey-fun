@@ -1,7 +1,6 @@
 import { IAlertRepo } from '../repo/alert';
 import { IWatchManager } from './watch';
 import { IRecentManager } from './recent';
-import { ISequenceRepo } from '../repo/sequence';
 import { IExchangeRepo } from '../repo/exchange';
 import { IPairRepo } from '../repo/pair';
 import { ISymbolManager } from './symbol';
@@ -15,7 +14,6 @@ export interface TickerSignals {
   alertCount: number;
   isWatched: boolean;
   isRecent: boolean;
-  hasSequence: boolean;
   hasExchange: boolean;
   hasPairMapping: boolean;
   score: number;
@@ -50,7 +48,6 @@ export interface CanonicalRankerDeps {
   alertRepo: IAlertRepo;
   watchManager: IWatchManager;
   recentManager: IRecentManager;
-  sequenceRepo: ISequenceRepo;
   exchangeRepo: IExchangeRepo;
   pairRepo: IPairRepo;
   symbolManager: ISymbolManager;
@@ -63,7 +60,7 @@ export interface CanonicalRankerDeps {
  * 1. Alert count (×100) — tickers with alerts are most valuable
  * 2. Watchlist membership (×50) — actively monitored tickers
  * 3. Recent open timestamp (×10 if present) — recently viewed
- * 4. Sequence/exchange footprints (×5 each) — has stored preferences
+ * 4. Exchange footprints (×5) — has stored preferences
  * 5. Pair mapping presence (×1) — has investing mapping
  * 6. HTML-encoding penalty (−500) — junk aliases like M&amp;M or M&amp;AMP;M
  * 7. Preferred exchange bonus (+15) — NSE/NYSE/NASDAQ/CBOE from exchangeRepo
@@ -74,7 +71,6 @@ export class CanonicalRanker implements ICanonicalRanker {
   private static readonly WEIGHT_ALERTS = 100;
   private static readonly WEIGHT_WATCHED = 50;
   private static readonly WEIGHT_RECENT = 10;
-  private static readonly WEIGHT_SEQUENCE = 5;
   private static readonly WEIGHT_EXCHANGE = 5;
   private static readonly WEIGHT_PAIR = 1;
   private static readonly PENALTY_HTML_ENCODED = -500;
@@ -84,7 +80,6 @@ export class CanonicalRanker implements ICanonicalRanker {
   private readonly alertRepo: IAlertRepo;
   private readonly watchManager: IWatchManager;
   private readonly recentManager: IRecentManager;
-  private readonly sequenceRepo: ISequenceRepo;
   private readonly exchangeRepo: IExchangeRepo;
   private readonly pairRepo: IPairRepo;
   private readonly symbolManager: ISymbolManager;
@@ -93,7 +88,6 @@ export class CanonicalRanker implements ICanonicalRanker {
     this.alertRepo = deps.alertRepo;
     this.watchManager = deps.watchManager;
     this.recentManager = deps.recentManager;
-    this.sequenceRepo = deps.sequenceRepo;
     this.exchangeRepo = deps.exchangeRepo;
     this.pairRepo = deps.pairRepo;
     this.symbolManager = deps.symbolManager;
@@ -106,7 +100,6 @@ export class CanonicalRanker implements ICanonicalRanker {
       const alertCount = this.getAlertCount(pairId);
       const isWatched = tvTicker ? this.watchManager.isWatched(tvTicker) : false;
       const isRecent = tvTicker ? this.recentManager.isRecent(tvTicker, Constants.RECENT_CUTOFF_MS) : false;
-      const hasSequence = tvTicker ? this.sequenceRepo.has(tvTicker) : false;
       const hasExchange = tvTicker ? this.exchangeRepo.has(tvTicker) : false;
       const hasPairMapping = tvTicker !== null;
 
@@ -115,7 +108,6 @@ export class CanonicalRanker implements ICanonicalRanker {
         alertCount,
         isWatched,
         isRecent,
-        hasSequence,
         hasExchange,
         hasPairMapping,
       });
@@ -133,7 +125,6 @@ export class CanonicalRanker implements ICanonicalRanker {
       const alertCount = pairId ? this.getAlertCount(pairId) : 0;
       const isWatched = this.watchManager.isWatched(tvTicker);
       const isRecent = this.recentManager.isRecent(tvTicker, Constants.RECENT_CUTOFF_MS);
-      const hasSequence = this.sequenceRepo.has(tvTicker);
       const hasExchange = this.exchangeRepo.has(tvTicker);
       const hasPairMapping = investingTicker !== null;
 
@@ -142,7 +133,6 @@ export class CanonicalRanker implements ICanonicalRanker {
         alertCount,
         isWatched,
         isRecent,
-        hasSequence,
         hasExchange,
         hasPairMapping,
       });
@@ -178,7 +168,6 @@ export class CanonicalRanker implements ICanonicalRanker {
       signals.alertCount * CanonicalRanker.WEIGHT_ALERTS +
       (signals.isWatched ? CanonicalRanker.WEIGHT_WATCHED : 0) +
       (signals.isRecent ? CanonicalRanker.WEIGHT_RECENT : 0) +
-      (signals.hasSequence ? CanonicalRanker.WEIGHT_SEQUENCE : 0) +
       (signals.hasExchange ? CanonicalRanker.WEIGHT_EXCHANGE : 0) +
       (signals.hasPairMapping ? CanonicalRanker.WEIGHT_PAIR : 0) +
       (this.isHtmlEncoded(signals.ticker) ? CanonicalRanker.PENALTY_HTML_ENCODED : 0) +

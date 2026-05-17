@@ -24,7 +24,6 @@ import { IWatchlistRepo, Watchlistrepo } from '../repo/watch';
 import { IPairRepo, PairRepo } from '../repo/pair';
 import { IExchangeRepo, ExchangeRepo } from '../repo/exchange';
 import { ITickerRepo, TickerRepo } from '../repo/ticker';
-import { ISequenceRepo, SequenceRepo } from '../repo/sequence';
 import { IAlertRepo, AlertRepo } from '../repo/alert';
 
 // Manager Layer Imports
@@ -79,7 +78,6 @@ import { AlertsPlugin } from '../manager/alerts_plugin';
 import { GttPlugin } from '../manager/gtt_plugin';
 import { IntegrityPlugin } from '../manager/integrity_plugin';
 import { OrphanAlertsPlugin } from '../manager/orphan_alerts_plugin';
-import { OrphanSequencesPlugin } from '../manager/orphan_sequences_plugin';
 import { OrphanFlagsPlugin } from '../manager/orphan_flags_plugin';
 import { OrphanExchangePlugin } from '../manager/orphan_exchange_plugin';
 import { DuplicatePairIdsPlugin } from '../manager/duplicate_pair_ids_plugin';
@@ -89,7 +87,6 @@ import { GttAuditSection } from '../handler/gtt_section';
 import { AlertsAuditSection } from '../handler/alerts_section';
 import { OrphanAlertsSection } from '../handler/orphan_alerts_section';
 import { IntegritySection } from '../handler/integrity_section';
-import { OrphanSequencesSection } from '../handler/orphan_sequences_section';
 import { OrphanFlagsSection } from '../handler/orphan_flags_section';
 import { OrphanExchangeSection } from '../handler/orphan_exchange_section';
 import { DuplicatePairIdsSection } from '../handler/duplicate_pair_ids_section';
@@ -189,7 +186,6 @@ export class Factory {
     pair: (): IPairRepo => Factory.getInstance('pairRepo', () => new PairRepo(Factory.repo.cron())),
     exchange: (): IExchangeRepo => Factory.getInstance('exchangeRepo', () => new ExchangeRepo(Factory.repo.cron())),
     ticker: (): ITickerRepo => Factory.getInstance('tickerRepo', () => new TickerRepo(Factory.repo.cron())),
-    sequence: (): ISequenceRepo => Factory.getInstance('sequenceRepo', () => new SequenceRepo(Factory.repo.cron())),
     kite: (): IKiteRepo => Factory.getInstance('kiteRepo', () => new KiteRepo()),
     imdb: (): IImdbRepo => Factory.getInstance('imdbRepo', () => new ImdbRepo()),
   };

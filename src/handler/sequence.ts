@@ -12,19 +12,18 @@ export interface ISequenceHandler {
   /**
    * Handles the sequence switch operation
    */
-  handleSequenceSwitch(): void;
+  handleSequenceSwitch(): Promise<void>;
 
   /**
    * Displays sequence information in the input
    */
-  displaySequence(): void;
+  displaySequence(): Promise<void>;
 
   /**
    * Toggles sequence freeze state
    * Uses current sequence when enabling freeze
-   * @returns Current freeze state after toggle
    */
-  toggleFreezeSequence(): void;
+  toggleFreezeSequence(): Promise<void>;
 }
 
 /**
@@ -39,15 +38,15 @@ export class SequenceHandler implements ISequenceHandler {
   ) {}
 
   /** @inheritdoc */
-  handleSequenceSwitch(): void {
-    this.sequenceManager.flipSequence();
+  async handleSequenceSwitch(): Promise<void> {
+    await this.sequenceManager.flipSequence();
     // Update the sequence display
-    this.displaySequence();
+    await this.displaySequence();
   }
 
   /** @inheritdoc */
-  displaySequence(): void {
-    const sequence = this.sequenceManager.getCurrentSequence();
+  async displaySequence(): Promise<void> {
+    const sequence = await this.sequenceManager.getCurrentSequence();
     const tvTicker = this.tickerManager.getTicker();
     const investingTicker = this.symbolManager.tvToInvesting(tvTicker);
 
@@ -77,7 +76,7 @@ export class SequenceHandler implements ISequenceHandler {
   }
 
   /** @inheritdoc */
-  toggleFreezeSequence(): void {
-    this.sequenceManager.toggleFreezeSequence();
+  async toggleFreezeSequence(): Promise<void> {
+    await this.sequenceManager.toggleFreezeSequence();
   }
 }

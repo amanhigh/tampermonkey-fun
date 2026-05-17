@@ -95,7 +95,7 @@ export class Barkat {
       )
       .append(
         this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.SEQUENCE, 'S', () => {
-          this.sequenceHandler.handleSequenceSwitch();
+          void this.sequenceHandler.handleSequenceSwitch();
         })
       )
       .append(

@@ -96,7 +96,7 @@ export class JournalManager implements IJournalManager {
   public async createJournal(input: CreateJournalInput): Promise<JournalRecord> {
     const request: CreateJournalRequest = {
       ticker: input.ticker.toUpperCase(),
-      sequence: this.sequenceManager.getCurrentSequence() as CreateJournalRequest['sequence'],
+      sequence: (await this.sequenceManager.getCurrentSequence()) as CreateJournalRequest['sequence'],
       type: input.type,
       status: input.status,
       images: input.screenshots.map((screenshot) => ({
@@ -176,7 +176,7 @@ export class JournalManager implements IJournalManager {
    * @returns Promise resolving with screenshot metadata
    */
   public async screenshotTicker(ticker: string, type: string): Promise<ScreenshotResponse[]> {
-    const sequence = this.sequenceManager.getCurrentSequence();
+    const sequence = await this.sequenceManager.getCurrentSequence();
     const screenshots: ScreenshotResponse[] = [];
     const screenshotType = type.toLowerCase();
 
