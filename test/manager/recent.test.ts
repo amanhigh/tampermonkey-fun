@@ -17,7 +17,7 @@ describe('RecentManager', () => {
 
     // Mock TickerClient
     mockClient = {
-      listAllTickers: jest.fn().mockResolvedValue(mockRecentTickers),
+      listTickers: jest.fn().mockResolvedValue(mockRecentTickers),
       patchTickerLastOpened: jest.fn().mockResolvedValue({} as any),
     } as unknown as jest.Mocked<ITickerClient>;
 
@@ -31,7 +31,7 @@ describe('RecentManager', () => {
     });
 
     it('should trigger cache load from backend on construction', () => {
-      expect(mockClient.listAllTickers).toHaveBeenCalledWith({
+      expect(mockClient.listTickers).toHaveBeenCalledWith({
         'sort-by': 'last_opened_at',
         'sort-order': 'desc',
       });
@@ -87,8 +87,8 @@ describe('RecentManager', () => {
   });
 
   describe('error handling', () => {
-    it('should handle backend listAllTickers failure gracefully', () => {
-      mockClient.listAllTickers.mockRejectedValue(new Error('Backend unavailable'));
+    it('should handle backend listTickers failure gracefully', () => {
+      mockClient.listTickers.mockRejectedValue(new Error('Backend unavailable'));
       const resilientManager = new RecentManager(mockClient);
       expect(resilientManager.isRecent('RELIANCE', Constants.RECENT_CUTOFF_MS)).toBe(false);
     });

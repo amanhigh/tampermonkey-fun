@@ -14,7 +14,7 @@ describe('FnoManager', () => {
 
   beforeEach(() => {
     mockClient = {
-      listAllTickers: jest.fn().mockResolvedValue(mockFnoTickers),
+      listTickers: jest.fn().mockResolvedValue(mockFnoTickers),
     } as unknown as jest.Mocked<ITickerClient>;
 
     fnoManager = new FnoManager(mockClient);
@@ -31,7 +31,7 @@ describe('FnoManager', () => {
     });
 
     it('should trigger cache load from backend on construction', () => {
-      expect(mockClient.listAllTickers).toHaveBeenCalledWith({ 'is-fno': true });
+      expect(mockClient.listTickers).toHaveBeenCalledWith({ 'is-fno': true });
     });
   });
 
@@ -45,7 +45,7 @@ describe('FnoManager', () => {
     });
 
     it('should return false for empty cache when backend fails', () => {
-      mockClient.listAllTickers.mockRejectedValue(new Error('Backend unavailable'));
+      mockClient.listTickers.mockRejectedValue(new Error('Backend unavailable'));
       const emptyManager = new FnoManager(mockClient);
       expect(emptyManager.isFno('NIFTY')).toBe(false);
     });
@@ -64,7 +64,7 @@ describe('FnoManager', () => {
     });
 
     it('should return empty set when cache is empty', () => {
-      mockClient.listAllTickers.mockResolvedValue([]);
+      mockClient.listTickers.mockResolvedValue([]);
       const emptyManager = new FnoManager(mockClient);
       expect(emptyManager.getAllFnoTickers()).toEqual(new Set());
     });

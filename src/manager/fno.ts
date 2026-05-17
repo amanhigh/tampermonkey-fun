@@ -44,7 +44,7 @@ export class FnoManager implements IFnoManager {
    */
   private async loadCache(): Promise<void> {
     try {
-      const tickers = await this.client.listAllTickers({ 'is-fno': true });
+      const tickers = await this.client.listTickers({ 'is-fno': true });
       for (const t of tickers) {
         this.cache.add(t.ticker);
       }

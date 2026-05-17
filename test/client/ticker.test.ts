@@ -222,9 +222,9 @@ describe('TickerClient', () => {
     });
   });
 
-  // ── listAllTickers (auto-paginating) ──
+  // ── listTickers (auto-paginating) ──
 
-  describe('listAllTickers', () => {
+  describe('listTickers', () => {
     it('should return all records from a single page when total <= 100', async () => {
       const page = Array.from({ length: 3 }, (_, i) => ({
         ticker: `T${i}`, exchange: null, timeframes: ['MN'] as any, type: 'EQUITY' as any,
@@ -236,7 +236,7 @@ describe('TickerClient', () => {
         data: { tickers: page, metadata: { total: 3, offset: 0, limit: 100 } },
       });
 
-      const result = await tickerClient.listAllTickers({ 'is-fno': false });
+      const result = await tickerClient.listTickers({ 'is-fno': false });
 
       expect(result).toHaveLength(3);
       expect(mockMakeRequest).toHaveBeenCalledTimes(1);
@@ -271,7 +271,7 @@ describe('TickerClient', () => {
           },
         });
 
-      const result = await tickerClient.listAllTickers({});
+      const result = await tickerClient.listTickers({});
 
       expect(result).toHaveLength(250);
       expect(mockMakeRequest).toHaveBeenCalledTimes(3);
@@ -286,7 +286,7 @@ describe('TickerClient', () => {
         data: { tickers: [], metadata: { total: 0, offset: 0, limit: 100 } },
       });
 
-      const result = await tickerClient.listAllTickers({});
+      const result = await tickerClient.listTickers({});
 
       expect(result).toEqual([]);
       expect(mockMakeRequest).toHaveBeenCalledTimes(1);
@@ -298,7 +298,7 @@ describe('TickerClient', () => {
         data: { tickers: [], metadata: { total: 0, offset: 0, limit: 100 } },
       });
 
-      await tickerClient.listAllTickers({ 'is-fno': true, exchange: 'NSE' });
+      await tickerClient.listTickers({ 'is-fno': true, exchange: 'NSE' });
 
       expect(mockMakeRequest).toHaveBeenCalledWith('/tickers?exchange=NSE&is-fno=true&offset=0&limit=100');
     });
@@ -311,7 +311,7 @@ describe('TickerClient', () => {
         })
         .mockRejectedValue(new Error('500 Server Error'));
 
-      await expect(tickerClient.listAllTickers({})).rejects.toThrow('Failed to list all tickers: 500 Server Error');
+      await expect(tickerClient.listTickers({})).rejects.toThrow('Failed to list all tickers: 500 Server Error');
     });
   });
 
@@ -355,10 +355,10 @@ describe('TickerClient', () => {
       await expect(tickerClient.deleteTicker('UNKNOWN')).rejects.toThrow('Failed to delete ticker: 404 Not Found');
     });
 
-    it('should wrap listAllTickers errors', async () => {
+    it('should wrap listTickers errors', async () => {
       mockMakeRequest.mockRejectedValue(new Error('500 Internal Server Error'));
 
-      await expect(tickerClient.listAllTickers({})).rejects.toThrow('Failed to list all tickers: 500 Internal Server Error');
+      await expect(tickerClient.listTickers({})).rejects.toThrow('Failed to list all tickers: 500 Internal Server Error');
     });
   });
 });

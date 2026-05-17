@@ -21,7 +21,7 @@ export interface IRecentManager {
 
 /**
  * Manages recent ticker data loaded from the Kohan backend.
- * Cache populated asynchronously on construction via listAllTickers().
+ * Cache populated asynchronously on construction via listTickers().
  * Writes update cache immediately + fire async to backend.
  */
 export class RecentManager implements IRecentManager {
@@ -43,7 +43,7 @@ export class RecentManager implements IRecentManager {
    */
   private async loadCache(): Promise<void> {
     try {
-      const tickers = await this.client.listAllTickers({
+      const tickers = await this.client.listTickers({
         'sort-by': 'last_opened_at',
         'sort-order': 'desc',
       });

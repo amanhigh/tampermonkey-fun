@@ -59,7 +59,7 @@ export interface ITickerClient extends IBaseClient {
    * @param params - Query parameters (offset/limit are overridden)
    * @returns Promise resolving with all matching ticker records
    */
-  listAllTickers(params: TickerQueryParams): Promise<TickerRecord[]>;
+  listTickers(params: TickerQueryParams): Promise<TickerRecord[]>;
 }
 
 /**
@@ -140,7 +140,7 @@ export class TickerClient extends BaseClient implements ITickerClient {
   }
 
   /** @inheritdoc */
-  async listAllTickers(params: TickerQueryParams): Promise<TickerRecord[]> {
+  async listTickers(params: TickerQueryParams): Promise<TickerRecord[]> {
     const limit = Constants.KOHAN.PAGE_LIMIT;
     let offset = 0;
     let total = 0;
@@ -182,6 +182,7 @@ export class TickerClient extends BaseClient implements ITickerClient {
    * Build URLSearchParams for primary ticker query.
    */
   private buildTickerQuery(params: TickerQueryParams): URLSearchParams {
+    // HACK: Reuse move to Base Client ?
     const query = new URLSearchParams();
     TickerClient.setQueryParams(query, [
       ['search', params.search],
