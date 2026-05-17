@@ -1,7 +1,7 @@
 import { CanonicalRanker } from '../../src/manager/canonical_ranker';
 import { IAlertRepo } from '../../src/repo/alert';
 import { IWatchManager } from '../../src/manager/watch';
-import { IRecentTickerRepo } from '../../src/repo/recent';
+import { IRecentManager } from '../../src/manager/recent';
 import { ISequenceRepo } from '../../src/repo/sequence';
 import { IExchangeRepo } from '../../src/repo/exchange';
 import { IPairRepo } from '../../src/repo/pair';
@@ -12,7 +12,7 @@ describe('CanonicalRanker', () => {
   let ranker: CanonicalRanker;
   let mockAlertRepo: Partial<IAlertRepo>;
   let mockWatchManager: Partial<IWatchManager>;
-  let mockRecentRepo: Partial<IRecentTickerRepo>;
+  let mockRecentManager: Partial<IRecentManager>;
   let mockSequenceRepo: Partial<ISequenceRepo>;
   let mockExchangeRepo: Partial<IExchangeRepo>;
   let mockPairRepo: Partial<IPairRepo>;
@@ -21,7 +21,7 @@ describe('CanonicalRanker', () => {
   beforeEach(() => {
     mockAlertRepo = { get: jest.fn().mockReturnValue(undefined) };
     mockWatchManager = { isWatched: jest.fn().mockReturnValue(false) };
-    mockRecentRepo = { get: jest.fn().mockReturnValue(undefined) };
+    mockRecentManager = { isRecent: jest.fn().mockReturnValue(false) };
     mockSequenceRepo = { has: jest.fn().mockReturnValue(false) };
     mockExchangeRepo = { has: jest.fn().mockReturnValue(false), get: jest.fn().mockReturnValue(undefined) };
     mockPairRepo = { getPairInfo: jest.fn().mockReturnValue(null) };
@@ -33,7 +33,7 @@ describe('CanonicalRanker', () => {
     ranker = new CanonicalRanker({
       alertRepo: mockAlertRepo as IAlertRepo,
       watchManager: mockWatchManager as IWatchManager,
-      recentRepo: mockRecentRepo as IRecentTickerRepo,
+      recentManager: mockRecentManager as IRecentManager,
       sequenceRepo: mockSequenceRepo as ISequenceRepo,
       exchangeRepo: mockExchangeRepo as IExchangeRepo,
       pairRepo: mockPairRepo as IPairRepo,
@@ -79,13 +79,13 @@ describe('CanonicalRanker', () => {
       (mockSymbolManager.investingToTv as jest.Mock)
         .mockReturnValueOnce('A_TV')
         .mockReturnValueOnce('B_TV');
-      (mockRecentRepo.get as jest.Mock)
-        .mockReturnValueOnce(Date.now())
-        .mockReturnValueOnce(undefined);
+      (mockRecentManager.isRecent as jest.Mock)
+        .mockReturnValueOnce(true)
+        .mockReturnValueOnce(false);
 
       const result = ranker.rankInvestingTickers(['A', 'B'], '123');
       expect(result[0].ticker).toBe('A');
-      expect(result[0].recentTimestamp).toBeGreaterThan(0);
+      expect(result[0].isRecent).toBe(true);
     });
 
     test('preserves original order when scores are equal', () => {
@@ -127,9 +127,9 @@ describe('CanonicalRanker', () => {
       (mockWatchManager.isWatched as jest.Mock)
         .mockReturnValueOnce(false)
         .mockReturnValueOnce(true);
-      (mockRecentRepo.get as jest.Mock)
-        .mockReturnValueOnce(undefined)
-        .mockReturnValueOnce(Date.now());
+      (mockRecentManager.isRecent as jest.Mock)
+        .mockReturnValueOnce(false)
+        .mockReturnValueOnce(true);
 
       const result = ranker.rankTvTickers(['A', 'B']);
       expect(result[0].ticker).toBe('B');
@@ -141,7 +141,7 @@ describe('CanonicalRanker', () => {
       (mockSymbolManager.tvToInvesting as jest.Mock).mockReturnValue('MAHM');
       (mockPairRepo.getPairInfo as jest.Mock).mockReturnValue(new PairInfo('Mahindra', '18273', 'NSE', 'MAHM'));
       (mockAlertRepo.get as jest.Mock).mockReturnValue([{ id: '1' }, { id: '2' }]);
-      (mockRecentRepo.get as jest.Mock).mockReturnValue(Date.now());
+      (mockRecentManager.isRecent as jest.Mock).mockReturnValue(true);
 
       const result = ranker.rankTvTickers(['M_M', 'M&M', 'M&amp;M', 'M&amp;AMP;M']);
 

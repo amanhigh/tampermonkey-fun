@@ -1,12 +1,13 @@
-export type ScreenshotType = 'FULL' | 'REGION';
+import { ScreenshotResponse } from './os';
 
-export type ScreenshotDirectoryType = 'JOURNAL' | 'DOWNLOAD';
+// ── Journal API Types ──
 
 export type JournalApiType = 'REJECTED' | 'TAKEN';
 
 export type JournalApiStatus = 'SET' | 'RUNNING' | 'SUCCESS' | 'FAIL' | 'MISSED' | 'JUST_LOSS' | 'BROKEN';
 
 export type JournalApiSequence = 'MWD' | 'YR' | 'WDH';
+
 // HACK: Unify Types in Frontend with Frontend Models
 export type JournalApiTimeframe = 'DL' | 'WK' | 'MN' | 'TMN' | 'SMN' | 'YR';
 
@@ -20,20 +21,6 @@ export type JournalNoteFormat = 'MARKDOWN' | 'PLAINTEXT';
 export interface KohanEnvelope<T> {
   status: 'success' | 'fail' | 'error';
   data: T;
-}
-
-export interface ScreenshotRequest {
-  file_name: string;
-  directory_type: ScreenshotDirectoryType;
-  type: ScreenshotType;
-  window?: string;
-  notify?: boolean;
-}
-
-export interface ScreenshotResponse {
-  file_name: string;
-  full_path: string;
-  timeframe?: JournalApiTimeframe;
 }
 
 export interface CreateJournalImageRequest {

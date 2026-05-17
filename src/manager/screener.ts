@@ -92,8 +92,13 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
     // Must Run in this Order- Clear, WatchList, Kite
     this.paintManager.paintSymbols(screenerSymbolSelector, null, { color: Constants.UI.COLORS.DEFAULT }, true);
 
-    // Paint Recently Watched
-    this.recentManager.paintRecent();
+    // Paint Recently Watched — compute recent screener tickers directly
+    const recentSymbols = this.getTickers(false).filter((t) =>
+      this.recentManager.isRecent(t, Constants.RECENT_CUTOFF_MS)
+    );
+    this.paintManager.paintSymbols(screenerSymbolSelector, new Set(recentSymbols), {
+      color: Constants.UI.COLORS.LIST[1],
+    });
 
     // Paint Symbols
     for (let i = 0; i < colorList.length; i++) {

@@ -101,7 +101,6 @@ export const Constants = Object.freeze({
         ALERT_CREATE: 'aman-alert-create', // Old Name: altCreateBtnId
         JOURNAL: 'aman-journal-btn', // Old Name: journalBtnId
         HOOK: 'aman-hook', // Add this line
-        RECENT: 'aman-recent', // Old Name: recentId
         AUDIT_GLOBAL_REFRESH: 'aman-audit-global-refresh', // Global refresh button for all audits
         AUDIT_STOP_TRACKING: 'aman-audit-stop-tracking', // Stop tracking button in audit toolbar
         AUDIT_MAP_ALERT: 'aman-audit-map-alert', // Map alert button in audit toolbar
@@ -281,8 +280,12 @@ Support:
   // External service endpoints
   KOHAN: {
     PORTS: KOHAN_PORTS,
-    BASE_URL: `http://localhost:${KOHAN_PORTS.PROD}/v1/api`,
+    BASE_URL: `http://localhost:${KOHAN_PORTS.DEV}/v1/api`,
+    PAGE_LIMIT: 100,
   },
+
+  // Recent ticker configuration
+  RECENT_CUTOFF_MS: 7 * 24 * 60 * 60 * 1000, // 7 days — default "recent" window,
 
   // Exchange and market related constants
   EXCHANGE: {

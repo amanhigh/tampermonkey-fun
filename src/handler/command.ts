@@ -1,6 +1,5 @@
 import { ITickerHandler } from './ticker';
 import { IAlertHandler } from './alert';
-import { IFnoManager } from '../manager/fno';
 import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 
@@ -39,8 +38,7 @@ export class CommandInputHandler implements ICommandInputHandler {
 
   constructor(
     private readonly tickerHandler: ITickerHandler,
-    private readonly alertHandler: IAlertHandler,
-    private readonly fnoManager: IFnoManager
+    private readonly alertHandler: IAlertHandler
   ) {}
 
   /** @inheritdoc */
@@ -68,11 +66,7 @@ export class CommandInputHandler implements ICommandInputHandler {
         break;
       case 'COMMAND':
         const [action, value] = processor.value.split('=');
-        if (['FNO', 'FNO!', 'FNO-'].includes(action.toUpperCase())) {
-          this.processFnoCommand(action.toUpperCase(), value);
-        } else {
-          this.processCommandInput(action, value);
-        }
+        this.processCommandInput(action, value);
         break;
       default:
         this.displayHelpMessage();
@@ -145,23 +139,6 @@ export class CommandInputHandler implements ICommandInputHandler {
     return e.keyCode === this.ENTER_KEY_CODE;
   }
 
-  private processFnoCommand(command: string, value: string): void {
-    // Convert comma-separated tickers to Set
-    const tickers = new Set(value.split(',').map((t) => t.trim()));
-
-    if (command === 'FNO') {
-      this.fnoManager.add(tickers);
-      Notifier.success(`Added FNO tickers. Total: ${this.fnoManager.getCount()}`);
-    } else if (command === 'FNO!') {
-      this.fnoManager.clear();
-      this.fnoManager.add(tickers);
-      Notifier.success(`Replaced FNO tickers. Total: ${this.fnoManager.getCount()}`);
-    } else if (command === 'FNO-') {
-      this.fnoManager.remove(tickers);
-      Notifier.success(`Removed FNO tickers. Total: ${this.fnoManager.getCount()}`);
-    }
-  }
-
   /** @inheritdoc */
   public focusCommandInput(): void {
     $(`#${Constants.UI.IDS.INPUTS.COMMAND}`).focus();
@@ -194,15 +171,7 @@ export class CommandInputHandler implements ICommandInputHandler {
                 <div style="${styles.item}">• P=SearchQuery - Map Pair (Symbol/Name etc) </div>
             </div>
 
-            <div style="${styles.section}">FNO Commands:</div>
-            <div style="${styles.list}">
-                <div style="${styles.item}">• FNO=TICKER1,TICKER2</div>
-                <div style="${styles.subItem}>Add FNO Tickers</div>
-                <div style="${styles.item}">• FNO!=TICKER1,TICKER2</div>
-                <div style="${styles.subItem}>Replace FNO Tickers</div>
-                <div style="${styles.item}">• FNO-=TICKER1,TICKER2</div>
-                <div style="${styles.subItem}>Remove FNO Tickers</div>
-            </div>
+
         </div>
     `;
   }

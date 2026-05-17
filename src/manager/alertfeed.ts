@@ -50,7 +50,7 @@ export class AlertFeedManager implements IAlertFeedManager {
       return { state: FeedState.WATCHED, color: 'yellow' };
     }
 
-    if (this.recentManager.isRecent(tvTicker)) {
+    if (this.recentManager.isRecent(tvTicker, Constants.RECENT_CUTOFF_MS)) {
       return { state: FeedState.RECENT, color: 'lime' };
     }
 

@@ -1,7 +1,7 @@
 import { TradingViewManager } from '../../src/manager/tv';
 import { WaitUtil } from '../../src/util/wait';
 import { IRepoCron } from '../../src/repo/cron';
-import { IKohanClient } from '../../src/client/kohan';
+import { IOsClient } from '../../src/client/os';
 import { Constants } from '../../src/models/constant';
 
 // Mock Notifier to avoid DOM issues
@@ -49,7 +49,7 @@ describe('TradingViewManager', () => {
   let manager: TradingViewManager;
   let mockWaitUtil: jest.Mocked<WaitUtil>;
   let mockRepoCron: jest.Mocked<IRepoCron>;
-  let mockKohanClient: jest.Mocked<IKohanClient>;
+  let mockOsClient: jest.Mocked<IOsClient>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -67,20 +67,16 @@ describe('TradingViewManager', () => {
       saveAllRepositories: jest.fn().mockResolvedValue(undefined),
     };
 
-    mockKohanClient = {
+    mockOsClient = {
       screenshot: jest.fn(),
-      createJournal: jest.fn(),
+      screenshotRegion: jest.fn(),
       getClip: jest.fn(),
       enableSubmap: jest.fn().mockResolvedValue(undefined),
       disableSubmap: jest.fn().mockResolvedValue(undefined),
-      listJournals: jest.fn(),
-      addJournalImage: jest.fn(),
-      addJournalTag: jest.fn(),
-      updateJournalStatus: jest.fn(),
       getBaseUrl: jest.fn(),
     };
 
-    manager = new TradingViewManager(mockWaitUtil, mockRepoCron, mockKohanClient);
+    manager = new TradingViewManager(mockWaitUtil, mockRepoCron, mockOsClient);
 
     // Reset mock states
     mockJQueryElement.text.mockReturnValue('100.50');
@@ -354,8 +350,8 @@ describe('TradingViewManager', () => {
       await manager.setSwiftKeysState(true);
 
       expect(mockSwiftElement.prop).toHaveBeenCalledWith('checked', true);
-      expect(mockKohanClient.enableSubmap).toHaveBeenCalledWith('swiftkeys');
-      expect(mockKohanClient.disableSubmap).not.toHaveBeenCalled();
+      expect(mockOsClient.enableSubmap).toHaveBeenCalledWith('swiftkeys');
+      expect(mockOsClient.disableSubmap).not.toHaveBeenCalled();
     });
 
     test('should disable swift keys and call kohan client', async () => {
@@ -376,27 +372,27 @@ describe('TradingViewManager', () => {
       await manager.setSwiftKeysState(false);
 
       expect(mockSwiftElement.prop).toHaveBeenCalledWith('checked', false);
-      expect(mockKohanClient.disableSubmap).toHaveBeenCalledWith('swiftkeys');
-      expect(mockKohanClient.enableSubmap).not.toHaveBeenCalled();
+      expect(mockOsClient.disableSubmap).toHaveBeenCalledWith('swiftkeys');
+      expect(mockOsClient.enableSubmap).not.toHaveBeenCalled();
     });
 
     test('should throw error when kohan client enable fails', async () => {
       const errorMessage = 'Network error';
-      mockKohanClient.enableSubmap.mockRejectedValue(new Error(errorMessage));
+      mockOsClient.enableSubmap.mockRejectedValue(new Error(errorMessage));
 
       await expect(manager.setSwiftKeysState(true)).rejects.toThrow(`SwiftKey state change failed: ${errorMessage}`);
     });
 
     test('should throw error when kohan client disable fails', async () => {
       const errorMessage = 'API error';
-      mockKohanClient.disableSubmap.mockRejectedValue(new Error(errorMessage));
+      mockOsClient.disableSubmap.mockRejectedValue(new Error(errorMessage));
 
       await expect(manager.setSwiftKeysState(false)).rejects.toThrow(`SwiftKey state change failed: ${errorMessage}`);
     });
 
     test('should handle non-Error objects in catch block', async () => {
       const errorObj = { message: 'String error' };
-      mockKohanClient.enableSubmap.mockRejectedValue(errorObj);
+      mockOsClient.enableSubmap.mockRejectedValue(errorObj);
 
       await expect(manager.setSwiftKeysState(true)).rejects.toThrow('SwiftKey state change failed: String error');
     });

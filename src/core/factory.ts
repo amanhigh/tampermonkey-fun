@@ -2,8 +2,10 @@
 import { InvestingClient, IInvestingClient } from '../client/investing';
 import { IImdbHandler, ImdbHandler } from '../handler/imdb';
 import { KiteClient, IKiteClient } from '../client/kite';
-import { KohanClient, IKohanClient } from '../client/kohan';
+import { JournalClient, IJournalClient } from '../client/journal';
+import { OsClient, IOsClient } from '../client/os';
 import { TickerClient, ITickerClient } from '../client/ticker';
+import { TickerAlertClient, ITickerAlertClient } from '../client/ticker_alert';
 import { UIUtil, IUIUtil } from '../util/ui';
 import { ObserveUtil, IObserveUtil } from '../util/observer';
 import { SearchUtil, ISearchUtil } from '../util/search';
@@ -23,7 +25,6 @@ import { IPairRepo, PairRepo } from '../repo/pair';
 import { IExchangeRepo, ExchangeRepo } from '../repo/exchange';
 import { ITickerRepo, TickerRepo } from '../repo/ticker';
 import { ISequenceRepo, SequenceRepo } from '../repo/sequence';
-import { IRecentTickerRepo, RecentTickerRepo } from '../repo/recent';
 import { IAlertRepo, AlertRepo } from '../repo/alert';
 
 // Manager Layer Imports
@@ -38,7 +39,6 @@ import { ITickerManager, TickerManager } from '../manager/ticker';
 import { ISymbolManager, SymbolManager } from '../manager/symbol';
 import { ITradingViewManager, TradingViewManager } from '../manager/tv';
 import { IPairManager, PairManager } from '../manager/pair';
-import { FnoRepo, IFnoRepo } from '../repo/fno';
 import { IFnoManager, FnoManager } from '../manager/fno';
 
 // Handler Imports
@@ -133,7 +133,6 @@ export class Factory {
             Factory.handler.journal(),
             Factory.handler.command(),
             Factory.handler.kite(),
-            Factory.handler.ticker(),
             Factory.handler.alertFeed(),
             Factory.handler.panel(),
             Factory.manager.tv(),
@@ -157,8 +156,10 @@ export class Factory {
   public static client = {
     investing: (): IInvestingClient => Factory.getInstance('investingClient', () => new InvestingClient()),
     kite: (): IKiteClient => Factory.getInstance('kiteClient', () => new KiteClient()),
-    kohan: (): IKohanClient => Factory.getInstance('kohanClient', () => new KohanClient()),
+    journal: (): IJournalClient => Factory.getInstance('journalClient', () => new JournalClient()),
+    os: (): IOsClient => Factory.getInstance('osClient', () => new OsClient()),
     ticker: (): ITickerClient => Factory.getInstance('tickerClient', () => new TickerClient()),
+    tickerAlert: (): ITickerAlertClient => Factory.getInstance('tickerAlertClient', () => new TickerAlertClient()),
   };
 
   /**
@@ -189,9 +190,7 @@ export class Factory {
     exchange: (): IExchangeRepo => Factory.getInstance('exchangeRepo', () => new ExchangeRepo(Factory.repo.cron())),
     ticker: (): ITickerRepo => Factory.getInstance('tickerRepo', () => new TickerRepo(Factory.repo.cron())),
     sequence: (): ISequenceRepo => Factory.getInstance('sequenceRepo', () => new SequenceRepo(Factory.repo.cron())),
-    fno: (): IFnoRepo => Factory.getInstance('fnoRepo', () => new FnoRepo(Factory.repo.cron())),
     kite: (): IKiteRepo => Factory.getInstance('kiteRepo', () => new KiteRepo()),
-    recent: (): IRecentTickerRepo => Factory.getInstance('recentRepo', () => new RecentTickerRepo(Factory.repo.cron())),
     imdb: (): IImdbRepo => Factory.getInstance('imdbRepo', () => new ImdbRepo()),
   };
 
@@ -225,7 +224,7 @@ export class Factory {
           new TradingViewWatchlistManager(
             Factory.manager.paint(),
             Factory.util.ui(),
-            Factory.repo.fno(),
+            Factory.manager.fno(),
             Factory.manager.watch(),
             Factory.manager.flag()
           )
@@ -240,7 +239,7 @@ export class Factory {
             Factory.manager.watch(),
             Factory.manager.flag(),
             Factory.manager.ticker(),
-            Factory.repo.fno()
+            Factory.manager.fno()
           )
       ),
 
@@ -290,7 +289,7 @@ export class Factory {
     tv: (): ITradingViewManager =>
       Factory.getInstance(
         'tvManager',
-        () => new TradingViewManager(Factory.util.wait(), Factory.repo.cron(), Factory.client.kohan())
+        () => new TradingViewManager(Factory.util.wait(), Factory.repo.cron(), Factory.client.os())
       ),
 
     pair: (): IPairManager =>
@@ -303,7 +302,6 @@ export class Factory {
             Factory.manager.watch(),
             Factory.manager.flag(),
             Factory.manager.alertFeed(),
-            Factory.repo.recent(),
             Factory.repo.sequence(),
             Factory.repo.exchange(),
             Factory.repo.alert(),
@@ -318,13 +316,19 @@ export class Factory {
       Factory.getInstance('flagManager', () => new FlagManager(Factory.repo.flag(), Factory.manager.paint())),
 
     recent: (): IRecentManager =>
-      Factory.getInstance('recentManager', () => new RecentManager(Factory.repo.recent(), Factory.manager.paint())),
+      Factory.getInstance('recentManager', () => new RecentManager(Factory.client.ticker())),
     journal: (): IJournalManager =>
       Factory.getInstance(
         'journalManager',
-        () => new JournalManager(Factory.manager.sequence(), Factory.client.kohan(), Factory.manager.timeFrame())
+        () =>
+          new JournalManager(
+            Factory.manager.sequence(),
+            Factory.client.journal(),
+            Factory.client.os(),
+            Factory.manager.timeFrame()
+          )
       ),
-    fno: (): IFnoManager => Factory.getInstance('fnoManager', () => new FnoManager(Factory.repo.fno())),
+    fno: (): IFnoManager => Factory.getInstance('fnoManager', () => new FnoManager(Factory.client.ticker())),
     alertFeed: (): IAlertFeedManager =>
       Factory.getInstance(
         'alertFeedManager',
@@ -337,7 +341,7 @@ export class Factory {
           new CanonicalRanker({
             alertRepo: Factory.repo.alert(),
             watchManager: Factory.manager.watch(),
-            recentRepo: Factory.repo.recent(),
+            recentManager: Factory.manager.recent(),
             sequenceRepo: Factory.repo.sequence(),
             exchangeRepo: Factory.repo.exchange(),
             pairRepo: Factory.repo.pair(),
@@ -429,7 +433,7 @@ export class Factory {
     staleReview: () =>
       Factory.getInstance(
         'auditPlugin_staleReview',
-        () => new StaleReviewPlugin(Factory.repo.recent(), Factory.repo.ticker(), Factory.manager.watch())
+        () => new StaleReviewPlugin(Factory.manager.recent(), Factory.repo.ticker(), Factory.manager.watch())
       ),
 
     // ===== SECTION CREATION =====
@@ -662,15 +666,7 @@ export class Factory {
     ticker: (): ITickerHandler =>
       Factory.getInstance(
         'tickerHandler',
-        () =>
-          new TickerHandler(
-            Factory.manager.recent(),
-            Factory.manager.ticker(),
-            Factory.manager.symbol(),
-            Factory.manager.screener(),
-            Factory.manager.alertFeed(),
-            Factory.handler.pair()
-          )
+        () => new TickerHandler(Factory.manager.ticker(), Factory.manager.symbol(), Factory.handler.pair())
       ),
 
     tickerChange: (): ITickerChangeHandler =>
@@ -768,6 +764,7 @@ export class Factory {
         () =>
           new JournalHandler(
             Factory.manager.ticker() as TickerManager,
+            Factory.client.os(),
             Factory.manager.journal(),
             Factory.util.smart(),
             Factory.util.ui(),
@@ -782,7 +779,7 @@ export class Factory {
     command: (): ICommandInputHandler =>
       Factory.getInstance(
         'commandHandler',
-        () => new CommandInputHandler(Factory.handler.ticker(), Factory.handler.alert(), Factory.manager.fno())
+        () => new CommandInputHandler(Factory.handler.ticker(), Factory.handler.alert())
       ),
     alertFeed: (): IAlertFeedHandler =>
       Factory.getInstance(

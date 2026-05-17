@@ -1,4 +1,5 @@
 import { JournalHandler } from '../../src/handler/journal';
+import { IOsClient } from '../../src/client/os';
 import { IJournalManager } from '../../src/manager/journal';
 import { ISmartPrompt } from '../../src/util/smart';
 import { IUIUtil } from '../../src/util/ui';
@@ -26,6 +27,7 @@ jest.mock('../../src/util/notify', () => ({
 describe('JournalHandler', () => {
   let journalHandler: JournalHandler;
   let mockTickerManager: jest.Mocked<TickerManager>;
+  let mockOsClient: jest.Mocked<IOsClient>;
   let mockJournalManager: jest.Mocked<IJournalManager>;
   let mockSmartPrompt: jest.Mocked<ISmartPrompt>;
   let mockUiUtil: jest.Mocked<IUIUtil>;
@@ -45,12 +47,20 @@ describe('JournalHandler', () => {
       getTicker: jest.fn(),
     } as unknown as jest.Mocked<TickerManager>;
 
+    mockOsClient = {
+      screenshotRegion: jest.fn(),
+      screenshot: jest.fn(),
+      getClip: jest.fn(),
+      enableSubmap: jest.fn(),
+      disableSubmap: jest.fn(),
+      getBaseUrl: jest.fn(),
+    } as unknown as jest.Mocked<IOsClient>;
+
     mockJournalManager = {
       createReasonText: jest.fn(),
       createJournal: jest.fn(),
       publishJournalOpenEvent: jest.fn().mockResolvedValue(undefined),
       screenshotTicker: jest.fn(),
-      screenshotChecklist: jest.fn(),
       findRunningJournal: jest.fn(),
       addJournalImages: jest.fn().mockResolvedValue(undefined),
       addReasonTags: jest.fn().mockResolvedValue(undefined),
@@ -104,6 +114,7 @@ describe('JournalHandler', () => {
 
     journalHandler = new JournalHandler(
       mockTickerManager,
+      mockOsClient,
       mockJournalManager,
       mockSmartPrompt,
       mockUiUtil,
@@ -181,7 +192,7 @@ describe('JournalHandler', () => {
       // Step 1: note
       mockSmartPrompt.showTextareaModal.mockResolvedValue(Constants.TRADING.PROMPT.TRADE_INFO);
       // Step 2: checklist screenshot
-      (mockJournalManager.screenshotChecklist as jest.Mock).mockResolvedValue({
+      (mockOsClient.screenshotRegion as jest.Mock).mockResolvedValue({
         file_name: 'TCS_20240422_0930_checklist_set.png',
         full_path: '/home/aman/Downloads/TCS_20240422_0930_checklist_set.png',
         timeframe: 'TMN',
@@ -210,7 +221,7 @@ describe('JournalHandler', () => {
         Constants.TRADING.PROMPT.TRADE_INFO,
         'Save Note'
       );
-      expect(mockJournalManager.screenshotChecklist).toHaveBeenCalledWith('TCS', 'set');
+      expect(mockOsClient.screenshotRegion).toHaveBeenCalledWith('TCS', 'set');
       expect(mockSmartPrompt.showModal).toHaveBeenCalled();
       expect(mockJournalManager.screenshotTicker).toHaveBeenCalledWith('TCS', 'set');
       expect(mockJournalManager.createJournal).toHaveBeenCalledWith({
@@ -239,7 +250,7 @@ describe('JournalHandler', () => {
 
       await journalHandler.handleRecordJournal(JournalType.SET);
 
-      expect(mockJournalManager.screenshotChecklist).not.toHaveBeenCalled();
+      expect(mockOsClient.screenshotRegion).not.toHaveBeenCalled();
       expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
       expect(mockJournalManager.createJournal).not.toHaveBeenCalled();
       expect(mockJournalManager.publishJournalOpenEvent).not.toHaveBeenCalled();
@@ -251,7 +262,7 @@ describe('JournalHandler', () => {
 
       await journalHandler.handleRecordJournal(JournalType.SET);
 
-      expect(mockJournalManager.screenshotChecklist).not.toHaveBeenCalled();
+      expect(mockOsClient.screenshotRegion).not.toHaveBeenCalled();
       expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
       expect(mockJournalManager.createJournal).not.toHaveBeenCalled();
       expect(mockJournalManager.publishJournalOpenEvent).not.toHaveBeenCalled();
@@ -260,11 +271,11 @@ describe('JournalHandler', () => {
     it('should abort SET journal flow when checklist region screenshot returns 409', async () => {
       mockTickerManager.getTicker.mockReturnValue('TCS');
       mockSmartPrompt.showTextareaModal.mockResolvedValue(Constants.TRADING.PROMPT.TRADE_INFO);
-      (mockJournalManager.screenshotChecklist as jest.Mock).mockRejectedValue(new Error('409 Conflict: screenshot aborted'));
+      (mockOsClient.screenshotRegion as jest.Mock).mockRejectedValue(new Error('409 Conflict: screenshot aborted'));
 
       await journalHandler.handleRecordJournal(JournalType.SET);
 
-      expect(mockJournalManager.screenshotChecklist).toHaveBeenCalledWith('TCS', 'set');
+      expect(mockOsClient.screenshotRegion).toHaveBeenCalledWith('TCS', 'set');
       expect(Notifier.warn).toHaveBeenCalledWith('Checklist screenshot was cancelled, aborting journal creation.');
       expect(mockSmartPrompt.showModal).not.toHaveBeenCalled();
       expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
@@ -275,7 +286,7 @@ describe('JournalHandler', () => {
     it('should abort SET journal flow when reason prompt is cancelled after checklist screenshot', async () => {
       mockTickerManager.getTicker.mockReturnValue('TCS');
       mockSmartPrompt.showTextareaModal.mockResolvedValue(Constants.TRADING.PROMPT.TRADE_INFO);
-      (mockJournalManager.screenshotChecklist as jest.Mock).mockResolvedValue({
+      (mockOsClient.screenshotRegion as jest.Mock).mockResolvedValue({
         file_name: 'TCS_20240422_0930_checklist_set.png',
         full_path: '/home/aman/Downloads/TCS_20240422_0930_checklist_set.png',
         timeframe: 'TMN',
@@ -284,7 +295,7 @@ describe('JournalHandler', () => {
 
       await journalHandler.handleRecordJournal(JournalType.SET);
 
-      expect(mockJournalManager.screenshotChecklist).toHaveBeenCalledWith('TCS', 'set');
+      expect(mockOsClient.screenshotRegion).toHaveBeenCalledWith('TCS', 'set');
       expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
       expect(mockJournalManager.createJournal).not.toHaveBeenCalled();
       expect(mockJournalManager.publishJournalOpenEvent).not.toHaveBeenCalled();

@@ -7,24 +7,29 @@ import {
   JournalQueryParams,
   JournalRecord,
   KohanEnvelope,
-  ScreenshotRequest,
-  ScreenshotResponse,
   UpdateJournalStatusRequest,
   UpdateJournalStatusResponse,
-} from '../models/kohan';
+} from '../models/journal';
 import { Constants } from '../models/constant';
 
 /**
- * KohanClient handles interactions with the local Kohan API
- * Provides methods for taking screenshots, creating journals, and managing journal sub-resources.
+ * JournalClient handles journal CRUD and sub-resource operations
+ * against the local Kohan API.
  */
-export interface IKohanClient extends IBaseClient {
+export interface IJournalClient extends IBaseClient {
   /**
    * List journals matching query parameters.
    * @param params Query parameters for filtering journals
    * @returns Promise resolving with paginated journal list
    */
   listJournals(params: JournalQueryParams): Promise<JournalListResponse>;
+
+  /**
+   * Create a journal through the V1 journal API.
+   * @param request - Journal creation request payload
+   * @returns Promise resolving with created journal data
+   */
+  createJournal(request: CreateJournalRequest): Promise<JournalRecord>;
 
   /**
    * Add an image to an existing journal.
@@ -49,77 +54,18 @@ export interface IKohanClient extends IBaseClient {
    * @returns Promise resolving with update response
    */
   updateJournalStatus(journalId: string, status: UpdateJournalStatusRequest): Promise<UpdateJournalStatusResponse>;
-
-  /**
-   * Take journal screenshots via the API
-   * @param request - Screenshot request payload
-   * @returns Promise resolving with captured screenshot metadata
-   * @throws Error when taking journal screenshots fails
-   */
-  screenshot(request: ScreenshotRequest): Promise<ScreenshotResponse>;
-
-  /**
-   * Create a journal through the V1 journal API.
-   * @param request - Journal creation request payload
-   * @returns Promise resolving with created journal data
-   * @throws Error when creating the journal fails
-   */
-  createJournal(request: CreateJournalRequest): Promise<JournalRecord>;
-
-  /**
-   * Retrieve clipboard data from the API
-   * @returns Promise resolving with clipboard data
-   * @throws Error when retrieving clipboard data fails
-   */
-  getClip(): Promise<string>;
-
-  /**
-   * Enable a submap via the API
-   * @param submap - Submap name to enable (e.g., 'swiftkeys')
-   * @returns Promise resolving when submap is enabled
-   * @throws Error when enabling submap fails
-   */
-  enableSubmap(submap: string): Promise<void>;
-
-  /**
-   * Disable a submap via the API
-   * @param submap - Submap name to disable
-   * @returns Promise resolving when submap is disabled
-   * @throws Error when disabling submap fails
-   */
-  disableSubmap(submap: string): Promise<void>;
 }
 
 /**
- * KohanClient handles interactions with the local Kohan API
- * Provides methods for taking screenshots, creating journals, and managing journal sub-resources.
+ * JournalClient handles journal CRUD and sub-resource operations against the Kohan backend.
  */
-export class KohanClient extends BaseClient implements IKohanClient {
+export class JournalClient extends BaseClient implements IJournalClient {
   /**
-   * Creates an instance of KohanClient
+   * Creates an instance of JournalClient.
    * @param baseUrl - Base URL for Kohan API
    */
   constructor(baseUrl: string = Constants.KOHAN.BASE_URL) {
     super(baseUrl);
-  }
-
-  /**
-   * Take journal screenshots via the API
-   * @param request - Screenshot request payload
-   * @returns Promise resolving with captured screenshot metadata
-   * @throws Error when taking journal screenshots fails
-   */
-  async screenshot(request: ScreenshotRequest): Promise<ScreenshotResponse> {
-    try {
-      const response = await this.makeRequest<KohanEnvelope<ScreenshotResponse>>('/os/screenshot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        data: JSON.stringify(request),
-      });
-      return response.data;
-    } catch (error) {
-      throw new Error(`Failed to take journal screenshots: ${(error as Error).message}`);
-    }
   }
 
   /** @inheritdoc */
@@ -204,55 +150,6 @@ export class KohanClient extends BaseClient implements IKohanClient {
       });
     } catch (error) {
       throw new Error(`Failed to update journal status: ${(error as Error).message}`);
-    }
-  }
-
-  /**
-   * Retrieve clipboard data from the API
-   * @returns Promise resolving with clipboard data
-   * @throws Error when retrieving clipboard data fails
-   */
-  async getClip(): Promise<string> {
-    try {
-      return await this.makeRequest<string>('/os/clip/');
-    } catch (error) {
-      throw new Error(`Failed to get clip: ${(error as Error).message}`);
-    }
-  }
-
-  /**
-   * Enable a submap via the API
-   * @param submap - Submap name to enable (e.g., 'swiftkeys')
-   * @returns Promise resolving when submap is enabled
-   * @throws Error when enabling submap fails
-   */
-  async enableSubmap(submap: string): Promise<void> {
-    try {
-      await this.makeRequest<void>('/os/submap/enable', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        data: JSON.stringify({ submap }),
-      });
-    } catch (error) {
-      throw new Error(`Failed to enable submap: ${(error as Error).message}`);
-    }
-  }
-
-  /**
-   * Disable a submap via the API
-   * @param submap - Submap name to disable
-   * @returns Promise resolving when submap is disabled
-   * @throws Error when disabling submap fails
-   */
-  async disableSubmap(submap: string): Promise<void> {
-    try {
-      await this.makeRequest<void>('/os/submap/disable', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        data: JSON.stringify({ submap }),
-      });
-    } catch (error) {
-      throw new Error(`Failed to disable submap: ${(error as Error).message}`);
     }
   }
 }

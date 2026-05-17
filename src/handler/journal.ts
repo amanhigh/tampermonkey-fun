@@ -2,6 +2,7 @@
  * Interface and implementations for journal handling operations
  */
 
+import { IOsClient } from '../client/os';
 import { IJournalManager } from '../manager/journal';
 import { ISmartPrompt } from '../util/smart';
 import { IUIUtil } from '../util/ui';
@@ -13,7 +14,8 @@ import { ITradingViewManager } from '../manager/tv';
 import { IStyleManager } from '../manager/style';
 import { IAlertManager } from '../manager/alert';
 import { AlertClickAction, JournalOpenEvent } from '../models/events';
-import { CreateJournalNoteRequest, JournalResultStatus, ScreenshotResponse } from '../models/kohan';
+import { CreateJournalNoteRequest, JournalResultStatus } from '../models/journal';
+import { ScreenshotResponse } from '../models/os';
 
 /**
  * Interface for managing journal entry operations at UI/Event level
@@ -62,6 +64,7 @@ export class JournalHandler implements IJournalHandler {
   // eslint-disable-next-line max-params
   constructor(
     private readonly tickerManager: TickerManager,
+    private readonly osClient: IOsClient,
     private readonly journalManager: IJournalManager,
     private readonly smartPrompt: ISmartPrompt,
     private readonly uiUtil: IUIUtil,
@@ -135,7 +138,7 @@ export class JournalHandler implements IJournalHandler {
     // Step 2: Capture checklist region screenshot
     let checklistScreenshot = null;
     try {
-      checklistScreenshot = await this.journalManager.screenshotChecklist(ticker, type);
+      checklistScreenshot = await this.osClient.screenshotRegion(ticker, type);
     } catch (error) {
       // API returns 409 when user aborts the region selection
       if ((error as Error).message.includes('409')) {

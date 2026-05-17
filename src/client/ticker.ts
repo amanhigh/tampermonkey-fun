@@ -1,9 +1,5 @@
 import { BaseClient, IBaseClient } from './base';
 import {
-  AlertTickerListResponse,
-  AlertTickerQueryParams,
-  AlertTickerRecord,
-  CreateAlertTickerRequest,
   CreateTickerRequest,
   TickerLastOpenedUpdate,
   TickerListResponse,
@@ -11,7 +7,7 @@ import {
   TickerRecord,
   TickerUpdateRequest,
 } from '../models/ticker';
-import { KohanEnvelope } from '../models/kohan';
+import { KohanEnvelope } from '../models/journal';
 import { Constants } from '../models/constant';
 
 /**
@@ -58,41 +54,12 @@ export interface ITickerClient extends IBaseClient {
   deleteTicker(ticker: string): Promise<void>;
 
   /**
-   * List primary tickers with filters and pagination.
-   * @param params - Query parameters for filtering, sorting, and pagination
-   * @returns Promise resolving with paginated ticker list
+   * List ALL tickers matching filters, auto-paginating through all pages.
+   * Backend enforces limit=100 max per page; this method handles the loop.
+   * @param params - Query parameters (offset/limit are overridden)
+   * @returns Promise resolving with all matching ticker records
    */
-  listTickers(params: TickerQueryParams): Promise<TickerListResponse>;
-
-  // ── Alert Ticker APIs (2.2.2) ──
-
-  /**
-   * Create an Alert ticker under a primary ticker.
-   * @param ticker - Parent primary ticker identity
-   * @param data - Alert ticker creation payload
-   * @returns Promise resolving with created Alert ticker
-   */
-  createAlertTicker(ticker: string, data: CreateAlertTickerRequest): Promise<AlertTickerRecord>;
-
-  /**
-   * Retrieve one Alert ticker by symbol.
-   * @param symbol - Alert ticker symbol
-   * @returns Promise resolving with Alert ticker record
-   */
-  getAlertTicker(symbol: string): Promise<AlertTickerRecord>;
-
-  /**
-   * Delete one Alert ticker by symbol.
-   * @param symbol - Alert ticker symbol
-   */
-  deleteAlertTicker(symbol: string): Promise<void>;
-
-  /**
-   * List Alert tickers with filters and pagination.
-   * @param params - Query parameters for filtering and pagination
-   * @returns Promise resolving with paginated Alert ticker list
-   */
-  listAlertTickers(params: AlertTickerQueryParams): Promise<AlertTickerListResponse>;
+  listTickers(params: TickerQueryParams): Promise<TickerRecord[]>;
 }
 
 /**
@@ -173,68 +140,26 @@ export class TickerClient extends BaseClient implements ITickerClient {
   }
 
   /** @inheritdoc */
-  async listTickers(params: TickerQueryParams): Promise<TickerListResponse> {
-    try {
-      const query = this.buildTickerQuery(params);
-      const response = await this.makeRequest<KohanEnvelope<TickerListResponse>>(`/tickers?${query.toString()}`);
-      return response.data;
-    } catch (error) {
-      throw new Error(`Failed to list tickers: ${(error as Error).message}`);
-    }
-  }
+  async listTickers(params: TickerQueryParams): Promise<TickerRecord[]> {
+    const limit = Constants.KOHAN.PAGE_LIMIT;
+    let offset = 0;
+    let total = 0;
+    const all: TickerRecord[] = [];
+    // HACK: Generic pagination helper in BaseClient instead of copy/paste in each method that needs it ?
 
-  // ── Alert Ticker APIs (2.2.2) ──
-
-  /** @inheritdoc */
-  async createAlertTicker(ticker: string, data: CreateAlertTickerRequest): Promise<AlertTickerRecord> {
     try {
-      const response = await this.makeRequest<KohanEnvelope<AlertTickerRecord>>(
-        `/tickers/${encodeURIComponent(ticker)}/alert-tickers`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          data: JSON.stringify(data),
-        }
-      );
-      return response.data;
-    } catch (error) {
-      throw new Error(`Failed to create Alert ticker: ${(error as Error).message}`);
-    }
-  }
+      do {
+        const query = this.buildTickerQuery({ ...params, limit, offset });
+        const response = await this.makeRequest<KohanEnvelope<TickerListResponse>>(`/tickers?${query.toString()}`);
+        const data = response.data;
+        all.push(...data.tickers);
+        total = data.metadata.total;
+        offset += limit;
+      } while (offset < total);
 
-  /** @inheritdoc */
-  async getAlertTicker(symbol: string): Promise<AlertTickerRecord> {
-    try {
-      const response = await this.makeRequest<KohanEnvelope<AlertTickerRecord>>(
-        `/alert-tickers/${encodeURIComponent(symbol)}`
-      );
-      return response.data;
+      return all;
     } catch (error) {
-      throw new Error(`Failed to get Alert ticker: ${(error as Error).message}`);
-    }
-  }
-
-  /** @inheritdoc */
-  async deleteAlertTicker(symbol: string): Promise<void> {
-    try {
-      await this.makeRequest<void>(`/alert-tickers/${encodeURIComponent(symbol)}`, {
-        method: 'DELETE',
-      });
-    } catch (error) {
-      throw new Error(`Failed to delete Alert ticker: ${(error as Error).message}`);
-    }
-  }
-
-  /** @inheritdoc */
-  async listAlertTickers(params: AlertTickerQueryParams): Promise<AlertTickerListResponse> {
-    try {
-      const query = this.buildAlertTickerQuery(params);
-      const response = await this.makeRequest<KohanEnvelope<AlertTickerListResponse>>(
-        `/alert-tickers?${query.toString()}`
-      );
-      return response.data;
-    } catch (error) {
-      throw new Error(`Failed to list Alert tickers: ${(error as Error).message}`);
+      throw new Error(`Failed to list all tickers: ${(error as Error).message}`);
     }
   }
 
@@ -258,6 +183,7 @@ export class TickerClient extends BaseClient implements ITickerClient {
    * Build URLSearchParams for primary ticker query.
    */
   private buildTickerQuery(params: TickerQueryParams): URLSearchParams {
+    // HACK: Reuse move to Base Client ?
     const query = new URLSearchParams();
     TickerClient.setQueryParams(query, [
       ['search', params.search],
@@ -269,22 +195,6 @@ export class TickerClient extends BaseClient implements ITickerClient {
       ['opened-after', params['opened-after']],
       ['sort-by', params['sort-by']],
       ['sort-order', params['sort-order']],
-      ['offset', params.offset],
-      ['limit', params.limit],
-    ]);
-    return query;
-  }
-
-  /**
-   * Build URLSearchParams for Alert ticker query.
-   */
-  private buildAlertTickerQuery(params: AlertTickerQueryParams): URLSearchParams {
-    const query = new URLSearchParams();
-    TickerClient.setQueryParams(query, [
-      ['symbol', params.symbol],
-      ['ticker', params.ticker],
-      ['pair-id', params['pair-id']],
-      ['exchange', params.exchange],
       ['offset', params.offset],
       ['limit', params.limit],
     ]);
