@@ -3,7 +3,7 @@ import { IPaintManager } from '../../src/manager/paint';
 import { IWatchManager } from '../../src/manager/watch';
 import { IFlagManager } from '../../src/manager/flag';
 import { ITickerManager } from '../../src/manager/ticker';
-import { IFnoRepo } from '../../src/repo/fno';
+import { IFnoManager } from '../../src/manager/fno';
 import { Constants } from '../../src/models/constant';
 
 // Mock jQuery
@@ -19,7 +19,7 @@ describe('HeaderManager', () => {
   let mockWatchManager: jest.Mocked<IWatchManager>;
   let mockFlagManager: jest.Mocked<IFlagManager>;
   let mockTickerManager: jest.Mocked<ITickerManager>;
-  let mockFnoRepo: jest.Mocked<IFnoRepo>;
+  let mockFnoManager: jest.Mocked<IFnoManager>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -63,25 +63,18 @@ describe('HeaderManager', () => {
       navigateTickers: jest.fn(),
     };
 
-    // Mock FnoRepo
-    mockFnoRepo = {
-      has: jest.fn(),
-      add: jest.fn(),
-      delete: jest.fn(),
-      clear: jest.fn(),
-      getAll: jest.fn(),
-      getCount: jest.fn(),
-      load: jest.fn(),
-      save: jest.fn(),
-      info: jest.fn(),
-    } as jest.Mocked<IFnoRepo>;
+    // Mock FnoManager
+    mockFnoManager = {
+      isFno: jest.fn(),
+      getAllFnoTickers: jest.fn(),
+    } as jest.Mocked<IFnoManager>;
 
     headerManager = new HeaderManager(
       mockPaintManager,
       mockWatchManager,
       mockFlagManager,
       mockTickerManager,
-      mockFnoRepo
+      mockFnoManager
     );
   });
 
@@ -101,7 +94,7 @@ describe('HeaderManager', () => {
     it('should paint header with all components', () => {
       mockWatchManager.getCategory.mockReturnValue(new Set());
       mockFlagManager.getCategory.mockReturnValue(new Set());
-      mockFnoRepo.has.mockReturnValue(false);
+      mockFnoManager.isFno.mockReturnValue(false);
 
       headerManager.paintHeader();
 
@@ -131,7 +124,7 @@ describe('HeaderManager', () => {
         .mockReturnValueOnce(new Set()) // category 1
         .mockReturnValueOnce(categorySet); // category 2
       mockFlagManager.getCategory.mockReturnValue(new Set());
-      mockFnoRepo.has.mockReturnValue(false);
+      mockFnoManager.isFno.mockReturnValue(false);
 
       headerManager.paintHeader();
 
@@ -153,7 +146,7 @@ describe('HeaderManager', () => {
         .mockReturnValueOnce(new Set()) // 4
         .mockReturnValueOnce(categorySet); // 5
       mockFlagManager.getCategory.mockReturnValue(new Set());
-      mockFnoRepo.has.mockReturnValue(false);
+      mockFnoManager.isFno.mockReturnValue(false);
 
       headerManager.paintHeader();
 
@@ -171,7 +164,7 @@ describe('HeaderManager', () => {
       mockFlagManager.getCategory
         .mockReturnValueOnce(new Set()) // category 0
         .mockReturnValueOnce(flagSet); // category 1
-      mockFnoRepo.has.mockReturnValue(false);
+      mockFnoManager.isFno.mockReturnValue(false);
 
       headerManager.paintHeader();
 
@@ -186,18 +179,18 @@ describe('HeaderManager', () => {
       mockTickerManager.getTicker.mockReturnValue(ticker);
       mockWatchManager.getCategory.mockReturnValue(new Set());
       mockFlagManager.getCategory.mockReturnValue(new Set());
-      mockFnoRepo.has.mockReturnValue(true);
+      mockFnoManager.isFno.mockReturnValue(true);
 
       headerManager.paintHeader();
 
-      expect(mockFnoRepo.has).toHaveBeenCalledWith(ticker);
+      expect(mockFnoManager.isFno).toHaveBeenCalledWith(ticker);
       expect(mockPaintManager.paintFNOMarking).toHaveBeenCalledWith(mockJQueryElement, true);
     });
 
     it('should reset colors to default before applying category colors', () => {
       mockWatchManager.getCategory.mockReturnValue(new Set());
       mockFlagManager.getCategory.mockReturnValue(new Set());
-      mockFnoRepo.has.mockReturnValue(false);
+      mockFnoManager.isFno.mockReturnValue(false);
 
       headerManager.paintHeader();
 
@@ -217,7 +210,7 @@ describe('HeaderManager', () => {
         .mockReturnValueOnce(new Set()) // category 2
         .mockReturnValueOnce(category3Set); // category 3 - should not reach here
       mockFlagManager.getCategory.mockReturnValue(new Set());
-      mockFnoRepo.has.mockReturnValue(false);
+      mockFnoManager.isFno.mockReturnValue(false);
 
       headerManager.paintHeader();
 
@@ -238,7 +231,7 @@ describe('HeaderManager', () => {
         .mockReturnValueOnce(flag0Set) // category 0 - first match
         .mockReturnValueOnce(new Set()) // category 1
         .mockReturnValueOnce(flag2Set); // category 2 - should not reach here
-      mockFnoRepo.has.mockReturnValue(false);
+      mockFnoManager.isFno.mockReturnValue(false);
 
       headerManager.paintHeader();
 
@@ -258,7 +251,7 @@ describe('HeaderManager', () => {
       mockTickerManager.getTicker.mockReturnValue(ticker);
       mockWatchManager.getCategory.mockReturnValueOnce(watchSet); // category 0
       mockFlagManager.getCategory.mockReturnValueOnce(flagSet); // category 0
-      mockFnoRepo.has.mockReturnValue(true);
+      mockFnoManager.isFno.mockReturnValue(true);
 
       headerManager.paintHeader();
 
@@ -276,7 +269,7 @@ describe('HeaderManager', () => {
       mockTickerManager.getTicker.mockReturnValue(ticker);
       mockWatchManager.getCategory.mockReturnValue(new Set());
       mockFlagManager.getCategory.mockReturnValue(new Set());
-      mockFnoRepo.has.mockReturnValue(true);
+      mockFnoManager.isFno.mockReturnValue(true);
 
       headerManager.paintHeader();
 
@@ -292,7 +285,7 @@ describe('HeaderManager', () => {
       mockTickerManager.getTicker.mockReturnValue(ticker);
       mockWatchManager.getCategory.mockReturnValue(new Set());
       mockFlagManager.getCategory.mockReturnValue(new Set());
-      mockFnoRepo.has.mockReturnValue(false);
+      mockFnoManager.isFno.mockReturnValue(false);
 
       headerManager.paintHeader();
 
@@ -303,7 +296,7 @@ describe('HeaderManager', () => {
       expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.BASIC.EXCHANGE);
       expect(mockWatchManager.getCategory).toHaveBeenCalled();
       expect(mockFlagManager.getCategory).toHaveBeenCalled();
-      expect(mockFnoRepo.has).toHaveBeenCalledWith(ticker);
+      expect(mockFnoManager.isFno).toHaveBeenCalledWith(ticker);
       expect(mockPaintManager.paintFNOMarking).toHaveBeenCalled();
     });
   });
@@ -344,7 +337,7 @@ describe('HeaderManager', () => {
       mockTickerManager.getTicker.mockReturnValue('NSE:TEST');
       mockWatchManager.getCategory.mockReturnValue(new Set());
       mockFlagManager.getCategory.mockReturnValue(new Set());
-      mockFnoRepo.has.mockImplementation(() => {
+      mockFnoManager.isFno.mockImplementation(() => {
         throw error;
       });
 
@@ -356,7 +349,7 @@ describe('HeaderManager', () => {
       mockTickerManager.getTicker.mockReturnValue('NSE:TEST');
       mockWatchManager.getCategory.mockReturnValue(new Set());
       mockFlagManager.getCategory.mockReturnValue(new Set());
-      mockFnoRepo.has.mockReturnValue(true);
+      mockFnoManager.isFno.mockReturnValue(true);
       mockPaintManager.paintFNOMarking.mockImplementation(() => {
         throw error;
       });

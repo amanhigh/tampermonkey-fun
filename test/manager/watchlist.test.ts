@@ -1,7 +1,7 @@
 import { TradingViewWatchlistManager, ITradingViewWatchlistManager } from '../../src/manager/watchlist';
 import { IPaintManager } from '../../src/manager/paint';
 import { IUIUtil } from '../../src/util/ui';
-import { IFnoRepo } from '../../src/repo/fno';
+import { IFnoManager } from '../../src/manager/fno';
 import { IWatchManager } from '../../src/manager/watch';
 import { IFlagManager } from '../../src/manager/flag';
 import { Constants } from '../../src/models/constant';
@@ -26,7 +26,7 @@ describe('TradingViewWatchlistManager', () => {
   let watchlistManager: ITradingViewWatchlistManager;
   let mockPaintManager: jest.Mocked<IPaintManager>;
   let mockUIUtil: jest.Mocked<IUIUtil>;
-  let mockFnoRepo: jest.Mocked<IFnoRepo>;
+  let mockFnoManager: jest.Mocked<IFnoManager>;
   let mockWatchManager: jest.Mocked<IWatchManager>;
   let mockFlagManager: jest.Mocked<IFlagManager>;
 
@@ -59,9 +59,10 @@ describe('TradingViewWatchlistManager', () => {
       buildLabel: jest.fn().mockReturnValue(mockJQueryChain),
     } as unknown as jest.Mocked<IUIUtil>;
 
-    mockFnoRepo = {
-      getAll: jest.fn().mockReturnValue(new Set(['FNO1', 'FNO2'])),
-    } as unknown as jest.Mocked<IFnoRepo>;
+    mockFnoManager = {
+      getAllFnoTickers: jest.fn().mockReturnValue(new Set(['FNO1', 'FNO2'])),
+      isFno: jest.fn(),
+    } as unknown as jest.Mocked<IFnoManager>;
 
     mockWatchManager = {
       computeDefaultList: jest.fn(),
@@ -78,7 +79,7 @@ describe('TradingViewWatchlistManager', () => {
     watchlistManager = new TradingViewWatchlistManager(
       mockPaintManager,
       mockUIUtil,
-      mockFnoRepo,
+      mockFnoManager,
       mockWatchManager,
       mockFlagManager
     );
@@ -195,7 +196,7 @@ describe('TradingViewWatchlistManager', () => {
       // Verify FNO painting
       expect(mockPaintManager.paintSymbols).toHaveBeenCalledWith(
         Constants.DOM.WATCHLIST.SYMBOL,
-        mockFnoRepo.getAll(),
+        mockFnoManager.getAllFnoTickers(),
         Constants.UI.COLORS.FNO_CSS
       );
 

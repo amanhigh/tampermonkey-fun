@@ -1,7 +1,7 @@
 import { Constants } from '../models/constant';
 import { IPaintManager } from './paint';
 import { IUIUtil } from '../util/ui';
-import { IFnoRepo } from '../repo/fno';
+import { IFnoManager } from './fno';
 import { IWatchManager } from './watch';
 import { IFlagManager } from './flag';
 
@@ -57,7 +57,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   constructor(
     private readonly paintManager: IPaintManager,
     private readonly uiUtil: IUIUtil,
-    private readonly fnoRepo: IFnoRepo,
+    private readonly fnoManager: IFnoManager,
     private readonly watchManager: IWatchManager,
     private readonly flagManager: IFlagManager
   ) {}
@@ -113,7 +113,11 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     this.displaySetSummary();
 
     // Mark FNO
-    this.paintManager.paintSymbols(Constants.DOM.WATCHLIST.SYMBOL, this.fnoRepo.getAll(), Constants.UI.COLORS.FNO_CSS);
+    this.paintManager.paintSymbols(
+      Constants.DOM.WATCHLIST.SYMBOL,
+      this.fnoManager.getAllFnoTickers(),
+      Constants.UI.COLORS.FNO_CSS
+    );
 
     // Apply Filters
     this.applyFilters();

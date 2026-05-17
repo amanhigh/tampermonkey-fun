@@ -69,7 +69,7 @@ describe('Factory Client Providers', () => {
   it('should provide singleton KohanClient', () => {
     const kohan = Factory.client.kohan();
     expect(kohan).toBeDefined();
-    expect(kohan.getBaseUrl()).toBe('http://localhost:9010/v1/api');
+    expect(kohan.getBaseUrl()).toBe('http://localhost:9091/v1/api');
 
     // Verify singleton behavior
     const kohanAgain = Factory.client.kohan();
@@ -79,7 +79,7 @@ describe('Factory Client Providers', () => {
   it('should provide singleton TickerClient', () => {
     const ticker = Factory.client.ticker();
     expect(ticker).toBeDefined();
-    expect(ticker.getBaseUrl()).toBe('http://localhost:9010/v1/api');
+    expect(ticker.getBaseUrl()).toBe('http://localhost:9091/v1/api');
 
     // Verify singleton behavior
     const tickerAgain = Factory.client.ticker();

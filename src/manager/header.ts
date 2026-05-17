@@ -1,6 +1,6 @@
 import { Constants } from '../models/constant';
-import { IFnoRepo } from '../repo/fno';
 import { IFlagManager } from './flag';
+import { IFnoManager } from './fno';
 import { IPaintManager } from './paint';
 import { ITickerManager } from './ticker';
 import { IWatchManager } from './watch';
@@ -24,7 +24,7 @@ export class HeaderManager implements IHeaderManager {
     private readonly watchManager: IWatchManager,
     private readonly flagManager: IFlagManager,
     private readonly tickerManager: ITickerManager,
-    private readonly fnoRepo: IFnoRepo
+    private readonly fnoManager: IFnoManager
   ) {}
 
   /** @inheritdoc */
@@ -94,6 +94,6 @@ export class HeaderManager implements IHeaderManager {
   }
 
   private paintFNOMarking($name: JQuery<HTMLElement>, ticker: string): void {
-    this.paintManager.paintFNOMarking($name, this.fnoRepo.has(ticker));
+    this.paintManager.paintFNOMarking($name, this.fnoManager.isFno(ticker));
   }
 }

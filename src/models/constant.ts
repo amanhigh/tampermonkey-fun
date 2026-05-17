@@ -281,7 +281,7 @@ Support:
   // External service endpoints
   KOHAN: {
     PORTS: KOHAN_PORTS,
-    BASE_URL: `http://localhost:${KOHAN_PORTS.PROD}/v1/api`,
+    BASE_URL: `http://localhost:${KOHAN_PORTS.DEV}/v1/api`,
   },
 
   // Exchange and market related constants
