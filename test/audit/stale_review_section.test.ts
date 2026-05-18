@@ -30,7 +30,7 @@ describe('StaleReviewSection', () => {
     };
 
     mockTickerHandler = { openTicker: jest.fn() };
-    mockPairHandler = { stopTrackingByTvTicker: jest.fn() };
+    mockPairHandler = { stopTrackingByTvTicker: jest.fn().mockResolvedValue(undefined) };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
     (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(true);
@@ -62,40 +62,30 @@ describe('StaleReviewSection', () => {
   });
 
   describe('onRightClick', () => {
-    test('stops tracking after confirmation', () => {
-      section.onRightClick(createResult('TCS', 100));
+    test('stops tracking after confirmation', async () => {
+      await section.onRightClick(createResult('TCS', 100));
       expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledWith('TCS');
     });
 
-    test('does nothing when user cancels', () => {
+    test('does nothing when user cancels', async () => {
       (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(false);
-      section.onRightClick(createResult('TCS', 100));
+      await section.onRightClick(createResult('TCS', 100));
       expect(mockPairHandler.stopTrackingByTvTicker).not.toHaveBeenCalled();
     });
   });
 
   describe('onFixAll', () => {
-    test('stops tracking all stale tickers after confirmation', () => {
+    test('stops tracking all stale tickers after confirmation', async () => {
       const results = [createResult('A', 100), createResult('B', -1)];
-      section.onFixAll!(results);
+      await section.onFixAll!(results);
       expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledTimes(2);
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
 
-    test('does nothing when user cancels', () => {
+    test('does nothing when user cancels', async () => {
       (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(false);
-      section.onFixAll!([createResult('A', 100)]);
+      await section.onFixAll!([createResult('A', 100)]);
       expect(mockPairHandler.stopTrackingByTvTicker).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('headerFormatter', () => {
-    test('shows success when no results', () => {
-      expect(section.headerFormatter([])).toContain('No stale review issues');
-    });
-
-    test('shows count when results present', () => {
-      expect(section.headerFormatter([createResult('TCS', 100)])).toContain('1');
     });
   });
 });

@@ -2,7 +2,7 @@ import { IAlertRepo } from '../repo/alert';
 import { IWatchManager } from './watch';
 import { IRecentManager } from './recent';
 import { ITickerClient } from '../client/ticker';
-import { IPairRepo } from '../repo/pair';
+import { IAlertTickerClient } from '../client/alert_ticker';
 import { ISymbolManager } from './symbol';
 import { Constants } from '../models/constant';
 
@@ -49,7 +49,7 @@ export interface CanonicalRankerDeps {
   watchManager: IWatchManager;
   recentManager: IRecentManager;
   tickerClient: ITickerClient;
-  pairRepo: IPairRepo;
+  alertTickerClient: IAlertTickerClient;
   symbolManager: ISymbolManager;
 }
 
@@ -81,7 +81,7 @@ export class CanonicalRanker implements ICanonicalRanker {
   private readonly watchManager: IWatchManager;
   private readonly recentManager: IRecentManager;
   private readonly tickerClient: ITickerClient;
-  private readonly pairRepo: IPairRepo;
+  private readonly alertTickerClient: IAlertTickerClient;
   private readonly symbolManager: ISymbolManager;
 
   constructor(deps: CanonicalRankerDeps) {
@@ -89,7 +89,7 @@ export class CanonicalRanker implements ICanonicalRanker {
     this.watchManager = deps.watchManager;
     this.recentManager = deps.recentManager;
     this.tickerClient = deps.tickerClient;
-    this.pairRepo = deps.pairRepo;
+    this.alertTickerClient = deps.alertTickerClient;
     this.symbolManager = deps.symbolManager;
   }
 
@@ -123,8 +123,7 @@ export class CanonicalRanker implements ICanonicalRanker {
     const signals = await Promise.all(
       tvTickers.map(async (tvTicker) => {
         const investingTicker = this.symbolManager.tvToInvesting(tvTicker);
-        const pairInfo = investingTicker ? this.pairRepo.getPairInfo(investingTicker) : null;
-        const pairId = pairInfo?.pairId;
+        const pairId = investingTicker ? await this.getPairId(investingTicker) : null;
         const alertCount = pairId ? this.getAlertCount(pairId) : 0;
         const isWatched = this.watchManager.isWatched(tvTicker);
         const isRecent = this.recentManager.isRecent(tvTicker, Constants.RECENT_CUTOFF_MS);
@@ -143,6 +142,19 @@ export class CanonicalRanker implements ICanonicalRanker {
     );
 
     return signals.sort((a, b) => b.score - a.score || a.ticker.length - b.ticker.length);
+  }
+
+  /**
+   * Get the pair_id for an investing ticker from backend alert ticker data.
+   * @private
+   */
+  private async getPairId(investingTicker: string): Promise<string | null> {
+    try {
+      const record = await this.alertTickerClient.getAlertTicker(investingTicker);
+      return record.pair_id;
+    } catch {
+      return null;
+    }
   }
 
   /**

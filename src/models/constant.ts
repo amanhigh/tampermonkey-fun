@@ -30,20 +30,11 @@ export const Constants = Object.freeze({
       /** Alerts audit plugin - analyzes trading alerts */
       ALERTS: 'alerts',
 
-      /** Orphan alerts audit plugin - identifies alerts without corresponding pairs */
-      ORPHAN_ALERTS: 'orphan-alerts',
-
-      /** Integrity audit plugin (FR-007) - ensures every investingTicker in PairRepo has a corresponding tvTicker in TickerRepo */
-      INTEGRITY: 'integrity',
-
       /** GTT unwatched audit plugin & section - identifies and displays unwatched GTT orders */
       GTT_UNWATCHED: 'gtt-unwatched',
 
       /** Orphan flags audit plugin - identifies flag entries without corresponding tickers */
       ORPHAN_FLAGS: 'orphan-flags',
-
-      /** Duplicate pair IDs audit plugin - identifies multiple investing tickers sharing the same pairId */
-      DUPLICATE_PAIR_IDS: 'duplicate-pair-ids',
 
       /** Ticker collision audit plugin - identifies reverse map collisions in TickerRepo */
       TICKER_COLLISION: 'ticker-collision',

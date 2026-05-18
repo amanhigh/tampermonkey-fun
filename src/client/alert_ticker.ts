@@ -34,6 +34,7 @@ export interface IAlertTickerClient extends IBaseClient {
    */
   deleteAlertTicker(symbol: string): Promise<void>;
 
+  // FIXME: Add getDefaultAlertTicker(ticker: string): Promise<AlertTicker | null>
   /**
    * List ALL alert tickers matching filters, auto-paginating through all pages.
    * Backend enforces limit=100 max per page; this method handles the loop.

@@ -51,15 +51,15 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
     void this.tickerHandler.openTicker(tvTicker);
   };
 
-  readonly onRightClick = (result: AuditResult) => {
+  readonly onRightClick = async (result: AuditResult): Promise<void> => {
     const investingTicker = result.target;
-    this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
+    await this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
   };
 
-  readonly onFixAll = (results: AuditResult[]) => {
-    results.forEach((result) => {
-      this.pairHandler.stopTrackingByInvestingTicker(result.target);
-    });
+  readonly onFixAll = async (results: AuditResult[]): Promise<void> => {
+    for (const result of results) {
+      await this.pairHandler.stopTrackingByInvestingTicker(result.target);
+    }
     Notifier.success(`⏹ Stopped tracking ${results.length} ticker(s)`);
   };
 
@@ -88,8 +88,7 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
    * @param plugin - IAudit plugin for alerts analysis (injected directly)
    * @param tickerHandler - Handler for ticker operations
    * @param symbolManager - Manager for symbol mappings
-   * @param pairManager - Manager for pair operations
-   * @param watchListHandler - Handler for watchlist repaint after pair deletion
+   * @param pairHandler - Handler for pair operations
    */
   constructor(
     plugin: IAudit,

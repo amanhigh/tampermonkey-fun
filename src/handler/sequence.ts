@@ -1,7 +1,7 @@
 import { ISequenceManager } from '../manager/sequence';
 import { ITickerManager } from '../manager/ticker';
 import { ISymbolManager } from '../manager/symbol';
-import { IPairManager } from '../manager/pair';
+import { IAlertTickerManager } from '../manager/alert_ticker';
 import { Constants } from '../models/constant';
 import { SequenceType } from '../models/trading';
 
@@ -34,7 +34,7 @@ export class SequenceHandler implements ISequenceHandler {
     private readonly sequenceManager: ISequenceManager,
     private readonly tickerManager: ITickerManager,
     private readonly symbolManager: ISymbolManager,
-    private readonly pairManager: IPairManager
+    private readonly alertTickerManager: IAlertTickerManager
   ) {}
 
   /** @inheritdoc */
@@ -54,11 +54,12 @@ export class SequenceHandler implements ISequenceHandler {
     const displayTicker = investingTicker || tvTicker;
     let message = `${displayTicker}:${sequence}`;
 
-    // Add pair name after sequence if mapped
-    if (investingTicker) {
-      const pairInfo = this.pairManager.investingTickerToPairInfo(investingTicker);
-      if (pairInfo && pairInfo.name) {
-        message += `:${pairInfo.name}`;
+    // Add first alert ticker name after sequence if available
+    if (tvTicker) {
+      const tickers = await this.alertTickerManager.getAlertTickers(tvTicker);
+      const first = tickers[0];
+      if (first && first.name) {
+        message += `:${first.name}`;
       }
     }
 

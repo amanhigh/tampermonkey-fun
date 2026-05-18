@@ -135,18 +135,20 @@ export class AuditHandler implements IAuditHandler {
     // Stop Tracking button (FR-9.8)
     this.uiUtil
       .buildButton(stopTrackId, '⏹ Stop', () => {
-        try {
-          const investingTicker = this.tickerManager.getInvestingTicker();
-          if (confirm(`Stop tracking ${investingTicker}?`)) {
-            // BUG 1.1: Stop tracking does not verify/remove existing flag state; flagged tickers stay highlighted
-            this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
+        void (async () => {
+          try {
+            const investingTicker = this.tickerManager.getInvestingTicker();
+            if (confirm(`Stop tracking ${investingTicker}?`)) {
+              // BUG 1.1: Stop tracking does not verify/remove existing flag state; flagged tickers stay highlighted
+              await this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
+            }
+          } catch {
+            const tvTicker = this.tickerManager.getTicker();
+            if (confirm(`Stop tracking ${tvTicker}?`)) {
+              await this.pairHandler.stopTrackingByTvTicker(tvTicker);
+            }
           }
-        } catch {
-          const tvTicker = this.tickerManager.getTicker();
-          if (confirm(`Stop tracking ${tvTicker}?`)) {
-            this.pairHandler.stopTrackingByTvTicker(tvTicker);
-          }
-        }
+        })();
       })
       .appendTo($toolbar);
 

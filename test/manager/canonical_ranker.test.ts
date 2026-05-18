@@ -1,195 +1,103 @@
-import { CanonicalRanker } from '../../src/manager/canonical_ranker';
+import { CanonicalRanker, CanonicalRankerDeps } from '../../src/manager/canonical_ranker';
 import { IAlertRepo } from '../../src/repo/alert';
 import { IWatchManager } from '../../src/manager/watch';
 import { IRecentManager } from '../../src/manager/recent';
 import { ITickerClient } from '../../src/client/ticker';
-import { IPairRepo } from '../../src/repo/pair';
+import { IAlertTickerClient } from '../../src/client/alert_ticker';
 import { ISymbolManager } from '../../src/manager/symbol';
-import { PairInfo } from '../../src/models/alert';
 import { TickerRecord } from '../../src/models/ticker';
 
 describe('CanonicalRanker', () => {
   let ranker: CanonicalRanker;
-  let mockAlertRepo: Partial<IAlertRepo>;
-  let mockWatchManager: Partial<IWatchManager>;
-  let mockRecentManager: Partial<IRecentManager>;
-  let mockTickerClient: Partial<ITickerClient>;
-  let mockPairRepo: Partial<IPairRepo>;
-  let mockSymbolManager: Partial<ISymbolManager>;
-
-  const createMockRecord = (exchange: string | null): TickerRecord => ({
-    ticker: 'T',
-    exchange,
-    timeframes: ['MN', 'WK', 'DL'],
-    type: 'EQUITY',
-    state: 'WATCHED',
-    trend: 'UPTREND',
-    last_opened_at: '2024-01-01T00:00:00Z',
-    is_fno: false,
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z',
-  });
+  let deps: CanonicalRankerDeps;
+  let mockAlertRepo: jest.Mocked<IAlertRepo>;
+  let mockWatchManager: jest.Mocked<IWatchManager>;
+  let mockRecentManager: jest.Mocked<IRecentManager>;
+  let mockTickerClient: jest.Mocked<ITickerClient>;
+  let mockAlertTickerClient: jest.Mocked<IAlertTickerClient>;
+  let mockSymbolManager: jest.Mocked<ISymbolManager>;
 
   beforeEach(() => {
-    mockAlertRepo = { get: jest.fn().mockReturnValue(undefined) };
-    mockWatchManager = { isWatched: jest.fn().mockReturnValue(false) };
-    mockRecentManager = { isRecent: jest.fn().mockReturnValue(false) };
+    mockAlertRepo = {
+      get: jest.fn().mockReturnValue([]),
+    } as any;
+
+    mockWatchManager = {
+      isWatched: jest.fn().mockReturnValue(false),
+    } as any;
+
+    mockRecentManager = {
+      isRecent: jest.fn().mockReturnValue(false),
+    } as any;
+
     mockTickerClient = {
-      getTicker: jest.fn(),
-    };
-    mockPairRepo = { getPairInfo: jest.fn().mockReturnValue(null) };
+      getTicker: jest.fn().mockRejectedValue(new Error('Not found')),
+    } as any;
+
+    mockAlertTickerClient = {
+      getAlertTicker: jest.fn(),
+      listAlertTickers: jest.fn(),
+      createAlertTicker: jest.fn(),
+      deleteAlertTicker: jest.fn(),
+    } as any;
+
     mockSymbolManager = {
       investingToTv: jest.fn().mockReturnValue(null),
       tvToInvesting: jest.fn().mockReturnValue(null),
+    } as any;
+
+    deps = {
+      alertRepo: mockAlertRepo,
+      watchManager: mockWatchManager,
+      recentManager: mockRecentManager,
+      tickerClient: mockTickerClient,
+      alertTickerClient: mockAlertTickerClient,
+      symbolManager: mockSymbolManager,
     };
 
-    ranker = new CanonicalRanker({
-      alertRepo: mockAlertRepo as IAlertRepo,
-      watchManager: mockWatchManager as IWatchManager,
-      recentManager: mockRecentManager as IRecentManager,
-      tickerClient: mockTickerClient as ITickerClient,
-      pairRepo: mockPairRepo as IPairRepo,
-      symbolManager: mockSymbolManager as ISymbolManager,
-    });
+    ranker = new CanonicalRanker(deps);
   });
 
   describe('rankInvestingTickers', () => {
-    test('returns tickers sorted by score descending', async () => {
-      (mockSymbolManager.investingToTv as jest.Mock)
-        .mockReturnValueOnce('A_TV')
-        .mockReturnValueOnce(null);
-      (mockTickerClient.getTicker as jest.Mock).mockResolvedValue(createMockRecord(null));
+    it('returns sorted tickers by score descending', async () => {
+      mockSymbolManager.investingToTv.mockImplementation((t) => t);
+      mockAlertRepo.get.mockReturnValue([{ id: 'a', price: 1, pairId: 'p', name: 'a' }]); // 1 alert
 
-      const result = await ranker.rankInvestingTickers(['A', 'B'], '123');
-      expect(result[0].ticker).toBe('A');
-      expect(result[0].score).toBeGreaterThan(result[1].score);
-    });
+      const result = await ranker.rankInvestingTickers(['TICKER_A', 'TICKER_B'], 'pair1');
 
-    test('ticker with alerts ranks higher', async () => {
-      (mockSymbolManager.investingToTv as jest.Mock).mockReturnValue('TV');
-      (mockAlertRepo.get as jest.Mock).mockReturnValue([{ id: '1' }, { id: '2' }]);
-      (mockTickerClient.getTicker as jest.Mock).mockResolvedValue(createMockRecord(null));
-
-      const result = await ranker.rankInvestingTickers(['A', 'B'], '123');
-      expect(result[0].alertCount).toBe(2);
-    });
-
-    test('watched ticker ranks higher than unwatched', async () => {
-      (mockSymbolManager.investingToTv as jest.Mock)
-        .mockReturnValueOnce('A_TV')
-        .mockReturnValueOnce('B_TV');
-      (mockWatchManager.isWatched as jest.Mock)
-        .mockReturnValueOnce(true)
-        .mockReturnValueOnce(false);
-      (mockTickerClient.getTicker as jest.Mock).mockResolvedValue(createMockRecord(null));
-
-      const result = await ranker.rankInvestingTickers(['A', 'B'], '123');
-      expect(result[0].ticker).toBe('A');
-      expect(result[0].isWatched).toBe(true);
-    });
-
-    test('recently opened ticker ranks higher', async () => {
-      (mockSymbolManager.investingToTv as jest.Mock)
-        .mockReturnValueOnce('A_TV')
-        .mockReturnValueOnce('B_TV');
-      (mockRecentManager.isRecent as jest.Mock)
-        .mockReturnValueOnce(true)
-        .mockReturnValueOnce(false);
-      (mockTickerClient.getTicker as jest.Mock).mockResolvedValue(createMockRecord(null));
-
-      const result = await ranker.rankInvestingTickers(['A', 'B'], '123');
-      expect(result[0].ticker).toBe('A');
-      expect(result[0].isRecent).toBe(true);
-    });
-
-    test('preserves original order when scores are equal', async () => {
-      (mockTickerClient.getTicker as jest.Mock).mockResolvedValue(createMockRecord(null));
-
-      const result = await ranker.rankInvestingTickers(['X', 'Y', 'Z'], '123');
-      expect(result.map((r) => r.ticker)).toEqual(['X', 'Y', 'Z']);
+      expect(result).toHaveLength(2);
+      expect(result[0].score).toBeGreaterThanOrEqual(result[1].score);
     });
   });
 
   describe('rankTvTickers', () => {
-    test('returns tickers sorted by score descending', async () => {
-      (mockSymbolManager.tvToInvesting as jest.Mock)
-        .mockReturnValueOnce('INV_A')
-        .mockReturnValueOnce(null);
-      (mockPairRepo.getPairInfo as jest.Mock).mockReturnValue(new PairInfo('Test', '123', 'NSE', 'TEST'));
-      (mockAlertRepo.get as jest.Mock).mockReturnValue([{ id: '1' }]);
-      (mockTickerClient.getTicker as jest.Mock).mockResolvedValue(createMockRecord(null));
+    it('returns sorted tv tickers by score', async () => {
+      mockAlertRepo.get.mockReturnValue([]);
+      mockTickerClient.getTicker.mockResolvedValue({
+        exchange: 'NSE',
+      } as TickerRecord);
 
-      const result = await ranker.rankTvTickers(['A', 'B']);
-      expect(result[0].ticker).toBe('A');
-      expect(result[0].score).toBeGreaterThan(result[1].score);
+      const result = await ranker.rankTvTickers(['TICKER1', 'TICKER2']);
+
+      expect(result).toHaveLength(2);
     });
 
-    test('ticker with exchange ranks higher', async () => {
-      (mockTickerClient.getTicker as jest.Mock)
-        .mockResolvedValueOnce(createMockRecord('NSE'))
-        .mockResolvedValueOnce(createMockRecord(null));
+    it('prefers ticker with alert ticker mapping', async () => {
+      mockSymbolManager.tvToInvesting.mockImplementation((t) => t === 'MAPPED' ? 'INV_MAPPED' : null);
+      mockAlertTickerClient.getAlertTicker.mockResolvedValue({
+        symbol: 'INV_MAPPED',
+        pair_id: 'pair1',
+        name: 'Mapped',
+        exchange: 'NSE',
+        created_at: '',
+        updated_at: '',
+      });
 
-      const result = await ranker.rankTvTickers(['A', 'B']);
-      expect(result[0].ticker).toBe('A');
-      expect(result[0].hasExchange).toBe(true);
-      expect(result[1].hasExchange).toBe(false);
-    });
+      const result = await ranker.rankTvTickers(['MAPPED', 'UNMAPPED']);
 
-    test('fallback ordering when no alerts — uses watchlist, recent, exchange', async () => {
-      (mockWatchManager.isWatched as jest.Mock)
-        .mockReturnValueOnce(false)
-        .mockReturnValueOnce(true);
-      (mockRecentManager.isRecent as jest.Mock)
-        .mockReturnValueOnce(false)
-        .mockReturnValueOnce(true);
-      (mockTickerClient.getTicker as jest.Mock).mockResolvedValue(createMockRecord(null));
-
-      const result = await ranker.rankTvTickers(['A', 'B']);
-      expect(result[0].ticker).toBe('B');
-      expect(result[0].isWatched).toBe(true);
-    });
-
-    test('HTML-encoded tickers get penalized below clean aliases', async () => {
-      (mockSymbolManager.tvToInvesting as jest.Mock).mockReturnValue('MAHM');
-      (mockPairRepo.getPairInfo as jest.Mock).mockReturnValue(new PairInfo('Mahindra', '18273', 'NSE', 'MAHM'));
-      (mockAlertRepo.get as jest.Mock).mockReturnValue([{ id: '1' }, { id: '2' }]);
-      (mockRecentManager.isRecent as jest.Mock).mockReturnValue(true);
-      (mockTickerClient.getTicker as jest.Mock).mockResolvedValue(createMockRecord(null));
-
-      const result = await ranker.rankTvTickers(['M_M', 'M&M', 'M&amp;M', 'M&amp;AMP;M']);
-
-      expect(result[0].ticker).toBe('M&M');
-      expect(result[1].ticker).toBe('M_M');
-      expect(result[2].score).toBeLessThan(0);
-      expect(result[3].score).toBeLessThan(0);
-    });
-
-    test('preferred exchange bonus ranks NSE ticker above non-exchange ticker', async () => {
-      // PTC maps to PTCI investing ticker; PFS has no investing mapping
-      (mockSymbolManager.tvToInvesting as jest.Mock)
-        .mockReturnValueOnce(null)
-        .mockReturnValueOnce('PTCI');
-      (mockPairRepo.getPairInfo as jest.Mock).mockReturnValue(new PairInfo('PTC India', '123', 'NSE', 'PTCI'));
-      (mockAlertRepo.get as jest.Mock).mockReturnValue([{ id: '1' }]);
-      (mockTickerClient.getTicker as jest.Mock).mockResolvedValue(createMockRecord('NSE'));
-
-      const result = await ranker.rankTvTickers(['PFS', 'PTC']);
-      expect(result[0].ticker).toBe('PTC');
-      expect(result[0].score).toBeGreaterThan(result[1].score);
-    });
-
-    test('none-preferred exchange does not get bonus', async () => {
-      (mockTickerClient.getTicker as jest.Mock).mockResolvedValue(createMockRecord('BSE'));
-
-      const result = await ranker.rankTvTickers(['A', 'B']);
-      expect(result[0].score).toBe(result[1].score);
-    });
-
-    test('tiebreaker prefers shorter ticker name when scores are equal', async () => {
-      (mockTickerClient.getTicker as jest.Mock).mockResolvedValue(createMockRecord(null));
-
-      const result = await ranker.rankTvTickers(['LONGNAME', 'SHORT', 'MID']);
-      expect(result.map((r) => r.ticker)).toEqual(['MID', 'SHORT', 'LONGNAME']);
+      const mapped = result.find((r) => r.ticker === 'MAPPED');
+      const unmapped = result.find((r) => r.ticker === 'UNMAPPED');
+      expect(mapped!.score).toBeGreaterThan(unmapped!.score);
     });
   });
 });

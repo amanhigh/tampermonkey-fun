@@ -1,6 +1,6 @@
 import { AuditResult, AuditSeverity } from '../models/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
-import { IPairManager } from './pair';
+import { IAlertTickerClient } from '../client/alert_ticker';
 import { IAlertManager } from './alert';
 import { IWatchManager } from './watch';
 import { ISymbolManager } from './symbol';
@@ -22,7 +22,7 @@ export class AlertsPlugin extends BaseAuditPlugin {
   public readonly title = 'Alerts Coverage';
 
   constructor(
-    private readonly pairManager: IPairManager,
+    private readonly alertTickerClient: IAlertTickerClient,
     private readonly alertManager: IAlertManager,
     private readonly watchManager: IWatchManager,
     private readonly symbolManager: ISymbolManager
@@ -31,21 +31,21 @@ export class AlertsPlugin extends BaseAuditPlugin {
   }
 
   async run(targets?: string[]): Promise<AuditResult[]> {
-    const investingTickers = targets && targets.length > 0 ? targets : this.pairManager.getAllInvestingTickers();
+    const allAlertTickers = await this.alertTickerClient.listAlertTickers({});
+    const allTickers = allAlertTickers.map((at) => at.symbol);
+    const investingTickers = targets && targets.length > 0 ? targets : allTickers;
     const results: AuditResult[] = [];
     // FIXME: Add To Watchlist should run Audit for Current Ticker.
 
-    investingTickers.forEach((investingTicker: string) => {
-      // Map investing ticker to TV format for watchlist checking
+    for (const investingTicker of investingTickers) {
       const tvTicker = this.investingToTv(investingTicker);
 
       // Skip watched tickers (don't audit what's already being watched)
       if (this.watchManager.isWatched(tvTicker)) {
-        return; // Skip this ticker
+        continue;
       }
 
-      // Get alerts for this ticker using investing format
-      const alerts = this.alertManager.getAlertsForInvestingTicker(investingTicker);
+      const alerts = await this.alertManager.getAlertsForInvestingTicker(investingTicker);
       let state: AlertState;
       if (alerts === null) {
         state = AlertState.NO_PAIR;
@@ -61,22 +61,18 @@ export class AlertsPlugin extends BaseAuditPlugin {
       if (status === 'FAIL') {
         // Severity mapping: invalid mapping > single alert > no alerts
         const severity: AuditSeverity =
-          state === AlertState.NO_PAIR
-            ? 'HIGH' // Invalid mapping is most urgent
-            : state === AlertState.SINGLE_ALERT
-              ? 'HIGH' // Single alert is high priority
-              : 'MEDIUM'; // No alerts is medium priority
+          state === AlertState.NO_PAIR ? 'HIGH' : state === AlertState.SINGLE_ALERT ? 'HIGH' : 'MEDIUM';
 
         results.push({
           pluginId: this.id,
           code: state,
-          target: investingTicker, // Store investing format as target
+          target: investingTicker,
           message: `${investingTicker}: ${state}`,
           severity,
           status,
         });
       }
-    });
+    }
 
     return Promise.resolve(results);
   }

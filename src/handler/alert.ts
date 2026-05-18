@@ -178,23 +178,24 @@ export class AlertHandler implements IAlertHandler {
   }
 
   /** @inheritdoc */
-  /** @inheritdoc */
   public refreshAlerts(): void {
     this.syncUtil.waitOn('alert-refresh-local', 10, () => {
-      try {
-        const alerts = this.alertManager.getAlerts();
-        this.alertSummaryHandler.displayAlerts(alerts);
-        void this.auditHandler.auditAll();
-      } catch (error) {
-        // Show NO PAIR for Null Alerts
-        this.alertSummaryHandler.displayAlerts(null);
+      void (async () => {
+        try {
+          const alerts = await this.alertManager.getAlerts();
+          this.alertSummaryHandler.displayAlerts(alerts);
+          void this.auditHandler.auditAll();
+        } catch (error) {
+          // Show NO PAIR for Null Alerts
+          this.alertSummaryHandler.displayAlerts(null);
 
-        const tvTicker = this.tickerManager.getTicker();
-        // Igoner Error for Composite Symbols as its expected.
-        if (!this.symbolManager.isComposite(tvTicker)) {
-          throw error;
+          const tvTicker = this.tickerManager.getTicker();
+          // Igoner Error for Composite Symbols as its expected.
+          if (!this.symbolManager.isComposite(tvTicker)) {
+            throw error;
+          }
         }
-      }
+      })();
     });
   }
 

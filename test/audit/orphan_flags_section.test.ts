@@ -30,7 +30,7 @@ describe('OrphanFlagsSection', () => {
     };
 
     mockTickerHandler = { openTicker: jest.fn() };
-    mockPairHandler = { stopTrackingByTvTicker: jest.fn() };
+    mockPairHandler = { stopTrackingByTvTicker: jest.fn().mockResolvedValue(undefined) };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
     jest.spyOn(Notifier, 'warn').mockImplementation();
@@ -58,16 +58,16 @@ describe('OrphanFlagsSection', () => {
   });
 
   describe('onRightClick', () => {
-    test('stops tracking orphan ticker', () => {
-      section.onRightClick(createResult('ORPHAN'));
+    test('stops tracking orphan ticker', async () => {
+      await section.onRightClick(createResult('ORPHAN'));
       expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledWith('ORPHAN');
     });
   });
 
   describe('onFixAll', () => {
-    test('stops tracking all orphan flag tickers', () => {
+    test('stops tracking all orphan flag tickers', async () => {
       const results = [createResult('O1'), createResult('O2')];
-      section.onFixAll!(results);
+      await section.onFixAll!(results);
       expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledTimes(2);
       expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledWith('O1');
       expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledWith('O2');

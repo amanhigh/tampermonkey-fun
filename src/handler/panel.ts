@@ -34,16 +34,16 @@ export class PanelHandler implements IPanelHandler {
     // Handle reason - should be a PanelAction
     if (response.type === 'reason') {
       const action = response.value as PanelAction;
-      this.handlePanelAction(action);
+      await this.handlePanelAction(action);
     }
   }
 
-  private handlePanelAction(action: PanelAction): void {
+  private async handlePanelAction(action: PanelAction): Promise<void> {
     try {
       const investingTicker = this.tickerManager.getInvestingTicker();
       switch (action) {
         case PanelAction.STOP_TRACKING:
-          this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
+          await this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
           break;
       }
     } catch {
@@ -51,7 +51,7 @@ export class PanelHandler implements IPanelHandler {
       switch (action) {
         case PanelAction.STOP_TRACKING:
           // TODO: Stop Tracking should involve both Investing and TV Tickers for Manual Buttons.
-          this.pairHandler.stopTrackingByTvTicker(tvTicker);
+          await this.pairHandler.stopTrackingByTvTicker(tvTicker);
           break;
       }
     }

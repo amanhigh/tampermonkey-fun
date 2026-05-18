@@ -17,7 +17,7 @@ describe('AlertsPlugin', () => {
 
   beforeEach(() => {
     alertTickerClient = {
-      listAlertTickers: jest.fn(),
+      listAlertTickers: jest.fn().mockResolvedValue([]),
       getAlertTicker: jest.fn(),
       createAlertTicker: jest.fn(),
       deleteAlertTicker: jest.fn(),

@@ -40,15 +40,15 @@ export class OrphanFlagsSection extends BaseAuditSection implements IAuditSectio
     }
   };
 
-  readonly onRightClick = (result: AuditResult): void => {
+  readonly onRightClick = async (result: AuditResult): Promise<void> => {
     const tvTicker = result.target;
-    this.pairHandler.stopTrackingByTvTicker(tvTicker);
+    await this.pairHandler.stopTrackingByTvTicker(tvTicker);
   };
 
-  readonly onFixAll = (results: AuditResult[]): void => {
-    results.forEach((result) => {
-      this.pairHandler.stopTrackingByTvTicker(result.target);
-    });
+  readonly onFixAll = async (results: AuditResult[]): Promise<void> => {
+    for (const result of results) {
+      await this.pairHandler.stopTrackingByTvTicker(result.target);
+    }
     Notifier.success(`⏹ Stopped tracking ${results.length} orphan flag(s)`);
   };
 

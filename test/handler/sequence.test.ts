@@ -38,7 +38,7 @@ describe('SequenceHandler', () => {
     } as any;
 
     mockAlertTickerManager = {
-      getAlertTickers: jest.fn(),
+      getAlertTickers: jest.fn().mockResolvedValue([]),
       createAlertTicker: jest.fn(),
     } as any;
 
