@@ -1,7 +1,7 @@
 import { Constants } from '../models/constant';
 import { IWaitUtil } from '../util/wait';
+import { ITickerManager } from './ticker';
 import { ITradingViewScreenerManager } from './screener';
-import { ISymbolManager } from './symbol';
 import { IAlertTickerManager } from './alert_ticker';
 import { ITradingViewWatchlistManager } from './watchlist';
 
@@ -28,9 +28,9 @@ export interface IDomManager {
 
   /**
    * Maps current TradingView ticker to Investing ticker
-   * @returns Mapped Investing ticker or original if no mapping exists
+   * @returns Promise resolving to mapped Investing ticker, rejects if no mapping
    */
-  getInvestingTicker(): string;
+  getInvestingTicker(): Promise<string>;
 
   /**
    * Opens specified ticker in TradingView.
@@ -64,7 +64,7 @@ export interface IDomManager {
 export class DomManager implements IDomManager {
   constructor(
     private readonly waitUtil: IWaitUtil,
-    private readonly symbolManager: ISymbolManager,
+    private readonly tickerBackendManager: ITickerManager,
     private readonly alertTickerManager: IAlertTickerManager,
     private readonly screenerManager: ITradingViewScreenerManager,
     private readonly watchlistManager: ITradingViewWatchlistManager
@@ -101,7 +101,13 @@ export class DomManager implements IDomManager {
 
   /** @inheritdoc */
   async openTicker(ticker: string): Promise<void> {
-    const exchangeTicker = await this.symbolManager.tvToExchangeTicker(ticker);
+    let exchangeTicker = ticker;
+    try {
+      const record = await this.tickerBackendManager.getTicker(ticker);
+      exchangeTicker = record.qualifiedName;
+    } catch {
+      // Fall back to raw ticker
+    }
     this.waitUtil.waitClick(Constants.DOM.BASIC.TICKER);
     this.waitUtil.waitInput(Constants.DOM.POPUPS.SEARCH, exchangeTicker);
   }

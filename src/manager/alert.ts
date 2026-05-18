@@ -1,86 +1,76 @@
 import { IInvestingClient } from '../client/investing';
+import { IPriceAlertClient } from '../client/price_alert';
 import { Alert, PairInfo } from '../models/alert';
-import { AlertTicker } from '../models/alert_ticker';
-import { IAlertRepo } from '../repo/alert';
+import { Constants } from '../models/constant';
 import { AlertClicked, AlertClickAction } from '../models/events';
+import { PriceAlert, PriceAlertInput } from '../models/price_alert';
 import { Notifier } from '../util/notify';
 import { IAlertTickerManager } from './alert_ticker';
 import { IDomManager } from './dom';
 import { ITradingViewManager } from './tv';
 
 /**
- * Interface for managing alert operations
+ * Interface for managing alert operations.
  */
 export interface IAlertManager {
   /**
-   * Get all alerts for current trading view ticker
-   * @returns Promise resolving to array of alerts sorted by price, or null if no alert ticker
+   * Get all alerts for current TradingView ticker.
+   * @returns Promise resolving to array of alerts sorted by price
    */
-  getAlerts(): Promise<Alert[] | null>;
+  getAlerts(): Promise<Alert[]>;
 
   /**
-   * Get all alerts for Investing.com ticker
+   * Get all alerts for Investing.com ticker.
    * @param investingTicker Investing.com ticker
-   * @returns Promise resolving to array of alerts sorted by price, or null if no pair info found
+   * @returns Promise resolving to array of alerts sorted by price, or null if no Alert ticker mapping exists
    */
   getAlertsForInvestingTicker(investingTicker: string): Promise<Alert[] | null>;
 
   /**
-   * Create alert for current trading view ticker
+   * Create alert for current TradingView ticker.
    * @param price Alert price
    * @throws Error If no alert ticker found for current ticker
    */
   createAlertForCurrentTicker(price: number): Promise<PairInfo>;
 
   /**
-   * Delete all alerts for current ticker
+   * Delete all alerts for current ticker.
    */
   deleteAllAlerts(): Promise<void>;
 
   /**
-   * Delete alerts near target price for current ticker
+   * Delete alerts near target price for current ticker.
    * @param targetPrice Price to delete alerts around
    */
   deleteAlertsByPrice(targetPrice: number): Promise<void>;
 
   /**
-   * Delete specified alert
-   * @param alert Alert to delete
+   * Delete specified alert by alert ID.
+   * @param alertId Alert identifier
    * @throws Error if deletion fails
    */
-  deleteAlert(alert: Alert): Promise<void>;
+  deleteAlert(alertId: string): Promise<void>;
 
   /**
-   * Reloads alerts from Investing.com
-   * @returns Promise resolving to number of alerts loaded
+   * Refresh alerts from Investing.com into backend Price Alert store.
+   * @returns Promise resolving to number of parsed alerts sent to backend
    */
-  reloadAlerts(): Promise<number>;
+  refreshAlerts(): Promise<number>;
 
   /**
-   * Retrieve alerts belonging to the given pairId from local repository
-   * @param pairId Pair identifier
-   * @returns Array of alerts or null when none exist
+   * Creates alert click event for ticker operations.
    */
-  getAlertsByPairId(pairId: string): Alert[] | null;
-
-  /**
-   * Delete all alerts belonging to a specific pairId from local repository
-   * @param pairId Pair identifier
-   */
-  deleteAlertsByPairId(pairId: string): void;
-
-  /**
-   * Creates alert click event for ticker operations
-   */
-  createAlertClickEvent(tvTicker: string | null, investingTicker: string | null): Promise<void>;
+  createAlertClickEvent(investingTicker: string, action: AlertClickAction): Promise<void>;
 }
 
 /**
- * Manages alert operations for trading using backend Alert Tickers for pair resolution.
+ * Manages alert operations using Investing.com for live actions and Kohan Price Alert APIs for storage.
  */
 export class AlertManager implements IAlertManager {
+  private static readonly ALERT_PRICE_TOLERANCE = 0.03;
+
   constructor(
-    private readonly alertRepo: IAlertRepo,
+    private readonly priceAlertClient: IPriceAlertClient,
     private readonly alertTickerManager: IAlertTickerManager,
     private readonly domManager: IDomManager,
     private readonly investingClient: IInvestingClient,
@@ -88,39 +78,83 @@ export class AlertManager implements IAlertManager {
   ) {}
 
   /** @inheritdoc */
-  async getAlerts(): Promise<Alert[] | null> {
-    const investingTicker = this.domManager.getInvestingTicker();
-    return this.getAlertsForInvestingTicker(investingTicker);
-  }
-
-  /** @inheritdoc */
-  getAlertsByPairId(pairId: string): Alert[] | null {
-    const alerts = this.alertRepo.get(pairId);
-    return alerts ?? null;
-  }
-
-  /** @inheritdoc */
-  deleteAlertsByPairId(pairId: string): void {
-    this.alertRepo.delete(pairId);
-  }
-
-  /**
-   * Get the first Alert Ticker for the current TV ticker, or null if none.
-   * @private
-   */
-  private async getFirstAlertTicker(): Promise<AlertTicker | null> {
+  async getAlerts(): Promise<Alert[]> {
     const tvTicker = this.domManager.getTicker();
-    const tickers = await this.alertTickerManager.getAlertTickers(tvTicker);
-    return tickers[0] ?? null;
+    return this.listAlertsByTvTicker(tvTicker);
+  }
+
+  /** @inheritdoc */
+  async getAlertsForInvestingTicker(investingTicker: string): Promise<Alert[] | null> {
+    const alertTicker = await this.alertTickerManager.fetchAlertTicker(investingTicker);
+    if (!alertTicker) {
+      return null;
+    }
+    return this.listAlertsByTvTicker(alertTicker.ticker);
+  }
+
+  /** @inheritdoc */
+  async createAlertForCurrentTicker(price: number): Promise<PairInfo> {
+    return this.createAlert(price);
+  }
+
+  /** @inheritdoc */
+  async deleteAllAlerts(): Promise<void> {
+    const alerts = await this.getAlerts();
+    const deletableAlerts = alerts.filter((alert) => alert.id !== '');
+    if (deletableAlerts.length === 0) {
+      Notifier.warn('No alerts found to delete');
+      return;
+    }
+    await Promise.all(deletableAlerts.map(async (alert) => this.deleteAlert(alert.id)));
+  }
+
+  /** @inheritdoc */
+  async deleteAlertsByPrice(targetPrice: number): Promise<void> {
+    const tolerance = targetPrice * AlertManager.ALERT_PRICE_TOLERANCE;
+    const alerts = await this.getAlerts();
+    const filteredAlerts = alerts.filter(
+      (alert) => alert.id !== '' && Math.abs(alert.price - targetPrice) <= tolerance
+    );
+
+    if (filteredAlerts.length === 0) {
+      Notifier.warn('No alerts found within price tolerance');
+      return;
+    }
+
+    await Promise.all(filteredAlerts.map(async (alert) => this.deleteAlert(alert.id)));
+  }
+
+  /** @inheritdoc */
+  async deleteAlert(alertId: string): Promise<void> {
+    try {
+      await this.investingClient.deleteAlert(new Alert(alertId, '', 0));
+      await this.priceAlertClient.deletePriceAlert(alertId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to delete alert ${alertId}: ${message}`);
+    }
+  }
+
+  /** @inheritdoc */
+  async refreshAlerts(): Promise<number> {
+    const html = await this.investingClient.getAllAlerts();
+    const alerts = this.parsePriceAlertsFromHtml(html);
+    await this.priceAlertClient.replacePriceAlerts({ alerts });
+    return alerts.length;
+  }
+
+  /** @inheritdoc */
+  async createAlertClickEvent(investingTicker: string, action: AlertClickAction): Promise<void> {
+    const event = new AlertClicked(investingTicker, action);
+    await GM.setValue(Constants.STORAGE.EVENTS.ALERT_CLICKED, event.stringify());
   }
 
   /**
-   * Create alert via Investing.com and store in local repo if successful
+   * Create alert via Investing.com and persist pending alert in Kohan.
    */
   private async createAlert(price: number): Promise<PairInfo> {
     const tvTicker = this.domManager.getTicker();
-    const tickers = await this.alertTickerManager.getAlertTickers(tvTicker);
-    const alertTicker = tickers[0];
+    const alertTicker = await this.alertTickerManager.getAlertTicker(tvTicker);
     if (!alertTicker) {
       throw new Error(`No alert ticker found for ${tvTicker}`);
     }
@@ -134,9 +168,8 @@ export class AlertManager implements IAlertManager {
 
     try {
       const ltp = this.tradingViewManager.getLastTradedPrice();
-      const response = await this.investingClient.createAlert(pairInfo.name, pairInfo.pairId, price, ltp);
-      const alert = new Alert('', response.pairId, response.price);
-      this.alertRepo.addAlert(pairInfo.pairId, alert);
+      await this.investingClient.createAlert(pairInfo.name, pairInfo.pairId, price, ltp);
+      await this.priceAlertClient.createPendingPriceAlert(tvTicker, { trigger_price: price });
       return pairInfo;
     } catch {
       throw new Error(`Failed to create alert for ${alertTicker.symbol} at price ${price}`);
@@ -144,116 +177,45 @@ export class AlertManager implements IAlertManager {
   }
 
   /**
-   * Load alerts from HTML content into repository
+   * List backend price alerts for a TV ticker and adapt them to UI Alert model.
    */
-  private reloadFromHtml(html: string): number {
-    let count = 0;
+  private async listAlertsByTvTicker(tvTicker: string): Promise<Alert[]> {
+    const priceAlerts = await this.priceAlertClient.listPriceAlerts({
+      ticker: tvTicker,
+      'sort-by': 'trigger_price',
+      'sort-order': 'asc',
+    });
+    return priceAlerts.map((alert) => this.toAlert(alert));
+  }
+
+  /**
+   * Convert backend PriceAlert model to legacy UI Alert model.
+   */
+  private toAlert(alert: PriceAlert): Alert {
+    return new Alert(alert.alert_id ?? '', alert.pair_id, alert.trigger_price);
+  }
+
+  /**
+   * Parse Investing.com alert-center HTML into backend PriceAlertInput rows.
+   */
+  private parsePriceAlertsFromHtml(html: string): PriceAlertInput[] {
+    const alerts: PriceAlertInput[] = [];
 
     $(html)
       .find('.js-alert-item[data-trigger=price]')
       .each((_, alertElement) => {
-        const $alt = $(alertElement);
-        const pairId = $alt.attr('data-pair-id') || '';
-        const price = parseFloat($alt.attr('data-value') || '0');
-        const id = $alt.attr('data-alert-id') || '';
-        const name = $alt.attr('data-name') || '';
+        const $alert = $(alertElement);
+        const pairId = $alert.attr('data-pair-id') || '';
+        const price = parseFloat($alert.attr('data-value') || '0');
+        const alertId = $alert.attr('data-alert-id') || '';
 
-        const alert = new Alert(id, pairId, price, name);
-
-        if (pairId && !isNaN(price) && id && price > 0) {
-          this.alertRepo.addAlert(pairId, alert);
-          count++;
+        if (pairId && !isNaN(price) && alertId && price > 0) {
+          alerts.push({ pair_id: pairId, alert_id: alertId, trigger_price: price });
         } else {
-          console.warn('Invalid alert:', pairId, alert);
+          console.warn('Invalid alert:', pairId, alertId, price);
         }
       });
 
-    return count;
-  }
-
-  /** @inheritdoc */
-  async createAlertForCurrentTicker(price: number): Promise<PairInfo> {
-    return this.createAlert(price);
-  }
-
-  /** @inheritdoc */
-  async deleteAllAlerts(): Promise<void> {
-    const pairInfo = await this.getCurrentPairInfo();
-    const alerts = this.alertRepo.getSortedAlerts(pairInfo.pairId);
-    if (!alerts) {
-      Notifier.warn('No alerts (Pair) found to delete');
-      return;
-    }
-    await Promise.all(alerts.map(async (alert) => this.deleteAlert(alert)));
-  }
-
-  /** @inheritdoc */
-  async deleteAlertsByPrice(targetPrice: number): Promise<void> {
-    const pairInfo = await this.getCurrentPairInfo();
-    const tolerance = targetPrice * 0.03;
-    const alerts = this.alertRepo.getSortedAlerts(pairInfo.pairId);
-    if (!alerts) {
-      Notifier.warn('No alerts (Pair) found to delete');
-      return;
-    }
-
-    const filteredAlerts = alerts.filter((alert) => Math.abs(alert.price - targetPrice) <= tolerance);
-    if (filteredAlerts.length === 0) {
-      Notifier.warn('No alerts found within price tolerance');
-      return;
-    }
-
-    await Promise.all(filteredAlerts.map(async (alert) => this.deleteAlert(alert)));
-  }
-
-  /** @inheritdoc */
-  async deleteAlert(alert: Alert): Promise<void> {
-    try {
-      await this.investingClient.deleteAlert(alert);
-      this.alertRepo.removeAlert(alert.pairId, alert.id);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Failed to delete alert ${alert.id}: ${message}`);
-    }
-  }
-
-  /** @inheritdoc */
-  async reloadAlerts(): Promise<number> {
-    this.alertRepo.clear();
-    const html = await this.investingClient.getAllAlerts();
-    const count = this.reloadFromHtml(html);
-    return count;
-  }
-
-  /** @inheritdoc */
-  async getAlertsForInvestingTicker(investingTicker: string): Promise<Alert[] | null> {
-    // For now get current TV ticker's alert tickers and match by symbol.
-    // With the two-method manager we rely on the current-TV context.
-    const tvTicker = this.domManager.getTicker();
-    const tickers = await this.alertTickerManager.getAlertTickers(tvTicker);
-    const alertTicker = tickers.find((t) => t.symbol === investingTicker) ?? tickers[0];
-    if (!alertTicker) {
-      return null;
-    }
-    return this.alertRepo.getSortedAlerts(alertTicker.pair_id);
-  }
-
-  /** @inheritdoc */
-  async createAlertClickEvent(investingTicker: string, action: AlertClickAction): Promise<void> {
-    const event = new AlertClicked(investingTicker, action);
-    await this.alertRepo.createAlertClickEvent(event);
-  }
-
-  /**
-   * Get pair info for current ticker using the first Alert Ticker
-   * @private
-   */
-  private async getCurrentPairInfo(): Promise<PairInfo> {
-    const alertTicker = await this.getFirstAlertTicker();
-    if (!alertTicker) {
-      const tvTicker = this.domManager.getTicker();
-      throw new Error(`No Alert Ticker found for ${tvTicker}`);
-    }
-    return new PairInfo(alertTicker.name, alertTicker.pair_id, alertTicker.exchange ?? '', alertTicker.symbol);
+    return alerts;
   }
 }

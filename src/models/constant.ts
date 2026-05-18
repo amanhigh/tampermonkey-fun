@@ -279,6 +279,12 @@ Support:
     },
     PREFERRED: ['NSE', 'NYSE', 'NASDAQ'],
   },
+  COMPOSITE: {
+    /** Characters that indicate a composite symbol */
+    CHARACTERS: ['/', '*', '-', ':'],
+    /** Tickers always treated as composite despite lacking separator characters */
+    SPECIAL_TICKERS: ['GOLDSILVER', 'BTC.D'],
+  },
 });
 
 /**

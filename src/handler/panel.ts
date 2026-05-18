@@ -14,7 +14,7 @@ export class PanelHandler implements IPanelHandler {
   constructor(
     private readonly smartPrompt: ISmartPrompt,
     private readonly tickerHandler: ITickerHandler,
-    private readonly tickerManager: IDomManager
+    private readonly domManager: IDomManager
   ) {}
 
   public async showPanel(): Promise<void> {
@@ -39,7 +39,7 @@ export class PanelHandler implements IPanelHandler {
   }
 
   private async handlePanelAction(action: PanelAction): Promise<void> {
-    const tvTicker = this.tickerManager.getTicker();
+    const tvTicker = this.domManager.getTicker();
     switch (action) {
       case PanelAction.STOP_TRACKING:
         await this.tickerHandler.stopTracking(tvTicker);
