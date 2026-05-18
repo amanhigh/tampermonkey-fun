@@ -61,11 +61,11 @@ export class SequenceManager implements ISequenceManager {
 
   /**
    * @param tickerClient Client for backend ticker operations
-   * @param tickerManager Ticker manager for current ticker info
+   * @param domManager Ticker manager for current ticker info
    */
   constructor(
     private readonly tickerClient: ITickerClient,
-    private readonly tickerManager: IDomManager
+    private readonly domManager: IDomManager
   ) {}
 
   /** @inheritdoc */
@@ -75,7 +75,7 @@ export class SequenceManager implements ISequenceManager {
       return this._frozenSequence;
     }
 
-    const ticker = this.tickerManager.getTicker();
+    const ticker = this.domManager.getTicker();
 
     try {
       const record = await this.tickerClient.getTicker(ticker);
@@ -88,7 +88,7 @@ export class SequenceManager implements ISequenceManager {
 
   /** @inheritdoc */
   async flipSequence(): Promise<void> {
-    const tvTicker = this.tickerManager.getTicker();
+    const tvTicker = this.domManager.getTicker();
     const currentSequence = await this.getCurrentSequence();
     const sequence = currentSequence === SequenceType.YR ? SequenceType.MWD : SequenceType.YR;
     const newTimeframes = SEQUENCE_TO_TIMEFRAMES[sequence];

@@ -6,7 +6,7 @@ export interface AlertTicker {
   pair_id: string;
   name: string;
   exchange: string | null;
-  ticker?: string;
+  ticker: string;
   created_at: string;
   updated_at: string;
 }

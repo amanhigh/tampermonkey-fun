@@ -82,14 +82,14 @@ export class AlertManager implements IAlertManager {
   constructor(
     private readonly alertRepo: IAlertRepo,
     private readonly alertTickerManager: IAlertTickerManager,
-    private readonly tickerManager: IDomManager,
+    private readonly domManager: IDomManager,
     private readonly investingClient: IInvestingClient,
     private readonly tradingViewManager: ITradingViewManager
   ) {}
 
   /** @inheritdoc */
   async getAlerts(): Promise<Alert[] | null> {
-    const investingTicker = this.tickerManager.getInvestingTicker();
+    const investingTicker = this.domManager.getInvestingTicker();
     return this.getAlertsForInvestingTicker(investingTicker);
   }
 
@@ -109,7 +109,7 @@ export class AlertManager implements IAlertManager {
    * @private
    */
   private async getFirstAlertTicker(): Promise<AlertTicker | null> {
-    const tvTicker = this.tickerManager.getTicker();
+    const tvTicker = this.domManager.getTicker();
     const tickers = await this.alertTickerManager.getAlertTickers(tvTicker);
     return tickers[0] ?? null;
   }
@@ -118,7 +118,7 @@ export class AlertManager implements IAlertManager {
    * Create alert via Investing.com and store in local repo if successful
    */
   private async createAlert(price: number): Promise<PairInfo> {
-    const tvTicker = this.tickerManager.getTicker();
+    const tvTicker = this.domManager.getTicker();
     const tickers = await this.alertTickerManager.getAlertTickers(tvTicker);
     const alertTicker = tickers[0];
     if (!alertTicker) {
@@ -229,7 +229,7 @@ export class AlertManager implements IAlertManager {
   async getAlertsForInvestingTicker(investingTicker: string): Promise<Alert[] | null> {
     // For now get current TV ticker's alert tickers and match by symbol.
     // With the two-method manager we rely on the current-TV context.
-    const tvTicker = this.tickerManager.getTicker();
+    const tvTicker = this.domManager.getTicker();
     const tickers = await this.alertTickerManager.getAlertTickers(tvTicker);
     const alertTicker = tickers.find((t) => t.symbol === investingTicker) ?? tickers[0];
     if (!alertTicker) {
@@ -251,7 +251,7 @@ export class AlertManager implements IAlertManager {
   private async getCurrentPairInfo(): Promise<PairInfo> {
     const alertTicker = await this.getFirstAlertTicker();
     if (!alertTicker) {
-      const tvTicker = this.tickerManager.getTicker();
+      const tvTicker = this.domManager.getTicker();
       throw new Error(`No Alert Ticker found for ${tvTicker}`);
     }
     return new PairInfo(alertTicker.name, alertTicker.pair_id, alertTicker.exchange ?? '', alertTicker.symbol);

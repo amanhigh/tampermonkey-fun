@@ -1,11 +1,5 @@
 import { ITickerClient } from '../client/ticker';
-import {
-  CreateTickerRequest,
-  TickerLastOpenedUpdate,
-  TickerQueryParams,
-  TickerRecord,
-  TickerUpdateRequest,
-} from '../models/ticker';
+import { CreateTickerRequest, TickerQueryParams, Ticker, TickerUpdateRequest } from '../models/ticker';
 
 /**
  * Request type for starting to track a new primary ticker.
@@ -29,14 +23,14 @@ export interface ITickerManager {
    * @param data - Ticker creation payload
    * @returns Promise resolving with created ticker record
    */
-  startTracking(data: StartTrackingRequest): Promise<TickerRecord>;
+  startTracking(data: StartTrackingRequest): Promise<Ticker>;
 
   /**
    * Get one primary ticker record.
    * @param ticker - Primary ticker identity
    * @returns Promise resolving with ticker record
    */
-  getTicker(ticker: string): Promise<TickerRecord>;
+  getTicker(ticker: string): Promise<Ticker>;
 
   /**
    * Update mutable primary ticker metadata.
@@ -44,7 +38,7 @@ export interface ITickerManager {
    * @param data - Partial update payload
    * @returns Promise resolving with updated ticker record
    */
-  updateTicker(ticker: string, data: TickerUpdateRequest): Promise<TickerRecord>;
+  updateTicker(ticker: string, data: TickerUpdateRequest): Promise<Ticker>;
 
   /**
    * Record the current ticker as recently opened.
@@ -64,7 +58,7 @@ export interface ITickerManager {
    * @param params - Query parameters
    * @returns Promise resolving with all matching ticker records
    */
-  listTickers(params: TickerQueryParams): Promise<TickerRecord[]>;
+  listTickers(params: TickerQueryParams): Promise<Ticker[]>;
 
   /**
    * Set or clear the exchange on a primary ticker.
@@ -73,7 +67,7 @@ export interface ITickerManager {
    * @param exchange - Exchange code (e.g. "NSE") or null to clear
    * @returns Promise resolving with updated ticker record
    */
-  setExchange(ticker: string, exchange: string | null): Promise<TickerRecord>;
+  setExchange(ticker: string, exchange: string | null): Promise<Ticker>;
 }
 
 /**
@@ -83,17 +77,17 @@ export class TickerManager implements ITickerManager {
   constructor(private readonly tickerClient: ITickerClient) {}
 
   /** @inheritdoc */
-  async startTracking(data: StartTrackingRequest): Promise<TickerRecord> {
+  async startTracking(data: StartTrackingRequest): Promise<Ticker> {
     return this.tickerClient.createTicker(data);
   }
 
   /** @inheritdoc */
-  async getTicker(ticker: string): Promise<TickerRecord> {
+  async getTicker(ticker: string): Promise<Ticker> {
     return this.tickerClient.getTicker(ticker);
   }
 
   /** @inheritdoc */
-  async updateTicker(ticker: string, data: TickerUpdateRequest): Promise<TickerRecord> {
+  async updateTicker(ticker: string, data: TickerUpdateRequest): Promise<Ticker> {
     return this.tickerClient.updateTicker(ticker, data);
   }
 
@@ -110,12 +104,12 @@ export class TickerManager implements ITickerManager {
   }
 
   /** @inheritdoc */
-  async listTickers(params: TickerQueryParams): Promise<TickerRecord[]> {
+  async listTickers(params: TickerQueryParams): Promise<Ticker[]> {
     return this.tickerClient.listTickers(params);
   }
 
   /** @inheritdoc */
-  async setExchange(ticker: string, exchange: string | null): Promise<TickerRecord> {
+  async setExchange(ticker: string, exchange: string | null): Promise<Ticker> {
     return this.tickerClient.updateTicker(ticker, { exchange });
   }
 }

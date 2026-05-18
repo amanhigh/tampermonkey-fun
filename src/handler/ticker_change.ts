@@ -16,7 +16,7 @@ export interface ITickerChangeHandler {
 export class TickerChangeHandler implements ITickerChangeHandler {
   // eslint-disable-next-line max-params
   constructor(
-    private readonly tickerManager: IDomManager,
+    private readonly domManager: IDomManager,
     private readonly alertHandler: IAlertHandler,
     private readonly headerManager: IHeaderManager,
     private readonly recentManager: IRecentManager,
@@ -49,7 +49,7 @@ export class TickerChangeHandler implements ITickerChangeHandler {
   }
 
   private recordRecentTicker(): void {
-    const tvTicker = this.tickerManager.getTicker();
+    const tvTicker = this.domManager.getTicker();
     this.recentManager.markRecent(tvTicker);
 
     // Paint if TV ticker is not in watchlist

@@ -57,7 +57,7 @@ export class WatchListHandler implements IWatchListHandler {
     private readonly headerManager: IHeaderManager,
     private readonly syncUtil: ISyncUtil,
     private readonly watchManager: IWatchManager,
-    private readonly tickerManager: IDomManager,
+    private readonly domManager: IDomManager,
     private readonly alertFeedManager: IAlertFeedManager,
     private readonly uiUtil: IUIUtil
   ) {}
@@ -75,7 +75,7 @@ export class WatchListHandler implements IWatchListHandler {
       this.headerManager.paintHeader();
 
       // Update alert feed with watchlist changes
-      void this.alertFeedManager.createAlertFeedEvent(this.tickerManager.getTicker());
+      void this.alertFeedManager.createAlertFeedEvent(this.domManager.getTicker());
     });
   }
 
@@ -125,7 +125,7 @@ export class WatchListHandler implements IWatchListHandler {
 
   /** @inheritdoc */
   public recordSelectedTicker(categoryIndex: number): void {
-    const selectedTickers = this.tickerManager.getSelectedTickers();
+    const selectedTickers = this.domManager.getSelectedTickers();
     this.watchManager.recordCategory(categoryIndex, selectedTickers);
     this.onWatchListChange();
   }

@@ -16,22 +16,33 @@ import { AlertTicker } from './alert_ticker';
 
 import { Constants } from './constant';
 
-// ── Primary Ticker Types ──
+// ── Primary Ticker Class ──
 
-/** Full primary ticker record returned by the API (matches go-fun models/barkat/ticker.go Ticker). */
-export interface TickerRecord {
-  ticker: string;
-  exchange: string | null;
-  timeframes: TickerTimeframe[];
-  type: TickerType;
-  state: TickerState;
-  trend: TickerTrend;
-  last_opened_at: string;
-  is_fno: boolean;
-  created_at: string;
-  updated_at: string;
+/**
+ * Full primary ticker record returned by the API (matches go-fun models/barkat/ticker.go Ticker).
+ */
+export class Ticker {
+  ticker: string = '';
+  exchange: string | null = null;
+  timeframes: TickerTimeframe[] = [];
+  type: TickerType = 'EQUITY';
+  state: TickerState = 'WATCHED';
+  trend: TickerTrend = 'SIDEWAYS';
+  last_opened_at: string = '';
+  is_fno: boolean = false;
+  created_at: string = '';
+  updated_at: string = '';
   alert_tickers?: AlertTicker[];
   alert_ticker_count?: number;
+
+  constructor(data: Partial<Ticker> = {}) {
+    Object.assign(this, data);
+  }
+
+  /** Exchange-qualified name: "EXCHANGE:ticker" or raw ticker when exchange absent. */
+  get qualifiedName(): string {
+    return this.exchange ? `${this.exchange}:${this.ticker}` : this.ticker;
+  }
 }
 
 /** Request body for POST /v1/api/tickers (create). */
@@ -80,20 +91,12 @@ export interface TickerQueryParams {
 
 /** Paginated ticker list response. */
 export interface TickerListResponse {
-  tickers: TickerRecord[];
+  tickers: Ticker[];
   metadata: {
     total: number;
     offset: number;
     limit: number;
   };
-}
-
-/**
- * Formats a TickerRecord to exchange-qualified form ("EXCHANGE:ticker").
- * Returns raw ticker when exchange is absent.
- */
-export function qualifiedTicker(record: TickerRecord): string {
-  return record.exchange ? `${record.exchange}:${record.ticker}` : record.ticker;
 }
 
 /**

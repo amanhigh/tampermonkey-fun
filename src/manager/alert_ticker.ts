@@ -2,41 +2,73 @@ import { IAlertTickerClient } from '../client/alert_ticker';
 import { AlertTicker, CreateAlertTickerRequest } from '../models/alert_ticker';
 
 /**
- * Interface for managing Alert Ticker operations (Investing.com identity).
- * Minimal scope: only create and list-by-TV-ticker until call sites force more.
+ * Interface for managing Alert Ticker (Investing.com identity) operations.
+ *
+ * Domain methods:
+ * - linkAlertTicker → attach an Investing ticker under a TV ticker
+ * - getAlertTicker → get default Alert ticker for a TV ticker
+ * - fetchAlertTicker → look up an Alert ticker by its symbol
+ * - getAllAlertTickers → list all Alert tickers (audit/global flows)
  */
 export interface IAlertTickerManager {
   /**
-   * Create an Alert Ticker under a primary TV ticker.
+   * Attach an Alert (Investing) ticker under a primary TV ticker.
    * @param tvTicker - Parent primary ticker identity
    * @param data - Alert ticker creation payload
-   * @returns Promise resolving with created Alert Ticker record
+   * @returns Promise resolving with created Alert ticker record
    */
-  createAlertTicker(tvTicker: string, data: CreateAlertTickerRequest): Promise<AlertTicker>;
+  linkAlertTicker(tvTicker: string, data: CreateAlertTickerRequest): Promise<AlertTicker>;
 
   /**
-   * Get all Alert Tickers attached to a given TV ticker.
-   * Uses backend list API filtered by ticker.
+   * Get the default Alert ticker for a given TV ticker.
+   * Returns the first Alert ticker from the backend list, or null if none.
    * @param tvTicker - Primary ticker identity
-   * @returns Promise resolving with array of Alert Ticker records (empty if none)
+   * @returns Promise resolving with the first Alert ticker, or null
    */
-  getAlertTickers(tvTicker: string): Promise<AlertTicker[]>;
+  getAlertTicker(tvTicker: string): Promise<AlertTicker | null>;
+
+  /**
+   * Fetch an Alert ticker by its Investing.com symbol.
+   * @param investingTicker - Alert/Investing ticker symbol
+   * @returns Promise resolving with the Alert ticker record, or null if not found
+   */
+  fetchAlertTicker(investingTicker: string): Promise<AlertTicker | null>;
+
+  /**
+   * Get ALL Alert tickers (auto-paginated). Used for audit coverage and global flows.
+   * @returns Promise resolving with all Alert ticker records
+   */
+  getAllAlertTickers(): Promise<AlertTicker[]>;
 }
 
 /**
- * AlertTickerManager handles backend Alert Ticker operations.
- * Every TV ticker can have zero or more Alert Tickers attached.
+ * Manages Alert Ticker (Investing.com identity) operations against the Kohan backend.
  */
 export class AlertTickerManager implements IAlertTickerManager {
-  constructor(private readonly tickerAlertClient: IAlertTickerClient) {}
+  constructor(private readonly alertTickerClient: IAlertTickerClient) {}
 
   /** @inheritdoc */
-  async createAlertTicker(tvTicker: string, data: CreateAlertTickerRequest): Promise<AlertTicker> {
-    return this.tickerAlertClient.createAlertTicker(tvTicker, data);
+  async linkAlertTicker(tvTicker: string, data: CreateAlertTickerRequest): Promise<AlertTicker> {
+    return this.alertTickerClient.createAlertTicker(tvTicker, data);
   }
 
   /** @inheritdoc */
-  async getAlertTickers(tvTicker: string): Promise<AlertTicker[]> {
-    return this.tickerAlertClient.listAlertTickers({ ticker: tvTicker });
+  async getAlertTicker(tvTicker: string): Promise<AlertTicker | null> {
+    const tickers = await this.alertTickerClient.listAlertTickers({ ticker: tvTicker });
+    return tickers[0] ?? null;
+  }
+
+  /** @inheritdoc */
+  async fetchAlertTicker(investingTicker: string): Promise<AlertTicker | null> {
+    try {
+      return await this.alertTickerClient.getAlertTicker(investingTicker);
+    } catch {
+      return null;
+    }
+  }
+
+  /** @inheritdoc */
+  async getAllAlertTickers(): Promise<AlertTicker[]> {
+    return this.alertTickerClient.listAlertTickers({});
   }
 }

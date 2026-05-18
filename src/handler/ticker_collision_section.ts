@@ -4,7 +4,7 @@ import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { ITickerHandler } from './ticker';
 import { ICanonicalRanker } from '../manager/canonical_ranker';
-import { ISymbolManager } from '../manager/symbol';
+import { IAlertTickerManager } from '../manager/alert_ticker';
 import { Notifier } from '../util/notify';
 import { Constants } from '../models/constant';
 
@@ -38,9 +38,9 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
       // Fallback: try opening via investingTicker or display name
       const investingTicker = result.data?.investingTicker as string | undefined;
       if (investingTicker) {
-        const resolved = this.symbolManager.investingToTv(investingTicker);
-        if (resolved) {
-          await this.tickerHandler.openTicker(resolved);
+        const alertTicker = await this.alertTickerManager.fetchAlertTicker(investingTicker);
+        if (alertTicker) {
+          await this.tickerHandler.openTicker(alertTicker.ticker);
           return;
         }
       }
@@ -67,7 +67,11 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
       return false;
     }
 
-    removals.forEach((r) => this.symbolManager.deleteTvTicker(r.ticker));
+    // Removals now mean stopping tracking on the TickerManager
+    // For each alias, stop tracking (backend cascade deletes linked alert tickers)
+    for (const r of removals) {
+      await this.tickerHandler.stopTracking(r.ticker);
+    }
     Notifier.success(`🔗 Kept ${canonical.ticker}, removed ${removals.length} alias(es) for ${result.target}`);
     return true;
   };
@@ -96,15 +100,15 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
       return;
     }
 
-    plans.forEach((plan) => {
+    for (const plan of plans) {
       if (!plan) {
-        return;
+        continue;
       }
-      for (let i = 1; i < plan.removals.length + 1; i++) {
-        this.symbolManager.deleteTvTicker(plan.removals[i - 1].ticker);
+      for (const r of plan.removals) {
+        await this.tickerHandler.stopTracking(r.ticker);
       }
       totalRemoved += plan.removals.length;
-    });
+    }
     Notifier.success(`🔗 Removed ${totalRemoved} ticker alias(es)`);
   };
 
@@ -118,7 +122,7 @@ export class TickerCollisionSection extends BaseAuditSection implements IAuditSe
   constructor(
     plugin: IAudit,
     private readonly tickerHandler: ITickerHandler,
-    private readonly symbolManager: ISymbolManager,
+    private readonly alertTickerManager: IAlertTickerManager,
     private readonly canonicalRanker: ICanonicalRanker
   ) {
     super();
