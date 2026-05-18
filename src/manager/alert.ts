@@ -20,6 +20,13 @@ export interface IAlertManager {
   getAlerts(): Promise<Alert[]>;
 
   /**
+   * Get all alerts for a specific TradingView ticker.
+   * @param tvTicker TradingView ticker
+   * @returns Promise resolving to array of alerts sorted by price
+   */
+  getAlertsForTicker(tvTicker: string): Promise<Alert[]>;
+
+  /**
    * Create alert for current TradingView ticker.
    * @param price Alert price
    * @throws Error If no alert ticker found for current ticker
@@ -73,6 +80,11 @@ export class AlertManager implements IAlertManager {
   /** @inheritdoc */
   async getAlerts(): Promise<Alert[]> {
     const tvTicker = this.domManager.getTicker();
+    return this.listAlertsByTvTicker(tvTicker);
+  }
+
+  /** @inheritdoc */
+  async getAlertsForTicker(tvTicker: string): Promise<Alert[]> {
     return this.listAlertsByTvTicker(tvTicker);
   }
 

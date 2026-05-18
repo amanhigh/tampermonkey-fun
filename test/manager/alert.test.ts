@@ -98,31 +98,20 @@ describe('AlertManager', () => {
     });
   });
 
-  describe('getAlertsForInvestingTicker', () => {
-    it('should resolve Investing ticker to TV ticker and list backend alerts', async () => {
-      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(defaultAlertTicker);
+  describe('getAlertsForTicker', () => {
+    it('should list backend alerts for the provided TV ticker', async () => {
       mockPriceAlertClient.listPriceAlerts.mockResolvedValue([
         { alert_id: '1', pair_id: '123', trigger_price: 100, created_at: '' },
       ]);
 
-      const result = await alertManager.getAlertsForInvestingTicker('HDFC');
+      const result = await alertManager.getAlertsForTicker('TV:HDFC');
 
-      expect(mockAlertTickerManager.fetchAlertTicker).toHaveBeenCalledWith('HDFC');
       expect(mockPriceAlertClient.listPriceAlerts).toHaveBeenCalledWith({
         ticker: 'TV:HDFC',
         'sort-by': 'trigger_price',
         'sort-order': 'asc',
       });
       expect(result).toEqual([new Alert('1', '123', 100)]);
-    });
-
-    it('should return null when Investing ticker has no Alert ticker mapping', async () => {
-      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(null);
-
-      const result = await alertManager.getAlertsForInvestingTicker('UNKNOWN');
-
-      expect(result).toBeNull();
-      expect(mockPriceAlertClient.listPriceAlerts).not.toHaveBeenCalled();
     });
   });
 

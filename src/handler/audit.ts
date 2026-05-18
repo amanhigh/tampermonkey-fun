@@ -2,7 +2,6 @@ import { AuditId, Constants } from '../models/constant';
 import { AuditSectionRegistry } from '../util/audit_registry';
 import { IUIUtil } from '../util/ui';
 import { AuditRenderer } from '../util/audit_renderer';
-import { AuditResult } from '../models/audit';
 import { ITickerHandler } from './ticker';
 import { IAlertTickerHandler } from './alert_ticker';
 import { IDomManager } from '../manager/dom';
@@ -48,7 +47,7 @@ export class AuditHandler implements IAuditHandler {
     private readonly uiUtil: IUIUtil,
     private readonly tickerHandler: ITickerHandler,
     private readonly alertTickerHandler: IAlertTickerHandler,
-    private readonly tickerManager: IDomManager
+    private readonly domManager: IDomManager
   ) {}
 
   /**
@@ -70,23 +69,12 @@ export class AuditHandler implements IAuditHandler {
    * Updates the audit summary in the UI based on current results
    */
   public async auditAll(): Promise<void> {
-    // Get Alerts section from registry (section contains plugin)
-    const alertsSection = this.auditRegistry.mustGetSection(Constants.AUDIT.PLUGINS.ALERTS);
-
-    // Run section's plugin to get audit results
-    //TODO: Remove Plugin Injection and use Section directly
-    const results = await alertsSection.plugin.run();
-
     // First run: render toolbar buttons (only once)
     if (!this.auditHasRun) {
       this.renderToolbarButtons();
     }
 
-    // Render alerts UI (header + buttons) before other audits
-    // Alerts has order 0 and uses setResults (not refresh) for special handling
-    this.auditAlerts(results);
-
-    // Run all remaining audits in order (skipping alerts with order 0)
+    // Run all audits in order
     await this.runOrderedAudits();
 
     // Mark audits as run
@@ -95,17 +83,11 @@ export class AuditHandler implements IAuditHandler {
 
   /**
    * Runs all audits in order number sequence (FR-9.1, FR-9.10)
-   * Skips alerts (order 0) as it's handled separately with setResults
    */
   private async runOrderedAudits(): Promise<void> {
     const orderedSections = this.auditRegistry.listSectionsOrdered();
 
     for (const section of orderedSections) {
-      // Skip alerts section (order 0) - already handled separately
-      if (section.order === 0) {
-        continue;
-      }
-
       const renderer = this.getOrCreateRenderer(section.id as AuditId);
       await renderer.refresh();
     }
@@ -176,15 +158,5 @@ export class AuditHandler implements IAuditHandler {
     renderer.render();
     this.renderers.set(sectionId, renderer);
     return renderer;
-  }
-
-  /**
-   * Renders alerts audit section using AuditRenderer
-   * Plugin handles all filtering (watched tickers, etc.)
-   * @param pluginResults Results from AlertsAudit plugin
-   */
-  private auditAlerts(pluginResults: AuditResult[]): void {
-    const renderer = this.getOrCreateRenderer(Constants.AUDIT.PLUGINS.ALERTS);
-    renderer.setResults(pluginResults);
   }
 }

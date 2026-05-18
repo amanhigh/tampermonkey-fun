@@ -36,7 +36,7 @@ export class TickerHandler implements ITickerHandler {
   constructor(
     private readonly domManager: IDomManager,
     private readonly styleManager: IStyleManager,
-    private readonly tickerBackendManager: ITickerManager,
+    private readonly tickerManager: ITickerManager,
     private readonly alertTickerHandler: IAlertTickerHandler
   ) {}
 
@@ -44,7 +44,7 @@ export class TickerHandler implements ITickerHandler {
   public async openTicker(ticker: string): Promise<void> {
     let exchangeTicker = ticker;
     try {
-      const record = await this.tickerBackendManager.getTicker(ticker);
+      const record = await this.tickerManager.getTicker(ticker);
       exchangeTicker = record.qualifiedName;
     } catch {
       // Fall back to raw ticker
@@ -60,7 +60,7 @@ export class TickerHandler implements ITickerHandler {
     }
 
     try {
-      await this.tickerBackendManager.stopTracking(tvTicker);
+      await this.tickerManager.stopTracking(tvTicker);
     } catch (error) {
       Notifier.warn(`Failed to delete ticker ${tvTicker}: ${(error as Error).message}`);
     }
@@ -73,7 +73,7 @@ export class TickerHandler implements ITickerHandler {
     switch (action.toUpperCase()) {
       case 'E': {
         const ticker = this.domManager.getTicker();
-        await this.tickerBackendManager.setExchange(ticker, value);
+        await this.tickerManager.setExchange(ticker, value);
         Notifier.success(`Mapped ${ticker} to Exchange ${value}`);
         break;
       }

@@ -64,7 +64,7 @@ export interface IDomManager {
 export class DomManager implements IDomManager {
   constructor(
     private readonly waitUtil: IWaitUtil,
-    private readonly tickerBackendManager: ITickerManager,
+    private readonly tickerManager: ITickerManager,
     private readonly alertTickerManager: IAlertTickerManager,
     private readonly screenerManager: ITradingViewScreenerManager,
     private readonly watchlistManager: ITradingViewWatchlistManager
@@ -103,7 +103,7 @@ export class DomManager implements IDomManager {
   async openTicker(ticker: string): Promise<void> {
     let exchangeTicker = ticker;
     try {
-      const record = await this.tickerBackendManager.getTicker(ticker);
+      const record = await this.tickerManager.getTicker(ticker);
       exchangeTicker = record.qualifiedName;
     } catch {
       // Fall back to raw ticker

@@ -21,7 +21,7 @@ export interface IAlertFeedHandler {
   /**
    * Updates alert feed display
    */
-  paintAlertFeed(): void;
+  paintAlertFeed(): Promise<void>;
 }
 
 export class AlertFeedHandler implements IAlertFeedHandler {
@@ -72,7 +72,7 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     // Setup alert click handlers
     this.setupAlertClickHandler();
     // Paint feed with current state
-    this.paintAlertFeed();
+    void this.paintAlertFeed();
   }
 
   private setupAlertClickHandler(): void {
@@ -93,22 +93,24 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     void this.alertManager.createAlertClickEvent(investingTicker, action);
   }
 
-  public paintAlertFeed(): void {
+  public async paintAlertFeed(): Promise<void> {
     Notifier.yellow('🎨 Painting alert feed');
+    const elements: Array<{ $el: JQuery; ticker: string }> = [];
     $(Constants.DOM.ALERT_FEED.ALERT_DATA).each((_, element) => {
       const $element = $(element);
       const alertName = $element.text();
       const investingTicker = this.extractTickerFromAlertName(alertName);
+      elements.push({ $el: $element, ticker: investingTicker });
+    });
 
-      // Get feed info from manager
-      const feedInfo = this.alertFeedManager.getAlertFeedState(investingTicker);
+    const feedInfos = await Promise.all(elements.map(async (e) => this.alertFeedManager.getAlertFeedState(e.ticker)));
 
+    elements.forEach(({ $el, ticker }, i) => {
+      const feedInfo = feedInfos[i];
       if (feedInfo.state === FeedState.UNMAPPED) {
-        Notifier.warn(`Unmapped: ${investingTicker}`);
+        Notifier.warn(`Unmapped: ${ticker}`);
       }
-
-      // Apply appropriate color based on state
-      $element.css('color', feedInfo.color);
+      $el.css('color', feedInfo.color);
     });
 
     this.applyBlackTheme();

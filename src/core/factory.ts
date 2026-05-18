@@ -73,11 +73,13 @@ import { IPanelHandler, PanelHandler } from '../handler/panel';
 import { IPicassoHandler, PicassoHandler } from '../handler/picasso';
 import { PicassoApp } from './picasso';
 import { AuditSectionRegistry } from '../util/audit_registry';
+import { AlertsPlugin } from '../manager/alerts_plugin';
 import { GttPlugin } from '../manager/gtt_plugin';
 
 import { OrphanFlagsPlugin } from '../manager/orphan_flags_plugin';
 import { TradeRiskPlugin } from '../manager/trade_risk_plugin';
 import { TickerCollisionPlugin } from '../manager/ticker_collision_plugin';
+import { AlertsAuditSection } from '../handler/alerts_section';
 import { GttAuditSection } from '../handler/gtt_section';
 
 import { OrphanFlagsSection } from '../handler/orphan_flags_section';
@@ -326,6 +328,13 @@ export class Factory {
    */
   public static audit = {
     // ===== PLUGIN CREATION =====
+    // Return a singleton AlertsPlugin instance
+    alerts: () =>
+      Factory.getInstance(
+        'auditPlugin_alerts',
+        () => new AlertsPlugin(Factory.manager.ticker(), Factory.manager.alert(), Factory.manager.watch())
+      ),
+
     // Return a singleton GttPlugin instance
     gttUnwatched: () =>
       Factory.getInstance(
@@ -355,6 +364,13 @@ export class Factory {
       ),
 
     // ===== SECTION CREATION =====
+    // Alerts Audit Section - receives plugin via direct injection
+    alertsSection: () =>
+      Factory.getInstance(
+        'alertsSection',
+        () => new AlertsAuditSection(Factory.audit.alerts(), Factory.handler.ticker())
+      ),
+
     // GTT Audit Section - receives plugin via direct injection
     // Pilot pattern: Follow this structure for other sections
     gttSection: () =>
@@ -410,6 +426,7 @@ export class Factory {
         const reg = new AuditSectionRegistry();
 
         // Register all sections
+        reg.registerSection(Factory.audit.alertsSection());
         reg.registerSection(Factory.audit.gttSection());
         reg.registerSection(Factory.audit.orphanFlagsSection());
         reg.registerSection(Factory.audit.tickerCollisionSection());
