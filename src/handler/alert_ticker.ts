@@ -3,7 +3,7 @@ import { ISmartPrompt } from '../util/smart';
 import { IInvestingClient } from '../client/investing';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { ISymbolManager } from '../manager/symbol';
-import { ITickerManager } from '../manager/ticker';
+import { IDomManager } from '../manager/dom';
 import { Notifier } from '../util/notify';
 
 /**
@@ -30,7 +30,7 @@ export class AlertTickerHandler implements IAlertTickerHandler {
     private readonly investingClient: IInvestingClient,
     private readonly alertTickerManager: IAlertTickerManager,
     private readonly smartPrompt: ISmartPrompt,
-    private readonly tickerManager: ITickerManager,
+    private readonly tickerManager: IDomManager,
     private readonly symbolManager: ISymbolManager
   ) {}
 

@@ -1,5 +1,5 @@
 import { IStyleManager } from '../manager/style';
-import { ITickerManager } from '../manager/ticker';
+import { IDomManager } from '../manager/dom';
 import { IAlertHandler } from './alert';
 import { IFlagHandler } from './flag';
 import { IWatchListHandler } from './watchlist';
@@ -35,7 +35,7 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
   // TASK Break Lines later for all eslint-disables
   // eslint-disable-next-line max-lines-per-function
   constructor(
-    private readonly tickerManager: ITickerManager,
+    private readonly tickerManager: IDomManager,
     private readonly styleManager: IStyleManager,
     private readonly alertHandler: IAlertHandler,
     private readonly watchlistHandler: IWatchListHandler,

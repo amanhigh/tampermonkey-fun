@@ -9,7 +9,7 @@ import { ITradingViewWatchlistManager } from '../manager/watchlist';
 import { Notifier } from '../util/notify';
 import { ISyncUtil } from '../util/sync';
 import { IUIUtil } from '../util/ui';
-import { ITickerManager } from '../manager/ticker';
+import { IDomManager } from '../manager/dom';
 import { IAlertFeedManager } from '../manager/alertfeed';
 
 /**
@@ -57,7 +57,7 @@ export class WatchListHandler implements IWatchListHandler {
     private readonly headerManager: IHeaderManager,
     private readonly syncUtil: ISyncUtil,
     private readonly watchManager: IWatchManager,
-    private readonly tickerManager: ITickerManager,
+    private readonly tickerManager: IDomManager,
     private readonly alertFeedManager: IAlertFeedManager,
     private readonly uiUtil: IUIUtil
   ) {}

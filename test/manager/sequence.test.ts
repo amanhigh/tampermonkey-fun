@@ -1,6 +1,6 @@
 import { SequenceManager, ISequenceManager } from '../../src/manager/sequence';
 import { ITickerClient } from '../../src/client/ticker';
-import { ITickerManager } from '../../src/manager/ticker';
+import { IDomManager } from '../../src/manager/dom';
 import { SequenceType, TimeFrame } from '../../src/models/trading';
 import { Constants } from '../../src/models/constant';
 import { Notifier } from '../../src/util/notify';
@@ -21,7 +21,7 @@ jest.mock('../../src/util/notify', () => ({
 describe('SequenceManager', () => {
   let sequenceManager: ISequenceManager;
   let mockTickerClient: jest.Mocked<ITickerClient>;
-  let mockTickerManager: jest.Mocked<ITickerManager>;
+  let mockTickerManager: jest.Mocked<IDomManager>;
 
   const createMockRecord = (overrides: Partial<TickerRecord> = {}): TickerRecord => ({
     ticker: 'TEST',
@@ -51,7 +51,7 @@ describe('SequenceManager', () => {
       getBaseUrl: jest.fn(),
     } as unknown as jest.Mocked<ITickerClient>;
 
-    // Mock TickerManager
+    // Mock DomManager
     mockTickerManager = {
       getTicker: jest.fn().mockReturnValue('AAPL'),
       getCurrentExchange: jest.fn().mockReturnValue('NSE'),
@@ -60,7 +60,7 @@ describe('SequenceManager', () => {
       resetTicker: jest.fn(),
       buildTickerSymbol: jest.fn(),
       parseTickerSymbol: jest.fn(),
-    } as unknown as jest.Mocked<ITickerManager>;
+    } as unknown as jest.Mocked<IDomManager>;
 
     sequenceManager = new SequenceManager(mockTickerClient, mockTickerManager);
   });

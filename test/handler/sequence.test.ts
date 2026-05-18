@@ -1,6 +1,6 @@
 import { SequenceHandler } from '../../src/handler/sequence';
 import { ISequenceManager } from '../../src/manager/sequence';
-import { ITickerManager } from '../../src/manager/ticker';
+import { IDomManager } from '../../src/manager/dom';
 import { ISymbolManager } from '../../src/manager/symbol';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { AlertTicker } from '../../src/models/alert_ticker';
@@ -16,7 +16,7 @@ const mockJQuery = jest.fn((_selector: string) => ({
 describe('SequenceHandler', () => {
   let sequenceHandler: SequenceHandler;
   let mockSequenceManager: jest.Mocked<ISequenceManager>;
-  let mockTickerManager: jest.Mocked<ITickerManager>;
+  let mockTickerManager: jest.Mocked<IDomManager>;
   let mockSymbolManager: jest.Mocked<ISymbolManager>;
   let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
   let mockDisplayInput: any;

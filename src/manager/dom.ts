@@ -12,7 +12,7 @@ const MIN_SELECTED_TICKERS = 2;
 /**
  * Interface for managing ticker operations
  */
-export interface ITickerManager {
+export interface IDomManager {
   /**
    * Gets current ticker from DOM
    * @returns Current ticker symbol
@@ -60,7 +60,7 @@ export interface ITickerManager {
 /**
  * Manages all ticker operations including retrieval, mapping, navigation and selection
  */
-export class TickerManager implements ITickerManager {
+export class DomManager implements IDomManager {
   /**
    * Manages all ticker operations including retrieval, mapping, navigation and selection
    * @param waitUtil DOM operation manager

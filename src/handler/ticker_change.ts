@@ -1,4 +1,4 @@
-import { ITickerManager } from '../manager/ticker';
+import { IDomManager } from '../manager/dom';
 import { IAlertHandler } from './alert';
 import { IHeaderManager } from '../manager/header';
 import { IRecentManager } from '../manager/recent';
@@ -16,7 +16,7 @@ export interface ITickerChangeHandler {
 export class TickerChangeHandler implements ITickerChangeHandler {
   // eslint-disable-next-line max-params
   constructor(
-    private readonly tickerManager: ITickerManager,
+    private readonly tickerManager: IDomManager,
     private readonly alertHandler: IAlertHandler,
     private readonly headerManager: IHeaderManager,
     private readonly recentManager: IRecentManager,

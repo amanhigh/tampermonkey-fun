@@ -1,5 +1,5 @@
 import { TickerHandler } from '../../src/handler/ticker';
-import { ITickerManager } from '../../src/manager/ticker';
+import { IDomManager } from '../../src/manager/dom';
 import { ISymbolManager } from '../../src/manager/symbol';
 import { IStyleManager } from '../../src/manager/style';
 import { ITickerClient } from '../../src/client/ticker';
@@ -19,7 +19,7 @@ jest.mock('../../src/util/notify', () => ({
 
 describe('TickerHandler', () => {
   let handler: TickerHandler;
-  let mockTickerManager: jest.Mocked<ITickerManager>;
+  let mockTickerManager: jest.Mocked<IDomManager>;
   let mockSymbolManager: jest.Mocked<ISymbolManager>;
   let mockStyleManager: jest.Mocked<IStyleManager>;
   let mockTickerClient: jest.Mocked<ITickerClient>;

@@ -1,6 +1,6 @@
 import { ISmartPrompt } from '../util/smart';
 import { ITickerHandler } from './ticker';
-import { ITickerManager } from '../manager/ticker';
+import { IDomManager } from '../manager/dom';
 
 export interface IPanelHandler {
   showPanel(): Promise<void>;
@@ -14,7 +14,7 @@ export class PanelHandler implements IPanelHandler {
   constructor(
     private readonly smartPrompt: ISmartPrompt,
     private readonly tickerHandler: ITickerHandler,
-    private readonly tickerManager: ITickerManager
+    private readonly tickerManager: IDomManager
   ) {}
 
   public async showPanel(): Promise<void> {

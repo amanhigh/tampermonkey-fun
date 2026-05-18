@@ -8,7 +8,7 @@ import { ISmartPrompt } from '../util/smart';
 import { IUIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
 import { JournalType } from '../models/trading';
-import { TickerManager } from '../manager/ticker';
+import { DomManager } from '../manager/dom';
 import { Notifier } from '../util/notify';
 import { ITradingViewManager } from '../manager/tv';
 import { IStyleManager } from '../manager/style';
@@ -63,7 +63,7 @@ export interface IJournalHandler {
 export class JournalHandler implements IJournalHandler {
   // eslint-disable-next-line max-params
   constructor(
-    private readonly tickerManager: TickerManager,
+    private readonly tickerManager: DomManager,
     private readonly osClient: IOsClient,
     private readonly journalManager: IJournalManager,
     private readonly smartPrompt: ISmartPrompt,

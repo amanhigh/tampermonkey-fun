@@ -1,5 +1,5 @@
 import { ISequenceManager } from '../manager/sequence';
-import { ITickerManager } from '../manager/ticker';
+import { IDomManager } from '../manager/dom';
 import { ISymbolManager } from '../manager/symbol';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { Constants } from '../models/constant';
@@ -32,7 +32,7 @@ export interface ISequenceHandler {
 export class SequenceHandler implements ISequenceHandler {
   constructor(
     private readonly sequenceManager: ISequenceManager,
-    private readonly tickerManager: ITickerManager,
+    private readonly tickerManager: IDomManager,
     private readonly symbolManager: ISymbolManager,
     private readonly alertTickerManager: IAlertTickerManager
   ) {}

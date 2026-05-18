@@ -5,7 +5,7 @@ import { IAlertRepo } from '../repo/alert';
 import { AlertClicked, AlertClickAction } from '../models/events';
 import { Notifier } from '../util/notify';
 import { IAlertTickerManager } from './alert_ticker';
-import { ITickerManager } from './ticker';
+import { IDomManager } from './dom';
 import { ITradingViewManager } from './tv';
 
 /**
@@ -82,7 +82,7 @@ export class AlertManager implements IAlertManager {
   constructor(
     private readonly alertRepo: IAlertRepo,
     private readonly alertTickerManager: IAlertTickerManager,
-    private readonly tickerManager: ITickerManager,
+    private readonly tickerManager: IDomManager,
     private readonly investingClient: IInvestingClient,
     private readonly tradingViewManager: ITradingViewManager
   ) {}

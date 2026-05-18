@@ -1,4 +1,4 @@
-import { TickerManager, ITickerManager } from '../../src/manager/ticker';
+import { DomManager, IDomManager } from '../../src/manager/dom';
 import { IWaitUtil } from '../../src/util/wait';
 import { ISymbolManager } from '../../src/manager/symbol';
 import { ITradingViewScreenerManager } from '../../src/manager/screener';
@@ -11,8 +11,8 @@ const mockTextFn = jest.fn();
   text: mockTextFn,
 }));
 
-describe('TickerManager', () => {
-  let tickerManager: ITickerManager;
+describe('DomManager', () => {
+  let tickerManager: IDomManager;
   let mockWaitUtil: jest.Mocked<IWaitUtil>;
   let mockSymbolManager: jest.Mocked<ISymbolManager>;
   let mockScreenerManager: jest.Mocked<ITradingViewScreenerManager>;
@@ -72,7 +72,7 @@ describe('TickerManager', () => {
       switchWatchlist: jest.fn(),
     } as unknown as jest.Mocked<ITradingViewWatchlistManager>;
 
-    tickerManager = new TickerManager(mockWaitUtil, mockSymbolManager, mockScreenerManager, mockWatchlistManager);
+    tickerManager = new DomManager(mockWaitUtil, mockSymbolManager, mockScreenerManager, mockWatchlistManager);
   });
 
   describe('getTicker', () => {

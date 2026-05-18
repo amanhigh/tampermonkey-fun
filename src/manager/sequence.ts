@@ -4,7 +4,7 @@ import { ITickerClient } from '../client/ticker';
 import { TickerTimeframe } from '../models/ticker';
 import { Notifier } from '../util/notify';
 import { Color } from '../models/color';
-import { ITickerManager } from './ticker';
+import { IDomManager } from './dom';
 
 /**
  * Interface for managing sequence operations and state
@@ -65,7 +65,7 @@ export class SequenceManager implements ISequenceManager {
    */
   constructor(
     private readonly tickerClient: ITickerClient,
-    private readonly tickerManager: ITickerManager
+    private readonly tickerManager: IDomManager
   ) {}
 
   /** @inheritdoc */

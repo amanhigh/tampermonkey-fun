@@ -1,6 +1,6 @@
 import { AlertManager, IAlertManager } from '../../src/manager/alert';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
-import { ITickerManager } from '../../src/manager/ticker';
+import { IDomManager } from '../../src/manager/dom';
 import { ITradingViewManager } from '../../src/manager/tv';
 import { IInvestingClient } from '../../src/client/investing';
 import { IAlertRepo } from '../../src/repo/alert';
@@ -27,7 +27,7 @@ describe('AlertManager', () => {
   let alertManager: IAlertManager;
   let mockAlertRepo: jest.Mocked<IAlertRepo>;
   let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
-  let mockTickerManager: jest.Mocked<ITickerManager>;
+  let mockTickerManager: jest.Mocked<IDomManager>;
   let mockInvestingClient: jest.Mocked<IInvestingClient>;
   let mockTradingViewManager: jest.Mocked<ITradingViewManager>;
 

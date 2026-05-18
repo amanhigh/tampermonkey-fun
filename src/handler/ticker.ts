@@ -1,5 +1,5 @@
 import { Notifier } from '../util/notify';
-import { ITickerManager } from '../manager/ticker';
+import { IDomManager } from '../manager/dom';
 import { ISymbolManager } from '../manager/symbol';
 import { IStyleManager } from '../manager/style';
 import { ITickerClient } from '../client/ticker';
@@ -36,7 +36,7 @@ export interface ITickerHandler {
  */
 export class TickerHandler implements ITickerHandler {
   constructor(
-    private readonly tickerManager: ITickerManager,
+    private readonly tickerManager: IDomManager,
     private readonly symbolManager: ISymbolManager,
     private readonly styleManager: IStyleManager,
     private readonly tickerClient: ITickerClient,

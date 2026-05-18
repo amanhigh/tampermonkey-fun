@@ -5,7 +5,7 @@ import { AlertState } from '../../src/models/alert';
 import { Constants } from '../../src/models/constant';
 import { ITickerHandler } from '../../src/handler/ticker';
 import { IAlertTickerHandler } from '../../src/handler/alert_ticker';
-import { ITickerManager } from '../../src/manager/ticker';
+import { IDomManager } from '../../src/manager/dom';
 
 // Mock jQuery globally for DOM operations
 const mockJQuery = {
@@ -57,7 +57,7 @@ describe('AuditHandler', () => {
   let mockUIUtil: jest.Mocked<IUIUtil>;
   let mockTickerHandler: jest.Mocked<ITickerHandler>;
   let mockAlertTickerHandler: jest.Mocked<IAlertTickerHandler>;
-  let mockTickerManager: jest.Mocked<ITickerManager>;
+  let mockTickerManager: jest.Mocked<IDomManager>;
 
   beforeEach(() => {
     jest.clearAllMocks();

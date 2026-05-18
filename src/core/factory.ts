@@ -32,7 +32,7 @@ import { ITradingViewWatchlistManager, TradingViewWatchlistManager } from '../ma
 import { ITradingViewScreenerManager, TradingViewScreenerManager } from '../manager/screener';
 import { ISequenceManager, SequenceManager } from '../manager/sequence';
 import { IPaintManager, PaintManager } from '../manager/paint';
-import { ITickerManager, TickerManager } from '../manager/ticker';
+import { IDomManager, DomManager } from '../manager/dom';
 import { ISymbolManager, SymbolManager } from '../manager/symbol';
 import { ITradingViewManager, TradingViewManager } from '../manager/tv';
 import { IAlertTickerManager, AlertTickerManager } from '../manager/alert_ticker';
@@ -252,11 +252,11 @@ export class Factory {
 
     paint: (): IPaintManager => Factory.getInstance('paintManager', () => new PaintManager()),
 
-    ticker: (): ITickerManager =>
+    ticker: (): IDomManager =>
       Factory.getInstance(
         'tickerManager',
         () =>
-          new TickerManager(
+          new DomManager(
             Factory.util.wait(),
             Factory.manager.symbol(),
             Factory.manager.screener(),
@@ -642,7 +642,7 @@ export class Factory {
         'journalHandler',
         () =>
           new JournalHandler(
-            Factory.manager.ticker() as TickerManager,
+            Factory.manager.ticker() as DomManager,
             Factory.client.os(),
             Factory.manager.journal(),
             Factory.util.smart(),

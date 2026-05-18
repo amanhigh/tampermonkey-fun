@@ -4,7 +4,7 @@
 
 import { IAlertManager } from '../manager/alert';
 import { ISymbolManager } from '../manager/symbol';
-import { ITickerManager } from '../manager/ticker';
+import { IDomManager } from '../manager/dom';
 import { ITradingViewManager } from '../manager/tv';
 import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
@@ -104,7 +104,7 @@ export class AlertHandler implements IAlertHandler {
     private readonly alertManager: IAlertManager,
     private readonly tradingViewManager: ITradingViewManager,
     private readonly auditHandler: IAuditHandler,
-    private readonly tickerManager: ITickerManager,
+    private readonly tickerManager: IDomManager,
     private readonly symbolManager: ISymbolManager,
     private readonly syncUtil: ISyncUtil,
     private readonly uiUtil: IUIUtil,

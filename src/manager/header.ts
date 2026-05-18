@@ -2,7 +2,7 @@ import { Constants } from '../models/constant';
 import { IFlagManager } from './flag';
 import { IFnoManager } from './fno';
 import { IPaintManager } from './paint';
-import { ITickerManager } from './ticker';
+import { IDomManager } from './dom';
 import { IWatchManager } from './watch';
 
 /**
@@ -23,7 +23,7 @@ export class HeaderManager implements IHeaderManager {
     private readonly paintManager: IPaintManager,
     private readonly watchManager: IWatchManager,
     private readonly flagManager: IFlagManager,
-    private readonly tickerManager: ITickerManager,
+    private readonly tickerManager: IDomManager,
     private readonly fnoManager: IFnoManager
   ) {}
 

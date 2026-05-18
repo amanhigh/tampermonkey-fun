@@ -1,6 +1,6 @@
 // CREATE NEW FILE: src/handler/flag.ts
 import { IFlagManager } from '../manager/flag';
-import { ITickerManager } from '../manager/ticker';
+import { IDomManager } from '../manager/dom';
 import { IWatchListHandler } from './watchlist';
 
 /**
@@ -20,7 +20,7 @@ export interface IFlagHandler {
 export class FlagHandler implements IFlagHandler {
   constructor(
     private readonly flagManager: IFlagManager,
-    private readonly tickerManager: ITickerManager,
+    private readonly tickerManager: IDomManager,
     private readonly watchHandler: IWatchListHandler
   ) {}
 

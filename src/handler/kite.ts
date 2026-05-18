@@ -1,6 +1,6 @@
 import { IKiteManager } from '../manager/kite';
 import { ISymbolManager } from '../manager/symbol';
-import { ITickerManager } from '../manager/ticker';
+import { IDomManager } from '../manager/dom';
 import { IWaitUtil } from '../util/wait';
 import { Constants } from '../models/constant';
 import { Order, GttApiResponse } from '../models/kite';
@@ -85,7 +85,7 @@ export class KiteHandler implements IKiteHandler {
     private readonly kiteManager: IKiteManager,
     private readonly symbolManager: ISymbolManager,
     private readonly waitUtil: IWaitUtil,
-    private readonly tickerManager: ITickerManager,
+    private readonly tickerManager: IDomManager,
     private readonly tvManager: ITradingViewManager,
     private readonly uiUtil: IUIUtil
   ) {}

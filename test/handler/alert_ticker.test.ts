@@ -2,7 +2,7 @@ import { AlertTickerHandler } from '../../src/handler/alert_ticker';
 import { IInvestingClient } from '../../src/client/investing';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { ISmartPrompt } from '../../src/util/smart';
-import { ITickerManager } from '../../src/manager/ticker';
+import { IDomManager } from '../../src/manager/dom';
 import { ISymbolManager } from '../../src/manager/symbol';
 import { Notifier } from '../../src/util/notify';
 import { PairInfo } from '../../src/models/alert';
@@ -23,7 +23,7 @@ describe('AlertTickerHandler', () => {
   let mockInvestingClient: jest.Mocked<IInvestingClient>;
   let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
   let mockSmartPrompt: jest.Mocked<ISmartPrompt>;
-  let mockTickerManager: jest.Mocked<ITickerManager>;
+  let mockTickerManager: jest.Mocked<IDomManager>;
   let mockSymbolManager: jest.Mocked<ISymbolManager>;
 
   const mockPairs: PairInfo[] = [

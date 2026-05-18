@@ -5,7 +5,7 @@ import { AuditRenderer } from '../util/audit_renderer';
 import { AuditResult } from '../models/audit';
 import { ITickerHandler } from './ticker';
 import { IAlertTickerHandler } from './alert_ticker';
-import { ITickerManager } from '../manager/ticker';
+import { IDomManager } from '../manager/dom';
 
 /**
  * Interface for managing audit UI operations
@@ -48,7 +48,7 @@ export class AuditHandler implements IAuditHandler {
     private readonly uiUtil: IUIUtil,
     private readonly tickerHandler: ITickerHandler,
     private readonly alertTickerHandler: IAlertTickerHandler,
-    private readonly tickerManager: ITickerManager
+    private readonly tickerManager: IDomManager
   ) {}
 
   /**
