@@ -1,9 +1,7 @@
-import { IAlertRepo } from '../repo/alert';
 import { IWatchManager } from './watch';
 import { IRecentManager } from './recent';
 import { ITickerClient } from '../client/ticker';
-import { IAlertTickerClient } from '../client/alert_ticker';
-import { ISymbolManager } from './symbol';
+import { IAlertTickerManager } from './alert_ticker';
 import { Constants } from '../models/constant';
 
 /**
@@ -11,7 +9,6 @@ import { Constants } from '../models/constant';
  */
 export interface TickerSignals {
   ticker: string;
-  alertCount: number;
   isWatched: boolean;
   isRecent: boolean;
   hasExchange: boolean;
@@ -24,13 +21,12 @@ export interface TickerSignals {
  */
 export interface ICanonicalRanker {
   /**
-   * Rank investingTickers sharing a pairId and return sorted by score descending.
+   * Rank investingTickers and return sorted by score descending.
    * First element is the canonical (highest score).
    * @param investingTickers Investing tickers to rank
-   * @param pairId The shared pairId
    * @returns Promise resolving to sorted TickerSignals array (highest score first)
    */
-  rankInvestingTickers(investingTickers: string[], pairId: string): Promise<TickerSignals[]>;
+  rankInvestingTickers(investingTickers: string[]): Promise<TickerSignals[]>;
 
   /**
    * Rank tvTickers sharing an investingTicker and return sorted by score descending.
@@ -45,30 +41,26 @@ export interface ICanonicalRanker {
  * Dependencies for CanonicalRanker
  */
 export interface CanonicalRankerDeps {
-  alertRepo: IAlertRepo;
   watchManager: IWatchManager;
   recentManager: IRecentManager;
   tickerClient: ITickerClient;
-  alertTickerClient: IAlertTickerClient;
-  symbolManager: ISymbolManager;
+  alertTickerManager: IAlertTickerManager;
 }
 
 /**
  * Ranks tickers using live signals to determine canonical entry for deduplication.
  *
  * Signal priority (descending weight):
- * 1. Alert count (×100) — tickers with alerts are most valuable
- * 2. Watchlist membership (×50) — actively monitored tickers
- * 3. Recent open timestamp (×10 if present) — recently viewed
- * 4. Exchange footprints (×5) — has stored exchange
- * 5. Pair mapping presence (×1) — has investing mapping
- * 6. HTML-encoding penalty (−500) — junk aliases like M&amp;M or M&amp;AMP;M
- * 7. Preferred exchange bonus (+15) — NSE/NYSE/NASDAQ/CBOE from backend ticker.exchange
- * 8. Ampersand fallback (+2) — raw & in ticker hints NSE origin when no exchange data
- * 9. Tiebreaker: shorter ticker name wins (e.g. M&M over M_M)
+ * 1. Watchlist membership (×50) — actively monitored tickers
+ * 2. Recent open timestamp (×10 if present) — recently viewed
+ * 3. Exchange footprints (×5) — has stored exchange
+ * 4. Pair mapping presence (×1) — has investing mapping
+ * 5. HTML-encoding penalty (−500) — junk aliases like M&amp;M or M&amp;AMP;M
+ * 6. Preferred exchange bonus (+15) — NSE/NYSE/NASDAQ/CBOE from backend ticker.exchange
+ * 7. Ampersand fallback (+2) — raw & in ticker hints NSE origin when no exchange data
+ * 8. Tiebreaker: shorter ticker name wins (e.g. M&M over M_M)
  */
 export class CanonicalRanker implements ICanonicalRanker {
-  private static readonly WEIGHT_ALERTS = 100;
   private static readonly WEIGHT_WATCHED = 50;
   private static readonly WEIGHT_RECENT = 10;
   private static readonly WEIGHT_EXCHANGE = 5;
@@ -77,28 +69,24 @@ export class CanonicalRanker implements ICanonicalRanker {
   private static readonly BONUS_PREFERRED_EXCHANGE = 15;
   private static readonly BONUS_AMPERSAND = 2;
 
-  private readonly alertRepo: IAlertRepo;
   private readonly watchManager: IWatchManager;
   private readonly recentManager: IRecentManager;
   private readonly tickerClient: ITickerClient;
-  private readonly alertTickerClient: IAlertTickerClient;
-  private readonly symbolManager: ISymbolManager;
+  private readonly alertTickerManager: IAlertTickerManager;
 
   constructor(deps: CanonicalRankerDeps) {
-    this.alertRepo = deps.alertRepo;
     this.watchManager = deps.watchManager;
     this.recentManager = deps.recentManager;
     this.tickerClient = deps.tickerClient;
-    this.alertTickerClient = deps.alertTickerClient;
-    this.symbolManager = deps.symbolManager;
+    this.alertTickerManager = deps.alertTickerManager;
   }
 
   /** @inheritdoc */
-  async rankInvestingTickers(investingTickers: string[], pairId: string): Promise<TickerSignals[]> {
+  async rankInvestingTickers(investingTickers: string[]): Promise<TickerSignals[]> {
     const signals = await Promise.all(
       investingTickers.map(async (investingTicker) => {
-        const tvTicker = this.symbolManager.investingToTv(investingTicker);
-        const alertCount = this.getAlertCount(pairId);
+        const alertTicker = await this.alertTickerManager.fetchAlertTicker(investingTicker);
+        const tvTicker = alertTicker ? alertTicker.ticker : null;
         const isWatched = tvTicker ? this.watchManager.isWatched(tvTicker) : false;
         const isRecent = tvTicker ? this.recentManager.isRecent(tvTicker, Constants.RECENT_CUTOFF_MS) : false;
         const hasExchange = tvTicker ? await this.hasExchange(tvTicker) : false;
@@ -106,7 +94,6 @@ export class CanonicalRanker implements ICanonicalRanker {
 
         return this.buildSignals({
           ticker: investingTicker,
-          alertCount,
           isWatched,
           isRecent,
           hasExchange,
@@ -122,9 +109,8 @@ export class CanonicalRanker implements ICanonicalRanker {
   async rankTvTickers(tvTickers: string[]): Promise<TickerSignals[]> {
     const signals = await Promise.all(
       tvTickers.map(async (tvTicker) => {
-        const investingTicker = this.symbolManager.tvToInvesting(tvTicker);
-        const pairId = investingTicker ? await this.getPairId(investingTicker) : null;
-        const alertCount = pairId ? this.getAlertCount(pairId) : 0;
+        const alertTicker = await this.alertTickerManager.getAlertTicker(tvTicker);
+        const investingTicker = alertTicker?.symbol ?? null;
         const isWatched = this.watchManager.isWatched(tvTicker);
         const isRecent = this.recentManager.isRecent(tvTicker, Constants.RECENT_CUTOFF_MS);
         const hasExchange = await this.hasExchange(tvTicker);
@@ -132,7 +118,6 @@ export class CanonicalRanker implements ICanonicalRanker {
 
         return this.buildSignals({
           ticker: tvTicker,
-          alertCount,
           isWatched,
           isRecent,
           hasExchange,
@@ -142,19 +127,6 @@ export class CanonicalRanker implements ICanonicalRanker {
     );
 
     return signals.sort((a, b) => b.score - a.score || a.ticker.length - b.ticker.length);
-  }
-
-  /**
-   * Get the pair_id for an investing ticker from backend alert ticker data.
-   * @private
-   */
-  private async getPairId(investingTicker: string): Promise<string | null> {
-    try {
-      const record = await this.alertTickerClient.getAlertTicker(investingTicker);
-      return record.pair_id;
-    } catch {
-      return null;
-    }
   }
 
   /**
@@ -168,11 +140,6 @@ export class CanonicalRanker implements ICanonicalRanker {
     } catch {
       return false;
     }
-  }
-
-  private getAlertCount(pairId: string): number {
-    const alerts = this.alertRepo.get(pairId);
-    return alerts ? alerts.length : 0;
   }
 
   private isHtmlEncoded(ticker: string): boolean {
@@ -201,7 +168,6 @@ export class CanonicalRanker implements ICanonicalRanker {
 
   private async buildSignals(signals: Omit<TickerSignals, 'score'>): Promise<TickerSignals> {
     const score =
-      signals.alertCount * CanonicalRanker.WEIGHT_ALERTS +
       (signals.isWatched ? CanonicalRanker.WEIGHT_WATCHED : 0) +
       (signals.isRecent ? CanonicalRanker.WEIGHT_RECENT : 0) +
       (signals.hasExchange ? CanonicalRanker.WEIGHT_EXCHANGE : 0) +

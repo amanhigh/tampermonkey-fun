@@ -6,6 +6,7 @@ import { JournalClient, IJournalClient } from '../client/journal';
 import { OsClient, IOsClient } from '../client/os';
 import { TickerClient, ITickerClient } from '../client/ticker';
 import { AlertTickerClient, IAlertTickerClient } from '../client/alert_ticker';
+import { IPriceAlertClient, PriceAlertClient } from '../client/price_alert';
 import { UIUtil, IUIUtil } from '../util/ui';
 import { ObserveUtil, IObserveUtil } from '../util/observer';
 import { SearchUtil, ISearchUtil } from '../util/search';
@@ -22,7 +23,6 @@ import { RepoCron, IRepoCron } from '../repo/cron';
 import { IFlagRepo, FlagRepo } from '../repo/flag';
 import { IWatchlistRepo, Watchlistrepo } from '../repo/watch';
 import { ITickerRepo, TickerRepo } from '../repo/ticker';
-import { IAlertRepo, AlertRepo } from '../repo/alert';
 
 // Manager Layer Imports
 import { ITimeFrameManager, TimeFrameManager } from '../manager/timeframe';
@@ -33,7 +33,7 @@ import { ITradingViewScreenerManager, TradingViewScreenerManager } from '../mana
 import { ISequenceManager, SequenceManager } from '../manager/sequence';
 import { IPaintManager, PaintManager } from '../manager/paint';
 import { IDomManager, DomManager } from '../manager/dom';
-import { ISymbolManager, SymbolManager } from '../manager/symbol';
+import { ITickerManager, TickerManager } from '../manager/ticker';
 import { ITradingViewManager, TradingViewManager } from '../manager/tv';
 import { IAlertTickerManager, AlertTickerManager } from '../manager/alert_ticker';
 import { IFnoManager, FnoManager } from '../manager/fno';
@@ -73,14 +73,12 @@ import { IPanelHandler, PanelHandler } from '../handler/panel';
 import { IPicassoHandler, PicassoHandler } from '../handler/picasso';
 import { PicassoApp } from './picasso';
 import { AuditSectionRegistry } from '../util/audit_registry';
-import { AlertsPlugin } from '../manager/alerts_plugin';
 import { GttPlugin } from '../manager/gtt_plugin';
 
 import { OrphanFlagsPlugin } from '../manager/orphan_flags_plugin';
 import { TradeRiskPlugin } from '../manager/trade_risk_plugin';
 import { TickerCollisionPlugin } from '../manager/ticker_collision_plugin';
 import { GttAuditSection } from '../handler/gtt_section';
-import { AlertsAuditSection } from '../handler/alerts_section';
 
 import { OrphanFlagsSection } from '../handler/orphan_flags_section';
 import { TickerCollisionSection } from '../handler/ticker_collision_section';
@@ -150,6 +148,7 @@ export class Factory {
     os: (): IOsClient => Factory.getInstance('osClient', () => new OsClient()),
     ticker: (): ITickerClient => Factory.getInstance('tickerClient', () => new TickerClient()),
     tickerAlert: (): IAlertTickerClient => Factory.getInstance('tickerAlertClient', () => new AlertTickerClient()),
+    priceAlert: (): IPriceAlertClient => Factory.getInstance('priceAlertClient', () => new PriceAlertClient()),
   };
 
   /**
@@ -175,7 +174,6 @@ export class Factory {
 
     flag: (): IFlagRepo => Factory.getInstance('flagRepo', () => new FlagRepo(Factory.repo.cron())),
     watch: (): IWatchlistRepo => Factory.getInstance('watchRepo', () => new Watchlistrepo(Factory.repo.cron())),
-    alert: (): IAlertRepo => Factory.getInstance('alertRepo', () => new AlertRepo(Factory.repo.cron())),
     ticker: (): ITickerRepo => Factory.getInstance('tickerRepo', () => new TickerRepo(Factory.repo.cron())),
     kite: (): IKiteRepo => Factory.getInstance('kiteRepo', () => new KiteRepo()),
     imdb: (): IImdbRepo => Factory.getInstance('imdbRepo', () => new ImdbRepo()),
@@ -194,9 +192,9 @@ export class Factory {
         'alertManager',
         () =>
           new AlertManager(
-            Factory.repo.alert(),
+            Factory.client.priceAlert(),
             Factory.manager.alertTicker(),
-            Factory.manager.ticker(),
+            Factory.manager.dom(),
             Factory.client.investing(),
             Factory.manager.tv()
           )
@@ -225,7 +223,7 @@ export class Factory {
             Factory.manager.paint(),
             Factory.manager.watch(),
             Factory.manager.flag(),
-            Factory.manager.ticker(),
+            Factory.manager.dom(),
             Factory.manager.fno()
           )
       ),
@@ -245,33 +243,28 @@ export class Factory {
       ),
 
     sequence: (): ISequenceManager =>
-      Factory.getInstance(
-        'sequenceManager',
-        () => new SequenceManager(Factory.client.ticker(), Factory.manager.ticker())
-      ),
+      Factory.getInstance('sequenceManager', () => new SequenceManager(Factory.client.ticker(), Factory.manager.dom())),
 
     paint: (): IPaintManager => Factory.getInstance('paintManager', () => new PaintManager()),
 
-    ticker: (): IDomManager =>
+    dom: (): IDomManager =>
       Factory.getInstance(
-        'tickerManager',
+        'domManager',
         () =>
           new DomManager(
             Factory.util.wait(),
-            Factory.manager.symbol(),
+            Factory.manager.ticker(),
+            Factory.manager.alertTicker(),
             Factory.manager.screener(),
             Factory.manager.watchlist()
           )
       ),
 
     kite: (): IKiteManager =>
-      Factory.getInstance(
-        'kiteManager',
-        () => new KiteManager(Factory.manager.symbol(), Factory.client.kite(), Factory.repo.kite())
-      ),
+      Factory.getInstance('kiteManager', () => new KiteManager(Factory.client.kite(), Factory.repo.kite())),
 
-    symbol: (): ISymbolManager =>
-      Factory.getInstance('symbolManager', () => new SymbolManager(Factory.repo.ticker(), Factory.client.ticker())),
+    ticker: (): ITickerManager =>
+      Factory.getInstance('tickerManager', () => new TickerManager(Factory.client.ticker())),
 
     tv: (): ITradingViewManager =>
       Factory.getInstance(
@@ -305,19 +298,17 @@ export class Factory {
     alertFeed: (): IAlertFeedManager =>
       Factory.getInstance(
         'alertFeedManager',
-        () => new AlertFeedManager(Factory.manager.symbol(), Factory.manager.watch(), Factory.manager.recent())
+        () => new AlertFeedManager(Factory.manager.alertTicker(), Factory.manager.watch(), Factory.manager.recent())
       ),
     canonicalRanker: (): ICanonicalRanker =>
       Factory.getInstance(
         'canonicalRanker',
         () =>
           new CanonicalRanker({
-            alertRepo: Factory.repo.alert(),
             watchManager: Factory.manager.watch(),
             recentManager: Factory.manager.recent(),
             tickerClient: Factory.client.ticker(),
-            alertTickerClient: Factory.client.tickerAlert(),
-            symbolManager: Factory.manager.symbol(),
+            alertTickerManager: Factory.manager.alertTicker(),
           })
       ),
   };
@@ -335,19 +326,6 @@ export class Factory {
    */
   public static audit = {
     // ===== PLUGIN CREATION =====
-    // Return a singleton AlertsAudit instance
-    alerts: () =>
-      Factory.getInstance(
-        'auditPlugin_alerts',
-        () =>
-          new AlertsPlugin(
-            Factory.client.tickerAlert(),
-            Factory.manager.alert(),
-            Factory.manager.watch(),
-            Factory.manager.symbol()
-          )
-      ),
-
     // Return a singleton GttPlugin instance
     gttUnwatched: () =>
       Factory.getInstance(
@@ -359,7 +337,7 @@ export class Factory {
     orphanFlags: () =>
       Factory.getInstance(
         'auditPlugin_orphanFlags',
-        () => new OrphanFlagsPlugin(Factory.repo.flag(), Factory.repo.ticker(), Factory.manager.symbol())
+        () => new OrphanFlagsPlugin(Factory.repo.flag(), Factory.repo.ticker())
       ),
 
     // Return a singleton TickerCollisionPlugin instance
@@ -391,19 +369,6 @@ export class Factory {
           )
       ),
 
-    // Alerts Audit Section - receives plugin via direct injection
-    // Follows GTT pattern for consistency
-    alertsSection: () =>
-      Factory.getInstance(
-        'alertsSection',
-        () =>
-          new AlertsAuditSection(
-            Factory.audit.alerts(), // ✅ Direct plugin injection
-            Factory.handler.ticker(),
-            Factory.manager.symbol()
-          )
-      ),
-
     // Orphan Flags Audit Section (FR-012)
     orphanFlagsSection: () =>
       Factory.getInstance(
@@ -419,7 +384,7 @@ export class Factory {
           new TickerCollisionSection(
             Factory.audit.tickerCollision(),
             Factory.handler.ticker(),
-            Factory.manager.symbol(),
+            Factory.manager.alertTicker(),
             Factory.manager.canonicalRanker()
           )
       ),
@@ -445,7 +410,6 @@ export class Factory {
         const reg = new AuditSectionRegistry();
 
         // Register all sections
-        reg.registerSection(Factory.audit.alertsSection());
         reg.registerSection(Factory.audit.gttSection());
         reg.registerSection(Factory.audit.orphanFlagsSection());
         reg.registerSection(Factory.audit.tickerCollisionSection());
@@ -470,8 +434,9 @@ export class Factory {
             Factory.manager.alert(),
             Factory.manager.tv(),
             Factory.handler.audit(),
+            Factory.manager.dom(),
             Factory.manager.ticker(),
-            Factory.manager.symbol(),
+            Factory.manager.alertTicker(),
             Factory.util.sync(),
             Factory.util.ui(),
             Factory.handler.alertSummary(),
@@ -495,7 +460,7 @@ export class Factory {
           Factory.util.ui(),
           Factory.handler.ticker(),
           Factory.handler.alertTicker(),
-          Factory.manager.ticker()
+          Factory.manager.dom()
         );
       }),
     onload: (): IOnLoadHandler =>
@@ -530,9 +495,8 @@ export class Factory {
         () =>
           new KiteHandler(
             Factory.manager.kite(),
-            Factory.manager.symbol(),
             Factory.util.wait(),
-            Factory.manager.ticker(),
+            Factory.manager.dom(),
             Factory.manager.tv(),
             Factory.util.ui()
           )
@@ -542,10 +506,9 @@ export class Factory {
         'tickerHandler',
         () =>
           new TickerHandler(
-            Factory.manager.ticker(),
-            Factory.manager.symbol(),
+            Factory.manager.dom(),
             Factory.manager.style(),
-            Factory.client.ticker(),
+            Factory.manager.ticker(),
             Factory.handler.alertTicker()
           )
       ),
@@ -557,8 +520,7 @@ export class Factory {
             Factory.client.investing(),
             Factory.manager.alertTicker(),
             Factory.util.smart(),
-            Factory.manager.ticker(),
-            Factory.manager.symbol()
+            Factory.manager.dom()
           )
       ),
 
@@ -567,7 +529,7 @@ export class Factory {
         'tickerChangeHandler',
         () =>
           new TickerChangeHandler(
-            Factory.manager.ticker(),
+            Factory.manager.dom(),
             Factory.handler.alert(),
             Factory.manager.header(),
             Factory.manager.recent(),
@@ -599,7 +561,7 @@ export class Factory {
         'modifierKeyConfig',
         () =>
           new ModifierKeyConfig(
-            Factory.manager.ticker(),
+            Factory.manager.dom(),
             Factory.manager.style(),
             Factory.handler.alert(),
             Factory.handler.watchlist(),
@@ -616,7 +578,7 @@ export class Factory {
             Factory.manager.header(),
             Factory.util.sync(),
             Factory.manager.watch(),
-            Factory.manager.ticker(),
+            Factory.manager.dom(),
             Factory.manager.alertFeed(),
             Factory.util.ui()
           )
@@ -624,25 +586,19 @@ export class Factory {
     flag: (): IFlagHandler =>
       Factory.getInstance(
         'flagHandler',
-        () => new FlagHandler(Factory.manager.flag(), Factory.manager.ticker(), Factory.handler.watchlist())
+        () => new FlagHandler(Factory.manager.flag(), Factory.manager.dom(), Factory.handler.watchlist())
       ),
     sequence: (): ISequenceHandler =>
       Factory.getInstance(
         'sequenceHandler',
-        () =>
-          new SequenceHandler(
-            Factory.manager.sequence(),
-            Factory.manager.ticker(),
-            Factory.manager.symbol(),
-            Factory.manager.alertTicker()
-          )
+        () => new SequenceHandler(Factory.manager.sequence(), Factory.manager.dom(), Factory.manager.alertTicker())
       ),
     journal: (): IJournalHandler =>
       Factory.getInstance(
         'journalHandler',
         () =>
           new JournalHandler(
-            Factory.manager.ticker() as DomManager,
+            Factory.manager.dom() as DomManager,
             Factory.client.os(),
             Factory.manager.journal(),
             Factory.util.smart(),
@@ -674,7 +630,7 @@ export class Factory {
     panel: (): IPanelHandler =>
       Factory.getInstance(
         'panelHandler',
-        () => new PanelHandler(Factory.util.smart(), Factory.handler.ticker(), Factory.manager.ticker())
+        () => new PanelHandler(Factory.util.smart(), Factory.handler.ticker(), Factory.manager.dom())
       ),
     picasso: (): IPicassoHandler =>
       Factory.getInstance(

@@ -27,7 +27,7 @@ export const Constants = Object.freeze({
       HEADER_TEXT: 'header-text', // Header text with timestamp
     },
     PLUGINS: Object.freeze({
-      /** Alerts audit plugin - analyzes trading alerts */
+      /** Alerts audit plugin - identifies tracked TV tickers with missing/weak alert coverage */
       ALERTS: 'alerts',
 
       /** GTT unwatched audit plugin & section - identifies and displays unwatched GTT orders */

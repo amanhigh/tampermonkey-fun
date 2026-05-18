@@ -2,7 +2,7 @@ import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
 import { IFlagRepo } from '../repo/flag';
 import { ITickerRepo } from '../repo/ticker';
-import { ISymbolManager } from './symbol';
+import { isCompositeSymbol } from '../models/ticker';
 import { Constants } from '../models/constant';
 
 /**
@@ -17,8 +17,7 @@ export class OrphanFlagsPlugin extends BaseAuditPlugin {
 
   constructor(
     private readonly flagRepo: IFlagRepo,
-    private readonly tickerRepo: ITickerRepo,
-    private readonly symbolManager: ISymbolManager
+    private readonly tickerRepo: ITickerRepo
   ) {
     super();
   }
@@ -41,7 +40,7 @@ export class OrphanFlagsPlugin extends BaseAuditPlugin {
       tvTickers.forEach((tvTicker) => {
         // Skip formula/composite tickers (containing '/', '*', etc.)
         // BUG 2.1: Composite spreads with '-' or ':' still leak into Flags because isComposite only checks '/', '*'
-        if (this.symbolManager.isComposite(tvTicker)) {
+        if (isCompositeSymbol(tvTicker)) {
           return;
         }
 
