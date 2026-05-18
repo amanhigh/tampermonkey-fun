@@ -3,7 +3,6 @@ import { IAuditSection } from './audit_section';
 import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { ITickerHandler } from './ticker';
-import { IPairHandler } from './pair';
 import { Notifier } from '../util/notify';
 import { Constants } from '../models/constant';
 
@@ -43,7 +42,7 @@ export class StaleReviewSection extends BaseAuditSection implements IAuditSectio
       return false;
     }
 
-    await this.pairHandler.stopTrackingByTvTicker(result.target);
+    await this.tickerHandler.stopTracking(result.target);
     return true;
   };
 
@@ -53,7 +52,7 @@ export class StaleReviewSection extends BaseAuditSection implements IAuditSectio
     }
 
     for (const result of results) {
-      await this.pairHandler.stopTrackingByTvTicker(result.target);
+      await this.tickerHandler.stopTracking(result.target);
     }
     Notifier.success(`⏹ Stopped tracking ${results.length} stale ticker(s)`);
   };
@@ -67,8 +66,7 @@ export class StaleReviewSection extends BaseAuditSection implements IAuditSectio
 
   constructor(
     plugin: IAudit,
-    private readonly tickerHandler: ITickerHandler,
-    private readonly pairHandler: IPairHandler
+    private readonly tickerHandler: ITickerHandler
   ) {
     super();
     this.plugin = plugin;

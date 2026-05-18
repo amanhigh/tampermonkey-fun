@@ -4,7 +4,6 @@ import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { ITickerHandler } from './ticker';
 import { ISymbolManager } from '../manager/symbol';
-import { IPairHandler } from './pair';
 import { Notifier } from '../util/notify';
 import { AlertState } from '../models/alert';
 import { Constants } from '../models/constant';
@@ -53,14 +52,25 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
 
   readonly onRightClick = async (result: AuditResult): Promise<void> => {
     const investingTicker = result.target;
-    await this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
+    const tvTicker = this.symbolManager.investingToTv(investingTicker);
+    if (tvTicker) {
+      await this.tickerHandler.stopTracking(tvTicker);
+    } else {
+      Notifier.warn(`No TV ticker mapping found for ${investingTicker}`);
+    }
   };
 
   readonly onFixAll = async (results: AuditResult[]): Promise<void> => {
+    let count = 0;
     for (const result of results) {
-      await this.pairHandler.stopTrackingByInvestingTicker(result.target);
+      const investingTicker = result.target;
+      const tvTicker = this.symbolManager.investingToTv(investingTicker);
+      if (tvTicker) {
+        await this.tickerHandler.stopTracking(tvTicker);
+        count++;
+      }
     }
-    Notifier.success(`⏹ Stopped tracking ${results.length} ticker(s)`);
+    Notifier.success(`⏹ Stopped tracking ${count} ticker(s)`);
   };
 
   readonly headerFormatter = (auditResults: AuditResult[]) => {
@@ -88,13 +98,11 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
    * @param plugin - IAudit plugin for alerts analysis (injected directly)
    * @param tickerHandler - Handler for ticker operations
    * @param symbolManager - Manager for symbol mappings
-   * @param pairHandler - Handler for pair operations
    */
   constructor(
     plugin: IAudit,
     private readonly tickerHandler: ITickerHandler,
-    private readonly symbolManager: ISymbolManager,
-    private readonly pairHandler: IPairHandler
+    private readonly symbolManager: ISymbolManager
   ) {
     super();
     this.plugin = plugin;

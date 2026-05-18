@@ -2,7 +2,6 @@ import { AlertsAuditSection } from '../../src/handler/alerts_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
 import { ISymbolManager } from '../../src/manager/symbol';
-import { IPairHandler } from '../../src/handler/pair';
 import { AlertState } from '../../src/models/alert';
 import { Notifier } from '../../src/util/notify';
 
@@ -11,7 +10,6 @@ describe('AlertsAuditSection', () => {
   let mockPlugin: IAudit;
   let mockTickerHandler: Partial<ITickerHandler>;
   let mockSymbolManager: Partial<ISymbolManager>;
-  let mockPairHandler: Partial<IPairHandler>;
   let notifySuccessSpy: jest.SpyInstance;
 
   beforeEach(() => {
@@ -24,14 +22,11 @@ describe('AlertsAuditSection', () => {
 
     mockTickerHandler = {
       openTicker: jest.fn(),
+      stopTracking: jest.fn().mockResolvedValue(undefined),
     };
 
     mockSymbolManager = {
       investingToTv: jest.fn().mockReturnValue('TV_TICKER'),
-    };
-
-    mockPairHandler = {
-      stopTrackingByInvestingTicker: jest.fn().mockResolvedValue(undefined),
     };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
@@ -39,8 +34,7 @@ describe('AlertsAuditSection', () => {
     section = new AlertsAuditSection(
       mockPlugin,
       mockTickerHandler as ITickerHandler,
-      mockSymbolManager as ISymbolManager,
-      mockPairHandler as IPairHandler
+      mockSymbolManager as ISymbolManager
     );
   });
 
@@ -57,124 +51,111 @@ describe('AlertsAuditSection', () => {
       expect(section.title).toBe('Alerts Coverage');
     });
 
-    test('has correct limit', () => {
+    test('has pagination limit', () => {
       expect(section.limit).toBe(10);
     });
 
-    test('has plugin', () => {
+    test('has plugin reference', () => {
       expect(section.plugin).toBe(mockPlugin);
     });
   });
 
-  describe('Left Click Handler', () => {
-    test('opens mapped TV ticker', () => {
-      const result: AuditResult = {
-        pluginId: 'alerts',
-        code: AlertState.NO_ALERTS,
-        target: 'INFY',
-        message: 'No alerts',
-        severity: 'MEDIUM',
-        status: 'FAIL',
-      };
+  describe('onLeftClick', () => {
+    const createResult = (target: string, code: AlertState = AlertState.NO_ALERTS): AuditResult => ({
+      pluginId: 'alerts',
+      code,
+      target,
+      message: `${target}: ${code}`,
+      severity: 'MEDIUM',
+      status: 'FAIL',
+    });
 
-      section.onLeftClick(result);
-
-      expect(mockSymbolManager.investingToTv).toHaveBeenCalledWith('INFY');
+    test('opens investing ticker via tickerHandler', () => {
+      section.onLeftClick(createResult('INFY'));
       expect(mockTickerHandler.openTicker).toHaveBeenCalledWith('TV_TICKER');
     });
 
-    test('falls back to investing ticker when no TV mapping', () => {
-      (mockSymbolManager.investingToTv as jest.Mock).mockReturnValue(undefined);
-
-      const result: AuditResult = {
-        pluginId: 'alerts',
-        code: AlertState.NO_PAIR,
-        target: 'UNKNOWN',
-        message: 'No pair',
-        severity: 'HIGH',
-        status: 'FAIL',
-      };
-
-      section.onLeftClick(result);
-
-      expect(mockTickerHandler.openTicker).toHaveBeenCalledWith('UNKNOWN');
+    test('falls back to original ticker when no mapping exists', () => {
+      mockSymbolManager.investingToTv = jest.fn().mockReturnValue(null);
+      section.onLeftClick(createResult('INFY'));
+      expect(mockTickerHandler.openTicker).toHaveBeenCalledWith('INFY');
     });
   });
 
-  describe('Right Click Handler', () => {
-    test('deletes pair mapping', async () => {
-      const result: AuditResult = {
-        pluginId: 'alerts',
-        code: AlertState.NO_ALERTS,
-        target: 'INFY',
-        message: 'No alerts',
-        severity: 'MEDIUM',
-        status: 'FAIL',
-      };
+  describe('onRightClick', () => {
+    const createResult = (target: string): AuditResult => ({
+      pluginId: 'alerts',
+      code: AlertState.NO_PAIR,
+      target,
+      message: `${target}: NO_PAIR`,
+      severity: 'HIGH',
+      status: 'FAIL',
+    });
 
-      await section.onRightClick(result);
+    test('stops tracking via tvTicker when mapping exists', async () => {
+      await section.onRightClick(createResult('INFY'));
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledWith('TV_TICKER');
+    });
 
-      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('INFY');
+    test('does not stop tracking when no tvTicker mapping exists', async () => {
+      mockSymbolManager.investingToTv = jest.fn().mockReturnValue(null);
+      await section.onRightClick(createResult('INFY'));
+      expect(mockTickerHandler.stopTracking).not.toHaveBeenCalled();
     });
   });
 
-  describe('Fix All Handler', () => {
-    test('deletes all pair mappings', async () => {
-      const results: AuditResult[] = [
-        {
-          pluginId: 'alerts',
-          code: AlertState.NO_ALERTS,
-          target: 'INFY',
-          message: 'No alerts',
-          severity: 'MEDIUM',
-          status: 'FAIL',
-        },
-        {
-          pluginId: 'alerts',
-          code: AlertState.SINGLE_ALERT,
-          target: 'TCS',
-          message: 'Single alert',
-          severity: 'MEDIUM',
-          status: 'FAIL',
-        },
-        {
-          pluginId: 'alerts',
-          code: AlertState.NO_PAIR,
-          target: 'HDFC',
-          message: 'No pair',
-          severity: 'HIGH',
-          status: 'FAIL',
-        },
-      ];
+  describe('onFixAll', () => {
+    const createResult = (target: string): AuditResult => ({
+      pluginId: 'alerts',
+      code: AlertState.NO_PAIR,
+      target,
+      message: `${target}: NO_PAIR`,
+      severity: 'HIGH',
+      status: 'FAIL',
+    });
 
+    test('stops tracking all tickers with tvTicker mappings', async () => {
+      mockSymbolManager.investingToTv = jest
+        .fn()
+        .mockReturnValueOnce('TV_A')
+        .mockReturnValueOnce('TV_B')
+        .mockReturnValueOnce('TV_C');
+
+      const results = [createResult('A'), createResult('B'), createResult('C')];
       await section.onFixAll!(results);
-
-      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledTimes(3);
-      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('INFY');
-      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('TCS');
-      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('HDFC');
-      expect(notifySuccessSpy).toHaveBeenCalledWith('⏹ Stopped tracking 3 ticker(s)');
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledTimes(3);
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledWith('TV_A');
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledWith('TV_B');
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledWith('TV_C');
+      expect(notifySuccessSpy).toHaveBeenCalled();
     });
 
-    test('handles empty results', async () => {
-      await section.onFixAll!([]);
-      expect(mockPairHandler.stopTrackingByInvestingTicker).not.toHaveBeenCalled();
+    test('skips tickers with no tvTicker mapping', async () => {
+      mockSymbolManager.investingToTv = jest
+        .fn()
+        .mockReturnValueOnce('TV_A')
+        .mockReturnValueOnce(null) // B has no mapping
+        .mockReturnValueOnce('TV_C');
+
+      const results = [createResult('A'), createResult('B'), createResult('C')];
+      await section.onFixAll!(results);
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledTimes(2);
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledWith('TV_A');
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledWith('TV_C');
     });
   });
 
   describe('headerFormatter', () => {
     test('shows success when no results', () => {
-      const html = section.headerFormatter([]);
-      expect(html).toContain('All alerts covered');
+      expect(section.headerFormatter([])).toContain('All alerts covered');
     });
 
-    test('shows categorized counts when results exist', () => {
+    test('shows counts for different states', () => {
       const results: AuditResult[] = [
-        { pluginId: 'alerts', code: AlertState.SINGLE_ALERT, target: 'A', message: '', severity: 'MEDIUM', status: 'FAIL' },
-        { pluginId: 'alerts', code: AlertState.NO_ALERTS, target: 'B', message: '', severity: 'MEDIUM', status: 'FAIL' },
-        { pluginId: 'alerts', code: AlertState.NO_PAIR, target: 'C', message: '', severity: 'HIGH', status: 'FAIL' },
+        { code: AlertState.SINGLE_ALERT, target: 'A', message: '', severity: 'HIGH', status: 'FAIL', pluginId: '' },
+        { code: AlertState.NO_ALERTS, target: 'B', message: '', severity: 'HIGH', status: 'FAIL', pluginId: '' },
+        { code: AlertState.NO_PAIR, target: 'C', message: '', severity: 'HIGH', status: 'FAIL', pluginId: '' },
       ];
-
       const html = section.headerFormatter(results);
       expect(html).toContain('One: 1');
       expect(html).toContain('None: 1');

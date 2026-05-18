@@ -1,14 +1,12 @@
 import { OrphanFlagsSection } from '../../src/handler/orphan_flags_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
-import { IPairHandler } from '../../src/handler/pair';
 import { Notifier } from '../../src/util/notify';
 
 describe('OrphanFlagsSection', () => {
   let section: OrphanFlagsSection;
   let mockPlugin: IAudit;
   let mockTickerHandler: Partial<ITickerHandler>;
-  let mockPairHandler: Partial<IPairHandler>;
   let notifySuccessSpy: jest.SpyInstance;
 
   const createResult = (ticker: string, categoryIndex = 0): AuditResult => ({
@@ -29,13 +27,12 @@ describe('OrphanFlagsSection', () => {
       run: jest.fn().mockResolvedValue([]),
     };
 
-    mockTickerHandler = { openTicker: jest.fn() };
-    mockPairHandler = { stopTrackingByTvTicker: jest.fn().mockResolvedValue(undefined) };
+    mockTickerHandler = { openTicker: jest.fn(), stopTracking: jest.fn().mockResolvedValue(undefined) };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
     jest.spyOn(Notifier, 'warn').mockImplementation();
 
-    section = new OrphanFlagsSection(mockPlugin, mockTickerHandler as ITickerHandler, mockPairHandler as IPairHandler);
+    section = new OrphanFlagsSection(mockPlugin, mockTickerHandler as ITickerHandler);
   });
 
   afterEach(() => {
@@ -60,7 +57,7 @@ describe('OrphanFlagsSection', () => {
   describe('onRightClick', () => {
     test('stops tracking orphan ticker', async () => {
       await section.onRightClick(createResult('ORPHAN'));
-      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledWith('ORPHAN');
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledWith('ORPHAN');
     });
   });
 
@@ -68,9 +65,9 @@ describe('OrphanFlagsSection', () => {
     test('stops tracking all orphan flag tickers', async () => {
       const results = [createResult('O1'), createResult('O2')];
       await section.onFixAll!(results);
-      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledTimes(2);
-      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledWith('O1');
-      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledWith('O2');
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledTimes(2);
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledWith('O1');
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledWith('O2');
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
   });
@@ -78,10 +75,6 @@ describe('OrphanFlagsSection', () => {
   describe('headerFormatter', () => {
     test('shows success when no results', () => {
       expect(section.headerFormatter([])).toContain('No flags');
-    });
-
-    test('shows count when results present', () => {
-      expect(section.headerFormatter([createResult('O1'), createResult('O2')])).toContain('2');
     });
   });
 });

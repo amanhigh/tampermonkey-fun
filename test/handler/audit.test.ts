@@ -4,7 +4,7 @@ import { IUIUtil } from '../../src/util/ui';
 import { AlertState } from '../../src/models/alert';
 import { Constants } from '../../src/models/constant';
 import { AuditResult } from '../../src/models/audit';
-import { IPairHandler } from '../../src/handler/pair';
+import { ITickerHandler } from '../../src/handler/ticker';
 import { ITickerManager } from '../../src/manager/ticker';
 
 // Mock jQuery globally for DOM operations
@@ -48,7 +48,8 @@ describe('AuditHandler', () => {
   let auditHandler: AuditHandler;
   let mockAuditRegistry: jest.Mocked<AuditSectionRegistry>;
   let mockUIUtil: jest.Mocked<IUIUtil>;
-  let mockPairHandler: jest.Mocked<IPairHandler>;
+  let mockTickerHandler: jest.Mocked<ITickerHandler>;
+  let mockAlertTickerHandler: jest.Mocked<{ linkInvestingTicker: jest.Mock }>;
   let mockTickerManager: jest.Mocked<ITickerManager>;
 
   beforeEach(() => {
@@ -83,10 +84,14 @@ describe('AuditHandler', () => {
       buildButton: jest.fn().mockReturnValue(mockJQuery),
     } as any;
 
-    mockPairHandler = {
-      mapInvestingTicker: jest.fn().mockResolvedValue(undefined),
-      stopTrackingByInvestingTicker: jest.fn(),
-      stopTrackingByTvTicker: jest.fn(),
+    mockTickerHandler = {
+      openTicker: jest.fn(),
+      stopTracking: jest.fn(),
+      processCommand: jest.fn(),
+    } as any;
+
+    mockAlertTickerHandler = {
+      linkInvestingTicker: jest.fn().mockResolvedValue(undefined),
     } as any;
 
     mockTickerManager = {
@@ -94,7 +99,7 @@ describe('AuditHandler', () => {
       getInvestingTicker: jest.fn().mockReturnValue('TCS_INV'),
     } as any;
 
-    auditHandler = new AuditHandler(mockAuditRegistry, mockUIUtil, mockPairHandler, mockTickerManager);
+    auditHandler = new AuditHandler(mockAuditRegistry, mockUIUtil, mockTickerHandler, mockAlertTickerHandler, mockTickerManager);
   });
 
   describe('auditAllOnFirstRun', () => {
