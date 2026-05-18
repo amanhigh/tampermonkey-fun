@@ -1,13 +1,14 @@
+import { IInvestingClient } from '../../src/client/investing';
+import { IPriceAlertClient } from '../../src/client/price_alert';
+import { Alert, PairInfo } from '../../src/models/alert';
+import { AlertTicker } from '../../src/models/alert_ticker';
+import { AlertClickAction } from '../../src/models/events';
 import { AlertManager, IAlertManager } from '../../src/manager/alert';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { IDomManager } from '../../src/manager/dom';
 import { ITradingViewManager } from '../../src/manager/tv';
-import { IInvestingClient } from '../../src/client/investing';
-import { IAlertRepo } from '../../src/repo/alert';
-import { Alert, PairInfo } from '../../src/models/alert';
-import { AlertTicker } from '../../src/models/alert_ticker';
+import { Constants } from '../../src/models/constant';
 
-// Mock Notifier to avoid DOM issues
 jest.mock('../../src/util/notify', () => ({
   Notifier: {
     info: jest.fn(),
@@ -17,17 +18,11 @@ jest.mock('../../src/util/notify', () => ({
   },
 }));
 
-// Mock jQuery
-(global as any).$ = jest.fn(() => ({
-  find: jest.fn().mockReturnThis(),
-  each: jest.fn(),
-}));
-
 describe('AlertManager', () => {
   let alertManager: IAlertManager;
-  let mockAlertRepo: jest.Mocked<IAlertRepo>;
+  let mockPriceAlertClient: jest.Mocked<IPriceAlertClient>;
   let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
-  let mockTickerManager: jest.Mocked<IDomManager>;
+  let mockDomManager: jest.Mocked<IDomManager>;
   let mockInvestingClient: jest.Mocked<IInvestingClient>;
   let mockTradingViewManager: jest.Mocked<ITradingViewManager>;
 
@@ -44,28 +39,22 @@ describe('AlertManager', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    mockAlertRepo = {
-      get: jest.fn(),
-      getSortedAlerts: jest.fn(),
-      addAlert: jest.fn(),
-      removeAlert: jest.fn(),
-      delete: jest.fn(),
-      getAllKeys: jest.fn(),
-      has: jest.fn(),
-      clear: jest.fn(),
-      set: jest.fn(),
-      getCount: jest.fn(),
-      load: jest.fn(),
-      save: jest.fn(),
-      createAlertClickEvent: jest.fn(),
+    mockPriceAlertClient = {
+      getBaseUrl: jest.fn(),
+      replacePriceAlerts: jest.fn(),
+      createPendingPriceAlert: jest.fn(),
+      deletePriceAlert: jest.fn(),
+      listPriceAlerts: jest.fn(),
     } as any;
 
     mockAlertTickerManager = {
-      getAlertTickers: jest.fn(),
-      createAlertTicker: jest.fn(),
+      linkAlertTicker: jest.fn(),
+      getAlertTicker: jest.fn(),
+      fetchAlertTicker: jest.fn(),
+      getAllAlertTickers: jest.fn(),
     } as any;
 
-    mockTickerManager = {
+    mockDomManager = {
       getInvestingTicker: jest.fn(),
       getTicker: jest.fn(),
     } as any;
@@ -82,97 +71,172 @@ describe('AlertManager', () => {
     } as any;
 
     alertManager = new AlertManager(
-      mockAlertRepo,
+      mockPriceAlertClient,
       mockAlertTickerManager,
-      mockTickerManager,
+      mockDomManager,
       mockInvestingClient,
       mockTradingViewManager
     );
   });
 
   describe('getAlerts', () => {
-    it('should get alerts for current investing ticker', async () => {
-      mockTickerManager.getInvestingTicker.mockReturnValue('HDFC');
-      mockTickerManager.getTicker.mockReturnValue('TV:HDFC');
-      mockAlertTickerManager.getAlertTickers.mockResolvedValue([defaultAlertTicker]);
-      mockAlertRepo.getSortedAlerts.mockReturnValue([
-        new Alert('1', '123', 100),
-        new Alert('2', '123', 200),
+    it('should list backend alerts for current TV ticker', async () => {
+      mockDomManager.getTicker.mockReturnValue('TV:HDFC');
+      mockPriceAlertClient.listPriceAlerts.mockResolvedValue([
+        { alert_id: '1', pair_id: '123', trigger_price: 100, created_at: '' },
+        { alert_id: '2', pair_id: '123', trigger_price: 200, created_at: '' },
       ]);
 
       const result = await alertManager.getAlerts();
 
-      expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledWith('TV:HDFC');
-      expect(result).toHaveLength(2);
+      expect(mockPriceAlertClient.listPriceAlerts).toHaveBeenCalledWith({
+        ticker: 'TV:HDFC',
+        'sort-by': 'trigger_price',
+        'sort-order': 'asc',
+      });
+      expect(result).toEqual([new Alert('1', '123', 100), new Alert('2', '123', 200)]);
+    });
+  });
+
+  describe('getAlertsForInvestingTicker', () => {
+    it('should resolve Investing ticker to TV ticker and list backend alerts', async () => {
+      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(defaultAlertTicker);
+      mockPriceAlertClient.listPriceAlerts.mockResolvedValue([
+        { alert_id: '1', pair_id: '123', trigger_price: 100, created_at: '' },
+      ]);
+
+      const result = await alertManager.getAlertsForInvestingTicker('HDFC');
+
+      expect(mockAlertTickerManager.fetchAlertTicker).toHaveBeenCalledWith('HDFC');
+      expect(mockPriceAlertClient.listPriceAlerts).toHaveBeenCalledWith({
+        ticker: 'TV:HDFC',
+        'sort-by': 'trigger_price',
+        'sort-order': 'asc',
+      });
+      expect(result).toEqual([new Alert('1', '123', 100)]);
     });
 
-    it('should return null when no alert ticker exists', async () => {
-      mockTickerManager.getInvestingTicker.mockReturnValue('UNKNOWN');
-      mockTickerManager.getTicker.mockReturnValue('TV:UNKNOWN');
-      mockAlertTickerManager.getAlertTickers.mockResolvedValue([]);
+    it('should return null when Investing ticker has no Alert ticker mapping', async () => {
+      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(null);
 
-      const result = await alertManager.getAlerts();
+      const result = await alertManager.getAlertsForInvestingTicker('UNKNOWN');
 
       expect(result).toBeNull();
+      expect(mockPriceAlertClient.listPriceAlerts).not.toHaveBeenCalled();
     });
   });
 
   describe('createAlertForCurrentTicker', () => {
-    it('should create alert via Investing.com when alert ticker exists', async () => {
-      mockTickerManager.getTicker.mockReturnValue('TV:HDFC');
-      mockAlertTickerManager.getAlertTickers.mockResolvedValue([defaultAlertTicker]);
+    it('should create Investing alert and backend pending price alert', async () => {
+      mockDomManager.getTicker.mockReturnValue('TV:HDFC');
+      mockAlertTickerManager.getAlertTicker.mockResolvedValue(defaultAlertTicker);
       mockTradingViewManager.getLastTradedPrice.mockReturnValue(500);
       mockInvestingClient.createAlert.mockResolvedValue({ name: 'HDFC', pairId: '123', price: 550 });
+      mockPriceAlertClient.createPendingPriceAlert.mockResolvedValue({
+        pair_id: '123',
+        trigger_price: 550,
+        created_at: '',
+      });
 
       const result = await alertManager.createAlertForCurrentTicker(550);
 
-      expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledWith('TV:HDFC');
+      expect(mockAlertTickerManager.getAlertTicker).toHaveBeenCalledWith('TV:HDFC');
       expect(mockInvestingClient.createAlert).toHaveBeenCalledWith('HDFC Bank', '123', 550, 500);
-      expect(mockAlertRepo.addAlert).toHaveBeenCalledWith('123', new Alert('', '123', 550));
+      expect(mockPriceAlertClient.createPendingPriceAlert).toHaveBeenCalledWith('TV:HDFC', { trigger_price: 550 });
       expect(result).toBeInstanceOf(PairInfo);
       expect(result.name).toBe('HDFC Bank');
     });
 
     it('should throw error when no alert ticker found', async () => {
-      mockTickerManager.getTicker.mockReturnValue('TV:UNKNOWN');
-      mockAlertTickerManager.getAlertTickers.mockResolvedValue([]);
+      mockDomManager.getTicker.mockReturnValue('TV:UNKNOWN');
+      mockAlertTickerManager.getAlertTicker.mockResolvedValue(null);
 
       await expect(alertManager.createAlertForCurrentTicker(550)).rejects.toThrow('No alert ticker found');
     });
   });
 
   describe('deleteAlert', () => {
-    it('should delete alert and remove from repo', async () => {
-      const alert = new Alert('1', '123', 100);
+    it('should delete alert by id from Investing and backend', async () => {
       mockInvestingClient.deleteAlert.mockResolvedValue(undefined);
-      mockAlertRepo.removeAlert.mockImplementation(() => {});
+      mockPriceAlertClient.deletePriceAlert.mockResolvedValue(undefined);
 
-      await alertManager.deleteAlert(alert);
+      await alertManager.deleteAlert('1');
 
-      expect(mockInvestingClient.deleteAlert).toHaveBeenCalledWith(alert);
-      expect(mockAlertRepo.removeAlert).toHaveBeenCalledWith('123', '1');
+      expect(mockInvestingClient.deleteAlert).toHaveBeenCalledWith(new Alert('1', '', 0));
+      expect(mockPriceAlertClient.deletePriceAlert).toHaveBeenCalledWith('1');
     });
 
     it('should throw error when deletion fails', async () => {
-      const alert = new Alert('1', '123', 100);
       mockInvestingClient.deleteAlert.mockRejectedValue(new Error('API error'));
 
-      await expect(alertManager.deleteAlert(alert)).rejects.toThrow('Failed to delete alert 1: API error');
+      await expect(alertManager.deleteAlert('1')).rejects.toThrow('Failed to delete alert 1: API error');
     });
   });
 
   describe('deleteAllAlerts', () => {
-    it('should delete all alerts for current ticker', async () => {
-      const alerts = [new Alert('1', '123', 100), new Alert('2', '123', 200)];
-      mockTickerManager.getTicker.mockReturnValue('TV:HDFC');
-      mockAlertTickerManager.getAlertTickers.mockResolvedValue([defaultAlertTicker]);
-      mockAlertRepo.getSortedAlerts.mockReturnValue(alerts);
+    it('should delete all resolved alerts for current ticker', async () => {
+      mockDomManager.getTicker.mockReturnValue('TV:HDFC');
+      mockPriceAlertClient.listPriceAlerts.mockResolvedValue([
+        { alert_id: '1', pair_id: '123', trigger_price: 100, created_at: '' },
+        { alert_id: '2', pair_id: '123', trigger_price: 200, created_at: '' },
+      ]);
       mockInvestingClient.deleteAlert.mockResolvedValue(undefined);
+      mockPriceAlertClient.deletePriceAlert.mockResolvedValue(undefined);
 
       await alertManager.deleteAllAlerts();
 
       expect(mockInvestingClient.deleteAlert).toHaveBeenCalledTimes(2);
-      expect(mockAlertRepo.removeAlert).toHaveBeenCalledTimes(2);
+      expect(mockPriceAlertClient.deletePriceAlert).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('refreshAlerts', () => {
+    it('should parse Investing HTML and replace backend price alerts', async () => {
+      mockInvestingClient.getAllAlerts.mockResolvedValue(
+        '<div class="js-alert-item" data-trigger="price" data-pair-id="123" data-alert-id="1" data-value="100.5"></div>'
+      );
+      mockPriceAlertClient.replacePriceAlerts.mockResolvedValue({ pairs_replaced: 1, alerts_created: 1 });
+      (global as any).$ = jest.fn((input: unknown) => {
+        if (typeof input === 'string') {
+          return {
+            find: jest.fn().mockReturnValue({
+              each: (callback: (_: number, element: unknown) => void) => {
+                callback(0, {});
+              },
+            }),
+          };
+        }
+        return {
+          attr: jest.fn((attribute: string) => {
+            const attrs: Record<string, string> = {
+              'data-pair-id': '123',
+              'data-value': '100.5',
+              'data-alert-id': '1',
+            };
+            return attrs[attribute];
+          }),
+        };
+      });
+
+      const count = await alertManager.refreshAlerts();
+
+      expect(mockPriceAlertClient.replacePriceAlerts).toHaveBeenCalledWith({
+        alerts: [{ pair_id: '123', alert_id: '1', trigger_price: 100.5 }],
+      });
+      expect(count).toBe(1);
+    });
+  });
+
+  describe('createAlertClickEvent', () => {
+    it('should publish alert click event through GM storage', async () => {
+      (global as any).GM = { setValue: jest.fn().mockResolvedValue(undefined) };
+
+      await alertManager.createAlertClickEvent('HDFC', AlertClickAction.OPEN);
+
+      expect((global as any).GM.setValue).toHaveBeenCalledWith(
+        Constants.STORAGE.EVENTS.ALERT_CLICKED,
+        expect.stringContaining('HDFC')
+      );
     });
   });
 });

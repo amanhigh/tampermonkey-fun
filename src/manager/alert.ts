@@ -20,13 +20,6 @@ export interface IAlertManager {
   getAlerts(): Promise<Alert[]>;
 
   /**
-   * Get all alerts for Investing.com ticker.
-   * @param investingTicker Investing.com ticker
-   * @returns Promise resolving to array of alerts sorted by price, or null if no Alert ticker mapping exists
-   */
-  getAlertsForInvestingTicker(investingTicker: string): Promise<Alert[] | null>;
-
-  /**
    * Create alert for current TradingView ticker.
    * @param price Alert price
    * @throws Error If no alert ticker found for current ticker
@@ -81,15 +74,6 @@ export class AlertManager implements IAlertManager {
   async getAlerts(): Promise<Alert[]> {
     const tvTicker = this.domManager.getTicker();
     return this.listAlertsByTvTicker(tvTicker);
-  }
-
-  /** @inheritdoc */
-  async getAlertsForInvestingTicker(investingTicker: string): Promise<Alert[] | null> {
-    const alertTicker = await this.alertTickerManager.fetchAlertTicker(investingTicker);
-    if (!alertTicker) {
-      return null;
-    }
-    return this.listAlertsByTvTicker(alertTicker.ticker);
   }
 
   /** @inheritdoc */

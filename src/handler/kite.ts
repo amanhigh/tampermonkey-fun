@@ -75,7 +75,7 @@ export class KiteHandler implements IKiteHandler {
    * @param kiteManager - Manager for Kite operations
    * @param symbolManager - Manager for symbol operations
    * @param waitUtil - Utility for waiting operations
-   * @param tickerManager - Manager for ticker operations
+   * @param domManager - Manager for ticker operations
    * @param tvManager - Manager for TradingView operations
    * @param uiUtil - Utility for UI operations
    */
@@ -83,7 +83,7 @@ export class KiteHandler implements IKiteHandler {
   constructor(
     private readonly kiteManager: IKiteManager,
     private readonly waitUtil: IWaitUtil,
-    private readonly tickerManager: IDomManager,
+    private readonly domManager: IDomManager,
     private readonly tvManager: ITradingViewManager,
     private readonly uiUtil: IUIUtil
   ) {}
@@ -117,7 +117,7 @@ export class KiteHandler implements IKiteHandler {
     const order = this.readOrderPanel();
 
     // Build request object in expected format
-    const tvTicker = this.tickerManager.getTicker();
+    const tvTicker = this.domManager.getTicker();
     const kiteSymbol = this.kiteManager.tvToKite(tvTicker);
     const event = new GttCreateEvent(
       kiteSymbol,
@@ -140,7 +140,7 @@ export class KiteHandler implements IKiteHandler {
   /** @inheritdoc */
   handleDeleteOrderButton($button: JQuery): void {
     const orderId = $button.data('order-id') as string;
-    const symbol = this.tickerManager.getTicker();
+    const symbol = this.domManager.getTicker();
     void this.kiteManager.createGttDeleteEvent(orderId, symbol);
     Notifier.red(`GTT Delete: ${orderId}`);
   }
@@ -153,7 +153,7 @@ export class KiteHandler implements IKiteHandler {
 
   /** @inheritdoc */
   async refreshGttOrders(): Promise<void> {
-    const currentTicker = this.tickerManager.getTicker();
+    const currentTicker = this.domManager.getTicker();
     const gttData = await this.kiteManager.getGttRefereshEvent();
     const ordersForTicker = gttData.getOrdersForTicker(currentTicker);
 

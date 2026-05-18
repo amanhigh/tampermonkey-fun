@@ -63,7 +63,7 @@ export interface IJournalHandler {
 export class JournalHandler implements IJournalHandler {
   // eslint-disable-next-line max-params
   constructor(
-    private readonly tickerManager: DomManager,
+    private readonly domManager: DomManager,
     private readonly osClient: IOsClient,
     private readonly journalManager: IJournalManager,
     private readonly smartPrompt: ISmartPrompt,
@@ -81,13 +81,13 @@ export class JournalHandler implements IJournalHandler {
   /** @inheritdoc */
   public async handleRecordJournal(type: JournalType): Promise<void> {
     if (type === JournalType.SET) {
-      const ticker = this.tickerManager.getTicker();
+      const ticker = this.domManager.getTicker();
       await this.handleSetupJournal(ticker, type);
       return;
     }
 
     if (type === JournalType.RESULT) {
-      const ticker = this.tickerManager.getTicker();
+      const ticker = this.domManager.getTicker();
       await this.handleResultJournal(ticker);
       return;
     }
@@ -103,7 +103,7 @@ export class JournalHandler implements IJournalHandler {
       return;
     }
 
-    const ticker = this.tickerManager.getTicker();
+    const ticker = this.domManager.getTicker();
 
     if (type === JournalType.REJECTED) {
       await this.handleRejectedJournal(ticker, reason, type);

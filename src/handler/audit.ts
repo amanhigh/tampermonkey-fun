@@ -138,7 +138,7 @@ export class AuditHandler implements IAuditHandler {
     this.uiUtil
       .buildButton(stopTrackId, '⏹ Stop', () => {
         void (async () => {
-          const tvTicker = this.tickerManager.getTicker();
+          const tvTicker = this.domManager.getTicker();
           if (confirm(`Stop tracking ${tvTicker}?`)) {
             // BUG 1.1: Stop tracking does not verify/remove existing flag state; flagged tickers stay highlighted
             await this.tickerHandler.stopTracking(tvTicker);
@@ -150,7 +150,7 @@ export class AuditHandler implements IAuditHandler {
     // Map Alert button (FR-9.9)
     this.uiUtil
       .buildButton(mapAlertId, '\u{1F517} Map', () => {
-        const ticker = this.tickerManager.getTicker();
+        const ticker = this.domManager.getTicker();
         // BUG: Mapping from toolbar does not refresh ticker/alerts to show new mapping state
         void this.alertTickerHandler.linkInvestingTicker(ticker);
       })

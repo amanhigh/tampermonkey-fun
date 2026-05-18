@@ -35,7 +35,7 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
   // TASK Break Lines later for all eslint-disables
   // eslint-disable-next-line max-lines-per-function
   constructor(
-    private readonly tickerManager: IDomManager,
+    private readonly domManager: IDomManager,
     private readonly styleManager: IStyleManager,
     private readonly alertHandler: IAlertHandler,
     private readonly watchlistHandler: IWatchListHandler,
@@ -128,7 +128,7 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
         'q',
         {
           description: 'Relative Chart',
-          action: () => void this.tickerManager.openBenchmarkTicker(),
+          action: () => void this.domManager.openBenchmarkTicker(),
         },
       ],
       [
@@ -146,14 +146,14 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
         't',
         {
           description: 'Navigate Previous',
-          action: () => void this.tickerManager.navigateTickers(-1),
+          action: () => void this.domManager.navigateTickers(-1),
         },
       ],
       [
         'd',
         {
           description: 'Navigate Next',
-          action: () => void this.tickerManager.navigateTickers(1),
+          action: () => void this.domManager.navigateTickers(1),
         },
       ],
     ]);

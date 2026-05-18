@@ -29,7 +29,7 @@ export class AlertTickerHandler implements IAlertTickerHandler {
     private readonly investingClient: IInvestingClient,
     private readonly alertTickerManager: IAlertTickerManager,
     private readonly smartPrompt: ISmartPrompt,
-    private readonly tickerManager: IDomManager
+    private readonly domManager: IDomManager
   ) {}
 
   /** @inheritdoc */
@@ -50,7 +50,7 @@ export class AlertTickerHandler implements IAlertTickerHandler {
       if (selectedPair) {
         Notifier.info(`Selected: ${this.formatPair(selectedPair)}`);
 
-        const tvTicker = this.tickerManager.getTicker();
+        const tvTicker = this.domManager.getTicker();
         await this.alertTickerManager.linkAlertTicker(tvTicker, {
           symbol: selectedPair.symbol,
           pair_id: selectedPair.pairId,

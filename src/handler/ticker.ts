@@ -1,8 +1,7 @@
 import { Notifier } from '../util/notify';
 import { IDomManager } from '../manager/dom';
-import { ISymbolManager } from '../manager/symbol';
+import { ITickerManager } from '../manager/ticker';
 import { IStyleManager } from '../manager/style';
-import { ITickerClient } from '../client/ticker';
 import { IAlertTickerHandler } from './alert_ticker';
 
 /**
@@ -17,8 +16,7 @@ export interface ITickerHandler {
   openTicker(ticker: string): Promise<void>;
 
   /**
-   * Stops tracking a TV ticker — deletes the primary ticker (MySQL cascade removes alert tickers)
-   * and cleans up local mappings.
+   * Stops tracking a TV ticker — deletes the primary ticker (MySQL cascade removes alert tickers).
    * @param tvTicker The TradingView ticker to stop tracking
    */
   stopTracking(tvTicker: string): Promise<void>;
@@ -36,33 +34,36 @@ export interface ITickerHandler {
  */
 export class TickerHandler implements ITickerHandler {
   constructor(
-    private readonly tickerManager: IDomManager,
-    private readonly symbolManager: ISymbolManager,
+    private readonly domManager: IDomManager,
     private readonly styleManager: IStyleManager,
-    private readonly tickerClient: ITickerClient,
+    private readonly tickerBackendManager: ITickerManager,
     private readonly alertTickerHandler: IAlertTickerHandler
   ) {}
 
   /** @inheritdoc */
   public async openTicker(ticker: string): Promise<void> {
-    const exchangeTicker = await this.symbolManager.tvToExchangeTicker(ticker);
-    await this.tickerManager.openTicker(exchangeTicker);
+    let exchangeTicker = ticker;
+    try {
+      const record = await this.tickerBackendManager.getTicker(ticker);
+      exchangeTicker = record.qualifiedName;
+    } catch {
+      // Fall back to raw ticker
+    }
+    await this.domManager.openTicker(exchangeTicker);
     Notifier.success(`Opened ${exchangeTicker}`);
   }
 
   /** @inheritdoc */
   public async stopTracking(tvTicker: string): Promise<void> {
-    if (this.tickerManager.getTicker() === tvTicker) {
+    if (this.domManager.getTicker() === tvTicker) {
       this.styleManager.clearAll();
     }
 
     try {
-      await this.tickerClient.deleteTicker(tvTicker);
+      await this.tickerBackendManager.stopTracking(tvTicker);
     } catch (error) {
       Notifier.warn(`Failed to delete ticker ${tvTicker}: ${(error as Error).message}`);
     }
-
-    this.symbolManager.deleteTvTicker(tvTicker);
 
     Notifier.success(`⏹ Stopped tracking ${tvTicker}`);
   }
@@ -71,8 +72,8 @@ export class TickerHandler implements ITickerHandler {
   async processCommand(action: string, value: string): Promise<void> {
     switch (action.toUpperCase()) {
       case 'E': {
-        const ticker = this.tickerManager.getTicker();
-        await this.symbolManager.setExchange(ticker, value);
+        const ticker = this.domManager.getTicker();
+        await this.tickerBackendManager.setExchange(ticker, value);
         Notifier.success(`Mapped ${ticker} to Exchange ${value}`);
         break;
       }

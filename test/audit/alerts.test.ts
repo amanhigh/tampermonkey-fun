@@ -2,7 +2,7 @@ import { AlertsPlugin } from '../../src/manager/alerts_plugin';
 import { IAlertTickerClient } from '../../src/client/alert_ticker';
 import { IAlertManager } from '../../src/manager/alert';
 import { IWatchManager } from '../../src/manager/watch';
-import { ISymbolManager } from '../../src/manager/symbol';
+import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { AlertState } from '../../src/models/alert';
 import { AlertTicker } from '../../src/models/alert_ticker';
 
@@ -13,7 +13,7 @@ describe('AlertsPlugin', () => {
   let alertTickerClient: jest.Mocked<IAlertTickerClient>;
   let alertManager: jest.Mocked<IAlertManager>;
   let watchManager: jest.Mocked<IWatchManager>;
-  let symbolManager: jest.Mocked<ISymbolManager>;
+  let alertTickerManager: jest.Mocked<IAlertTickerManager>;
 
   beforeEach(() => {
     alertTickerClient = {
@@ -31,11 +31,21 @@ describe('AlertsPlugin', () => {
       isWatched: jest.fn().mockReturnValue(false),
     } as any;
 
-    symbolManager = {
-      investingToTv: jest.fn().mockImplementation((ticker) => `TV:${ticker}`),
+    alertTickerManager = {
+      fetchAlertTicker: jest.fn().mockImplementation((ticker) =>
+        Promise.resolve({
+          symbol: ticker,
+          ticker: `TV:${ticker}`,
+          pair_id: '1',
+          name: ticker,
+          exchange: null,
+          created_at: '',
+          updated_at: '',
+        })
+      ),
     } as any;
 
-    plugin = new AlertsPlugin(alertTickerClient, alertManager, watchManager, symbolManager);
+    plugin = new AlertsPlugin(alertTickerClient, alertManager, watchManager, alertTickerManager);
   });
 
   describe('validate', () => {
