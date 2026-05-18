@@ -34,7 +34,7 @@ describe('TickerHandler', () => {
     } as any;
 
     mockSymbolManager = {
-      tvToExchangeTicker: jest.fn().mockResolvedValue('EXCHANGE:TV_TICKER'),
+      tvToExchangeTicker: jest.fn().mockImplementation((ticker: string) => Promise.resolve(`EXCHANGE:${ticker}`)),
       deleteTvTicker: jest.fn(),
       setExchange: jest.fn(),
     } as any;

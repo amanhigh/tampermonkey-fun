@@ -14,7 +14,7 @@ import { AlertClicked, AlertClickAction } from '../models/events';
 import { IAlertSummaryHandler } from './alert_summary';
 import { IWatchListHandler } from './watchlist';
 import { ITickerHandler } from './ticker';
-import { IPairHandler } from './pair';
+import { IAlertTickerHandler } from './alert_ticker';
 import { IAuditHandler } from './audit';
 import { IAlertFeedManager } from '../manager/alertfeed';
 import { PairInfo } from '../models/alert';
@@ -110,7 +110,7 @@ export class AlertHandler implements IAlertHandler {
     private readonly uiUtil: IUIUtil,
     private readonly alertSummaryHandler: IAlertSummaryHandler,
     private readonly tickerHandler: ITickerHandler,
-    private readonly pairHandler: IPairHandler,
+    private readonly alertTickerHandler: IAlertTickerHandler,
     private readonly alertFeedManager: IAlertFeedManager,
     private readonly watchListHandler: IWatchListHandler
   ) {}
@@ -243,7 +243,7 @@ export class AlertHandler implements IAlertHandler {
   /** @inheritdoc */
   public handleAlertContextMenu(e: Event): void {
     e.preventDefault();
-    void this.pairHandler.mapInvestingTicker(this.tickerManager.getTicker()).then(() => {
+    void this.alertTickerHandler.linkInvestingTicker(this.tickerManager.getTicker()).then(() => {
       this.refreshAlerts();
     });
   }
@@ -255,7 +255,7 @@ export class AlertHandler implements IAlertHandler {
         // Map TV Ticker to Investing Ticker
         const tvTickerNow = this.tickerManager.getTicker();
         void this.alertFeedManager.createAlertFeedEvent(tvTickerNow);
-        void this.pairHandler.mapInvestingTicker(event.investingTicker).then(() => {
+        void this.alertTickerHandler.linkInvestingTicker(event.investingTicker).then(() => {
           this.refreshAlerts();
         });
         Notifier.success(`Mapped ${this.tickerManager.getTicker()} to ${event.investingTicker}`);

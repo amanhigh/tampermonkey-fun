@@ -1,5 +1,5 @@
 import { ISmartPrompt } from '../util/smart';
-import { IPairHandler } from './pair';
+import { ITickerHandler } from './ticker';
 import { ITickerManager } from '../manager/ticker';
 
 export interface IPanelHandler {
@@ -13,7 +13,7 @@ enum PanelAction {
 export class PanelHandler implements IPanelHandler {
   constructor(
     private readonly smartPrompt: ISmartPrompt,
-    private readonly pairHandler: IPairHandler,
+    private readonly tickerHandler: ITickerHandler,
     private readonly tickerManager: ITickerManager
   ) {}
 
@@ -39,21 +39,11 @@ export class PanelHandler implements IPanelHandler {
   }
 
   private async handlePanelAction(action: PanelAction): Promise<void> {
-    try {
-      const investingTicker = this.tickerManager.getInvestingTicker();
-      switch (action) {
-        case PanelAction.STOP_TRACKING:
-          await this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
-          break;
-      }
-    } catch {
-      const tvTicker = this.tickerManager.getTicker();
-      switch (action) {
-        case PanelAction.STOP_TRACKING:
-          // TODO: Stop Tracking should involve both Investing and TV Tickers for Manual Buttons.
-          await this.pairHandler.stopTrackingByTvTicker(tvTicker);
-          break;
-      }
+    const tvTicker = this.tickerManager.getTicker();
+    switch (action) {
+      case PanelAction.STOP_TRACKING:
+        await this.tickerHandler.stopTracking(tvTicker);
+        break;
     }
   }
 }

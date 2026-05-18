@@ -1,7 +1,9 @@
 import { Notifier } from '../util/notify';
 import { ITickerManager } from '../manager/ticker';
 import { ISymbolManager } from '../manager/symbol';
-import { IPairHandler } from './pair';
+import { IStyleManager } from '../manager/style';
+import { ITickerClient } from '../client/ticker';
+import { IAlertTickerHandler } from './alert_ticker';
 
 /**
  * Interface for managing ticker operations
@@ -15,8 +17,16 @@ export interface ITickerHandler {
   openTicker(ticker: string): Promise<void>;
 
   /**
+   * Stops tracking a TV ticker — deletes the primary ticker (MySQL cascade removes alert tickers)
+   * and cleans up local mappings.
+   * @param tvTicker The TradingView ticker to stop tracking
+   */
+  stopTracking(tvTicker: string): Promise<void>;
+
+  /**
    * Processes command strings for ticker operations
-   * @param command The command string to process
+   * @param action The command action
+   * @param value The command value
    */
   processCommand(action: string, value: string): Promise<void>;
 }
@@ -28,7 +38,9 @@ export class TickerHandler implements ITickerHandler {
   constructor(
     private readonly tickerManager: ITickerManager,
     private readonly symbolManager: ISymbolManager,
-    private readonly pairHandler: IPairHandler
+    private readonly styleManager: IStyleManager,
+    private readonly tickerClient: ITickerClient,
+    private readonly alertTickerHandler: IAlertTickerHandler
   ) {}
 
   /** @inheritdoc */
@@ -36,6 +48,23 @@ export class TickerHandler implements ITickerHandler {
     const exchangeTicker = await this.symbolManager.tvToExchangeTicker(ticker);
     await this.tickerManager.openTicker(exchangeTicker);
     Notifier.success(`Opened ${exchangeTicker}`);
+  }
+
+  /** @inheritdoc */
+  public async stopTracking(tvTicker: string): Promise<void> {
+    if (this.tickerManager.getTicker() === tvTicker) {
+      this.styleManager.clearAll();
+    }
+
+    try {
+      await this.tickerClient.deleteTicker(tvTicker);
+    } catch (error) {
+      Notifier.warn(`Failed to delete ticker ${tvTicker}: ${(error as Error).message}`);
+    }
+
+    this.symbolManager.deleteTvTicker(tvTicker);
+
+    Notifier.success(`⏹ Stopped tracking ${tvTicker}`);
   }
 
   /** @inheritdoc */
@@ -48,7 +77,7 @@ export class TickerHandler implements ITickerHandler {
         break;
       }
       case 'P': {
-        await this.pairHandler.mapInvestingTicker(value);
+        await this.alertTickerHandler.linkInvestingTicker(value);
         break;
       }
       default:

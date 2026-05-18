@@ -3,7 +3,8 @@ import { AuditSectionRegistry } from '../util/audit_registry';
 import { IUIUtil } from '../util/ui';
 import { AuditRenderer } from '../util/audit_renderer';
 import { AuditResult } from '../models/audit';
-import { IPairHandler } from './pair';
+import { ITickerHandler } from './ticker';
+import { IAlertTickerHandler } from './alert_ticker';
 import { ITickerManager } from '../manager/ticker';
 
 /**
@@ -45,7 +46,8 @@ export class AuditHandler implements IAuditHandler {
   constructor(
     private readonly auditRegistry: AuditSectionRegistry,
     private readonly uiUtil: IUIUtil,
-    private readonly pairHandler: IPairHandler,
+    private readonly tickerHandler: ITickerHandler,
+    private readonly alertTickerHandler: IAlertTickerHandler,
     private readonly tickerManager: ITickerManager
   ) {}
 
@@ -136,17 +138,10 @@ export class AuditHandler implements IAuditHandler {
     this.uiUtil
       .buildButton(stopTrackId, '⏹ Stop', () => {
         void (async () => {
-          try {
-            const investingTicker = this.tickerManager.getInvestingTicker();
-            if (confirm(`Stop tracking ${investingTicker}?`)) {
-              // BUG 1.1: Stop tracking does not verify/remove existing flag state; flagged tickers stay highlighted
-              await this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
-            }
-          } catch {
-            const tvTicker = this.tickerManager.getTicker();
-            if (confirm(`Stop tracking ${tvTicker}?`)) {
-              await this.pairHandler.stopTrackingByTvTicker(tvTicker);
-            }
+          const tvTicker = this.tickerManager.getTicker();
+          if (confirm(`Stop tracking ${tvTicker}?`)) {
+            // BUG 1.1: Stop tracking does not verify/remove existing flag state; flagged tickers stay highlighted
+            await this.tickerHandler.stopTracking(tvTicker);
           }
         })();
       })
@@ -157,7 +152,7 @@ export class AuditHandler implements IAuditHandler {
       .buildButton(mapAlertId, '\u{1F517} Map', () => {
         const ticker = this.tickerManager.getTicker();
         // BUG: Mapping from toolbar does not refresh ticker/alerts to show new mapping state
-        void this.pairHandler.mapInvestingTicker(ticker);
+        void this.alertTickerHandler.linkInvestingTicker(ticker);
       })
       .appendTo($toolbar);
 

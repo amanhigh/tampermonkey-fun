@@ -46,7 +46,7 @@ import { JournalHandler, IJournalHandler } from '../handler/journal';
 import { HotkeyHandler, IHotkeyHandler } from '../handler/hotkey';
 import { KeyConfig } from '../handler/key_config';
 import { IModifierKeyConfig, ModifierKeyConfig } from '../handler/modifier_config';
-import { IPairHandler, PairHandler } from '../handler/pair';
+
 import { ISequenceHandler, SequenceHandler } from '../handler/sequence';
 import { IKiteHandler, KiteHandler } from '../handler/kite';
 import { IKiteManager, KiteManager } from '../manager/kite';
@@ -59,6 +59,7 @@ import { IWatchListHandler, WatchListHandler } from '../handler/watchlist';
 import { IOnLoadHandler, OnLoadHandler } from '../handler/onload';
 import { IFlagHandler, FlagHandler } from '../handler/flag';
 import { IKiteRepo, KiteRepo } from '../repo/kite';
+import { IAlertTickerHandler, AlertTickerHandler } from '../handler/alert_ticker';
 import { ITickerHandler, TickerHandler } from '../handler/ticker';
 import { ITickerChangeHandler, TickerChangeHandler } from '../handler/ticker_change';
 
@@ -399,8 +400,7 @@ export class Factory {
           new AlertsAuditSection(
             Factory.audit.alerts(), // ✅ Direct plugin injection
             Factory.handler.ticker(),
-            Factory.manager.symbol(),
-            Factory.handler.pair() // ✅ PairHandler handles watchlist repaint
+            Factory.manager.symbol()
           )
       ),
 
@@ -408,7 +408,7 @@ export class Factory {
     orphanFlagsSection: () =>
       Factory.getInstance(
         'orphanFlagsSection',
-        () => new OrphanFlagsSection(Factory.audit.orphanFlags(), Factory.handler.ticker(), Factory.handler.pair())
+        () => new OrphanFlagsSection(Factory.audit.orphanFlags(), Factory.handler.ticker())
       ),
 
     // Ticker Collision Audit Section (FR-015)
@@ -435,7 +435,7 @@ export class Factory {
     staleReviewSection: () =>
       Factory.getInstance(
         'staleReviewSection',
-        () => new StaleReviewSection(Factory.audit.staleReview(), Factory.handler.ticker(), Factory.handler.pair())
+        () => new StaleReviewSection(Factory.audit.staleReview(), Factory.handler.ticker())
       ),
 
     // ===== REGISTRY =====
@@ -476,7 +476,7 @@ export class Factory {
             Factory.util.ui(),
             Factory.handler.alertSummary(),
             Factory.handler.ticker(),
-            Factory.handler.pair(),
+            Factory.handler.alertTicker(),
             Factory.manager.alertFeed(),
             Factory.handler.watchlist()
           )
@@ -493,7 +493,8 @@ export class Factory {
         return new AuditHandler(
           Factory.audit.registry(),
           Factory.util.ui(),
-          Factory.handler.pair(),
+          Factory.handler.ticker(),
+          Factory.handler.alertTicker(),
           Factory.manager.ticker()
         );
       }),
@@ -539,7 +540,26 @@ export class Factory {
     ticker: (): ITickerHandler =>
       Factory.getInstance(
         'tickerHandler',
-        () => new TickerHandler(Factory.manager.ticker(), Factory.manager.symbol(), Factory.handler.pair())
+        () =>
+          new TickerHandler(
+            Factory.manager.ticker(),
+            Factory.manager.symbol(),
+            Factory.manager.style(),
+            Factory.client.ticker(),
+            Factory.handler.alertTicker()
+          )
+      ),
+    alertTicker: (): IAlertTickerHandler =>
+      Factory.getInstance(
+        'alertTickerHandler',
+        () =>
+          new AlertTickerHandler(
+            Factory.client.investing(),
+            Factory.manager.alertTicker(),
+            Factory.util.smart(),
+            Factory.manager.ticker(),
+            Factory.manager.symbol()
+          )
       ),
 
     tickerChange: (): ITickerChangeHandler =>
@@ -601,19 +621,6 @@ export class Factory {
             Factory.util.ui()
           )
       ),
-    pair: (): IPairHandler =>
-      Factory.getInstance(
-        'pairHandler',
-        () =>
-          new PairHandler(
-            Factory.client.investing(),
-            Factory.client.tickerAlert(),
-            Factory.util.smart(),
-            Factory.manager.ticker(),
-            Factory.manager.symbol(),
-            Factory.manager.style()
-          )
-      ),
     flag: (): IFlagHandler =>
       Factory.getInstance(
         'flagHandler',
@@ -667,7 +674,7 @@ export class Factory {
     panel: (): IPanelHandler =>
       Factory.getInstance(
         'panelHandler',
-        () => new PanelHandler(Factory.util.smart(), Factory.handler.pair(), Factory.manager.ticker())
+        () => new PanelHandler(Factory.util.smart(), Factory.handler.ticker(), Factory.manager.ticker())
       ),
     picasso: (): IPicassoHandler =>
       Factory.getInstance(

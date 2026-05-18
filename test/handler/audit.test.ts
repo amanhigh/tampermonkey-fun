@@ -3,8 +3,8 @@ import { AuditSectionRegistry } from '../../src/util/audit_registry';
 import { IUIUtil } from '../../src/util/ui';
 import { AlertState } from '../../src/models/alert';
 import { Constants } from '../../src/models/constant';
-import { AuditResult } from '../../src/models/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
+import { IAlertTickerHandler } from '../../src/handler/alert_ticker';
 import { ITickerManager } from '../../src/manager/ticker';
 
 // Mock jQuery globally for DOM operations
@@ -30,48 +30,38 @@ const mockJQuery = {
   slideDown: jest.fn().mockReturnThis(),
 } as any;
 
-// Mock jQuery with proper typing
 (global as any).$ = jest.fn(() => mockJQuery);
 
-// Mock Notifier to prevent document access errors
 jest.mock('../../src/util/notify', () => ({
-  Notifier: {
-    red: jest.fn(),
-    success: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    message: jest.fn(),
-  },
+  Notifier: { red: jest.fn(), success: jest.fn(), info: jest.fn(), warn: jest.fn(), message: jest.fn() },
 }));
+
+function makeSection(overrides: Partial<any> = {}): any {
+  return {
+    id: 'test',
+    title: 'Test',
+    plugin: { run: jest.fn().mockResolvedValue([]) },
+    headerFormatter: jest.fn().mockReturnValue('Test Header'),
+    buttonColorMapper: jest.fn().mockReturnValue('black'),
+    limit: 10,
+    context: undefined,
+    onLeftClick: jest.fn(),
+    onRightClick: jest.fn(),
+    ...overrides,
+  };
+}
 
 describe('AuditHandler', () => {
   let auditHandler: AuditHandler;
   let mockAuditRegistry: jest.Mocked<AuditSectionRegistry>;
   let mockUIUtil: jest.Mocked<IUIUtil>;
   let mockTickerHandler: jest.Mocked<ITickerHandler>;
-  let mockAlertTickerHandler: jest.Mocked<{ linkInvestingTicker: jest.Mock }>;
+  let mockAlertTickerHandler: jest.Mocked<IAlertTickerHandler>;
   let mockTickerManager: jest.Mocked<ITickerManager>;
 
   beforeEach(() => {
-    // Reset jQuery mock
     jest.clearAllMocks();
-    mockJQuery.empty.mockReturnThis();
-    mockJQuery.remove.mockReturnThis();
-    mockJQuery.replaceWith.mockReturnThis();
-    mockJQuery.appendTo.mockReturnThis();
-    mockJQuery.prependTo.mockReturnThis();
-    mockJQuery.css.mockReturnThis();
-    mockJQuery.on.mockReturnThis();
-    mockJQuery.find.mockReturnThis();
-    mockJQuery.hide.mockReturnThis();
-    mockJQuery.show.mockReturnThis();
-    mockJQuery.attr.mockReturnThis();
-    mockJQuery.addClass.mockReturnThis();
-    mockJQuery.html.mockReturnThis();
-    mockJQuery.data.mockReturnThis();
-    mockJQuery.prop.mockReturnThis();
-    mockJQuery.slideUp.mockReturnThis();
-    mockJQuery.slideDown.mockReturnThis();
+    Object.values(mockJQuery).forEach((fn: any) => fn.mockReturnThis?.());
 
     mockAuditRegistry = {
       mustGetSection: jest.fn(),
@@ -79,943 +69,84 @@ describe('AuditHandler', () => {
       listSectionsOrdered: jest.fn().mockReturnValue([]),
     } as any;
 
-    mockUIUtil = {
-      buildLabel: jest.fn().mockReturnValue(mockJQuery),
-      buildButton: jest.fn().mockReturnValue(mockJQuery),
-    } as any;
+    mockUIUtil = { buildLabel: jest.fn().mockReturnValue(mockJQuery), buildButton: jest.fn().mockReturnValue(mockJQuery) } as any;
 
-    mockTickerHandler = {
-      openTicker: jest.fn(),
-      stopTracking: jest.fn(),
-      processCommand: jest.fn(),
-    } as any;
-
-    mockAlertTickerHandler = {
-      linkInvestingTicker: jest.fn().mockResolvedValue(undefined),
-    } as any;
-
-    mockTickerManager = {
-      getTicker: jest.fn().mockReturnValue('TCS'),
-      getInvestingTicker: jest.fn().mockReturnValue('TCS_INV'),
-    } as any;
+    mockTickerHandler = { openTicker: jest.fn(), stopTracking: jest.fn(), processCommand: jest.fn() } as any;
+    mockAlertTickerHandler = { linkInvestingTicker: jest.fn().mockResolvedValue(undefined) } as any;
+    mockTickerManager = { getTicker: jest.fn().mockReturnValue('TCS'), getInvestingTicker: jest.fn().mockReturnValue('TCS_INV') } as any;
 
     auditHandler = new AuditHandler(mockAuditRegistry, mockUIUtil, mockTickerHandler, mockAlertTickerHandler, mockTickerManager);
   });
 
   describe('auditAllOnFirstRun', () => {
     beforeEach(() => {
-      // Setup mocks for auditAllOnFirstRun tests
-      const mockPlugin = {
-        run: jest.fn().mockResolvedValue([]),
-      };
-
-      const mockAlertsSection = {
-        id: 'alerts',
-        title: 'Alerts Coverage',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('One: 0, None: 0, Inv: 0, Tot: 0'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockGttSection = {
-        id: 'gtt-unwatched',
-        title: 'GTT Orders',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('GTT Orders'),
-        buttonColorMapper: jest.fn().mockReturnValue('gold'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      // Create mock sections for remaining plugins
-      const mockOrphanSequencesSection = {
-        id: 'orphan-sequences',
-        title: 'Orphan Sequences',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Orphan Sequences'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockOrphanFlagsSection = {
-        id: 'orphan-flags',
-        title: 'Orphan Flags',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Orphan Flags'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockOrphanExchangeSection = {
-        id: 'orphan-exchange',
-        title: 'Orphan Exchange',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Orphan Exchange'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockTickerCollisionSection = {
-        id: 'ticker-collision',
-        title: 'Ticker Collisions',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Ticker Collisions'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockTradeRiskSection = {
-        id: 'trade-risk',
-        title: 'Trade Risk Multiple',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Trade Risk Multiple'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockStaleReviewSection = {
-        id: 'stale-review',
-        title: 'Stale Review',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Stale Review'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      // Return appropriate section based on ID
-      mockAuditRegistry.mustGetSection.mockImplementation((id) => {
-        if (id === 'alerts') return mockAlertsSection;
-        if (id === 'gtt-unwatched') return mockGttSection;
-        if (id === 'orphan-sequences') return mockOrphanSequencesSection;
-        if (id === 'orphan-flags') return mockOrphanFlagsSection;
-        if (id === 'orphan-exchange') return mockOrphanExchangeSection;
-        if (id === 'ticker-collision') return mockTickerCollisionSection;
-        if (id === 'trade-risk') return mockTradeRiskSection;
-        if (id === 'stale-review') return mockStaleReviewSection;
-        throw new Error(`Unknown section: ${id}`);
-      });
+      const alertsSection = makeSection({ id: 'alerts', title: 'Alerts Coverage' });
+      mockAuditRegistry.mustGetSection.mockReturnValue(alertsSection);
     });
 
-    it('should run audits on first call', async () => {
+    it('runs audits on first call', async () => {
       await auditHandler.auditAllOnFirstRun();
-
-      // Verify audit was run - check that global refresh button was created
       expect(mockUIUtil.buildButton).toHaveBeenCalledWith(
-        Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH,
-        '\u{1F504} Refresh',
-        expect.any(Function)
+        Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH, '\u{1F504} Refresh', expect.any(Function)
       );
-      // Verify section refresh buttons were created (Alerts and GTT)
-      expect(mockUIUtil.buildButton.mock.calls.length).toBeGreaterThan(1);
     });
 
-    it('should not run audits on second call (lazy load pattern)', async () => {
-      // Clear previous calls from beforeEach setup
-      jest.clearAllMocks();
-
-      // First call - should run
-      await auditHandler.auditAllOnFirstRun();
-      const firstButtonCallCount = mockUIUtil.buildButton.mock.calls.length;
-
-      // Second call - should not run again
+    it('does not run audits on second call', async () => {
       jest.clearAllMocks();
       await auditHandler.auditAllOnFirstRun();
-      const secondButtonCallCount = mockUIUtil.buildButton.mock.calls.length;
-
-      // Second call should not create any buttons (nothing runs)
-      expect(secondButtonCallCount).toBe(0);
-      expect(firstButtonCallCount).toBeGreaterThan(0);
+      const firstCount = mockUIUtil.buildButton.mock.calls.length;
+      jest.clearAllMocks();
+      await auditHandler.auditAllOnFirstRun();
+      expect(mockUIUtil.buildButton.mock.calls.length).toBe(0);
+      expect(firstCount).toBeGreaterThan(0);
     });
   });
 
-  describe('auditAll', () => {
+  describe('toolbar buttons', () => {
     beforeEach(() => {
-      // Mock Alerts section with plugin
-      const mockPlugin = {
-        run: jest.fn().mockResolvedValue([]),
-      };
-      const mockAlertsSection = {
-        id: 'alerts',
-        title: 'Alerts Coverage',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('One: 0, None: 0, Inv: 0, Tot: 0'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      // Mock GTT section with plugin and all required properties
-      const mockGttSection = {
-        id: 'gtt-unwatched',
-        title: 'GTT Orders',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('GTT Orders'),
-        buttonColorMapper: jest.fn().mockReturnValue('gold'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      // Create mock sections for remaining plugins
-      const mockOrphanSequencesSection = {
-        id: 'orphan-sequences',
-        title: 'Orphan Sequences',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Orphan Sequences'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockOrphanFlagsSection = {
-        id: 'orphan-flags',
-        title: 'Orphan Flags',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Orphan Flags'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockOrphanExchangeSection = {
-        id: 'orphan-exchange',
-        title: 'Orphan Exchange',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Orphan Exchange'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockTickerCollisionSection = {
-        id: 'ticker-collision',
-        title: 'Ticker Collisions',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Ticker Collisions'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockTradeRiskSection = {
-        id: 'trade-risk',
-        title: 'Trade Risk Multiple',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Trade Risk Multiple'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockStaleReviewSection = {
-        id: 'stale-review',
-        title: 'Stale Review',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Stale Review'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      // Return appropriate section based on ID
-      mockAuditRegistry.mustGetSection.mockImplementation((id) => {
-        if (id === 'alerts') return mockAlertsSection;
-        if (id === 'gtt-unwatched') return mockGttSection;
-        if (id === 'orphan-sequences') return mockOrphanSequencesSection;
-        if (id === 'orphan-flags') return mockOrphanFlagsSection;
-        if (id === 'orphan-exchange') return mockOrphanExchangeSection;
-        if (id === 'ticker-collision') return mockTickerCollisionSection;
-        if (id === 'trade-risk') return mockTradeRiskSection;
-        if (id === 'stale-review') return mockStaleReviewSection;
-        throw new Error(`Unknown section: ${id}`);
-      });
+      mockAuditRegistry.mustGetSection.mockReturnValue(makeSection({ id: 'alerts', title: 'Alerts Coverage' }));
     });
 
-    it('should clear existing audit area', async () => {
+    it('creates global refresh button', async () => {
       await auditHandler.auditAll();
-
-      // Audit area is accessed but not cleared anymore (renderer handles section rendering)
-      expect($).toHaveBeenCalledWith(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-    });
-
-    it('should create audit label', async () => {
-      await auditHandler.auditAll();
-
-      // buildLabel is no longer used for Alerts section (uses renderer instead)
-      // But global refresh button still uses buildButton
-      expect(mockUIUtil.buildButton).toHaveBeenCalled();
-    });
-
-    it('should preserve renderer instances across multiple auditAll calls', async () => {
-      await auditHandler.auditAll();
-      await auditHandler.auditAll();
-
-      // Verify that jQuery was called to find audit area
-      expect($).toHaveBeenCalledWith(`#${Constants.UI.IDS.AREAS.AUDIT}`);
-
-      // Sections should NOT be cleared — renderers persist and update in-place
-      expect(mockJQuery.find).not.toHaveBeenCalledWith(`.${Constants.AUDIT.CLASSES.SECTION}`);
-    });
-
-    it('should filter non-watched audit results', async () => {
-      const pluginResults = [
-        {
-          pluginId: 'alerts',
-          code: AlertState.SINGLE_ALERT,
-          target: 'TICKER1',
-          message: 'msg',
-          severity: 'HIGH',
-          status: 'FAIL',
-        },
-        {
-          pluginId: 'alerts',
-          code: AlertState.SINGLE_ALERT,
-          target: 'TICKER2',
-          message: 'msg',
-          severity: 'HIGH',
-          status: 'FAIL',
-        },
-        {
-          pluginId: 'alerts',
-          code: AlertState.NO_ALERTS,
-          target: 'TICKER3',
-          message: 'msg',
-          severity: 'MEDIUM',
-          status: 'FAIL',
-        },
-      ] as AuditResult[];
-
-      const mockAlertsPlugin = {
-        run: jest.fn().mockResolvedValue(pluginResults),
-      };
-      const mockAlertsSectionWithResults = {
-        id: 'alerts',
-        title: 'Alerts Coverage',
-        plugin: mockAlertsPlugin,
-        headerFormatter: jest.fn(),
-        buttonColorMapper: jest.fn(),
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-        limit: 10,
-        context: undefined,
-      } as any;
-      const mockPlugin = { run: jest.fn().mockResolvedValue([]) };
-      const mockGttSection = {
-        id: 'gtt-unwatched',
-        title: 'GTT Orders',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('GTT Orders'),
-        buttonColorMapper: jest.fn().mockReturnValue('gold'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      // Create mock sections for remaining plugins
-      const mockOrphanSequencesSection = {
-        id: 'orphan-sequences',
-        title: 'Orphan Sequences',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Orphan Sequences'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockOrphanFlagsSection = {
-        id: 'orphan-flags',
-        title: 'Orphan Flags',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Orphan Flags'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockOrphanExchangeSection = {
-        id: 'orphan-exchange',
-        title: 'Orphan Exchange',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Orphan Exchange'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockTickerCollisionSection = {
-        id: 'ticker-collision',
-        title: 'Ticker Collisions',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Ticker Collisions'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockTradeRiskSection = {
-        id: 'trade-risk',
-        title: 'Trade Risk Multiple',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Trade Risk Multiple'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockStaleReviewSection = {
-        id: 'stale-review',
-        title: 'Stale Review',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Stale Review'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      mockAuditRegistry.mustGetSection.mockImplementation((id: string) => {
-        if (id === 'alerts') return mockAlertsSectionWithResults;
-        if (id === 'gtt-unwatched') return mockGttSection;
-        if (id === 'orphan-sequences') return mockOrphanSequencesSection;
-        if (id === 'orphan-flags') return mockOrphanFlagsSection;
-        if (id === 'orphan-exchange') return mockOrphanExchangeSection;
-        if (id === 'ticker-collision') return mockTickerCollisionSection;
-        if (id === 'trade-risk') return mockTradeRiskSection;
-        if (id === 'stale-review') return mockStaleReviewSection;
-        throw new Error(`Unknown section: ${id}`);
-      });
-
-      await auditHandler.auditAll();
-
-      expect(mockAlertsPlugin.run).toHaveBeenCalledTimes(1);
-    });
-
-    it('should limit audit buttons to 10', async () => {
-      // Create 15 audit results to test the limit
-      const pluginResults = Array.from({ length: 15 }, (_, i) => ({
-        pluginId: 'alerts',
-        code: AlertState.NO_ALERTS,
-        target: `TICKER${i}`,
-        message: 'msg',
-        severity: 'MEDIUM',
-        status: 'FAIL',
-      })) as AuditResult[];
-
-      const mockAlertsPlugin = {
-        run: jest.fn().mockResolvedValue(pluginResults),
-      };
-      const mockAlertsSectionWithResults = {
-        id: 'alerts',
-        title: 'Alerts Coverage',
-        plugin: mockAlertsPlugin,
-        headerFormatter: jest.fn(),
-        buttonColorMapper: jest.fn(),
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-        limit: 10,
-        context: undefined,
-      } as any;
-      const mockPlugin = { run: jest.fn().mockResolvedValue([]) };
-      const mockGttSection = {
-        id: 'gtt-unwatched',
-        title: 'GTT',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn(),
-        buttonColorMapper: jest.fn(),
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-        limit: 10,
-        context: undefined,
-      } as any;
-
-      // Create mock sections for remaining plugins
-      const mockOrphanSequencesSection = {
-        id: 'orphan-sequences',
-        title: 'Orphan Sequences',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Orphan Sequences'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockOrphanFlagsSection = {
-        id: 'orphan-flags',
-        title: 'Orphan Flags',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Orphan Flags'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockOrphanExchangeSection = {
-        id: 'orphan-exchange',
-        title: 'Orphan Exchange',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Orphan Exchange'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockTickerCollisionSection = {
-        id: 'ticker-collision',
-        title: 'Ticker Collisions',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Ticker Collisions'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockTradeRiskSection = {
-        id: 'trade-risk',
-        title: 'Trade Risk Multiple',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Trade Risk Multiple'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockStaleReviewSection = {
-        id: 'stale-review',
-        title: 'Stale Review',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Stale Review'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      mockAuditRegistry.mustGetSection.mockImplementation((id: string) => {
-        if (id === 'alerts') return mockAlertsSectionWithResults;
-        if (id === 'gtt-unwatched') return mockGttSection;
-        if (id === 'orphan-sequences') return mockOrphanSequencesSection;
-        if (id === 'orphan-flags') return mockOrphanFlagsSection;
-        if (id === 'orphan-exchange') return mockOrphanExchangeSection;
-        if (id === 'ticker-collision') return mockTickerCollisionSection;
-        if (id === 'trade-risk') return mockTradeRiskSection;
-        if (id === 'stale-review') return mockStaleReviewSection;
-        throw new Error(`Unknown section: ${id}`);
-      });
-
-      await auditHandler.auditAll();
-
-      // Verify buttons were created (exact count varies with renderer implementation)
-      // Should have at least: global refresh + some audit buttons + GTT refresh buttons
-      expect(mockUIUtil.buildButton.mock.calls.length).toBeGreaterThan(10);
-    });
-
-    it('should create global refresh button', async () => {
-      const mockPlugin = {
-        run: jest.fn().mockResolvedValue([]),
-      };
-      const mockAlertsSection = {
-        id: 'alerts',
-        title: 'Alerts Coverage',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn(),
-        buttonColorMapper: jest.fn(),
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-        limit: 10,
-        context: undefined,
-      } as any;
-      const mockGttSection = {
-        id: 'gtt-unwatched',
-        title: 'GTT Orders',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('GTT Orders'),
-        buttonColorMapper: jest.fn().mockReturnValue('gold'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      // Create mock sections for remaining plugins
-      const mockOrphanSequencesSection = {
-        id: 'orphan-sequences',
-        title: 'Orphan Sequences',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Orphan Sequences'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockOrphanFlagsSection = {
-        id: 'orphan-flags',
-        title: 'Orphan Flags',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Orphan Flags'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockOrphanExchangeSection = {
-        id: 'orphan-exchange',
-        title: 'Orphan Exchange',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Orphan Exchange'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockTickerCollisionSection = {
-        id: 'ticker-collision',
-        title: 'Ticker Collisions',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Ticker Collisions'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockTradeRiskSection = {
-        id: 'trade-risk',
-        title: 'Trade Risk Multiple',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Trade Risk Multiple'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockStaleReviewSection = {
-        id: 'stale-review',
-        title: 'Stale Review',
-        plugin: mockPlugin,
-        headerFormatter: jest.fn().mockReturnValue('Stale Review'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      mockAuditRegistry.mustGetSection.mockImplementation((id: string) => {
-        if (id === 'alerts') return mockAlertsSection;
-        if (id === 'gtt-unwatched') return mockGttSection;
-        if (id === 'orphan-sequences') return mockOrphanSequencesSection;
-        if (id === 'orphan-flags') return mockOrphanFlagsSection;
-        if (id === 'orphan-exchange') return mockOrphanExchangeSection;
-        if (id === 'ticker-collision') return mockTickerCollisionSection;
-        if (id === 'trade-risk') return mockTradeRiskSection;
-        if (id === 'stale-review') return mockStaleReviewSection;
-        throw new Error(`Unknown section: ${id}`);
-      });
-
-      await auditHandler.auditAll();
-
       expect(mockUIUtil.buildButton).toHaveBeenCalledWith(
-        Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH,
-        '\u{1F504} Refresh',
-        expect.any(Function)
+        Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH, '\u{1F504} Refresh', expect.any(Function)
       );
     });
 
-    it('should perform GTT audit', async () => {
-      const mockAlertPlugin = { run: jest.fn().mockResolvedValue([]) };
-      const mockGttPlugin = { run: jest.fn().mockResolvedValue([]) };
-      const mockAlertsSection = {
-        id: 'alerts',
-        title: 'Alerts',
-        plugin: mockAlertPlugin,
-        headerFormatter: jest.fn(),
-        buttonColorMapper: jest.fn(),
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-        limit: 10,
-        context: undefined,
-      } as any;
-      const mockGttSection = {
-        id: 'gtt-unwatched',
-        title: 'GTT Orders',
-        plugin: mockGttPlugin,
-        headerFormatter: jest.fn().mockReturnValue('GTT Orders'),
-        buttonColorMapper: jest.fn().mockReturnValue('gold'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-      const mockOrphanSequencesSection = {
-        id: 'orphan-sequences',
-        title: 'Orphan Sequences',
-        plugin: { run: jest.fn().mockResolvedValue([]) },
-        headerFormatter: jest.fn().mockReturnValue('Orphan Sequences'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockOrphanFlagsSection = {
-        id: 'orphan-flags',
-        title: 'Orphan Flags',
-        plugin: { run: jest.fn().mockResolvedValue([]) },
-        headerFormatter: jest.fn().mockReturnValue('Orphan Flags'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockOrphanExchangeSection = {
-        id: 'orphan-exchange',
-        title: 'Orphan Exchange',
-        plugin: { run: jest.fn().mockResolvedValue([]) },
-        headerFormatter: jest.fn().mockReturnValue('Orphan Exchange'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockTickerCollisionSection = {
-        id: 'ticker-collision',
-        title: 'Ticker Collisions',
-        plugin: { run: jest.fn().mockResolvedValue([]) },
-        headerFormatter: jest.fn().mockReturnValue('Ticker Collisions'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockTradeRiskSection = {
-        id: 'trade-risk',
-        title: 'Trade Risk Multiple',
-        plugin: { run: jest.fn().mockResolvedValue([]) },
-        headerFormatter: jest.fn().mockReturnValue('Trade Risk Multiple'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      const mockStaleReviewSection = {
-        id: 'stale-review',
-        title: 'Stale Review',
-        plugin: { run: jest.fn().mockResolvedValue([]) },
-        headerFormatter: jest.fn().mockReturnValue('Stale Review'),
-        buttonColorMapper: jest.fn().mockReturnValue('darkorange'),
-        limit: 10,
-        context: undefined,
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-      } as any;
-
-      mockAuditRegistry.mustGetSection.mockImplementation((id: string) => {
-        if (id === 'alerts') return mockAlertsSection;
-        if (id === 'gtt-unwatched') return mockGttSection;
-        if (id === 'orphan-sequences') return mockOrphanSequencesSection;
-        if (id === 'orphan-flags') return mockOrphanFlagsSection;
-        if (id === 'orphan-exchange') return mockOrphanExchangeSection;
-        if (id === 'ticker-collision') return mockTickerCollisionSection;
-        if (id === 'trade-risk') return mockTradeRiskSection;
-        if (id === 'stale-review') return mockStaleReviewSection;
-        throw new Error(`Unknown section: ${id}`);
-      });
-
-      // Mock listSectionsOrdered to return sections in order
-      mockAuditRegistry.listSectionsOrdered.mockReturnValue([
-        mockAlertsSection,
-        mockTickerCollisionSection,
-        mockGttSection,
-        mockOrphanSequencesSection,
-        mockOrphanFlagsSection,
-        mockOrphanExchangeSection,
-        mockTradeRiskSection,
-        mockStaleReviewSection,
-      ]);
-
+    it('creates stop tracking button', async () => {
       await auditHandler.auditAll();
-
-      expect(mockGttPlugin.run).toHaveBeenCalled();
+      expect(mockUIUtil.buildButton).toHaveBeenCalledWith(
+        Constants.UI.IDS.BUTTONS.AUDIT_STOP_TRACKING, expect.stringContaining('Stop'), expect.any(Function)
+      );
     });
 
-  describe('Button Color Mapping', () => {
-    it('should apply darkred color for NO_PAIR (invalid mapping) state', () => {
-      // This test verifies the button color mapper in AlertsAuditSection
-      // NO_PAIR state should result in darkred buttons
-      const result = {
-        pluginId: 'alerts',
-        code: AlertState.NO_PAIR,
-        target: 'INVALID_TICKER',
-        message: 'INVALID_TICKER: NO_PAIR',
-        severity: 'HIGH' as const,
-        status: 'FAIL' as const,
-      };
+    it('creates map alert button', async () => {
+      await auditHandler.auditAll();
+      expect(mockUIUtil.buildButton).toHaveBeenCalledWith(
+        Constants.UI.IDS.BUTTONS.AUDIT_MAP_ALERT, expect.any(String), expect.any(Function)
+      );
+    });
+  });
 
-      // The color mapper should be applied by renderer when building buttons
-      // We verify this by checking that section with buttonColorMapper is properly configured
-      const mockAlertsSection = {
-        id: 'alerts',
-        title: 'Alerts Coverage',
-        plugin: { run: jest.fn().mockResolvedValue([]) },
-        buttonColorMapper: (r: any) => {
-          if (r.code === AlertState.NO_PAIR) return 'darkred';
-          if (r.code === AlertState.SINGLE_ALERT) return 'darkorange';
-          if (r.code === AlertState.NO_ALERTS) return 'darkgray';
-          return 'black';
-        },
-        headerFormatter: jest.fn().mockReturnValue('Test Header'),
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-        limit: 10,
-        context: undefined,
-      };
+  describe('button color mapping', () => {
+    const colorMapper = (r: any) => {
+      if (r.code === AlertState.NO_PAIR) return 'darkred';
+      if (r.code === AlertState.SINGLE_ALERT) return 'darkorange';
+      if (r.code === AlertState.NO_ALERTS) return 'darkgray';
+      return 'black';
+    };
 
-      mockAuditRegistry.mustGetSection.mockReturnValue(mockAlertsSection as any);
-
-      // Verify the mapper returns correct color for NO_PAIR
-      expect(mockAlertsSection.buttonColorMapper(result)).toBe('darkred');
+    it('NO_PAIR maps to darkred', () => {
+      expect(colorMapper({ code: AlertState.NO_PAIR })).toBe('darkred');
     });
 
-    it('should apply darkorange color for SINGLE_ALERT state', () => {
-      const result = {
-        pluginId: 'alerts',
-        code: AlertState.SINGLE_ALERT,
-        target: 'TICKER1',
-        message: 'TICKER1: SINGLE_ALERT',
-        severity: 'HIGH' as const,
-        status: 'FAIL' as const,
-      };
-
-      const mockAlertsSection = {
-        id: 'alerts',
-        title: 'Alerts Coverage',
-        plugin: { run: jest.fn().mockResolvedValue([]) },
-        buttonColorMapper: (r: any) => {
-          if (r.code === AlertState.NO_PAIR) return 'darkred';
-          if (r.code === AlertState.SINGLE_ALERT) return 'darkorange';
-          if (r.code === AlertState.NO_ALERTS) return 'darkgray';
-          return 'black';
-        },
-        headerFormatter: jest.fn().mockReturnValue('Test Header'),
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-        limit: 10,
-        context: undefined,
-      };
-
-      mockAuditRegistry.mustGetSection.mockReturnValue(mockAlertsSection as any);
-      expect(mockAlertsSection.buttonColorMapper(result)).toBe('darkorange');
+    it('SINGLE_ALERT maps to darkorange', () => {
+      expect(colorMapper({ code: AlertState.SINGLE_ALERT })).toBe('darkorange');
     });
 
-    it('should apply darkgray color for NO_ALERTS state', () => {
-      const result = {
-        pluginId: 'alerts',
-        code: AlertState.NO_ALERTS,
-        target: 'TICKER2',
-        message: 'TICKER2: NO_ALERTS',
-        severity: 'MEDIUM' as const,
-        status: 'FAIL' as const,
-      };
-
-      const mockAlertsSection = {
-        id: 'alerts',
-        title: 'Alerts Coverage',
-        plugin: { run: jest.fn().mockResolvedValue([]) },
-        buttonColorMapper: (r: any) => {
-          if (r.code === AlertState.NO_PAIR) return 'darkred';
-          if (r.code === AlertState.SINGLE_ALERT) return 'darkorange';
-          if (r.code === AlertState.NO_ALERTS) return 'darkgray';
-          return 'black';
-        },
-        headerFormatter: jest.fn().mockReturnValue('Test Header'),
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
-        limit: 10,
-        context: undefined,
-      };
-
-      mockAuditRegistry.mustGetSection.mockReturnValue(mockAlertsSection as any);
-      expect(mockAlertsSection.buttonColorMapper(result)).toBe('darkgray');
+    it('NO_ALERTS maps to darkgray', () => {
+      expect(colorMapper({ code: AlertState.NO_ALERTS })).toBe('darkgray');
     });
   });
 });

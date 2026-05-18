@@ -1,7 +1,7 @@
 import { PairInfo } from '../models/alert';
 import { ISmartPrompt } from '../util/smart';
 import { IInvestingClient } from '../client/investing';
-import { IAlertTickerClient } from '../client/alert_ticker';
+import { IAlertTickerManager } from '../manager/alert_ticker';
 import { ISymbolManager } from '../manager/symbol';
 import { ITickerManager } from '../manager/ticker';
 import { Notifier } from '../util/notify';
@@ -28,7 +28,7 @@ export interface IAlertTickerHandler {
 export class AlertTickerHandler implements IAlertTickerHandler {
   constructor(
     private readonly investingClient: IInvestingClient,
-    private readonly alertTickerClient: IAlertTickerClient,
+    private readonly alertTickerManager: IAlertTickerManager,
     private readonly smartPrompt: ISmartPrompt,
     private readonly tickerManager: ITickerManager,
     private readonly symbolManager: ISymbolManager
@@ -53,7 +53,7 @@ export class AlertTickerHandler implements IAlertTickerHandler {
         Notifier.info(`Selected: ${this.formatPair(selectedPair)}`);
 
         const tvTicker = this.tickerManager.getTicker();
-        await this.alertTickerClient.createAlertTicker(tvTicker, {
+        await this.alertTickerManager.createAlertTicker(tvTicker, {
           symbol: selectedPair.symbol,
           pair_id: selectedPair.pairId,
           name: selectedPair.name,

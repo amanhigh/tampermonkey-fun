@@ -30,6 +30,7 @@ describe('AlertsAuditSection', () => {
     };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
+    jest.spyOn(Notifier, 'warn').mockImplementation();
 
     section = new AlertsAuditSection(
       mockPlugin,
