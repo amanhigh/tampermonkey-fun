@@ -2,7 +2,7 @@ import { Constants } from '../models/constant';
 import { IFlagManager } from './flag';
 import { IFnoManager } from './fno';
 import { IPaintManager } from './paint';
-import { ITickerManager } from './ticker';
+import { IDomManager } from './dom';
 import { IWatchManager } from './watch';
 
 /**
@@ -23,13 +23,13 @@ export class HeaderManager implements IHeaderManager {
     private readonly paintManager: IPaintManager,
     private readonly watchManager: IWatchManager,
     private readonly flagManager: IFlagManager,
-    private readonly tickerManager: ITickerManager,
+    private readonly domManager: IDomManager,
     private readonly fnoManager: IFnoManager
   ) {}
 
   /** @inheritdoc */
   paintHeader(): void {
-    const ticker = this.tickerManager.getTicker();
+    const ticker = this.domManager.getTicker();
     const $name = $(Constants.DOM.BASIC.NAME);
 
     // Paint each component

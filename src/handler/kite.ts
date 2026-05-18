@@ -1,6 +1,5 @@
 import { IKiteManager } from '../manager/kite';
-import { ISymbolManager } from '../manager/symbol';
-import { ITickerManager } from '../manager/ticker';
+import { IDomManager } from '../manager/dom';
 import { IWaitUtil } from '../util/wait';
 import { Constants } from '../models/constant';
 import { Order, GttApiResponse } from '../models/kite';
@@ -76,16 +75,15 @@ export class KiteHandler implements IKiteHandler {
    * @param kiteManager - Manager for Kite operations
    * @param symbolManager - Manager for symbol operations
    * @param waitUtil - Utility for waiting operations
-   * @param tickerManager - Manager for ticker operations
+   * @param domManager - Manager for ticker operations
    * @param tvManager - Manager for TradingView operations
    * @param uiUtil - Utility for UI operations
    */
   // eslint-disable-next-line max-params
   constructor(
     private readonly kiteManager: IKiteManager,
-    private readonly symbolManager: ISymbolManager,
     private readonly waitUtil: IWaitUtil,
-    private readonly tickerManager: ITickerManager,
+    private readonly domManager: IDomManager,
     private readonly tvManager: ITradingViewManager,
     private readonly uiUtil: IUIUtil
   ) {}
@@ -119,8 +117,8 @@ export class KiteHandler implements IKiteHandler {
     const order = this.readOrderPanel();
 
     // Build request object in expected format
-    const tvTicker = this.tickerManager.getTicker();
-    const kiteSymbol = this.symbolManager.tvToKite(tvTicker);
+    const tvTicker = this.domManager.getTicker();
+    const kiteSymbol = this.kiteManager.tvToKite(tvTicker);
     const event = new GttCreateEvent(
       kiteSymbol,
       order.qty,
@@ -142,7 +140,7 @@ export class KiteHandler implements IKiteHandler {
   /** @inheritdoc */
   handleDeleteOrderButton($button: JQuery): void {
     const orderId = $button.data('order-id') as string;
-    const symbol = this.tickerManager.getTicker();
+    const symbol = this.domManager.getTicker();
     void this.kiteManager.createGttDeleteEvent(orderId, symbol);
     Notifier.red(`GTT Delete: ${orderId}`);
   }
@@ -155,7 +153,7 @@ export class KiteHandler implements IKiteHandler {
 
   /** @inheritdoc */
   async refreshGttOrders(): Promise<void> {
-    const currentTicker = this.tickerManager.getTicker();
+    const currentTicker = this.domManager.getTicker();
     const gttData = await this.kiteManager.getGttRefereshEvent();
     const ordersForTicker = gttData.getOrdersForTicker(currentTicker);
 
@@ -196,7 +194,7 @@ export class KiteHandler implements IKiteHandler {
     gttResponse.data
       .filter((gtt) => gtt.status === 'active' && gtt.orders?.length > 0)
       .forEach((gtt) => {
-        const symbol = this.symbolManager.kiteToTv(gtt.orders[0].tradingsymbol);
+        const symbol = this.kiteManager.kiteToTv(gtt.orders[0].tradingsymbol);
         const order = new Order(symbol, gtt.orders[0].quantity, gtt.type, gtt.id, gtt.condition.trigger_values);
         refreshEvent.addOrder(symbol, order);
       });

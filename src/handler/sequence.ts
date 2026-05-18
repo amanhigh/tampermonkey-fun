@@ -1,7 +1,6 @@
 import { ISequenceManager } from '../manager/sequence';
-import { ITickerManager } from '../manager/ticker';
-import { ISymbolManager } from '../manager/symbol';
-import { IPairManager } from '../manager/pair';
+import { IDomManager } from '../manager/dom';
+import { IAlertTickerManager } from '../manager/alert_ticker';
 import { Constants } from '../models/constant';
 import { SequenceType } from '../models/trading';
 
@@ -12,19 +11,18 @@ export interface ISequenceHandler {
   /**
    * Handles the sequence switch operation
    */
-  handleSequenceSwitch(): void;
+  handleSequenceSwitch(): Promise<void>;
 
   /**
    * Displays sequence information in the input
    */
-  displaySequence(): void;
+  displaySequence(): Promise<void>;
 
   /**
    * Toggles sequence freeze state
    * Uses current sequence when enabling freeze
-   * @returns Current freeze state after toggle
    */
-  toggleFreezeSequence(): void;
+  toggleFreezeSequence(): Promise<void>;
 }
 
 /**
@@ -33,34 +31,31 @@ export interface ISequenceHandler {
 export class SequenceHandler implements ISequenceHandler {
   constructor(
     private readonly sequenceManager: ISequenceManager,
-    private readonly tickerManager: ITickerManager,
-    private readonly symbolManager: ISymbolManager,
-    private readonly pairManager: IPairManager
+    private readonly domManager: IDomManager,
+    private readonly alertTickerManager: IAlertTickerManager
   ) {}
 
   /** @inheritdoc */
-  handleSequenceSwitch(): void {
-    this.sequenceManager.flipSequence();
+  async handleSequenceSwitch(): Promise<void> {
+    await this.sequenceManager.flipSequence();
     // Update the sequence display
-    this.displaySequence();
+    await this.displaySequence();
   }
 
   /** @inheritdoc */
-  displaySequence(): void {
-    const sequence = this.sequenceManager.getCurrentSequence();
-    const tvTicker = this.tickerManager.getTicker();
-    const investingTicker = this.symbolManager.tvToInvesting(tvTicker);
+  async displaySequence(): Promise<void> {
+    const sequence = await this.sequenceManager.getCurrentSequence();
+    const tvTicker = this.domManager.getTicker();
+    const alertTicker = await this.alertTickerManager.getAlertTicker(tvTicker);
+    const investingTicker = alertTicker?.symbol ?? null;
 
     // Show investingTicker when unmapped, otherwise show tvTicker
     const displayTicker = investingTicker || tvTicker;
     let message = `${displayTicker}:${sequence}`;
 
-    // Add pair name after sequence if mapped
-    if (investingTicker) {
-      const pairInfo = this.pairManager.investingTickerToPairInfo(investingTicker);
-      if (pairInfo && pairInfo.name) {
-        message += `:${pairInfo.name}`;
-      }
+    // Add first alert ticker name after sequence if available
+    if (alertTicker && alertTicker.name) {
+      message += `:${alertTicker.name}`;
     }
 
     const $displayInput = $(`#${Constants.UI.IDS.INPUTS.DISPLAY}`);
@@ -77,7 +72,7 @@ export class SequenceHandler implements ISequenceHandler {
   }
 
   /** @inheritdoc */
-  toggleFreezeSequence(): void {
-    this.sequenceManager.toggleFreezeSequence();
+  async toggleFreezeSequence(): Promise<void> {
+    await this.sequenceManager.toggleFreezeSequence();
   }
 }

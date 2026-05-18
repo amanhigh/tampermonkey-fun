@@ -1,24 +1,28 @@
 import { Constants } from '../models/constant';
 import { TimeFrameConfig, SequenceType, TimeFrame } from '../models/trading';
-import { ISequenceRepo } from '../repo/sequence';
+import { ITickerClient } from '../client/ticker';
+import { TickerTimeframe } from '../models/ticker';
 import { Notifier } from '../util/notify';
 import { Color } from '../models/color';
-import { ITickerManager } from './ticker';
+import { IDomManager } from './dom';
 
 /**
  * Interface for managing sequence operations and state
  */
 export interface ISequenceManager {
   /**
-   * Gets current sequence considering freeze state
-   * @returns Sequence type (MWD or YR)
+   * Gets current sequence considering freeze state.
+   * Reads from backend ticker timeframes: has DL => MWD, otherwise YR.
+   * Falls back by exchange if backend read fails.
+   * @returns Promise resolving to SequenceType (MWD or YR)
    */
-  getCurrentSequence(): SequenceType;
+  getCurrentSequence(): Promise<SequenceType>;
 
   /**
-   * Flips current ticker's sequence between MWD and YR
+   * Flips current ticker's sequence between MWD and YR.
+   * Persists new timeframes to backend.
    */
-  flipSequence(): void;
+  flipSequence(): Promise<void>;
 
   /**
    * Get timeframe for given sequence and index
@@ -29,29 +33,24 @@ export interface ISequenceManager {
   sequenceToTimeFrameConfig(sequence: SequenceType, position: number): TimeFrameConfig;
 
   /**
-   * Toggles sequence freeze state
-   * Uses current sequence when enabling freeze
-   * @returns Current freeze state after toggle
+   * Toggles sequence freeze state.
+   * Uses current sequence when enabling freeze.
    */
-  toggleFreezeSequence(): void;
-
-  /**
-   * Deletes a sequence entry for the given ticker
-   * Used for cleaning up orphan sequence entries
-   * @param tvTicker TradingView ticker to delete sequence for
-   */
-  deleteSequence(tvTicker: string): void;
-
-  /**
-   * Retrieve raw sequence data stored for a ticker (if any)
-   * @param tvTicker TradingView ticker
-   * @returns Stored sequence string or undefined
-   */
-  getSequence(tvTicker: string): string | undefined;
+  toggleFreezeSequence(): Promise<void>;
 }
 
 /**
- * Manages sequence operations and state for trading view timeframes
+ * Maps a SequenceType to the ordered backend timeframe list.
+ */
+const SEQUENCE_TO_TIMEFRAMES: Record<SequenceType, TickerTimeframe[]> = {
+  [SequenceType.MWD]: ['MN', 'WK', 'DL'],
+  [SequenceType.YR]: ['YR', 'SMN', 'TMN', 'MN', 'WK'],
+};
+
+/**
+ * Manages sequence operations and state for trading view timeframes.
+ * Reads sequence from backend ticker timeframes.
+ * No local cache — direct backend reads on every call.
  */
 export class SequenceManager implements ISequenceManager {
   /**
@@ -61,35 +60,45 @@ export class SequenceManager implements ISequenceManager {
   private _frozenSequence: SequenceType | null = null;
 
   /**
-   * @param sequenceRepo Repository for sequence operations
-   * @param tvManager Trading view manager
-   * @param tickerManager Ticker manager
+   * @param tickerClient Client for backend ticker operations
+   * @param domManager Ticker manager for current ticker info
    */
   constructor(
-    private readonly sequenceRepo: ISequenceRepo,
-    private readonly tickerManager: ITickerManager
+    private readonly tickerClient: ITickerClient,
+    private readonly domManager: IDomManager
   ) {}
 
   /** @inheritdoc */
-  getCurrentSequence(): SequenceType {
+  async getCurrentSequence(): Promise<SequenceType> {
     // Return frozen sequence if exists
     if (this._frozenSequence !== null) {
       return this._frozenSequence;
     }
 
-    const ticker = this.tickerManager.getTicker();
-    const exchange = this.tickerManager.getCurrentExchange();
-    const defaultSequence = this._getDefaultSequence(exchange);
+    const ticker = this.domManager.getTicker();
 
-    return this.sequenceRepo.getSequence(ticker, defaultSequence);
+    try {
+      const record = await this.tickerClient.getTicker(ticker);
+      return record.timeframes.includes('DL' as TickerTimeframe) ? SequenceType.MWD : SequenceType.YR;
+    } catch (error) {
+      Notifier.warn(`getCurrentSequence: ${(error as Error).message}. Defaulting to MWD.`);
+      return SequenceType.MWD;
+    }
   }
 
   /** @inheritdoc */
-  flipSequence(): void {
-    const tvTicker = this.tickerManager.getTicker();
-    const currentSequence = this.getCurrentSequence();
+  async flipSequence(): Promise<void> {
+    const tvTicker = this.domManager.getTicker();
+    const currentSequence = await this.getCurrentSequence();
     const sequence = currentSequence === SequenceType.YR ? SequenceType.MWD : SequenceType.YR;
-    void this.sequenceRepo.pinSequence(tvTicker, sequence);
+    const newTimeframes = SEQUENCE_TO_TIMEFRAMES[sequence];
+
+    // Persist to backend — updateTicker merges with current record internally
+    try {
+      await this.tickerClient.updateTicker(tvTicker, { timeframes: newTimeframes });
+    } catch (error) {
+      Notifier.warn(`flipSequence: ${(error as Error).message}. Skipping backend persistence.`);
+    }
   }
 
   /** @inheritdoc */
@@ -106,41 +115,13 @@ export class SequenceManager implements ISequenceManager {
   }
 
   /** @inheritdoc */
-  toggleFreezeSequence(): void {
+  async toggleFreezeSequence(): Promise<void> {
     if (this._frozenSequence !== null) {
       this._frozenSequence = null;
       Notifier.red('🚫 FreezeSequence Disabled');
     } else {
-      this._frozenSequence = this.getCurrentSequence();
+      this._frozenSequence = await this.getCurrentSequence();
       Notifier.message(`FreezeSequence: ${this._frozenSequence}`, Color.ROYAL_BLUE);
     }
-  }
-
-  /**
-   * Deletes a sequence entry for the given ticker
-   * Used for cleaning up orphan sequence entries
-   * @param tvTicker TradingView ticker to delete sequence for
-   */
-  deleteSequence(tvTicker: string): void {
-    this.sequenceRepo.delete(tvTicker);
-  }
-
-  /**
-   * Retrieve raw sequence data stored for a ticker (if any)
-   * @param tvTicker TradingView ticker
-   * @returns Stored sequence string or undefined
-   */
-  getSequence(tvTicker: string): string | undefined {
-    return this.sequenceRepo.get(tvTicker);
-  }
-
-  /**
-   * Get default sequence based on exchange
-   * @private
-   * @param exchange Exchange identifier
-   * @returns Default sequence (MWD or YR)
-   */
-  private _getDefaultSequence(exchange: string): SequenceType {
-    return exchange === Constants.EXCHANGE.TYPES.NSE ? SequenceType.MWD : SequenceType.YR;
   }
 }

@@ -157,35 +157,35 @@ export class KeyConfig implements IKeyConfig {
         '0',
         {
           description: 'Freeze Sequence',
-          action: () => this.sequenceManager.toggleFreezeSequence(),
+          action: () => void this.sequenceManager.toggleFreezeSequence(),
         },
       ],
       [
         '1',
         {
           description: 'VHTF (Very High Timeframe)',
-          action: () => this.timeFrameManager.applyTimeFrame(0),
+          action: () => void this.timeFrameManager.applyTimeFrame(0),
         },
       ],
       [
         '2',
         {
           description: 'HTF (High Timeframe)',
-          action: () => this.timeFrameManager.applyTimeFrame(1),
+          action: () => void this.timeFrameManager.applyTimeFrame(1),
         },
       ],
       [
         '3',
         {
           description: 'ITF (Intermediate Timeframe)',
-          action: () => this.timeFrameManager.applyTimeFrame(2),
+          action: () => void this.timeFrameManager.applyTimeFrame(2),
         },
       ],
       [
         '4',
         {
           description: 'TTF (Trading Timeframe)',
-          action: () => this.timeFrameManager.applyTimeFrame(3),
+          action: () => void this.timeFrameManager.applyTimeFrame(3),
         },
       ],
     ]);

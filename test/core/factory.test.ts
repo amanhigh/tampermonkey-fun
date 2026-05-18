@@ -95,4 +95,14 @@ describe('Factory Client Providers', () => {
     const tickerAgain = Factory.client.ticker();
     expect(ticker).toBe(tickerAgain);
   });
+
+  it('should provide singleton PriceAlertClient', () => {
+    const priceAlert = Factory.client.priceAlert();
+    expect(priceAlert).toBeDefined();
+    expect(priceAlert.getBaseUrl()).toBe('http://localhost:9091/v1/api');
+
+    // Verify singleton behavior
+    const priceAlertAgain = Factory.client.priceAlert();
+    expect(priceAlert).toBe(priceAlertAgain);
+  });
 });

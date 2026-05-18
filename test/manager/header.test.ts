@@ -2,7 +2,7 @@ import { HeaderManager, IHeaderManager } from '../../src/manager/header';
 import { IPaintManager } from '../../src/manager/paint';
 import { IWatchManager } from '../../src/manager/watch';
 import { IFlagManager } from '../../src/manager/flag';
-import { ITickerManager } from '../../src/manager/ticker';
+import { IDomManager } from '../../src/manager/dom';
 import { IFnoManager } from '../../src/manager/fno';
 import { Constants } from '../../src/models/constant';
 
@@ -18,7 +18,7 @@ describe('HeaderManager', () => {
   let mockPaintManager: jest.Mocked<IPaintManager>;
   let mockWatchManager: jest.Mocked<IWatchManager>;
   let mockFlagManager: jest.Mocked<IFlagManager>;
-  let mockTickerManager: jest.Mocked<ITickerManager>;
+  let mockTickerManager: jest.Mocked<IDomManager>;
   let mockFnoManager: jest.Mocked<IFnoManager>;
 
   beforeEach(() => {
@@ -52,7 +52,7 @@ describe('HeaderManager', () => {
       paint: jest.fn(),
     } as jest.Mocked<IFlagManager>;
 
-    // Mock TickerManager
+    // Mock DomManager
     mockTickerManager = {
       getTicker: jest.fn(),
       getCurrentExchange: jest.fn(),

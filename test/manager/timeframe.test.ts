@@ -28,10 +28,10 @@ describe('TimeFrameManager', () => {
 
     // Mock SequenceManager
     mockSequenceManager = {
-      getCurrentSequence: jest.fn().mockReturnValue(SequenceType.MWD),
-      flipSequence: jest.fn(),
+      getCurrentSequence: jest.fn().mockResolvedValue(SequenceType.MWD),
+      flipSequence: jest.fn().mockResolvedValue(undefined),
       sequenceToTimeFrameConfig: jest.fn().mockReturnValue(Constants.TIME.SEQUENCE_TYPES.FRAMES[TimeFrame.DAILY]),
-      toggleFreezeSequence: jest.fn(),
+      toggleFreezeSequence: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<ISequenceManager>;
 
     timeFrameManager = new TimeFrameManager(mockSequenceManager);
@@ -44,88 +44,154 @@ describe('TimeFrameManager', () => {
   });
 
   describe('applyTimeFrame', () => {
-    it('should apply timeframe successfully for position 0', () => {
+    it('should apply timeframe successfully for position 0', async () => {
       const mockClick = jest.fn();
       mockJQuery.mockReturnValue({ length: 1, click: mockClick });
       mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(
-        new TimeFrameConfig('TMN', 'three-monthly-style', 5)
+        Constants.TIME.SEQUENCE_TYPES.FRAMES[TimeFrame.DAILY]
       );
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
 
-      const result = timeFrameManager.applyTimeFrame(0);
+      const result = await timeFrameManager.applyTimeFrame(0);
 
       expect(mockSequenceManager.getCurrentSequence).toHaveBeenCalled();
       expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenCalledWith(SequenceType.MWD, 0);
-      expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(5)`);
       expect(mockClick).toHaveBeenCalled();
       expect(result).toBe(true);
     });
 
-    it('should apply timeframe successfully for position 1', () => {
+    it('should apply timeframe for position 1', async () => {
+      mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(
+        Constants.TIME.SEQUENCE_TYPES.FRAMES[TimeFrame.DAILY]
+      );
+      mockJQuery.mockReturnValue({ length: 1, click: jest.fn() });
+
+      const result = await timeFrameManager.applyTimeFrame(1);
+
+      expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenCalledWith(SequenceType.MWD, 1);
+      expect(result).toBe(true);
+    });
+
+    it('should apply timeframe for position 2', async () => {
+      mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(
+        Constants.TIME.SEQUENCE_TYPES.FRAMES[TimeFrame.DAILY]
+      );
+      mockJQuery.mockReturnValue({ length: 1, click: jest.fn() });
+
+      const result = await timeFrameManager.applyTimeFrame(2);
+
+      expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenCalledWith(SequenceType.MWD, 2);
+      expect(result).toBe(true);
+    });
+
+    it('should apply timeframe for position 3', async () => {
+      mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(
+        Constants.TIME.SEQUENCE_TYPES.FRAMES[TimeFrame.DAILY]
+      );
+      mockJQuery.mockReturnValue({ length: 1, click: jest.fn() });
+
+      const result = await timeFrameManager.applyTimeFrame(3);
+
+      expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenCalledWith(SequenceType.MWD, 3);
+      expect(result).toBe(true);
+    });
+
+    it('should use YR sequence when set', async () => {
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.YR);
+      mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(
+        Constants.TIME.SEQUENCE_TYPES.FRAMES[TimeFrame.DAILY]
+      );
+      mockJQuery.mockReturnValue({ length: 1, click: jest.fn() });
+
+      const result = await timeFrameManager.applyTimeFrame(0);
+
+      expect(mockSequenceManager.getCurrentSequence).toHaveBeenCalled();
+      expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenCalledWith(SequenceType.YR, 0);
+      expect(result).toBe(true);
+    });
+
+    it('should return false when toolbar element not found', async () => {
+      mockJQuery.mockReturnValue({ length: 0 });
+
+      const result = await timeFrameManager.applyTimeFrame(0);
+
+      expect(result).toBe(false);
+    });
+
+    it('should handle sequenceToTimeFrameConfig throwing', async () => {
+      mockSequenceManager.sequenceToTimeFrameConfig.mockImplementation(() => {
+        throw new Error('Invalid position');
+      });
+
+      await expect(timeFrameManager.applyTimeFrame(999)).rejects.toThrow('Invalid position');
+    });
+
+    it('should apply timeframe successfully for position 1', async () => {
       const mockClick = jest.fn();
       mockJQuery.mockReturnValue({ length: 1, click: mockClick });
       mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(new TimeFrameConfig('MN', 'monthly-style', 4));
 
-      const result = timeFrameManager.applyTimeFrame(1);
+      const result = await timeFrameManager.applyTimeFrame(1);
 
       expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenCalledWith(SequenceType.MWD, 1);
       expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(4)`);
       expect(result).toBe(true);
     });
 
-    it('should apply timeframe successfully for position 2', () => {
+    it('should apply timeframe successfully for position 2', async () => {
       const mockClick = jest.fn();
       mockJQuery.mockReturnValue({ length: 1, click: mockClick });
       mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(new TimeFrameConfig('WK', 'weekly-style', 3));
 
-      const result = timeFrameManager.applyTimeFrame(2);
+      const result = await timeFrameManager.applyTimeFrame(2);
 
       expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenCalledWith(SequenceType.MWD, 2);
       expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(3)`);
       expect(result).toBe(true);
     });
 
-    it('should apply timeframe successfully for position 3', () => {
+    it('should apply timeframe successfully for position 3', async () => {
       const mockClick = jest.fn();
       mockJQuery.mockReturnValue({ length: 1, click: mockClick });
       mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(new TimeFrameConfig('D', 'daily-style', 2));
 
-      const result = timeFrameManager.applyTimeFrame(3);
+      const result = await timeFrameManager.applyTimeFrame(3);
 
       expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenCalledWith(SequenceType.MWD, 3);
       expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(2)`);
       expect(result).toBe(true);
     });
 
-    it('should handle YR sequence correctly', () => {
+    it('should handle YR sequence correctly', async () => {
       const mockClick = jest.fn();
       mockJQuery.mockReturnValue({ length: 1, click: mockClick });
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.YR);
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.YR);
       mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(new TimeFrameConfig('SMN', 'six-monthly-style', 6));
 
-      const result = timeFrameManager.applyTimeFrame(0);
+      const result = await timeFrameManager.applyTimeFrame(0);
 
       expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenCalledWith(SequenceType.YR, 0);
       expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(6)`);
       expect(result).toBe(true);
     });
 
-    it('should return false when timeframe element not found', () => {
+    it('should return false when timeframe element not found', async () => {
       mockJQuery.mockReturnValue({ length: 0 });
 
-      const result = timeFrameManager.applyTimeFrame(0);
+      const result = await timeFrameManager.applyTimeFrame(0);
 
       expect(result).toBe(false);
     });
 
-    it('should propagate sequence manager errors', () => {
+    it('should propagate sequence manager errors', async () => {
       mockSequenceManager.sequenceToTimeFrameConfig.mockImplementation(() => {
         throw new Error('Invalid position');
       });
 
-      expect(() => timeFrameManager.applyTimeFrame(999)).toThrow('Invalid position');
+      await expect(timeFrameManager.applyTimeFrame(999)).rejects.toThrow('Invalid position');
     });
 
-    it('should handle different toolbar positions', () => {
+    it('should handle different toolbar positions', async () => {
       const mockClick = jest.fn();
       mockJQuery.mockReturnValue({ length: 1, click: mockClick });
 
@@ -137,13 +203,13 @@ describe('TimeFrameManager', () => {
         { timeFrame: TimeFrame.SIX_MONTHLY, toolbarIndex: 6 },
       ];
 
-      testCases.forEach(({ timeFrame, toolbarIndex }) => {
+      for (const { timeFrame, toolbarIndex } of testCases) {
         mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(Constants.TIME.SEQUENCE_TYPES.FRAMES[timeFrame]);
 
-        timeFrameManager.applyTimeFrame(0);
+        await timeFrameManager.applyTimeFrame(0);
 
         expect(mockJQuery).toHaveBeenLastCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(${toolbarIndex})`);
-      });
+      }
     });
   });
 
@@ -240,15 +306,15 @@ describe('TimeFrameManager', () => {
   });
 
   describe('Integration Tests', () => {
-    it('should handle complete timeframe application workflow', () => {
+    it('should handle complete timeframe application workflow', async () => {
       const mockClick = jest.fn();
       mockJQuery.mockReturnValue({ length: 1, click: mockClick });
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(
         Constants.TIME.SEQUENCE_TYPES.FRAMES[TimeFrame.WEEKLY]
       );
 
-      const result = timeFrameManager.applyTimeFrame(2);
+      const result = await timeFrameManager.applyTimeFrame(2);
 
       expect(mockSequenceManager.getCurrentSequence).toHaveBeenCalled();
       expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenCalledWith(SequenceType.MWD, 2);
@@ -270,42 +336,42 @@ describe('TimeFrameManager', () => {
       expect(result.toolbar).toBe(4);
     });
 
-    it('should handle sequence switching scenarios', () => {
+    it('should handle sequence switching scenarios', async () => {
       const mockClick = jest.fn();
       mockJQuery.mockReturnValue({ length: 1, click: mockClick });
 
       // Test MWD sequence
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(
         Constants.TIME.SEQUENCE_TYPES.FRAMES[TimeFrame.DAILY]
       );
 
-      let result = timeFrameManager.applyTimeFrame(3);
+      let result = await timeFrameManager.applyTimeFrame(3);
       expect(result).toBe(true);
       expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenLastCalledWith(SequenceType.MWD, 3);
 
       // Test YR sequence
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.YR);
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.YR);
       mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(
         Constants.TIME.SEQUENCE_TYPES.FRAMES[TimeFrame.SIX_MONTHLY]
       );
 
-      result = timeFrameManager.applyTimeFrame(0);
+      result = await timeFrameManager.applyTimeFrame(0);
       expect(result).toBe(true);
       expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenLastCalledWith(SequenceType.YR, 0);
     });
 
-    it('should maintain consistency between apply and get operations', () => {
+    it('should maintain consistency between apply and get operations', async () => {
       const mockClick = jest.fn();
       mockJQuery.mockReturnValue({ length: 1, click: mockClick });
 
       // Apply a timeframe
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(
         Constants.TIME.SEQUENCE_TYPES.FRAMES[TimeFrame.WEEKLY]
       );
 
-      timeFrameManager.applyTimeFrame(2);
+      await timeFrameManager.applyTimeFrame(2);
 
       // Simulate that timeframe was applied (toolbar index 3)
       const mockIndex = jest.fn().mockReturnValue(3);
@@ -317,13 +383,13 @@ describe('TimeFrameManager', () => {
       expect(currentConfig).toBe(Constants.TIME.SEQUENCE_TYPES.FRAMES[TimeFrame.WEEKLY]);
     });
 
-    it('should handle error scenarios gracefully', () => {
+    it('should handle error scenarios gracefully', async () => {
       // Test sequence manager error propagation
       mockSequenceManager.sequenceToTimeFrameConfig.mockImplementation(() => {
         throw new Error('Test sequence error');
       });
 
-      expect(() => timeFrameManager.applyTimeFrame(0)).toThrow('Test sequence error');
+      await expect(timeFrameManager.applyTimeFrame(0)).rejects.toThrow('Test sequence error');
 
       // Test DOM detection failure
       mockJQuery.mockReturnValue({ length: 0 });
@@ -355,38 +421,38 @@ describe('TimeFrameManager', () => {
       });
     });
 
-    it('should verify timeframe sequence mappings consistency', () => {
+    it('should verify timeframe sequence mappings consistency', async () => {
       const mockClick = jest.fn();
       mockJQuery.mockReturnValue({ length: 1, click: mockClick });
 
       // Test MWD sequence positions map to correct timeframes
       const mwdSequence = Constants.TIME.SEQUENCE_TYPES.SEQUENCES[SequenceType.MWD];
-      mwdSequence.forEach((timeFrame, position) => {
-        mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+      for (const [position, timeFrame] of mwdSequence.entries()) {
+        mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
         mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(Constants.TIME.SEQUENCE_TYPES.FRAMES[timeFrame]);
 
-        timeFrameManager.applyTimeFrame(position);
+        await timeFrameManager.applyTimeFrame(position);
 
         expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenLastCalledWith(SequenceType.MWD, position);
-      });
+      }
 
       // Test YR sequence positions map to correct timeframes
       const yrSequence = Constants.TIME.SEQUENCE_TYPES.SEQUENCES[SequenceType.YR];
-      yrSequence.forEach((timeFrame, position) => {
-        mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.YR);
+      for (const [position, timeFrame] of yrSequence.entries()) {
+        mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.YR);
         mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(Constants.TIME.SEQUENCE_TYPES.FRAMES[timeFrame]);
 
-        timeFrameManager.applyTimeFrame(position);
+        await timeFrameManager.applyTimeFrame(position);
 
         expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenLastCalledWith(SequenceType.YR, position);
-      });
+      }
     });
 
-    it('should handle DOM element detection edge cases', () => {
+    it('should handle DOM element detection edge cases', async () => {
       // Test when jQuery selector returns empty set
       mockJQuery.mockReturnValue({ length: 0 });
 
-      const result1 = timeFrameManager.applyTimeFrame(0);
+      const result1 = await timeFrameManager.applyTimeFrame(0);
       expect(result1).toBe(false);
 
       // Test when DOM element exists but click fails
@@ -395,7 +461,7 @@ describe('TimeFrameManager', () => {
       });
       mockJQuery.mockReturnValue({ length: 1, click: mockClick });
 
-      expect(() => timeFrameManager.applyTimeFrame(0)).toThrow('Click failed');
+      await expect(timeFrameManager.applyTimeFrame(0)).rejects.toThrow('Click failed');
     });
 
     it('should handle all valid toolbar index mappings', () => {

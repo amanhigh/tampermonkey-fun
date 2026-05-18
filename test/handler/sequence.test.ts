@@ -1,9 +1,9 @@
 import { SequenceHandler } from '../../src/handler/sequence';
 import { ISequenceManager } from '../../src/manager/sequence';
-import { ITickerManager } from '../../src/manager/ticker';
+import { IDomManager } from '../../src/manager/dom';
 import { ISymbolManager } from '../../src/manager/symbol';
-import { IPairManager } from '../../src/manager/pair';
-import { PairInfo } from '../../src/models/alert';
+import { IAlertTickerManager } from '../../src/manager/alert_ticker';
+import { AlertTicker } from '../../src/models/alert_ticker';
 import { SequenceType } from '../../src/models/trading';
 
 // Mock jQuery
@@ -16,16 +16,17 @@ const mockJQuery = jest.fn((_selector: string) => ({
 describe('SequenceHandler', () => {
   let sequenceHandler: SequenceHandler;
   let mockSequenceManager: jest.Mocked<ISequenceManager>;
-  let mockTickerManager: jest.Mocked<ITickerManager>;
+  let mockTickerManager: jest.Mocked<IDomManager>;
   let mockSymbolManager: jest.Mocked<ISymbolManager>;
-  let mockPairManager: jest.Mocked<IPairManager>;
+  let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
   let mockDisplayInput: any;
 
   beforeEach(() => {
     mockSequenceManager = {
-      getCurrentSequence: jest.fn(),
-      flipSequence: jest.fn(),
-      toggleFreezeSequence: jest.fn(),
+      getCurrentSequence: jest.fn().mockResolvedValue(SequenceType.MWD),
+      flipSequence: jest.fn().mockResolvedValue(undefined),
+      sequenceToTimeFrameConfig: jest.fn(),
+      toggleFreezeSequence: jest.fn().mockResolvedValue(undefined),
     } as any;
 
     mockTickerManager = {
@@ -36,8 +37,9 @@ describe('SequenceHandler', () => {
       tvToInvesting: jest.fn(),
     } as any;
 
-    mockPairManager = {
-      investingTickerToPairInfo: jest.fn(),
+    mockAlertTickerManager = {
+      getAlertTickers: jest.fn().mockResolvedValue([]),
+      createAlertTicker: jest.fn(),
     } as any;
 
     mockDisplayInput = {
@@ -51,46 +53,59 @@ describe('SequenceHandler', () => {
       mockSequenceManager,
       mockTickerManager,
       mockSymbolManager,
-      mockPairManager
+      mockAlertTickerManager
     );
   });
 
   describe('displaySequence', () => {
-    it('should display ticker:sequence when ticker is not mapped', () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+    it('should display ticker:sequence when ticker is not mapped', async () => {
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockTickerManager.getTicker.mockReturnValue('TVTICKER');
       mockSymbolManager.tvToInvesting.mockReturnValue(null);
 
-      sequenceHandler.displaySequence();
+      await sequenceHandler.displaySequence();
 
       expect(mockDisplayInput.val).toHaveBeenCalledWith('TVTICKER:MWD');
       expect(mockDisplayInput.css).toHaveBeenCalledWith('background-color', 'maroon');
     });
 
-    it('should display ticker:sequence:PairName when ticker is mapped with pair name', () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.YR);
+    it('should display ticker:sequence:PairName when ticker has alert ticker with name', async () => {
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.YR);
       mockTickerManager.getTicker.mockReturnValue('TVTICKER');
       mockSymbolManager.tvToInvesting.mockReturnValue('INVESTINGTICKER');
-      mockPairManager.investingTickerToPairInfo.mockReturnValue(
-        new PairInfo('NIFTY 50', '123', 'NSE', 'NIFTY')
-      );
+      mockAlertTickerManager.getAlertTickers.mockResolvedValue([
+        { name: 'NIFTY 50', symbol: 'NIFTY', pair_id: '123', exchange: 'NSE' } as AlertTicker,
+      ]);
 
-      sequenceHandler.displaySequence();
+      await sequenceHandler.displaySequence();
 
       expect(mockDisplayInput.val).toHaveBeenCalledWith('INVESTINGTICKER:YR:NIFTY 50');
       expect(mockDisplayInput.css).toHaveBeenCalledWith('background-color', 'blue');
     });
 
-    it('should display ticker:sequence when ticker is mapped but no pair name', () => {
-      mockSequenceManager.getCurrentSequence.mockReturnValue(SequenceType.MWD);
+    it('should display ticker:sequence when no alert ticker name', async () => {
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockTickerManager.getTicker.mockReturnValue('TVTICKER');
       mockSymbolManager.tvToInvesting.mockReturnValue('INVESTINGTICKER');
-      mockPairManager.investingTickerToPairInfo.mockReturnValue(null);
+      mockAlertTickerManager.getAlertTickers.mockResolvedValue([]);
 
-      sequenceHandler.displaySequence();
+      await sequenceHandler.displaySequence();
 
       expect(mockDisplayInput.val).toHaveBeenCalledWith('INVESTINGTICKER:MWD');
       expect(mockDisplayInput.css).toHaveBeenCalledWith('background-color', 'black');
+    });
+  });
+
+  describe('handleSequenceSwitch', () => {
+    it('should flip sequence and display', async () => {
+      mockSequenceManager.flipSequence.mockResolvedValue(undefined);
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
+      mockTickerManager.getTicker.mockReturnValue('TVTICKER');
+      mockSymbolManager.tvToInvesting.mockReturnValue(null);
+
+      await sequenceHandler.handleSequenceSwitch();
+
+      expect(mockSequenceManager.flipSequence).toHaveBeenCalled();
     });
   });
 });

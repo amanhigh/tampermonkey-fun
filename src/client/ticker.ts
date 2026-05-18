@@ -4,7 +4,7 @@ import {
   TickerLastOpenedUpdate,
   TickerListResponse,
   TickerQueryParams,
-  TickerRecord,
+  Ticker,
   TickerUpdateRequest,
 } from '../models/ticker';
 import { KohanEnvelope } from '../models/journal';
@@ -22,22 +22,23 @@ export interface ITickerClient extends IBaseClient {
    * @param data - Ticker creation payload
    * @returns Promise resolving with created ticker
    */
-  createTicker(data: CreateTickerRequest): Promise<TickerRecord>;
+  createTicker(data: CreateTickerRequest): Promise<Ticker>;
 
   /**
    * Retrieve one primary ticker with mapped Alert tickers.
    * @param ticker - Primary ticker identity
    * @returns Promise resolving with ticker record
    */
-  getTicker(ticker: string): Promise<TickerRecord>;
+  getTicker(ticker: string): Promise<Ticker>;
 
   /**
-   * Replace mutable primary ticker metadata.
+   * Update mutable primary ticker metadata. Accepts only the fields to change;
+   * missing fields are merged from the current backend record.
    * @param ticker - Primary ticker identity
-   * @param data - Update payload (exchange, timeframes, type, state, trend, is_fno)
+   * @param data - Partial update payload (exchange, timeframes, type, state, trend, is_fno)
    * @returns Promise resolving with updated ticker
    */
-  updateTicker(ticker: string, data: TickerUpdateRequest): Promise<TickerRecord>;
+  updateTicker(ticker: string, data: TickerUpdateRequest): Promise<Ticker>;
 
   /**
    * Update only the recent-open timestamp.
@@ -45,7 +46,7 @@ export interface ITickerClient extends IBaseClient {
    * @param data - Last opened timestamp payload
    * @returns Promise resolving with updated ticker
    */
-  patchTickerLastOpened(ticker: string, data: TickerLastOpenedUpdate): Promise<TickerRecord>;
+  patchTickerLastOpened(ticker: string, data: TickerLastOpenedUpdate): Promise<Ticker>;
 
   /**
    * Delete a primary ticker (cascades to linked Alert tickers).
@@ -59,7 +60,7 @@ export interface ITickerClient extends IBaseClient {
    * @param params - Query parameters (offset/limit are overridden)
    * @returns Promise resolving with all matching ticker records
    */
-  listTickers(params: TickerQueryParams): Promise<TickerRecord[]>;
+  listTickers(params: TickerQueryParams): Promise<Ticker[]>;
 }
 
 /**
@@ -77,9 +78,9 @@ export class TickerClient extends BaseClient implements ITickerClient {
   // ── Primary Ticker APIs (2.2.1) ──
 
   /** @inheritdoc */
-  async createTicker(data: CreateTickerRequest): Promise<TickerRecord> {
+  async createTicker(data: CreateTickerRequest): Promise<Ticker> {
     try {
-      const response = await this.makeRequest<KohanEnvelope<TickerRecord>>('/tickers', {
+      const response = await this.makeRequest<KohanEnvelope<Ticker>>('/tickers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify(data),
@@ -91,9 +92,9 @@ export class TickerClient extends BaseClient implements ITickerClient {
   }
 
   /** @inheritdoc */
-  async getTicker(ticker: string): Promise<TickerRecord> {
+  async getTicker(ticker: string): Promise<Ticker> {
     try {
-      const response = await this.makeRequest<KohanEnvelope<TickerRecord>>(`/tickers/${encodeURIComponent(ticker)}`);
+      const response = await this.makeRequest<KohanEnvelope<Ticker>>(`/tickers/${encodeURIComponent(ticker)}`);
       return response.data;
     } catch (error) {
       throw new Error(`Failed to get ticker: ${(error as Error).message}`);
@@ -101,12 +102,16 @@ export class TickerClient extends BaseClient implements ITickerClient {
   }
 
   /** @inheritdoc */
-  async updateTicker(ticker: string, data: TickerUpdateRequest): Promise<TickerRecord> {
+  async updateTicker(ticker: string, data: TickerUpdateRequest): Promise<Ticker> {
     try {
-      const response = await this.makeRequest<KohanEnvelope<TickerRecord>>(`/tickers/${encodeURIComponent(ticker)}`, {
+      // Fetch current record to merge partial update fields
+      const record = await this.getTicker(ticker);
+      // Build full mutable payload by overlaying only provided fields
+      const fullData = this.buildFullUpdatePayload(record, data);
+      const response = await this.makeRequest<KohanEnvelope<Ticker>>(`/tickers/${encodeURIComponent(ticker)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        data: JSON.stringify(data),
+        data: JSON.stringify(fullData),
       });
       return response.data;
     } catch (error) {
@@ -115,9 +120,9 @@ export class TickerClient extends BaseClient implements ITickerClient {
   }
 
   /** @inheritdoc */
-  async patchTickerLastOpened(ticker: string, data: TickerLastOpenedUpdate): Promise<TickerRecord> {
+  async patchTickerLastOpened(ticker: string, data: TickerLastOpenedUpdate): Promise<Ticker> {
     try {
-      const response = await this.makeRequest<KohanEnvelope<TickerRecord>>(`/tickers/${encodeURIComponent(ticker)}`, {
+      const response = await this.makeRequest<KohanEnvelope<Ticker>>(`/tickers/${encodeURIComponent(ticker)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify(data),
@@ -140,11 +145,11 @@ export class TickerClient extends BaseClient implements ITickerClient {
   }
 
   /** @inheritdoc */
-  async listTickers(params: TickerQueryParams): Promise<TickerRecord[]> {
+  async listTickers(params: TickerQueryParams): Promise<Ticker[]> {
     const limit = Constants.KOHAN.PAGE_LIMIT;
     let offset = 0;
     let total = 0;
-    const all: TickerRecord[] = [];
+    const all: Ticker[] = [];
     // HACK: Generic pagination helper in BaseClient instead of copy/paste in each method that needs it ?
 
     try {
@@ -161,6 +166,24 @@ export class TickerClient extends BaseClient implements ITickerClient {
     } catch (error) {
       throw new Error(`Failed to list all tickers: ${(error as Error).message}`);
     }
+  }
+
+  /**
+   * Merge a partial TickerUpdateRequest into the current Ticker to produce
+   * the full mutable payload the backend PUT endpoint expects.
+   *
+   * Fields that are `undefined` in the partial request are kept from the record.
+   * Explicit `null` on `exchange` is preserved (clears exchange on backend).
+   */
+  private buildFullUpdatePayload(record: Ticker, partial: TickerUpdateRequest): Required<TickerUpdateRequest> {
+    return {
+      exchange: partial.exchange !== undefined ? partial.exchange : record.exchange,
+      timeframes: partial.timeframes ?? record.timeframes,
+      type: partial.type ?? record.type,
+      state: partial.state ?? record.state,
+      trend: partial.trend ?? record.trend,
+      is_fno: partial.is_fno ?? record.is_fno,
+    };
   }
 
   // ── Private Helpers ──

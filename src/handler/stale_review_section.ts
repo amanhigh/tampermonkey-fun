@@ -3,7 +3,6 @@ import { IAuditSection } from './audit_section';
 import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { ITickerHandler } from './ticker';
-import { IPairHandler } from './pair';
 import { Notifier } from '../util/notify';
 import { Constants } from '../models/constant';
 
@@ -32,10 +31,10 @@ export class StaleReviewSection extends BaseAuditSection implements IAuditSectio
   readonly context: unknown = undefined;
 
   readonly onLeftClick = (result: AuditResult) => {
-    this.tickerHandler.openTicker(result.target);
+    void this.tickerHandler.openTicker(result.target);
   };
 
-  readonly onRightClick = (result: AuditResult): boolean => {
+  readonly onRightClick = async (result: AuditResult): Promise<boolean> => {
     const daysSinceOpen = result.data?.daysSinceOpen as number | undefined;
     const label = daysSinceOpen !== undefined && daysSinceOpen >= 0 ? `${daysSinceOpen} days stale` : 'never opened';
 
@@ -43,18 +42,18 @@ export class StaleReviewSection extends BaseAuditSection implements IAuditSectio
       return false;
     }
 
-    this.pairHandler.stopTrackingByTvTicker(result.target);
+    await this.tickerHandler.stopTracking(result.target);
     return true;
   };
 
-  readonly onFixAll = (results: AuditResult[]): void => {
+  readonly onFixAll = async (results: AuditResult[]): Promise<void> => {
     if (!confirm(`Stop tracking ${results.length} stale ticker(s)?`)) {
       return;
     }
 
-    results.forEach((result) => {
-      this.pairHandler.stopTrackingByTvTicker(result.target);
-    });
+    for (const result of results) {
+      await this.tickerHandler.stopTracking(result.target);
+    }
     Notifier.success(`⏹ Stopped tracking ${results.length} stale ticker(s)`);
   };
 
@@ -67,8 +66,7 @@ export class StaleReviewSection extends BaseAuditSection implements IAuditSectio
 
   constructor(
     plugin: IAudit,
-    private readonly tickerHandler: ITickerHandler,
-    private readonly pairHandler: IPairHandler
+    private readonly tickerHandler: ITickerHandler
   ) {
     super();
     this.plugin = plugin;

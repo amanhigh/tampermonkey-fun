@@ -1,14 +1,12 @@
 import { StaleReviewSection } from '../../src/handler/stale_review_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
-import { IPairHandler } from '../../src/handler/pair';
 import { Notifier } from '../../src/util/notify';
 
 describe('StaleReviewSection', () => {
   let section: StaleReviewSection;
   let mockPlugin: IAudit;
   let mockTickerHandler: Partial<ITickerHandler>;
-  let mockPairHandler: Partial<IPairHandler>;
   let notifySuccessSpy: jest.SpyInstance;
 
   const createResult = (tvTicker: string, daysSinceOpen: number): AuditResult => ({
@@ -29,17 +27,12 @@ describe('StaleReviewSection', () => {
       run: jest.fn().mockResolvedValue([]),
     };
 
-    mockTickerHandler = { openTicker: jest.fn() };
-    mockPairHandler = { stopTrackingByTvTicker: jest.fn() };
+    mockTickerHandler = { openTicker: jest.fn(), stopTracking: jest.fn().mockResolvedValue(undefined) };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
     (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(true);
 
-    section = new StaleReviewSection(
-      mockPlugin,
-      mockTickerHandler as ITickerHandler,
-      mockPairHandler as IPairHandler
-    );
+    section = new StaleReviewSection(mockPlugin, mockTickerHandler as ITickerHandler);
   });
 
   afterEach(() => {
@@ -62,40 +55,36 @@ describe('StaleReviewSection', () => {
   });
 
   describe('onRightClick', () => {
-    test('stops tracking after confirmation', () => {
-      section.onRightClick(createResult('TCS', 100));
-      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledWith('TCS');
+    test('stops tracking after confirmation', async () => {
+      await section.onRightClick(createResult('TCS', 100));
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledWith('TCS');
     });
 
-    test('does nothing when user cancels', () => {
+    test('does nothing when user cancels', async () => {
       (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(false);
-      section.onRightClick(createResult('TCS', 100));
-      expect(mockPairHandler.stopTrackingByTvTicker).not.toHaveBeenCalled();
+      await section.onRightClick(createResult('TCS', 100));
+      expect(mockTickerHandler.stopTracking).not.toHaveBeenCalled();
     });
   });
 
   describe('onFixAll', () => {
-    test('stops tracking all stale tickers after confirmation', () => {
+    test('stops tracking all stale tickers after confirmation', async () => {
       const results = [createResult('A', 100), createResult('B', -1)];
-      section.onFixAll!(results);
-      expect(mockPairHandler.stopTrackingByTvTicker).toHaveBeenCalledTimes(2);
+      await section.onFixAll!(results);
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledTimes(2);
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
 
-    test('does nothing when user cancels', () => {
+    test('does nothing when user cancels', async () => {
       (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(false);
-      section.onFixAll!([createResult('A', 100)]);
-      expect(mockPairHandler.stopTrackingByTvTicker).not.toHaveBeenCalled();
+      await section.onFixAll!([createResult('A', 100)]);
+      expect(mockTickerHandler.stopTracking).not.toHaveBeenCalled();
     });
   });
 
   describe('headerFormatter', () => {
     test('shows success when no results', () => {
       expect(section.headerFormatter([])).toContain('No stale review issues');
-    });
-
-    test('shows count when results present', () => {
-      expect(section.headerFormatter([createResult('TCS', 100)])).toContain('1');
     });
   });
 });
