@@ -1,5 +1,4 @@
 import { IKiteManager } from '../manager/kite';
-import { ISymbolManager } from '../manager/symbol';
 import { IDomManager } from '../manager/dom';
 import { IWaitUtil } from '../util/wait';
 import { Constants } from '../models/constant';
@@ -83,7 +82,6 @@ export class KiteHandler implements IKiteHandler {
   // eslint-disable-next-line max-params
   constructor(
     private readonly kiteManager: IKiteManager,
-    private readonly symbolManager: ISymbolManager,
     private readonly waitUtil: IWaitUtil,
     private readonly tickerManager: IDomManager,
     private readonly tvManager: ITradingViewManager,
@@ -120,7 +118,7 @@ export class KiteHandler implements IKiteHandler {
 
     // Build request object in expected format
     const tvTicker = this.tickerManager.getTicker();
-    const kiteSymbol = this.symbolManager.tvToKite(tvTicker);
+    const kiteSymbol = this.kiteManager.tvToKite(tvTicker);
     const event = new GttCreateEvent(
       kiteSymbol,
       order.qty,
@@ -196,7 +194,7 @@ export class KiteHandler implements IKiteHandler {
     gttResponse.data
       .filter((gtt) => gtt.status === 'active' && gtt.orders?.length > 0)
       .forEach((gtt) => {
-        const symbol = this.symbolManager.kiteToTv(gtt.orders[0].tradingsymbol);
+        const symbol = this.kiteManager.kiteToTv(gtt.orders[0].tradingsymbol);
         const order = new Order(symbol, gtt.orders[0].quantity, gtt.type, gtt.id, gtt.condition.trigger_values);
         refreshEvent.addOrder(symbol, order);
       });

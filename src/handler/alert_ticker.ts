@@ -2,7 +2,6 @@ import { PairInfo } from '../models/alert';
 import { ISmartPrompt } from '../util/smart';
 import { IInvestingClient } from '../client/investing';
 import { IAlertTickerManager } from '../manager/alert_ticker';
-import { ISymbolManager } from '../manager/symbol';
 import { IDomManager } from '../manager/dom';
 import { Notifier } from '../util/notify';
 
@@ -30,8 +29,7 @@ export class AlertTickerHandler implements IAlertTickerHandler {
     private readonly investingClient: IInvestingClient,
     private readonly alertTickerManager: IAlertTickerManager,
     private readonly smartPrompt: ISmartPrompt,
-    private readonly tickerManager: IDomManager,
-    private readonly symbolManager: ISymbolManager
+    private readonly tickerManager: IDomManager
   ) {}
 
   /** @inheritdoc */
@@ -53,13 +51,12 @@ export class AlertTickerHandler implements IAlertTickerHandler {
         Notifier.info(`Selected: ${this.formatPair(selectedPair)}`);
 
         const tvTicker = this.tickerManager.getTicker();
-        await this.alertTickerManager.createAlertTicker(tvTicker, {
+        await this.alertTickerManager.linkAlertTicker(tvTicker, {
           symbol: selectedPair.symbol,
           pair_id: selectedPair.pairId,
           name: selectedPair.name,
           exchange: selectedPair.exchange,
         });
-        this.symbolManager.createTvToInvestingMapping(tvTicker, selectedPair.symbol);
       } else {
         Notifier.warn(`Invalid selection for ${searchQuery} on ${exchange}, cant map Pair.`);
       }

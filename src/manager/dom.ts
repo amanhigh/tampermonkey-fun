@@ -2,6 +2,7 @@ import { Constants } from '../models/constant';
 import { IWaitUtil } from '../util/wait';
 import { ITradingViewScreenerManager } from './screener';
 import { ISymbolManager } from './symbol';
+import { IAlertTickerManager } from './alert_ticker';
 import { ITradingViewWatchlistManager } from './watchlist';
 
 /**
@@ -61,16 +62,10 @@ export interface IDomManager {
  * Manages all ticker operations including retrieval, mapping, navigation and selection
  */
 export class DomManager implements IDomManager {
-  /**
-   * Manages all ticker operations including retrieval, mapping, navigation and selection
-   * @param waitUtil DOM operation manager
-   * @param symbolManager Manager for symbol operations
-   * @param screenerManager Manager for screener operations
-   * @param watchlistManager Manager for watchlist operations
-   */
   constructor(
     private readonly waitUtil: IWaitUtil,
     private readonly symbolManager: ISymbolManager,
+    private readonly alertTickerManager: IAlertTickerManager,
     private readonly screenerManager: ITradingViewScreenerManager,
     private readonly watchlistManager: ITradingViewWatchlistManager
   ) {}
@@ -94,13 +89,14 @@ export class DomManager implements IDomManager {
   }
 
   /** @inheritdoc */
-  getInvestingTicker(): string {
+  async getInvestingTicker(): Promise<string> {
+    // HACK: Remove out of this as its not pure DOM
     const tvTicker = this.getTicker();
-    const investingTicker = this.symbolManager.tvToInvesting(tvTicker);
-    if (!investingTicker) {
+    const alertTicker = await this.alertTickerManager.getAlertTicker(tvTicker);
+    if (!alertTicker) {
       throw new Error(`Investing ticker not found for ${tvTicker}`);
     }
-    return investingTicker;
+    return alertTicker.symbol;
   }
 
   /** @inheritdoc */
@@ -159,7 +155,7 @@ export class DomManager implements IDomManager {
   /**
    * Gets currently visible tickers based on active view
    * @private
-   * @returns {string[]} Array of visible ticker symbols
+   * @returns Array of visible ticker symbols
    */
   private getVisibleSelectedTickers(): string[] {
     return this.screenerManager.isScreenerVisible()

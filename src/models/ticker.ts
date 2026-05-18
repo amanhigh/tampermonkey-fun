@@ -14,6 +14,8 @@ export type TickerTrend = 'UPTREND' | 'SIDEWAYS' | 'DOWNTREND';
 
 import { AlertTicker } from './alert_ticker';
 
+import { Constants } from './constant';
+
 // ── Primary Ticker Types ──
 
 /** Full primary ticker record returned by the API (matches go-fun models/barkat/ticker.go Ticker). */
@@ -84,4 +86,27 @@ export interface TickerListResponse {
     offset: number;
     limit: number;
   };
+}
+
+/**
+ * Formats a TickerRecord to exchange-qualified form ("EXCHANGE:ticker").
+ * Returns raw ticker when exchange is absent.
+ */
+export function qualifiedTicker(record: TickerRecord): string {
+  return record.exchange ? `${record.exchange}:${record.ticker}` : record.ticker;
+}
+
+/**
+ * Checks if a symbol is a composite symbol containing special characters
+ * like '/', '*', '-', ':' or matching special-case composite tickers.
+ * @param symbol Symbol to check
+ * @returns True if symbol is composite
+ */
+export function isCompositeSymbol(symbol: string): boolean {
+  // FIXME: Use Backend Composite Type and Thong Logic.
+  const normalized = symbol.toUpperCase();
+  if (Constants.COMPOSITE.SPECIAL_TICKERS.includes(normalized)) {
+    return true;
+  }
+  return Constants.COMPOSITE.CHARACTERS.some((char) => symbol.includes(char));
 }
