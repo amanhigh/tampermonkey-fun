@@ -22,7 +22,7 @@ import { Barkat } from './barkat';
 import { RepoCron, IRepoCron } from '../repo/cron';
 import { IFlagRepo, FlagRepo } from '../repo/flag';
 import { IWatchlistRepo, Watchlistrepo } from '../repo/watch';
-import { ITickerRepo, TickerRepo } from '../repo/ticker';
+// TickerRepo removed — audit plugins use Manager/Client now
 
 // Manager Layer Imports
 import { ITimeFrameManager, TimeFrameManager } from '../manager/timeframe';
@@ -76,16 +76,11 @@ import { AuditSectionRegistry } from '../util/audit_registry';
 import { AlertsPlugin } from '../manager/alerts_plugin';
 import { GttPlugin } from '../manager/gtt_plugin';
 
-import { OrphanFlagsPlugin } from '../manager/orphan_flags_plugin';
 import { TradeRiskPlugin } from '../manager/trade_risk_plugin';
-import { TickerCollisionPlugin } from '../manager/ticker_collision_plugin';
 import { AlertsAuditSection } from '../handler/alerts_section';
 import { GttAuditSection } from '../handler/gtt_section';
 
-import { OrphanFlagsSection } from '../handler/orphan_flags_section';
-import { TickerCollisionSection } from '../handler/ticker_collision_section';
 import { TradeRiskSection } from '../handler/trade_risk_section';
-import { CanonicalRanker, ICanonicalRanker } from '../manager/canonical_ranker';
 import { StaleReviewPlugin } from '../manager/stale_review_plugin';
 import { StaleReviewSection } from '../handler/stale_review_section';
 
@@ -176,7 +171,6 @@ export class Factory {
 
     flag: (): IFlagRepo => Factory.getInstance('flagRepo', () => new FlagRepo(Factory.repo.cron())),
     watch: (): IWatchlistRepo => Factory.getInstance('watchRepo', () => new Watchlistrepo(Factory.repo.cron())),
-    ticker: (): ITickerRepo => Factory.getInstance('tickerRepo', () => new TickerRepo(Factory.repo.cron())),
     kite: (): IKiteRepo => Factory.getInstance('kiteRepo', () => new KiteRepo()),
     imdb: (): IImdbRepo => Factory.getInstance('imdbRepo', () => new ImdbRepo()),
   };
@@ -302,17 +296,6 @@ export class Factory {
         'alertFeedManager',
         () => new AlertFeedManager(Factory.manager.alertTicker(), Factory.manager.watch(), Factory.manager.recent())
       ),
-    canonicalRanker: (): ICanonicalRanker =>
-      Factory.getInstance(
-        'canonicalRanker',
-        () =>
-          new CanonicalRanker({
-            watchManager: Factory.manager.watch(),
-            recentManager: Factory.manager.recent(),
-            tickerClient: Factory.client.ticker(),
-            alertTickerManager: Factory.manager.alertTicker(),
-          })
-      ),
   };
 
   /**
@@ -342,16 +325,7 @@ export class Factory {
         () => new GttPlugin(Factory.repo.kite(), Factory.manager.watch())
       ),
 
-    // Return a singleton OrphanFlagsPlugin instance
-    orphanFlags: () =>
-      Factory.getInstance(
-        'auditPlugin_orphanFlags',
-        () => new OrphanFlagsPlugin(Factory.repo.flag(), Factory.repo.ticker())
-      ),
-
-    // Return a singleton TickerCollisionPlugin instance
-    tickerCollision: () =>
-      Factory.getInstance('auditPlugin_tickerCollision', () => new TickerCollisionPlugin(Factory.repo.ticker())),
+    // OrphanFlagsPlugin and TickerCollisionPlugin retired per PRD audit.md §4.2.2
 
     // Return a singleton TradeRiskPlugin instance
     tradeRisk: () => Factory.getInstance('auditPlugin_tradeRisk', () => new TradeRiskPlugin(Factory.repo.kite())),
@@ -360,7 +334,7 @@ export class Factory {
     staleReview: () =>
       Factory.getInstance(
         'auditPlugin_staleReview',
-        () => new StaleReviewPlugin(Factory.manager.recent(), Factory.repo.ticker(), Factory.manager.watch())
+        () => new StaleReviewPlugin(Factory.manager.recent(), Factory.manager.ticker(), Factory.manager.watch())
       ),
 
     // ===== SECTION CREATION =====
@@ -382,26 +356,6 @@ export class Factory {
             Factory.handler.ticker(),
             Factory.manager.kite(), // ✅ KiteManager for GTT order deletion
             Factory.util.ui()
-          )
-      ),
-
-    // Orphan Flags Audit Section (FR-012)
-    orphanFlagsSection: () =>
-      Factory.getInstance(
-        'orphanFlagsSection',
-        () => new OrphanFlagsSection(Factory.audit.orphanFlags(), Factory.handler.ticker())
-      ),
-
-    // Ticker Collision Audit Section (FR-015)
-    tickerCollisionSection: () =>
-      Factory.getInstance(
-        'tickerCollisionSection',
-        () =>
-          new TickerCollisionSection(
-            Factory.audit.tickerCollision(),
-            Factory.handler.ticker(),
-            Factory.manager.alertTicker(),
-            Factory.manager.canonicalRanker()
           )
       ),
 
@@ -428,8 +382,6 @@ export class Factory {
         // Register all sections
         reg.registerSection(Factory.audit.alertsSection());
         reg.registerSection(Factory.audit.gttSection());
-        reg.registerSection(Factory.audit.orphanFlagsSection());
-        reg.registerSection(Factory.audit.tickerCollisionSection());
         reg.registerSection(Factory.audit.tradeRiskSection());
         reg.registerSection(Factory.audit.staleReviewSection());
 
