@@ -144,6 +144,7 @@ export class PriceAlertClient extends BaseClient implements IPriceAlertClient {
       return [[]];
     }
 
+    // HACK: Further Simplify Batching Logic.
     const byPairID = new Map<string, PriceAlertInput[]>();
     for (const alert of alerts) {
       const group = byPairID.get(alert.pair_id);

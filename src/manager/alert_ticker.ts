@@ -55,6 +55,7 @@ export class AlertTickerManager implements IAlertTickerManager {
   /** @inheritdoc */
   async getAlertTicker(tvTicker: string): Promise<AlertTicker | null> {
     const tickers = await this.alertTickerClient.listAlertTickers({ ticker: tvTicker });
+    // FIXME: Better Default than first
     return tickers[0] ?? null;
   }
 
