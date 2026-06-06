@@ -48,7 +48,6 @@ describe('HeaderManager', () => {
     mockFlagManager = {
       getCategory: jest.fn(),
       recordCategory: jest.fn(),
-      evictTicker: jest.fn(),
       paint: jest.fn(),
     } as jest.Mocked<IFlagManager>;
 

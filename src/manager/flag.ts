@@ -5,19 +5,21 @@ import { IPaintManager } from './paint';
 import { Notifier } from '../util/notify';
 
 /**
- * Interface for managing flag-based ticker categories
+ * Interface for managing flag-based ticker categories.
+ * paint() fetches fresh backend data every call. getCategory() returns the last
+ * paint snapshot for synchronous compatibility.
  */
 export interface IFlagManager {
   /**
-   * Gets flag category set by index
-   * @param categoryIndex Category index
-   * @returns Set of symbols in category
+   * Gets flag category set by index from the last paint snapshot.
+   * Returns empty set if no paint has run yet.
+   * @param categoryIndex Category index (0-7)
    */
   getCategory(categoryIndex: number): Set<string>;
 
   /**
    * Records selected tickers in flag category.
-   * For supported categories this fires an async backend ticker update.
+   * Fires async backend ticker update per ticker.
    * Category 3 and 5 are unused and produce a warning.
    * @param categoryIndex Category index to record into
    * @param tvTickers List of selected tickers
@@ -25,15 +27,8 @@ export interface IFlagManager {
   recordCategory(categoryIndex: number, tvTickers: string[]): void;
 
   /**
-   * Evicts ticker from all flag categories if present.
-   * Does not persist backend state — just removes from display cache.
-   * @param tvTicker Ticker to evict
-   * @returns True if ticker was found and removed, false if not found
-   */
-  evictTicker(tvTicker: string): boolean;
-
-  /**
-   * Paint flag indicators based on category colors
+   * Paint flag indicators based on backend ticker data.
+   * Fetches fresh listTickers({}) every call.
    * @param selector Selector for ticker elements
    * @param itemSelector Selector for item container
    */
@@ -69,16 +64,19 @@ const UNSUPPORTED_CATEGORIES = new Set([3, 5]);
  */
 const CATEGORY_PRIORITY = [7, 2, 6, 4, 0, 1];
 
+const TOTAL_CATEGORIES = 8;
+
 /**
- * Manages flag-based sets of tickers using a backend-backed cache.
- * Cache is loaded asynchronously on construction from TickerClient.
- * All public read methods are synchronous cache reads.
+ * Manages flag-based sets of tickers using backend calls per paint.
+ * No persistent cache — paint() fetches fresh data every time.
+ * getCategory() returns the last paint snapshot for synchronous consumers.
  */
 export class FlagManager implements IFlagManager {
-  /** Display-priority-ordered cache: index → set of ticker strings. */
-  private readonly cache: Map<number, Set<string>> = new Map();
-
-  private readonly TOTAL_CATEGORIES = 8;
+  /**
+   * Snapshot from the last paint call.
+   * categoryIndex → set of ticker strings.
+   */
+  private lastPaintGroups: Map<number, Set<string>> = new Map();
 
   /**
    * @param tickerClient Client for backend ticker CRUD
@@ -89,36 +87,12 @@ export class FlagManager implements IFlagManager {
     private readonly paintManager: IPaintManager
   ) {
     // Initialize empty sets for all categories
-    for (let i = 0; i < this.TOTAL_CATEGORIES; i++) {
-      this.cache.set(i, new Set());
-    }
-    void this.loadCache();
-  }
-
-  // ── Cache Loading ──
-
-  /**
-   * Loads all tickers from backend and indexes them into category sets.
-   * Fire-and-forget; cache stays empty on failure.
-   */
-  private async loadCache(): Promise<void> {
-    try {
-      const tickers = await this.tickerClient.listTickers({});
-      // Reset cache
-      for (const [, set] of this.cache) {
-        set.clear();
-      }
-      // Classify each ticker into one display category
-      for (const ticker of tickers) {
-        const category = this.resolveCategory(ticker);
-        if (category >= 0) {
-          this.cache.get(category)?.add(ticker.ticker);
-        }
-      }
-    } catch {
-      // Cache stays empty on failure — retry on next operation
+    for (let i = 0; i < TOTAL_CATEGORIES; i++) {
+      this.lastPaintGroups.set(i, new Set());
     }
   }
+
+  // ── Category Mapping Helpers ──
 
   /**
    * Resolves a ticker to its display flag category index.
@@ -169,16 +143,16 @@ export class FlagManager implements IFlagManager {
 
   /** @inheritdoc */
   getCategory(categoryIndex: number): Set<string> {
-    if (categoryIndex < 0 || categoryIndex >= this.TOTAL_CATEGORIES) {
-      throw new Error(`Invalid category index: ${categoryIndex}. Must be between 0 and ${this.TOTAL_CATEGORIES - 1}`);
+    if (categoryIndex < 0 || categoryIndex >= TOTAL_CATEGORIES) {
+      throw new Error(`Invalid category index: ${categoryIndex}. Must be between 0 and ${TOTAL_CATEGORIES - 1}`);
     }
-    return this.cache.get(categoryIndex) ?? new Set();
+    return this.lastPaintGroups.get(categoryIndex) ?? new Set();
   }
 
   /** @inheritdoc */
   recordCategory(categoryIndex: number, tvTickers: string[]): void {
-    if (categoryIndex < 0 || categoryIndex >= this.TOTAL_CATEGORIES) {
-      throw new Error(`Invalid category index: ${categoryIndex}. Must be between 0 and ${this.TOTAL_CATEGORIES - 1}`);
+    if (categoryIndex < 0 || categoryIndex >= TOTAL_CATEGORIES) {
+      throw new Error(`Invalid category index: ${categoryIndex}. Must be between 0 and ${TOTAL_CATEGORIES - 1}`);
     }
 
     if (UNSUPPORTED_CATEGORIES.has(categoryIndex)) {
@@ -187,14 +161,7 @@ export class FlagManager implements IFlagManager {
     }
 
     for (const ticker of tvTickers) {
-      // Remove from all categories first (mutual exclusivity)
-      for (const [, set] of this.cache) {
-        set.delete(ticker);
-      }
-      // Add to target category cache
-      this.cache.get(categoryIndex)?.add(ticker);
-
-      // Fire async backend update
+      // Fire async backend update — no local cache mutation
       void this.updateBackend(ticker, categoryIndex);
     }
   }
@@ -221,25 +188,50 @@ export class FlagManager implements IFlagManager {
   }
 
   /** @inheritdoc */
-  evictTicker(tvTicker: string): boolean {
-    let removed = false;
-    for (const [, set] of this.cache) {
-      if (set.has(tvTicker)) {
-        set.delete(tvTicker);
-        removed = true;
-      }
-    }
-    return removed;
+  paint(selector: string, itemSelector: string): void {
+    void this.paintFromBackend(selector, itemSelector);
   }
 
-  /** @inheritdoc */
-  paint(selector: string, itemSelector: string): void {
-    const colorList = Constants.UI.COLORS.LIST;
+  /**
+   * Fetches fresh ticker data from backend, groups by flag category,
+   * paints all flag indicators.
+   */
+  private async paintFromBackend(selector: string, itemSelector: string): Promise<void> {
+    try {
+      const tickers = await this.tickerClient.listTickers({});
+      const freshGroups = this.groupTickersByCategory(tickers);
 
-    for (let i = 0; i < colorList.length; i++) {
-      const color = colorList[i];
-      const flagSymbols = this.getCategory(i);
-      this.paintManager.paintFlags(selector, flagSymbols, color, itemSelector);
+      // Update snapshot for sync getCategory() consumers
+      this.lastPaintGroups = freshGroups;
+
+      // Paint flags for each category
+      const colorList = Constants.UI.COLORS.LIST;
+      for (let i = 0; i < colorList.length; i++) {
+        const color = colorList[i];
+        const flagSymbols = freshGroups.get(i) ?? new Set();
+        this.paintManager.paintFlags(selector, flagSymbols, color, itemSelector);
+      }
+    } catch {
+      // If backend call fails, paint nothing new
     }
+  }
+
+  /**
+   * Groups fresh ticker records into flag category sets.
+   */
+  private groupTickersByCategory(tickers: Ticker[]): Map<number, Set<string>> {
+    const groups = new Map<number, Set<string>>();
+    for (let i = 0; i < TOTAL_CATEGORIES; i++) {
+      groups.set(i, new Set());
+    }
+
+    for (const ticker of tickers) {
+      const category = this.resolveCategory(ticker);
+      if (category >= 0) {
+        groups.get(category)?.add(ticker.ticker);
+      }
+    }
+
+    return groups;
   }
 }
