@@ -4,10 +4,8 @@ import { IWaitUtil } from '../../src/util/wait';
 import { IDomManager } from '../../src/manager/dom';
 import { ITradingViewManager } from '../../src/manager/tv';
 import { IUIUtil } from '../../src/util/ui';
-import { Constants } from '../../src/models/constant';
 
 describe('KiteHandler', () => {
-  let kiteHandler: KiteHandler;
   let kiteManagerMock: jest.Mocked<IKiteManager>;
   let waitUtilMock: jest.Mocked<IWaitUtil>;
   let tickerManagerMock: jest.Mocked<IDomManager>;
@@ -38,22 +36,13 @@ describe('KiteHandler', () => {
     uiUtilMock = {
       buildButton: jest.fn(),
     } as any;
-
-    kiteHandler = new KiteHandler(
-      kiteManagerMock,
-      waitUtilMock,
-      tickerManagerMock,
-      tvManagerMock,
-      uiUtilMock
-    );
-
-    // Mock Constants.TRADING.ORDER.RISK_LIMIT
-    Object.defineProperty(Constants.TRADING.ORDER, 'RISK_LIMIT', { value: 1000 });
   });
 
-  describe('calculateQuantity', () => {
-    it('should calculate quantity correctly', () => {
-      // ... existing tests
-    });
+  it('should create instance with all dependencies', () => {
+    const handler = new KiteHandler(
+      kiteManagerMock, waitUtilMock, tickerManagerMock, tvManagerMock, uiUtilMock
+    );
+    expect(handler).toBeDefined();
+    expect(handler).toBeInstanceOf(KiteHandler);
   });
 });

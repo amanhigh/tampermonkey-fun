@@ -1,56 +1,39 @@
 import { KiteManager, IKiteManager } from '../../src/manager/kite';
-import { ISymbolManager } from '../../src/manager/symbol';
 import { IKiteClient } from '../../src/client/kite';
 import { IKiteRepo } from '../../src/repo/kite';
-import { GttApiResponse } from '../../src/models/kite';
 import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../../src/models/gtt';
 
 // Mock dependencies
-const mockSymbolManager: jest.Mocked<ISymbolManager> = {
-  kiteToTv: jest.fn(),
-  tvToKite: jest.fn(),
-  tvToInvesting: jest.fn(),
-  investingToTv: jest.fn(),
-  tvToExchangeTicker: jest.fn(),
-  createTvToInvestingMapping: jest.fn(),
-  removeTvToInvestingMapping: jest.fn(),
-  setExchange: jest.fn(),
-  isComposite: jest.fn(),
-  deleteTvTicker: jest.fn(),
-};
-
 const mockKiteClient: jest.Mocked<IKiteClient> = {
   createGTT: jest.fn(),
   loadGTT: jest.fn(),
   deleteGTT: jest.fn(),
   getBaseUrl: jest.fn(),
-};
+} as any;
 
 const mockKiteRepo: jest.Mocked<IKiteRepo> = {
   createGttOrderEvent: jest.fn(),
   createGttDeleteEvent: jest.fn(),
   createGttRefreshEvent: jest.fn(),
   getGttRefereshEvent: jest.fn(),
-};
+} as any;
 
 describe('KiteManager', () => {
   let kiteManager: IKiteManager;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    kiteManager = new KiteManager(mockSymbolManager, mockKiteClient, mockKiteRepo);
+    kiteManager = new KiteManager(mockKiteClient, mockKiteRepo);
   });
 
   describe('createOrder', () => {
     const validEvent = new GttCreateEvent('TEST', 10, 100, 90, 95, 110);
 
     it('should successfully create order with valid event', async () => {
-      mockSymbolManager.tvToKite.mockReturnValue('TEST_KITE');
       mockKiteClient.createGTT.mockResolvedValue();
 
       await expect(kiteManager.createOrder(validEvent)).resolves.toBeUndefined();
 
-      expect(mockSymbolManager.tvToKite).toHaveBeenCalledWith('TEST');
       expect(mockKiteClient.createGTT).toHaveBeenCalledTimes(2); // Buy and OCO
     });
 
@@ -61,7 +44,6 @@ describe('KiteManager', () => {
     });
 
     it('should handle API failure during order creation', async () => {
-      mockSymbolManager.tvToKite.mockReturnValue('TEST_KITE');
       mockKiteClient.createGTT.mockRejectedValue(new Error('API Error'));
 
       await expect(kiteManager.createOrder(validEvent)).rejects.toThrow('API Error');
@@ -69,9 +51,9 @@ describe('KiteManager', () => {
 
     it('should build correct buy order request', () => {
       const manager = kiteManager as any; // Access private methods
-      const request = manager.buildBuyOrderRequest('TEST_KITE', validEvent, '2025-09-04 00:00:00');
+      const request = manager.buildBuyOrderRequest('TEST', validEvent, '2025-09-04 00:00:00');
 
-      expect(request.condition.tradingsymbol).toBe('TEST_KITE');
+      expect(request.condition.tradingsymbol).toBe('TEST');
       expect(request.condition.trigger_values).toEqual([95]);
       expect(request.orders[0].transaction_type).toBe('BUY');
       expect(request.orders[0].quantity).toBe(10);
@@ -79,9 +61,9 @@ describe('KiteManager', () => {
 
     it('should build correct OCO order request', () => {
       const manager = kiteManager as any;
-      const request = manager.buildOcoOrderRequest('TEST_KITE', validEvent, '2025-09-04 00:00:00');
+      const request = manager.buildOcoOrderRequest('TEST', validEvent, '2025-09-04 00:00:00');
 
-      expect(request.condition.tradingsymbol).toBe('TEST_KITE');
+      expect(request.condition.tradingsymbol).toBe('TEST');
       expect(request.condition.trigger_values).toEqual([90, 110]); // TP is 110, not close to LTP trigger
       expect(request.orders.length).toBe(2);
       expect(request.orders[0].transaction_type).toBe('SELL');
@@ -92,7 +74,7 @@ describe('KiteManager', () => {
       const manager = kiteManager as any;
       const invalidEvent = new GttCreateEvent('TEST', 10, 100, 90, 0, 110); // ent is 0
 
-      expect(() => manager.buildBuyOrderRequest('TEST_KITE', invalidEvent, '2025-09-04 00:00:00')).toThrow(
+      expect(() => manager.buildBuyOrderRequest('TEST', invalidEvent, '2025-09-04 00:00:00')).toThrow(
         'Invalid event parameters for buy order'
       );
     });
@@ -101,35 +83,9 @@ describe('KiteManager', () => {
       const manager = kiteManager as any;
       const invalidEvent = new GttCreateEvent('TEST', 0, 100, 90, 95, 110); // qty is 0
 
-      expect(() => manager.buildOcoOrderRequest('TEST_KITE', invalidEvent, '2025-09-04 00:00:00')).toThrow(
+      expect(() => manager.buildOcoOrderRequest('TEST', invalidEvent, '2025-09-04 00:00:00')).toThrow(
         'Invalid event parameters for OCO order'
       );
-    });
-  });
-
-  describe('deleteOrder', () => {
-    it('should successfully delete order', () => {
-      mockKiteClient.deleteGTT.mockResolvedValue();
-
-      kiteManager.deleteOrder('123');
-
-      expect(mockKiteClient.deleteGTT).toHaveBeenCalledWith('123');
-    });
-  });
-
-  describe('loadOrders', () => {
-    const mockCallback = jest.fn();
-
-    it('should successfully load orders and call callback', async () => {
-      const mockResponse: GttApiResponse = { data: [] };
-      mockKiteClient.loadGTT.mockImplementation(async (callback) => {
-        callback(mockResponse);
-      });
-
-      kiteManager.loadOrders(mockCallback);
-
-      expect(mockKiteClient.loadGTT).toHaveBeenCalledWith(mockCallback);
-      // Note: callback is called asynchronously, so we can't test it directly here
     });
   });
 

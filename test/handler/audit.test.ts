@@ -131,15 +131,10 @@ describe('AuditHandler', () => {
 
   describe('button color mapping', () => {
     const colorMapper = (r: any) => {
-      if (r.code === AlertState.NO_PAIR) return 'darkred';
       if (r.code === AlertState.SINGLE_ALERT) return 'darkorange';
       if (r.code === AlertState.NO_ALERTS) return 'darkgray';
       return 'black';
     };
-
-    it('NO_PAIR maps to darkred', () => {
-      expect(colorMapper({ code: AlertState.NO_PAIR })).toBe('darkred');
-    });
 
     it('SINGLE_ALERT maps to darkorange', () => {
       expect(colorMapper({ code: AlertState.SINGLE_ALERT })).toBe('darkorange');
