@@ -3,6 +3,7 @@ import { IDomManager } from '../manager/dom';
 import { IAlertHandler } from './alert';
 import { IFlagHandler } from './flag';
 import { IWatchListHandler } from './watchlist';
+import { FlagCategoryId } from '../models/flag';
 
 /**
  * Type definitions for key bindings and actions
@@ -82,35 +83,35 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
         'f7',
         {
           description: 'Flag Red Shorts',
-          action: () => this.flagHandler.recordSelectedTicker(1),
+          action: () => this.flagHandler.recordSelectedTicker(FlagCategoryId.DOWNTREND),
         },
       ],
       [
         'f8',
         {
           description: 'Flag Blue Crypto',
-          action: () => this.flagHandler.recordSelectedTicker(2),
+          action: () => this.flagHandler.recordSelectedTicker(FlagCategoryId.CRYPTO),
         },
       ],
       [
         'f10',
         {
           description: 'Flag Green Longs',
-          action: () => this.flagHandler.recordSelectedTicker(4),
+          action: () => this.flagHandler.recordSelectedTicker(FlagCategoryId.UPTREND),
         },
       ],
       [
         'f11',
         {
           description: 'Flag Brown Index',
-          action: () => this.flagHandler.recordSelectedTicker(6),
+          action: () => this.flagHandler.recordSelectedTicker(FlagCategoryId.INDEX),
         },
       ],
       [
         'f12',
         {
           description: 'Flag Golden XAU',
-          action: () => this.flagHandler.recordSelectedTicker(7),
+          action: () => this.flagHandler.recordSelectedTicker(FlagCategoryId.GOLD_INDEX),
         },
       ],
     ]);

@@ -2,6 +2,7 @@
 import { IFlagManager } from '../manager/flag';
 import { IDomManager } from '../manager/dom';
 import { IWatchListHandler } from './watchlist';
+import { FlagCategoryId } from '../models/flag';
 
 /**
  * Handles flag-related operations and UI updates
@@ -9,9 +10,9 @@ import { IWatchListHandler } from './watchlist';
 export interface IFlagHandler {
   /**
    * Record current selected ticker in flag category and trigger UI updates
-   * @param categoryIndex Category index to record into
+   * @param categoryId Flag category identifier to record into
    */
-  recordSelectedTicker(categoryIndex: number): void;
+  recordSelectedTicker(categoryId: FlagCategoryId): void;
 }
 
 /**
@@ -25,9 +26,9 @@ export class FlagHandler implements IFlagHandler {
   ) {}
 
   /** @inheritdoc */
-  public recordSelectedTicker(categoryIndex: number): void {
+  public recordSelectedTicker(categoryId: FlagCategoryId): void {
     const tvTicker = this.domManager.getTicker();
-    this.flagManager.recordCategory(categoryIndex, [tvTicker]);
+    this.flagManager.recordCategory(categoryId, [tvTicker]);
     this.watchHandler.onWatchListChange();
   }
 }

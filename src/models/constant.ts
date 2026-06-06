@@ -33,12 +33,6 @@ export const Constants = Object.freeze({
       /** GTT unwatched audit plugin & section - identifies and displays unwatched GTT orders */
       GTT_UNWATCHED: 'gtt-unwatched',
 
-      /** Orphan flags audit plugin - identifies flag entries without corresponding tickers */
-      ORPHAN_FLAGS: 'orphan-flags',
-
-      /** Ticker collision audit plugin - identifies reverse map collisions in TickerRepo */
-      TICKER_COLLISION: 'ticker-collision',
-
       /** Trade risk multiple audit plugin - identifies trades with non-standard risk multiples */
       TRADE_RISK: 'trade-risk',
 
@@ -284,6 +278,12 @@ Support:
     CHARACTERS: ['/', '*', '-', ':'],
     /** Tickers always treated as composite despite lacking separator characters */
     SPECIAL_TICKERS: ['GOLDSILVER', 'BTC.D'],
+  },
+  FLAGS: {
+    /** Substrings that identify a composite ticker as gold-index related */
+    GOLD_INDEX_TOKENS: ['XAUUSD', 'GOLDSILVER'],
+    /** Ticker types that classify as "Index / Markets" (INDEX flag category) */
+    INDEX_TICKER_TYPES: ['INDEX', 'COMMODITY', 'FX', 'BOND'],
   },
 });
 

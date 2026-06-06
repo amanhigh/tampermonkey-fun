@@ -1,7 +1,7 @@
 import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
 import { IRecentManager } from './recent';
-import { ITickerRepo } from '../repo/ticker';
+import { ITickerManager } from './ticker';
 import { IWatchManager } from './watch';
 import { Constants } from '../models/constant';
 
@@ -18,7 +18,7 @@ export class StaleReviewPlugin extends BaseAuditPlugin {
 
   constructor(
     private readonly recentManager: IRecentManager,
-    private readonly tickerRepo: ITickerRepo,
+    private readonly tickerManager: ITickerManager,
     private readonly watchManager: IWatchManager,
     private readonly thresholdDays: number = Constants.AUDIT.STALE_REVIEW_THRESHOLD_DAYS
   ) {
@@ -35,17 +35,19 @@ export class StaleReviewPlugin extends BaseAuditPlugin {
       throw new Error('Stale review audit does not support targeted mode');
     }
 
-    const results: AuditResult[] = [];
     const cutOffPeriod = this.thresholdDays * 24 * 60 * 60 * 1000;
 
-    this.tickerRepo.getAllKeys().forEach((tvTicker: string) => {
+    const trackedTickers = await this.tickerManager.listTickers({});
+    const results: AuditResult[] = [];
+
+    for (const ticker of trackedTickers) {
+      const tvTicker = ticker.ticker;
+
       if (this.watchManager.isWatched(tvTicker)) {
-        return;
+        continue;
       }
 
-      const isStale = !this.recentManager.isRecent(tvTicker, cutOffPeriod);
-
-      if (isStale) {
+      if (!this.recentManager.isRecent(tvTicker, cutOffPeriod)) {
         results.push({
           pluginId: this.id,
           code: 'STALE_TICKER',
@@ -53,13 +55,11 @@ export class StaleReviewPlugin extends BaseAuditPlugin {
           message: `${tvTicker}: not recently opened`,
           severity: 'MEDIUM',
           status: 'FAIL',
-          data: {
-            tvTicker,
-          },
+          data: { tvTicker },
         });
       }
-    });
+    }
 
-    return Promise.resolve(results);
+    return results;
   }
 }

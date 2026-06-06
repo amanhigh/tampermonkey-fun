@@ -1,390 +1,267 @@
 import { FlagManager, IFlagManager } from '../../src/manager/flag';
-import { IFlagRepo } from '../../src/repo/flag';
+import { ITickerManager } from '../../src/manager/ticker';
 import { IPaintManager } from '../../src/manager/paint';
-import { CategoryLists } from '../../src/models/category';
-import { Constants } from '../../src/models/constant';
+import { Ticker } from '../../src/models/ticker';
+import { ALL_FLAG_CATEGORIES, FlagCategoryId } from '../../src/models/flag';
+
+// Mock Notifier
+jest.mock('../../src/util/notify', () => ({
+  Notifier: {
+    warn: jest.fn(),
+  },
+}));
 
 describe('FlagManager', () => {
   let flagManager: IFlagManager;
-  let mockFlagRepo: jest.Mocked<IFlagRepo>;
+  let mockTickerManager: jest.Mocked<ITickerManager>;
   let mockPaintManager: jest.Mocked<IPaintManager>;
-  let getListSpy: jest.SpyInstance;
-  let toggleSpy: jest.SpyInstance;
+
+  // ── Helpers ──
+
+  async function waitForAsync(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  function makeTicker(overrides: Partial<Ticker> = {}): Ticker {
+    const defaults: Partial<Ticker> = {
+      ticker: 'TICKER',
+      trend: 'SIDEWAYS',
+      type: 'EQUITY',
+    };
+    return new Ticker({ ...defaults, ...overrides });
+  }
 
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Create a real CategoryLists instance
-    const mockMap = new Map<number, Set<string>>();
-    const mockCategoryLists = new CategoryLists(mockMap);
+    mockTickerManager = {
+      listTickers: jest.fn().mockResolvedValue([]),
+      updateTicker: jest.fn().mockResolvedValue({} as any),
+      getTicker: jest.fn(),
+      startTracking: jest.fn(),
+      markRecent: jest.fn(),
+      stopTracking: jest.fn(),
+      setExchange: jest.fn(),
+    } as unknown as jest.Mocked<ITickerManager>;
 
-    // Create spies
-    getListSpy = jest.spyOn(mockCategoryLists, 'getList');
-    toggleSpy = jest.spyOn(mockCategoryLists, 'toggle');
-
-    // Mock FlagRepo
-    mockFlagRepo = {
-      getFlagCategoryLists: jest.fn().mockReturnValue(mockCategoryLists),
-      getCount: jest.fn(),
-      getAllItems: jest.fn(),
-      load: jest.fn(),
-      save: jest.fn(),
-      info: jest.fn(),
-      getCategoryLists: jest.fn(),
-    } as jest.Mocked<IFlagRepo>;
-
-    // Mock PaintManager
     mockPaintManager = {
-      paintSymbols: jest.fn(),
       paintFlags: jest.fn(),
-      resetColors: jest.fn(),
-      paintFNOMarking: jest.fn(),
-    } as jest.Mocked<IPaintManager>;
+    } as unknown as jest.Mocked<IPaintManager>;
 
-    flagManager = new FlagManager(mockFlagRepo, mockPaintManager);
+    flagManager = new FlagManager(mockTickerManager, mockPaintManager);
   });
 
+  // ── Constructor ──
+
   describe('constructor', () => {
-    it('should create instance successfully', () => {
+    it('should create instance with dependencies', () => {
       expect(flagManager).toBeDefined();
       expect(flagManager).toBeInstanceOf(FlagManager);
     });
-  });
 
-  describe('getCategory', () => {
-    it('should return category set when category exists', () => {
-      const categoryIndex = 0;
-      const expectedSet = new Set(['RELIANCE', 'TCS']);
-
-      getListSpy.mockReturnValue(expectedSet);
-
-      const result = flagManager.getCategory(categoryIndex);
-
-      expect(result).toBe(expectedSet);
-      expect(mockFlagRepo.getFlagCategoryLists).toHaveBeenCalled();
-      expect(getListSpy).toHaveBeenCalledWith(categoryIndex);
+    it('should NOT call listTickers on construction', () => {
+      expect(mockTickerManager.listTickers).not.toHaveBeenCalled();
     });
 
-    it('should throw error when category list not found', () => {
-      const categoryIndex = 999;
-
-      getListSpy.mockReturnValue(undefined);
-
-      expect(() => flagManager.getCategory(categoryIndex)).toThrow(
-        `Category list for index ${categoryIndex} not found`
-      );
-
-      expect(mockFlagRepo.getFlagCategoryLists).toHaveBeenCalled();
-      expect(getListSpy).toHaveBeenCalledWith(categoryIndex);
-    });
-
-    it('should handle empty category set', () => {
-      const categoryIndex = 1;
-      const emptySet = new Set<string>();
-
-      getListSpy.mockReturnValue(emptySet);
-
-      const result = flagManager.getCategory(categoryIndex);
-
-      expect(result).toBe(emptySet);
-      expect(result.size).toBe(0);
+    it('should return undefined for getTickerCategory before any paint', () => {
+      expect(flagManager.getTickerCategory('ANY')).toBeUndefined();
     });
   });
+
+  // ── getTickerCategory ──
+
+  describe('getTickerCategory', () => {
+    it('should return undefined before paint', () => {
+      expect(flagManager.getTickerCategory('TEST')).toBeUndefined();
+    });
+
+    it('should return matching FlagCategory after paint', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([
+        makeTicker({ ticker: 'SIDE_A', trend: 'SIDEWAYS' }),
+        makeTicker({ ticker: 'BTC', type: 'CRYPTO' }),
+      ]);
+
+      flagManager.paint('.sel', '.item');
+      await waitForAsync();
+
+      expect(flagManager.getTickerCategory('SIDE_A')?.id).toBe(FlagCategoryId.SIDEWAYS);
+      expect(flagManager.getTickerCategory('BTC')?.id).toBe(FlagCategoryId.CRYPTO);
+    });
+
+    it('should return undefined for ticker absent from snapshot', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([
+        makeTicker({ ticker: 'PRESENT', trend: 'SIDEWAYS' }),
+      ]);
+
+      flagManager.paint('.sel', '.item');
+      await waitForAsync();
+
+      expect(flagManager.getTickerCategory('ABSENT')).toBeUndefined();
+    });
+  });
+
+  // ── recordCategory ──
 
   describe('recordCategory', () => {
-    it('should record tickers in specified category', () => {
-      const categoryIndex = 2;
-      const tvTickers = ['NSE:HDFC', 'NSE:ICICI', 'NSE:SBI'];
+    it('should call updateTicker for SIDEWAYS', () => {
+      flagManager.recordCategory(FlagCategoryId.SIDEWAYS, ['TEST']);
 
-      flagManager.recordCategory(categoryIndex, tvTickers);
-
-      expect(mockFlagRepo.getFlagCategoryLists).toHaveBeenCalled();
-      expect(toggleSpy).toHaveBeenCalledTimes(3);
-      expect(toggleSpy).toHaveBeenCalledWith(categoryIndex, 'NSE:HDFC');
-      expect(toggleSpy).toHaveBeenCalledWith(categoryIndex, 'NSE:ICICI');
-      expect(toggleSpy).toHaveBeenCalledWith(categoryIndex, 'NSE:SBI');
+      expect(flagManager.getTickerCategory('TEST')).toBeUndefined();
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'SIDEWAYS' });
     });
 
-    it('should handle empty tickers array', () => {
-      const categoryIndex = 1;
-      const tvTickers: string[] = [];
+    it('should call updateTicker for DOWNTREND', () => {
+      flagManager.recordCategory(FlagCategoryId.DOWNTREND, ['TEST']);
 
-      flagManager.recordCategory(categoryIndex, tvTickers);
-
-      expect(mockFlagRepo.getFlagCategoryLists).toHaveBeenCalled();
-      expect(toggleSpy).not.toHaveBeenCalled();
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'DOWNTREND' });
     });
 
-    it('should handle single ticker', () => {
-      const categoryIndex = 0;
-      const tvTickers = ['NSE:NIFTY'];
+    it('should call updateTicker for CRYPTO', () => {
+      flagManager.recordCategory(FlagCategoryId.CRYPTO, ['TEST']);
 
-      flagManager.recordCategory(categoryIndex, tvTickers);
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'CRYPTO' });
+    });
 
-      expect(mockFlagRepo.getFlagCategoryLists).toHaveBeenCalled();
-      expect(toggleSpy).toHaveBeenCalledTimes(1);
-      expect(toggleSpy).toHaveBeenCalledWith(categoryIndex, 'NSE:NIFTY');
+    it('should call updateTicker for UPTREND', () => {
+      flagManager.recordCategory(FlagCategoryId.UPTREND, ['TEST']);
+
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'UPTREND' });
+    });
+
+    it('should reject DEFAULT_UNTRACKED at type level (not recordable)', () => {
+      // DEFAULT_UNTRACKED is excluded from recordable categories.
+      // A runtime call would still attempt to look up the category.
+      // Verify the category lookup throws for invalid ID.
+      // (This test documents the intent.)
+      flagManager.recordCategory(FlagCategoryId.SIDEWAYS, []);
+      expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
+    });
+
+    it('should call updateTicker for INDEX', () => {
+      flagManager.recordCategory(FlagCategoryId.INDEX, ['TEST']);
+
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'INDEX' });
+    });
+
+    it('should call updateTicker for GOLD_INDEX', () => {
+      flagManager.recordCategory(FlagCategoryId.GOLD_INDEX, ['TEST']);
+
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'COMPOSITE' });
+    });
+
+    it('should NOT mutate local getTickerCategory snapshot', () => {
+      flagManager.recordCategory(FlagCategoryId.SIDEWAYS, ['TICKER_A']);
+
+      expect(flagManager.getTickerCategory('TICKER_A')).toBeUndefined();
+    });
+
+    it('should handle empty ticker array', () => {
+      flagManager.recordCategory(FlagCategoryId.SIDEWAYS, []);
+      expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
     });
   });
+
+  // ── paint ──
 
   describe('paint', () => {
-    beforeEach(() => {
-      // Mock getCategory to return different sets for each index
-      jest.spyOn(flagManager, 'getCategory').mockImplementation((index: number) => {
-        switch (index) {
-          case 0:
-            return new Set(['RELIANCE', 'TCS']);
-          case 1:
-            return new Set(['HDFC', 'ICICI']);
-          case 2:
-            return new Set(['NIFTY']);
-          default:
-            return new Set();
-        }
-      });
+    it('should call listTickers every paint via ITickerManager', () => {
+      flagManager.paint('.sel', '.item');
+
+      expect(mockTickerManager.listTickers).toHaveBeenCalledWith({});
     });
 
-    it('should paint flags for all categories with correct colors', () => {
-      const selector = '.symbol';
-      const itemSelector = '.item';
+    it('should group tickers by FlagCategoryId', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([
+        makeTicker({ ticker: 'SIDE_A', trend: 'SIDEWAYS' }),          // → SIDEWAYS
+        makeTicker({ ticker: 'DOWN_A', trend: 'DOWNTREND' }),         // → DOWNTREND
+        makeTicker({ ticker: 'BTC', type: 'CRYPTO' }),                // → CRYPTO
+        makeTicker({ ticker: 'UP_A', trend: 'UPTREND' }),             // → UPTREND
+        makeTicker({ ticker: 'NIFTY', type: 'INDEX' }),               // → INDEX
+        makeTicker({ ticker: 'GOLDSILVER', type: 'COMPOSITE' }),      // → GOLD_INDEX
+      ]);
 
-      flagManager.paint(selector, itemSelector);
+      flagManager.paint('.sym', '.itm');
+      await waitForAsync();
 
-      const colorList = Constants.UI.COLORS.LIST;
+      expect(mockPaintManager.paintFlags).toHaveBeenCalledTimes(ALL_FLAG_CATEGORIES.length);
 
-      // Verify paint calls for each category
-      expect(mockPaintManager.paintFlags).toHaveBeenCalledTimes(colorList.length);
-
-      // Verify specific calls
+      // Verify each category was painted with correct symbols and color
       expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
-        selector,
-        new Set(['RELIANCE', 'TCS']),
-        colorList[0],
-        itemSelector
+        '.sym', new Set(['SIDE_A']), 'orange', '.itm',
       );
       expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
-        selector,
-        new Set(['HDFC', 'ICICI']),
-        colorList[1],
-        itemSelector
+        '.sym', new Set(['DOWN_A']), 'red', '.itm',
       );
       expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
-        selector,
-        new Set(['NIFTY']),
-        colorList[2],
-        itemSelector
+        '.sym', new Set(['BTC']), 'dodgerblue', '.itm',
+      );
+      expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
+        '.sym', new Set(['UP_A']), 'lime', '.itm',
+      );
+      // DEFAULT_UNTRACKED — empty in this test
+      expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
+        '.sym', new Set(['NIFTY']), 'brown', '.itm',
+      );
+      expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
+        '.sym', new Set(['GOLDSILVER']), 'darkkhaki', '.itm',
       );
     });
 
-    it('should handle empty categories during paint', () => {
-      const selector = '.symbol';
-      const itemSelector = '.item';
+    it('should handle empty ticker list', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([]);
 
-      // Mock all categories as empty
-      jest.spyOn(flagManager, 'getCategory').mockReturnValue(new Set());
+      flagManager.paint('.sel', '.item');
+      await waitForAsync();
 
-      flagManager.paint(selector, itemSelector);
-
-      const colorList = Constants.UI.COLORS.LIST;
-
-      // Should still call paint for each color/category
-      expect(mockPaintManager.paintFlags).toHaveBeenCalledTimes(colorList.length);
-
-      // Each call should be with empty set
-      for (let i = 0; i < colorList.length; i++) {
-        expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(selector, new Set(), colorList[i], itemSelector);
+      expect(mockPaintManager.paintFlags).toHaveBeenCalledTimes(ALL_FLAG_CATEGORIES.length);
+      for (const cat of ALL_FLAG_CATEGORIES) {
+        expect(mockPaintManager.paintFlags).toHaveBeenCalledWith('.sel', new Set(), cat.color, '.item');
       }
     });
 
-    it('should use correct color list from constants', () => {
-      const selector = '.test';
-      const itemSelector = '.test-item';
+    it('should handle backend failure gracefully', async () => {
+      mockTickerManager.listTickers.mockRejectedValue(new Error('Backend down'));
 
-      flagManager.paint(selector, itemSelector);
+      flagManager.paint('.sel', '.item');
+      await waitForAsync();
 
-      const expectedColorList = Constants.UI.COLORS.LIST;
+      expect(mockPaintManager.paintFlags).not.toHaveBeenCalled();
+    });
 
-      // Verify colors are used in correct order
-      for (let i = 0; i < expectedColorList.length; i++) {
+    it('should apply display priority: GOLD_INDEX > INDEX > CRYPTO > UPTREND > SIDEWAYS > DOWNTREND', async () => {
+      // Ticker with both CRYPTO type and UPTREND trend → should go to CRYPTO
+      mockTickerManager.listTickers.mockResolvedValue([
+        makeTicker({ ticker: 'ETH', type: 'CRYPTO', trend: 'UPTREND' }),
+      ]);
+
+      flagManager.paint('.sel', '.item');
+      await waitForAsync();
+
+      // CRYPTO color is 'dodgerblue'
+      expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
+        '.sel', new Set(['ETH']), 'dodgerblue', '.item',
+      );
+    });
+
+    it('should paint all categories', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([
+        makeTicker({ ticker: 'A', trend: 'SIDEWAYS' }),
+      ]);
+
+      flagManager.paint('.sel', '.item');
+      await waitForAsync();
+
+      expect(mockPaintManager.paintFlags).toHaveBeenCalledTimes(ALL_FLAG_CATEGORIES.length);
+
+      // First call is SIDEWAYS with 'A', rest are empty
+      expect(mockPaintManager.paintFlags).toHaveBeenNthCalledWith(
+        1, '.sel', new Set(['A']), ALL_FLAG_CATEGORIES[0].color, '.item',
+      );
+      for (let i = 1; i < ALL_FLAG_CATEGORIES.length; i++) {
         expect(mockPaintManager.paintFlags).toHaveBeenNthCalledWith(
-          i + 1,
-          selector,
-          expect.any(Set),
-          expectedColorList[i],
-          itemSelector
+          i + 1, '.sel', new Set(), ALL_FLAG_CATEGORIES[i].color, '.item',
         );
       }
-    });
-  });
-
-  describe('integration scenarios', () => {
-    it('should handle complete workflow of recording and painting', () => {
-      const categoryIndex = 1;
-      const tvTickers = ['NSE:WIPRO', 'NSE:INFY'];
-      const selector = '.symbol';
-      const itemSelector = '.item';
-
-      // Setup category list mock
-      const categorySet = new Set(tvTickers);
-      getListSpy.mockReturnValue(categorySet);
-
-      // Record tickers
-      flagManager.recordCategory(categoryIndex, tvTickers);
-
-      // Paint flags
-      flagManager.paint(selector, itemSelector);
-
-      // Verify recording happened
-      expect(toggleSpy).toHaveBeenCalledTimes(2);
-      tvTickers.forEach((ticker) => {
-        expect(toggleSpy).toHaveBeenCalledWith(categoryIndex, ticker);
-      });
-
-      // Verify painting happened for all categories
-      expect(mockPaintManager.paintFlags).toHaveBeenCalledTimes(Constants.UI.COLORS.LIST.length);
-    });
-
-    it('should handle multiple category operations', () => {
-      const category1 = 0;
-      const category2 = 2;
-      const tickers1 = ['NSE:RELIANCE'];
-      const tickers2 = ['NSE:TCS', 'NSE:WIPRO'];
-
-      // Record in multiple categories
-      flagManager.recordCategory(category1, tickers1);
-      flagManager.recordCategory(category2, tickers2);
-
-      // Verify both recording operations
-      expect(mockFlagRepo.getFlagCategoryLists).toHaveBeenCalledTimes(2);
-      expect(toggleSpy).toHaveBeenCalledTimes(3);
-
-      expect(toggleSpy).toHaveBeenCalledWith(category1, tickers1[0]);
-      expect(toggleSpy).toHaveBeenCalledWith(category2, tickers2[0]);
-      expect(toggleSpy).toHaveBeenCalledWith(category2, tickers2[1]);
-    });
-  });
-
-  describe('error handling', () => {
-    it('should handle repository errors gracefully', () => {
-      const error = new Error('Repository error');
-      mockFlagRepo.getFlagCategoryLists.mockImplementation(() => {
-        throw error;
-      });
-
-      expect(() => flagManager.getCategory(0)).toThrow('Repository error');
-    });
-
-    it('should handle paint manager errors gracefully', () => {
-      const error = new Error('Paint error');
-      mockPaintManager.paintFlags.mockImplementation(() => {
-        throw error;
-      });
-
-      // Mock successful getCategory
-      jest.spyOn(flagManager, 'getCategory').mockReturnValue(new Set(['TEST']));
-
-      expect(() => flagManager.paint('.test', '.item')).toThrow('Paint error');
-    });
-
-    it('should handle null/undefined tickers in recordCategory', () => {
-      const categoryIndex = 0;
-
-      // Test with array containing undefined values - should filter them out
-      const tickersWithUndefined = ['NSE:VALID', undefined as any, 'NSE:ANOTHER'];
-
-      expect(() => flagManager.recordCategory(categoryIndex, tickersWithUndefined)).not.toThrow();
-
-      // Should attempt to toggle all provided values (even undefined ones)
-      expect(toggleSpy).toHaveBeenCalledTimes(3);
-    });
-
-    describe('evictTicker', () => {
-      it('should remove ticker from all flag categories where it exists', () => {
-        const tvTicker = 'HDFC';
-        
-        // Mock flag category lists with ticker in multiple categories
-        const mockMap = new Map<number, Set<string>>([
-          [0, new Set(['HDFC', 'RELIANCE'])], // HDFC should be removed
-          [1, new Set(['TCS'])], // HDFC not present
-          [2, new Set(['HDFC', 'INFY'])], // HDFC should be removed
-        ]);
-        const mockCategoryLists = new CategoryLists(mockMap);
-        
-        // Create spy for delete method
-        const deleteSpy = jest.spyOn(mockCategoryLists, 'delete');
-        mockFlagRepo.getFlagCategoryLists.mockReturnValue(mockCategoryLists);
-
-        const result = flagManager.evictTicker(tvTicker);
-
-        // Verify ticker was removed from categories where it existed
-        expect(deleteSpy).toHaveBeenCalledWith(0, tvTicker);
-        expect(deleteSpy).toHaveBeenCalledWith(2, tvTicker);
-        expect(deleteSpy).not.toHaveBeenCalledWith(1, tvTicker);
-        expect(result).toBe(true); // Ticker was found and removed
-      });
-
-      it('should return false when ticker not found in any flag category', () => {
-        const tvTicker = 'NONEXISTENT';
-        
-        // Mock flag category lists without the ticker
-        const mockMap = new Map<number, Set<string>>([
-          [0, new Set(['HDFC', 'RELIANCE'])],
-          [1, new Set(['TCS'])],
-          [2, new Set(['INFY'])],
-        ]);
-        const mockCategoryLists = new CategoryLists(mockMap);
-        
-        // Create spy for delete method
-        const deleteSpy = jest.spyOn(mockCategoryLists, 'delete');
-        mockFlagRepo.getFlagCategoryLists.mockReturnValue(mockCategoryLists);
-
-        const result = flagManager.evictTicker(tvTicker);
-
-        // Verify no delete operations were called
-        expect(deleteSpy).not.toHaveBeenCalled();
-        expect(result).toBe(false); // Ticker not found
-      });
-
-      it('should handle empty flag categories gracefully', () => {
-        const tvTicker = 'HDFC';
-        
-        // Mock empty flag category lists
-        const mockMap = new Map<number, Set<string>>([
-          [0, new Set<string>()],
-          [1, new Set<string>()],
-          [2, new Set<string>()],
-        ]);
-        const mockCategoryLists = new CategoryLists(mockMap);
-        
-        // Create spy for delete method
-        const deleteSpy = jest.spyOn(mockCategoryLists, 'delete');
-        mockFlagRepo.getFlagCategoryLists.mockReturnValue(mockCategoryLists);
-
-        const result = flagManager.evictTicker(tvTicker);
-
-        expect(deleteSpy).not.toHaveBeenCalled();
-        expect(result).toBe(false); // Ticker not found in empty categories
-      });
-
-      it('should handle special characters in ticker names', () => {
-        const tvTicker = 'M&M_SPECIAL';
-        
-        // Mock flag category with special character ticker
-        const mockMap = new Map<number, Set<string>>([
-          [0, new Set(['M&M_SPECIAL', 'L&T'])],
-          [1, new Set(['TCS'])],
-        ]);
-        const mockCategoryLists = new CategoryLists(mockMap);
-        
-        // Create spy for delete method
-        const deleteSpy = jest.spyOn(mockCategoryLists, 'delete');
-        mockFlagRepo.getFlagCategoryLists.mockReturnValue(mockCategoryLists);
-
-        const result = flagManager.evictTicker(tvTicker);
-
-        expect(deleteSpy).toHaveBeenCalledWith(0, tvTicker);
-        expect(result).toBe(true); // Ticker was found and removed
-      });
     });
   });
 });

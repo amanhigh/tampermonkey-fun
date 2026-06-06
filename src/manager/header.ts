@@ -81,15 +81,11 @@ export class HeaderManager implements IHeaderManager {
     $flag.css('color', Constants.UI.COLORS.DEFAULT);
     $exchange.css('color', Constants.UI.COLORS.DEFAULT);
 
-    // Paint flags based on flag categories
-    for (let i = 0; i < Constants.UI.COLORS.LIST.length; i++) {
-      const color = Constants.UI.COLORS.LIST[i];
-      const flagSymbols = this.flagManager.getCategory(i);
-      if (flagSymbols && flagSymbols.has(ticker)) {
-        $flag.css('color', color);
-        $exchange.css('color', color);
-        break; // Break the loop after first match
-      }
+    // Paint flags based on flag category
+    const category = this.flagManager.getTickerCategory(ticker);
+    if (category) {
+      $flag.css('color', category.color);
+      $exchange.css('color', category.color);
     }
   }
 
