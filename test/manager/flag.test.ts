@@ -2,7 +2,7 @@ import { FlagManager, IFlagManager } from '../../src/manager/flag';
 import { ITickerClient } from '../../src/client/ticker';
 import { IPaintManager } from '../../src/manager/paint';
 import { Ticker } from '../../src/models/ticker';
-import { Constants } from '../../src/models/constant';
+import { ALL_FLAG_CATEGORIES } from '../../src/models/flag';
 
 // Mock Notifier
 jest.mock('../../src/util/notify', () => ({
@@ -18,16 +18,10 @@ describe('FlagManager', () => {
 
   // ── Helpers ──
 
-  /**
-   * Wait for async paint / backend calls to settle.
-   */
   async function waitForAsync(): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
-  /**
-   * Helper to build a minimal ticker fixture.
-   */
   function makeTicker(overrides: Partial<Ticker> = {}): Ticker {
     const defaults: Partial<Ticker> = {
       ticker: 'TICKER',
@@ -65,10 +59,11 @@ describe('FlagManager', () => {
       expect(mockTickerClient.listTickers).not.toHaveBeenCalled();
     });
 
-    it('should initialise all 8 category sets as empty', () => {
-      for (let i = 0; i < 8; i++) {
-        expect(flagManager.getCategory(i)).toBeInstanceOf(Set);
-        expect(flagManager.getCategory(i).size).toBe(0);
+    it('should initialise all category sets as empty', () => {
+      for (const cat of ALL_FLAG_CATEGORIES) {
+        const c = flagManager.getCategory(cat.index);
+        expect(c).toBeInstanceOf(Set);
+        expect(c.size).toBe(0);
       }
     });
   });
@@ -77,16 +72,20 @@ describe('FlagManager', () => {
 
   describe('getCategory', () => {
     it('should throw for negative category index', () => {
-      expect(() => flagManager.getCategory(-1)).toThrow('Invalid category index: -1. Must be between 0 and 7');
+      expect(() => flagManager.getCategory(-1)).toThrow('Invalid category index: -1');
+    });
+
+    it('should throw for unsupported category index 3 (was UNUSED)', () => {
+      expect(() => flagManager.getCategory(3)).toThrow('Invalid category index: 3');
     });
 
     it('should throw for category index >= 8', () => {
-      expect(() => flagManager.getCategory(8)).toThrow('Invalid category index: 8. Must be between 0 and 7');
+      expect(() => flagManager.getCategory(8)).toThrow('Invalid category index: 8');
     });
 
     it('should return empty set for all categories before any paint', () => {
-      for (let i = 0; i < 8; i++) {
-        expect(flagManager.getCategory(i).size).toBe(0);
+      for (const cat of ALL_FLAG_CATEGORIES) {
+        expect(flagManager.getCategory(cat.index).size).toBe(0);
       }
     });
 
@@ -132,32 +131,26 @@ describe('FlagManager', () => {
       expect(mockTickerClient.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'UPTREND' });
     });
 
+    it('should call updateTicker as NOOP for category 5 (DEFAULT_UNTRACKED)', () => {
+      flagManager.recordCategory(5, ['TEST']);
+
+      expect(mockTickerClient.updateTicker).toHaveBeenCalledWith('TEST', {});
+    });
+
     it('should call updateTicker for category 6 (INDEX)', () => {
       flagManager.recordCategory(6, ['TEST']);
 
       expect(mockTickerClient.updateTicker).toHaveBeenCalledWith('TEST', { type: 'INDEX' });
     });
 
-    it('should call updateTicker for category 7 (COMPOSITE)', () => {
+    it('should call updateTicker for category 7 (GOLD_INDEX)', () => {
       flagManager.recordCategory(7, ['TEST']);
 
       expect(mockTickerClient.updateTicker).toHaveBeenCalledWith('TEST', { type: 'COMPOSITE' });
     });
 
-    it('should handle category 3 with warning and no backend call', () => {
-      const { Notifier } = jest.requireMock('../../src/util/notify');
-      flagManager.recordCategory(3, ['TEST']);
-
-      expect(Notifier.warn).toHaveBeenCalledWith('Category 3 is not supported for storage');
-      expect(mockTickerClient.updateTicker).not.toHaveBeenCalled();
-    });
-
-    it('should handle category 5 with warning and no backend call', () => {
-      const { Notifier } = jest.requireMock('../../src/util/notify');
-      flagManager.recordCategory(5, ['TEST']);
-
-      expect(Notifier.warn).toHaveBeenCalledWith('Category 5 is not supported for storage');
-      expect(mockTickerClient.updateTicker).not.toHaveBeenCalled();
+    it('should throw for removed category index 3', () => {
+      expect(() => flagManager.recordCategory(3, ['TEST'])).toThrow('Invalid category index: 3');
     });
 
     it('should NOT mutate local getCategory snapshot', () => {
@@ -167,12 +160,8 @@ describe('FlagManager', () => {
     });
 
     it('should throw for out-of-range category index', () => {
-      expect(() => flagManager.recordCategory(-1, ['T'])).toThrow(
-        'Invalid category index: -1. Must be between 0 and 7'
-      );
-      expect(() => flagManager.recordCategory(8, ['T'])).toThrow(
-        'Invalid category index: 8. Must be between 0 and 7'
-      );
+      expect(() => flagManager.recordCategory(-1, ['T'])).toThrow('Invalid category index: -1');
+      expect(() => flagManager.recordCategory(8, ['T'])).toThrow('Invalid category index: 8');
     });
 
     it('should handle empty ticker array', () => {
@@ -190,45 +179,43 @@ describe('FlagManager', () => {
       expect(mockTickerClient.listTickers).toHaveBeenCalledWith({});
     });
 
-    it('should group tickers by category and call paintFlags', async () => {
+    it('should group tickers by category using FlagCategory matches', async () => {
       mockTickerClient.listTickers.mockResolvedValue([
-        makeTicker({ ticker: 'SIDE_A', trend: 'SIDEWAYS' }),      // → cat 0
-        makeTicker({ ticker: 'DOWN_A', trend: 'DOWNTREND' }),      // → cat 1
-        makeTicker({ ticker: 'BTC', type: 'CRYPTO' }),             // → cat 2
-        makeTicker({ ticker: 'UP_A', trend: 'UPTREND' }),          // → cat 4
-        makeTicker({ ticker: 'NIFTY', type: 'INDEX' }),            // → cat 6
-        makeTicker({ ticker: 'BTCUSD/XAUUSD', type: 'COMPOSITE' }),
+        makeTicker({ ticker: 'SIDE_A', trend: 'SIDEWAYS' }),          // → SIDEWAYS (idx 0)
+        makeTicker({ ticker: 'DOWN_A', trend: 'DOWNTREND' }),         // → DOWNTREND (idx 1)
+        makeTicker({ ticker: 'BTC', type: 'CRYPTO' }),                // → CRYPTO (idx 2)
+        makeTicker({ ticker: 'UP_A', trend: 'UPTREND' }),             // → UPTREND (idx 4)
+        makeTicker({ ticker: 'NIFTY', type: 'INDEX' }),               // → INDEX (idx 6)
+        makeTicker({ ticker: 'BTCUSD/XAUUSD', type: 'COMPOSITE' }),   // → GOLD_INDEX (idx 7)
       ]);
 
       flagManager.paint('.sym', '.itm');
       await waitForAsync();
 
-      const colorList = Constants.UI.COLORS.LIST;
-      expect(mockPaintManager.paintFlags).toHaveBeenCalledTimes(colorList.length);
+      expect(mockPaintManager.paintFlags).toHaveBeenCalledTimes(ALL_FLAG_CATEGORIES.length);
 
-      // Cat 0 → orange
+      // Verify each category was painted with correct symbols and color
       expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
-        '.sym', new Set(['SIDE_A']), colorList[0], '.itm'
+        '.sym', new Set(['SIDE_A']), ALL_FLAG_CATEGORIES[0].color, '.itm',
       );
-      // Cat 1 → red
       expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
-        '.sym', new Set(['DOWN_A']), colorList[1], '.itm'
+        '.sym', new Set(['DOWN_A']), ALL_FLAG_CATEGORIES[1].color, '.itm',
       );
-      // Cat 2 → dodgerblue
       expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
-        '.sym', new Set(['BTC']), colorList[2], '.itm'
+        '.sym', new Set(['BTC']), ALL_FLAG_CATEGORIES[2].color, '.itm',
       );
-      // Cat 4 → lime
+      // UPTREND is ALL_FLAG_CATEGORIES[3]
       expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
-        '.sym', new Set(['UP_A']), colorList[4], '.itm'
+        '.sym', new Set(['UP_A']), ALL_FLAG_CATEGORIES[3].color, '.itm',
       );
-      // Cat 6 → brown
+      // DEFAULT_UNTRACKED is [4] — empty in this test
+      // INDEX is ALL_FLAG_CATEGORIES[5]
       expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
-        '.sym', new Set(['NIFTY']), colorList[6], '.itm'
+        '.sym', new Set(['NIFTY']), ALL_FLAG_CATEGORIES[5].color, '.itm',
       );
-      // Cat 7 → darkkhaki
+      // GOLD_INDEX is ALL_FLAG_CATEGORIES[6]
       expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
-        '.sym', new Set(['BTCUSD/XAUUSD']), colorList[7], '.itm'
+        '.sym', new Set(['BTCUSD/XAUUSD']), ALL_FLAG_CATEGORIES[6].color, '.itm',
       );
     });
 
@@ -238,10 +225,9 @@ describe('FlagManager', () => {
       flagManager.paint('.sel', '.item');
       await waitForAsync();
 
-      const colorList = Constants.UI.COLORS.LIST;
-      expect(mockPaintManager.paintFlags).toHaveBeenCalledTimes(colorList.length);
-      for (let i = 0; i < colorList.length; i++) {
-        expect(mockPaintManager.paintFlags).toHaveBeenCalledWith('.sel', new Set(), colorList[i], '.item');
+      expect(mockPaintManager.paintFlags).toHaveBeenCalledTimes(ALL_FLAG_CATEGORIES.length);
+      for (const cat of ALL_FLAG_CATEGORIES) {
+        expect(mockPaintManager.paintFlags).toHaveBeenCalledWith('.sel', new Set(), cat.color, '.item');
       }
     });
 
@@ -254,8 +240,8 @@ describe('FlagManager', () => {
       expect(mockPaintManager.paintFlags).not.toHaveBeenCalled();
     });
 
-    it('should apply display priority: 7 > 2 > 6 > 4 > 0 > 1', async () => {
-      // Ticker has both CRYPTO type and UPTREND trend → should go to cat 2
+    it('should apply display priority: GOLD_INDEX > CRYPTO > INDEX > UPTREND > SIDEWAYS > DOWNTREND', async () => {
+      // Ticker with both CRYPTO type and UPTREND trend → should go to CRYPTO
       mockTickerClient.listTickers.mockResolvedValue([
         makeTicker({ ticker: 'ETH', type: 'CRYPTO', trend: 'UPTREND' }),
       ]);
@@ -263,10 +249,13 @@ describe('FlagManager', () => {
       flagManager.paint('.sel', '.item');
       await waitForAsync();
 
-      expect(mockPaintManager.paintFlags).toHaveBeenCalledWith('.sel', new Set(['ETH']), Constants.UI.COLORS.LIST[2], '.item');
+      // CRYPTO is ALL_FLAG_CATEGORIES[2]
+      expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
+        '.sel', new Set(['ETH']), ALL_FLAG_CATEGORIES[2].color, '.item',
+      );
     });
 
-    it('should call paintFlags for all 8 categories even when some are empty', async () => {
+    it('should paint all categories via FlagCategory objects', async () => {
       mockTickerClient.listTickers.mockResolvedValue([
         makeTicker({ ticker: 'A', trend: 'SIDEWAYS' }),
       ]);
@@ -274,12 +263,16 @@ describe('FlagManager', () => {
       flagManager.paint('.sel', '.item');
       await waitForAsync();
 
-      const colorList = Constants.UI.COLORS.LIST;
-      expect(mockPaintManager.paintFlags).toHaveBeenCalledTimes(8);
-      // Cat 0 should have 'A', others empty
-      expect(mockPaintManager.paintFlags).toHaveBeenCalledWith('.sel', new Set(['A']), colorList[0], '.item');
-      for (let i = 1; i < 8; i++) {
-        expect(mockPaintManager.paintFlags).toHaveBeenCalledWith('.sel', new Set(), colorList[i], '.item');
+      expect(mockPaintManager.paintFlags).toHaveBeenCalledTimes(ALL_FLAG_CATEGORIES.length);
+
+      // Cat 0 (SIDEWAYS) should have 'A', others empty
+      expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
+        '.sel', new Set(['A']), ALL_FLAG_CATEGORIES[0].color, '.item',
+      );
+      for (let i = 1; i < ALL_FLAG_CATEGORIES.length; i++) {
+        expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
+          '.sel', new Set(), ALL_FLAG_CATEGORIES[i].color, '.item',
+        );
       }
     });
   });
