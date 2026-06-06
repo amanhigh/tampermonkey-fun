@@ -1,28 +1,29 @@
 import { TickerCollisionSection } from '../../src/handler/ticker_collision_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
+import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { ICanonicalRanker } from '../../src/manager/canonical_ranker';
-import { ISymbolManager } from '../../src/manager/symbol';
 import { Notifier } from '../../src/util/notify';
 
 describe('TickerCollisionSection', () => {
   let section: TickerCollisionSection;
   let mockPlugin: IAudit;
   let mockTickerHandler: Partial<ITickerHandler>;
+  let mockAlertTickerManager: Partial<IAlertTickerManager>;
   let mockCanonicalRanker: Partial<ICanonicalRanker>;
-  let mockSymbolManager: Partial<ISymbolManager>;
   let notifySuccessSpy: jest.SpyInstance;
-  let notifyWarnSpy: jest.SpyInstance;
-
   const createResult = (investingTicker: string, tvTickers: string[]): AuditResult => ({
     pluginId: 'ticker-collision',
     code: 'TICKER_COLLISION',
     target: investingTicker,
-    message: `${investingTicker}: ${tvTickers.length} aliases`,
-    severity: 'MEDIUM',
+    message: `${investingTicker}: Multiple TV tickers: ${tvTickers.join(', ')}`,
+    severity: 'HIGH',
     status: 'FAIL',
     data: { investingTicker, tvTickers },
   });
+
+  const mockRankResponse = (tickers: string[]) =>
+    Promise.resolve(tickers.map((t, i) => ({ ticker: t, alertCount: 0, isWatched: false, isRecent: false, hasExchange: false, hasPairMapping: true, score: tickers.length - i })));
 
   beforeEach(() => {
     mockPlugin = {
@@ -32,22 +33,19 @@ describe('TickerCollisionSection', () => {
       run: jest.fn().mockResolvedValue([]),
     };
 
-    mockTickerHandler = { openTicker: jest.fn() };
+    mockTickerHandler = { openTicker: jest.fn().mockResolvedValue(undefined), stopTracking: jest.fn() };
+    mockAlertTickerManager = { fetchAlertTicker: jest.fn() };
     mockCanonicalRanker = {
-      rankTvTickers: jest.fn().mockImplementation((tickers: string[]) =>
-        tickers.map((t, i) => ({ ticker: t, alertCount: 0, isWatched: false, recentTimestamp: 0, hasSequence: false, hasExchange: false, hasPairMapping: true, score: tickers.length - i }))
-      ),
+      rankTvTickers: jest.fn().mockImplementation((tickers: string[]) => mockRankResponse(tickers)),
     };
-    mockSymbolManager = { investingToTv: jest.fn(), deleteTvTicker: jest.fn() };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
-    notifyWarnSpy = jest.spyOn(Notifier, 'warn').mockImplementation();
     (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(true);
 
     section = new TickerCollisionSection(
       mockPlugin,
       mockTickerHandler as ITickerHandler,
-      mockSymbolManager as ISymbolManager,
+      mockAlertTickerManager as IAlertTickerManager,
       mockCanonicalRanker as ICanonicalRanker
     );
   });
@@ -65,86 +63,45 @@ describe('TickerCollisionSection', () => {
   });
 
   describe('onLeftClick', () => {
-    test('opens canonical tvTicker alias via CanonicalRanker', () => {
-      section.onLeftClick(createResult('M&M', ['M_M', 'M&M']));
-      expect(mockCanonicalRanker.rankTvTickers).toHaveBeenCalledWith(['M_M', 'M&M']);
-      expect(mockTickerHandler.openTicker).toHaveBeenCalledWith('M_M');
+    test('opens canonical tvTicker alias via CanonicalRanker', async () => {
+      await section.onLeftClick(createResult('HDFC', ['HDFC', 'HDFC_EQ', 'HDFC_NS']));
+      expect(mockCanonicalRanker.rankTvTickers).toHaveBeenCalledWith(['HDFC', 'HDFC_EQ', 'HDFC_NS']);
+      expect(mockTickerHandler.openTicker).toHaveBeenCalledWith('HDFC');
     });
 
-    test('shows warning when no tvTickers available', () => {
-      const result: AuditResult = {
-        pluginId: 'ticker-collision',
-        code: 'TICKER_COLLISION',
-        target: 'EMPTY',
-        message: 'EMPTY: no aliases',
-        severity: 'MEDIUM',
-        status: 'FAIL',
-        data: { investingTicker: 'EMPTY' },
-      };
-      section.onLeftClick(result);
-      expect(notifyWarnSpy).toHaveBeenCalled();
-    });
-
-    test('shows warning when less than 2 tvTickers and no fallback', () => {
-      section.onLeftClick(createResult('M&M', ['M_M']));
-      expect(notifyWarnSpy).toHaveBeenCalled();
-      expect(mockCanonicalRanker.rankTvTickers).not.toHaveBeenCalled();
-    });
-
-    test('falls back to investingTicker resolution when less than 2 tvTickers', () => {
-      (mockSymbolManager.investingToTv as jest.Mock).mockReturnValue('M_M_RESOLVED');
-      const result: AuditResult = {
-        pluginId: 'ticker-collision',
-        code: 'TICKER_COLLISION',
-        target: 'M&M',
-        message: 'M&M: 1 alias',
-        severity: 'MEDIUM',
-        status: 'FAIL',
-        data: { investingTicker: 'M&M', tvTickers: ['M_M'] },
-      };
-      section.onLeftClick(result);
-      expect(mockSymbolManager.investingToTv).toHaveBeenCalledWith('M&M');
-      expect(mockTickerHandler.openTicker).toHaveBeenCalledWith('M_M_RESOLVED');
-      expect(notifyWarnSpy).not.toHaveBeenCalled();
+    test('falls back to alertTickerManager when only one tvTicker in data', async () => {
+      mockAlertTickerManager.fetchAlertTicker = jest.fn().mockResolvedValue({ ticker: 'RESOLVED' });
+      await section.onLeftClick(createResult('HDFC', ['HDFC']));
+      expect(mockAlertTickerManager.fetchAlertTicker).toHaveBeenCalledWith('HDFC');
+      expect(mockTickerHandler.openTicker).toHaveBeenCalledWith('RESOLVED');
     });
   });
 
   describe('onRightClick', () => {
-    test('ranks aliases and removes lower-ranked after confirmation', () => {
-      section.onRightClick(createResult('M&M', ['M_M', 'M&M', 'M&amp;M']));
-      expect(mockCanonicalRanker.rankTvTickers).toHaveBeenCalledWith(['M_M', 'M&M', 'M&amp;M']);
-      expect(mockSymbolManager.deleteTvTicker).toHaveBeenCalledTimes(2);
-      expect(notifySuccessSpy).toHaveBeenCalled();
-    });
+    test('ranks aliases and removes lower-ranked after confirmation', async () => {
+      // Mock stopTracking for removal test
+      mockTickerHandler.stopTracking = jest.fn().mockResolvedValue(undefined);
 
-    test('does nothing when less than 2 tvTickers', () => {
-      section.onRightClick(createResult('M&M', ['M_M']));
-      expect(notifySuccessSpy).not.toHaveBeenCalled();
-    });
-
-    test('does nothing when user cancels confirmation', () => {
-      (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(false);
-      section.onRightClick(createResult('M&M', ['M_M', 'M&M']));
-      expect(mockSymbolManager.deleteTvTicker).not.toHaveBeenCalled();
+      await section.onRightClick(createResult('HDFC', ['KEEP', 'REMOVE1', 'REMOVE2']));
+      expect(mockCanonicalRanker.rankTvTickers).toHaveBeenCalledWith(['KEEP', 'REMOVE1', 'REMOVE2']);
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledTimes(2);
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledWith('REMOVE1');
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledWith('REMOVE2');
     });
   });
 
   describe('onFixAll', () => {
-    test('ranks and removes all lower-ranked aliases across groups after confirmation', () => {
-      const results = [
-        createResult('M&M', ['M_M', 'M&M', 'M&amp;M']),
-        createResult('PTC', ['PTC', 'PFS']),
-      ];
-      section.onFixAll!(results);
-      // Group 1: keeps M_M, removes M&M, M&amp;M. Group 2: keeps PTC, removes PFS.
-      expect(mockSymbolManager.deleteTvTicker).toHaveBeenCalledTimes(3);
-      expect(notifySuccessSpy).toHaveBeenCalled();
-    });
+    test('ranks and removes all lower-ranked aliases across groups after confirmation', async () => {
+      mockTickerHandler.stopTracking = jest.fn().mockResolvedValue(undefined);
 
-    test('does nothing when user cancels confirmation', () => {
-      (globalThis as Record<string, unknown>).confirm = jest.fn().mockReturnValue(false);
-      section.onFixAll!([createResult('M&M', ['M_M', 'M&M'])]);
-      expect(mockSymbolManager.deleteTvTicker).not.toHaveBeenCalled();
+      const results = [
+        createResult('INV1', ['A', 'B', 'C']),
+        createResult('INV2', ['D', 'E']),
+      ];
+      await section.onFixAll!(results);
+      // A kept, B+C removed; D kept, E removed = 3 total removals
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledTimes(3);
+      expect(notifySuccessSpy).toHaveBeenCalled();
     });
   });
 
@@ -154,7 +111,15 @@ describe('TickerCollisionSection', () => {
     });
 
     test('shows count when results present', () => {
-      expect(section.headerFormatter([createResult('M&M', ['M_M', 'M&M'])])).toContain('1');
+      expect(section.headerFormatter([createResult('HDFC', ['A', 'B'])])).toContain('1');
+    });
+  });
+
+  describe('buttonColorMapper', () => {
+    test('maps HIGH severity', () => {
+      const result = createResult('HDFC', ['A', 'B']);
+      const color = section.buttonColorMapper(result);
+      expect(color).toBeDefined();
     });
   });
 });

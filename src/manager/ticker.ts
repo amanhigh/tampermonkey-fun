@@ -1,201 +1,115 @@
-import { Constants } from '../models/constant';
-import { IWaitUtil } from '../util/wait';
-import { ITradingViewScreenerManager } from './screener';
-import { ISymbolManager } from './symbol';
-import { ITradingViewWatchlistManager } from './watchlist';
+import { ITickerClient } from '../client/ticker';
+import { CreateTickerRequest, TickerQueryParams, Ticker, TickerUpdateRequest } from '../models/ticker';
 
 /**
- * Minimum number of tickers required for selection
+ * Request type for starting to track a new primary ticker.
+ * Alias for the backend create-ticker request.
  */
-const MIN_SELECTED_TICKERS = 2;
+export type StartTrackingRequest = CreateTickerRequest;
 
 /**
- * Interface for managing ticker operations
+ * Interface for managing primary TradingView ticker lifecycle and data.
+ *
+ * Domain methods:
+ * - startTracking / stopTracking → user-facing lifecycle
+ * - markRecent → convenience over PATCH last-opened
+ * - setExchange → convenience over updateTicker
+ *
+ * Generic read/write methods mirror the backend client.
  */
 export interface ITickerManager {
   /**
-   * Gets current ticker from DOM
-   * @returns Current ticker symbol
+   * Start tracking a new primary ticker. Creates a backend record.
+   * @param data - Ticker creation payload
+   * @returns Promise resolving with created ticker record
    */
-  getTicker(): string;
+  startTracking(data: StartTrackingRequest): Promise<Ticker>;
 
   /**
-   * Gets current exchange from DOM
-   * @returns Current exchange
+   * Get one primary ticker record.
+   * @param ticker - Primary ticker identity
+   * @returns Promise resolving with ticker record
    */
-  getCurrentExchange(): string;
+  getTicker(ticker: string): Promise<Ticker>;
 
   /**
-   * Maps current TradingView ticker to Investing ticker
-   * @returns Mapped Investing ticker or original if no mapping exists
+   * Update mutable primary ticker metadata.
+   * @param ticker - Primary ticker identity
+   * @param data - Partial update payload
+   * @returns Promise resolving with updated ticker record
    */
-  getInvestingTicker(): string;
+  updateTicker(ticker: string, data: TickerUpdateRequest): Promise<Ticker>;
 
   /**
-   * Opens specified ticker in TradingView
-   * @param ticker - Ticker to open
+   * Record the current ticker as recently opened.
+   * Internally calls PATCH last_opened_at with current timestamp.
+   * @param ticker - Primary ticker identity
    */
-  openTicker(ticker: string): void;
+  markRecent(ticker: string): Promise<void>;
 
   /**
-   * Gets currently selected tickers from watchlist and screener
-   * @returns Selected tickers
+   * Stop tracking a primary ticker. Backend cascades to linked Alert tickers.
+   * @param ticker - Primary ticker identity
    */
-  getSelectedTickers(): string[];
+  stopTracking(ticker: string): Promise<void>;
 
   /**
-   * Opens current ticker relative to its benchmark
+   * List ALL primary tickers matching filters, auto-paginating.
+   * @param params - Query parameters
+   * @returns Promise resolving with all matching ticker records
    */
-  openBenchmarkTicker(): void;
+  listTickers(params: TickerQueryParams): Promise<Ticker[]>;
 
   /**
-   * Navigates through visible tickers in either screener or watchlist
-   * @param step - Number of steps to move (positive for forward, negative for backward)
-   * @throws Error When no visible tickers are available
+   * Set or clear the exchange on a primary ticker.
+   * Convenience wrapping updateTicker with { exchange }.
+   * @param ticker - Primary ticker identity
+   * @param exchange - Exchange code (e.g. "NSE") or null to clear
+   * @returns Promise resolving with updated ticker record
    */
-  navigateTickers(step: number): void;
+  setExchange(ticker: string, exchange: string | null): Promise<Ticker>;
 }
 
 /**
- * Manages all ticker operations including retrieval, mapping, navigation and selection
+ * Manages primary TradingView ticker lifecycle and data against the Kohan backend.
  */
 export class TickerManager implements ITickerManager {
-  /**
-   * Manages all ticker operations including retrieval, mapping, navigation and selection
-   * @param waitUtil DOM operation manager
-   * @param symbolManager Manager for symbol operations
-   * @param screenerManager Manager for screener operations
-   * @param watchlistManager Manager for watchlist operations
-   */
-  constructor(
-    private readonly waitUtil: IWaitUtil,
-    private readonly symbolManager: ISymbolManager,
-    private readonly screenerManager: ITradingViewScreenerManager,
-    private readonly watchlistManager: ITradingViewWatchlistManager
-  ) {}
+  constructor(private readonly tickerClient: ITickerClient) {}
 
   /** @inheritdoc */
-  getTicker(): string {
-    const ticker = $(Constants.DOM.BASIC.TICKER).text();
-    if (!ticker) {
-      throw new Error('Ticker not found');
-    }
-    return ticker;
+  async startTracking(data: StartTrackingRequest): Promise<Ticker> {
+    return this.tickerClient.createTicker(data);
   }
 
   /** @inheritdoc */
-  getCurrentExchange(): string {
-    const exchange = $(Constants.DOM.BASIC.EXCHANGE).text();
-    if (!exchange) {
-      throw new Error('Exchange not found');
-    }
-    return exchange;
+  async getTicker(ticker: string): Promise<Ticker> {
+    return this.tickerClient.getTicker(ticker);
   }
 
   /** @inheritdoc */
-  getInvestingTicker(): string {
-    const tvTicker = this.getTicker();
-    const investingTicker = this.symbolManager.tvToInvesting(tvTicker);
-    if (!investingTicker) {
-      throw new Error(`Investing ticker not found for ${tvTicker}`);
-    }
-    return investingTicker;
+  async updateTicker(ticker: string, data: TickerUpdateRequest): Promise<Ticker> {
+    return this.tickerClient.updateTicker(ticker, data);
   }
 
   /** @inheritdoc */
-  openTicker(ticker: string): void {
-    const exchangeTicker = this.symbolManager.tvToExchangeTicker(ticker);
-    this.waitUtil.waitClick(Constants.DOM.BASIC.TICKER);
-    this.waitUtil.waitInput(Constants.DOM.POPUPS.SEARCH, exchangeTicker);
+  async markRecent(ticker: string): Promise<void> {
+    await this.tickerClient.patchTickerLastOpened(ticker, {
+      last_opened_at: new Date().toISOString(),
+    });
   }
 
   /** @inheritdoc */
-  getSelectedTickers(): string[] {
-    let selected = this.getVisibleSelectedTickers();
-    if (selected.length < MIN_SELECTED_TICKERS) {
-      selected = [this.getTicker()];
-    }
-    return selected;
+  async stopTracking(ticker: string): Promise<void> {
+    await this.tickerClient.deleteTicker(ticker);
   }
 
   /** @inheritdoc */
-  openBenchmarkTicker(): void {
-    const ticker = this.getTicker();
-    const exchange = this.getCurrentExchange();
-
-    let benchmark: string;
-    switch (exchange) {
-      case 'MCX':
-        benchmark = 'MCX:GOLD1!';
-        break;
-      case Constants.EXCHANGE.TYPES.NSE:
-        benchmark = 'NIFTY';
-        break;
-      case 'BINANCE':
-        benchmark = 'BINANCE:BTCUSDT';
-        break;
-      default:
-        benchmark = 'XAUUSD';
-    }
-
-    this.openTicker(`${ticker}/${benchmark}`);
+  async listTickers(params: TickerQueryParams): Promise<Ticker[]> {
+    return this.tickerClient.listTickers(params);
   }
 
   /** @inheritdoc */
-  navigateTickers(step: number): void {
-    const currentTicker = this.getTicker();
-    const visibleTickers = this.getVisibleTickers();
-
-    if (!visibleTickers.length) {
-      throw new Error('No visible tickers available for navigation');
-    }
-
-    const nextTicker = this.calculateNextTicker(currentTicker, visibleTickers, step);
-
-    this.openTicker(nextTicker);
-  }
-
-  /**
-   * Gets currently visible tickers based on active view
-   * @private
-   * @returns {string[]} Array of visible ticker symbols
-   */
-  private getVisibleSelectedTickers(): string[] {
-    return this.screenerManager.isScreenerVisible()
-      ? this.screenerManager.getSelectedTickers()
-      : this.watchlistManager.getSelectedTickers();
-  }
-
-  /**
-   * Gets currently visible tickers based on active view
-   * @private
-   * @returns Array of visible ticker symbols
-   */
-  private getVisibleTickers(): string[] {
-    return this.screenerManager.isScreenerVisible()
-      ? this.screenerManager.getTickers(true)
-      : this.watchlistManager.getTickers(true);
-  }
-
-  /**
-   * Calculates the next ticker based on current position and step
-   * @private
-   * @param currentTicker - Currently selected ticker
-   * @param tickers - Array of available tickers
-   * @param step - Number of steps to move
-   * @returns Next ticker symbol
-   */
-  private calculateNextTicker(currentTicker: string, tickers: string[], step: number): string {
-    const currentIndex = tickers.indexOf(currentTicker);
-    let nextIndex = currentIndex + step;
-
-    // Handle wraparound
-    if (nextIndex < 0) {
-      nextIndex = tickers.length - 1;
-    } else if (nextIndex >= tickers.length) {
-      nextIndex = 0;
-    }
-
-    return tickers[nextIndex];
+  async setExchange(ticker: string, exchange: string | null): Promise<Ticker> {
+    return this.tickerClient.updateTicker(ticker, { exchange });
   }
 }

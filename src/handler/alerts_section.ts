@@ -3,22 +3,18 @@ import { IAuditSection } from './audit_section';
 import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { ITickerHandler } from './ticker';
-import { ISymbolManager } from '../manager/symbol';
-import { IPairHandler } from './pair';
 import { Notifier } from '../util/notify';
 import { AlertState } from '../models/alert';
 import { Constants } from '../models/constant';
 
 /**
  * Alerts Audit Section
- * Displays alerts with coverage status: SINGLE_ALERT, NO_ALERTS, NO_PAIR
+ * Displays tracked TV tickers with weak alert coverage: SINGLE_ALERT or NO_ALERTS
  *
  * Features:
- * - Filters out watched tickers (don't show if in watchlist)
- * - Filters out invalid mappings (shows as separate category)
  * - Prioritizes SINGLE_ALERT over NO_ALERTS in display
  * - Left-click: Open ticker in TradingView
- * - Right-click: Delete pair mapping
+ * - Right-click: Stop tracking ticker
  *
  * Pattern:
  * - Receives plugin via direct injection (not via registry)
@@ -29,8 +25,7 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
   // Identity - shares ID with ALERTS plugin
   readonly id = Constants.AUDIT.PLUGINS.ALERTS;
   readonly title = 'Alerts Coverage';
-  readonly description =
-    'Audits alert coverage for every tracked Investing ticker (NO_PAIR / NO_ALERTS / SINGLE_ALERT)';
+  readonly description = 'Audits alert coverage for every tracked TV ticker (NO_ALERTS / SINGLE_ALERT)';
   readonly order = 0;
 
   // Action labels
@@ -46,21 +41,20 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
 
   // Interaction handlers
   readonly onLeftClick = (result: AuditResult) => {
-    const investingTicker = result.target;
-    const tvTicker = this.tryMapTvTicker(investingTicker);
-    this.tickerHandler.openTicker(tvTicker);
+    void this.tickerHandler.openTicker(result.target);
   };
 
-  readonly onRightClick = (result: AuditResult) => {
-    const investingTicker = result.target;
-    this.pairHandler.stopTrackingByInvestingTicker(investingTicker);
+  readonly onRightClick = async (result: AuditResult): Promise<void> => {
+    await this.tickerHandler.stopTracking(result.target);
   };
 
-  readonly onFixAll = (results: AuditResult[]) => {
-    results.forEach((result) => {
-      this.pairHandler.stopTrackingByInvestingTicker(result.target);
-    });
-    Notifier.success(`⏹ Stopped tracking ${results.length} ticker(s)`);
+  readonly onFixAll = async (results: AuditResult[]): Promise<void> => {
+    let count = 0;
+    for (const result of results) {
+      await this.tickerHandler.stopTracking(result.target);
+      count++;
+    }
+    Notifier.success(`⏹ Stopped tracking ${count} ticker(s)`);
   };
 
   readonly headerFormatter = (auditResults: AuditResult[]) => {
@@ -71,14 +65,12 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
     // Count different states
     const singles = auditResults.filter((r) => r.code === AlertState.SINGLE_ALERT).length;
     const nones = auditResults.filter((r) => r.code === AlertState.NO_ALERTS).length;
-    const invalids = auditResults.filter((r) => r.code === AlertState.NO_PAIR).length;
 
     // Color-coded counts matching button colors for visual clarity
-    // One (SINGLE_ALERT): darkorange | None (NO_ALERTS): silver | Inv (NO_PAIR): darkred | Tot: default
+    // One (SINGLE_ALERT): darkorange | None (NO_ALERTS): silver | Tot: default
     return [
       `<span style="color: darkorange">One: ${singles}</span>`,
       `<span style="color: silver">None: ${nones}</span>`,
-      `<span style="color: darkred">Inv: ${invalids}</span>`,
       `Tot: ${auditResults.length}`,
     ].join(' | ');
   };
@@ -87,28 +79,12 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
    * Creates an Alerts audit section
    * @param plugin - IAudit plugin for alerts analysis (injected directly)
    * @param tickerHandler - Handler for ticker operations
-   * @param symbolManager - Manager for symbol mappings
-   * @param pairManager - Manager for pair operations
-   * @param watchListHandler - Handler for watchlist repaint after pair deletion
    */
   constructor(
     plugin: IAudit,
-    private readonly tickerHandler: ITickerHandler,
-    private readonly symbolManager: ISymbolManager,
-    private readonly pairHandler: IPairHandler
+    private readonly tickerHandler: ITickerHandler
   ) {
     super();
     this.plugin = plugin;
-  }
-
-  /**
-   * Attempts to map an investing ticker to a TV ticker
-   * @private
-   * @param investingTicker The ticker symbol
-   * @returns The mapped tv ticker or the original ticker if no mapping exists
-   */
-  private tryMapTvTicker(investingTicker: string): string {
-    const tvTicker = this.symbolManager.investingToTv(investingTicker);
-    return tvTicker || investingTicker;
   }
 }

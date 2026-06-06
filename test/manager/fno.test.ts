@@ -1,15 +1,15 @@
 import { FnoManager, IFnoManager } from '../../src/manager/fno';
 import { ITickerClient } from '../../src/client/ticker';
-import { TickerRecord } from '../../src/models/ticker';
+import { Ticker } from '../../src/models/ticker';
 
 describe('FnoManager', () => {
   let fnoManager: IFnoManager;
   let mockClient: jest.Mocked<ITickerClient>;
 
-  const mockFnoTickers: TickerRecord[] = [
-    { ticker: 'NIFTY', is_fno: true, exchange: 'NSE', timeframes: ['MN', 'WK', 'DL'], type: 'INDEX', state: 'WATCHED', trend: 'UPTREND', last_opened_at: '2026-05-05T10:30:00Z', created_at: '2026-05-05T10:30:00Z', updated_at: '2026-05-05T10:30:00Z' },
-    { ticker: 'BANKNIFTY', is_fno: true, exchange: 'NSE', timeframes: ['MN', 'WK', 'DL'], type: 'INDEX', state: 'WATCHED', trend: 'SIDEWAYS', last_opened_at: '2026-05-05T10:30:00Z', created_at: '2026-05-05T10:30:00Z', updated_at: '2026-05-05T10:30:00Z' },
-    { ticker: 'RELIANCE', is_fno: true, exchange: 'NSE', timeframes: ['MN', 'WK', 'DL'], type: 'EQUITY', state: 'WATCHED', trend: 'UPTREND', last_opened_at: '2026-05-05T10:30:00Z', created_at: '2026-05-05T10:30:00Z', updated_at: '2026-05-05T10:30:00Z' },
+  const mockFnoTickers: Ticker[] = [
+    new Ticker({ ticker: 'NIFTY', is_fno: true, exchange: 'NSE', timeframes: ['MN', 'WK', 'DL'], type: 'INDEX', state: 'WATCHED', trend: 'UPTREND', last_opened_at: '2026-05-05T10:30:00Z' }),
+    new Ticker({ ticker: 'BANKNIFTY', is_fno: true, exchange: 'NSE', timeframes: ['MN', 'WK', 'DL'], type: 'INDEX', state: 'WATCHED', trend: 'SIDEWAYS', last_opened_at: '2026-05-05T10:30:00Z' }),
+    new Ticker({ ticker: 'RELIANCE', is_fno: true, exchange: 'NSE', timeframes: ['MN', 'WK', 'DL'], type: 'EQUITY', state: 'WATCHED', trend: 'UPTREND', last_opened_at: '2026-05-05T10:30:00Z' }),
   ];
 
   beforeEach(() => {
@@ -69,5 +69,4 @@ describe('FnoManager', () => {
       expect(emptyManager.getAllFnoTickers()).toEqual(new Set());
     });
   });
-
 });

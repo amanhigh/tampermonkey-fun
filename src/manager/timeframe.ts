@@ -12,7 +12,7 @@ export interface ITimeFrameManager {
    * @param position - Position in sequence (0-3)
    * @returns True if successfully applied
    */
-  applyTimeFrame(position: number): boolean;
+  applyTimeFrame(position: number): Promise<boolean>;
 
   /**
    * Get currently selected timeframe
@@ -42,8 +42,8 @@ export class TimeFrameManager implements ITimeFrameManager {
   constructor(private readonly sequenceManager: ISequenceManager) {}
 
   /** @inheritdoc */
-  applyTimeFrame(position: number): boolean {
-    const sequence = this.sequenceManager.getCurrentSequence();
+  async applyTimeFrame(position: number): Promise<boolean> {
+    const sequence = await this.sequenceManager.getCurrentSequence();
     const timeFrame = this.sequenceManager.sequenceToTimeFrameConfig(sequence, position);
     return this.clickTimeFrameToolbar(timeFrame.toolbar);
   }

@@ -27,29 +27,14 @@ export const Constants = Object.freeze({
       HEADER_TEXT: 'header-text', // Header text with timestamp
     },
     PLUGINS: Object.freeze({
-      /** Alerts audit plugin - analyzes trading alerts */
+      /** Alerts audit plugin - identifies tracked TV tickers with missing/weak alert coverage */
       ALERTS: 'alerts',
-
-      /** Orphan alerts audit plugin - identifies alerts without corresponding pairs */
-      ORPHAN_ALERTS: 'orphan-alerts',
-
-      /** Integrity audit plugin (FR-007) - ensures every investingTicker in PairRepo has a corresponding tvTicker in TickerRepo */
-      INTEGRITY: 'integrity',
 
       /** GTT unwatched audit plugin & section - identifies and displays unwatched GTT orders */
       GTT_UNWATCHED: 'gtt-unwatched',
 
-      /** Orphan sequences audit plugin - identifies sequence entries without corresponding tickers */
-      ORPHAN_SEQUENCES: 'orphan-sequences',
-
       /** Orphan flags audit plugin - identifies flag entries without corresponding tickers */
       ORPHAN_FLAGS: 'orphan-flags',
-
-      /** Orphan exchange audit plugin - identifies exchange mappings without corresponding tickers */
-      ORPHAN_EXCHANGE: 'orphan-exchange',
-
-      /** Duplicate pair IDs audit plugin - identifies multiple investing tickers sharing the same pairId */
-      DUPLICATE_PAIR_IDS: 'duplicate-pair-ids',
 
       /** Ticker collision audit plugin - identifies reverse map collisions in TickerRepo */
       TICKER_COLLISION: 'ticker-collision',
@@ -293,6 +278,12 @@ Support:
       NSE: 'NSE', // Old Name: NSE_EXCHANGE
     },
     PREFERRED: ['NSE', 'NYSE', 'NASDAQ'],
+  },
+  COMPOSITE: {
+    /** Characters that indicate a composite symbol */
+    CHARACTERS: ['/', '*', '-', ':'],
+    /** Tickers always treated as composite despite lacking separator characters */
+    SPECIAL_TICKERS: ['GOLDSILVER', 'BTC.D'],
   },
 });
 

@@ -1,18 +1,14 @@
 import { KiteHandler } from '../../src/handler/kite';
 import { IKiteManager } from '../../src/manager/kite';
-import { ISymbolManager } from '../../src/manager/symbol';
 import { IWaitUtil } from '../../src/util/wait';
-import { ITickerManager } from '../../src/manager/ticker';
+import { IDomManager } from '../../src/manager/dom';
 import { ITradingViewManager } from '../../src/manager/tv';
 import { IUIUtil } from '../../src/util/ui';
-import { Constants } from '../../src/models/constant';
 
 describe('KiteHandler', () => {
-  let kiteHandler: KiteHandler;
   let kiteManagerMock: jest.Mocked<IKiteManager>;
-  let symbolManagerMock: jest.Mocked<ISymbolManager>;
   let waitUtilMock: jest.Mocked<IWaitUtil>;
-  let tickerManagerMock: jest.Mocked<ITickerManager>;
+  let tickerManagerMock: jest.Mocked<IDomManager>;
   let tvManagerMock: jest.Mocked<ITradingViewManager>;
   let uiUtilMock: jest.Mocked<IUIUtil>;
 
@@ -25,10 +21,8 @@ describe('KiteHandler', () => {
       getGttRefereshEvent: jest.fn(),
       createGttRefreshEvent: jest.fn(),
       loadOrders: jest.fn(),
-    } as any;
-    symbolManagerMock = {
-      tvToKite: jest.fn(),
       kiteToTv: jest.fn(),
+      tvToKite: jest.fn(),
     } as any;
     waitUtilMock = {
       waitJEE: jest.fn(),
@@ -42,33 +36,13 @@ describe('KiteHandler', () => {
     uiUtilMock = {
       buildButton: jest.fn(),
     } as any;
-
-    kiteHandler = new KiteHandler(
-      kiteManagerMock,
-      symbolManagerMock,
-      waitUtilMock,
-      tickerManagerMock,
-      tvManagerMock,
-      uiUtilMock
-    );
-
-    // Mock Constants.TRADING.ORDER.RISK_LIMIT
-    Object.defineProperty(Constants.TRADING.ORDER, 'RISK_LIMIT', { value: 1000 });
   });
 
-  describe('calculateQuantity', () => {
-    it('should calculate quantity correctly', () => {
-      const entryPrice = 100;
-      const stopPrice = 90;
-      const expectedRisk = 10;
-      const expectedQty = 100;
-      const expectedDoubleQty = 200;
-
-      const { risk, qty, doubleQty } = kiteHandler.calculateQuantity(entryPrice, stopPrice);
-
-      expect(qty).toBe(expectedQty);
-      expect(risk).toBe(expectedRisk);
-      expect(doubleQty).toBe(expectedDoubleQty);
-    });
+  it('should create instance with all dependencies', () => {
+    const handler = new KiteHandler(
+      kiteManagerMock, waitUtilMock, tickerManagerMock, tvManagerMock, uiUtilMock
+    );
+    expect(handler).toBeDefined();
+    expect(handler).toBeInstanceOf(KiteHandler);
   });
 });

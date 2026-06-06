@@ -12,24 +12,37 @@ export type TickerState = 'WATCHED' | 'READY' | 'BLACKLIST';
 /** Trend classification. */
 export type TickerTrend = 'UPTREND' | 'SIDEWAYS' | 'DOWNTREND';
 
-import { AlertTickerRecord } from './alert_ticker';
+import { AlertTicker } from './alert_ticker';
 
-// ── Primary Ticker Types ──
+import { Constants } from './constant';
 
-/** Full primary ticker record returned by the API (matches go-fun models/barkat/ticker.go Ticker). */
-export interface TickerRecord {
-  ticker: string;
-  exchange: string | null;
-  timeframes: TickerTimeframe[];
-  type: TickerType;
-  state: TickerState;
-  trend: TickerTrend;
-  last_opened_at: string;
-  is_fno: boolean;
-  created_at: string;
-  updated_at: string;
-  alert_tickers?: AlertTickerRecord[];
+// ── Primary Ticker Class ──
+
+/**
+ * Full primary ticker record returned by the API (matches go-fun models/barkat/ticker.go Ticker).
+ */
+export class Ticker {
+  ticker: string = '';
+  exchange: string | null = null;
+  timeframes: TickerTimeframe[] = [];
+  type: TickerType = 'EQUITY';
+  state: TickerState = 'WATCHED';
+  trend: TickerTrend = 'SIDEWAYS';
+  last_opened_at: string = '';
+  is_fno: boolean = false;
+  created_at: string = '';
+  updated_at: string = '';
+  alert_tickers?: AlertTicker[];
   alert_ticker_count?: number;
+
+  constructor(data: Partial<Ticker> = {}) {
+    Object.assign(this, data);
+  }
+
+  /** Exchange-qualified name: "EXCHANGE:ticker" or raw ticker when exchange absent. */
+  get qualifiedName(): string {
+    return this.exchange ? `${this.exchange}:${this.ticker}` : this.ticker;
+  }
 }
 
 /** Request body for POST /v1/api/tickers (create). */
@@ -44,14 +57,16 @@ export interface CreateTickerRequest {
   is_fno?: boolean;
 }
 
-/** Request body for PUT /v1/api/tickers/{ticker} (update mutable fields). */
+/** Request body for PUT /v1/api/tickers/{ticker} (update mutable fields).
+ * All fields are optional; only provided fields are merged into the current record.
+ */
 export interface TickerUpdateRequest {
   exchange?: string | null;
-  timeframes: TickerTimeframe[];
-  type: TickerType;
-  state: TickerState;
-  trend: TickerTrend;
-  is_fno: boolean;
+  timeframes?: TickerTimeframe[];
+  type?: TickerType;
+  state?: TickerState;
+  trend?: TickerTrend;
+  is_fno?: boolean;
 }
 
 /** Request body for PATCH /v1/api/tickers/{ticker} (last_opened_at only). */
@@ -76,10 +91,25 @@ export interface TickerQueryParams {
 
 /** Paginated ticker list response. */
 export interface TickerListResponse {
-  tickers: TickerRecord[];
+  tickers: Ticker[];
   metadata: {
     total: number;
     offset: number;
     limit: number;
   };
+}
+
+/**
+ * Checks if a symbol is a composite symbol containing special characters
+ * like '/', '*', '-', ':' or matching special-case composite tickers.
+ * @param symbol Symbol to check
+ * @returns True if symbol is composite
+ */
+export function isCompositeSymbol(symbol: string): boolean {
+  // FIXME: Use Backend Composite Type and Thong Logic.
+  const normalized = symbol.toUpperCase();
+  if (Constants.COMPOSITE.SPECIAL_TICKERS.includes(normalized)) {
+    return true;
+  }
+  return Constants.COMPOSITE.CHARACTERS.some((char) => symbol.includes(char));
 }

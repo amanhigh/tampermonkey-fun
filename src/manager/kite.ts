@@ -1,4 +1,3 @@
-import { ISymbolManager } from './symbol';
 import { IKiteClient } from '../client/kite';
 import { CreateGttRequest, GttApiResponse } from '../models/kite';
 import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../models/gtt';
@@ -36,6 +35,20 @@ export interface IKiteManager {
   createGttOrderEvent(event: GttCreateEvent): Promise<void>;
   createGttRefreshEvent(event: GttRefreshEvent): Promise<void>;
   getGttRefereshEvent(): Promise<GttRefreshEvent>;
+
+  /**
+   * Maps a Kite symbol to TradingView symbol
+   * @param kiteSymbol Symbol in Kite format (e.g., "M_M")
+   * @returns TradingView formatted symbol (e.g., "M&M")
+   */
+  kiteToTv(kiteSymbol: string): string;
+
+  /**
+   * Maps a TradingView symbol to Kite symbol
+   * @param tvSymbol Symbol in TradingView format (e.g., "M&M")
+   * @returns Kite formatted symbol (e.g., "M_M")
+   */
+  tvToKite(tvSymbol: string): string;
 }
 
 /**
@@ -71,15 +84,31 @@ export class KiteManager implements IKiteManager {
   ] as const;
 
   /**
-   * @param symbolManager Manager for symbol operations
+   * Kite to TradingView symbol mapping
+   * @private
+   */
+  private readonly kiteToTvSymbolMap: Readonly<Record<string, string>> = Object.freeze({
+    M_M: 'M&M',
+    M_MFIN: 'M&MFIN',
+  });
+
+  /**
+   * TradingView to Kite symbol mapping (auto-generated reverse map)
+   * @private
+   */
+  private readonly tvToKiteSymbolMap: Readonly<Record<string, string>>;
+
+  /**
    * @param kiteClient Client for Kite API operations
    * @param kiteRepo Repository for Kite data persistence
    */
   constructor(
-    private readonly symbolManager: ISymbolManager,
     private readonly kiteClient: IKiteClient,
     private readonly kiteRepo: IKiteRepo
-  ) {}
+  ) {
+    this.tvToKiteSymbolMap = this.generateTvToKiteSymbolMap();
+    Object.freeze(this.tvToKiteSymbolMap);
+  }
 
   /** @inheritdoc */
   async createOrder(evt: GttCreateEvent): Promise<void> {
@@ -91,7 +120,7 @@ export class KiteManager implements IKiteManager {
     if (!evt.symb) {
       throw new Error('Missing symbol in GTT event');
     }
-    const pair = encodeURIComponent(this.symbolManager.tvToKite(evt.symb));
+    const pair = encodeURIComponent(this.tvToKite(evt.symb));
 
     const buyRequest = this.buildBuyOrderRequest(pair, evt, exp);
     const ocoRequest = this.buildOcoOrderRequest(pair, evt, exp);
@@ -272,5 +301,30 @@ export class KiteManager implements IKiteManager {
     const month = date.getMonth();
     const day = date.getDate();
     return `${year}-${month}-${day} 00:00:00`;
+  }
+
+  /** @inheritdoc */
+  kiteToTv(kiteSymbol: string): string {
+    return this.kiteToTvSymbolMap[kiteSymbol] || kiteSymbol;
+  }
+
+  /** @inheritdoc */
+  tvToKite(tvSymbol: string): string {
+    return this.tvToKiteSymbolMap[tvSymbol] || tvSymbol;
+  }
+
+  /**
+   * Generates TradingView to Kite symbol mapping from kite to tv map
+   * @private
+   * @returns TradingView to Kite symbol map
+   */
+  private generateTvToKiteSymbolMap(): Record<string, string> {
+    return Object.entries(this.kiteToTvSymbolMap).reduce(
+      (reverseMap, [kiteSymbol, tvSymbol]) => {
+        reverseMap[tvSymbol] = kiteSymbol;
+        return reverseMap;
+      },
+      {} as Record<string, string>
+    );
   }
 }

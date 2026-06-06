@@ -3,9 +3,11 @@
  */
 
 import { IAlertManager } from '../manager/alert';
-import { ISymbolManager } from '../manager/symbol';
 import { ITickerManager } from '../manager/ticker';
+import { IAlertTickerManager } from '../manager/alert_ticker';
+import { IDomManager } from '../manager/dom';
 import { ITradingViewManager } from '../manager/tv';
+import { isCompositeSymbol } from '../models/ticker';
 import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 import { IUIUtil } from '../util/ui';
@@ -14,7 +16,7 @@ import { AlertClicked, AlertClickAction } from '../models/events';
 import { IAlertSummaryHandler } from './alert_summary';
 import { IWatchListHandler } from './watchlist';
 import { ITickerHandler } from './ticker';
-import { IPairHandler } from './pair';
+import { IAlertTickerHandler } from './alert_ticker';
 import { IAuditHandler } from './audit';
 import { IAlertFeedManager } from '../manager/alertfeed';
 import { PairInfo } from '../models/alert';
@@ -104,13 +106,14 @@ export class AlertHandler implements IAlertHandler {
     private readonly alertManager: IAlertManager,
     private readonly tradingViewManager: ITradingViewManager,
     private readonly auditHandler: IAuditHandler,
+    private readonly domManager: IDomManager,
     private readonly tickerManager: ITickerManager,
-    private readonly symbolManager: ISymbolManager,
+    private readonly alertTickerManager: IAlertTickerManager,
     private readonly syncUtil: ISyncUtil,
     private readonly uiUtil: IUIUtil,
     private readonly alertSummaryHandler: IAlertSummaryHandler,
     private readonly tickerHandler: ITickerHandler,
-    private readonly pairHandler: IPairHandler,
+    private readonly alertTickerHandler: IAlertTickerHandler,
     private readonly alertFeedManager: IAlertFeedManager,
     private readonly watchListHandler: IWatchListHandler
   ) {}
@@ -178,29 +181,30 @@ export class AlertHandler implements IAlertHandler {
   }
 
   /** @inheritdoc */
-  /** @inheritdoc */
   public refreshAlerts(): void {
     this.syncUtil.waitOn('alert-refresh-local', 10, () => {
-      try {
-        const alerts = this.alertManager.getAlerts();
-        this.alertSummaryHandler.displayAlerts(alerts);
-        void this.auditHandler.auditAll();
-      } catch (error) {
-        // Show NO PAIR for Null Alerts
-        this.alertSummaryHandler.displayAlerts(null);
+      void (async () => {
+        try {
+          const alerts = await this.alertManager.getAlerts();
+          this.alertSummaryHandler.displayAlerts(alerts);
+          void this.auditHandler.auditAll();
+        } catch (error) {
+          // Show NO PAIR for Null Alerts
+          this.alertSummaryHandler.displayAlerts(null);
 
-        const tvTicker = this.tickerManager.getTicker();
-        // Igoner Error for Composite Symbols as its expected.
-        if (!this.symbolManager.isComposite(tvTicker)) {
-          throw error;
+          const tvTicker = this.domManager.getTicker();
+          // Igoner Error for Composite Symbols as its expected.
+          if (!isCompositeSymbol(tvTicker)) {
+            throw error;
+          }
         }
-      }
+      })();
     });
   }
 
   /** @inheritdoc */
   public async refreshAllAlerts(): Promise<void> {
-    const count = await this.alertManager.reloadAlerts();
+    const count = await this.alertManager.refreshAlerts();
     if (count > 0) {
       Notifier.success(`Loaded ${count} alerts`);
     } else {
@@ -224,10 +228,11 @@ export class AlertHandler implements IAlertHandler {
   public handleAlertButton(e: MouseEvent): void {
     if (e.ctrlKey) {
       // Map current exchange to current TV ticker
-      const ticker = this.tickerManager.getTicker();
-      const exchange = this.tickerManager.getCurrentExchange();
-      this.symbolManager.createTvToExchangeTickerMapping(ticker, exchange);
-      Notifier.success(`Mapped ${ticker} to ${exchange}`);
+      const ticker = this.domManager.getTicker();
+      const exchange = this.domManager.getCurrentExchange();
+      void this.tickerManager.setExchange(ticker, exchange).then(() => {
+        Notifier.success(`Mapped ${ticker} to ${exchange}`);
+      });
     } else {
       void this.createHighAlert();
     }
@@ -241,7 +246,7 @@ export class AlertHandler implements IAlertHandler {
   /** @inheritdoc */
   public handleAlertContextMenu(e: Event): void {
     e.preventDefault();
-    void this.pairHandler.mapInvestingTicker(this.tickerManager.getTicker()).then(() => {
+    void this.alertTickerHandler.linkInvestingTicker(this.domManager.getTicker()).then(() => {
       this.refreshAlerts();
     });
   }
@@ -251,21 +256,22 @@ export class AlertHandler implements IAlertHandler {
     switch (event.action) {
       case AlertClickAction.MAP:
         // Map TV Ticker to Investing Ticker
-        const tvTickerNow = this.tickerManager.getTicker();
+        const tvTickerNow = this.domManager.getTicker();
         void this.alertFeedManager.createAlertFeedEvent(tvTickerNow);
-        void this.pairHandler.mapInvestingTicker(event.investingTicker).then(() => {
+        void this.alertTickerHandler.linkInvestingTicker(event.investingTicker).then(() => {
           this.refreshAlerts();
         });
-        Notifier.success(`Mapped ${this.tickerManager.getTicker()} to ${event.investingTicker}`);
+        Notifier.success(`Mapped ${this.domManager.getTicker()} to ${event.investingTicker}`);
         break;
       case AlertClickAction.OPEN:
-        const tvTicker = this.symbolManager.investingToTv(event.investingTicker);
-        if (!tvTicker) {
-          Notifier.warn(`Unmapped: ${event.investingTicker}`);
-          this.tickerHandler.openTicker(event.investingTicker);
-        } else {
-          this.tickerHandler.openTicker(tvTicker);
-        }
+        void this.alertTickerManager.fetchAlertTicker(event.investingTicker).then((alertTicker) => {
+          if (!alertTicker) {
+            Notifier.warn(`Unmapped: ${event.investingTicker}`);
+            void this.tickerHandler.openTicker(event.investingTicker);
+          } else {
+            void this.tickerHandler.openTicker(alertTicker.ticker);
+          }
+        });
         break;
       default:
         throw new Error(`Unknown alert action: ${event.action}`);

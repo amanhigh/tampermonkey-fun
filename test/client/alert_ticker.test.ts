@@ -1,4 +1,4 @@
-import { TickerAlertClient, ITickerAlertClient } from '../../src/client/ticker_alert';
+import { AlertTickerClient, IAlertTickerClient } from '../../src/client/alert_ticker';
 import { Constants } from '../../src/models/constant';
 
 // Mock the BaseClient's makeRequest method
@@ -22,25 +22,25 @@ jest.mock('../../src/client/base', () => {
   };
 });
 
-describe('TickerAlertClient', () => {
-  let tickerAlertClient: ITickerAlertClient;
+describe('AlertTickerClient', () => {
+  let alertTickerClient: IAlertTickerClient;
   let mockMakeRequest: jest.MockedFunction<any>;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    tickerAlertClient = new TickerAlertClient();
-    mockMakeRequest = (tickerAlertClient as any).makeRequest;
+    alertTickerClient = new AlertTickerClient();
+    mockMakeRequest = (alertTickerClient as any).makeRequest;
   });
 
   describe('constructor', () => {
     it('should create instance with default base URL', () => {
-      const client = new TickerAlertClient();
+      const client = new AlertTickerClient();
       expect(client.getBaseUrl()).toBe(Constants.KOHAN.BASE_URL);
     });
 
     it('should create instance with custom base URL', () => {
       const customUrl = 'http://custom.local:8080/v1/api';
-      const client = new TickerAlertClient(customUrl);
+      const client = new AlertTickerClient(customUrl);
       expect(client.getBaseUrl()).toBe(customUrl);
     });
   });
@@ -54,7 +54,7 @@ describe('TickerAlertClient', () => {
 
       mockMakeRequest.mockResolvedValue(apiEnvelope as any);
 
-      const result = await tickerAlertClient.createAlertTicker('MCX', {
+      const result = await alertTickerClient.createAlertTicker('MCX', {
         symbol: 'MCIX',
         pair_id: '941982',
         name: 'Multi Commodity Exchange of India',
@@ -79,7 +79,7 @@ describe('TickerAlertClient', () => {
 
       mockMakeRequest.mockResolvedValue(apiEnvelope as any);
 
-      const result = await tickerAlertClient.getAlertTicker('MCIX');
+      const result = await alertTickerClient.getAlertTicker('MCIX');
 
       expect(mockMakeRequest).toHaveBeenCalledWith('/alert-tickers/MCIX');
       expect(result).toEqual(apiEnvelope.data);
@@ -90,7 +90,7 @@ describe('TickerAlertClient', () => {
     it('should DELETE encoded symbol path', async () => {
       mockMakeRequest.mockResolvedValue(undefined);
 
-      await tickerAlertClient.deleteAlertTicker('MCIX');
+      await alertTickerClient.deleteAlertTicker('MCIX');
 
       expect(mockMakeRequest).toHaveBeenCalledWith('/alert-tickers/MCIX', {
         method: 'DELETE',
@@ -112,7 +112,7 @@ describe('TickerAlertClient', () => {
         },
       });
 
-      const result = await tickerAlertClient.listAlertTickers({ symbol: 'MCIX' });
+      const result = await alertTickerClient.listAlertTickers({ symbol: 'MCIX' });
 
       expect(result).toHaveLength(1);
       expect(mockMakeRequest).toHaveBeenCalledTimes(1);
@@ -140,7 +140,7 @@ describe('TickerAlertClient', () => {
           },
         });
 
-      const result = await tickerAlertClient.listAlertTickers({});
+      const result = await alertTickerClient.listAlertTickers({});
 
       expect(result).toHaveLength(150);
       expect(mockMakeRequest).toHaveBeenCalledTimes(2);
@@ -152,7 +152,7 @@ describe('TickerAlertClient', () => {
         data: { alert_tickers: [], metadata: { total: 0, offset: 0, limit: 100 } },
       });
 
-      const result = await tickerAlertClient.listAlertTickers({});
+      const result = await alertTickerClient.listAlertTickers({});
 
       expect(result).toEqual([]);
       expect(mockMakeRequest).toHaveBeenCalledTimes(1);
@@ -166,26 +166,26 @@ describe('TickerAlertClient', () => {
       mockMakeRequest.mockRejectedValue(new Error('409 Conflict: Alert ticker already exists'));
 
       await expect(
-        tickerAlertClient.createAlertTicker('MCX', { symbol: 'MCIX', pair_id: '941982', name: 'Test' })
+        alertTickerClient.createAlertTicker('MCX', { symbol: 'MCIX', pair_id: '941982', name: 'Test' })
       ).rejects.toThrow('Failed to create Alert ticker: 409 Conflict: Alert ticker already exists');
     });
 
     it('should wrap get Alert ticker errors', async () => {
       mockMakeRequest.mockRejectedValue(new Error('404 Not Found'));
 
-      await expect(tickerAlertClient.getAlertTicker('UNKNOWN')).rejects.toThrow('Failed to get Alert ticker: 404 Not Found');
+      await expect(alertTickerClient.getAlertTicker('UNKNOWN')).rejects.toThrow('Failed to get Alert ticker: 404 Not Found');
     });
 
     it('should wrap delete Alert ticker errors', async () => {
       mockMakeRequest.mockRejectedValue(new Error('404 Not Found'));
 
-      await expect(tickerAlertClient.deleteAlertTicker('UNKNOWN')).rejects.toThrow('Failed to delete Alert ticker: 404 Not Found');
+      await expect(alertTickerClient.deleteAlertTicker('UNKNOWN')).rejects.toThrow('Failed to delete Alert ticker: 404 Not Found');
     });
 
     it('should wrap listAlertTickers errors', async () => {
       mockMakeRequest.mockRejectedValue(new Error('500 Internal Server Error'));
 
-      await expect(tickerAlertClient.listAlertTickers({})).rejects.toThrow('Failed to list all Alert tickers: 500 Internal Server Error');
+      await expect(alertTickerClient.listAlertTickers({})).rejects.toThrow('Failed to list all Alert tickers: 500 Internal Server Error');
     });
   });
 });

@@ -1,9 +1,10 @@
 import { AlertFeedManager, IAlertFeedManager } from '../../src/manager/alertfeed';
-import { ISymbolManager } from '../../src/manager/symbol';
+import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { IWatchManager } from '../../src/manager/watch';
 import { IRecentManager } from '../../src/manager/recent';
 import { FeedState } from '../../src/models/alertfeed';
 import { Constants } from '../../src/models/constant';
+import { AlertTicker } from '../../src/models/alert_ticker';
 
 // Mock GM global
 (global as any).GM = {
@@ -12,27 +13,31 @@ import { Constants } from '../../src/models/constant';
 
 describe('AlertFeedManager', () => {
   let alertFeedManager: IAlertFeedManager;
-  let mockSymbolManager: jest.Mocked<ISymbolManager>;
+  let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
   let mockWatchManager: jest.Mocked<IWatchManager>;
   let mockRecentManager: jest.Mocked<IRecentManager>;
+
+  const makeAlertTicker = (overrides: Partial<AlertTicker> = {}): AlertTicker => ({
+    symbol: 'RELIANCE',
+    pair_id: 'pair1',
+    name: 'Reliance Industries',
+    exchange: 'NSE',
+    ticker: 'NSE:RELIANCE',
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+    ...overrides,
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Mock SymbolManager
-    mockSymbolManager = {
-      kiteToTv: jest.fn(),
-      tvToKite: jest.fn(),
-      tvToInvesting: jest.fn(),
-      investingToTv: jest.fn(),
-      tvToExchangeTicker: jest.fn(),
-      createTvToInvestingMapping: jest.fn(),
-      removeTvToInvestingMapping: jest.fn(),
-      createTvToExchangeTickerMapping: jest.fn(),
-      isComposite: jest.fn(),
-      removeTvToExchangeTickerMapping: jest.fn(),
-      deleteTvTicker: jest.fn(),
-    };
+    // Mock AlertTickerManager
+    mockAlertTickerManager = {
+      fetchAlertTicker: jest.fn(),
+      getAlertTicker: jest.fn(),
+      linkAlertTicker: jest.fn(),
+      getAllAlertTickers: jest.fn(),
+    } as any;
 
     // Mock WatchManager
     mockWatchManager = {
@@ -44,15 +49,15 @@ describe('AlertFeedManager', () => {
       dryRunClean: jest.fn(),
       clean: jest.fn(),
       isWatched: jest.fn(),
-    };
+    } as any;
 
     // Mock RecentManager
     mockRecentManager = {
       markRecent: jest.fn(),
       isRecent: jest.fn(),
-    };
+    } as any;
 
-    alertFeedManager = new AlertFeedManager(mockSymbolManager, mockWatchManager, mockRecentManager);
+    alertFeedManager = new AlertFeedManager(mockAlertTickerManager, mockWatchManager, mockRecentManager);
   });
 
   describe('constructor', () => {
@@ -63,60 +68,60 @@ describe('AlertFeedManager', () => {
   });
 
   describe('getAlertFeedState', () => {
-    it('should return UNMAPPED state when ticker cannot be mapped', () => {
-      mockSymbolManager.investingToTv.mockReturnValue(null);
+    it('should return UNMAPPED state when ticker cannot be found', async () => {
+      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(null);
 
-      const result = alertFeedManager.getAlertFeedState('UNKNOWN_TICKER');
+      const result = await alertFeedManager.getAlertFeedState('UNKNOWN_TICKER');
 
       expect(result).toEqual({
         state: FeedState.UNMAPPED,
         color: 'red',
       });
-      expect(mockSymbolManager.investingToTv).toHaveBeenCalledWith('UNKNOWN_TICKER');
+      expect(mockAlertTickerManager.fetchAlertTicker).toHaveBeenCalledWith('UNKNOWN_TICKER');
     });
 
-    it('should return WATCHED state when ticker is watched', () => {
-      mockSymbolManager.investingToTv.mockReturnValue('NSE:RELIANCE');
+    it('should return WATCHED state when ticker is watched', async () => {
+      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(makeAlertTicker({ ticker: 'NSE:RELIANCE' }));
       mockWatchManager.isWatched.mockReturnValue(true);
 
-      const result = alertFeedManager.getAlertFeedState('RELIANCE');
+      const result = await alertFeedManager.getAlertFeedState('RELIANCE');
 
       expect(result).toEqual({
         state: FeedState.WATCHED,
         color: 'yellow',
       });
-      expect(mockSymbolManager.investingToTv).toHaveBeenCalledWith('RELIANCE');
+      expect(mockAlertTickerManager.fetchAlertTicker).toHaveBeenCalledWith('RELIANCE');
       expect(mockWatchManager.isWatched).toHaveBeenCalledWith('NSE:RELIANCE');
     });
 
-    it('should return RECENT state when ticker is recent but not watched', () => {
-      mockSymbolManager.investingToTv.mockReturnValue('NSE:TCS');
+    it('should return RECENT state when ticker is recent but not watched', async () => {
+      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(makeAlertTicker({ ticker: 'NSE:TCS' }));
       mockWatchManager.isWatched.mockReturnValue(false);
       mockRecentManager.isRecent.mockReturnValue(true);
 
-      const result = alertFeedManager.getAlertFeedState('TCS');
+      const result = await alertFeedManager.getAlertFeedState('TCS');
 
       expect(result).toEqual({
         state: FeedState.RECENT,
         color: 'lime',
       });
-      expect(mockSymbolManager.investingToTv).toHaveBeenCalledWith('TCS');
+      expect(mockAlertTickerManager.fetchAlertTicker).toHaveBeenCalledWith('TCS');
       expect(mockWatchManager.isWatched).toHaveBeenCalledWith('NSE:TCS');
       expect(mockRecentManager.isRecent).toHaveBeenCalledWith('NSE:TCS', Constants.RECENT_CUTOFF_MS);
     });
 
-    it('should return MAPPED state when ticker is mapped but not watched or recent', () => {
-      mockSymbolManager.investingToTv.mockReturnValue('NSE:HDFC');
+    it('should return MAPPED state when ticker is mapped but not watched or recent', async () => {
+      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(makeAlertTicker({ ticker: 'NSE:HDFC' }));
       mockWatchManager.isWatched.mockReturnValue(false);
       mockRecentManager.isRecent.mockReturnValue(false);
 
-      const result = alertFeedManager.getAlertFeedState('HDFC');
+      const result = await alertFeedManager.getAlertFeedState('HDFC');
 
       expect(result).toEqual({
         state: FeedState.MAPPED,
         color: 'white',
       });
-      expect(mockSymbolManager.investingToTv).toHaveBeenCalledWith('HDFC');
+      expect(mockAlertTickerManager.fetchAlertTicker).toHaveBeenCalledWith('HDFC');
       expect(mockWatchManager.isWatched).toHaveBeenCalledWith('NSE:HDFC');
       expect(mockRecentManager.isRecent).toHaveBeenCalledWith('NSE:HDFC', Constants.RECENT_CUTOFF_MS);
     });
@@ -125,35 +130,33 @@ describe('AlertFeedManager', () => {
   describe('createAlertFeedEvent', () => {
     it('should create and store alert feed event successfully', async () => {
       const tvTicker = 'NSE:RELIANCE';
-      const investingTicker = 'RELIANCE';
 
-      mockSymbolManager.tvToInvesting.mockReturnValue(investingTicker);
-      mockSymbolManager.investingToTv.mockReturnValue(tvTicker);
+      mockAlertTickerManager.getAlertTicker.mockResolvedValue(makeAlertTicker({ symbol: 'RELIANCE', ticker: tvTicker }));
+      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(makeAlertTicker({ symbol: 'RELIANCE', ticker: tvTicker }));
       mockWatchManager.isWatched.mockReturnValue(true);
 
       await alertFeedManager.createAlertFeedEvent(tvTicker);
 
-      expect(mockSymbolManager.tvToInvesting).toHaveBeenCalledWith(tvTicker);
+      expect(mockAlertTickerManager.getAlertTicker).toHaveBeenCalledWith(tvTicker);
       expect(GM.setValue).toHaveBeenCalledWith(Constants.STORAGE.EVENTS.ALERT_FEED_UPDATE, expect.any(String));
     });
 
     it('should throw error when ticker cannot be converted', async () => {
-      mockSymbolManager.tvToInvesting.mockReturnValue(null);
+      mockAlertTickerManager.getAlertTicker.mockResolvedValue(null);
 
       await expect(alertFeedManager.createAlertFeedEvent('INVALID_TICKER')).rejects.toThrow(
         'Failed to convert ticker: INVALID_TICKER'
       );
 
-      expect(mockSymbolManager.tvToInvesting).toHaveBeenCalledWith('INVALID_TICKER');
+      expect(mockAlertTickerManager.getAlertTicker).toHaveBeenCalledWith('INVALID_TICKER');
       expect(GM.setValue).not.toHaveBeenCalled();
     });
 
     it('should create event with correct feed state', async () => {
       const tvTicker = 'NSE:TCS';
-      const investingTicker = 'TCS';
 
-      mockSymbolManager.tvToInvesting.mockReturnValue(investingTicker);
-      mockSymbolManager.investingToTv.mockReturnValue(tvTicker);
+      mockAlertTickerManager.getAlertTicker.mockResolvedValue(makeAlertTicker({ symbol: 'TCS', ticker: tvTicker }));
+      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(makeAlertTicker({ symbol: 'TCS', ticker: tvTicker }));
       mockWatchManager.isWatched.mockReturnValue(false);
       mockRecentManager.isRecent.mockReturnValue(true);
 
@@ -164,7 +167,7 @@ describe('AlertFeedManager', () => {
       // Verify the stored event contains correct data
       const storedEventString = (GM.setValue as jest.Mock).mock.calls[0][1];
       const storedEvent = JSON.parse(storedEventString);
-      expect(storedEvent.investingTicker).toBe(investingTicker);
+      expect(storedEvent.investingTicker).toBe('TCS');
       expect(storedEvent.feedInfo.state).toBe(FeedState.RECENT);
       expect(storedEvent.feedInfo.color).toBe('lime');
     });
@@ -188,18 +191,17 @@ describe('AlertFeedManager', () => {
   describe('integration scenarios', () => {
     it('should handle complete workflow from tv ticker to stored event', async () => {
       const tvTicker = 'NSE:NIFTY';
-      const investingTicker = 'NIFTY';
 
-      mockSymbolManager.tvToInvesting.mockReturnValue(investingTicker);
-      mockSymbolManager.investingToTv.mockReturnValue(tvTicker);
+      mockAlertTickerManager.getAlertTicker.mockResolvedValue(makeAlertTicker({ symbol: 'NIFTY', ticker: tvTicker }));
+      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(makeAlertTicker({ symbol: 'NIFTY', ticker: tvTicker }));
       mockWatchManager.isWatched.mockReturnValue(false);
       mockRecentManager.isRecent.mockReturnValue(false);
 
       await alertFeedManager.createAlertFeedEvent(tvTicker);
 
-      // Verify all dependencies were called correctly
-      expect(mockSymbolManager.tvToInvesting).toHaveBeenCalledWith(tvTicker);
-      expect(mockSymbolManager.investingToTv).toHaveBeenCalledWith(investingTicker);
+      // Verify dependencies were called correctly
+      expect(mockAlertTickerManager.getAlertTicker).toHaveBeenCalledWith(tvTicker);
+      expect(mockAlertTickerManager.fetchAlertTicker).toHaveBeenCalledWith('NIFTY');
       expect(mockWatchManager.isWatched).toHaveBeenCalledWith(tvTicker);
       expect(mockRecentManager.isRecent).toHaveBeenCalledWith(tvTicker, Constants.RECENT_CUTOFF_MS);
 
@@ -207,17 +209,16 @@ describe('AlertFeedManager', () => {
       expect(GM.setValue).toHaveBeenCalledTimes(1);
       const storedEventString = (GM.setValue as jest.Mock).mock.calls[0][1];
       const storedEvent = JSON.parse(storedEventString);
-      expect(storedEvent.investingTicker).toBe(investingTicker);
+      expect(storedEvent.investingTicker).toBe('NIFTY');
       expect(storedEvent.feedInfo.state).toBe(FeedState.MAPPED);
       expect(storedEvent.feedInfo.color).toBe('white');
     });
 
     it('should prioritize WATCHED over RECENT state', async () => {
       const tvTicker = 'NSE:BANKNIFTY';
-      const investingTicker = 'BANKNIFTY';
 
-      mockSymbolManager.tvToInvesting.mockReturnValue(investingTicker);
-      mockSymbolManager.investingToTv.mockReturnValue(tvTicker);
+      mockAlertTickerManager.getAlertTicker.mockResolvedValue(makeAlertTicker({ symbol: 'BANKNIFTY', ticker: tvTicker }));
+      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(makeAlertTicker({ symbol: 'BANKNIFTY', ticker: tvTicker }));
       mockWatchManager.isWatched.mockReturnValue(true);
       mockRecentManager.isRecent.mockReturnValue(true); // Both are true, but WATCHED should take priority
 
@@ -235,18 +236,18 @@ describe('AlertFeedManager', () => {
       const gmError = new Error('Storage failed');
       (GM.setValue as jest.Mock).mockRejectedValue(gmError);
 
-      mockSymbolManager.tvToInvesting.mockReturnValue('RELIANCE');
-      mockSymbolManager.investingToTv.mockReturnValue('NSE:RELIANCE');
+      mockAlertTickerManager.getAlertTicker.mockResolvedValue(makeAlertTicker({ symbol: 'RELIANCE', ticker: 'NSE:RELIANCE' }));
+      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(makeAlertTicker({ symbol: 'RELIANCE', ticker: 'NSE:RELIANCE' }));
       mockWatchManager.isWatched.mockReturnValue(false);
       mockRecentManager.isRecent.mockReturnValue(false);
 
       await expect(alertFeedManager.createAlertFeedEvent('NSE:RELIANCE')).rejects.toThrow('Storage failed');
     });
 
-    it('should handle null/undefined ticker inputs', () => {
-      mockSymbolManager.investingToTv.mockReturnValue(null);
+    it('should handle null/undefined ticker inputs', async () => {
+      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(null);
 
-      const result = alertFeedManager.getAlertFeedState('');
+      const result = await alertFeedManager.getAlertFeedState('');
 
       expect(result.state).toBe(FeedState.UNMAPPED);
       expect(result.color).toBe('red');

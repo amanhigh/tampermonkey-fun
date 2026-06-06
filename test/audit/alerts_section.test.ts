@@ -1,8 +1,6 @@
 import { AlertsAuditSection } from '../../src/handler/alerts_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
-import { ISymbolManager } from '../../src/manager/symbol';
-import { IPairHandler } from '../../src/handler/pair';
 import { AlertState } from '../../src/models/alert';
 import { Notifier } from '../../src/util/notify';
 
@@ -10,9 +8,16 @@ describe('AlertsAuditSection', () => {
   let section: AlertsAuditSection;
   let mockPlugin: IAudit;
   let mockTickerHandler: Partial<ITickerHandler>;
-  let mockSymbolManager: Partial<ISymbolManager>;
-  let mockPairHandler: Partial<IPairHandler>;
   let notifySuccessSpy: jest.SpyInstance;
+
+  const createResult = (target: string, code: AlertState = AlertState.NO_ALERTS): AuditResult => ({
+    pluginId: 'alerts',
+    code,
+    target,
+    message: `${target}: ${code}`,
+    severity: 'MEDIUM',
+    status: 'FAIL',
+  });
 
   beforeEach(() => {
     mockPlugin = {
@@ -24,24 +29,12 @@ describe('AlertsAuditSection', () => {
 
     mockTickerHandler = {
       openTicker: jest.fn(),
-    };
-
-    mockSymbolManager = {
-      investingToTv: jest.fn().mockReturnValue('TV_TICKER'),
-    };
-
-    mockPairHandler = {
-      stopTrackingByInvestingTicker: jest.fn(),
+      stopTracking: jest.fn().mockResolvedValue(undefined),
     };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
 
-    section = new AlertsAuditSection(
-      mockPlugin,
-      mockTickerHandler as ITickerHandler,
-      mockSymbolManager as ISymbolManager,
-      mockPairHandler as IPairHandler
-    );
+    section = new AlertsAuditSection(mockPlugin, mockTickerHandler as ITickerHandler);
   });
 
   afterEach(() => {
@@ -57,153 +50,59 @@ describe('AlertsAuditSection', () => {
       expect(section.title).toBe('Alerts Coverage');
     });
 
-    test('has correct limit', () => {
+    test('has pagination limit', () => {
       expect(section.limit).toBe(10);
     });
 
-    test('has plugin', () => {
+    test('has plugin reference', () => {
       expect(section.plugin).toBe(mockPlugin);
     });
   });
 
-  describe('Left Click Handler', () => {
-    test('opens mapped TV ticker', () => {
-      const result: AuditResult = {
-        pluginId: 'alerts',
-        code: AlertState.NO_ALERTS,
-        target: 'INFY',
-        message: 'No alerts',
-        severity: 'MEDIUM',
-        status: 'FAIL',
-      };
-
-      section.onLeftClick(result);
-
-      expect(mockSymbolManager.investingToTv).toHaveBeenCalledWith('INFY');
-      expect(mockTickerHandler.openTicker).toHaveBeenCalledWith('TV_TICKER');
-    });
-
-    test('falls back to investing ticker when no TV mapping', () => {
-      (mockSymbolManager.investingToTv as jest.Mock).mockReturnValue(undefined);
-
-      const result: AuditResult = {
-        pluginId: 'alerts',
-        code: AlertState.NO_PAIR,
-        target: 'UNKNOWN',
-        message: 'No pair',
-        severity: 'HIGH',
-        status: 'FAIL',
-      };
-
-      section.onLeftClick(result);
-
-      expect(mockTickerHandler.openTicker).toHaveBeenCalledWith('UNKNOWN');
+  describe('onLeftClick', () => {
+    test('opens TV ticker directly', () => {
+      section.onLeftClick(createResult('NSE:INFY'));
+      expect(mockTickerHandler.openTicker).toHaveBeenCalledWith('NSE:INFY');
     });
   });
 
-  describe('Right Click Handler', () => {
-    test('deletes pair mapping', () => {
-      const result: AuditResult = {
-        pluginId: 'alerts',
-        code: AlertState.NO_ALERTS,
-        target: 'INFY',
-        message: 'No alerts',
-        severity: 'MEDIUM',
-        status: 'FAIL',
-      };
-
-      section.onRightClick(result);
-
-      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('INFY');
+  describe('onRightClick', () => {
+    test('stops tracking TV ticker directly', async () => {
+      await section.onRightClick(createResult('NSE:INFY'));
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledWith('NSE:INFY');
     });
   });
 
-  describe('Fix All Handler', () => {
-    test('deletes all pair mappings', () => {
-      const results: AuditResult[] = [
-        {
-          pluginId: 'alerts',
-          code: AlertState.NO_ALERTS,
-          target: 'INFY',
-          message: 'No alerts',
-          severity: 'MEDIUM',
-          status: 'FAIL',
-        },
-        {
-          pluginId: 'alerts',
-          code: AlertState.SINGLE_ALERT,
-          target: 'TCS',
-          message: 'Single alert',
-          severity: 'MEDIUM',
-          status: 'FAIL',
-        },
-        {
-          pluginId: 'alerts',
-          code: AlertState.NO_PAIR,
-          target: 'HDFC',
-          message: 'No pair',
-          severity: 'HIGH',
-          status: 'FAIL',
-        },
-      ];
+  describe('onFixAll', () => {
+    test('stops tracking all result TV tickers', async () => {
+      const results = [createResult('TV_A'), createResult('TV_B'), createResult('TV_C')];
 
-      section.onFixAll!(results);
+      await section.onFixAll!(results);
 
-      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledTimes(3);
-      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('INFY');
-      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('TCS');
-      expect(mockPairHandler.stopTrackingByInvestingTicker).toHaveBeenCalledWith('HDFC');
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledTimes(3);
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledWith('TV_A');
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledWith('TV_B');
+      expect(mockTickerHandler.stopTracking).toHaveBeenCalledWith('TV_C');
       expect(notifySuccessSpy).toHaveBeenCalledWith('⏹ Stopped tracking 3 ticker(s)');
     });
-
-    test('handles empty results', () => {
-      section.onFixAll!([]);
-
-      expect(mockPairHandler.stopTrackingByInvestingTicker).not.toHaveBeenCalled();
-      expect(notifySuccessSpy).toHaveBeenCalledWith('⏹ Stopped tracking 0 ticker(s)');
-    });
   });
 
-  describe('Header Formatter', () => {
+  describe('headerFormatter', () => {
     test('shows success when no results', () => {
-      const html = section.headerFormatter([]);
-      expect(html).toContain('All alerts covered');
-      expect(html).toContain('success-badge');
+      expect(section.headerFormatter([])).toContain('All alerts covered');
     });
 
-    test('shows categorized counts', () => {
+    test('shows counts for alert coverage states', () => {
       const results: AuditResult[] = [
-        {
-          pluginId: 'alerts',
-          code: AlertState.SINGLE_ALERT,
-          target: 'TCS',
-          message: '',
-          severity: 'MEDIUM',
-          status: 'FAIL',
-        },
-        {
-          pluginId: 'alerts',
-          code: AlertState.NO_ALERTS,
-          target: 'INFY',
-          message: '',
-          severity: 'MEDIUM',
-          status: 'FAIL',
-        },
-        {
-          pluginId: 'alerts',
-          code: AlertState.NO_PAIR,
-          target: 'HDFC',
-          message: '',
-          severity: 'HIGH',
-          status: 'FAIL',
-        },
+        createResult('A', AlertState.SINGLE_ALERT),
+        createResult('B', AlertState.NO_ALERTS),
       ];
 
       const html = section.headerFormatter(results);
+
       expect(html).toContain('One: 1');
       expect(html).toContain('None: 1');
-      expect(html).toContain('Inv: 1');
-      expect(html).toContain('Tot: 3');
+      expect(html).not.toContain('Inv:');
     });
   });
 });

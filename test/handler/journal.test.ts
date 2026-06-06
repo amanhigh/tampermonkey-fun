@@ -5,7 +5,7 @@ import { ISmartPrompt } from '../../src/util/smart';
 import { IUIUtil } from '../../src/util/ui';
 import { ITradingViewManager } from '../../src/manager/tv';
 import { IStyleManager } from '../../src/manager/style';
-import { TickerManager } from '../../src/manager/ticker';
+import { DomManager } from '../../src/manager/dom';
 import { IAlertManager } from '../../src/manager/alert';
 import { AlertClickAction } from '../../src/models/events';
 import { JournalType } from '../../src/models/trading';
@@ -26,7 +26,7 @@ jest.mock('../../src/util/notify', () => ({
 
 describe('JournalHandler', () => {
   let journalHandler: JournalHandler;
-  let mockTickerManager: jest.Mocked<TickerManager>;
+  let mockTickerManager: jest.Mocked<DomManager>;
   let mockOsClient: jest.Mocked<IOsClient>;
   let mockJournalManager: jest.Mocked<IJournalManager>;
   let mockSmartPrompt: jest.Mocked<ISmartPrompt>;
@@ -45,7 +45,7 @@ describe('JournalHandler', () => {
   beforeEach(() => {
     mockTickerManager = {
       getTicker: jest.fn(),
-    } as unknown as jest.Mocked<TickerManager>;
+    } as unknown as jest.Mocked<DomManager>;
 
     mockOsClient = {
       screenshotRegion: jest.fn(),

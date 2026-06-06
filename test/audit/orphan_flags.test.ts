@@ -1,14 +1,12 @@
 import { OrphanFlagsPlugin } from '../../src/manager/orphan_flags_plugin';
 import { IFlagRepo } from '../../src/repo/flag';
 import { ITickerRepo } from '../../src/repo/ticker';
-import { ISymbolManager } from '../../src/manager/symbol';
 import { CategoryLists } from '../../src/models/category';
 
 describe('OrphanFlagsPlugin', () => {
   let plugin: OrphanFlagsPlugin;
   let flagRepo: jest.Mocked<IFlagRepo>;
   let tickerRepo: jest.Mocked<ITickerRepo>;
-  let symbolManager: jest.Mocked<ISymbolManager>;
 
   beforeEach(() => {
     flagRepo = {
@@ -19,11 +17,7 @@ describe('OrphanFlagsPlugin', () => {
       has: jest.fn(),
     } as any;
 
-    symbolManager = {
-      isComposite: jest.fn(),
-    } as any;
-
-    plugin = new OrphanFlagsPlugin(flagRepo, tickerRepo, symbolManager);
+    plugin = new OrphanFlagsPlugin(flagRepo, tickerRepo);
   });
 
   describe('validate', () => {
@@ -50,7 +44,6 @@ describe('OrphanFlagsPlugin', () => {
       const categoryLists = new CategoryLists(lists);
       flagRepo.getFlagCategoryLists.mockReturnValue(categoryLists);
       tickerRepo.has.mockReturnValue(true);
-      symbolManager.isComposite.mockReturnValue(false);
 
       const results = await plugin.run();
 
@@ -62,7 +55,6 @@ describe('OrphanFlagsPlugin', () => {
       lists.set(0, new Set(['NIFTY/BANKNIFTY', 'GOLD*2']));
       const categoryLists = new CategoryLists(lists);
       flagRepo.getFlagCategoryLists.mockReturnValue(categoryLists);
-      symbolManager.isComposite.mockReturnValue(true);
       tickerRepo.has.mockReturnValue(false);
 
       const results = await plugin.run();
@@ -75,7 +67,6 @@ describe('OrphanFlagsPlugin', () => {
       lists.set(2, new Set(['ORPHAN']));
       const categoryLists = new CategoryLists(lists);
       flagRepo.getFlagCategoryLists.mockReturnValue(categoryLists);
-      symbolManager.isComposite.mockReturnValue(false);
       tickerRepo.has.mockReturnValue(false);
 
       const results = await plugin.run();
@@ -94,7 +85,6 @@ describe('OrphanFlagsPlugin', () => {
       lists.set(3, new Set(['ORPHAN2']));
       const categoryLists = new CategoryLists(lists);
       flagRepo.getFlagCategoryLists.mockReturnValue(categoryLists);
-      symbolManager.isComposite.mockReturnValue(false);
       tickerRepo.has.mockReturnValue(false);
 
       const results = await plugin.run();
@@ -109,7 +99,6 @@ describe('OrphanFlagsPlugin', () => {
       lists.set(0, new Set(['VALID', 'ORPHAN']));
       const categoryLists = new CategoryLists(lists);
       flagRepo.getFlagCategoryLists.mockReturnValue(categoryLists);
-      symbolManager.isComposite.mockReturnValue(false);
       tickerRepo.has.mockImplementation((key: string) => key === 'VALID');
 
       const results = await plugin.run();
@@ -127,7 +116,6 @@ describe('OrphanFlagsPlugin', () => {
       lists.set(1, new Set(['ORPHAN']));
       const categoryLists = new CategoryLists(lists);
       flagRepo.getFlagCategoryLists.mockReturnValue(categoryLists);
-      symbolManager.isComposite.mockReturnValue(false);
       tickerRepo.has.mockReturnValue(false);
 
       const results = await plugin.run();

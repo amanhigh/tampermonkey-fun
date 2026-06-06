@@ -136,33 +136,37 @@ describe('TickerClient', () => {
   });
 
   describe('updateTicker', () => {
-    it('should PUT to encoded ticker path with mutable fields', async () => {
-      const apiEnvelope = {
-        status: 'success',
-        data: {
-          ticker: 'MCX',
-          exchange: 'NSE',
-          timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'],
-          type: 'EQUITY',
-          state: 'READY',
-          trend: 'UPTREND',
-          is_fno: true,
-          updated_at: '2026-05-05T11:00:01Z',
-        },
-      };
-
-      mockMakeRequest.mockResolvedValue(apiEnvelope as any);
-
-      const result = await tickerClient.updateTicker('MCX', {
+    it('should GET current ticker, merge changed fields, then PUT full payload', async () => {
+      const currentRecord = {
+        ticker: 'MCX',
         exchange: 'NSE',
-        timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'],
-        type: 'EQUITY',
+        timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'] as any[],
+        type: 'EQUITY' as any,
+        state: 'WATCHED' as any,
+        trend: 'UPTREND' as any,
+        is_fno: false,
+        last_opened_at: '',
+        created_at: '',
+        updated_at: '2026-05-05T10:00:00Z',
+      };
+      const updatedRecord = {
+        ...currentRecord,
         state: 'READY',
-        trend: 'UPTREND',
-        is_fno: true,
-      });
+        updated_at: '2026-05-05T11:00:01Z',
+      };
+      const putEnvelope = { status: 'success', data: updatedRecord };
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/tickers/MCX', {
+      mockMakeRequest
+        .mockResolvedValueOnce({ status: 'success', data: currentRecord } as any)
+        .mockResolvedValueOnce(putEnvelope as any);
+
+      // Partial update — only change `state`
+      const result = await tickerClient.updateTicker('MCX', { state: 'READY' });
+
+      // First call: GET current record
+      expect(mockMakeRequest).toHaveBeenNthCalledWith(1, '/tickers/MCX');
+      // Second call: PUT merged full payload
+      expect(mockMakeRequest).toHaveBeenNthCalledWith(2, '/tickers/MCX', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({
@@ -171,10 +175,48 @@ describe('TickerClient', () => {
           type: 'EQUITY',
           state: 'READY',
           trend: 'UPTREND',
-          is_fno: true,
+          is_fno: false,
         }),
       });
-      expect(result).toEqual(apiEnvelope.data);
+      expect(result).toEqual(updatedRecord);
+    });
+
+    it('should preserve explicit null/false in partial update', async () => {
+      const currentRecord = {
+        ticker: 'MCX',
+        exchange: 'NSE',
+        timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'] as any[],
+        type: 'EQUITY' as any,
+        state: 'WATCHED' as any,
+        trend: 'UPTREND' as any,
+        is_fno: true,
+        last_opened_at: '',
+        created_at: '',
+        updated_at: '2026-05-05T10:00:00Z',
+      };
+      const putEnvelope = {
+        status: 'success',
+        data: { ...currentRecord, exchange: null, is_fno: false, updated_at: '2026-05-05T12:00:00Z' },
+      };
+
+      mockMakeRequest
+        .mockResolvedValueOnce({ status: 'success', data: currentRecord } as any)
+        .mockResolvedValueOnce(putEnvelope as any);
+
+      await tickerClient.updateTicker('MCX', { exchange: null, is_fno: false });
+
+      expect(mockMakeRequest).toHaveBeenNthCalledWith(2, '/tickers/MCX', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        data: JSON.stringify({
+          exchange: null,
+          timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'],
+          type: 'EQUITY',
+          state: 'WATCHED',
+          trend: 'UPTREND',
+          is_fno: false,
+        }),
+      });
     });
   });
 
@@ -341,12 +383,22 @@ describe('TickerClient', () => {
       await expect(tickerClient.getTicker('UNKNOWN')).rejects.toThrow('Failed to get ticker: 404 Not Found');
     });
 
-    it('should wrap update ticker errors', async () => {
+    it('should wrap update ticker errors from inner GET', async () => {
       mockMakeRequest.mockRejectedValue(new Error('404 Not Found'));
 
       await expect(
-        tickerClient.updateTicker('UNKNOWN', { timeframes: ['MN'], type: 'EQUITY', state: 'WATCHED', trend: 'UPTREND', is_fno: false })
-      ).rejects.toThrow('Failed to update ticker: 404 Not Found');
+        tickerClient.updateTicker('UNKNOWN', { state: 'WATCHED' })
+      ).rejects.toThrow('Failed to update ticker: Failed to get ticker: 404 Not Found');
+    });
+
+    it('should wrap update ticker errors from PUT after successful GET', async () => {
+      mockMakeRequest
+        .mockResolvedValueOnce({ status: 'success', data: { ticker: 'MCX', exchange: null, timeframes: ['MN'], type: 'EQUITY', state: 'WATCHED', trend: 'UPTREND', is_fno: false, last_opened_at: '', created_at: '', updated_at: '' } } as any)
+        .mockRejectedValueOnce(new Error('500 Server Error'));
+
+      await expect(
+        tickerClient.updateTicker('MCX', { state: 'READY' })
+      ).rejects.toThrow('Failed to update ticker: 500 Server Error');
     });
 
     it('should wrap delete ticker errors', async () => {

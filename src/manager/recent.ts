@@ -2,7 +2,7 @@ import { ITickerClient } from '../client/ticker';
 
 /**
  * Interface for managing recent ticker data operations.
- * Backed by TickerClient — reads/writes TickerRecord.last_opened_at.
+ * Backed by TickerClient — reads/writes Ticker.last_opened_at.
  */
 export interface IRecentManager {
   /**

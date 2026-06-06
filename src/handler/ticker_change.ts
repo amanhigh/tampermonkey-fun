@@ -1,4 +1,4 @@
-import { ITickerManager } from '../manager/ticker';
+import { IDomManager } from '../manager/dom';
 import { IAlertHandler } from './alert';
 import { IHeaderManager } from '../manager/header';
 import { IRecentManager } from '../manager/recent';
@@ -16,7 +16,7 @@ export interface ITickerChangeHandler {
 export class TickerChangeHandler implements ITickerChangeHandler {
   // eslint-disable-next-line max-params
   constructor(
-    private readonly tickerManager: ITickerManager,
+    private readonly domManager: IDomManager,
     private readonly alertHandler: IAlertHandler,
     private readonly headerManager: IHeaderManager,
     private readonly recentManager: IRecentManager,
@@ -36,7 +36,7 @@ export class TickerChangeHandler implements ITickerChangeHandler {
       // Update UI components
       this.headerManager.paintHeader();
       this.recordRecentTicker();
-      this.sequenceHandler.displaySequence();
+      void this.sequenceHandler.displaySequence();
 
       // Update Screener
       if (this.screenManager.isScreenerVisible()) {
@@ -49,7 +49,7 @@ export class TickerChangeHandler implements ITickerChangeHandler {
   }
 
   private recordRecentTicker(): void {
-    const tvTicker = this.tickerManager.getTicker();
+    const tvTicker = this.domManager.getTicker();
     this.recentManager.markRecent(tvTicker);
 
     // Paint if TV ticker is not in watchlist
