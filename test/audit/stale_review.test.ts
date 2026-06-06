@@ -1,22 +1,23 @@
 import { StaleReviewPlugin } from '../../src/manager/stale_review_plugin';
 import { IRecentManager } from '../../src/manager/recent';
-import { ITickerRepo } from '../../src/repo/ticker';
+import { ITickerManager } from '../../src/manager/ticker';
 import { IWatchManager } from '../../src/manager/watch';
+import { Ticker } from '../../src/models/ticker';
 
 describe('StaleReviewPlugin', () => {
   let plugin: StaleReviewPlugin;
   let mockRecentManager: Partial<IRecentManager>;
-  let mockTickerRepo: Partial<ITickerRepo>;
+  let mockTickerManager: Partial<ITickerManager>;
   let mockWatchManager: Partial<IWatchManager>;
 
   beforeEach(() => {
     mockRecentManager = { isRecent: jest.fn().mockReturnValue(true) };
-    mockTickerRepo = { getAllKeys: jest.fn().mockReturnValue([]) };
+    mockTickerManager = { listTickers: jest.fn().mockResolvedValue([]) };
     mockWatchManager = { isWatched: jest.fn().mockReturnValue(false) };
 
     plugin = new StaleReviewPlugin(
       mockRecentManager as IRecentManager,
-      mockTickerRepo as ITickerRepo,
+      mockTickerManager as ITickerManager,
       mockWatchManager as IWatchManager
     );
   });
@@ -40,7 +41,7 @@ describe('StaleReviewPlugin', () => {
   });
 
   test('flags tickers that are not recent (stale) as MEDIUM severity', async () => {
-    (mockTickerRepo.getAllKeys as jest.Mock).mockReturnValue(['TCS', 'INFY']);
+    (mockTickerManager.listTickers as jest.Mock).mockResolvedValue([new Ticker({ ticker: 'TCS' }), new Ticker({ ticker: 'INFY' })]);
     (mockRecentManager.isRecent as jest.Mock).mockReturnValue(false);
 
     const results = await plugin.run();
@@ -50,7 +51,7 @@ describe('StaleReviewPlugin', () => {
   });
 
   test('skips tickers that are recent', async () => {
-    (mockTickerRepo.getAllKeys as jest.Mock).mockReturnValue(['FRESH']);
+    (mockTickerManager.listTickers as jest.Mock).mockResolvedValue([new Ticker({ ticker: 'FRESH' })]);
     (mockRecentManager.isRecent as jest.Mock).mockReturnValue(true);
 
     const results = await plugin.run();
@@ -58,7 +59,7 @@ describe('StaleReviewPlugin', () => {
   });
 
   test('skips watched tickers', async () => {
-    (mockTickerRepo.getAllKeys as jest.Mock).mockReturnValue(['WATCHED', 'UNWATCHED']);
+    (mockTickerManager.listTickers as jest.Mock).mockResolvedValue([new Ticker({ ticker: 'WATCHED' }), new Ticker({ ticker: 'UNWATCHED' })]);
     (mockWatchManager.isWatched as jest.Mock).mockImplementation((ticker: string) => ticker === 'WATCHED');
     (mockRecentManager.isRecent as jest.Mock)
       .mockReturnValueOnce(false)
@@ -72,12 +73,12 @@ describe('StaleReviewPlugin', () => {
   test('respects custom threshold via isRecent sinceMs option', async () => {
     const customPlugin = new StaleReviewPlugin(
       mockRecentManager as IRecentManager,
-      mockTickerRepo as ITickerRepo,
+      mockTickerManager as ITickerManager,
       mockWatchManager as IWatchManager,
       30
     );
 
-    (mockTickerRepo.getAllKeys as jest.Mock).mockReturnValue(['A']);
+    (mockTickerManager.listTickers as jest.Mock).mockResolvedValue([new Ticker({ ticker: 'A' })]);
     (mockRecentManager.isRecent as jest.Mock).mockReturnValue(false);
 
     const customResults = await customPlugin.run();

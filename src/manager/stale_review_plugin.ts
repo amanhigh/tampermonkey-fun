@@ -1,7 +1,7 @@
 import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
 import { IRecentManager } from './recent';
-import { ITickerRepo } from '../repo/ticker';
+import { ITickerManager } from './ticker';
 import { IWatchManager } from './watch';
 import { Constants } from '../models/constant';
 
@@ -18,7 +18,7 @@ export class StaleReviewPlugin extends BaseAuditPlugin {
 
   constructor(
     private readonly recentManager: IRecentManager,
-    private readonly tickerRepo: ITickerRepo,
+    private readonly tickerManager: ITickerManager,
     private readonly watchManager: IWatchManager,
     private readonly thresholdDays: number = Constants.AUDIT.STALE_REVIEW_THRESHOLD_DAYS
   ) {
@@ -38,7 +38,10 @@ export class StaleReviewPlugin extends BaseAuditPlugin {
     const results: AuditResult[] = [];
     const cutOffPeriod = this.thresholdDays * 24 * 60 * 60 * 1000;
 
-    this.tickerRepo.getAllKeys().forEach((tvTicker: string) => {
+    const trackedTickers = await this.tickerManager.listTickers({});
+    trackedTickers.forEach((ticker) => {
+      const tvTicker = ticker.ticker;
+
       if (this.watchManager.isWatched(tvTicker)) {
         return;
       }
@@ -60,6 +63,6 @@ export class StaleReviewPlugin extends BaseAuditPlugin {
       }
     });
 
-    return Promise.resolve(results);
+    return results;
   }
 }

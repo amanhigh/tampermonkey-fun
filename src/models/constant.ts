@@ -33,12 +33,6 @@ export const Constants = Object.freeze({
       /** GTT unwatched audit plugin & section - identifies and displays unwatched GTT orders */
       GTT_UNWATCHED: 'gtt-unwatched',
 
-      /** Orphan flags audit plugin - identifies flag entries without corresponding tickers */
-      ORPHAN_FLAGS: 'orphan-flags',
-
-      /** Ticker collision audit plugin - identifies reverse map collisions in TickerRepo */
-      TICKER_COLLISION: 'ticker-collision',
-
       /** Trade risk multiple audit plugin - identifies trades with non-standard risk multiples */
       TRADE_RISK: 'trade-risk',
 
