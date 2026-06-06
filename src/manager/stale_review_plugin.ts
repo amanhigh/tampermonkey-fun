@@ -35,20 +35,19 @@ export class StaleReviewPlugin extends BaseAuditPlugin {
       throw new Error('Stale review audit does not support targeted mode');
     }
 
-    const results: AuditResult[] = [];
     const cutOffPeriod = this.thresholdDays * 24 * 60 * 60 * 1000;
 
     const trackedTickers = await this.tickerManager.listTickers({});
-    trackedTickers.forEach((ticker) => {
+    const results: AuditResult[] = [];
+
+    for (const ticker of trackedTickers) {
       const tvTicker = ticker.ticker;
 
       if (this.watchManager.isWatched(tvTicker)) {
-        return;
+        continue;
       }
 
-      const isStale = !this.recentManager.isRecent(tvTicker, cutOffPeriod);
-
-      if (isStale) {
+      if (!this.recentManager.isRecent(tvTicker, cutOffPeriod)) {
         results.push({
           pluginId: this.id,
           code: 'STALE_TICKER',
@@ -56,12 +55,10 @@ export class StaleReviewPlugin extends BaseAuditPlugin {
           message: `${tvTicker}: not recently opened`,
           severity: 'MEDIUM',
           status: 'FAIL',
-          data: {
-            tvTicker,
-          },
+          data: { tvTicker },
         });
       }
-    });
+    }
 
     return results;
   }

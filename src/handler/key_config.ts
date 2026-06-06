@@ -6,6 +6,7 @@ import { IWatchListHandler } from '../handler/watchlist';
 import { IFlagHandler } from '../handler/flag';
 import { IJournalHandler } from './journal';
 import { IKiteHandler } from './kite';
+import { FlagCategoryId } from '../models/flag';
 
 /**
  * Type definitions for key bindings and actions
@@ -232,36 +233,29 @@ export class KeyConfig implements IKeyConfig {
       [
         'F6',
         {
-          description: 'Orange Consolidation Flag - Index 0',
-          action: () => this.flagHandler.recordSelectedTicker(0),
+          description: 'Orange Consolidation Flag - SIDEWAYS',
+          action: () => this.flagHandler.recordSelectedTicker(FlagCategoryId.SIDEWAYS),
         },
       ],
       [
         'F7',
         {
-          description: 'Red Shorts Flag - Index 1',
-          action: () => this.flagHandler.recordSelectedTicker(1),
+          description: 'Red Shorts Flag - DOWNTREND',
+          action: () => this.flagHandler.recordSelectedTicker(FlagCategoryId.DOWNTREND),
         },
       ],
       [
         'F8',
         {
-          description: 'Blue Crypto Flag - Index 2',
-          action: () => this.flagHandler.recordSelectedTicker(2),
-        },
-      ],
-      [
-        'F9',
-        {
-          description: 'Empty Flag - Index 3',
-          action: () => this.flagHandler.recordSelectedTicker(3),
+          description: 'Blue Crypto Flag - CRYPTO',
+          action: () => this.flagHandler.recordSelectedTicker(FlagCategoryId.CRYPTO),
         },
       ],
       [
         'F10',
         {
-          description: 'Green Longs Flag - Index 4',
-          action: () => this.flagHandler.recordSelectedTicker(4),
+          description: 'Green Longs Flag - UPTREND',
+          action: () => this.flagHandler.recordSelectedTicker(FlagCategoryId.UPTREND),
         },
       ],
       [

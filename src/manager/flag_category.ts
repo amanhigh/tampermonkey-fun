@@ -7,33 +7,21 @@ import { ALL_FLAG_CATEGORIES, FlagCategory, FlagCategoryId } from '../models/fla
  * Order: GOLD_INDEX > INDEX > CRYPTO > UPTREND > SIDEWAYS > DOWNTREND
  */
 const FLAG_CATEGORY_PRIORITY: readonly FlagCategoryId[] = [
-  'GOLD_INDEX',
-  'INDEX',
-  'CRYPTO',
-  'UPTREND',
-  'SIDEWAYS',
-  'DOWNTREND',
+  FlagCategoryId.GOLD_INDEX,
+  FlagCategoryId.INDEX,
+  FlagCategoryId.CRYPTO,
+  FlagCategoryId.UPTREND,
+  FlagCategoryId.SIDEWAYS,
+  FlagCategoryId.DOWNTREND,
 ] as const;
 
 // ── Lookup ──
 
 /**
- * Look up a flag category by its numeric index.
- * @throws If no category exists for the given index
- */
-export function findFlagCategoryByIndex(index: number): FlagCategory {
-  const cat = ALL_FLAG_CATEGORIES.find((c) => c.index === index);
-  if (!cat) {
-    throw new Error(`Invalid category index: ${index}. Must be between 0 and ${ALL_FLAG_CATEGORIES.length - 1}`);
-  }
-  return cat;
-}
-
-/**
  * Look up a flag category by its semantic ID.
  * @throws If no category exists for the given ID
  */
-function findFlagCategoryById(id: FlagCategoryId): FlagCategory {
+export function findFlagCategoryById(id: FlagCategoryId): FlagCategory {
   const cat = ALL_FLAG_CATEGORIES.find((c) => c.id === id);
   if (!cat) {
     throw new Error(`Invalid category id: ${id}`);
@@ -57,19 +45,19 @@ function isGoldIndexSymbol(ticker: string): boolean {
  */
 function matchesCategory(categoryId: FlagCategoryId, ticker: Ticker): boolean {
   switch (categoryId) {
-    case 'GOLD_INDEX':
+    case FlagCategoryId.GOLD_INDEX:
       return ticker.type === 'COMPOSITE' && isGoldIndexSymbol(ticker.ticker);
-    case 'INDEX':
+    case FlagCategoryId.INDEX:
       return Constants.FLAGS.INDEX_TICKER_TYPES.includes(ticker.type);
-    case 'CRYPTO':
+    case FlagCategoryId.CRYPTO:
       return ticker.type === 'CRYPTO';
-    case 'UPTREND':
+    case FlagCategoryId.UPTREND:
       return ticker.trend === 'UPTREND';
-    case 'SIDEWAYS':
+    case FlagCategoryId.SIDEWAYS:
       return ticker.trend === 'SIDEWAYS';
-    case 'DOWNTREND':
+    case FlagCategoryId.DOWNTREND:
       return ticker.trend === 'DOWNTREND';
-    case 'DEFAULT_UNTRACKED':
+    case FlagCategoryId.DEFAULT_UNTRACKED:
       return false;
   }
 }
@@ -86,5 +74,5 @@ export function resolveFlagCategory(ticker: Ticker): FlagCategory {
       return findFlagCategoryById(id);
     }
   }
-  return findFlagCategoryById('DEFAULT_UNTRACKED');
+  return findFlagCategoryById(FlagCategoryId.DEFAULT_UNTRACKED);
 }

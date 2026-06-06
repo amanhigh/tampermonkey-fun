@@ -1,31 +1,32 @@
 import { Ticker, TickerUpdateRequest } from '../models/ticker';
-import { ITickerClient } from '../client/ticker';
+import { ITickerManager } from './ticker';
 import { IPaintManager } from './paint';
 import { Notifier } from '../util/notify';
-import { ALL_FLAG_CATEGORIES } from '../models/flag';
-import { findFlagCategoryByIndex, resolveFlagCategory } from './flag_category';
+import { ALL_FLAG_CATEGORIES, FlagCategory, FlagCategoryId } from '../models/flag';
+import { findFlagCategoryById } from './flag_category';
+import { resolveFlagCategory } from './flag_category';
 
 /**
  * Interface for managing flag-based ticker categories.
- * paint() fetches fresh backend data every call. getCategory() returns the last
- * paint snapshot for synchronous compatibility.
+ * paint() fetches fresh backend data every call. getTickerCategory() returns
+ * the category for a given ticker from the last paint snapshot.
  */
 export interface IFlagManager {
   /**
-   * Gets flag category set by index from the last paint snapshot.
-   * Returns empty set if no paint has run yet.
-   * @param index Category index (0-7)
+   * Gets the flag category for a ticker from the last paint snapshot.
+   * Returns undefined if the ticker is not present in any flag category.
+   * @param ticker Ticker symbol to look up
    */
-  getCategory(index: number): Set<string>;
+  getTickerCategory(ticker: string): FlagCategory | undefined;
 
   /**
    * Records selected tickers in the given flag category.
    * Fires an async backend `updateTicker()` per ticker using the category's
    * defined update payload.
-   * @param index Category index (0-7)
+   * @param categoryId Category identifier (e.g. 'SIDEWAYS', 'CRYPTO')
    * @param tvTickers List of ticker symbols to assign
    */
-  recordCategory(index: number, tvTickers: string[]): void;
+  recordCategory(categoryId: FlagCategoryId, tvTickers: string[]): void;
 
   /**
    * Paints flag indicators based on backend ticker data.
@@ -42,19 +43,19 @@ export interface IFlagManager {
  * Manages flag-based sets of tickers using backend calls per paint.
  *
  * No persistent cache — `paint()` fetches fresh data every time.
- * `getCategory()` returns the last paint snapshot for synchronous consumers.
+ * `getTickerCategory()` returns the last paint snapshot for synchronous consumers.
  *
  * Classification logic (which category a ticker belongs to) is delegated to
  * the flag_category resolver module.
  */
 export class FlagManager implements IFlagManager {
   /**
-   * Snapshot from the last paint call: category index → set of ticker symbols.
+   * Snapshot from the last paint call: category ID → set of ticker symbols.
    */
-  private lastPaintGroups: Map<number, Set<string>> = new Map();
+  private lastPaintGroups: Map<FlagCategoryId, Set<string>> = new Map();
 
   constructor(
-    private readonly tickerClient: ITickerClient,
+    private readonly tickerManager: ITickerManager,
     private readonly paintManager: IPaintManager
   ) {
     this.lastPaintGroups = this.createEmptyCategoryGroups();
@@ -63,14 +64,19 @@ export class FlagManager implements IFlagManager {
   // ── Public API ──
 
   /** @inheritdoc */
-  getCategory(index: number): Set<string> {
-    findFlagCategoryByIndex(index); // validates index exists
-    return this.lastPaintGroups.get(index) ?? new Set();
+  getTickerCategory(ticker: string): FlagCategory | undefined {
+    for (const cat of ALL_FLAG_CATEGORIES) {
+      const symbols = this.lastPaintGroups.get(cat.id);
+      if (symbols?.has(ticker)) {
+        return cat;
+      }
+    }
+    return undefined;
   }
 
   /** @inheritdoc */
-  recordCategory(index: number, tvTickers: string[]): void {
-    const cat = findFlagCategoryByIndex(index);
+  recordCategory(categoryId: FlagCategoryId, tvTickers: string[]): void {
+    const cat = findFlagCategoryById(categoryId);
 
     for (const ticker of tvTickers) {
       // Fire async backend update — no local cache mutation
@@ -90,7 +96,7 @@ export class FlagManager implements IFlagManager {
    */
   private async updateBackend(ticker: string, update: TickerUpdateRequest): Promise<void> {
     try {
-      await this.tickerClient.updateTicker(ticker, update);
+      await this.tickerManager.updateTicker(ticker, update);
     } catch {
       Notifier.warn(`Failed to update flag category for ${ticker}`);
     }
@@ -102,10 +108,10 @@ export class FlagManager implements IFlagManager {
    */
   private async paintFromBackend(selector: string, itemSelector: string): Promise<void> {
     try {
-      const tickers = await this.tickerClient.listTickers({});
+      const tickers = await this.tickerManager.listTickers({});
       const freshGroups = this.groupTickersByCategory(tickers);
 
-      // Update snapshot for synchronous getCategory() consumers
+      // Update snapshot for synchronous getTickerCategory() consumers
       this.lastPaintGroups = freshGroups;
 
       // Paint flags for every category in UI order
@@ -120,10 +126,10 @@ export class FlagManager implements IFlagManager {
   /**
    * Create a new map with empty sets for every flag category.
    */
-  private createEmptyCategoryGroups(): Map<number, Set<string>> {
-    const groups = new Map<number, Set<string>>();
+  private createEmptyCategoryGroups(): Map<FlagCategoryId, Set<string>> {
+    const groups = new Map<FlagCategoryId, Set<string>>();
     for (const cat of ALL_FLAG_CATEGORIES) {
-      groups.set(cat.index, new Set());
+      groups.set(cat.id, new Set());
     }
     return groups;
   }
@@ -131,13 +137,13 @@ export class FlagManager implements IFlagManager {
   /**
    * Group a list of ticker records into flag category sets.
    */
-  private groupTickersByCategory(tickers: Ticker[]): Map<number, Set<string>> {
+  private groupTickersByCategory(tickers: Ticker[]): Map<FlagCategoryId, Set<string>> {
     const groups = this.createEmptyCategoryGroups();
 
     // Classify each ticker into the first matching category
     for (const ticker of tickers) {
       const cat = resolveFlagCategory(ticker);
-      groups.get(cat.index)?.add(ticker.ticker);
+      groups.get(cat.id)?.add(ticker.ticker);
     }
 
     return groups;
@@ -146,9 +152,9 @@ export class FlagManager implements IFlagManager {
   /**
    * Paint flags for every category using the given group sets.
    */
-  private paintGroups(selector: string, itemSelector: string, groups: Map<number, Set<string>>): void {
+  private paintGroups(selector: string, itemSelector: string, groups: Map<FlagCategoryId, Set<string>>): void {
     for (const cat of ALL_FLAG_CATEGORIES) {
-      const symbols = groups.get(cat.index) ?? new Set();
+      const symbols = groups.get(cat.id) ?? new Set();
       this.paintManager.paintFlags(selector, symbols, cat.color, itemSelector);
     }
   }

@@ -272,7 +272,7 @@ export class Factory {
       Factory.getInstance('styleManager', () => new StyleManager(Factory.util.wait(), Factory.manager.timeFrame())),
 
     flag: (): IFlagManager =>
-      Factory.getInstance('flagManager', () => new FlagManager(Factory.client.ticker(), Factory.manager.paint())),
+      Factory.getInstance('flagManager', () => new FlagManager(Factory.manager.ticker(), Factory.manager.paint())),
 
     recent: (): IRecentManager =>
       Factory.getInstance('recentManager', () => new RecentManager(Factory.client.ticker())),
