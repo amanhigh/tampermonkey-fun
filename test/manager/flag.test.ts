@@ -104,60 +104,59 @@ describe('FlagManager', () => {
 
   describe('recordCategory', () => {
     it('should call updateTicker for SIDEWAYS', () => {
-      flagManager.recordCategory('SIDEWAYS', ['TEST']);
+      flagManager.recordCategory(FlagCategoryId.SIDEWAYS, ['TEST']);
 
       expect(flagManager.getTickerCategory('TEST')).toBeUndefined();
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'SIDEWAYS' });
     });
 
     it('should call updateTicker for DOWNTREND', () => {
-      flagManager.recordCategory('DOWNTREND', ['TEST']);
+      flagManager.recordCategory(FlagCategoryId.DOWNTREND, ['TEST']);
 
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'DOWNTREND' });
     });
 
     it('should call updateTicker for CRYPTO', () => {
-      flagManager.recordCategory('CRYPTO', ['TEST']);
+      flagManager.recordCategory(FlagCategoryId.CRYPTO, ['TEST']);
 
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'CRYPTO' });
     });
 
     it('should call updateTicker for UPTREND', () => {
-      flagManager.recordCategory('UPTREND', ['TEST']);
+      flagManager.recordCategory(FlagCategoryId.UPTREND, ['TEST']);
 
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'UPTREND' });
     });
 
     it('should reject DEFAULT_UNTRACKED at type level (not recordable)', () => {
-      // DEFAULT_UNTRACKED is excluded from RecordableFlagCategoryId at type level.
-      // RecordableFlagCategoryId = Exclude<FlagCategoryId, 'DEFAULT_UNTRACKED'>
+      // DEFAULT_UNTRACKED is excluded from recordable categories.
       // A runtime call would still attempt to look up the category.
       // Verify the category lookup throws for invalid ID.
-      // (TypeScript prevents this at compile time; this test documents the intent.)
-      flagManager.recordCategory('SIDEWAYS', []);
+      // (This test documents the intent.)
+      flagManager.recordCategory(FlagCategoryId.SIDEWAYS, []);
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
     });
 
     it('should call updateTicker for INDEX', () => {
-      flagManager.recordCategory('INDEX', ['TEST']);
+      flagManager.recordCategory(FlagCategoryId.INDEX, ['TEST']);
 
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'INDEX' });
     });
 
     it('should call updateTicker for GOLD_INDEX', () => {
-      flagManager.recordCategory('GOLD_INDEX', ['TEST']);
+      flagManager.recordCategory(FlagCategoryId.GOLD_INDEX, ['TEST']);
 
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'COMPOSITE' });
     });
 
     it('should NOT mutate local getTickerCategory snapshot', () => {
-      flagManager.recordCategory('SIDEWAYS', ['TICKER_A']);
+      flagManager.recordCategory(FlagCategoryId.SIDEWAYS, ['TICKER_A']);
 
       expect(flagManager.getTickerCategory('TICKER_A')).toBeUndefined();
     });
 
     it('should handle empty ticker array', () => {
-      flagManager.recordCategory('SIDEWAYS', []);
+      flagManager.recordCategory(FlagCategoryId.SIDEWAYS, []);
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
     });
   });

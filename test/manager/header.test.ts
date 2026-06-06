@@ -5,6 +5,7 @@ import { IFlagManager } from '../../src/manager/flag';
 import { IDomManager } from '../../src/manager/dom';
 import { IFnoManager } from '../../src/manager/fno';
 import { Constants } from '../../src/models/constant';
+import { FlagCategoryId } from '../../src/models/flag';
 
 // Mock jQuery
 const mockJQueryElement = {
@@ -156,7 +157,7 @@ describe('HeaderManager', () => {
     it('should paint flag and exchange elements with flag colors', () => {
       const ticker = 'NSE:TCS';
       const flagCategoryIndex = 1;
-      const flagCategory = { id: 'DOWNTREND', color: Constants.UI.COLORS.LIST[flagCategoryIndex], label: '', update: {} };
+      const flagCategory = { id: FlagCategoryId.DOWNTREND, color: Constants.UI.COLORS.LIST[flagCategoryIndex], label: '', update: {} };
 
       mockTickerManager.getTicker.mockReturnValue(ticker);
       mockWatchManager.getCategory.mockReturnValue(new Set());
@@ -175,7 +176,7 @@ describe('HeaderManager', () => {
 
       mockTickerManager.getTicker.mockReturnValue(ticker);
       mockWatchManager.getCategory.mockReturnValue(new Set());
-      mockFlagManager.getCategory.mockReturnValue(new Set());
+      mockFlagManager.getTickerCategory.mockReturnValue(undefined);
       mockFnoManager.isFno.mockReturnValue(true);
 
       headerManager.paintHeader();
@@ -186,7 +187,7 @@ describe('HeaderManager', () => {
 
     it('should reset colors to default before applying category colors', () => {
       mockWatchManager.getCategory.mockReturnValue(new Set());
-      mockFlagManager.getCategory.mockReturnValue(new Set());
+      mockFlagManager.getTickerCategory.mockReturnValue(undefined);
       mockFnoManager.isFno.mockReturnValue(false);
 
       headerManager.paintHeader();
@@ -206,7 +207,7 @@ describe('HeaderManager', () => {
         .mockReturnValueOnce(category1Set) // category 1 - first match
         .mockReturnValueOnce(new Set()) // category 2
         .mockReturnValueOnce(category3Set); // category 3 - should not reach here
-      mockFlagManager.getCategory.mockReturnValue(new Set());
+      mockFlagManager.getTickerCategory.mockReturnValue(undefined);
       mockFnoManager.isFno.mockReturnValue(false);
 
       headerManager.paintHeader();
@@ -226,11 +227,10 @@ describe('HeaderManager', () => {
     it('should handle ticker in both watch and flag categories', () => {
       const ticker = 'NSE:BANKNIFTY';
       const watchSet = new Set([ticker]);
-      const flagSet = new Set([ticker]);
 
       mockTickerManager.getTicker.mockReturnValue(ticker);
       mockWatchManager.getCategory.mockReturnValueOnce(watchSet); // category 0
-      mockFlagManager.getTickerCategory.mockReturnValue({ id: 'SIDEWAYS', color: 'orange', label: '', update: {} });
+      mockFlagManager.getTickerCategory.mockReturnValue({ id: FlagCategoryId.SIDEWAYS, color: 'orange', label: '', update: {} });
       mockFnoManager.isFno.mockReturnValue(true);
 
       headerManager.paintHeader();
@@ -248,7 +248,7 @@ describe('HeaderManager', () => {
 
       mockTickerManager.getTicker.mockReturnValue(ticker);
       mockWatchManager.getCategory.mockReturnValue(new Set());
-      mockFlagManager.getCategory.mockReturnValue(new Set());
+      mockFlagManager.getTickerCategory.mockReturnValue(undefined);
       mockFnoManager.isFno.mockReturnValue(true);
 
       headerManager.paintHeader();
