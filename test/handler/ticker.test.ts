@@ -1,10 +1,10 @@
 import { TickerHandler } from '../../src/handler/ticker';
 import { IDomManager } from '../../src/manager/dom';
-import { ISymbolManager } from '../../src/manager/symbol';
+import { ITickerManager } from '../../src/manager/ticker';
 import { IStyleManager } from '../../src/manager/style';
-import { ITickerClient } from '../../src/client/ticker';
 import { IAlertTickerHandler } from '../../src/handler/alert_ticker';
 import { Notifier } from '../../src/util/notify';
+import { Ticker } from '../../src/models/ticker';
 
 // Mock Notifier
 jest.mock('../../src/util/notify', () => ({
@@ -19,60 +19,73 @@ jest.mock('../../src/util/notify', () => ({
 
 describe('TickerHandler', () => {
   let handler: TickerHandler;
-  let mockTickerManager: jest.Mocked<IDomManager>;
-  let mockSymbolManager: jest.Mocked<ISymbolManager>;
+  let mockDomManager: jest.Mocked<IDomManager>;
   let mockStyleManager: jest.Mocked<IStyleManager>;
-  let mockTickerClient: jest.Mocked<ITickerClient>;
+  let mockTickerManager: jest.Mocked<ITickerManager>;
   let mockAlertTickerHandler: jest.Mocked<IAlertTickerHandler>;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
-    mockTickerManager = {
+    mockDomManager = {
       getTicker: jest.fn().mockReturnValue('TV_TICKER'),
       openTicker: jest.fn(),
-    } as any;
-
-    mockSymbolManager = {
-      tvToExchangeTicker: jest.fn().mockImplementation((ticker: string) => Promise.resolve(`EXCHANGE:${ticker}`)),
-      deleteTvTicker: jest.fn(),
-      setExchange: jest.fn(),
     } as any;
 
     mockStyleManager = {
       clearAll: jest.fn(),
     } as any;
 
-    mockTickerClient = {
-      deleteTicker: jest.fn().mockResolvedValue(undefined),
-    } as any;
+    mockTickerManager = {
+      getTicker: jest.fn(),
+      startTracking: jest.fn(),
+      updateTicker: jest.fn(),
+      markRecent: jest.fn(),
+      stopTracking: jest.fn(),
+      listTickers: jest.fn(),
+      setExchange: jest.fn(),
+    } as unknown as jest.Mocked<ITickerManager>;
 
     mockAlertTickerHandler = {
       linkInvestingTicker: jest.fn().mockResolvedValue(undefined),
     } as any;
 
     handler = new TickerHandler(
-      mockTickerManager,
-      mockSymbolManager,
+      mockDomManager,
       mockStyleManager,
-      mockTickerClient,
+      mockTickerManager,
       mockAlertTickerHandler
     );
   });
 
   describe('openTicker', () => {
     test('opens exchange-qualified ticker and notifies success', async () => {
+      mockTickerManager.getTicker.mockResolvedValue({ qualifiedName: 'EXCHANGE:TEST' } as Ticker);
+
       await handler.openTicker('TEST');
-      expect(mockSymbolManager.tvToExchangeTicker).toHaveBeenCalledWith('TEST');
-      expect(mockTickerManager.openTicker).toHaveBeenCalledWith('EXCHANGE:TEST');
+
+      expect(mockTickerManager.getTicker).toHaveBeenCalledWith('TEST');
+      expect(mockDomManager.openTicker).toHaveBeenCalledWith('EXCHANGE:TEST');
       expect(Notifier.success).toHaveBeenCalledWith('Opened EXCHANGE:TEST');
+    });
+
+    test('falls back to raw ticker when backend lookup fails', async () => {
+      mockTickerManager.getTicker.mockRejectedValue(new Error('Not found'));
+
+      await handler.openTicker('UNKNOWN');
+
+      expect(mockDomManager.openTicker).toHaveBeenCalledWith('UNKNOWN');
+      expect(Notifier.success).toHaveBeenCalledWith('Opened UNKNOWN');
     });
   });
 
   describe('processCommand', () => {
     test('maps exchange for E command', async () => {
+      mockTickerManager.setExchange.mockResolvedValue({} as Ticker);
+
       await handler.processCommand('E', 'NSE');
-      expect(mockSymbolManager.setExchange).toHaveBeenCalledWith('TV_TICKER', 'NSE');
+
+      expect(mockTickerManager.setExchange).toHaveBeenCalledWith('TV_TICKER', 'NSE');
       expect(Notifier.success).toHaveBeenCalledWith('Mapped TV_TICKER to Exchange NSE');
     });
 
@@ -88,7 +101,8 @@ describe('TickerHandler', () => {
 
   describe('stopTracking', () => {
     test('clears styles when stopped ticker matches current chart ticker', async () => {
-      mockTickerManager.getTicker.mockReturnValue('TV_TICKER');
+      mockDomManager.getTicker.mockReturnValue('TV_TICKER');
+      mockTickerManager.stopTracking.mockResolvedValue(undefined);
 
       await handler.stopTracking('TV_TICKER');
 
@@ -96,36 +110,33 @@ describe('TickerHandler', () => {
     });
 
     test('does not clear styles when stopped ticker is not current', async () => {
-      mockTickerManager.getTicker.mockReturnValue('OTHER_TICKER');
+      mockDomManager.getTicker.mockReturnValue('OTHER_TICKER');
+      mockTickerManager.stopTracking.mockResolvedValue(undefined);
 
       await handler.stopTracking('TV_TICKER');
 
       expect(mockStyleManager.clearAll).not.toHaveBeenCalled();
     });
 
-    test('calls tickerClient.deleteTicker with tvTicker', async () => {
+    test('calls tickerManager.stopTracking with tvTicker', async () => {
+      mockTickerManager.stopTracking.mockResolvedValue(undefined);
+
       await handler.stopTracking('TV_TICKER');
 
-      expect(mockTickerClient.deleteTicker).toHaveBeenCalledWith('TV_TICKER');
-    });
-
-    test('deletes local TV ticker mapping via symbolManager', async () => {
-      await handler.stopTracking('TV_TICKER');
-
-      expect(mockSymbolManager.deleteTvTicker).toHaveBeenCalledWith('TV_TICKER');
+      expect(mockTickerManager.stopTracking).toHaveBeenCalledWith('TV_TICKER');
     });
 
     test('warns when backend delete fails', async () => {
-      mockTickerClient.deleteTicker.mockRejectedValue(new Error('Network error'));
+      mockTickerManager.stopTracking.mockRejectedValue(new Error('Network error'));
 
       await handler.stopTracking('TV_TICKER');
 
       expect(Notifier.warn).toHaveBeenCalledWith('Failed to delete ticker TV_TICKER: Network error');
-      // Should still clean up local mapping
-      expect(mockSymbolManager.deleteTvTicker).toHaveBeenCalledWith('TV_TICKER');
     });
 
     test('notifies success after stop tracking', async () => {
+      mockTickerManager.stopTracking.mockResolvedValue(undefined);
+
       await handler.stopTracking('TV_TICKER');
 
       expect(Notifier.success).toHaveBeenCalledWith('⏹ Stopped tracking TV_TICKER');
