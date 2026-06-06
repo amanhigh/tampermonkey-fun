@@ -20,7 +20,6 @@ import { Barkat } from './barkat';
 
 // Repository Imports
 import { RepoCron, IRepoCron } from '../repo/cron';
-import { IFlagRepo, FlagRepo } from '../repo/flag';
 import { IWatchlistRepo, Watchlistrepo } from '../repo/watch';
 // TickerRepo removed — audit plugins use Manager/Client now
 
@@ -168,8 +167,6 @@ export class Factory {
    */
   public static repo = {
     cron: (): IRepoCron => Factory.getInstance('repoCron', () => new RepoCron()),
-
-    flag: (): IFlagRepo => Factory.getInstance('flagRepo', () => new FlagRepo(Factory.repo.cron())),
     watch: (): IWatchlistRepo => Factory.getInstance('watchRepo', () => new Watchlistrepo(Factory.repo.cron())),
     kite: (): IKiteRepo => Factory.getInstance('kiteRepo', () => new KiteRepo()),
     imdb: (): IImdbRepo => Factory.getInstance('imdbRepo', () => new ImdbRepo()),
@@ -275,7 +272,7 @@ export class Factory {
       Factory.getInstance('styleManager', () => new StyleManager(Factory.util.wait(), Factory.manager.timeFrame())),
 
     flag: (): IFlagManager =>
-      Factory.getInstance('flagManager', () => new FlagManager(Factory.repo.flag(), Factory.manager.paint())),
+      Factory.getInstance('flagManager', () => new FlagManager(Factory.client.ticker(), Factory.manager.paint())),
 
     recent: (): IRecentManager =>
       Factory.getInstance('recentManager', () => new RecentManager(Factory.client.ticker())),
