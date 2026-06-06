@@ -2,7 +2,21 @@ import { Ticker, TickerUpdateRequest } from '../models/ticker';
 import { ITickerClient } from '../client/ticker';
 import { IPaintManager } from './paint';
 import { Notifier } from '../util/notify';
-import { ALL_FLAG_CATEGORIES, findFlagCategoryByIndex, resolveFlagCategory } from '../models/flag';
+import { ALL_FLAG_CATEGORIES, FlagCategory, FlagCategoryId } from '../models/flag';
+import { Constants } from '../models/constant';
+
+/**
+ * Priority-ordered list of category IDs used by resolveFlagCategory().
+ * Order: GOLD_INDEX > INDEX > CRYPTO > UPTREND > SIDEWAYS > DOWNTREND
+ */
+const FLAG_CATEGORY_PRIORITY: readonly FlagCategoryId[] = [
+  'GOLD_INDEX',
+  'INDEX',
+  'CRYPTO',
+  'UPTREND',
+  'SIDEWAYS',
+  'DOWNTREND',
+] as const;
 
 /**
  * Interface for managing flag-based ticker categories.
@@ -20,8 +34,7 @@ export interface IFlagManager {
   /**
    * Records selected tickers in the given flag category.
    * Fires an async backend `updateTicker()` per ticker using the category's
-   * defined update payload. Categories without a backend update (e.g. UNUSED_CYAN,
-   * DEFAULT_UNTRACKED) produce a warning and do nothing.
+   * defined update payload.
    * @param index Category index (0-7)
    * @param tvTickers List of ticker symbols to assign
    */
@@ -43,6 +56,9 @@ export interface IFlagManager {
  *
  * No persistent cache — `paint()` fetches fresh data every time.
  * `getCategory()` returns the last paint snapshot for synchronous consumers.
+ *
+ * Classification logic (which category a ticker belongs to) lives here in
+ * private helpers rather than in the model layer.
  */
 export class FlagManager implements IFlagManager {
   /**
@@ -65,19 +81,13 @@ export class FlagManager implements IFlagManager {
 
   /** @inheritdoc */
   getCategory(index: number): Set<string> {
-    const cat = findFlagCategoryByIndex(index);
-    if (!cat) {
-      throw new Error(`Invalid category index: ${index}. Must be between 0 and ${ALL_FLAG_CATEGORIES.length - 1}`);
-    }
+    this.findCategoryByIndex(index); // validates index exists
     return this.lastPaintGroups.get(index) ?? new Set();
   }
 
   /** @inheritdoc */
   recordCategory(index: number, tvTickers: string[]): void {
-    const cat = findFlagCategoryByIndex(index);
-    if (!cat) {
-      throw new Error(`Invalid category index: ${index}. Must be between 0 and ${ALL_FLAG_CATEGORIES.length - 1}`);
-    }
+    const cat = this.findCategoryByIndex(index);
 
     for (const ticker of tvTickers) {
       // Fire async backend update — no local cache mutation
@@ -90,7 +100,79 @@ export class FlagManager implements IFlagManager {
     void this.paintFromBackend(selector, itemSelector);
   }
 
-  // ── Private helpers ──
+  // ── Category lookup ──
+
+  /**
+   * Look up a flag category by its numeric index.
+   * @throws If no category exists for the given index
+   */
+  private findCategoryByIndex(index: number): FlagCategory {
+    const cat = ALL_FLAG_CATEGORIES.find((c) => c.index === index);
+    if (!cat) {
+      throw new Error(`Invalid category index: ${index}. Must be between 0 and ${ALL_FLAG_CATEGORIES.length - 1}`);
+    }
+    return cat;
+  }
+
+  /**
+   * Look up a flag category by its semantic ID.
+   * @throws If no category exists for the given ID
+   */
+  private findCategoryById(id: FlagCategoryId): FlagCategory {
+    const cat = ALL_FLAG_CATEGORIES.find((c) => c.id === id);
+    if (!cat) {
+      throw new Error(`Invalid category id: ${id}`);
+    }
+    return cat;
+  }
+
+  // ── Ticker classification ──
+
+  /**
+   * Check whether a ticker symbol is gold-index related.
+   * A gold-index symbol is a composite expression containing XAUUSD or GOLDSILVER.
+   */
+  private isGoldIndexSymbol(ticker: string): boolean {
+    const upper = ticker.toUpperCase();
+    return Constants.FLAGS.GOLD_INDEX_TOKENS.some((token) => upper.includes(token));
+  }
+
+  /**
+   * Check whether a ticker matches a given category's criteria.
+   */
+  private matchesCategory(categoryId: FlagCategoryId, ticker: Ticker): boolean {
+    switch (categoryId) {
+      case 'GOLD_INDEX':
+        return ticker.type === 'COMPOSITE' && this.isGoldIndexSymbol(ticker.ticker);
+      case 'INDEX':
+        return Constants.FLAGS.INDEX_TICKER_TYPES.includes(ticker.type);
+      case 'CRYPTO':
+        return ticker.type === 'CRYPTO';
+      case 'UPTREND':
+        return ticker.trend === 'UPTREND';
+      case 'SIDEWAYS':
+        return ticker.trend === 'SIDEWAYS';
+      case 'DOWNTREND':
+        return ticker.trend === 'DOWNTREND';
+      case 'DEFAULT_UNTRACKED':
+        return false;
+    }
+  }
+
+  /**
+   * Find the highest-priority flag category for a ticker.
+   * Falls back to DEFAULT_UNTRACKED if no other category matches.
+   */
+  private resolveFlagCategory(ticker: Ticker): FlagCategory {
+    for (const id of FLAG_CATEGORY_PRIORITY) {
+      if (this.matchesCategory(id, ticker)) {
+        return this.findCategoryById(id);
+      }
+    }
+    return this.findCategoryById('DEFAULT_UNTRACKED');
+  }
+
+  // ── Backend sync ──
 
   /**
    * Persist a category assignment to the backend.
@@ -138,7 +220,7 @@ export class FlagManager implements IFlagManager {
 
     // Classify each ticker into the first matching category
     for (const ticker of tickers) {
-      const cat = resolveFlagCategory(ticker);
+      const cat = this.resolveFlagCategory(ticker);
       groups.get(cat.index)?.add(ticker.ticker);
     }
 

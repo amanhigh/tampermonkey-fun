@@ -279,6 +279,12 @@ Support:
     /** Tickers always treated as composite despite lacking separator characters */
     SPECIAL_TICKERS: ['GOLDSILVER', 'BTC.D'],
   },
+  FLAGS: {
+    /** Substrings that identify a composite ticker as gold-index related */
+    GOLD_INDEX_TOKENS: ['XAUUSD', 'GOLDSILVER'],
+    /** Ticker types that classify as "Index / Markets" (INDEX flag category) */
+    INDEX_TICKER_TYPES: ['INDEX', 'COMMODITY', 'FX', 'BOND'],
+  },
 });
 
 /**
