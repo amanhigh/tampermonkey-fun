@@ -69,6 +69,110 @@ describe('PriceAlertClient', () => {
       });
       expect(result).toEqual(apiEnvelope.data);
     });
+
+    it('should split more than 100 alerts into multiple pair-safe PUT requests', async () => {
+      // Build 150 alerts across 2 pairs (pair_1: 100, pair_2: 50)
+      const pair1Alerts = Array.from({ length: 100 }, (_, i) => ({
+        pair_id: 'pair_1',
+        alert_id: `pair1_${i}`,
+        trigger_price: i + 1,
+      }));
+      const pair2Alerts = Array.from({ length: 50 }, (_, i) => ({
+        pair_id: 'pair_2',
+        alert_id: `pair2_${i}`,
+        trigger_price: i + 1,
+      }));
+      const allAlerts = [...pair1Alerts, ...pair2Alerts];
+      const request = { alerts: allAlerts };
+
+      mockMakeRequest
+        .mockResolvedValueOnce({
+          status: 'success',
+          data: { pairs_replaced: 1, alerts_created: 100 },
+        })
+        .mockResolvedValueOnce({
+          status: 'success',
+          data: { pairs_replaced: 1, alerts_created: 50 },
+        });
+
+      const result = await priceAlertClient.replacePriceAlerts(request);
+
+      expect(mockMakeRequest).toHaveBeenCalledTimes(2);
+      // First batch: pair_1 alerts (100)
+      expect(mockMakeRequest).toHaveBeenNthCalledWith(1, '/alerts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        data: JSON.stringify({ alerts: pair1Alerts }),
+      });
+      // Second batch: pair_2 alerts (50)
+      expect(mockMakeRequest).toHaveBeenNthCalledWith(2, '/alerts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        data: JSON.stringify({ alerts: pair2Alerts }),
+      });
+      expect(result).toEqual({ pairs_replaced: 2, alerts_created: 150 });
+    });
+
+    it('should aggregate pairs_replaced and alerts_created across batches', async () => {
+      // 180 alerts across 3 pairs of 60 each → 3 batches (60+60 > 100, 60+60 > 100)
+      const makeAlerts = (pairId: string, count: number) =>
+        Array.from({ length: count }, (_, i) => ({
+          pair_id: pairId,
+          alert_id: `${pairId}_${i}`,
+          trigger_price: i + 1,
+        }));
+
+      const allAlerts = [...makeAlerts('a', 60), ...makeAlerts('b', 60), ...makeAlerts('c', 60)];
+
+      mockMakeRequest
+        .mockResolvedValueOnce({
+          status: 'success',
+          data: { pairs_replaced: 1, alerts_created: 60 },
+        })
+        .mockResolvedValueOnce({
+          status: 'success',
+          data: { pairs_replaced: 1, alerts_created: 60 },
+        })
+        .mockResolvedValueOnce({
+          status: 'success',
+          data: { pairs_replaced: 1, alerts_created: 60 },
+        });
+
+      const result = await priceAlertClient.replacePriceAlerts({ alerts: allAlerts });
+
+      expect(mockMakeRequest).toHaveBeenCalledTimes(3);
+      expect(result).toEqual({ pairs_replaced: 3, alerts_created: 180 });
+    });
+
+    it('should send one empty replace request when alerts are empty', async () => {
+      mockMakeRequest.mockResolvedValue({
+        status: 'success',
+        data: { pairs_replaced: 0, alerts_created: 0 },
+      });
+
+      const result = await priceAlertClient.replacePriceAlerts({ alerts: [] });
+
+      expect(mockMakeRequest).toHaveBeenCalledWith('/alerts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        data: JSON.stringify({ alerts: [] }),
+      });
+      expect(result).toEqual({ pairs_replaced: 0, alerts_created: 0 });
+    });
+
+    it('should throw before backend call when one pair_id has more than 100 alerts', async () => {
+      const oversizedAlerts = Array.from({ length: 150 }, (_, i) => ({
+        pair_id: 'oversized',
+        alert_id: `${i}`,
+        trigger_price: i,
+      }));
+
+      await expect(priceAlertClient.replacePriceAlerts({ alerts: oversizedAlerts })).rejects.toThrow(
+        'Failed to replace price alerts: Pair oversized has 150 alerts, which exceeds the maximum batch size of 100'
+      );
+
+      expect(mockMakeRequest).not.toHaveBeenCalled();
+    });
   });
 
   describe('createPendingPriceAlert', () => {

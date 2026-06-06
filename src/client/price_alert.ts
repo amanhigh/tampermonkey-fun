@@ -4,6 +4,7 @@ import { Constants } from '../models/constant';
 import {
   PendingPriceAlertRequest,
   PriceAlert,
+  PriceAlertInput,
   PriceAlertListResponse,
   PriceAlertQueryParams,
   PriceAlertReplaceRequest,
@@ -50,6 +51,7 @@ export interface IPriceAlertClient extends IBaseClient {
  */
 export class PriceAlertClient extends BaseClient implements IPriceAlertClient {
   private static readonly pageLimit = 10;
+  private static readonly replaceBatchLimit = 100;
 
   /**
    * Creates an instance of PriceAlertClient.
@@ -61,13 +63,21 @@ export class PriceAlertClient extends BaseClient implements IPriceAlertClient {
 
   /** @inheritdoc */
   async replacePriceAlerts(data: PriceAlertReplaceRequest): Promise<PriceAlertReplaceResult> {
+    let totalReplaced = 0;
+    let totalCreated = 0;
+
     try {
-      const response = await this.makeRequest<KohanEnvelope<PriceAlertReplaceResult>>('/alerts', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        data: JSON.stringify(data),
-      });
-      return response.data;
+      const batches = PriceAlertClient.buildReplaceBatches(data.alerts);
+      for (const batch of batches) {
+        const response = await this.makeRequest<KohanEnvelope<PriceAlertReplaceResult>>('/alerts', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          data: JSON.stringify({ alerts: batch }),
+        });
+        totalReplaced += response.data.pairs_replaced;
+        totalCreated += response.data.alerts_created;
+      }
+      return { pairs_replaced: totalReplaced, alerts_created: totalCreated };
     } catch (error) {
       throw new Error(`Failed to replace price alerts: ${(error as Error).message}`);
     }
@@ -122,6 +132,53 @@ export class PriceAlertClient extends BaseClient implements IPriceAlertClient {
     } catch (error) {
       throw new Error(`Failed to list all price alerts: ${(error as Error).message}`);
     }
+  }
+
+  /**
+   * Group alerts by pair_id and pack into batches of at most `replaceBatchLimit`.
+   * Alerts for the same pair_id are never split across requests.
+   * @throws if a single pair_id exceeds `replaceBatchLimit`
+   */
+  private static buildReplaceBatches(alerts: PriceAlertInput[]): PriceAlertInput[][] {
+    if (alerts.length === 0) {
+      return [[]];
+    }
+
+    const byPairID = new Map<string, PriceAlertInput[]>();
+    for (const alert of alerts) {
+      const group = byPairID.get(alert.pair_id);
+      if (group) {
+        group.push(alert);
+      } else {
+        byPairID.set(alert.pair_id, [alert]);
+      }
+    }
+
+    const pairIDs = Array.from(byPairID.keys()).sort();
+    const batches: PriceAlertInput[][] = [];
+    let current: PriceAlertInput[] = [];
+
+    for (const pairID of pairIDs) {
+      const group = byPairID.get(pairID)!;
+
+      if (group.length > PriceAlertClient.replaceBatchLimit) {
+        throw new Error(
+          `Pair ${pairID} has ${group.length} alerts, which exceeds the maximum batch size of ${PriceAlertClient.replaceBatchLimit}`
+        );
+      }
+
+      if (current.length > 0 && current.length + group.length > PriceAlertClient.replaceBatchLimit) {
+        batches.push(current);
+        current = [];
+      }
+      current.push(...group);
+    }
+
+    if (current.length > 0) {
+      batches.push(current);
+    }
+
+    return batches;
   }
 
   /**

@@ -17,6 +17,7 @@ export interface IAlertManager {
    * Get all alerts for current TradingView ticker.
    * @returns Promise resolving to array of alerts sorted by price
    */
+  // FIXME: Check Batch Size Optimization here.
   getAlerts(): Promise<Alert[]>;
 
   /**
@@ -55,6 +56,7 @@ export interface IAlertManager {
    * Refresh alerts from Investing.com into backend Price Alert store.
    * @returns Promise resolving to number of parsed alerts sent to backend
    */
+  // HACK: Seperate Class for Referesh Logic ?
   refreshAlerts(): Promise<number>;
 
   /**
