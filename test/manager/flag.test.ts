@@ -186,7 +186,7 @@ describe('FlagManager', () => {
         makeTicker({ ticker: 'BTC', type: 'CRYPTO' }),                // → CRYPTO (idx 2)
         makeTicker({ ticker: 'UP_A', trend: 'UPTREND' }),             // → UPTREND (idx 4)
         makeTicker({ ticker: 'NIFTY', type: 'INDEX' }),               // → INDEX (idx 6)
-        makeTicker({ ticker: 'BTCUSD/XAUUSD', type: 'COMPOSITE' }),   // → GOLD_INDEX (idx 7)
+        makeTicker({ ticker: 'GOLDSILVER', type: 'COMPOSITE' }),   // → GOLD_INDEX (idx 7)
       ]);
 
       flagManager.paint('.sym', '.itm');
@@ -215,7 +215,7 @@ describe('FlagManager', () => {
       );
       // GOLD_INDEX is ALL_FLAG_CATEGORIES[6]
       expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
-        '.sym', new Set(['BTCUSD/XAUUSD']), ALL_FLAG_CATEGORIES[6].color, '.itm',
+        '.sym', new Set(['GOLDSILVER']), ALL_FLAG_CATEGORIES[6].color, '.itm',
       );
     });
 
@@ -240,7 +240,7 @@ describe('FlagManager', () => {
       expect(mockPaintManager.paintFlags).not.toHaveBeenCalled();
     });
 
-    it('should apply display priority: GOLD_INDEX > CRYPTO > INDEX > UPTREND > SIDEWAYS > DOWNTREND', async () => {
+    it('should apply display priority: GOLD_INDEX > INDEX > CRYPTO > UPTREND > SIDEWAYS > DOWNTREND', async () => {
       // Ticker with both CRYPTO type and UPTREND trend → should go to CRYPTO
       mockTickerClient.listTickers.mockResolvedValue([
         makeTicker({ ticker: 'ETH', type: 'CRYPTO', trend: 'UPTREND' }),

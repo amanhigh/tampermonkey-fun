@@ -2,7 +2,7 @@ import { Ticker, TickerUpdateRequest } from '../models/ticker';
 import { ITickerClient } from '../client/ticker';
 import { IPaintManager } from './paint';
 import { Notifier } from '../util/notify';
-import { ALL_FLAG_CATEGORIES, findFlagCategoryByIndex, resolveFlagCategory } from '../models/flag_category';
+import { ALL_FLAG_CATEGORIES, findFlagCategoryByIndex, resolveFlagCategory } from '../models/flag';
 
 /**
  * Interface for managing flag-based ticker categories.
@@ -79,14 +79,9 @@ export class FlagManager implements IFlagManager {
       throw new Error(`Invalid category index: ${index}. Must be between 0 and ${ALL_FLAG_CATEGORIES.length - 1}`);
     }
 
-    if (!cat.update) {
-      Notifier.warn(`Category ${index} (${cat.id}) does not support storage`);
-      return;
-    }
-
     for (const ticker of tvTickers) {
       // Fire async backend update — no local cache mutation
-      void this.updateBackend(ticker, cat.update!);
+      void this.updateBackend(ticker, cat.update);
     }
   }
 

@@ -54,6 +54,9 @@ export interface FlagCategory {
 
 // ── Category Definitions ──
 
+/** Ticker types that classify as "Index / Markets" (INDEX category). */
+const INDEX_TICKER_TYPES: readonly string[] = ['INDEX', 'COMMODITY', 'FX', 'BOND'] as const;
+
 /**
  * All flag categories in UI paint order (by index).
  * This is the canonical list used by the FlagManager for paint, record, and lookup.
@@ -105,8 +108,7 @@ export const ALL_FLAG_CATEGORIES: readonly FlagCategory[] = [
     color: 'brown',
     label: 'Index / Markets',
     update: { type: 'INDEX' },
-    matches: (ticker) =>
-      ['INDEX', 'COMMODITY', 'FX', 'BOND'].includes(ticker.type),
+    matches: (ticker) => INDEX_TICKER_TYPES.includes(ticker.type),
   },
   {
     id: 'GOLD_INDEX',
@@ -114,8 +116,7 @@ export const ALL_FLAG_CATEGORIES: readonly FlagCategory[] = [
     color: 'darkkhaki',
     label: 'Gold / Composite Index',
     update: { type: 'COMPOSITE' },
-    matches: (ticker) =>
-      ticker.type === 'COMPOSITE' && isGoldIndexSymbol(ticker.ticker),
+    matches: (ticker) => ticker.type === 'COMPOSITE' && isGoldIndexSymbol(ticker.ticker),
   },
 ] as const;
 
@@ -140,20 +141,43 @@ export function findFlagCategoryByIndex(index: number): FlagCategory | undefined
 }
 
 /**
+ * Look up a flag category by its semantic ID.
+ * @param id Category ID (e.g. 'GOLD_INDEX', 'UPTREND')
+ * @returns The matching FlagCategory, or undefined if not found
+ */
+function findFlagCategoryById(id: FlagCategoryId): FlagCategory | undefined {
+  return ALL_FLAG_CATEGORIES.find((c) => c.id === id);
+}
+
+/**
+ * Priority-ordered list of category IDs used by resolveFlagCategory().
+ *
+ * Order: GOLD_INDEX > INDEX > CRYPTO > UPTREND > SIDEWAYS > DOWNTREND
+ */
+const FLAG_CATEGORY_PRIORITY: readonly FlagCategoryId[] = [
+  'GOLD_INDEX',
+  'INDEX',
+  'CRYPTO',
+  'UPTREND',
+  'SIDEWAYS',
+  'DOWNTREND',
+] as const;
+
+/**
  * Find the highest-priority flag category for a ticker.
  * Falls back to DEFAULT_UNTRACKED if no other category matches.
  *
- * Priority order: GOLD_INDEX > CRYPTO > INDEX > UPTREND > SIDEWAYS > DOWNTREND
+ * Priority order: GOLD_INDEX > INDEX > CRYPTO > UPTREND > SIDEWAYS > DOWNTREND
  *
  * @param ticker Full ticker record
  * @returns The matching FlagCategory (always one of the defined categories)
  */
 export function resolveFlagCategory(ticker: Ticker): FlagCategory {
-  if (ALL_FLAG_CATEGORIES[6].matches(ticker)) return ALL_FLAG_CATEGORIES[6]; // GOLD_INDEX
-  if (ALL_FLAG_CATEGORIES[2].matches(ticker)) return ALL_FLAG_CATEGORIES[2]; // CRYPTO
-  if (ALL_FLAG_CATEGORIES[5].matches(ticker)) return ALL_FLAG_CATEGORIES[5]; // INDEX
-  if (ALL_FLAG_CATEGORIES[3].matches(ticker)) return ALL_FLAG_CATEGORIES[3]; // UPTREND
-  if (ALL_FLAG_CATEGORIES[0].matches(ticker)) return ALL_FLAG_CATEGORIES[0]; // SIDEWAYS
-  if (ALL_FLAG_CATEGORIES[1].matches(ticker)) return ALL_FLAG_CATEGORIES[1]; // DOWNTREND
-  return ALL_FLAG_CATEGORIES[4]; // DEFAULT_UNTRACKED
+  for (const id of FLAG_CATEGORY_PRIORITY) {
+    const cat = findFlagCategoryById(id);
+    if (cat?.matches(ticker)) {
+      return cat;
+    }
+  }
+  return findFlagCategoryById('DEFAULT_UNTRACKED')!;
 }
