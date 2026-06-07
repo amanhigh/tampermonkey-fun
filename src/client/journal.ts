@@ -98,6 +98,9 @@ export class JournalClient extends BaseClient implements IJournalClient {
       if (params.limit) {
         query.set('limit', String(params.limit));
       }
+      if (params.offset !== undefined) {
+        query.set('offset', String(params.offset));
+      }
       if (params['sort-by']) {
         query.set('sort-by', params['sort-by']);
       }

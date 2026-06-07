@@ -91,6 +91,7 @@ export interface JournalQueryParams {
   type?: JournalApiType;
   status?: JournalApiStatus;
   limit?: number;
+  offset?: number;
   'sort-by'?: string;
   'sort-order'?: string;
 }

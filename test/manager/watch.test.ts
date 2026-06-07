@@ -1,9 +1,10 @@
 import { WatchManager, IWatchManager } from '../../src/manager/watch';
-import { IWatchlistRepo } from '../../src/repo/watch';
-import { CategoryLists } from '../../src/models/category';
-import { Constants } from '../../src/models/constant';
+import { ITickerManager } from '../../src/manager/ticker';
+import { IJournalClient } from '../../src/client/journal';
+import { Ticker } from '../../src/models/ticker';
+import { WATCH_CATEGORY_COUNT } from '../../src/models/watch';
 
-// Mock Notifier to avoid DOM issues
+// Mock Notifier
 jest.mock('../../src/util/notify', () => ({
   Notifier: {
     red: jest.fn(),
@@ -15,514 +16,396 @@ jest.mock('../../src/util/notify', () => ({
 
 describe('WatchManager', () => {
   let watchManager: IWatchManager;
-  let mockWatchRepo: jest.Mocked<IWatchlistRepo>;
-  let mockCategoryLists: jest.Mocked<CategoryLists>;
+  let mockTickerManager: jest.Mocked<ITickerManager>;
+  let mockJournalClient: jest.Mocked<IJournalClient>;
+
+  // ── Helpers ──
+
+  async function waitForAsync(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  function makeTicker(overrides: Partial<Ticker> = {}): Ticker {
+    const defaults: Partial<Ticker> = {
+      ticker: 'TICKER',
+      exchange: null,
+      timeframes: ['MN', 'WK', 'DL'],
+      type: 'EQUITY',
+      state: 'WATCHED',
+      trend: 'SIDEWAYS',
+    };
+    return new Ticker({ ...defaults, ...overrides });
+  }
 
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Mock CategoryLists
-    mockCategoryLists = {
-      getList: jest.fn(),
-      setList: jest.fn(),
-      toggle: jest.fn(),
-      add: jest.fn(),
-      delete: jest.fn(),
-      contains: jest.fn(),
-      containsInAny: jest.fn(),
-      getLists: jest.fn(),
-    } as unknown as jest.Mocked<CategoryLists>;
+    mockTickerManager = {
+      listTickers: jest.fn().mockResolvedValue([]),
+      updateTicker: jest.fn().mockResolvedValue(undefined as any),
+      getTicker: jest.fn(),
+      startTracking: jest.fn(),
+      markRecent: jest.fn(),
+      stopTracking: jest.fn(),
+      setExchange: jest.fn(),
+    } as unknown as jest.Mocked<ITickerManager>;
 
-    // Mock WatchlistRepo
-    mockWatchRepo = {
-      getWatchCategoryLists: jest.fn().mockReturnValue(mockCategoryLists),
-      getAllItems: jest.fn(),
-      getCategory: jest.fn(),
-      getCategoryCount: jest.fn(),
-      addToCategory: jest.fn(),
-      removeFromCategory: jest.fn(),
-      getAllKeys: jest.fn(),
-      has: jest.fn(),
-      get: jest.fn(),
-      set: jest.fn(),
-      delete: jest.fn(),
-      clear: jest.fn(),
-      getCount: jest.fn(),
-      load: jest.fn(),
-      save: jest.fn(),
-    } as unknown as jest.Mocked<IWatchlistRepo>;
+    mockJournalClient = {
+      listJournals: jest.fn().mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } }),
+      createJournal: jest.fn(),
+      addJournalImage: jest.fn(),
+      addJournalTag: jest.fn(),
+      updateJournalStatus: jest.fn(),
+      getBaseUrl: jest.fn(),
+    } as unknown as jest.Mocked<IJournalClient>;
 
-    // Set up default mock behavior for most tests (all categories exist)
-    mockCategoryLists.getList.mockReturnValue(new Set(['DEFAULT']));
-
-    watchManager = new WatchManager(mockWatchRepo);
-
-    // Clear the mock call history after creating the default instance
-    // This ensures constructor tests start with clean mock state
-    mockCategoryLists.setList.mockClear();
+    watchManager = new WatchManager(mockTickerManager, mockJournalClient);
   });
 
-  describe('constructor and initialization', () => {
-    it('should initialize category lists during construction', () => {
-      // Setup - mock empty category lists that need initialization
-      mockCategoryLists.getList.mockImplementation((index: number) => {
-        return index < 4 ? undefined : new Set<string>(); // First 4 are undefined
-      });
+  // ── Constructor ──
 
-      // Create a new manager to test initialization
-      new WatchManager(mockWatchRepo);
-
-      expect(mockWatchRepo.getWatchCategoryLists).toHaveBeenCalled();
-      // Should call setList for each undefined category (0-3 only)
-      expect(mockCategoryLists.setList).toHaveBeenCalledTimes(4);
-      expect(mockCategoryLists.setList).toHaveBeenCalledWith(0, new Set());
-      expect(mockCategoryLists.setList).toHaveBeenCalledWith(1, new Set());
-      expect(mockCategoryLists.setList).toHaveBeenCalledWith(2, new Set());
-      expect(mockCategoryLists.setList).toHaveBeenCalledWith(3, new Set());
+  describe('constructor', () => {
+    it('should create instance with dependencies', () => {
+      expect(watchManager).toBeDefined();
+      expect(watchManager).toBeInstanceOf(WatchManager);
     });
 
-    it('should not reinitialize existing category lists', () => {
-      // Setup - all categories already exist
-      mockCategoryLists.getList.mockReturnValue(new Set(['HDFC']));
+    it('should NOT call backend on construction', () => {
+      expect(mockTickerManager.listTickers).not.toHaveBeenCalled();
+      expect(mockJournalClient.listJournals).not.toHaveBeenCalled();
+    });
 
-      // Create a new manager to test no initialization
-      new WatchManager(mockWatchRepo);
-
-      expect(mockCategoryLists.setList).not.toHaveBeenCalled();
+    it('should return empty sets for all categories before any refresh', () => {
+      for (let i = 0; i < WATCH_CATEGORY_COUNT; i++) {
+        expect(watchManager.getCategory(i)).toBeInstanceOf(Set);
+        expect(watchManager.getCategory(i).size).toBe(0);
+      }
     });
   });
+
+  // ── getCategory ──
 
   describe('getCategory', () => {
-    it('should return category set for valid index', () => {
-      const testSet = new Set(['HDFC', 'RELIANCE']);
-      mockCategoryLists.getList.mockReturnValue(testSet);
-
+    it('should return empty set for valid index before refresh', () => {
       const result = watchManager.getCategory(3);
-
-      expect(mockWatchRepo.getWatchCategoryLists).toHaveBeenCalled();
-      expect(mockCategoryLists.getList).toHaveBeenCalledWith(3);
-      expect(result).toBe(testSet);
+      expect(result).toBeInstanceOf(Set);
+      expect(result.size).toBe(0);
     });
 
     it('should throw error for negative category index', () => {
-      expect(() => watchManager.getCategory(-1)).toThrow('Invalid category index: -1. Must be between 0 and 7');
+      expect(() => watchManager.getCategory(-1)).toThrow('Invalid category index: -1');
     });
 
-    it('should throw error for category index >= 8', () => {
-      expect(() => watchManager.getCategory(8)).toThrow('Invalid category index: 8. Must be between 0 and 7');
+    it('should throw error for category index >= TOTAL_CATEGORIES', () => {
+      expect(() => watchManager.getCategory(WATCH_CATEGORY_COUNT)).toThrow(
+        `Invalid category index: ${WATCH_CATEGORY_COUNT}`
+      );
     });
 
-    it('should handle missing category list by creating new set and throwing error', () => {
-      mockCategoryLists.getList.mockReturnValue(undefined);
+    it('should return populated category after backend refresh', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([
+        makeTicker({ ticker: 'READY_A', state: 'READY' }),
+      ]);
+      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
 
-      expect(() => watchManager.getCategory(5)).toThrow('Category list for index 5 not found');
+      watchManager.computeDefaultList([]);
+      await waitForAsync();
 
-      expect(mockCategoryLists.setList).toHaveBeenCalledWith(5, new Set());
+      const category1 = watchManager.getCategory(1);
+      expect(category1.has('READY_A')).toBe(true);
     });
   });
+
+  // ── getDefaultWatchlist ──
 
   describe('getDefaultWatchlist', () => {
-    it('should return category 5 (default watchlist)', () => {
-      const defaultSet = new Set(['HDFC', 'NIFTY']);
-      mockCategoryLists.getList.mockReturnValue(defaultSet);
-
+    it('should return empty set before any refresh', () => {
       const result = watchManager.getDefaultWatchlist();
-
-      expect(mockCategoryLists.getList).toHaveBeenCalledWith(5);
-      expect(result).toBe(defaultSet);
+      expect(result).toBeInstanceOf(Set);
+      expect(result.size).toBe(0);
     });
 
-    it('should handle empty default watchlist', () => {
-      const emptySet = new Set<string>();
-      mockCategoryLists.getList.mockReturnValue(emptySet);
+    it('should return category 5 as default watchlist', () => {
+      // Manually trigger first call with TV tickers to set fallback
+      watchManager.computeDefaultList(['DEFAULT_A', 'DEFAULT_B']);
 
+      // Before async refresh resolves, fallback populates category 5
       const result = watchManager.getDefaultWatchlist();
-
-      expect(result).toBe(emptySet);
-      expect(result.size).toBe(0);
+      expect(result.has('DEFAULT_A')).toBe(true);
+      expect(result.has('DEFAULT_B')).toBe(true);
     });
   });
 
+  // ── computeDefaultList / backend refresh ──
+
+  describe('computeDefaultList (backend refresh)', () => {
+    it('should fire backend refresh with tickers and journals', () => {
+      mockTickerManager.listTickers.mockResolvedValue([]);
+      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+
+      watchManager.computeDefaultList(['TV_A', 'TV_B']);
+
+      expect(mockTickerManager.listTickers).toHaveBeenCalledWith({});
+      expect(mockJournalClient.listJournals).toHaveBeenCalledTimes(2);
+      expect(mockJournalClient.listJournals).toHaveBeenCalledWith(expect.objectContaining({ status: 'SET' }));
+      expect(mockJournalClient.listJournals).toHaveBeenCalledWith(expect.objectContaining({ status: 'RUNNING' }));
+    });
+
+    it('should map SET journal tickers to category 0', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([]);
+      // Mock SET journals returning tickers
+      const mockSetJournal = { ticker: 'SET_1' };
+      const mockSetJournal2 = { ticker: 'SET_2' };
+      mockJournalClient.listJournals.mockImplementation((params: any) => {
+        if (params.status === 'SET') return Promise.resolve({ journals: [mockSetJournal, mockSetJournal2] as any, metadata: { total: 2, offset: 0, limit: 100 } });
+        return Promise.resolve({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+      });
+
+      watchManager.computeDefaultList([]);
+      await waitForAsync();
+
+      const category0 = watchManager.getCategory(0);
+      expect(category0.has('SET_1')).toBe(true);
+      expect(category0.has('SET_2')).toBe(true);
+    });
+
+    it('should map RUNNING journal tickers to category 4', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([]);
+      const mockRunningJournal = { ticker: 'RUN_1' };
+      const mockRunningJournal2 = { ticker: 'RUN_2' };
+      mockJournalClient.listJournals.mockImplementation((params: any) => {
+        if (params.status === 'RUNNING') return Promise.resolve({ journals: [mockRunningJournal, mockRunningJournal2] as any, metadata: { total: 2, offset: 0, limit: 100 } });
+        return Promise.resolve({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+      });
+
+      watchManager.computeDefaultList([]);
+      await waitForAsync();
+
+      const category4 = watchManager.getCategory(4);
+      expect(category4.has('RUN_1')).toBe(true);
+      expect(category4.has('RUN_2')).toBe(true);
+    });
+
+    it('should map READY tickers to category 1', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([
+        makeTicker({ ticker: 'R_STATE', state: 'READY' }),
+        makeTicker({ ticker: 'W_STATE', state: 'WATCHED' }),
+      ]);
+      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+
+      watchManager.computeDefaultList([]);
+      await waitForAsync();
+
+      const category1 = watchManager.getCategory(1);
+      expect(category1.has('R_STATE')).toBe(true);
+      expect(category1.has('W_STATE')).toBe(false);
+    });
+
+    it('should map long NSE tickers to category 2', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([
+        makeTicker({ ticker: 'LONG_NSE', exchange: 'NSE', timeframes: ['MN', 'WK'] }),
+      ]);
+      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+
+      watchManager.computeDefaultList([]);
+      await waitForAsync();
+
+      const category2 = watchManager.getCategory(2);
+      expect(category2.has('LONG_NSE')).toBe(true);
+    });
+
+    it('should map long non-NSE tickers to category 3', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([
+        makeTicker({ ticker: 'LONG_US', exchange: 'NASDAQ', timeframes: ['MN', 'WK'] }),
+      ]);
+      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+
+      watchManager.computeDefaultList([]);
+      await waitForAsync();
+
+      const category3 = watchManager.getCategory(3);
+      expect(category3.has('LONG_US')).toBe(true);
+    });
+
+    it('should map INDEX/COMMODITY/FX/BOND tickers to category 6', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([
+        makeTicker({ ticker: 'IND_A', type: 'INDEX' }),
+        makeTicker({ ticker: 'COM_A', type: 'COMMODITY' }),
+        makeTicker({ ticker: 'FX_A', type: 'FX' }),
+        makeTicker({ ticker: 'BND_A', type: 'BOND' }),
+      ]);
+      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+
+      watchManager.computeDefaultList([]);
+      await waitForAsync();
+
+      const category6 = watchManager.getCategory(6);
+      expect(category6.has('IND_A')).toBe(true);
+      expect(category6.has('COM_A')).toBe(true);
+      expect(category6.has('FX_A')).toBe(true);
+      expect(category6.has('BND_A')).toBe(true);
+    });
+
+    it('should map COMPOSITE tickers to category 7', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([
+        makeTicker({ ticker: 'COMP_A', type: 'COMPOSITE' }),
+      ]);
+      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+
+      watchManager.computeDefaultList([]);
+      await waitForAsync();
+
+      const category7 = watchManager.getCategory(7);
+      expect(category7.has('COMP_A')).toBe(true);
+    });
+
+    it('should place unassigned TV tickers into category 5 (default)', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([
+        makeTicker({ ticker: 'ASSIGNED_1', state: 'READY' }), // goes to category 1
+      ]);
+      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+
+      watchManager.computeDefaultList(['ASSIGNED_1', 'DEFAULT_1', 'DEFAULT_2']);
+      await waitForAsync();
+
+      // ASSIGNED_1 should be in category 1, not category 5
+      const category1 = watchManager.getCategory(1);
+      expect(category1.has('ASSIGNED_1')).toBe(true);
+
+      // DEFAULT_1 and DEFAULT_2 should go to category 5
+      const category5 = watchManager.getCategory(5);
+      expect(category5.has('ASSIGNED_1')).toBe(false);
+      expect(category5.has('DEFAULT_1')).toBe(true);
+      expect(category5.has('DEFAULT_2')).toBe(true);
+    });
+
+    it('should handle backend failure gracefully', async () => {
+      mockTickerManager.listTickers.mockRejectedValue(new Error('Backend down'));
+
+      watchManager.computeDefaultList(['TV_A']);
+      await waitForAsync();
+
+      // Snapshot falls back to TV tickers in category 5 on first call
+      expect(watchManager.getCategory(5).has('TV_A')).toBe(true);
+    });
+  });
+
+  // ── recordCategory ──
+
   describe('recordCategory', () => {
-    it('should record tickers in specified category', () => {
-      const tickers = ['HDFC', 'RELIANCE', 'TCS'];
+    it('should update ticker state to READY for category 1', () => {
+      watchManager.recordCategory(1, ['TEST']);
 
-      watchManager.recordCategory(2, tickers);
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { state: 'READY' });
+    });
 
-      expect(mockWatchRepo.getWatchCategoryLists).toHaveBeenCalled();
-      expect(mockCategoryLists.toggle).toHaveBeenCalledTimes(3);
-      expect(mockCategoryLists.toggle).toHaveBeenCalledWith(2, 'HDFC');
-      expect(mockCategoryLists.toggle).toHaveBeenCalledWith(2, 'RELIANCE');
-      expect(mockCategoryLists.toggle).toHaveBeenCalledWith(2, 'TCS');
+    it('should update ticker type to INDEX for category 6', () => {
+      watchManager.recordCategory(6, ['TEST']);
+
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'INDEX' });
+    });
+
+    it('should NOT update backend for category 7 (unsupported)', () => {
+      watchManager.recordCategory(7, ['TEST']);
+
+      expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
+    });
+
+    it('should NOT update backend for category 0 (journal-derived)', () => {
+      watchManager.recordCategory(0, ['TEST']);
+
+      expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
+    });
+
+    it('should NOT update backend for category 4 (journal-derived)', () => {
+      watchManager.recordCategory(4, ['TEST']);
+
+      expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
     });
 
     it('should handle empty ticker array', () => {
       watchManager.recordCategory(1, []);
 
-      expect(mockCategoryLists.toggle).not.toHaveBeenCalled();
-    });
-
-    it('should handle single ticker', () => {
-      watchManager.recordCategory(0, ['NIFTY']);
-
-      expect(mockCategoryLists.toggle).toHaveBeenCalledWith(0, 'NIFTY');
+      expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
     });
   });
 
-  describe('computeDefaultList', () => {
-    beforeEach(() => {
-      // Mock Constants.UI.COLORS.LIST to have 8 items (indices 0-7)
-      (Constants.UI.COLORS.LIST as any) = new Array(8).fill('color');
-    });
-
-    it('should compute default watchlist excluding items from other categories', () => {
-      const tvWatchlistTickers = ['HDFC', 'RELIANCE', 'TCS', 'WIPRO', 'INFY'];
-
-      // Setup category lists - categories 0-4, 6-7 have some tickers, category 5 is watchlist
-      const mockCategoryMap = new Map<number, Set<string>>([
-        [0, new Set(['HDFC'])],
-        [1, new Set(['RELIANCE'])],
-        [2, new Set()],
-        [3, new Set(['TCS'])],
-        [4, new Set()],
-        [5, new Set()], // Default watchlist - will be replaced
-        [6, new Set(['WIPRO'])],
-        [7, new Set()],
-      ]);
-
-      mockCategoryLists.getList.mockImplementation((index: number) => mockCategoryMap.get(index));
-
-      watchManager.computeDefaultList(tvWatchlistTickers);
-
-      // Should create new set with INFY only (others are in different categories)
-      const expectedWatchlist = new Set(['INFY']);
-      expect(mockCategoryLists.setList).toHaveBeenCalledWith(5, expectedWatchlist);
-    });
-
-    it('should handle all tickers being in other categories', () => {
-      const tvWatchlistTickers = ['HDFC', 'RELIANCE'];
-
-      const mockCategoryMap = new Map<number, Set<string>>([
-        [0, new Set(['HDFC'])],
-        [1, new Set(['RELIANCE'])],
-        [2, new Set()],
-        [3, new Set()],
-        [4, new Set()],
-        [5, new Set()], // Default watchlist
-        [6, new Set()],
-        [7, new Set()],
-      ]);
-
-      mockCategoryLists.getList.mockImplementation((index: number) => mockCategoryMap.get(index));
-
-      watchManager.computeDefaultList(tvWatchlistTickers);
-
-      // Should create empty set
-      const expectedWatchlist = new Set();
-      expect(mockCategoryLists.setList).toHaveBeenCalledWith(5, expectedWatchlist);
-    });
-
-    it('should handle no tickers in other categories', () => {
-      const tvWatchlistTickers = ['HDFC', 'RELIANCE', 'TCS'];
-
-      // All categories are empty
-      mockCategoryLists.getList.mockReturnValue(new Set());
-
-      watchManager.computeDefaultList(tvWatchlistTickers);
-
-      // Should include all watchlist tickers
-      const expectedWatchlist = new Set(['HDFC', 'RELIANCE', 'TCS']);
-      expect(mockCategoryLists.setList).toHaveBeenCalledWith(5, expectedWatchlist);
-    });
-
-    it('should handle undefined category lists', () => {
-      const tvWatchlistTickers = ['HDFC', 'RELIANCE'];
-
-      mockCategoryLists.getList.mockImplementation((index: number) => {
-        return index === 0 ? new Set(['HDFC']) : undefined;
-      });
-
-      watchManager.computeDefaultList(tvWatchlistTickers);
-
-      // Should handle undefined gracefully and only exclude HDFC
-      const expectedWatchlist = new Set(['RELIANCE']);
-      expect(mockCategoryLists.setList).toHaveBeenCalledWith(5, expectedWatchlist);
-    });
-  });
+  // ── isWatched ──
 
   describe('isWatched', () => {
-    it('should return true when ticker is in any category', () => {
-      const allWatchedItems = new Set(['HDFC', 'RELIANCE', 'TCS']);
-      mockWatchRepo.getAllItems.mockReturnValue(allWatchedItems);
-
-      const result = watchManager.isWatched('HDFC');
-
-      expect(mockWatchRepo.getAllItems).toHaveBeenCalled();
-      expect(result).toBe(true);
+    it('should return false before any refresh', () => {
+      expect(watchManager.isWatched('ANY')).toBe(false);
     });
 
-    it('should return false when ticker is not watched', () => {
-      const allWatchedItems = new Set(['HDFC', 'RELIANCE']);
-      mockWatchRepo.getAllItems.mockReturnValue(allWatchedItems);
+    it('should return true after backend populates a category', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([
+        makeTicker({ ticker: 'WATCHED_A', state: 'READY' }),
+      ]);
+      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
 
-      const result = watchManager.isWatched('TCS');
+      watchManager.computeDefaultList([]);
+      await waitForAsync();
 
-      expect(result).toBe(false);
+      expect(watchManager.isWatched('WATCHED_A')).toBe(true);
     });
 
-    it('should handle empty watched items', () => {
-      mockWatchRepo.getAllItems.mockReturnValue(new Set());
+    it('should return false for ticker not in any category', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([
+        makeTicker({ ticker: 'PRESENT', state: 'READY' }),
+      ]);
+      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
 
-      const result = watchManager.isWatched('HDFC');
+      watchManager.computeDefaultList([]);
+      await waitForAsync();
 
-      expect(result).toBe(false);
-    });
-
-    it('should handle case sensitivity', () => {
-      const allWatchedItems = new Set(['HDFC']);
-      mockWatchRepo.getAllItems.mockReturnValue(allWatchedItems);
-
-      expect(watchManager.isWatched('HDFC')).toBe(true);
-      expect(watchManager.isWatched('hdfc')).toBe(false);
+      expect(watchManager.isWatched('ABSENT')).toBe(false);
     });
   });
 
-  describe('dryRunClean', () => {
-    it('should count items that would be removed without executing changes', () => {
-      const currentTickers = ['HDFC', 'RELIANCE'];
+  // ── evictTicker ──
 
-      // Setup categories with some tickers that are not in current watchlist
-      const mockCategoryMap = new Map([
-        [0, new Set(['HDFC', 'TCS'])], // TCS will be removed
-        [1, new Set(['RELIANCE', 'WIPRO'])], // WIPRO will be removed
-        [2, new Set(['INFY'])], // INFY will be removed
-      ]);
-
-      mockCategoryLists.getLists.mockReturnValue(mockCategoryMap);
-
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-
-      const result = watchManager.dryRunClean(currentTickers);
-
-      expect(result).toBe(3); // TCS, WIPRO, INFY
-      expect(mockCategoryLists.delete).not.toHaveBeenCalled(); // No actual changes
-      expect(consoleSpy).toHaveBeenCalledTimes(3);
-      expect(consoleSpy).toHaveBeenCalledWith('Removing TCS from category 0');
-      expect(consoleSpy).toHaveBeenCalledWith('Removing WIPRO from category 1');
-      expect(consoleSpy).toHaveBeenCalledWith('Removing INFY from category 2');
-
-      consoleSpy.mockRestore();
+  describe('evictTicker', () => {
+    it('should be a no-op for backend-derived categories', () => {
+      const result = watchManager.evictTicker('ANY');
+      expect(result).toBe(false);
     });
+  });
 
-    it('should return 0 when no items need to be removed', () => {
-      const currentTickers = ['HDFC', 'RELIANCE', 'TCS'];
+  // ── Cleanup ──
 
-      const mockCategoryMap = new Map([
-        [0, new Set(['HDFC'])],
-        [1, new Set(['RELIANCE'])],
-        [2, new Set(['TCS'])],
+  describe('dryRunClean', () => {
+    it('should return 0 when all TV tickers are in snapshot', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([
+        makeTicker({ ticker: 'TV_A', state: 'READY' }),
       ]);
+      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
 
-      mockCategoryLists.getLists.mockReturnValue(mockCategoryMap);
+      watchManager.computeDefaultList([]);
+      await waitForAsync();
 
-      const result = watchManager.dryRunClean(currentTickers);
-
+      const result = watchManager.dryRunClean(['TV_A']);
       expect(result).toBe(0);
     });
   });
 
   describe('clean', () => {
-    it('should remove items not in watchlist and execute changes', () => {
-      const currentTickers = ['HDFC'];
-
-      const mockCategoryMap = new Map([
-        [0, new Set(['HDFC', 'RELIANCE'])], // RELIANCE will be removed
-        [1, new Set(['TCS'])], // TCS will be removed
+    it('should remove items from snapshot and return count', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([
+        makeTicker({ ticker: 'STALE', state: 'READY' }),
+        makeTicker({ ticker: 'KEEP', state: 'READY' }),
       ]);
+      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
 
-      mockCategoryLists.getLists.mockReturnValue(mockCategoryMap);
+      watchManager.computeDefaultList([]);
+      await waitForAsync();
 
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-
-      const result = watchManager.clean(currentTickers);
-
-      expect(result).toBe(2); // RELIANCE, TCS
-      expect(mockCategoryLists.delete).toHaveBeenCalledTimes(2);
-      expect(mockCategoryLists.delete).toHaveBeenCalledWith(0, 'RELIANCE');
-      expect(mockCategoryLists.delete).toHaveBeenCalledWith(1, 'TCS');
-
-      consoleSpy.mockRestore();
-    });
-
-    it('should handle empty categories', () => {
-      const currentTickers = ['HDFC'];
-      const emptyMap = new Map();
-
-      mockCategoryLists.getLists.mockReturnValue(emptyMap);
-
-      const result = watchManager.clean(currentTickers);
-
-      expect(result).toBe(0);
-      expect(mockCategoryLists.delete).not.toHaveBeenCalled();
-    });
-
-    it('should handle empty current tickers (remove all)', () => {
-      const currentTickers: string[] = [];
-
-      const mockCategoryMap = new Map([
-        [0, new Set(['HDFC', 'RELIANCE'])],
-        [1, new Set(['TCS'])],
-      ]);
-
-      mockCategoryLists.getLists.mockReturnValue(mockCategoryMap);
-
-      const result = watchManager.clean(currentTickers);
-
-      expect(result).toBe(3); // All items removed
-      expect(mockCategoryLists.delete).toHaveBeenCalledTimes(3);
-    });
-  });
-
-  describe('edge cases and error handling', () => {
-    it('should handle category boundary values', () => {
-      const validSet = new Set(['HDFC']);
-      mockCategoryLists.getList.mockReturnValue(validSet);
-
-      // Test boundary values
-      expect(watchManager.getCategory(0)).toBe(validSet); // Min valid
-      expect(watchManager.getCategory(7)).toBe(validSet); // Max valid
-
-      expect(() => watchManager.getCategory(-1)).toThrow(); // Below min
-      expect(() => watchManager.getCategory(8)).toThrow(); // Above max
-    });
-
-    it('should handle recordCategory with duplicate tickers', () => {
-      const tickers = ['HDFC', 'HDFC', 'RELIANCE'];
-
-      watchManager.recordCategory(1, tickers);
-
-      // Should call toggle for each ticker, even duplicates
-      expect(mockCategoryLists.toggle).toHaveBeenCalledTimes(3);
-      expect(mockCategoryLists.toggle).toHaveBeenCalledWith(1, 'HDFC');
-      expect(mockCategoryLists.toggle).toHaveBeenNthCalledWith(2, 1, 'HDFC');
-      expect(mockCategoryLists.toggle).toHaveBeenCalledWith(1, 'RELIANCE');
-    });
-
-    it('should handle cleanup with special characters in ticker names', () => {
-      const currentTickers = ['M&M'];
-
-      const mockCategoryMap = new Map([
-        [0, new Set(['M&M', 'L&T'])], // L&T will be removed
-      ]);
-
-      mockCategoryLists.getLists.mockReturnValue(mockCategoryMap);
-
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-
-      const result = watchManager.clean(currentTickers);
-
+      // STALE is in the snapshot but not in current TV tickers
+      const result = watchManager.clean(['KEEP']);
       expect(result).toBe(1);
-      expect(mockCategoryLists.delete).toHaveBeenCalledWith(0, 'L&T');
 
-      consoleSpy.mockRestore();
-    });
-
-    it('should handle computeDefaultList with large ticker lists', () => {
-      const largeTickers = Array.from({ length: 1000 }, (_, i) => `TICKER${i}`);
-      (Constants.UI.COLORS.LIST as any) = new Array(8).fill('color');
-
-      // All categories are empty
-      mockCategoryLists.getList.mockReturnValue(new Set());
-
-      watchManager.computeDefaultList(largeTickers);
-
-      const expectedSet = new Set(largeTickers);
-      expect(mockCategoryLists.setList).toHaveBeenCalledWith(5, expectedSet);
-    });
-
-    it('should handle watchRepo returning undefined for getAllItems', () => {
-      mockWatchRepo.getAllItems.mockReturnValue(new Set());
-
-      const result = watchManager.isWatched('HDFC');
-
-      expect(result).toBe(false);
-    });
-
-    describe('evictTicker', () => {
-      it('should remove ticker from all categories where it exists', () => {
-        const tvTicker = 'HDFC';
-        
-        // Mock category lists with ticker in multiple categories
-        const mockCategoryMap = new Map([
-          [0, new Set(['HDFC', 'RELIANCE'])], // HDFC should be removed
-          [1, new Set(['TCS'])], // HDFC not present
-          [2, new Set(['HDFC', 'INFY'])], // HDFC should be removed
-        ]);
-        
-        mockCategoryLists.getLists.mockReturnValue(mockCategoryMap);
-
-        const result = watchManager.evictTicker(tvTicker);
-
-        // Verify ticker was removed from categories where it existed
-        expect(mockCategoryLists.delete).toHaveBeenCalledWith(0, tvTicker);
-        expect(mockCategoryLists.delete).toHaveBeenCalledWith(2, tvTicker);
-        expect(mockCategoryLists.delete).not.toHaveBeenCalledWith(1, tvTicker);
-        expect(result).toBe(true); // Ticker was found and removed
-      });
-
-      it('should return false when ticker not found in any category', () => {
-        const tvTicker = 'NONEXISTENT';
-        
-        // Mock category lists without the ticker
-        const mockCategoryMap = new Map([
-          [0, new Set(['HDFC', 'RELIANCE'])],
-          [1, new Set(['TCS'])],
-          [2, new Set(['INFY'])],
-        ]);
-        
-        mockCategoryLists.getLists.mockReturnValue(mockCategoryMap);
-
-        const result = watchManager.evictTicker(tvTicker);
-
-        // Verify no delete operations were called
-        expect(mockCategoryLists.delete).not.toHaveBeenCalled();
-        expect(result).toBe(false); // Ticker not found
-      });
-
-      it('should handle empty categories gracefully', () => {
-        const tvTicker = 'HDFC';
-        
-        // Mock empty category lists
-        const mockCategoryMap = new Map<number, Set<string>>([
-          [0, new Set<string>()],
-          [1, new Set<string>()],
-          [2, new Set<string>()],
-        ]);
-        
-        mockCategoryLists.getLists.mockReturnValue(mockCategoryMap);
-
-        const result = watchManager.evictTicker(tvTicker);
-
-        expect(mockCategoryLists.delete).not.toHaveBeenCalled();
-        expect(result).toBe(false); // Ticker not found in empty categories
-      });
-
-      it('should handle special characters in ticker names', () => {
-        const tvTicker = 'M&M_SPECIAL';
-        
-        // Mock category with special character ticker
-        const mockCategoryMap = new Map([
-          [0, new Set(['M&M_SPECIAL', 'L&T'])],
-          [1, new Set(['TCS'])],
-        ]);
-        
-        mockCategoryLists.getLists.mockReturnValue(mockCategoryMap);
-
-        const result = watchManager.evictTicker(tvTicker);
-
-        expect(mockCategoryLists.delete).toHaveBeenCalledWith(0, tvTicker);
-        expect(result).toBe(true); // Ticker was found and removed
-      });
+      // Verify KEEP remained and STALE was removed
+      expect(watchManager.isWatched('STALE')).toBe(false);
+      expect(watchManager.isWatched('KEEP')).toBe(true);
     });
   });
 });

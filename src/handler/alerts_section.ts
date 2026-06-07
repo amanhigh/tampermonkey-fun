@@ -49,6 +49,7 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
 
   // Interaction handlers
   readonly onLeftClick = (result: AuditResult) => {
+    // BUG: openTicker needs exchange-qualified symbol (e.g. "NSE:SYMBOL") but result.target is raw ticker
     void this.tickerHandler.openTicker(result.target);
   };
 
