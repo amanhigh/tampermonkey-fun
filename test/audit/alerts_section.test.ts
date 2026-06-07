@@ -100,10 +100,10 @@ describe('AlertsAuditSection', () => {
 
       const html = section.headerFormatter(results);
 
-      expect(html).toContain('NoMap: 1');
-      expect(html).toContain('One: 1');
-      expect(html).toContain('None: 1');
-      expect(html).toContain('Tot: 3');
+      expect(html).toContain('O:1');
+      expect(html).toContain('N:1');
+      expect(html).toContain('M:1');
+      expect(html).toContain('T:3');
     });
   });
 });

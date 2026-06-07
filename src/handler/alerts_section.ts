@@ -71,16 +71,16 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
     }
 
     // Count different backend finding codes
-    const noMap = auditResults.filter((r) => r.code === CODE_NO_ALERT_TICKER).length;
     const singles = auditResults.filter((r) => r.code === CODE_SINGLE_ALERT).length;
     const nones = auditResults.filter((r) => r.code === CODE_NO_ALERTS).length;
+    const maps = auditResults.filter((r) => r.code === CODE_NO_ALERT_TICKER).length;
 
     // Color-coded counts for visual clarity
     return [
-      `<span style="color: darkred">NoMap: ${noMap}</span>`,
-      `<span style="color: darkorange">One: ${singles}</span>`,
-      `<span style="color: silver">None: ${nones}</span>`,
-      `Tot: ${auditResults.length}`,
+      `<span style="color: darkorange">O:${singles}</span>`,
+      `<span style="color: silver">N:${nones}</span>`,
+      `<span style="color: darkred">M:${maps}</span>`,
+      `T:${auditResults.length}`,
     ].join(' | ');
   };
 
