@@ -523,7 +523,6 @@ export class Factory {
             Factory.manager.dom(),
             Factory.manager.style(),
             Factory.handler.alert(),
-            Factory.handler.watchlist(),
             Factory.handler.flag()
           )
       ),

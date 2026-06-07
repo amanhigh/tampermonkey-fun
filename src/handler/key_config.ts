@@ -212,29 +212,36 @@ export class KeyConfig implements IKeyConfig {
       [
         'F8',
         {
-          description: 'Blue Crypto Flag - CRYPTO',
-          action: () => this.flagHandler.recordSelectedTicker(FlagCategoryId.CRYPTO),
-        },
-      ],
-      [
-        'F10',
-        {
           description: 'Green Longs Flag - UPTREND',
           action: () => this.flagHandler.recordSelectedTicker(FlagCategoryId.UPTREND),
         },
       ],
       [
-        'F11',
+        'F9',
         {
           description: 'INDEX',
           action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.INDEX),
         },
       ],
       [
-        'F12',
+        'F10',
         {
           description: 'COMPOSITE',
           action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.COMPOSITE),
+        },
+      ],
+      [
+        'F11',
+        {
+          description: 'BLACKLISTED',
+          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.BLACKLISTED),
+        },
+      ],
+      [
+        'F12',
+        {
+          description: 'Blue Crypto Flag - CRYPTO',
+          action: () => this.flagHandler.recordSelectedTicker(FlagCategoryId.CRYPTO),
         },
       ],
     ]);

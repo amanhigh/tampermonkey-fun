@@ -23,6 +23,7 @@ export enum WatchCategoryId {
   DEFAULT_DAILY = 'DEFAULT_DAILY',
   INDEX = 'INDEX',
   COMPOSITE = 'COMPOSITE',
+  BLACKLISTED = 'BLACKLISTED',
 }
 
 // ── Category Definition ──
@@ -111,5 +112,10 @@ export const ALL_WATCH_CATEGORIES: readonly WatchCategory[] = [
     label: 'Composite',
     recordUpdate: null, // Code-derived; recording not currently supported
   },
-  // FIXME: Add BLACKLISTED category with key binding (e.g. F9) and dark grey color
+  {
+    id: WatchCategoryId.BLACKLISTED,
+    color: 'dimgrey',
+    label: 'Blacklisted',
+    recordUpdate: { state: 'BLACKLIST' },
+  },
 ] as const;

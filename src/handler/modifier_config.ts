@@ -2,9 +2,7 @@ import { IStyleManager } from '../manager/style';
 import { IDomManager } from '../manager/dom';
 import { IAlertHandler } from './alert';
 import { IFlagHandler } from './flag';
-import { IWatchListHandler } from './watchlist';
 import { FlagCategoryId } from '../models/flag';
-import { WatchCategoryId } from '../models/watch';
 
 /**
  * Type definitions for key bindings and actions
@@ -40,7 +38,6 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
     private readonly domManager: IDomManager,
     private readonly styleManager: IStyleManager,
     private readonly alertHandler: IAlertHandler,
-    private readonly watchlistHandler: IWatchListHandler,
     private readonly flagHandler: IFlagHandler
   ) {
     // CTRL modifier actions
@@ -66,22 +63,6 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
           action: () => void this.alertHandler.deleteAlertAtCursor(),
         },
       ],
-      [
-        'f12',
-        {
-          description: 'Mark INDEX',
-          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.INDEX),
-        },
-      ],
-      [
-        'f11',
-        {
-          description: 'Mark COMPOSITE',
-          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.COMPOSITE),
-        },
-      ],
-      // HACK: 'f11'/'f12' below overwrite the watchlistHandler bindings above
-      // (lines 69-82). Only flagHandler entries survive at runtime.
       [
         'f11',
         {
