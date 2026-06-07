@@ -120,12 +120,6 @@ describe('StaleReviewPlugin (backend adapter)', () => {
       expect(results).toEqual([]);
     });
 
-    it('rejects targeted runs because backend audit is batch-only', async () => {
-      await expect(plugin.run(['TCS'])).rejects.toThrow(
-        'Stale Review audit does not support targeted runs'
-      );
-    });
-
     it('surfaces backend client execution errors', async () => {
       mockAuditClient.executeAudit.mockRejectedValue(new Error('500 Internal Server Error'));
 

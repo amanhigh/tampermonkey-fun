@@ -110,12 +110,6 @@ describe('AlertsPlugin (backend adapter)', () => {
       expect(result.data).toEqual({ alert_ticker_count: '0', price_alert_count: '0' });
     });
 
-    it('rejects targeted runs because backend audit is batch-only', async () => {
-      await expect(plugin.run(['TARGET_TICKER'])).rejects.toThrow(
-        'Alert Coverage audit does not support targeted runs'
-      );
-    });
-
     it('surfaces backend client execution errors', async () => {
       mockAuditClient.executeAudit.mockRejectedValue(new Error('500 Internal Server Error'));
 

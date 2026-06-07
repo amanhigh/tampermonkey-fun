@@ -1,7 +1,7 @@
 import { AuditResult } from '../models/audit';
 import { AuditFinding } from '../models/audit_catalogue';
 import { IAuditClient } from '../client/audit';
-import { BaseAuditPlugin } from './audit_plugin_base';
+import { BackendAuditPlugin } from './backend_audit_base';
 import { Constants } from '../models/constant';
 
 /**
@@ -10,53 +10,28 @@ import { Constants } from '../models/constant';
  * instruments.
  *
  * Backend adapter: delegates stale-review analysis to the Kohan backend stale-review
- * audit plugin. Computes `daysSinceOpen` client-side from the backend's `last_opened_at`
- * RFC3339 timestamp for display in the section handler.
+ * audit plugin. Customises `toAuditResult()` to compute `daysSinceOpen` client-side
+ * from the backend's `last_opened_at` RFC3339 timestamp.
  *
  * ## Batch-only
- * The backend stale-review audit is batch-only (audits all tracked tickers).
- * Targeted runs via `targets` parameter throw an error.
+ * The backend stale-review audit is batch-only — audits all tracked tickers.
  */
-export class StaleReviewPlugin extends BaseAuditPlugin {
+export class StaleReviewPlugin extends BackendAuditPlugin {
   public readonly id = Constants.AUDIT.PLUGINS.STALE_REVIEW;
   public readonly title = 'Stale Review';
 
-  constructor(
-    private readonly auditClient: IAuditClient,
-    private readonly limit: number = 10
-  ) {
-    super();
-  }
-
-  /**
-   * Runs stale review audit via backend. Audits entire ticker universe — targets not supported.
-   * @throws Error if targets array is provided
-   * @returns Promise resolving to array of audit results for stale tickers
-   */
-  async run(targets?: string[]): Promise<AuditResult[]> {
-    if (targets && targets.length > 0) {
-      throw new Error(
-        `${this.title} audit does not support targeted runs — it audits all tracked tickers on the backend.`
-      );
-    }
-
-    const execution = await this.auditClient.executeAudit(this.id, 0, this.limit);
-    return execution.findings.map((f) => this.toAuditResult(f));
+  constructor(auditClient: IAuditClient, limit: number = Constants.AUDIT.DEFAULT_SECTION_LIMIT) {
+    super(auditClient, limit);
   }
 
   /**
    * Maps a backend AuditFinding into a frontend AuditResult.
-   * Computes `daysSinceOpen` (number) from the backend's `last_opened_at` RFC3339 string.
+   * Computes `daysSinceOpen` (number) from the backend's `last_opened_at` RFC3339 string
+   * for display in the section handler.
    */
-  private toAuditResult(finding: AuditFinding): AuditResult {
-    const data: Record<string, unknown> = {};
-
-    // Preserve all backend data fields
-    if (finding.data) {
-      for (const [key, value] of Object.entries(finding.data)) {
-        data[key] = value;
-      }
-    }
+  protected toAuditResult(finding: AuditFinding): AuditResult {
+    // Spread backend data fields into a mutable copy
+    const data: Record<string, unknown> = { ...(finding.data || {}) };
 
     // Derive daysSinceOpen from last_opened_at for section handler display
     const lastOpenedAt = finding.data?.last_opened_at;
@@ -68,12 +43,8 @@ export class StaleReviewPlugin extends BaseAuditPlugin {
     }
 
     return {
-      pluginId: this.id,
-      code: finding.code,
-      target: finding.target,
+      ...super.toAuditResult(finding),
       message: `${finding.target}: not recently opened`,
-      severity: finding.severity as AuditResult['severity'],
-      status: 'FAIL',
       data,
     };
   }
