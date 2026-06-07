@@ -225,21 +225,21 @@ describe('WatchManager', () => {
       expect(mockJournalManager.listJournals).not.toHaveBeenCalled();
     });
 
-    it('should cache uncategorized ticker result (avoids repeated backend misses)', async () => {
+    it('should NOT cache uncategorized ticker result (misses hit backend each time)', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockRejectedValue(new Error('not found'));
 
-      // First call — miss, caches sentinel
+      // First call — miss, no category cached
       const first = await watchManager.getTickerCategory('MISS');
       expect(first).toBeUndefined();
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
 
-      // Second call — cache hit on sentinel, no backend call
+      // Second call — still a miss, hits backend again
       jest.clearAllMocks();
       const second = await watchManager.getTickerCategory('MISS');
       expect(second).toBeUndefined();
-      expect(mockTickerManager.getTicker).not.toHaveBeenCalled();
-      expect(mockJournalManager.listJournals).not.toHaveBeenCalled();
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
+      expect(mockJournalManager.listJournals).toHaveBeenCalledTimes(1);
     });
   });
 
