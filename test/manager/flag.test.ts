@@ -37,7 +37,7 @@ describe('FlagManager', () => {
     mockTickerManager = {
       listTickers: jest.fn().mockResolvedValue([]),
       updateTicker: jest.fn().mockResolvedValue({} as any),
-      getTicker: jest.fn(),
+      getTicker: jest.fn().mockRejectedValue(new Error('Not found')),
       startTracking: jest.fn(),
       markRecent: jest.fn(),
       stopTracking: jest.fn(),
@@ -63,40 +63,73 @@ describe('FlagManager', () => {
       expect(mockTickerManager.listTickers).not.toHaveBeenCalled();
     });
 
-    it('should return undefined for getTickerCategory before any paint', () => {
-      expect(flagManager.getTickerCategory('ANY')).toBeUndefined();
+    it('should return undefined for getTickerCategory for untracked ticker', async () => {
+      const result = await flagManager.getTickerCategory('ANY');
+      expect(result).toBeUndefined();
     });
   });
 
-  // ── getTickerCategory ──
+  // ── getTickerCategory (async, LRU-cached) ──
 
   describe('getTickerCategory', () => {
-    it('should return undefined before paint', () => {
-      expect(flagManager.getTickerCategory('TEST')).toBeUndefined();
+    it('should return undefined for untracked ticker', async () => {
+      mockTickerManager.getTicker.mockRejectedValue(new Error('Not found'));
+
+      const result = await flagManager.getTickerCategory('UNTRACKED');
+      expect(result).toBeUndefined();
     });
 
-    it('should return matching FlagCategory after paint', async () => {
-      mockTickerManager.listTickers.mockResolvedValue([
-        makeTicker({ ticker: 'SIDE_A', trend: 'SIDEWAYS' }),
-        makeTicker({ ticker: 'BTC', type: 'CRYPTO' }),
-      ]);
+    it('should return FlagCategory for a SIDEWAYS ticker', async () => {
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'SIDE_A', trend: 'SIDEWAYS' })
+      );
 
-      flagManager.paint('.sel', '.item');
-      await waitForAsync();
-
-      expect(flagManager.getTickerCategory('SIDE_A')?.id).toBe(FlagCategoryId.SIDEWAYS);
-      expect(flagManager.getTickerCategory('BTC')?.id).toBe(FlagCategoryId.CRYPTO);
+      const result = await flagManager.getTickerCategory('SIDE_A');
+      expect(result?.id).toBe(FlagCategoryId.SIDEWAYS);
     });
 
-    it('should return undefined for ticker absent from snapshot', async () => {
-      mockTickerManager.listTickers.mockResolvedValue([
-        makeTicker({ ticker: 'PRESENT', trend: 'SIDEWAYS' }),
-      ]);
+    it('should return FlagCategory for a CRYPTO ticker', async () => {
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'BTC', type: 'CRYPTO' })
+      );
 
-      flagManager.paint('.sel', '.item');
-      await waitForAsync();
+      const result = await flagManager.getTickerCategory('BTC');
+      expect(result?.id).toBe(FlagCategoryId.CRYPTO);
+    });
 
-      expect(flagManager.getTickerCategory('ABSENT')).toBeUndefined();
+    it('should return undefined for DEFAULT_UNTRACKED ticker', async () => {
+      // A ticker that doesn't match any FLAG_CATEGORY_PRIORITY entry
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'PLAIN', trend: 'UNKNOWN', type: 'EQUITY' })
+      );
+
+      const result = await flagManager.getTickerCategory('PLAIN');
+      expect(result).toBeUndefined();
+    });
+
+    it('should cache resolved categories (single backend call per ticker)', async () => {
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'SIDE_A', trend: 'SIDEWAYS' })
+      );
+
+      await flagManager.getTickerCategory('SIDE_A');
+      await flagManager.getTickerCategory('SIDE_A');
+      await flagManager.getTickerCategory('SIDE_A');
+
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
+    });
+
+    it('should NOT cache DEFAULT_UNTRACKED results', async () => {
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'PLAIN', trend: 'UNKNOWN', type: 'EQUITY' })
+      );
+
+      await flagManager.getTickerCategory('PLAIN');
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
+
+      await flagManager.getTickerCategory('PLAIN');
+      // Misses are not cached — second call hits backend again
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -106,7 +139,6 @@ describe('FlagManager', () => {
     it('should call updateTicker for SIDEWAYS', () => {
       flagManager.recordCategory(FlagCategoryId.SIDEWAYS, ['TEST']);
 
-      expect(flagManager.getTickerCategory('TEST')).toBeUndefined();
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'SIDEWAYS', type: 'EQUITY', state: 'WATCHED' });
     });
 
@@ -149,10 +181,20 @@ describe('FlagManager', () => {
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'COMPOSITE', state: 'WATCHED' });
     });
 
-    it('should NOT mutate local getTickerCategory snapshot', () => {
+    it('should evict ticker from cache before backend update', async () => {
+      // Prime the cache
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'TICKER_A', trend: 'SIDEWAYS' })
+      );
+      await flagManager.getTickerCategory('TICKER_A');
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
+
+      // recordCategory evicts the cache entry
       flagManager.recordCategory(FlagCategoryId.SIDEWAYS, ['TICKER_A']);
 
-      expect(flagManager.getTickerCategory('TICKER_A')).toBeUndefined();
+      // Next lookup hits backend again (cache was evicted)
+      await flagManager.getTickerCategory('TICKER_A');
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(2);
     });
 
     it('should handle empty ticker array', () => {

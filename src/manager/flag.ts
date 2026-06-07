@@ -1,28 +1,29 @@
+import { LRUCache } from 'lru-cache';
 import { Ticker, TickerUpdateRequest } from '../models/ticker';
 import { ITickerManager } from './ticker';
 import { IPaintManager } from './paint';
 import { Notifier } from '../util/notify';
 import { ALL_FLAG_CATEGORIES, FlagCategory, FlagCategoryId } from '../models/flag';
-import { findFlagCategoryById } from './flag_category';
-import { resolveFlagCategory } from './flag_category';
+import { findFlagCategoryById, resolveFlagCategory } from './flag_category';
 
 /**
  * Interface for managing flag-based ticker categories.
- * paint() fetches fresh backend data every call. getTickerCategory() returns
- * the category for a given ticker from the last paint snapshot.
+ * paint() fetches fresh backend data every call. getTickerCategory()
+ * resolves from backend with an LRU cache.
  */
 export interface IFlagManager {
   /**
-   * Gets the flag category for a ticker from the last paint snapshot.
-   * Returns undefined if the ticker is not present in any flag category.
+   * Gets the flag category for a ticker.
+   * Resolves from backend data with a 5-min LRU cache. Returns undefined
+   * for DEFAULT_UNTRACKED or untracked tickers.
    * @param ticker Ticker symbol to look up
    */
-  getTickerCategory(ticker: string): FlagCategory | undefined;
+  getTickerCategory(ticker: string): Promise<FlagCategory | undefined>;
 
   /**
    * Records selected tickers in the given flag category.
    * Fires an async backend `updateTicker()` per ticker using the category's
-   * defined update payload.
+   * defined update payload. Evicts the ticker from cache before the update.
    * @param categoryId Category identifier (e.g. 'SIDEWAYS', 'CRYPTO')
    * @param tvTickers List of ticker symbols to assign
    */
@@ -42,36 +43,33 @@ export interface IFlagManager {
 /**
  * Manages flag-based sets of tickers using backend calls per paint.
  *
- * No persistent cache — `paint()` fetches fresh data every time.
- * `getTickerCategory()` returns the last paint snapshot for synchronous consumers.
+ * Per-ticker lookups are cached via LRU (max 1000, ttl 5 min).
+ * DEFAULT_UNTRACKED results are treated as cache misses — only known
+ * categories are stored.
  *
  * Classification logic (which category a ticker belongs to) is delegated to
  * the flag_category resolver module.
  */
 export class FlagManager implements IFlagManager {
-  /**
-   * Snapshot from the last paint call: category ID → set of ticker symbols.
-   */
-  private lastPaintGroups: Map<FlagCategoryId, Set<string>> = new Map();
+  /** LRU cache for ticker → flag category lookups. Misses are not cached. */
+  private readonly categoryCache = new LRUCache<string, FlagCategory>({
+    max: 1000,
+    ttl: 5 * 60 * 1000,
+    fetchMethod: async (key: string): Promise<FlagCategory | undefined> => {
+      return this.loadFlagCategory(key);
+    },
+  });
 
   constructor(
     private readonly tickerManager: ITickerManager,
     private readonly paintManager: IPaintManager
-  ) {
-    this.lastPaintGroups = this.createEmptyCategoryGroups();
-  }
+  ) {}
 
   // ── Public API ──
 
   /** @inheritdoc */
-  getTickerCategory(ticker: string): FlagCategory | undefined {
-    for (const cat of ALL_FLAG_CATEGORIES) {
-      const symbols = this.lastPaintGroups.get(cat.id);
-      if (symbols?.has(ticker)) {
-        return cat;
-      }
-    }
-    return undefined;
+  async getTickerCategory(ticker: string): Promise<FlagCategory | undefined> {
+    return this.categoryCache.fetch(ticker);
   }
 
   /** @inheritdoc */
@@ -79,7 +77,7 @@ export class FlagManager implements IFlagManager {
     const cat = findFlagCategoryById(categoryId);
 
     for (const ticker of tvTickers) {
-      // Fire async backend update — no local cache mutation
+      this.evictFlagCategory(ticker);
       void this.updateBackend(ticker, cat.update);
     }
   }
@@ -87,6 +85,35 @@ export class FlagManager implements IFlagManager {
   /** @inheritdoc */
   paint(selector: string, itemSelector: string): void {
     void this.paintFromBackend(selector, itemSelector);
+  }
+
+  // ── Cache Management ──
+
+  /**
+   * Evict a ticker from the flag category cache so the next lookup is fresh.
+   */
+  private evictFlagCategory(ticker: string): void {
+    this.categoryCache.delete(ticker);
+  }
+
+  /**
+   * Load a ticker's flag category from backend data.
+   * Used as the fetchMethod callback by the LRU cache.
+   * Returns undefined for DEFAULT_UNTRACKED or untracked tickers;
+   * the cache does NOT store misses.
+   */
+  private async loadFlagCategory(ticker: string): Promise<FlagCategory | undefined> {
+    try {
+      const record = await this.tickerManager.getTicker(ticker);
+      const cat = resolveFlagCategory(record);
+      if (cat.id === FlagCategoryId.DEFAULT_UNTRACKED) {
+        return undefined;
+      }
+      return cat;
+    } catch {
+      // Ticker not tracked on backend
+      return undefined;
+    }
   }
 
   // ── Backend sync ──
@@ -103,21 +130,16 @@ export class FlagManager implements IFlagManager {
   }
 
   /**
-   * Fetch tickers from the backend, group them into category sets,
+   * Fetch all tickers from the backend, group them into category sets,
    * and paint each category.
    */
   private async paintFromBackend(selector: string, itemSelector: string): Promise<void> {
     try {
       const tickers = await this.tickerManager.listTickers({});
-      const freshGroups = this.groupTickersByCategory(tickers);
-
-      // Update snapshot for synchronous getTickerCategory() consumers
-      this.lastPaintGroups = freshGroups;
-
-      // Paint flags for every category in UI order
-      this.paintGroups(selector, itemSelector, freshGroups);
+      const groups = this.groupTickersByCategory(tickers);
+      this.paintGroups(selector, itemSelector, groups);
     } catch {
-      // Backend call failed — keep existing snapshot, paint nothing new
+      // Backend call failed — nothing to paint
     }
   }
 

@@ -37,7 +37,7 @@ export class HeaderManager implements IHeaderManager {
     // Paint each component
     await this.paintNameElement($name, ticker);
     this.paintFNOMarking($name, ticker);
-    this.paintFlagAndExchange(ticker);
+    await this.paintFlagAndExchange(ticker);
   }
 
   /**
@@ -70,7 +70,7 @@ export class HeaderManager implements IHeaderManager {
    * @private
    * @param ticker Ticker symbol
    */
-  private paintFlagAndExchange(ticker: string): void {
+  private async paintFlagAndExchange(ticker: string): Promise<void> {
     const $flag = $(Constants.DOM.FLAGS.MARKING);
     const $exchange = $(Constants.DOM.BASIC.EXCHANGE);
 
@@ -78,8 +78,8 @@ export class HeaderManager implements IHeaderManager {
     $flag.css('color', Constants.UI.COLORS.DEFAULT);
     $exchange.css('color', Constants.UI.COLORS.DEFAULT);
 
-    // Paint flags based on flag category
-    const category = this.flagManager.getTickerCategory(ticker);
+    // Paint flags based on flag category (LRU-cached backend lookup)
+    const category = await this.flagManager.getTickerCategory(ticker);
     if (category) {
       $flag.css('color', category.color);
       $exchange.css('color', category.color);
