@@ -179,6 +179,16 @@ describe('WatchManager', () => {
       expect(result).toBeUndefined();
     });
 
+    it('should skip journal lookup for composite ticker', async () => {
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockRejectedValue(new Error('not found'));
+
+      const result = await watchManager.getTickerCategory('BANKNIFTY/NIFTY');
+
+      expect(mockJournalManager.listJournals).not.toHaveBeenCalled();
+      expect(result).toBeUndefined();
+    });
+
     it('should query journals with ticker filter', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockRejectedValue(new Error('not found'));

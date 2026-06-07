@@ -1,7 +1,7 @@
 import { ITickerManager } from './ticker';
 import { IJournalManager } from './journal';
 import { Notifier } from '../util/notify';
-import { TickerUpdateRequest } from '../models/ticker';
+import { isCompositeSymbol, TickerUpdateRequest } from '../models/ticker';
 import { WatchCategory, WatchCategoryId } from '../models/watch';
 import { findWatchCategoryById, resolveWatchCategory } from './watch_category';
 
@@ -121,6 +121,11 @@ export class WatchManager implements IWatchManager {
    * SET has higher priority.
    */
   private async resolveJournalCategory(tvTicker: string): Promise<WatchCategory | undefined> {
+    // Composite symbols (e.g. 'BANKNIFTY/NIFTY') are not valid journal tickers
+    if (isCompositeSymbol(tvTicker)) {
+      return undefined;
+    }
+
     const journalManager = this.getJournalManager();
 
     const [setJournals, runningJournals] = await Promise.all([
