@@ -212,20 +212,16 @@ describe('WatchManager', () => {
   // ── recordCategory ──
 
   describe('recordCategory', () => {
-    beforeEach(() => {
-      mockTickerManager.getTicker.mockResolvedValue(new Ticker({ ticker: 'TEST', exchange: 'NSE' }));
-    });
-
     it('should update ticker for READY category', () => {
       watchManager.recordCategory(WatchCategoryId.READY, ['TEST']);
 
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { state: 'READY', exchange: 'NSE' });
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { state: 'READY' });
     });
 
     it('should update ticker for INDEX category', () => {
       watchManager.recordCategory(WatchCategoryId.INDEX, ['TEST']);
 
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'INDEX', exchange: 'NSE' });
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'INDEX' });
     });
 
     it('should NOT update backend for COMPOSITE (unsupported)', () => {
