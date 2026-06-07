@@ -20,8 +20,6 @@ import { ImdbApp } from './imdb';
 import { Barkat } from './barkat';
 
 // Repository Imports
-import { RepoCron, IRepoCron } from '../repo/cron';
-// Repository imports — watch removed, WatchManager uses backend data now
 
 // Manager Layer Imports
 import { ITimeFrameManager, TimeFrameManager } from '../manager/timeframe';
@@ -167,7 +165,6 @@ export class Factory {
    * Handles data persistence for various entities
    */
   public static repo = {
-    cron: (): IRepoCron => Factory.getInstance('repoCron', () => new RepoCron()),
     kite: (): IKiteRepo => Factory.getInstance('kiteRepo', () => new KiteRepo()),
     imdb: (): IImdbRepo => Factory.getInstance('imdbRepo', () => new ImdbRepo()),
   };
@@ -268,7 +265,7 @@ export class Factory {
     tv: (): ITradingViewManager =>
       Factory.getInstance(
         'tvManager',
-        () => new TradingViewManager(Factory.util.wait(), Factory.repo.cron(), Factory.client.os())
+        () => new TradingViewManager(Factory.util.wait(), Factory.client.os())
       ),
 
     alertTicker: (): IAlertTickerManager =>

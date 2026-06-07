@@ -1,6 +1,5 @@
 import { TradingViewManager } from '../../src/manager/tv';
 import { WaitUtil } from '../../src/util/wait';
-import { IRepoCron } from '../../src/repo/cron';
 import { IOsClient } from '../../src/client/os';
 import { Constants } from '../../src/models/constant';
 
@@ -48,7 +47,6 @@ const mockJQuery = jest.fn((selector: string) => {
 describe('TradingViewManager', () => {
   let manager: TradingViewManager;
   let mockWaitUtil: jest.Mocked<WaitUtil>;
-  let mockRepoCron: jest.Mocked<IRepoCron>;
   let mockOsClient: jest.Mocked<IOsClient>;
 
   beforeEach(() => {
@@ -62,11 +60,6 @@ describe('TradingViewManager', () => {
       waitInput: jest.fn(),
     };
 
-    mockRepoCron = {
-      registerRepository: jest.fn(),
-      saveAllRepositories: jest.fn().mockResolvedValue(undefined),
-    };
-
     mockOsClient = {
       screenshot: jest.fn(),
       screenshotRegion: jest.fn(),
@@ -76,7 +69,7 @@ describe('TradingViewManager', () => {
       getBaseUrl: jest.fn(),
     };
 
-    manager = new TradingViewManager(mockWaitUtil, mockRepoCron, mockOsClient);
+    manager = new TradingViewManager(mockWaitUtil, mockOsClient);
 
     // Reset mock states
     mockJQueryElement.text.mockReturnValue('100.50');
