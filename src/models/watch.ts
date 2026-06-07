@@ -111,4 +111,5 @@ export const ALL_WATCH_CATEGORIES: readonly WatchCategory[] = [
     label: 'Composite',
     recordUpdate: null, // Code-derived; recording not currently supported
   },
+  // FIXME: Add BLACKLISTED category with key binding (e.g. F9) and dark grey color
 ] as const;
