@@ -57,9 +57,8 @@ export class WatchListHandler implements IWatchListHandler {
       // Paint watchlist items
       void this.watchlistManager.paintWatchList();
 
-      // Paint screener items if visible (pass watchlist tickers for DEFAULT_DAILY brown override)
-      const watchlistTickers = this.watchlistManager.getTickers();
-      void this.screenerManager.paintScreener(watchlistTickers);
+      // Paint screener items if visible
+      void this.screenerManager.paintScreener();
 
       // Paint header items
       void this.headerManager.paintHeader();

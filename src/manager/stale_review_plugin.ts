@@ -37,17 +37,14 @@ export class StaleReviewPlugin extends BaseAuditPlugin {
     const cutOffPeriod = this.thresholdDays * 24 * 60 * 60 * 1000;
 
     const trackedTickers = await this.tickerManager.listTickers({});
-    const allTvTickers = trackedTickers.map((t) => t.ticker);
-
-    // Classify all tracked tickers in one backend call
-    const categoryMap = await this.watchManager.getTickerCategories(allTvTickers);
     const results: AuditResult[] = [];
 
     for (const ticker of trackedTickers) {
       const tvTicker = ticker.ticker;
 
       // Skip tickers that belong to any watch category
-      if (categoryMap.has(tvTicker)) {
+      const category = await this.watchManager.getTickerCategory(tvTicker);
+      if (category) {
         continue;
       }
 

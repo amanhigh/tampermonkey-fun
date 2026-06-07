@@ -3,7 +3,6 @@ import { IRecentManager } from '../../src/manager/recent';
 import { ITickerManager } from '../../src/manager/ticker';
 import { IWatchManager } from '../../src/manager/watch';
 import { Ticker } from '../../src/models/ticker';
-import { WatchCategoryId } from '../../src/models/watch';
 
 describe('StaleReviewPlugin', () => {
   let plugin: StaleReviewPlugin;
@@ -11,19 +10,11 @@ describe('StaleReviewPlugin', () => {
   let mockTickerManager: Partial<ITickerManager>;
   let mockWatchManager: Partial<IWatchManager>;
 
-  const makeCategoryMap = (watchedTickers: string[]) => {
-    const map = new Map<string, any>();
-    for (const t of watchedTickers) {
-      map.set(t, { id: WatchCategoryId.READY, color: 'red' });
-    }
-    return map;
-  };
-
   beforeEach(() => {
     mockRecentManager = { isRecent: jest.fn().mockReturnValue(true) };
     mockTickerManager = { listTickers: jest.fn().mockResolvedValue([]) };
     mockWatchManager = {
-      getTickerCategories: jest.fn().mockResolvedValue(new Map()),
+      getTickerCategory: jest.fn().mockResolvedValue(undefined),
     };
 
     plugin = new StaleReviewPlugin(
@@ -77,9 +68,9 @@ describe('StaleReviewPlugin', () => {
       new Ticker({ ticker: 'WATCHED' }),
       new Ticker({ ticker: 'UNWATCHED' }),
     ]);
-    (mockWatchManager.getTickerCategories as jest.Mock).mockResolvedValue(
-      makeCategoryMap(['WATCHED'])
-    );
+    (mockWatchManager.getTickerCategory as jest.Mock).mockImplementation(async (ticker: string) => {
+      return ticker === 'WATCHED' ? { id: 'READY', color: 'red' } : undefined;
+    });
     (mockRecentManager.isRecent as jest.Mock)
       .mockReturnValueOnce(false)
       .mockReturnValueOnce(false);

@@ -43,7 +43,6 @@ describe('AlertFeedManager', () => {
     // Mock WatchManager
     mockWatchManager = {
       getTickerCategory: jest.fn(),
-      getTickerCategories: jest.fn(),
       recordCategory: jest.fn(),
     } as any;
 

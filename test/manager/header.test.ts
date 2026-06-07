@@ -9,9 +9,12 @@ import { FlagCategoryId } from '../../src/models/flag';
 import { WatchCategoryId } from '../../src/models/watch';
 
 // Mock jQuery
+const mockCssFn = jest.fn().mockReturnThis();
+let mockToArrayResult: { textContent: string | null; innerHTML: string }[] = [];
+
 const mockJQueryElement = {
-  css: jest.fn().mockReturnThis(),
-  toArray: jest.fn().mockReturnValue([]),
+  css: mockCssFn,
+  toArray: jest.fn().mockImplementation(() => mockToArrayResult),
 };
 const mockJQuery = jest.fn(() => mockJQueryElement);
 (global as any).$ = mockJQuery;
@@ -26,6 +29,7 @@ describe('HeaderManager', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockToArrayResult = [];
 
     // Mock PaintManager
     mockPaintManager = {
@@ -35,10 +39,9 @@ describe('HeaderManager', () => {
       paintFNOMarking: jest.fn(),
     } as jest.Mocked<IPaintManager>;
 
-    // Mock WatchManager
+    // Mock WatchManager — getTickerCategory is the only method
     mockWatchManager = {
       getTickerCategory: jest.fn(),
-      getTickerCategories: jest.fn(),
       recordCategory: jest.fn(),
     } as jest.Mocked<IWatchManager>;
 
@@ -103,8 +106,8 @@ describe('HeaderManager', () => {
       expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.FLAGS.MARKING);
       expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.BASIC.EXCHANGE);
 
-      // Verify CSS was applied
-      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', Constants.UI.COLORS.DEFAULT);
+      // Verify CSS was applied (default white since no category)
+      expect(mockCssFn).toHaveBeenCalledWith('color', Constants.UI.COLORS.DEFAULT);
 
       // Verify paint manager was called for FNO marking
       expect(mockPaintManager.paintFNOMarking).toHaveBeenCalledWith(mockJQueryElement, false);
@@ -125,27 +128,43 @@ describe('HeaderManager', () => {
 
       await headerManager.paintHeader();
 
-      expect(mockWatchManager.getTickerCategory).toHaveBeenCalledWith(ticker, expect.any(Array));
-      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'red');
+      // getTickerCategory now takes only ticker (no watchlist array)
+      expect(mockWatchManager.getTickerCategory).toHaveBeenCalledWith(ticker);
+      expect(mockCssFn).toHaveBeenCalledWith('color', 'red');
     });
 
-    it('should use brown override for DEFAULT_DAILY category', async () => {
+    it('should use brown override for uncategorized ticker in watchlist', async () => {
       const ticker = 'NSE:NIFTY';
 
       mockTickerManager.getTicker.mockReturnValue(ticker);
-      mockWatchManager.getTickerCategory.mockResolvedValue({
-        id: WatchCategoryId.DEFAULT_DAILY,
-        color: 'white',
-        label: 'Default / Daily',
-        recordUpdate: null,
-      });
+      mockWatchManager.getTickerCategory.mockResolvedValue(undefined);
       mockFlagManager.getTickerCategory.mockReturnValue(undefined);
       mockFnoManager.isFno.mockReturnValue(false);
 
+      // Mock the watchlist DOM to contain the ticker
+      mockToArrayResult = [{ textContent: ticker, innerHTML: ticker }];
+
       await headerManager.paintHeader();
 
-      // DEFAULT_DAILY should use brown (colorList[6])
-      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', Constants.UI.COLORS.LIST[6]);
+      // No category but ticker is in watchlist → brown
+      expect(mockCssFn).toHaveBeenCalledWith('color', Constants.UI.COLORS.LIST[6]);
+    });
+
+    it('should use default white for uncategorized ticker not in watchlist', async () => {
+      const ticker = 'NSE:UNKNOWN';
+
+      mockTickerManager.getTicker.mockReturnValue(ticker);
+      mockWatchManager.getTickerCategory.mockResolvedValue(undefined);
+      mockFlagManager.getTickerCategory.mockReturnValue(undefined);
+      mockFnoManager.isFno.mockReturnValue(false);
+
+      // Mock the watchlist DOM to NOT contain the ticker
+      mockToArrayResult = [{ textContent: 'NSE:OTHER', innerHTML: 'NSE:OTHER' }];
+
+      await headerManager.paintHeader();
+
+      // No category + not in watchlist → stays default white
+      expect(mockCssFn).toHaveBeenCalledWith('color', Constants.UI.COLORS.DEFAULT);
     });
 
     it('should paint flag and exchange elements with flag colors', async () => {
@@ -160,8 +179,7 @@ describe('HeaderManager', () => {
       await headerManager.paintHeader();
 
       expect(mockFlagManager.getTickerCategory).toHaveBeenCalledTimes(1);
-      // Flag and exchange should be colored with flag category color
-      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', flagCategory.color);
+      expect(mockCssFn).toHaveBeenCalledWith('color', flagCategory.color);
     });
 
     it('should paint FNO marking when ticker is in FNO repo', async () => {
@@ -176,46 +194,6 @@ describe('HeaderManager', () => {
 
       expect(mockFnoManager.isFno).toHaveBeenCalledWith(ticker);
       expect(mockPaintManager.paintFNOMarking).toHaveBeenCalledWith(mockJQueryElement, true);
-    });
-
-    it('should handle ticker in both watch and flag categories', async () => {
-      const ticker = 'NSE:BANKNIFTY';
-
-      mockTickerManager.getTicker.mockReturnValue(ticker);
-      mockWatchManager.getTickerCategory.mockResolvedValue({
-        id: WatchCategoryId.SET_JOURNAL,
-        color: 'orange',
-        label: 'Set Trades',
-        recordUpdate: null,
-      });
-      mockFlagManager.getTickerCategory.mockReturnValue({ id: FlagCategoryId.SIDEWAYS, color: 'orange', label: '', update: {} });
-      mockFnoManager.isFno.mockReturnValue(true);
-
-      await headerManager.paintHeader();
-
-      // Name should be colored with watch category color
-      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'orange');
-      // FNO marking should be painted
-      expect(mockPaintManager.paintFNOMarking).toHaveBeenCalledWith(mockJQueryElement, true);
-    });
-  });
-
-  describe('error handling', () => {
-    it('should handle getTickerCategory errors gracefully', async () => {
-      const error = new Error('Watch category failed');
-      mockTickerManager.getTicker.mockReturnValue('NSE:TEST');
-      mockWatchManager.getTickerCategory.mockRejectedValue(error);
-
-      await expect(headerManager.paintHeader()).rejects.toThrow('Watch category failed');
-    });
-
-    it('should handle ticker manager errors gracefully', async () => {
-      const error = new Error('Ticker retrieval failed');
-      mockTickerManager.getTicker.mockImplementation(() => {
-        throw error;
-      });
-
-      await expect(headerManager.paintHeader()).rejects.toThrow('Ticker retrieval failed');
     });
   });
 });

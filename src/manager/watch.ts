@@ -1,8 +1,7 @@
 import { ITickerManager } from './ticker';
 import { IJournalManager } from './journal';
 import { Notifier } from '../util/notify';
-import { Ticker, TickerUpdateRequest } from '../models/ticker';
-import { JournalRecord } from '../models/journal';
+import { TickerUpdateRequest } from '../models/ticker';
 import { WatchCategory, WatchCategoryId } from '../models/watch';
 import { findWatchCategoryById, resolveWatchCategory } from './watch_category';
 
@@ -10,28 +9,18 @@ import { findWatchCategoryById, resolveWatchCategory } from './watch_category';
  * Interface for managing watch category operations.
  *
  * All classification is backend-on-demand — no local snapshot.
- * DEFAULT_DAILY is NOT resolved here; callers supply the TV watchlist
- * when they want the default-watchlist fallback applied.
+ * The method works with one ticker at a time. Batch classification
+ * is handled by callers when needed.
  */
 export interface IWatchManager {
   /**
    * Get the watch category for a single ticker.
+   * Resolves from backend data only (journals + ticker record).
+   * Returns undefined if no category matches — callers should
+   * apply UI-level fallback (e.g., default-white paint).
    * @param tvTicker Ticker symbol to look up
-   * @param defaultWatchlistTickers Current TV watchlist tickers (optional, needed for DEFAULT_DAILY)
-   * @returns Promise resolving to the category or undefined
    */
-  getTickerCategory(tvTicker: string, defaultWatchlistTickers?: readonly string[]): Promise<WatchCategory | undefined>;
-
-  /**
-   * Get watch categories for multiple tickers in one backend call.
-   * @param tvTickers Ticker symbols to classify
-   * @param defaultWatchlistTickers Current TV watchlist tickers (optional, needed for DEFAULT_DAILY)
-   * @returns Promise resolving to a map of ticker → category for matched tickers only
-   */
-  getTickerCategories(
-    tvTickers: readonly string[],
-    defaultWatchlistTickers?: readonly string[]
-  ): Promise<Map<string, WatchCategory>>;
+  getTickerCategory(tvTicker: string): Promise<WatchCategory | undefined>;
 
   /**
    * Records selected tickers in the given watch category.
@@ -45,7 +34,7 @@ export interface IWatchManager {
 /**
  * Manages watch category operations using backend-on-demand classification.
  *
- * No snapshot — every call to getTickerCategory/getTickerCategories fetches
+ * No snapshot — every call to getTickerCategory fetches
  * backend data fresh. Journal manager is injected as a lazy getter to avoid
  * circular dependency at factory construction time.
  */
@@ -56,29 +45,21 @@ export class WatchManager implements IWatchManager {
   ) {}
 
   /** @inheritdoc */
-  async getTickerCategory(
-    tvTicker: string,
-    defaultWatchlistTickers?: readonly string[]
-  ): Promise<WatchCategory | undefined> {
-    const map = await this.getTickerCategories([tvTicker], defaultWatchlistTickers);
-    return map.get(tvTicker);
-  }
+  async getTickerCategory(tvTicker: string): Promise<WatchCategory | undefined> {
+    // 1. Check journals (highest priority)
+    const journalCategory = await this.resolveJournalCategory(tvTicker);
+    if (journalCategory !== undefined) {
+      return journalCategory;
+    }
 
-  /** @inheritdoc */
-  async getTickerCategories(
-    tvTickers: readonly string[],
-    defaultWatchlistTickers?: readonly string[]
-  ): Promise<Map<string, WatchCategory>> {
-    const journalManager = this.getJournalManager();
+    // 2. Check ticker-derived category
+    const tickerCategory = await this.resolveTickerDerivedCategory(tvTicker);
+    if (tickerCategory !== undefined) {
+      return tickerCategory;
+    }
 
-    const [allTickers, setJournals, runningJournals] = await Promise.all([
-      this.tickerManager.listTickers({}),
-      journalManager.listJournals({ status: 'SET' }),
-      journalManager.listJournals({ status: 'RUNNING' }),
-    ]);
-
-    const allBackendCategories = this.classifyAllTickers(allTickers, setJournals, runningJournals);
-    return this.buildCategoryMap(tvTickers, allBackendCategories, defaultWatchlistTickers);
+    // 3. No match — let caller apply UI fallback
+    return undefined;
   }
 
   /** @inheritdoc */
@@ -95,66 +76,43 @@ export class WatchManager implements IWatchManager {
     }
   }
 
-  // ── Classification helpers ──
+  // ── Classification step helpers ──
 
   /**
-   * Build a complete classification map from backend data.
-   * Priority: SET journal > RUNNING journal > ticker-derived categories.
+   * Check if a ticker has a SET or RUNNING journal.
+   * SET has higher priority.
    */
-  private classifyAllTickers(
-    allTickers: Ticker[],
-    setJournals: JournalRecord[],
-    runningJournals: JournalRecord[]
-  ): Map<string, WatchCategoryId> {
-    const result = new Map<string, WatchCategoryId>();
+  private async resolveJournalCategory(tvTicker: string): Promise<WatchCategory | undefined> {
+    const journalManager = this.getJournalManager();
 
-    // 1. SET journals (highest priority)
-    for (const j of setJournals) {
-      result.set(j.ticker, WatchCategoryId.SET_JOURNAL);
+    const [setJournals, runningJournals] = await Promise.all([
+      journalManager.listJournals({ ticker: tvTicker, status: 'SET' }),
+      journalManager.listJournals({ ticker: tvTicker, status: 'RUNNING' }),
+    ]);
+
+    if (setJournals.length > 0) {
+      return findWatchCategoryById(WatchCategoryId.SET_JOURNAL);
     }
 
-    // 2. RUNNING journals (won't overwrite SET)
-    for (const j of runningJournals) {
-      if (!result.has(j.ticker)) {
-        result.set(j.ticker, WatchCategoryId.RUNNING_JOURNAL);
-      }
+    if (runningJournals.length > 0) {
+      return findWatchCategoryById(WatchCategoryId.RUNNING_JOURNAL);
     }
 
-    // 3. Backend ticker records (skip journal-covered)
-    for (const ticker of allTickers) {
-      if (!result.has(ticker.ticker)) {
-        const id = resolveWatchCategory(ticker);
-        if (id !== undefined) {
-          result.set(ticker.ticker, id);
-        }
-      }
-    }
-
-    return result;
+    return undefined;
   }
 
   /**
-   * Build the result map for only the requested tickers.
-   * Falls back to DEFAULT_DAILY for tickers in the TV watchlist.
+   * Fetch the backend ticker record and derive its watch category.
    */
-  private buildCategoryMap(
-    tvTickers: readonly string[],
-    allBackendCategories: Map<string, WatchCategoryId>,
-    defaultWatchlistTickers?: readonly string[]
-  ): Map<string, WatchCategory> {
-    const categoryMap = new Map<string, WatchCategory>();
-    const defaultList = defaultWatchlistTickers ? new Set(defaultWatchlistTickers) : new Set<string>();
-
-    for (const tvTicker of tvTickers) {
-      const backendId = allBackendCategories.get(tvTicker);
-      if (backendId !== undefined) {
-        categoryMap.set(tvTicker, findWatchCategoryById(backendId));
-      } else if (defaultList.has(tvTicker)) {
-        categoryMap.set(tvTicker, findWatchCategoryById(WatchCategoryId.DEFAULT_DAILY));
-      }
+  private async resolveTickerDerivedCategory(tvTicker: string): Promise<WatchCategory | undefined> {
+    try {
+      const ticker = await this.tickerManager.getTicker(tvTicker);
+      const id = resolveWatchCategory(ticker);
+      return id !== undefined ? findWatchCategoryById(id) : undefined;
+    } catch {
+      // Ticker not tracked on backend — no derived category
+      return undefined;
     }
-
-    return categoryMap;
   }
 
   // ── Backend Update ──

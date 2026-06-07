@@ -48,7 +48,9 @@ export class AlertFeedManager implements IAlertFeedManager {
 
     const tvTicker = alertTicker.ticker;
 
-    if (this.watchManager.isWatched(tvTicker)) {
+    // Check if ticker belongs to any watch category (backend-on-demand)
+    const category = await this.watchManager.getTickerCategory(tvTicker);
+    if (category) {
       return { state: FeedState.WATCHED, color: 'yellow' };
     }
 
