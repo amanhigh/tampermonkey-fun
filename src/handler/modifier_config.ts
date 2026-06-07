@@ -1,8 +1,6 @@
 import { IStyleManager } from '../manager/style';
 import { IDomManager } from '../manager/dom';
 import { IAlertHandler } from './alert';
-import { IFlagHandler } from './flag';
-import { FlagCategoryId } from '../models/flag';
 
 /**
  * Type definitions for key bindings and actions
@@ -37,8 +35,7 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
   constructor(
     private readonly domManager: IDomManager,
     private readonly styleManager: IStyleManager,
-    private readonly alertHandler: IAlertHandler,
-    private readonly flagHandler: IFlagHandler
+    private readonly alertHandler: IAlertHandler
   ) {
     // CTRL modifier actions
     this._ctrlKeys = new Map([
@@ -61,20 +58,6 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
         {
           description: 'Auto Alert Delete',
           action: () => void this.alertHandler.deleteAlertAtCursor(),
-        },
-      ],
-      [
-        'f11',
-        {
-          description: 'Flag Brown Index',
-          action: () => this.flagHandler.recordSelectedTicker(FlagCategoryId.INDEX),
-        },
-      ],
-      [
-        'f12',
-        {
-          description: 'Flag Golden XAU',
-          action: () => this.flagHandler.recordSelectedTicker(FlagCategoryId.GOLD_INDEX),
         },
       ],
     ]);
