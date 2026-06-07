@@ -49,11 +49,14 @@ export interface IWatchManager {
  * at factory construction time.
  */
 export class WatchManager implements IWatchManager {
-  /** LRU cache for ticker → category lookups. Uncategorized results are cached as null. */
-  private readonly categoryCache = new LRUCache<string, WatchCategory | null>({
+  /** Sentinel stored in cache for tickers that match no category. */
+  private static readonly NO_CATEGORY = Symbol('no_category');
+
+  /** LRU cache for ticker → category lookups. Uncategorized results are cached via sentinel. */
+  private readonly categoryCache = new LRUCache<string, WatchCategory | typeof WatchManager.NO_CATEGORY>({
     max: 1000,
     ttl: 5 * 60 * 1000,
-    fetchMethod: async (key: string): Promise<WatchCategory | null> => {
+    fetchMethod: async (key: string): Promise<WatchCategory | typeof WatchManager.NO_CATEGORY> => {
       return this.loadTickerCategory(key);
     },
   });
@@ -66,15 +69,15 @@ export class WatchManager implements IWatchManager {
   /** @inheritdoc */
   async getTickerCategory(tvTicker: string): Promise<WatchCategory | undefined> {
     const result = await this.categoryCache.fetch(tvTicker);
-    return result ?? undefined;
+    return result === WatchManager.NO_CATEGORY ? undefined : result;
   }
 
   /**
    * Load a ticker's watch category from backend data (journals + ticker record).
    * Used as the fetchMethod callback by the LRU cache.
-   * Returns null for uncategorized tickers so the result is cached.
+   * Returns the NO_CATEGORY sentinel for uncategorized tickers so the result is cached.
    */
-  private async loadTickerCategory(tvTicker: string): Promise<WatchCategory | null> {
+  private async loadTickerCategory(tvTicker: string): Promise<WatchCategory | typeof WatchManager.NO_CATEGORY> {
     // 1. Check journals (highest priority)
     const journalCategory = await this.resolveJournalCategory(tvTicker);
     if (journalCategory !== undefined) {
@@ -87,8 +90,8 @@ export class WatchManager implements IWatchManager {
       return tickerCategory;
     }
 
-    // 3. No match — let caller apply UI fallback
-    return undefined;
+    // 3. No match — cache sentinel so repeated lookups don't hit backend
+    return WatchManager.NO_CATEGORY;
   }
 
   /** @inheritdoc */
@@ -121,8 +124,18 @@ export class WatchManager implements IWatchManager {
     }
 
     for (const ticker of tvTickers) {
+      this.evictTickerCategory(ticker);
       void this.updateBackend(ticker, cat.recordUpdate);
     }
+  }
+
+  // ── Cache Management ──
+
+  /**
+   * Evict a ticker from the category cache so the next lookup is fresh.
+   */
+  private evictTickerCategory(tvTicker: string): void {
+    this.categoryCache.delete(tvTicker);
   }
 
   // ── Classification step helpers ──

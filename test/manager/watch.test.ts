@@ -207,6 +207,40 @@ describe('WatchManager', () => {
 
       expect(mockTickerManager.getTicker).toHaveBeenCalledWith('SOME_TICKER');
     });
+
+    it('should reuse cached category for repeated categorized ticker lookup', async () => {
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'CACHED', state: 'READY' }));
+
+      // First call — populates cache
+      const first = await watchManager.getTickerCategory('CACHED');
+      expect(first?.id).toBe(WatchCategoryId.READY);
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
+
+      // Second call — cache hit, no backend call
+      jest.clearAllMocks();
+      const second = await watchManager.getTickerCategory('CACHED');
+      expect(second?.id).toBe(WatchCategoryId.READY);
+      expect(mockTickerManager.getTicker).not.toHaveBeenCalled();
+      expect(mockJournalManager.listJournals).not.toHaveBeenCalled();
+    });
+
+    it('should cache uncategorized ticker result (avoids repeated backend misses)', async () => {
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockRejectedValue(new Error('not found'));
+
+      // First call — miss, caches sentinel
+      const first = await watchManager.getTickerCategory('MISS');
+      expect(first).toBeUndefined();
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
+
+      // Second call — cache hit on sentinel, no backend call
+      jest.clearAllMocks();
+      const second = await watchManager.getTickerCategory('MISS');
+      expect(second).toBeUndefined();
+      expect(mockTickerManager.getTicker).not.toHaveBeenCalled();
+      expect(mockJournalManager.listJournals).not.toHaveBeenCalled();
+    });
   });
 
   // ── recordCategory ──
@@ -246,6 +280,28 @@ describe('WatchManager', () => {
       watchManager.recordCategory(WatchCategoryId.READY, []);
 
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
+    });
+
+    it('should evict cached ticker category before manual backend update', async () => {
+      // Populate cache with uncategorized result
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockRejectedValue(new Error('not found'));
+      await watchManager.getTickerCategory('EVICT_ME');
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
+
+      // Evict + update via recordCategory
+      jest.clearAllMocks();
+      mockTickerManager.updateTicker.mockResolvedValue(undefined as any);
+      watchManager.recordCategory(WatchCategoryId.READY, ['EVICT_ME']);
+
+      // Verify update was called
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('EVICT_ME', { state: 'READY' });
+
+      // Next getTickerCategory fetches fresh (cache was evicted)
+      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'EVICT_ME', state: 'READY' }));
+      const result = await watchManager.getTickerCategory('EVICT_ME');
+      expect(result?.id).toBe(WatchCategoryId.READY);
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
     });
   });
 
