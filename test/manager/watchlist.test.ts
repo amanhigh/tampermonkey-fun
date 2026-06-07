@@ -2,10 +2,10 @@ import { TradingViewWatchlistManager, ITradingViewWatchlistManager } from '../..
 import { IPaintManager } from '../../src/manager/paint';
 import { IUIUtil } from '../../src/util/ui';
 import { IFnoManager } from '../../src/manager/fno';
-import { IWatchManager, CategoryBuckets } from '../../src/manager/watch';
+import { IWatchManager } from '../../src/manager/watch';
 import { IFlagManager } from '../../src/manager/flag';
 import { Constants } from '../../src/models/constant';
-import { WatchCategoryId } from '../../src/models/watch';
+import { WatchCategoryId, CategoryBuckets } from '../../src/models/watch';
 
 // Mock jQuery globally for DOM manipulation
 const mockJQuery = jest.fn(() => ({

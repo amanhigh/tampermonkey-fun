@@ -48,9 +48,12 @@ export function resolveWatchCategory(ticker: Ticker): WatchCategoryId | undefine
     return WatchCategoryId.READY;
   }
 
-  // Long-watch (timeframes no DL), split by exchange
-  if (isLongWatch(ticker)) {
-    return isIndiaExchange(ticker) ? WatchCategoryId.LONG_NSE : WatchCategoryId.LONG_NON_NSE;
+  // Explicit types take priority over timeframe-based classification
+  // to prevent COMPOSITE/INDEX tickers without DL from being misclassified as LONG_*
+
+  // Composite instruments
+  if (ticker.type === 'COMPOSITE') {
+    return WatchCategoryId.COMPOSITE;
   }
 
   // Market instruments
@@ -58,9 +61,9 @@ export function resolveWatchCategory(ticker: Ticker): WatchCategoryId | undefine
     return WatchCategoryId.INDEX;
   }
 
-  // Composite instruments
-  if (ticker.type === 'COMPOSITE') {
-    return WatchCategoryId.COMPOSITE;
+  // Long-watch (timeframes no DL), split by exchange
+  if (isLongWatch(ticker)) {
+    return isIndiaExchange(ticker) ? WatchCategoryId.LONG_NSE : WatchCategoryId.LONG_NON_NSE;
   }
 
   // No match — caller should apply DEFAULT_DAILY fallback
