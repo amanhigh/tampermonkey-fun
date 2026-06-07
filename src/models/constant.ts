@@ -1,4 +1,5 @@
 import { SequenceMap, SequenceType, TimeFrameConfig, TimeFrame, TimeFrameMap } from './trading';
+import type { TickerTimeframe } from './ticker';
 
 /**
  * Application-wide constants organized by domain and functionality
@@ -251,6 +252,11 @@ Support:
         [SequenceType.MWD]: [TimeFrame.THREE_MONTHLY, TimeFrame.MONTHLY, TimeFrame.WEEKLY, TimeFrame.DAILY],
         [SequenceType.YR]: [TimeFrame.SIX_MONTHLY, TimeFrame.THREE_MONTHLY, TimeFrame.MONTHLY, TimeFrame.WEEKLY],
       } as SequenceMap,
+      /** Maps a SequenceType to the ordered backend timeframe list. */
+      TO_TIMEFRAMES: {
+        [SequenceType.MWD]: ['MN', 'WK', 'DL'] as TickerTimeframe[],
+        [SequenceType.YR]: ['YR', 'SMN', 'TMN', 'MN', 'WK'] as TickerTimeframe[],
+      } as Record<SequenceType, TickerTimeframe[]>,
     },
   },
 

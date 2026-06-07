@@ -105,7 +105,7 @@ describe('HeaderManager', () => {
 
     it('should paint header with all components', async () => {
       mockWatchManager.getTickerCategory.mockResolvedValue(undefined);
-      mockFlagManager.getTickerCategory.mockReturnValue(undefined);
+      mockFlagManager.getTickerCategory.mockResolvedValue(undefined);
       mockFnoManager.isFno.mockReturnValue(false);
 
       await headerManager.paintHeader();
@@ -135,7 +135,7 @@ describe('HeaderManager', () => {
         label: 'Ready',
         recordUpdate: { state: 'READY' },
       });
-      mockFlagManager.getTickerCategory.mockReturnValue(undefined);
+      mockFlagManager.getTickerCategory.mockResolvedValue(undefined);
       mockFnoManager.isFno.mockReturnValue(false);
 
       await headerManager.paintHeader();
@@ -150,7 +150,7 @@ describe('HeaderManager', () => {
 
       mockTickerManager.getTicker.mockReturnValue(ticker);
       mockWatchManager.getTickerCategory.mockResolvedValue(undefined);
-      mockFlagManager.getTickerCategory.mockReturnValue(undefined);
+      mockFlagManager.getTickerCategory.mockResolvedValue(undefined);
       mockFnoManager.isFno.mockReturnValue(false);
 
       // Ticker is in the watchlist → brown override
@@ -167,7 +167,7 @@ describe('HeaderManager', () => {
 
       mockTickerManager.getTicker.mockReturnValue(ticker);
       mockWatchManager.getTickerCategory.mockResolvedValue(undefined);
-      mockFlagManager.getTickerCategory.mockReturnValue(undefined);
+      mockFlagManager.getTickerCategory.mockResolvedValue(undefined);
       mockFnoManager.isFno.mockReturnValue(false);
 
       // Ticker is NOT in the watchlist → stays default white
@@ -185,7 +185,7 @@ describe('HeaderManager', () => {
 
       mockTickerManager.getTicker.mockReturnValue(ticker);
       mockWatchManager.getTickerCategory.mockResolvedValue(undefined);
-      mockFlagManager.getTickerCategory.mockReturnValue(flagCategory);
+      mockFlagManager.getTickerCategory.mockResolvedValue(flagCategory);
       mockFnoManager.isFno.mockReturnValue(false);
 
       await headerManager.paintHeader();
@@ -199,7 +199,7 @@ describe('HeaderManager', () => {
 
       mockTickerManager.getTicker.mockReturnValue(ticker);
       mockWatchManager.getTickerCategory.mockResolvedValue(undefined);
-      mockFlagManager.getTickerCategory.mockReturnValue(undefined);
+      mockFlagManager.getTickerCategory.mockResolvedValue(undefined);
       mockFnoManager.isFno.mockReturnValue(true);
 
       await headerManager.paintHeader();

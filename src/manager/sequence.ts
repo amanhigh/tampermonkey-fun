@@ -1,7 +1,7 @@
 import { Constants } from '../models/constant';
 import { TimeFrameConfig, SequenceType, TimeFrame } from '../models/trading';
 import { ITickerClient } from '../client/ticker';
-import { TickerTimeframe } from '../models/ticker';
+import type { TickerTimeframe } from '../models/ticker';
 import { Notifier } from '../util/notify';
 import { Color } from '../models/color';
 import { IDomManager } from './dom';
@@ -38,14 +38,6 @@ export interface ISequenceManager {
    */
   toggleFreezeSequence(): Promise<void>;
 }
-
-/**
- * Maps a SequenceType to the ordered backend timeframe list.
- */
-const SEQUENCE_TO_TIMEFRAMES: Record<SequenceType, TickerTimeframe[]> = {
-  [SequenceType.MWD]: ['MN', 'WK', 'DL'],
-  [SequenceType.YR]: ['YR', 'SMN', 'TMN', 'MN', 'WK'],
-};
 
 /**
  * Manages sequence operations and state for trading view timeframes.
@@ -91,7 +83,7 @@ export class SequenceManager implements ISequenceManager {
     const tvTicker = this.domManager.getTicker();
     const currentSequence = await this.getCurrentSequence();
     const sequence = currentSequence === SequenceType.YR ? SequenceType.MWD : SequenceType.YR;
-    const newTimeframes = SEQUENCE_TO_TIMEFRAMES[sequence];
+    const newTimeframes = Constants.TIME.SEQUENCE_TYPES.TO_TIMEFRAMES[sequence];
 
     // Persist to backend — updateTicker merges with current record internally
     try {

@@ -94,9 +94,14 @@ export class Barkat {
         })
       )
       .append(
-        this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.SEQUENCE, 'S', () => {
-          void this.sequenceHandler.handleSequenceSwitch();
-        })
+        this.uiUtil
+          .buildButton(Constants.UI.IDS.BUTTONS.SEQUENCE, 'S', () => {
+            void this.sequenceHandler.handleSequenceSwitch();
+          })
+          .on('contextmenu', (e) => {
+            e.preventDefault();
+            void this.sequenceHandler.startTracking();
+          })
       )
       .append(
         this.uiUtil

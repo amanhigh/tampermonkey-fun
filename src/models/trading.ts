@@ -1,5 +1,8 @@
 /**
  * Available sequence types for timeframe analysis
+ *
+ * FIXME: Rename to TimeframeSet — "sequence" is a legacy concept
+ * to be replaced everywhere (manager, handler, Constants, UI).
  */
 export enum SequenceType {
   /** Monthly-Weekly-Daily sequence for regular trading */

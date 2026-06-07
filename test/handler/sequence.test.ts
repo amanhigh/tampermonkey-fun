@@ -1,9 +1,12 @@
 import { SequenceHandler } from '../../src/handler/sequence';
 import { ISequenceManager } from '../../src/manager/sequence';
 import { IDomManager } from '../../src/manager/dom';
+import { ITickerManager } from '../../src/manager/ticker';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { AlertTicker } from '../../src/models/alert_ticker';
 import { SequenceType } from '../../src/models/trading';
+import { Ticker } from '../../src/models/ticker';
+import { Notifier } from '../../src/util/notify';
 
 // Mock jQuery
 const mockJQuery = jest.fn((_selector: string) => ({
@@ -12,10 +15,22 @@ const mockJQuery = jest.fn((_selector: string) => ({
 }));
 (global as any).$ = mockJQuery;
 
+// Mock Notifier
+jest.mock('../../src/util/notify', () => ({
+  Notifier: {
+    info: jest.fn(),
+    success: jest.fn(),
+    warn: jest.fn(),
+    red: jest.fn(),
+    message: jest.fn(),
+  },
+}));
+
 describe('SequenceHandler', () => {
   let sequenceHandler: SequenceHandler;
   let mockSequenceManager: jest.Mocked<ISequenceManager>;
   let mockDomManager: jest.Mocked<IDomManager>;
+  let mockTickerManager: jest.Mocked<ITickerManager>;
   let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
   let mockDisplayInput: any;
 
@@ -40,6 +55,11 @@ describe('SequenceHandler', () => {
 
     mockDomManager = {
       getTicker: jest.fn(),
+      getCurrentExchange: jest.fn(),
+    } as any;
+
+    mockTickerManager = {
+      startTracking: jest.fn(),
     } as any;
 
     mockAlertTickerManager = {
@@ -59,7 +79,8 @@ describe('SequenceHandler', () => {
     sequenceHandler = new SequenceHandler(
       mockSequenceManager,
       mockDomManager,
-      mockAlertTickerManager
+      mockAlertTickerManager,
+      mockTickerManager
     );
   });
 
@@ -112,6 +133,54 @@ describe('SequenceHandler', () => {
       await sequenceHandler.handleSequenceSwitch();
 
       expect(mockSequenceManager.flipSequence).toHaveBeenCalled();
+    });
+  });
+
+  describe('startTracking', () => {
+    it('should start tracking current ticker with MWD sequence timeframes', async () => {
+      mockDomManager.getTicker.mockReturnValue('TVTICKER');
+      mockDomManager.getCurrentExchange.mockReturnValue('NSE');
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
+      mockTickerManager.startTracking.mockResolvedValue({ ticker: 'TVTICKER' } as Ticker);
+
+      await sequenceHandler.startTracking();
+
+      expect(mockTickerManager.startTracking).toHaveBeenCalledWith({
+        ticker: 'TVTICKER',
+        exchange: 'NSE',
+        timeframes: ['MN', 'WK', 'DL'],
+        type: 'EQUITY',
+        state: 'WATCHED',
+        trend: 'SIDEWAYS',
+        last_opened_at: expect.any(String),
+      });
+      expect(Notifier.success).toHaveBeenCalledWith('⏺ Started tracking TVTICKER');
+    });
+
+    it('should use YR sequence timeframes when current sequence is YR', async () => {
+      mockDomManager.getTicker.mockReturnValue('TVTICKER');
+      mockDomManager.getCurrentExchange.mockReturnValue('NSE');
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.YR);
+      mockTickerManager.startTracking.mockResolvedValue({ ticker: 'TVTICKER' } as Ticker);
+
+      await sequenceHandler.startTracking();
+
+      expect(mockTickerManager.startTracking).toHaveBeenCalledWith(
+        expect.objectContaining({
+          timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'],
+        })
+      );
+    });
+
+    it('should warn when start tracking fails', async () => {
+      mockDomManager.getTicker.mockReturnValue('TVTICKER');
+      mockDomManager.getCurrentExchange.mockReturnValue('NSE');
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
+      mockTickerManager.startTracking.mockRejectedValue(new Error('Already exists'));
+
+      await sequenceHandler.startTracking();
+
+      expect(Notifier.warn).toHaveBeenCalledWith('Failed to start tracking TVTICKER: Already exists');
     });
   });
 });
