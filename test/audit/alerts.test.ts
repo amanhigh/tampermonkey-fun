@@ -1,30 +1,30 @@
 import { AlertsPlugin } from '../../src/manager/alerts_plugin';
-import { IAlertManager } from '../../src/manager/alert';
-import { ITickerManager } from '../../src/manager/ticker';
-import { IWatchManager } from '../../src/manager/watch';
-import { AlertState } from '../../src/models/alert';
-import { Ticker } from '../../src/models/ticker';
+import { IAuditClient } from '../../src/client/audit';
+import { AuditExecutionResult } from '../../src/models/audit_catalogue';
 
-describe('AlertsPlugin', () => {
+describe('AlertsPlugin (backend adapter)', () => {
   let plugin: AlertsPlugin;
-  let tickerManager: jest.Mocked<ITickerManager>;
-  let alertManager: jest.Mocked<IAlertManager>;
-  let watchManager: jest.Mocked<IWatchManager>;
+  let mockAuditClient: jest.Mocked<IAuditClient>;
+
+  const makeExecutionResult = (
+    overrides: Partial<AuditExecutionResult> = {}
+  ): AuditExecutionResult => ({
+    audit_id: 'alert-coverage',
+    generated_at: '2026-06-07T10:00:00Z',
+    counts: { NO_ALERT_TICKER: 1, NO_ALERTS: 1, SINGLE_ALERT: 1 },
+    findings: [],
+    metadata: { total: 3, offset: 0, limit: 10 },
+    ...overrides,
+  });
 
   beforeEach(() => {
-    tickerManager = {
-      listTickers: jest.fn().mockResolvedValue([]),
-    } as any;
+    mockAuditClient = {
+      getBaseUrl: jest.fn(),
+      getAuditCatalogue: jest.fn(),
+      executeAudit: jest.fn(),
+    } as jest.Mocked<IAuditClient>;
 
-    alertManager = {
-      getAlertsForTicker: jest.fn(),
-    } as any;
-
-    watchManager = {
-      isWatched: jest.fn().mockReturnValue(false),
-    } as any;
-
-    plugin = new AlertsPlugin(tickerManager, alertManager, watchManager);
+    plugin = new AlertsPlugin(mockAuditClient, 10);
   });
 
   describe('validate', () => {
@@ -33,62 +33,84 @@ describe('AlertsPlugin', () => {
     });
   });
 
+  describe('properties', () => {
+    it('exposes backend audit id alert-coverage', () => {
+      expect(plugin.id).toBe('alert-coverage');
+    });
+
+    it('exposes correct title', () => {
+      expect(plugin.title).toBe('Alert Coverage');
+    });
+  });
+
   describe('run', () => {
-    it('audits tracked TV tickers and emits only weak alert coverage results', async () => {
-      tickerManager.listTickers.mockResolvedValue([
-        new Ticker({ ticker: 'NO_ALERTS_TICKER' }),
-        new Ticker({ ticker: 'SINGLE_ALERT_TICKER' }),
-        new Ticker({ ticker: 'VALID_TICKER' }),
-      ]);
+    it('calls AuditClient.executeAudit with backend audit id and section limit', async () => {
+      mockAuditClient.executeAudit.mockResolvedValue(makeExecutionResult({ findings: [] }));
 
-      alertManager.getAlertsForTicker.mockImplementation((ticker: string) => {
-        if (ticker === 'NO_ALERTS_TICKER') return Promise.resolve([] as any);
-        if (ticker === 'SINGLE_ALERT_TICKER') return Promise.resolve([{ id: 'x', price: 1, pairId: 'p' }] as any);
-        return Promise.resolve([
-          { id: 'x', price: 1, pairId: 'p' },
-          { id: 'y', price: 2, pairId: 'p' },
-        ] as any);
-      });
+      await plugin.run();
+
+      expect(mockAuditClient.executeAudit).toHaveBeenCalledWith('alert-coverage', 0, 10);
+    });
+
+    it('maps NO_ALERT_TICKER backend finding to AuditResult', async () => {
+      mockAuditClient.executeAudit.mockResolvedValue(
+        makeExecutionResult({
+          findings: [
+            { code: 'NO_ALERT_TICKER', target: 'MCX', severity: 'HIGH', data: { alert_ticker_count: '0', price_alert_count: '0' } },
+          ],
+        })
+      );
 
       const results = await plugin.run();
 
-      expect(tickerManager.listTickers).toHaveBeenCalledWith({ 'sort-by': 'ticker', 'sort-order': 'asc' });
-      expect(alertManager.getAlertsForTicker).toHaveBeenCalledWith('NO_ALERTS_TICKER');
-      expect(alertManager.getAlertsForTicker).toHaveBeenCalledWith('SINGLE_ALERT_TICKER');
-      expect(alertManager.getAlertsForTicker).toHaveBeenCalledWith('VALID_TICKER');
-      expect(results.map((r) => r.target).sort()).toEqual(['NO_ALERTS_TICKER', 'SINGLE_ALERT_TICKER']);
-
-      const byTarget = Object.fromEntries(results.map((r) => [r.target, r]));
-      expect(byTarget['NO_ALERTS_TICKER'].code).toBe(AlertState.NO_ALERTS);
-      expect(byTarget['NO_ALERTS_TICKER'].severity).toBe('MEDIUM');
-      expect(byTarget['SINGLE_ALERT_TICKER'].code).toBe(AlertState.SINGLE_ALERT);
-      expect(byTarget['SINGLE_ALERT_TICKER'].severity).toBe('HIGH');
-    });
-
-    it('uses provided TV targets without listing all tracked tickers', async () => {
-      alertManager.getAlertsForTicker.mockResolvedValue([]);
-
-      const results = await plugin.run(['TARGET_TICKER']);
-
-      expect(tickerManager.listTickers).not.toHaveBeenCalled();
-      expect(alertManager.getAlertsForTicker).toHaveBeenCalledWith('TARGET_TICKER');
       expect(results).toHaveLength(1);
-      expect(results[0].target).toBe('TARGET_TICKER');
+      expect(results[0]).toEqual({
+        code: 'NO_ALERT_TICKER',
+        target: 'MCX',
+        severity: 'HIGH',
+        data: { alert_ticker_count: '0', price_alert_count: '0' },
+      });
     });
 
-    it('excludes watched TV tickers from alert coverage results', async () => {
-      tickerManager.listTickers.mockResolvedValue([
-        new Ticker({ ticker: 'WATCHED_TICKER' }),
-        new Ticker({ ticker: 'UNWATCHED_TICKER' }),
-      ]);
-      watchManager.isWatched.mockImplementation((ticker: string) => ticker === 'WATCHED_TICKER');
-      alertManager.getAlertsForTicker.mockResolvedValue([]);
+    it('maps NO_ALERTS and SINGLE_ALERT findings to AuditResult', async () => {
+      mockAuditClient.executeAudit.mockResolvedValue(
+        makeExecutionResult({
+          findings: [
+            { code: 'NO_ALERTS', target: 'INFY', severity: 'MEDIUM', data: { alert_ticker_count: '1', price_alert_count: '0' } },
+            { code: 'SINGLE_ALERT', target: 'TCS', severity: 'HIGH', data: { alert_ticker_count: '1', price_alert_count: '1' } },
+          ],
+        })
+      );
 
       const results = await plugin.run();
 
-      expect(alertManager.getAlertsForTicker).not.toHaveBeenCalledWith('WATCHED_TICKER');
-      expect(alertManager.getAlertsForTicker).toHaveBeenCalledWith('UNWATCHED_TICKER');
-      expect(results.map((r) => r.target)).toEqual(['UNWATCHED_TICKER']);
+      expect(results).toHaveLength(2);
+      expect(results[0].code).toBe('NO_ALERTS');
+      expect(results[0].target).toBe('INFY');
+      expect(results[0].severity).toBe('MEDIUM');
+      expect(results[1].code).toBe('SINGLE_ALERT');
+      expect(results[1].target).toBe('TCS');
+      expect(results[1].severity).toBe('HIGH');
+    });
+
+    it('preserves finding data metadata', async () => {
+      mockAuditClient.executeAudit.mockResolvedValue(
+        makeExecutionResult({
+          findings: [
+            { code: 'NO_ALERT_TICKER', target: 'MCX', severity: 'HIGH', data: { alert_ticker_count: '0', price_alert_count: '0' } },
+          ],
+        })
+      );
+
+      const [result] = await plugin.run();
+
+      expect(result.data).toEqual({ alert_ticker_count: '0', price_alert_count: '0' });
+    });
+
+    it('surfaces backend client execution errors', async () => {
+      mockAuditClient.executeAudit.mockRejectedValue(new Error('500 Internal Server Error'));
+
+      await expect(plugin.run()).rejects.toThrow('500 Internal Server Error');
     });
   });
 });

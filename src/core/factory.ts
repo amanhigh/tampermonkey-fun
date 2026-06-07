@@ -7,6 +7,7 @@ import { OsClient, IOsClient } from '../client/os';
 import { TickerClient, ITickerClient } from '../client/ticker';
 import { AlertTickerClient, IAlertTickerClient } from '../client/alert_ticker';
 import { IPriceAlertClient, PriceAlertClient } from '../client/price_alert';
+import { IAuditClient, AuditClient } from '../client/audit';
 import { UIUtil, IUIUtil } from '../util/ui';
 import { ObserveUtil, IObserveUtil } from '../util/observer';
 import { SearchUtil, ISearchUtil } from '../util/search';
@@ -19,9 +20,6 @@ import { ImdbApp } from './imdb';
 import { Barkat } from './barkat';
 
 // Repository Imports
-import { RepoCron, IRepoCron } from '../repo/cron';
-import { IWatchlistRepo, Watchlistrepo } from '../repo/watch';
-// TickerRepo removed — audit plugins use Manager/Client now
 
 // Manager Layer Imports
 import { ITimeFrameManager, TimeFrameManager } from '../manager/timeframe';
@@ -145,6 +143,7 @@ export class Factory {
     ticker: (): ITickerClient => Factory.getInstance('tickerClient', () => new TickerClient()),
     tickerAlert: (): IAlertTickerClient => Factory.getInstance('tickerAlertClient', () => new AlertTickerClient()),
     priceAlert: (): IPriceAlertClient => Factory.getInstance('priceAlertClient', () => new PriceAlertClient()),
+    audit: (): IAuditClient => Factory.getInstance('auditClient', () => new AuditClient()),
   };
 
   /**
@@ -166,8 +165,6 @@ export class Factory {
    * Handles data persistence for various entities
    */
   public static repo = {
-    cron: (): IRepoCron => Factory.getInstance('repoCron', () => new RepoCron()),
-    watch: (): IWatchlistRepo => Factory.getInstance('watchRepo', () => new Watchlistrepo(Factory.repo.cron())),
     kite: (): IKiteRepo => Factory.getInstance('kiteRepo', () => new KiteRepo()),
     imdb: (): IImdbRepo => Factory.getInstance('imdbRepo', () => new ImdbRepo()),
   };
@@ -217,11 +214,16 @@ export class Factory {
             Factory.manager.watch(),
             Factory.manager.flag(),
             Factory.manager.dom(),
-            Factory.manager.fno()
+            Factory.manager.fno(),
+            Factory.manager.watchlist()
           )
       ),
 
-    watch: (): IWatchManager => Factory.getInstance('watchManager', () => new WatchManager(Factory.repo.watch())),
+    watch: (): IWatchManager =>
+      Factory.getInstance(
+        'watchManager',
+        () => new WatchManager(Factory.manager.ticker(), () => Factory.manager.journal())
+      ),
 
     screener: (): ITradingViewScreenerManager =>
       Factory.getInstance(
@@ -231,7 +233,8 @@ export class Factory {
             Factory.manager.paint(),
             Factory.manager.watch(),
             Factory.manager.flag(),
-            Factory.manager.recent()
+            Factory.manager.recent(),
+            Factory.manager.watchlist()
           )
       ),
 
@@ -262,7 +265,7 @@ export class Factory {
     tv: (): ITradingViewManager =>
       Factory.getInstance(
         'tvManager',
-        () => new TradingViewManager(Factory.util.wait(), Factory.repo.cron(), Factory.client.os())
+        () => new TradingViewManager(Factory.util.wait(), Factory.client.os())
       ),
 
     alertTicker: (): IAlertTickerManager =>
@@ -308,12 +311,8 @@ export class Factory {
    */
   public static audit = {
     // ===== PLUGIN CREATION =====
-    // Return a singleton AlertsPlugin instance
-    alerts: () =>
-      Factory.getInstance(
-        'auditPlugin_alerts',
-        () => new AlertsPlugin(Factory.manager.ticker(), Factory.manager.alert(), Factory.manager.watch())
-      ),
+    // Return a singleton AlertsPlugin instance (backend adapter via IAuditClient)
+    alerts: () => Factory.getInstance('auditPlugin_alerts', () => new AlertsPlugin(Factory.client.audit())),
 
     // Return a singleton GttPlugin instance
     gttUnwatched: () =>
@@ -327,12 +326,9 @@ export class Factory {
     // Return a singleton TradeRiskPlugin instance
     tradeRisk: () => Factory.getInstance('auditPlugin_tradeRisk', () => new TradeRiskPlugin(Factory.repo.kite())),
 
-    // Return a singleton StaleReviewPlugin instance (FR-016)
+    // Return a singleton StaleReviewPlugin instance (backend adapter via IAuditClient)
     staleReview: () =>
-      Factory.getInstance(
-        'auditPlugin_staleReview',
-        () => new StaleReviewPlugin(Factory.manager.recent(), Factory.manager.ticker(), Factory.manager.watch())
-      ),
+      Factory.getInstance('auditPlugin_staleReview', () => new StaleReviewPlugin(Factory.client.audit())),
 
     // ===== SECTION CREATION =====
     // Alerts Audit Section - receives plugin via direct injection
@@ -372,6 +368,8 @@ export class Factory {
 
     // ===== REGISTRY =====
     // Build registry by registering all sections
+    // FIXME: Catalogue-based registration — fetch available audits from backend
+    // GET /v1/api/audits instead of hardcoding each section here.
     registry: () =>
       Factory.getInstance('auditRegistry', () => {
         const reg = new AuditSectionRegistry();
@@ -408,8 +406,7 @@ export class Factory {
             Factory.handler.alertSummary(),
             Factory.handler.ticker(),
             Factory.handler.alertTicker(),
-            Factory.manager.alertFeed(),
-            Factory.handler.watchlist()
+            Factory.manager.alertFeed()
           )
       ),
     alertSummary: (): IAlertSummaryHandler =>
@@ -513,7 +510,6 @@ export class Factory {
         'keyConfig',
         () =>
           new KeyConfig(
-            Factory.manager.sequence(),
             Factory.manager.timeFrame(),
             Factory.handler.watchlist(),
             Factory.handler.flag(),
@@ -545,8 +541,7 @@ export class Factory {
             Factory.util.sync(),
             Factory.manager.watch(),
             Factory.manager.dom(),
-            Factory.manager.alertFeed(),
-            Factory.util.ui()
+            Factory.manager.alertFeed()
           )
       ),
     flag: (): IFlagHandler =>

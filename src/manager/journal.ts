@@ -9,6 +9,7 @@ import {
   CreateJournalRequest,
   CreateJournalTagRequest,
   JournalApiTimeframe,
+  JournalQueryParams,
   JournalRecord,
   JournalResultStatus,
 } from '../models/journal';
@@ -69,6 +70,13 @@ export interface IJournalManager {
    * @returns Formatted text (e.g., "HGS - oe")
    */
   createReasonText(reason: string): string;
+
+  /**
+   * Lists all journals matching the given query parameters, auto-paginating.
+   * @param params Query parameters for filtering journals
+   * @returns Promise resolving with all matching journal records
+   */
+  listJournals(params: JournalQueryParams): Promise<JournalRecord[]>;
 
   /**
    * Publishes an open-journal event for localhost review tabs.
@@ -162,6 +170,28 @@ export class JournalManager implements IJournalManager {
   /** @inheritdoc */
   public async updateJournalStatus(journalId: string, status: JournalResultStatus): Promise<void> {
     await this.journalClient.updateJournalStatus(journalId, { status });
+  }
+
+  /** @inheritdoc */
+  public async listJournals(params: JournalQueryParams): Promise<JournalRecord[]> {
+    // FIXME: Extract auto-pagination (do/while offset<total) into a shared BaseManager helper
+    const limit = Constants.KOHAN.PAGE_LIMIT;
+    let offset = 0;
+    let total = 0;
+    const all: JournalRecord[] = [];
+
+    try {
+      do {
+        const response = await this.journalClient.listJournals({ ...params, limit, offset });
+        all.push(...response.journals);
+        total = response.metadata.total;
+        offset += limit;
+      } while (offset < total);
+
+      return all;
+    } catch (error) {
+      throw new Error(`Failed to list journals: ${(error as Error).message}`);
+    }
   }
 
   /** @inheritdoc */

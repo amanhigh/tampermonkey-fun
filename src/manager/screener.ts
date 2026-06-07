@@ -3,6 +3,8 @@ import { IPaintManager } from './paint';
 import { IWatchManager } from './watch';
 import { IFlagManager } from './flag';
 import { IRecentManager } from './recent';
+import { ITradingViewWatchlistManager } from './watchlist';
+import { ALL_WATCH_CATEGORIES } from '../models/watch';
 
 /**
  * Interface for managing TradingView screener operations
@@ -28,9 +30,9 @@ export interface ITradingViewScreenerManager {
   isScreenerVisible(): boolean;
 
   /**
-   * Paint the screener display
+   * Paint the screener display using fresh backend classification.
    */
-  paintScreener(): void;
+  paintScreener(): Promise<void>;
 }
 
 /**
@@ -42,7 +44,8 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
     private readonly paintManager: IPaintManager,
     private readonly watchManager: IWatchManager,
     private readonly flagManager: IFlagManager,
-    private readonly recentManager: IRecentManager
+    private readonly recentManager: IRecentManager,
+    private readonly watchlistManager: ITradingViewWatchlistManager
   ) {}
 
   /** @inheritdoc */
@@ -85,9 +88,8 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
   }
 
   /** @inheritdoc */
-  paintScreener(): void {
+  async paintScreener(): Promise<void> {
     const screenerSymbolSelector = Constants.DOM.SCREENER.SYMBOL;
-    const colorList = Constants.UI.COLORS.LIST;
 
     // Must Run in this Order- Clear, WatchList, Kite
     this.paintManager.paintSymbols(screenerSymbolSelector, null, { color: Constants.UI.COLORS.DEFAULT }, true);
@@ -100,18 +102,28 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
       color: Constants.UI.COLORS.LIST[1],
     });
 
-    // Paint Symbols
-    for (let i = 0; i < colorList.length; i++) {
-      const color = colorList[i];
-      const symbols = this.watchManager.getCategory(i);
-      this.paintManager.paintSymbols(screenerSymbolSelector, symbols, { color: color });
+    // Classify each screener ticker into category buckets
+    const screenerTickers = this.getTickers(false);
+    const { buckets, uncategorized } = await this.watchManager.classifyTickers(screenerTickers);
+
+    // Paint Symbols in ALL_WATCH_CATEGORIES order
+    for (const cat of ALL_WATCH_CATEGORIES) {
+      const symbols = buckets.get(cat.id);
+      if (symbols?.size) {
+        this.paintManager.paintSymbols(screenerSymbolSelector, symbols, { color: cat.color });
+      }
     }
 
     // Paint Flags
     this.flagManager.paint(screenerSymbolSelector, Constants.DOM.SCREENER.ITEM);
 
-    // Paint Watchlist (Overwrite White)
-    const watchlistSet = this.watchManager.getDefaultWatchlist();
-    this.paintManager.paintSymbols(screenerSymbolSelector, watchlistSet, { color: colorList[6] });
+    // Apply brown override for uncategorized watchlist tickers (legacy DEFAULT_DAILY)
+    const watchlistTickers = this.watchlistManager.getTickers();
+    const defaultDailyTickers = new Set(watchlistTickers.filter((t) => uncategorized.has(t)));
+    if (defaultDailyTickers.size > 0) {
+      this.paintManager.paintSymbols(screenerSymbolSelector, defaultDailyTickers, {
+        color: Constants.UI.COLORS.HEADER_DEFAULT,
+      });
+    }
   }
 }

@@ -10,12 +10,9 @@ describe('StaleReviewSection', () => {
   let notifySuccessSpy: jest.SpyInstance;
 
   const createResult = (tvTicker: string, daysSinceOpen: number): AuditResult => ({
-    pluginId: 'stale-review',
     code: 'STALE_TICKER',
     target: tvTicker,
-    message: daysSinceOpen >= 0 ? `${tvTicker}: last opened ${daysSinceOpen} days ago` : `${tvTicker}: never opened`,
     severity: 'MEDIUM',
-    status: 'FAIL',
     data: { tvTicker, lastOpened: 0, daysSinceOpen },
   });
 

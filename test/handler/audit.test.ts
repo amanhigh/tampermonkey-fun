@@ -80,7 +80,7 @@ describe('AuditHandler', () => {
 
   describe('auditAllOnFirstRun', () => {
     beforeEach(() => {
-      const alertsSection = makeSection({ id: 'alerts', title: 'Alerts Coverage' });
+      const alertsSection = makeSection({ id: 'alert-coverage', title: 'Alerts Coverage' });
       mockAuditRegistry.mustGetSection.mockReturnValue(alertsSection);
     });
 
@@ -104,7 +104,7 @@ describe('AuditHandler', () => {
 
   describe('toolbar buttons', () => {
     beforeEach(() => {
-      mockAuditRegistry.mustGetSection.mockReturnValue(makeSection({ id: 'alerts', title: 'Alerts Coverage' }));
+      mockAuditRegistry.mustGetSection.mockReturnValue(makeSection({ id: 'alert-coverage', title: 'Alerts Coverage' }));
     });
 
     it('creates global refresh button', async () => {

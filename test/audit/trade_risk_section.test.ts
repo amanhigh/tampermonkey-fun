@@ -13,12 +13,9 @@ describe('TradeRiskSection', () => {
   let notifyWarnSpy: jest.SpyInstance;
 
   const createResult = (tvTicker: string, orderId: string): AuditResult => ({
-    pluginId: 'trade-risk',
     code: 'INVALID_RISK_MULTIPLE',
     target: tvTicker,
-    message: `${tvTicker}: Risk not a multiple`,
     severity: 'HIGH',
-    status: 'FAIL',
     data: { tvTicker, orderId, entry: 100, stop: 90, quantity: 50, computedRisk: 500, expectedMultiples: [3200, 6400] },
   });
 
@@ -81,12 +78,9 @@ describe('TradeRiskSection', () => {
     test('warns when no order ID found in allResults', () => {
       section.headerFormatter([]);
       const result: AuditResult = {
-        pluginId: 'trade-risk',
         code: 'INVALID_RISK_MULTIPLE',
         target: 'HDFC',
-        message: 'test',
         severity: 'HIGH',
-        status: 'FAIL',
         data: { tvTicker: 'HDFC' },
       };
       section.onRightClick(result);
@@ -108,7 +102,7 @@ describe('TradeRiskSection', () => {
     test('skips results without order ID', () => {
       const results: AuditResult[] = [
         createResult('HDFC', 'ord-1'),
-        { pluginId: 'trade-risk', code: 'X', target: 'BAD', message: 'x', severity: 'HIGH', status: 'FAIL', data: {} },
+        { code: 'X', target: 'BAD', severity: 'HIGH', data: {} },
       ];
       section.onFixAll!(results);
       expect(mockKiteManager.deleteOrder).toHaveBeenCalledTimes(1);

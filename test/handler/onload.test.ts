@@ -58,7 +58,6 @@ describe('OnLoadHandler', () => {
 
     mockWatchListHandler = {
       onWatchListChange: jest.fn(),
-      handleWatchlistCleanup: jest.fn(),
       recordSelectedTicker: jest.fn(),
       applyDefaultFilters: jest.fn(),
     } as unknown as jest.Mocked<IWatchListHandler>;
@@ -80,7 +79,7 @@ describe('OnLoadHandler', () => {
       getTickers: jest.fn(),
       getSelectedTickers: jest.fn(),
       isScreenerVisible: jest.fn(),
-      paintScreener: jest.fn(),
+      paintScreener: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<ITradingViewScreenerManager>;
 
     onLoadHandler = new OnLoadHandler(

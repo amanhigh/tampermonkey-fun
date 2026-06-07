@@ -4,28 +4,36 @@ import { IAudit } from '../models/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { ITickerHandler } from './ticker';
 import { Notifier } from '../util/notify';
-import { AlertState } from '../models/alert';
 import { Constants } from '../models/constant';
+
+/** Backend alert coverage finding codes. */
+const CODE_NO_ALERT_TICKER = 'NO_ALERT_TICKER';
+const CODE_NO_ALERTS = 'NO_ALERTS';
+const CODE_SINGLE_ALERT = 'SINGLE_ALERT';
 
 /**
  * Alerts Audit Section
- * Displays tracked TV tickers with weak alert coverage: SINGLE_ALERT or NO_ALERTS
+ * Displays tracked TV tickers with weak alert coverage from the backend alert-coverage plugin.
+ *
+ * Backend finding codes:
+ * - NO_ALERT_TICKER: Tracked ticker has no Investing.com alert ticker mapping.
+ * - NO_ALERTS: Mapped ticker has no price alerts.
+ * - SINGLE_ALERT: Mapped ticker has only one price alert.
  *
  * Features:
- * - Prioritizes SINGLE_ALERT over NO_ALERTS in display
  * - Left-click: Open ticker in TradingView
  * - Right-click: Stop tracking ticker
  *
  * Pattern:
  * - Receives plugin via direct injection (not via registry)
- * - Plugin contains the business logic for analyzing alerts
+ * - Plugin is a backend adapter that calls the Kohan audit API
  * - Section defines the UI specification and interaction handlers
  */
 export class AlertsAuditSection extends BaseAuditSection implements IAuditSection {
-  // Identity - shares ID with ALERTS plugin
-  readonly id = Constants.AUDIT.PLUGINS.ALERTS;
+  // Identity - matches backend alert-coverage plugin ID
+  readonly id = Constants.AUDIT.PLUGINS.ALERT_COVERAGE;
   readonly title = 'Alerts Coverage';
-  readonly description = 'Audits alert coverage for every tracked TV ticker (NO_ALERTS / SINGLE_ALERT)';
+  readonly description = 'Backend audit of tracked ticker alert coverage: NO_ALERT_TICKER / NO_ALERTS / SINGLE_ALERT';
   readonly order = 0;
 
   // Action labels
@@ -36,11 +44,12 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
   readonly plugin: IAudit;
 
   // Presentation
-  readonly limit = 10; // Show up to 10 items (prioritize SINGLE_ALERT)
+  readonly limit = 10;
   readonly context: unknown = undefined;
 
   // Interaction handlers
   readonly onLeftClick = (result: AuditResult) => {
+    // BUG: openTicker needs exchange-qualified symbol (e.g. "NSE:SYMBOL") but result.target is raw ticker
     void this.tickerHandler.openTicker(result.target);
   };
 
@@ -62,22 +71,23 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
       return `<span class="success-badge">✓ All alerts covered</span>`;
     }
 
-    // Count different states
-    const singles = auditResults.filter((r) => r.code === AlertState.SINGLE_ALERT).length;
-    const nones = auditResults.filter((r) => r.code === AlertState.NO_ALERTS).length;
+    // Count different backend finding codes
+    const singles = auditResults.filter((r) => r.code === CODE_SINGLE_ALERT).length;
+    const nones = auditResults.filter((r) => r.code === CODE_NO_ALERTS).length;
+    const maps = auditResults.filter((r) => r.code === CODE_NO_ALERT_TICKER).length;
 
-    // Color-coded counts matching button colors for visual clarity
-    // One (SINGLE_ALERT): darkorange | None (NO_ALERTS): silver | Tot: default
+    // Color-coded counts for visual clarity
     return [
-      `<span style="color: darkorange">One: ${singles}</span>`,
-      `<span style="color: silver">None: ${nones}</span>`,
-      `Tot: ${auditResults.length}`,
+      `<span style="color: darkorange">O:${singles}</span>`,
+      `<span style="color: silver">N:${nones}</span>`,
+      `<span style="color: darkred">M:${maps}</span>`,
+      `T:${auditResults.length}`,
     ].join(' | ');
   };
 
   /**
    * Creates an Alerts audit section
-   * @param plugin - IAudit plugin for alerts analysis (injected directly)
+   * @param plugin - IAudit plugin (backend adapter) for alert coverage analysis
    * @param tickerHandler - Handler for ticker operations
    */
   constructor(

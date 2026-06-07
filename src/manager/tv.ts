@@ -1,7 +1,6 @@
 import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 import { IWaitUtil } from '../util/wait';
-import { IRepoCron } from '../repo/cron';
 import { IOsClient } from '../client/os';
 
 // Price and validation related constants
@@ -78,12 +77,10 @@ export class TradingViewManager implements ITradingViewManager {
 
   /**
    * @param waitUtil Manager for DOM operations
-   * @param repoCron Repository for cron operations
-   * @param kohanClient Client for HTTP API communication
+   * @param osClient Client for HTTP API communication
    */
   constructor(
     private readonly waitUtil: IWaitUtil,
-    private readonly repoCron: IRepoCron,
     private readonly osClient: IOsClient
   ) {}
 
@@ -93,7 +90,6 @@ export class TradingViewManager implements ITradingViewManager {
 
   private async autoSave(): Promise<void> {
     this.clickSaveButton();
-    await this.repoCron.saveAllRepositories();
     Notifier.success('Workspace saved');
   }
 

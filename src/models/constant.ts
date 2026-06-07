@@ -27,8 +27,8 @@ export const Constants = Object.freeze({
       HEADER_TEXT: 'header-text', // Header text with timestamp
     },
     PLUGINS: Object.freeze({
-      /** Alerts audit plugin - identifies tracked TV tickers with missing/weak alert coverage */
-      ALERTS: 'alerts',
+      /** Alert Coverage audit plugin - delegates to Kohan backend alert-coverage plugin */
+      ALERT_COVERAGE: 'alert-coverage',
 
       /** GTT unwatched audit plugin & section - identifies and displays unwatched GTT orders */
       GTT_UNWATCHED: 'gtt-unwatched',
@@ -39,7 +39,8 @@ export const Constants = Object.freeze({
       /** Stale review audit plugin - identifies tickers not opened within configurable review window */
       STALE_REVIEW: 'stale-review',
     }),
-    STALE_REVIEW_THRESHOLD_DAYS: 180,
+    /** Default page size for backend audit result pagination (10). */
+    DEFAULT_SECTION_LIMIT: 10,
   },
 
   // UI element colors and styles
@@ -47,6 +48,7 @@ export const Constants = Object.freeze({
     COLORS: {
       LIST: ['orange', 'red', 'dodgerblue', 'cyan', 'lime', 'white', 'brown', 'darkkhaki'], // Old name: colorList
       DEFAULT: 'white',
+      HEADER_DEFAULT: 'brown', // Brown fallback for uncategorized ticker in watchlist (header/screener)
       FNO_CSS: { 'border-top-style': 'groove', 'border-width': 'medium' }, // Old name: fnoCss
       // Severity colors for audit results
       SEVERITY: {

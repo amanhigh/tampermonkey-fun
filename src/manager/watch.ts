@@ -1,201 +1,163 @@
-import { CategoryLists } from '../models/category';
-import { Constants } from '../models/constant';
-import { IWatchlistRepo } from '../repo/watch';
+import { ITickerManager } from './ticker';
+import { IJournalManager } from './journal';
 import { Notifier } from '../util/notify';
+import { isCompositeSymbol, TickerUpdateRequest } from '../models/ticker';
+import { WatchCategory, WatchCategoryId, CategoryBuckets } from '../models/watch';
+import { findWatchCategoryById, resolveWatchCategory } from './watch_category';
 
 /**
- * Interface for managing watch category operations
+ * Interface for managing watch category operations.
+ *
+ * All classification is backend-on-demand — no local snapshot.
+ * The method works with one ticker at a time. Batch classification
+ * is handled by callers when needed.
  */
 export interface IWatchManager {
   /**
-   * Gets order category set by index
-   * @param categoryIndex Category index
-   * @returns Set of symbols in category
+   * Get the watch category for a single ticker.
+   * Resolves from backend data only (journals + ticker record).
+   * Returns undefined if no category matches — callers should
+   * apply UI-level fallback (e.g., default-white paint).
+   * @param tvTicker Ticker symbol to look up
    */
-  getCategory(categoryIndex: number): Set<string>;
+  getTickerCategory(tvTicker: string): Promise<WatchCategory | undefined>;
 
   /**
-   * Get default watchlist (Index 5)
-   * @returns Set of default watchlist symbols
-   * */
-  getDefaultWatchlist(): Set<string>;
+   * Classify multiple tickers and group them into category buckets.
+   * Composes {@link getTickerCategory} — no new business logic.
+   * Uncategorized tickers are returned separately for UI fallback.
+   * @param tvTickers Ticker symbols to classify
+   */
+  classifyTickers(tvTickers: string[]): Promise<CategoryBuckets>;
 
   /**
-   * Computes Default Watchlist based on other Lists.
-   * @param tvWatchlistTickers Latest watchlist tickers in TradingView for Universe
+   * Records selected tickers in the given watch category.
+   * Fires async backend updates for supported categories.
+   * @param categoryId Category identifier to record into
+   * @param tvTickers List of ticker symbols to assign
    */
-  computeDefaultList(tvWatchlistTickers: string[]): void;
-
-  /**
-   * Records selected tickers in order category
-   * @param categoryIndex Category index to record into
-   * @param tvTickers List of selected tickers
-   */
-  recordCategory(categoryIndex: number, tvTickers: string[]): void;
-
-  /**
-   * Evicts ticker from all watchlist categories if present
-   * @param tvTicker Ticker to evict
-   * @returns True if ticker was found and removed, false if not found
-   */
-  evictTicker(tvTicker: string): boolean;
-
-  /**
-   * Check how many order items would be removed by cleanup
-   * @param currentTickers List of current tickers in watchlist
-   * @returns Number of items that would be removed
-   */
-  dryRunClean(currentTickers: string[]): number;
-
-  /**
-   * Remove order items not in watchlist and save changes
-   * @param currentTickers List of current tickers in watchlist
-   * @returns Number of items removed
-   */
-  clean(currentTickers: string[]): number;
-
-  /**
-   * Check if a ticker is in any watch category
-   * @param tvTicker TradingView ticker symbol
-   * @returns True if ticker is in any watch category
-   */
-  isWatched(tvTicker: string): boolean;
+  recordCategory(categoryId: WatchCategoryId, tvTickers: string[]): void;
 }
 
 /**
- * Manages watch category operations
+ * Manages watch category operations using backend-on-demand classification.
+ *
+ * No snapshot — every call to getTickerCategory fetches
+ * backend data fresh. Journal manager is injected as a lazy getter to avoid
+ * circular dependency at factory construction time.
  */
 export class WatchManager implements IWatchManager {
-  DEFAULT_LIST_INDEX = 5;
-  private readonly TOTAL_CATEGORIES = 8; // Based on UI.COLORS.LIST length
+  constructor(
+    private readonly tickerManager: ITickerManager,
+    private readonly getJournalManager: () => IJournalManager
+  ) {}
 
-  constructor(private readonly watchRepo: IWatchlistRepo) {
-    const categoryLists = this.watchRepo.getWatchCategoryLists();
-    this.initializeCategoryLists(categoryLists);
-  }
-
-  private initializeCategoryLists(categoryLists: CategoryLists): void {
-    // Initialize empty sets for all required categories (0-7)
-    for (let i = 0; i < this.TOTAL_CATEGORIES; i++) {
-      if (!categoryLists.getList(i)) {
-        categoryLists.setList(i, new Set());
-      }
-    }
-  }
   /** @inheritdoc */
-  public getCategory(categoryIndex: number): Set<string> {
-    if (categoryIndex < 0 || categoryIndex >= this.TOTAL_CATEGORIES) {
-      throw new Error(`Invalid category index: ${categoryIndex}. Must be between 0 and ${this.TOTAL_CATEGORIES - 1}`);
+  async getTickerCategory(tvTicker: string): Promise<WatchCategory | undefined> {
+    // 1. Check journals (highest priority)
+    const journalCategory = await this.resolveJournalCategory(tvTicker);
+    if (journalCategory !== undefined) {
+      return journalCategory;
     }
 
-    const categoryLists = this.watchRepo.getWatchCategoryLists();
-    const list = categoryLists.getList(categoryIndex);
-    if (!list) {
-      categoryLists.setList(categoryIndex, new Set());
-      throw new Error(`Category list for index ${categoryIndex} not found`);
+    // 2. Check ticker-derived category
+    const tickerCategory = await this.resolveTickerDerivedCategory(tvTicker);
+    if (tickerCategory !== undefined) {
+      return tickerCategory;
     }
-    return list;
+
+    // 3. No match — let caller apply UI fallback
+    return undefined;
   }
 
   /** @inheritdoc */
-  recordCategory(categoryIndex: number, tvTickers: string[]): void {
-    const categoryLists = this.watchRepo.getWatchCategoryLists();
-    this.recordCategoryInternal(categoryLists, categoryIndex, tvTickers);
-  }
+  async classifyTickers(tvTickers: string[]): Promise<CategoryBuckets> {
+    const entries = await Promise.all(tvTickers.map(async (t) => [t, await this.getTickerCategory(t)] as const));
 
-  /** @inheritdoc */
-  evictTicker(tvTicker: string): boolean {
-    const categoryLists = this.watchRepo.getWatchCategoryLists();
-    let removed = false;
+    const buckets = new Map<WatchCategoryId, Set<string>>();
+    const uncategorized = new Set<string>();
 
-    categoryLists.getLists().forEach((list, categoryIndex) => {
-      if (list.has(tvTicker)) {
-        categoryLists.delete(categoryIndex, tvTicker);
-        removed = true;
-      }
-    });
-
-    return removed;
-  }
-
-  /** @inheritdoc */
-  computeDefaultList(tvWatchlistTickers: string[]): void {
-    //Prep Watchlist Set with all Symbols not in other Order Sets
-    const tvWatchSet = new Set(tvWatchlistTickers);
-    const categoryLists = this.watchRepo.getWatchCategoryLists();
-    // Remove tickers from other categories (except index 5 which is watchlist)
-    for (let i = 0; i < Constants.UI.COLORS.LIST.length; i++) {
-      if (i !== this.DEFAULT_LIST_INDEX) {
-        // Skip watchlist category
-        const categorySet = categoryLists.getList(i);
-        if (categorySet) {
-          categorySet.forEach((ticker) => tvWatchSet.delete(ticker));
-        }
+    for (const [ticker, category] of entries) {
+      if (category) {
+        const set = buckets.get(category.id) ?? new Set();
+        set.add(ticker);
+        buckets.set(category.id, set);
+      } else {
+        uncategorized.add(ticker);
       }
     }
 
-    // Update watchlist category
-    categoryLists.setList(this.DEFAULT_LIST_INDEX, tvWatchSet);
+    return { buckets, uncategorized };
   }
 
   /** @inheritdoc */
-  dryRunClean(currentTickers: string[]): number {
-    return this.processCleanup(currentTickers, false);
+  recordCategory(categoryId: WatchCategoryId, tvTickers: string[]): void {
+    const cat = findWatchCategoryById(categoryId);
+
+    if (cat.recordUpdate === null) {
+      Notifier.warn(`Category ${categoryId} does not support manual recording`);
+      return;
+    }
+
+    for (const ticker of tvTickers) {
+      void this.updateBackend(ticker, cat.recordUpdate);
+    }
   }
 
-  /** @inheritdoc */
-  clean(currentTickers: string[]): number {
-    return this.processCleanup(currentTickers, true);
-  }
+  // ── Classification step helpers ──
 
-  /** @inheritdoc */
-  getDefaultWatchlist(): Set<string> {
-    return this.getCategory(this.DEFAULT_LIST_INDEX);
-  }
+  /**
+   * Check if a ticker has a SET or RUNNING journal.
+   * SET has higher priority.
+   */
+  private async resolveJournalCategory(tvTicker: string): Promise<WatchCategory | undefined> {
+    // Composite symbols (e.g. 'BANKNIFTY/NIFTY') are not valid journal tickers
+    if (isCompositeSymbol(tvTicker)) {
+      return undefined;
+    }
 
-  /** @inheritdoc */
-  public isWatched(tvTicker: string): boolean {
-    const allWatchedItems = this.watchRepo.getAllItems();
-    return allWatchedItems.has(tvTicker);
+    const journalManager = this.getJournalManager();
+
+    const [setJournals, runningJournals] = await Promise.all([
+      journalManager.listJournals({ ticker: tvTicker, status: 'SET' }),
+      journalManager.listJournals({ ticker: tvTicker, status: 'RUNNING' }),
+    ]);
+
+    if (setJournals.length > 0) {
+      return findWatchCategoryById(WatchCategoryId.SET_JOURNAL);
+    }
+
+    if (runningJournals.length > 0) {
+      return findWatchCategoryById(WatchCategoryId.RUNNING_JOURNAL);
+    }
+
+    return undefined;
   }
 
   /**
-   * Records tickers in specified category
-   * @private
-   * @param categoryLists Category lists to update
-   * @param categoryIndex Category index
-   * @param tickers Tickers to record
+   * Fetch the backend ticker record and derive its watch category.
    */
-  private recordCategoryInternal(categoryLists: CategoryLists, categoryIndex: number, tickers: string[]): void {
-    tickers.forEach((ticker) => {
-      categoryLists.toggle(categoryIndex, ticker);
-    });
+  private async resolveTickerDerivedCategory(tvTicker: string): Promise<WatchCategory | undefined> {
+    try {
+      const ticker = await this.tickerManager.getTicker(tvTicker);
+      const id = resolveWatchCategory(ticker);
+      return id !== undefined ? findWatchCategoryById(id) : undefined;
+    } catch {
+      // Ticker not tracked on backend — no derived category
+      return undefined;
+    }
   }
 
+  // ── Backend Update ──
+
   /**
-   * Process cleanup of order items not in watchlist
-   * @private
-   * @param executeChanges Whether to actually remove items and save
-   * @returns Number of items affected
+   * Persist a category assignment to the backend.
    */
-  private processCleanup(currentTickers: string[], executeChanges: boolean): number {
-    let count = 0;
-    const categoryLists = this.watchRepo.getWatchCategoryLists();
-    const watchListTickers = new Set(currentTickers);
-
-    categoryLists.getLists().forEach((list, key) => {
-      for (const ticker of [...list]) {
-        if (!watchListTickers.has(ticker)) {
-          console.log(`Removing ${ticker} from category ${key}`);
-          Notifier.red(`🗑️ ${ticker}`);
-          if (executeChanges) {
-            categoryLists.delete(key, ticker);
-          }
-          count++;
-        }
-      }
-    });
-
-    return count;
+  private async updateBackend(ticker: string, update: TickerUpdateRequest): Promise<void> {
+    try {
+      await this.tickerManager.updateTicker(ticker, update);
+    } catch {
+      Notifier.warn(`Failed to update watch category for ${ticker}`);
+    }
   }
 }

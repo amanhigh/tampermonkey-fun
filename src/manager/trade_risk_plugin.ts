@@ -72,12 +72,9 @@ export class TradeRiskPlugin extends BaseAuditPlugin {
 
         if (!this.isValidRiskMultiple(risk, riskLimit, halfRisk)) {
           results.push({
-            pluginId: this.id,
             code: 'INVALID_RISK_MULTIPLE',
             target: tvTicker,
-            message: `${tvTicker}: Risk ₹${risk.toFixed(0)} not a multiple of ${halfRisk}/${riskLimit}`,
             severity: 'HIGH',
-            status: 'FAIL',
             data: {
               tvTicker,
               orderId: order.id,

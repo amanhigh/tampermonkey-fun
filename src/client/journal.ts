@@ -6,10 +6,10 @@ import {
   JournalListResponse,
   JournalQueryParams,
   JournalRecord,
-  KohanEnvelope,
   UpdateJournalStatusRequest,
   UpdateJournalStatusResponse,
 } from '../models/journal';
+import { KohanEnvelope } from '../models/api';
 import { Constants } from '../models/constant';
 
 /**
@@ -98,6 +98,9 @@ export class JournalClient extends BaseClient implements IJournalClient {
       if (params.limit) {
         query.set('limit', String(params.limit));
       }
+      if (params.offset !== undefined) {
+        query.set('offset', String(params.offset));
+      }
       if (params['sort-by']) {
         query.set('sort-by', params['sort-by']);
       }
@@ -105,7 +108,8 @@ export class JournalClient extends BaseClient implements IJournalClient {
         query.set('sort-order', params['sort-order']);
       }
 
-      return await this.makeRequest<JournalListResponse>(`/journals?${query.toString()}`);
+      const response = await this.makeRequest<KohanEnvelope<JournalListResponse>>(`/journals?${query.toString()}`);
+      return response.data;
     } catch (error) {
       throw new Error(`Failed to list journals: ${(error as Error).message}`);
     }

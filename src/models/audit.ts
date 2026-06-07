@@ -1,14 +1,10 @@
 export type AuditSeverity = 'LOW' | 'MEDIUM' | 'HIGH';
-export type AuditStatus = 'PASS' | 'FAIL';
 
 export interface AuditResult {
-  pluginId: string;
   code: string;
-  target: string; // e.g., investingTicker
-  message: string;
+  target: string;
   severity: AuditSeverity;
-  status: AuditStatus; // Explicit pass/fail for each target
-  data?: Record<string, unknown>; // Optional metadata passed by plugins (e.g., pairId, alertCount)
+  data?: Record<string, unknown>;
 }
 
 export interface IAudit {

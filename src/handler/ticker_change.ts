@@ -34,13 +34,13 @@ export class TickerChangeHandler implements ITickerChangeHandler {
       this.alertHandler.refreshAlerts();
 
       // Update UI components
-      this.headerManager.paintHeader();
-      this.recordRecentTicker();
+      void this.headerManager.paintHeader();
+      void this.recordRecentTicker();
       void this.sequenceHandler.displaySequence();
 
       // Update Screener
       if (this.screenManager.isScreenerVisible()) {
-        this.screenManager.paintScreener();
+        void this.screenManager.paintScreener();
       }
 
       // Handle GTT operations
@@ -52,9 +52,11 @@ export class TickerChangeHandler implements ITickerChangeHandler {
     const tvTicker = this.domManager.getTicker();
     this.recentManager.markRecent(tvTicker);
 
-    // Paint if TV ticker is not in watchlist
-    if (!this.watchManager.isWatched(tvTicker)) {
-      void this.alertFeedManager.createAlertFeedEvent(tvTicker);
-    }
+    // Paint if TV ticker is not in any watch category
+    void this.watchManager.getTickerCategory(tvTicker).then((category) => {
+      if (!category) {
+        void this.alertFeedManager.createAlertFeedEvent(tvTicker);
+      }
+    });
   }
 }

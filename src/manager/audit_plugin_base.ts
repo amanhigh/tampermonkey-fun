@@ -23,32 +23,23 @@ import { IAudit } from '../models/audit';
  * - Some plugins throw error if targets provided (batch-only)
  * - Check plugin documentation for support
  *
+ * ### Backend Adapter Pattern
+ * Backend-adapter plugins should extend `BackendAuditPlugin` (in `backend_audit_base.ts`)
+ * instead of this base class directly. Non-backend plugins (local-computation)
+ * should extend this base class and implement `run()` themselves.
+ *
  * @example
  * ```typescript
- * class MyAudit extends BaseAuditPlugin {
- *   async run(targets?: string[]): Promise<AuditResult[]> {
- *     const items = targets || this.getAllItems();
- *     const results: AuditResult[] = [];
+ * // Backend-adapter plugin
+ * class MyBackendAudit extends BackendAuditPlugin { ... }
  *
- *     items.forEach(item => {
- *       if (this.checkFailed(item)) {
- *         results.push({
- *           pluginId: this.id,
- *           code: 'FAILURE_CODE',
- *           target: item,
- *           message: `${item}: failure description`,
- *           severity: 'HIGH',
- *           status: 'FAIL',
- *         });
- *       }
- *       // No result for passed items
- *     });
- *
- *     return Promise.resolve(results);
- *   }
+ * // Local-computation plugin
+ * class MyLocalAudit extends BaseAuditPlugin {
+ *   async run(targets?: string[]): Promise<AuditResult[]> { ... }
  * }
  * ```
  */
+// FIXME: Consolidate into BackendAuditPlugin once all plugins migrate to backend adapter pattern
 export abstract class BaseAuditPlugin implements IAudit {
   abstract readonly id: string;
   abstract readonly title: string;

@@ -6,11 +6,10 @@ import { IHeaderManager } from '../manager/header';
 import { ITradingViewScreenerManager } from '../manager/screener';
 import { IWatchManager } from '../manager/watch';
 import { ITradingViewWatchlistManager } from '../manager/watchlist';
-import { Notifier } from '../util/notify';
 import { ISyncUtil } from '../util/sync';
-import { IUIUtil } from '../util/ui';
 import { IDomManager } from '../manager/dom';
 import { IAlertFeedManager } from '../manager/alertfeed';
+import { WatchCategoryId } from '../models/watch';
 
 /**
  * Handles watchlist-related events and UI updates
@@ -26,19 +25,10 @@ export interface IWatchListHandler {
   onWatchListChange(): void;
 
   /**
-   * Handles watchlist cleanup operations
-   * - Performs dry run to check potential deletion count
-   * - Auto updates if deletions < 5
-   * - Prompts for confirmation if deletions >= 5
-   * - Saves changes after cleanup
+   * Records the selected ticker for a given watch category.
+   * @param categoryId The category identifier to record into.
    */
-  handleWatchlistCleanup(): Promise<void>;
-
-  /**
-   * Records the selected ticker for a given category index.
-   * @param categoryIndex The index of the category.
-   */
-  recordSelectedTicker(categoryIndex: number): void;
+  recordSelectedTicker(categoryId: WatchCategoryId): void;
 
   /**
    * Applies default filters to the watchlist
@@ -58,21 +48,20 @@ export class WatchListHandler implements IWatchListHandler {
     private readonly syncUtil: ISyncUtil,
     private readonly watchManager: IWatchManager,
     private readonly domManager: IDomManager,
-    private readonly alertFeedManager: IAlertFeedManager,
-    private readonly uiUtil: IUIUtil
+    private readonly alertFeedManager: IAlertFeedManager
   ) {}
 
   /** @inheritdoc */
   public onWatchListChange(): void {
     this.syncUtil.waitOn('watchListChangeEvent', 20, () => {
       // Paint watchlist items
-      this.watchlistManager.paintWatchList();
+      void this.watchlistManager.paintWatchList();
 
       // Paint screener items if visible
-      this.screenerManager.paintScreener();
+      void this.screenerManager.paintScreener();
 
       // Paint header items
-      this.headerManager.paintHeader();
+      void this.headerManager.paintHeader();
 
       // Update alert feed with watchlist changes
       void this.alertFeedManager.createAlertFeedEvent(this.domManager.getTicker());
@@ -80,53 +69,9 @@ export class WatchListHandler implements IWatchListHandler {
   }
 
   /** @inheritdoc */
-  public async handleWatchlistCleanup(): Promise<void> {
-    // Get current UI tickers
-    const currentTickers = this.watchlistManager.getTickers();
-
-    // Perform dry run to get potential deletion count
-    const dryRunCount = this.watchManager.dryRunClean(currentTickers);
-
-    // Wait for unfilter to complete
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // Handle cleanup based on deletion count
-    if (dryRunCount < 5) {
-      this.executeCleanup(currentTickers);
-    } else {
-      this.executeCleanupWithConfirmation(currentTickers, dryRunCount);
-    }
-  }
-
-  /**
-   * Executes cleanup for small number of deletions
-   * @private
-   */
-  private executeCleanup(currentTickers: string[]): void {
-    const cleanCount = this.watchManager.clean(currentTickers);
-    Notifier.success(`Cleaned ${cleanCount} items`);
-  }
-
-  /**
-   * Executes cleanup with user confirmation for larger deletions
-   * @private
-   */
-  private executeCleanupWithConfirmation(currentTickers: string[], count: number): void {
-    const confirmDeletion = this.uiUtil.showConfirm(
-      'Watchlist Cleanup',
-      `🚨 Potential Deletions: ${count}. Proceed with cleanup?`
-    );
-    if (confirmDeletion) {
-      this.executeCleanup(currentTickers);
-    } else {
-      Notifier.yellow('🚫 Cleanup aborted by user.');
-    }
-  }
-
-  /** @inheritdoc */
-  public recordSelectedTicker(categoryIndex: number): void {
+  public recordSelectedTicker(categoryId: WatchCategoryId): void {
     const selectedTickers = this.domManager.getSelectedTickers();
-    this.watchManager.recordCategory(categoryIndex, selectedTickers);
+    this.watchManager.recordCategory(categoryId, selectedTickers);
     this.onWatchListChange();
   }
 

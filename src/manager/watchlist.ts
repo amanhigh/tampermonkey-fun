@@ -4,6 +4,7 @@ import { IUIUtil } from '../util/ui';
 import { IFnoManager } from './fno';
 import { IWatchManager } from './watch';
 import { IFlagManager } from './flag';
+import { ALL_WATCH_CATEGORIES, CategoryBuckets } from '../models/watch';
 
 /**
  * Filter options for watchlist manipulation
@@ -33,9 +34,9 @@ export interface ITradingViewWatchlistManager {
   getSelectedTickers(): string[];
 
   /**
-   * Paints the TradingView watchlist
+   * Paints the TradingView watchlist using fresh backend classification.
    */
-  paintWatchList(): void;
+  paintWatchList(): Promise<void>;
 
   /**
    * Applies default filters to the watchlist
@@ -92,25 +93,34 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   }
 
   /** @inheritdoc */
-  paintWatchList(): void {
+  async paintWatchList(): Promise<void> {
     this.resetWatchList();
 
-    // TASK Optimize Further only on Ticker Movement ?
-    this.watchManager.computeDefaultList(this.getTickers());
+    const allTickers = this.getTickers();
 
-    // Paint Symbols
-    const colorList = Constants.UI.COLORS.LIST;
-    for (let i = 0; i < colorList.length; i++) {
-      const color = colorList[i];
-      const symbols = this.watchManager.getCategory(i);
-      this.paintManager.paintSymbols(Constants.DOM.WATCHLIST.SYMBOL, symbols, { color: color });
+    // Classify all tickers into category buckets (single backend pass)
+    const { buckets, uncategorized } = await this.watchManager.classifyTickers(allTickers);
+
+    // Paint Symbols in ALL_WATCH_CATEGORIES order
+    for (const cat of ALL_WATCH_CATEGORIES) {
+      const symbols = buckets.get(cat.id);
+      if (symbols?.size) {
+        this.paintManager.paintSymbols(Constants.DOM.WATCHLIST.SYMBOL, symbols, { color: cat.color });
+      }
+    }
+
+    // Paint default white for uncategorized DOM tickers
+    if (uncategorized.size) {
+      this.paintManager.paintSymbols(Constants.DOM.WATCHLIST.SYMBOL, uncategorized, {
+        color: Constants.UI.COLORS.DEFAULT,
+      });
     }
 
     // Paint Flags
     this.flagManager.paint(Constants.DOM.WATCHLIST.SYMBOL, Constants.DOM.WATCHLIST.ITEM);
 
     // Ticker Set Summary Update
-    this.displaySetSummary();
+    this.displaySetSummary({ buckets, uncategorized });
 
     // Mark FNO
     this.paintManager.paintSymbols(
@@ -153,17 +163,21 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   /**
    * Displays the ticker set summary in the UI
    * @private
+   * @param result Category bucket results from classification
    */
-  private displaySetSummary(): void {
+  private displaySetSummary(result: CategoryBuckets): void {
     const $watchSummary = $(`#${Constants.UI.IDS.AREAS.SUMMARY}`);
     $watchSummary.empty();
 
-    for (let i = 0; i < Constants.UI.COLORS.LIST.length; i++) {
-      const count = this.watchManager.getCategory(i)?.size || 0;
-      const color = Constants.UI.COLORS.LIST[i];
+    const uncategorizedCount = result.uncategorized.size;
+
+    for (const cat of ALL_WATCH_CATEGORIES) {
+      const count = result.buckets.get(cat.id)?.size ?? 0;
+      const displayCount = cat.id === 'DEFAULT_DAILY' ? count + uncategorizedCount : count;
+      const color = cat.color;
 
       const $label = this.uiUtil
-        .buildLabel(count.toString() + '|', color)
+        .buildLabel(displayCount.toString() + '|', color)
         .data('color', color)
         .appendTo($watchSummary);
 

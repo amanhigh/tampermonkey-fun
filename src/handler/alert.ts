@@ -14,7 +14,6 @@ import { IUIUtil } from '../util/ui';
 import { ISyncUtil } from '../util/sync';
 import { AlertClicked, AlertClickAction } from '../models/events';
 import { IAlertSummaryHandler } from './alert_summary';
-import { IWatchListHandler } from './watchlist';
 import { ITickerHandler } from './ticker';
 import { IAlertTickerHandler } from './alert_ticker';
 import { IAuditHandler } from './audit';
@@ -114,8 +113,7 @@ export class AlertHandler implements IAlertHandler {
     private readonly alertSummaryHandler: IAlertSummaryHandler,
     private readonly tickerHandler: ITickerHandler,
     private readonly alertTickerHandler: IAlertTickerHandler,
-    private readonly alertFeedManager: IAlertFeedManager,
-    private readonly watchListHandler: IWatchListHandler
+    private readonly alertFeedManager: IAlertFeedManager
   ) {}
 
   /** @inheritdoc */
@@ -217,11 +215,7 @@ export class AlertHandler implements IAlertHandler {
 
   /** @inheritdoc */
   public handleRefreshButton(): void {
-    // Refresh alerts
     void this.refreshAllAlerts();
-
-    // Use WatchlistHandler for cleanup
-    void this.watchListHandler.handleWatchlistCleanup();
   }
 
   /** @inheritdoc */

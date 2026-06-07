@@ -73,12 +73,9 @@ describe('GttAuditSection', () => {
   describe('Left Click Handler', () => {
     test('opens ticker in TradingView', () => {
       const result: AuditResult = {
-        pluginId: 'gtt-unwatched',
         code: 'UNWATCHED',
         target: 'SBIN',
-        message: 'SBIN: 2 orders',
         severity: 'HIGH',
-        status: 'FAIL',
         data: { orderIds: ['123', '456'] },
       };
 
@@ -91,12 +88,9 @@ describe('GttAuditSection', () => {
   describe('Right Click Handler', () => {
     test('deletes GTT orders after confirmation', () => {
       const result: AuditResult = {
-        pluginId: 'gtt-unwatched',
         code: 'UNWATCHED',
         target: 'SBIN',
-        message: 'SBIN: 2 orders',
         severity: 'HIGH',
-        status: 'FAIL',
         data: { orderIds: ['123', '456'] },
       };
 
@@ -111,12 +105,9 @@ describe('GttAuditSection', () => {
 
     test('cancels when user declines', () => {
       const result: AuditResult = {
-        pluginId: 'gtt-unwatched',
         code: 'UNWATCHED',
         target: 'SBIN',
-        message: 'SBIN: 2 orders',
         severity: 'HIGH',
-        status: 'FAIL',
         data: { orderIds: ['123', '456'] },
       };
 
@@ -130,12 +121,9 @@ describe('GttAuditSection', () => {
 
     test('warns when no order IDs', () => {
       const result: AuditResult = {
-        pluginId: 'gtt-unwatched',
         code: 'UNWATCHED',
         target: 'SBIN',
-        message: 'SBIN: 0 orders',
         severity: 'HIGH',
-        status: 'FAIL',
         data: {},
       };
 
@@ -149,21 +137,15 @@ describe('GttAuditSection', () => {
     test('deletes all GTT orders for all tickers', () => {
       const results: AuditResult[] = [
         {
-          pluginId: 'gtt-unwatched',
           code: 'UNWATCHED',
           target: 'SBIN',
-          message: 'SBIN: 2 orders',
           severity: 'HIGH',
-          status: 'FAIL',
           data: { orderIds: ['123', '456'] },
         },
         {
-          pluginId: 'gtt-unwatched',
           code: 'UNWATCHED',
-          target: 'LT',
-          message: 'LT: 1 order',
-          severity: 'HIGH',
-          status: 'FAIL',
+        target: 'LT',
+        severity: 'HIGH',
           data: { orderIds: ['789'] },
         },
       ];
@@ -180,12 +162,9 @@ describe('GttAuditSection', () => {
     test('skips results with no order IDs', () => {
       const results: AuditResult[] = [
         {
-          pluginId: 'gtt-unwatched',
           code: 'UNWATCHED',
           target: 'SBIN',
-          message: 'SBIN: 0 orders',
           severity: 'HIGH',
-          status: 'FAIL',
           data: {},
         },
       ];
@@ -214,12 +193,9 @@ describe('GttAuditSection', () => {
     test('shows count when results exist', () => {
       const results: AuditResult[] = [
         {
-          pluginId: 'gtt-unwatched',
           code: 'UNWATCHED',
           target: 'SBIN',
-          message: 'SBIN: 2 orders',
           severity: 'HIGH',
-          status: 'FAIL',
           data: { orderIds: ['123', '456'] },
         },
       ];

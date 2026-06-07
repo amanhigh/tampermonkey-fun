@@ -1,65 +1,50 @@
 import { AuditResult } from '../models/audit';
-import { BaseAuditPlugin } from './audit_plugin_base';
-import { IRecentManager } from './recent';
-import { ITickerManager } from './ticker';
-import { IWatchManager } from './watch';
+import { AuditFinding } from '../models/audit_catalogue';
+import { IAuditClient } from '../client/audit';
+import { BackendAuditPlugin } from './backend_audit_base';
 import { Constants } from '../models/constant';
 
 /**
- * Stale Review Audit plugin (FR-016): detects tickers not opened within a configurable
- * review window so operators can prune or re-validate neglected instruments.
+ * Stale Review Audit plugin (FR-004 / FR-016): detects tickers not opened within the
+ * backend-configured review window so operators can prune or re-validate neglected
+ * instruments.
  *
- * Skips watched tickers and emits FAIL results only for unwatched tickers
- * whose last-opened date exceeds the threshold.
+ * Backend adapter: delegates stale-review analysis to the Kohan backend stale-review
+ * audit plugin. Customises `toAuditResult()` to compute `daysSinceOpen` client-side
+ * from the backend's `last_opened_at` RFC3339 timestamp.
+ *
+ * ## Batch-only
+ * The backend stale-review audit is batch-only — audits all tracked tickers.
  */
-export class StaleReviewPlugin extends BaseAuditPlugin {
+export class StaleReviewPlugin extends BackendAuditPlugin {
   public readonly id = Constants.AUDIT.PLUGINS.STALE_REVIEW;
   public readonly title = 'Stale Review';
 
-  constructor(
-    private readonly recentManager: IRecentManager,
-    private readonly tickerManager: ITickerManager,
-    private readonly watchManager: IWatchManager,
-    private readonly thresholdDays: number = Constants.AUDIT.STALE_REVIEW_THRESHOLD_DAYS
-  ) {
-    super();
+  constructor(auditClient: IAuditClient, limit: number = Constants.AUDIT.DEFAULT_SECTION_LIMIT) {
+    super(auditClient, limit);
   }
 
   /**
-   * Runs stale review audit. Audits entire ticker universe — targets not supported.
-   * @throws Error if targets array is provided
-   * @returns Promise resolving to array of audit results for stale tickers
+   * Maps a backend AuditFinding into a frontend AuditResult.
+   * Computes `daysSinceOpen` (number) from the backend's `last_opened_at` RFC3339 string
+   * for display in the section handler.
    */
-  async run(targets?: string[]): Promise<AuditResult[]> {
-    if (targets) {
-      throw new Error('Stale review audit does not support targeted mode');
-    }
+  protected toAuditResult(finding: AuditFinding): AuditResult {
+    // Spread backend data fields into a mutable copy
+    const data: Record<string, unknown> = { ...(finding.data || {}) };
 
-    const cutOffPeriod = this.thresholdDays * 24 * 60 * 60 * 1000;
-
-    const trackedTickers = await this.tickerManager.listTickers({});
-    const results: AuditResult[] = [];
-
-    for (const ticker of trackedTickers) {
-      const tvTicker = ticker.ticker;
-
-      if (this.watchManager.isWatched(tvTicker)) {
-        continue;
-      }
-
-      if (!this.recentManager.isRecent(tvTicker, cutOffPeriod)) {
-        results.push({
-          pluginId: this.id,
-          code: 'STALE_TICKER',
-          target: tvTicker,
-          message: `${tvTicker}: not recently opened`,
-          severity: 'MEDIUM',
-          status: 'FAIL',
-          data: { tvTicker },
-        });
+    // Derive daysSinceOpen from last_opened_at for section handler display
+    const lastOpenedAt = finding.data?.last_opened_at;
+    if (lastOpenedAt) {
+      const parsed = new Date(lastOpenedAt).getTime();
+      if (!isNaN(parsed)) {
+        data.daysSinceOpen = Math.floor((Date.now() - parsed) / (24 * 60 * 60 * 1000));
       }
     }
 
-    return results;
+    return {
+      ...super.toAuditResult(finding),
+      data,
+    };
   }
 }

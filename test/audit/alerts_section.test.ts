@@ -1,7 +1,6 @@
 import { AlertsAuditSection } from '../../src/handler/alerts_section';
 import { IAudit, AuditResult } from '../../src/models/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
-import { AlertState } from '../../src/models/alert';
 import { Notifier } from '../../src/util/notify';
 
 describe('AlertsAuditSection', () => {
@@ -10,19 +9,16 @@ describe('AlertsAuditSection', () => {
   let mockTickerHandler: Partial<ITickerHandler>;
   let notifySuccessSpy: jest.SpyInstance;
 
-  const createResult = (target: string, code: AlertState = AlertState.NO_ALERTS): AuditResult => ({
-    pluginId: 'alerts',
+  const createResult = (target: string, code = 'NO_ALERTS'): AuditResult => ({
     code,
     target,
-    message: `${target}: ${code}`,
     severity: 'MEDIUM',
-    status: 'FAIL',
   });
 
   beforeEach(() => {
     mockPlugin = {
-      id: 'alerts',
-      title: 'Alerts',
+      id: 'alert-coverage',
+      title: 'Alert Coverage',
       validate: jest.fn(),
       run: jest.fn().mockResolvedValue([]),
     };
@@ -42,8 +38,8 @@ describe('AlertsAuditSection', () => {
   });
 
   describe('Section Properties', () => {
-    test('has correct id', () => {
-      expect(section.id).toBe('alerts');
+    test('has correct backend id', () => {
+      expect(section.id).toBe('alert-coverage');
     });
 
     test('has correct title', () => {
@@ -92,17 +88,19 @@ describe('AlertsAuditSection', () => {
       expect(section.headerFormatter([])).toContain('All alerts covered');
     });
 
-    test('shows counts for alert coverage states', () => {
+    test('shows counts for backend alert coverage finding codes', () => {
       const results: AuditResult[] = [
-        createResult('A', AlertState.SINGLE_ALERT),
-        createResult('B', AlertState.NO_ALERTS),
+        createResult('A', 'NO_ALERT_TICKER'),
+        createResult('B', 'SINGLE_ALERT'),
+        createResult('C', 'NO_ALERTS'),
       ];
 
       const html = section.headerFormatter(results);
 
-      expect(html).toContain('One: 1');
-      expect(html).toContain('None: 1');
-      expect(html).not.toContain('Inv:');
+      expect(html).toContain('O:1');
+      expect(html).toContain('N:1');
+      expect(html).toContain('M:1');
+      expect(html).toContain('T:3');
     });
   });
 });
