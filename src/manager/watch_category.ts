@@ -60,8 +60,5 @@ export function resolveWatchCategory(ticker: Ticker): WatchCategoryId | undefine
   }
   // else: result remains undefined (DEFAULT_DAILY fallback)
 
-  console.debug(
-    `[WatchCategory] ${ticker.ticker} (type=${ticker.type}, exchange=${ticker.exchange ?? 'null'}, timeframes=[${ticker.timeframes}], state=${ticker.state}) -> ${result ?? 'undefined'}`
-  );
   return result;
 }

@@ -57,16 +57,19 @@ export class WatchManager implements IWatchManager {
     // 1. Check journals (highest priority)
     const journalCategory = await this.resolveJournalCategory(tvTicker);
     if (journalCategory !== undefined) {
+      console.debug(`[WatchCategory] ${tvTicker} -> ${journalCategory.id}`);
       return journalCategory;
     }
 
     // 2. Check ticker-derived category
     const tickerCategory = await this.resolveTickerDerivedCategory(tvTicker);
     if (tickerCategory !== undefined) {
+      console.debug(`[WatchCategory] ${tvTicker} -> ${tickerCategory.id}`);
       return tickerCategory;
     }
 
     // 3. No match — let caller apply UI fallback
+    console.debug(`[WatchCategory] ${tvTicker} -> undefined`);
     return undefined;
   }
 
