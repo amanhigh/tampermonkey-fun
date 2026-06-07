@@ -5,7 +5,7 @@ import { GttRefreshEvent } from '../../src/models/gtt';
 import { Order, OrderType } from '../../src/models/kite';
 import { WatchCategoryId } from '../../src/models/watch';
 
-// Unit tests for GttUnwatchedAudit: only SET_JOURNAL and RUNNING_JOURNAL count as watched
+// Unit tests for GttUnwatchedAudit: only SET_JOURNAL and RUNNING count as watched
 
 describe('GttPlugin', () => {
   let plugin: GttPlugin;
@@ -58,13 +58,13 @@ describe('GttPlugin', () => {
       expect(results).toEqual([]);
     });
 
-    it('skips ticker with RUNNING_JOURNAL category', async () => {
+    it('skips ticker with RUNNING category', async () => {
       const gttEvent = new GttRefreshEvent();
       const mockOrder = new Order('MSFT', 10, OrderType.SINGLE, '1', [100]);
       gttEvent.addOrder('MSFT', mockOrder);
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
-      watchManager.getTickerCategory.mockResolvedValue({ id: WatchCategoryId.RUNNING_JOURNAL, color: 'lime', label: '', recordUpdate: null });
+      watchManager.getTickerCategory.mockResolvedValue({ id: WatchCategoryId.RUNNING, color: 'lime', label: '', recordUpdate: null });
 
       const results = await plugin.run();
 

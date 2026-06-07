@@ -110,8 +110,7 @@ export class WatchManager implements IWatchManager {
   // ── Classification step helpers ──
 
   /**
-   * Check if a ticker has a SET or RUNNING journal.
-   * SET has higher priority.
+   * Check if a ticker has a RUNNING journal.
    */
   private async resolveJournalCategory(tvTicker: string): Promise<WatchCategory | undefined> {
     // Composite symbols (e.g. 'BANKNIFTY/NIFTY') are not valid journal tickers
@@ -121,17 +120,10 @@ export class WatchManager implements IWatchManager {
 
     const journalManager = this.getJournalManager();
 
-    const [setJournals, runningJournals] = await Promise.all([
-      journalManager.listJournals({ ticker: tvTicker, status: 'SET' }),
-      journalManager.listJournals({ ticker: tvTicker, status: 'RUNNING' }),
-    ]);
-
-    if (setJournals.length > 0) {
-      return findWatchCategoryById(WatchCategoryId.SET_JOURNAL);
-    }
+    const runningJournals = await journalManager.listJournals({ ticker: tvTicker, status: 'RUNNING' });
 
     if (runningJournals.length > 0) {
-      return findWatchCategoryById(WatchCategoryId.RUNNING_JOURNAL);
+      return findWatchCategoryById(WatchCategoryId.RUNNING);
     }
 
     return undefined;

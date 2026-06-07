@@ -19,7 +19,7 @@ export enum WatchCategoryId {
   READY = 'READY',
   LONG_NSE = 'LONG_NSE',
   LONG_NON_NSE = 'LONG_NON_NSE',
-  RUNNING_JOURNAL = 'RUNNING_JOURNAL',
+  RUNNING = 'RUNNING',
   DEFAULT_DAILY = 'DEFAULT_DAILY',
   INDEX = 'INDEX',
   COMPOSITE = 'COMPOSITE',
@@ -88,7 +88,7 @@ export const ALL_WATCH_CATEGORIES: readonly WatchCategory[] = [
     recordUpdate: null, // Derived from timeframes; not directly recordable
   },
   {
-    id: WatchCategoryId.RUNNING_JOURNAL,
+    id: WatchCategoryId.RUNNING,
     color: 'lime',
     label: 'Running Trades (Journal)',
     recordUpdate: null, // Derived from journal status=RUNNING; not directly recordable

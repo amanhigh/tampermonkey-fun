@@ -217,7 +217,7 @@ export class KeyConfig implements IKeyConfig {
         'F5',
         {
           description: 'RUNNING Journal',
-          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.RUNNING_JOURNAL),
+          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.RUNNING),
         },
       ],
     ]);
