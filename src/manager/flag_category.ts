@@ -41,14 +41,21 @@ function isGoldIndexSymbol(ticker: string): boolean {
 }
 
 /**
+ * Check whether a ticker type is a market instrument (INDEX, COMPOSITE, COMMODITY, FX, BOND).
+ */
+function isMarket(ticker: Ticker): boolean {
+  return Constants.FLAGS.INDEX_TICKER_TYPES.includes(ticker.type) || ticker.type === 'COMPOSITE';
+}
+
+/**
  * Check whether a ticker matches a given category's criteria.
  */
 function matchesCategory(categoryId: FlagCategoryId, ticker: Ticker): boolean {
   switch (categoryId) {
     case FlagCategoryId.GOLD_INDEX:
-      return ticker.type === 'COMPOSITE' && isGoldIndexSymbol(ticker.ticker);
+      return isMarket(ticker) && isGoldIndexSymbol(ticker.ticker);
     case FlagCategoryId.INDEX:
-      return Constants.FLAGS.INDEX_TICKER_TYPES.includes(ticker.type);
+      return isMarket(ticker);
     case FlagCategoryId.CRYPTO:
       return ticker.type === 'CRYPTO';
     case FlagCategoryId.UPTREND:

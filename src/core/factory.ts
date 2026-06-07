@@ -518,13 +518,7 @@ export class Factory {
     modifierKeyConfig: (): IModifierKeyConfig =>
       Factory.getInstance(
         'modifierKeyConfig',
-        () =>
-          new ModifierKeyConfig(
-            Factory.manager.dom(),
-            Factory.manager.style(),
-            Factory.handler.alert(),
-            Factory.handler.flag()
-          )
+        () => new ModifierKeyConfig(Factory.manager.dom(), Factory.manager.style(), Factory.handler.alert())
       ),
     watchlist: (): IWatchListHandler =>
       Factory.getInstance(
