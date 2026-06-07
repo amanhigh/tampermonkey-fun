@@ -175,9 +175,9 @@ describe('AuditClient', () => {
         data: {
           audit_id: 'stale-review',
           generated_at: '2026-06-07T08:00:00Z',
-          counts: { STALE: 5 },
+          counts: { STALE_TICKER: 5 },
           findings: [
-            { code: 'STALE', target: 'XYZ', severity: 'MEDIUM', data: { days_since_review: '200' } },
+            { code: 'STALE_TICKER', target: 'XYZ', severity: 'MEDIUM', data: { last_opened_at: '2025-11-19T00:00:00Z' } },
           ],
           metadata: { total: 5, offset: 0, limit: 20 },
         },
@@ -190,9 +190,9 @@ describe('AuditClient', () => {
       expect(result).toEqual({
         audit_id: 'stale-review',
         generated_at: '2026-06-07T08:00:00Z',
-        counts: { STALE: 5 },
+        counts: { STALE_TICKER: 5 },
         findings: [
-          { code: 'STALE', target: 'XYZ', severity: 'MEDIUM', data: { days_since_review: '200' } },
+          { code: 'STALE_TICKER', target: 'XYZ', severity: 'MEDIUM', data: { last_opened_at: '2025-11-19T00:00:00Z' } },
         ],
         metadata: { total: 5, offset: 0, limit: 20 },
       });

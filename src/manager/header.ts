@@ -4,6 +4,7 @@ import { IFnoManager } from './fno';
 import { IPaintManager } from './paint';
 import { IDomManager } from './dom';
 import { IWatchManager } from './watch';
+import { ITradingViewWatchlistManager } from './watchlist';
 
 /**
  * Interface for managing header display operations
@@ -12,7 +13,7 @@ export interface IHeaderManager {
   /**
    * Paints all aspects of the current ticker header display
    */
-  paintHeader(): void;
+  paintHeader(): Promise<void>;
 }
 
 /**
@@ -24,48 +25,44 @@ export class HeaderManager implements IHeaderManager {
     private readonly watchManager: IWatchManager,
     private readonly flagManager: IFlagManager,
     private readonly domManager: IDomManager,
-    private readonly fnoManager: IFnoManager
+    private readonly fnoManager: IFnoManager,
+    private readonly watchlistManager: ITradingViewWatchlistManager
   ) {}
 
   /** @inheritdoc */
-  paintHeader(): void {
+  async paintHeader(): Promise<void> {
     const ticker = this.domManager.getTicker();
     const $name = $(Constants.DOM.BASIC.NAME);
 
     // Paint each component
-    this.paintNameElement($name, ticker);
+    await this.paintNameElement($name, ticker);
     this.paintFNOMarking($name, ticker);
     this.paintFlagAndExchange(ticker);
   }
 
   /**
-   * Paints the name element with appropriate category color
+   * Paints the name element with appropriate category color.
+   *
+   * If the ticker has a backend-derived category, use its color.
+   * If it has no category but is in the DOM watchlist, apply brown
+   * (legacy DEFAULT_DAILY fallback). Otherwise use default white.
    * @private
    * @param $name jQuery element for the name
    * @param ticker Ticker symbol
    */
-  private paintNameElement($name: JQuery<HTMLElement>, ticker: string): void {
+  private async paintNameElement($name: JQuery<HTMLElement>, ticker: string): Promise<void> {
     $name.css('color', Constants.UI.COLORS.DEFAULT);
 
-    // Paint based on order categories
-    for (let i = 0; i < Constants.UI.COLORS.LIST.length; i++) {
-      const watchSymbols = this.watchManager.getCategory(i);
-      if (watchSymbols && watchSymbols.has(ticker)) {
-        $name.css('color', this.getCategoryColor(i));
-        break; // Stop after first matching category
-      }
-    }
-  }
+    // Fetch category from backend (no watchlist list passed)
+    const category = await this.watchManager.getTickerCategory(ticker);
 
-  /**
-   * Gets the appropriate color for a category index
-   * @private
-   * @param index Category index
-   * @returns Color for the category
-   */
-  private getCategoryColor(index: number): string {
-    const colorList = Constants.UI.COLORS.LIST;
-    return index === 5 ? colorList[6] : colorList[index];
+    if (category) {
+      $name.css('color', category.color);
+    } else if (this.watchlistManager.getTickers().includes(ticker)) {
+      // UI fallback: uncategorized ticker in the watchlist → brown
+      $name.css('color', Constants.UI.COLORS.HEADER_DEFAULT);
+    }
+    // else: stays default white
   }
 
   /**

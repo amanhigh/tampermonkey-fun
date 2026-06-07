@@ -1,4 +1,4 @@
-import { WatchManager, IWatchManager, CategoryBuckets } from '../../src/manager/watch';
+import { WatchManager, IWatchManager } from '../../src/manager/watch';
 import { ITickerManager } from '../../src/manager/ticker';
 import { IJournalManager } from '../../src/manager/journal';
 import { Ticker } from '../../src/models/ticker';
@@ -253,9 +253,9 @@ describe('WatchManager', () => {
 
     it('should bucket tickers by category', async () => {
       // SET journal tickers
-      mockGetJournalManager().listJournals.mockImplementation(async (filter: any) => {
-        if (filter.status === 'SET' && filter.ticker === 'SET1') return [{ id: 'j1' }];
-        if (filter.status === 'SET' && filter.ticker === 'SET2') return [{ id: 'j2' }];
+      mockJournalManager.listJournals.mockImplementation(async (filter: any) => {
+        if (filter.status === 'SET' && filter.ticker === 'SET1') return [{ ticker: 'SET1' }] as any;
+        if (filter.status === 'SET' && filter.ticker === 'SET2') return [{ ticker: 'SET2' }] as any;
         return [];
       });
 
@@ -273,8 +273,8 @@ describe('WatchManager', () => {
     });
 
     it('should bucket mixed categories correctly', async () => {
-      mockGetJournalManager().listJournals.mockImplementation(async (filter: any) => {
-        if (filter.status === 'SET' && filter.ticker === 'JOURNAL_TICKER') return [{ id: 'j1' }];
+      mockJournalManager.listJournals.mockImplementation(async (filter: any) => {
+        if (filter.status === 'SET' && filter.ticker === 'JOURNAL_TICKER') return [{ ticker: 'JOURNAL_TICKER' }] as any;
         return [];
       });
 
@@ -292,8 +292,8 @@ describe('WatchManager', () => {
 
     it('should compose getTickerCategory (no new classification logic)', async () => {
       // SET journal takes priority over ticker-derived
-      mockGetJournalManager().listJournals.mockImplementation(async (filter: any) => {
-        if (filter.status === 'SET' && filter.ticker === 'PRIORITY') return [{ id: 'j1' }];
+      mockJournalManager.listJournals.mockImplementation(async (filter: any) => {
+        if (filter.status === 'SET' && filter.ticker === 'PRIORITY') return [{ ticker: 'PRIORITY' }] as any;
         return [];
       });
 

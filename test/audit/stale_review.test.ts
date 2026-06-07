@@ -1,103 +1,135 @@
 import { StaleReviewPlugin } from '../../src/manager/stale_review_plugin';
-import { IRecentManager } from '../../src/manager/recent';
-import { ITickerManager } from '../../src/manager/ticker';
-import { IWatchManager } from '../../src/manager/watch';
-import { Ticker } from '../../src/models/ticker';
+import { IAuditClient } from '../../src/client/audit';
+import { AuditExecutionResult } from '../../src/models/audit_catalogue';
 
-describe('StaleReviewPlugin', () => {
+describe('StaleReviewPlugin (backend adapter)', () => {
   let plugin: StaleReviewPlugin;
-  let mockRecentManager: Partial<IRecentManager>;
-  let mockTickerManager: Partial<ITickerManager>;
-  let mockWatchManager: Partial<IWatchManager>;
+  let mockAuditClient: jest.Mocked<IAuditClient>;
+
+  const makeExecutionResult = (
+    overrides: Partial<AuditExecutionResult> = {}
+  ): AuditExecutionResult => ({
+    audit_id: 'stale-review',
+    generated_at: '2026-06-07T10:00:00Z',
+    counts: { STALE_TICKER: 1 },
+    findings: [],
+    metadata: { total: 1, offset: 0, limit: 10 },
+    ...overrides,
+  });
 
   beforeEach(() => {
-    mockRecentManager = { isRecent: jest.fn().mockReturnValue(true) };
-    mockTickerManager = { listTickers: jest.fn().mockResolvedValue([]) };
-    mockWatchManager = {
-      getTickerCategory: jest.fn().mockResolvedValue(undefined),
-      classifyTickers: jest.fn(),
-    };
+    mockAuditClient = {
+      getBaseUrl: jest.fn(),
+      getAuditCatalogue: jest.fn(),
+      executeAudit: jest.fn(),
+    } as jest.Mocked<IAuditClient>;
 
-    plugin = new StaleReviewPlugin(
-      mockRecentManager as IRecentManager,
-      mockTickerManager as ITickerManager,
-      mockWatchManager as IWatchManager
-    );
+    plugin = new StaleReviewPlugin(mockAuditClient, 10);
   });
 
-  test('has correct id and title', () => {
-    expect(plugin.id).toBe('stale-review');
-    expect(plugin.title).toBe('Stale Review');
-  });
-
-  test('validates successfully', () => {
-    expect(() => plugin.validate()).not.toThrow();
-  });
-
-  test('rejects targeted mode', async () => {
-    await expect(plugin.run(['TCS'])).rejects.toThrow('does not support targeted mode');
-  });
-
-  test('returns empty when no tickers exist', async () => {
-    const results = await plugin.run();
-    expect(results).toEqual([]);
-  });
-
-  test('flags tickers that are not recent (stale) as MEDIUM severity', async () => {
-    (mockTickerManager.listTickers as jest.Mock).mockResolvedValue([
-      new Ticker({ ticker: 'TCS' }),
-      new Ticker({ ticker: 'INFY' }),
-    ]);
-    (mockRecentManager.isRecent as jest.Mock).mockReturnValue(false);
-
-    const results = await plugin.run();
-    expect(results).toHaveLength(2);
-    expect(results[0].severity).toBe('MEDIUM');
-    expect(results[0].message).toContain('not recently opened');
-  });
-
-  test('skips tickers that are recent', async () => {
-    (mockTickerManager.listTickers as jest.Mock).mockResolvedValue([new Ticker({ ticker: 'FRESH' })]);
-    (mockRecentManager.isRecent as jest.Mock).mockReturnValue(true);
-
-    const results = await plugin.run();
-    expect(results).toHaveLength(0);
-  });
-
-  test('skips tickers with any watch category', async () => {
-    (mockTickerManager.listTickers as jest.Mock).mockResolvedValue([
-      new Ticker({ ticker: 'WATCHED' }),
-      new Ticker({ ticker: 'UNWATCHED' }),
-    ]);
-    (mockWatchManager.getTickerCategory as jest.Mock).mockImplementation(async (ticker: string) => {
-      return ticker === 'WATCHED' ? { id: 'READY', color: 'red' } : undefined;
+  describe('validate', () => {
+    it('enforces non-empty id/title', () => {
+      expect(() => plugin.validate()).not.toThrow();
     });
-    (mockRecentManager.isRecent as jest.Mock)
-      .mockReturnValueOnce(false)
-      .mockReturnValueOnce(false);
-
-    const results = await plugin.run();
-    expect(results).toHaveLength(1);
-    expect(results[0].target).toBe('UNWATCHED');
   });
 
-  test('respects custom threshold via isRecent sinceMs option', async () => {
-    const customPlugin = new StaleReviewPlugin(
-      mockRecentManager as IRecentManager,
-      mockTickerManager as ITickerManager,
-      mockWatchManager as IWatchManager,
-      30
-    );
+  describe('properties', () => {
+    it('exposes backend audit id stale-review', () => {
+      expect(plugin.id).toBe('stale-review');
+    });
 
-    (mockTickerManager.listTickers as jest.Mock).mockResolvedValue([new Ticker({ ticker: 'A' })]);
-    (mockRecentManager.isRecent as jest.Mock).mockReturnValue(false);
+    it('exposes correct title', () => {
+      expect(plugin.title).toBe('Stale Review');
+    });
+  });
 
-    const customResults = await customPlugin.run();
-    expect(customResults).toHaveLength(1);
+  describe('run', () => {
+    it('calls AuditClient.executeAudit with backend audit id and section limit', async () => {
+      mockAuditClient.executeAudit.mockResolvedValue(makeExecutionResult({ findings: [] }));
 
-    // Default plugin with 180-day threshold — isRecent returns true (not stale)
-    (mockRecentManager.isRecent as jest.Mock).mockReturnValue(true);
-    const defaultResults = await plugin.run();
-    expect(defaultResults).toHaveLength(0);
+      await plugin.run();
+
+      expect(mockAuditClient.executeAudit).toHaveBeenCalledWith('stale-review', 0, 10);
+    });
+
+    it('maps STALE_TICKER backend finding to AuditResult', async () => {
+      mockAuditClient.executeAudit.mockResolvedValue(
+        makeExecutionResult({
+          findings: [
+            { code: 'STALE_TICKER', target: 'MCX', severity: 'MEDIUM', data: { last_opened_at: '2025-11-19T00:00:00Z' } },
+          ],
+        })
+      );
+
+      const results = await plugin.run();
+
+      expect(results).toHaveLength(1);
+      expect(results[0]).toMatchObject({
+        pluginId: 'stale-review',
+        code: 'STALE_TICKER',
+        target: 'MCX',
+        message: 'MCX: not recently opened',
+        severity: 'MEDIUM',
+        status: 'FAIL',
+      });
+    });
+
+    it('computes daysSinceOpen from last_opened_at timestamp', async () => {
+      const mockNow = new Date('2026-06-07T00:00:00Z').getTime();
+      const jestNowSpy = jest.spyOn(Date, 'now').mockReturnValue(mockNow);
+
+      mockAuditClient.executeAudit.mockResolvedValue(
+        makeExecutionResult({
+          findings: [
+            { code: 'STALE_TICKER', target: 'TCS', severity: 'MEDIUM', data: { last_opened_at: '2025-11-19T00:00:00Z' } },
+          ],
+        })
+      );
+
+      const results = await plugin.run();
+
+      expect(results).toHaveLength(1);
+      expect(results[0].data).toMatchObject({
+        last_opened_at: '2025-11-19T00:00:00Z',
+        daysSinceOpen: 200,
+      });
+
+      jestNowSpy.mockRestore();
+    });
+
+    it('omits daysSinceOpen when last_opened_at is missing', async () => {
+      mockAuditClient.executeAudit.mockResolvedValue(
+        makeExecutionResult({
+          findings: [
+            { code: 'STALE_TICKER', target: 'TCS', severity: 'MEDIUM', data: {} },
+          ],
+        })
+      );
+
+      const results = await plugin.run();
+
+      expect(results).toHaveLength(1);
+      expect(results[0].data?.daysSinceOpen).toBeUndefined();
+    });
+
+    it('returns empty when backend returns no findings', async () => {
+      mockAuditClient.executeAudit.mockResolvedValue(makeExecutionResult({ findings: [] }));
+
+      const results = await plugin.run();
+
+      expect(results).toEqual([]);
+    });
+
+    it('rejects targeted runs because backend audit is batch-only', async () => {
+      await expect(plugin.run(['TCS'])).rejects.toThrow(
+        'Stale Review audit does not support targeted runs'
+      );
+    });
+
+    it('surfaces backend client execution errors', async () => {
+      mockAuditClient.executeAudit.mockRejectedValue(new Error('500 Internal Server Error'));
+
+      await expect(plugin.run()).rejects.toThrow('500 Internal Server Error');
+    });
   });
 });

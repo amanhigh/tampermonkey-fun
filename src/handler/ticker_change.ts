@@ -48,14 +48,15 @@ export class TickerChangeHandler implements ITickerChangeHandler {
     });
   }
 
-  private async recordRecentTicker(): Promise<void> {
+  private recordRecentTicker(): void {
     const tvTicker = this.domManager.getTicker();
     this.recentManager.markRecent(tvTicker);
 
     // Paint if TV ticker is not in any watch category
-    const category = await this.watchManager.getTickerCategory(tvTicker);
-    if (!category) {
-      void this.alertFeedManager.createAlertFeedEvent(tvTicker);
-    }
+    void this.watchManager.getTickerCategory(tvTicker).then((category) => {
+      if (!category) {
+        void this.alertFeedManager.createAlertFeedEvent(tvTicker);
+      }
+    });
   }
 }

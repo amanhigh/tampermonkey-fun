@@ -217,7 +217,8 @@ export class Factory {
             Factory.manager.watch(),
             Factory.manager.flag(),
             Factory.manager.dom(),
-            Factory.manager.fno()
+            Factory.manager.fno(),
+            Factory.manager.watchlist()
           )
       ),
 
@@ -235,7 +236,8 @@ export class Factory {
             Factory.manager.paint(),
             Factory.manager.watch(),
             Factory.manager.flag(),
-            Factory.manager.recent()
+            Factory.manager.recent(),
+            Factory.manager.watchlist()
           )
       ),
 
@@ -327,12 +329,9 @@ export class Factory {
     // Return a singleton TradeRiskPlugin instance
     tradeRisk: () => Factory.getInstance('auditPlugin_tradeRisk', () => new TradeRiskPlugin(Factory.repo.kite())),
 
-    // Return a singleton StaleReviewPlugin instance (FR-016)
+    // Return a singleton StaleReviewPlugin instance (backend adapter via IAuditClient)
     staleReview: () =>
-      Factory.getInstance(
-        'auditPlugin_staleReview',
-        () => new StaleReviewPlugin(Factory.manager.recent(), Factory.manager.ticker(), Factory.manager.watch())
-      ),
+      Factory.getInstance('auditPlugin_staleReview', () => new StaleReviewPlugin(Factory.client.audit())),
 
     // ===== SECTION CREATION =====
     // Alerts Audit Section - receives plugin via direct injection

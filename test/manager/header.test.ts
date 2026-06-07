@@ -4,6 +4,7 @@ import { IWatchManager } from '../../src/manager/watch';
 import { IFlagManager } from '../../src/manager/flag';
 import { IDomManager } from '../../src/manager/dom';
 import { IFnoManager } from '../../src/manager/fno';
+import { ITradingViewWatchlistManager } from '../../src/manager/watchlist';
 import { Constants } from '../../src/models/constant';
 import { FlagCategoryId } from '../../src/models/flag';
 import { WatchCategoryId } from '../../src/models/watch';
@@ -26,6 +27,7 @@ describe('HeaderManager', () => {
   let mockFlagManager: jest.Mocked<IFlagManager>;
   let mockTickerManager: jest.Mocked<IDomManager>;
   let mockFnoManager: jest.Mocked<IFnoManager>;
+  let mockWatchlistManager: jest.Mocked<ITradingViewWatchlistManager>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -64,6 +66,14 @@ describe('HeaderManager', () => {
       navigateTickers: jest.fn(),
     };
 
+    // Mock WatchlistManager
+    mockWatchlistManager = {
+      getTickers: jest.fn().mockReturnValue([]),
+      getSelectedTickers: jest.fn(),
+      paintWatchList: jest.fn(),
+      applyDefaultFilters: jest.fn(),
+    };
+
     // Mock FnoManager
     mockFnoManager = {
       isFno: jest.fn(),
@@ -75,7 +85,8 @@ describe('HeaderManager', () => {
       mockWatchManager,
       mockFlagManager,
       mockTickerManager,
-      mockFnoManager
+      mockFnoManager,
+      mockWatchlistManager
     );
   });
 
@@ -142,13 +153,13 @@ describe('HeaderManager', () => {
       mockFlagManager.getTickerCategory.mockReturnValue(undefined);
       mockFnoManager.isFno.mockReturnValue(false);
 
-      // Mock the watchlist DOM to contain the ticker
-      mockToArrayResult = [{ textContent: ticker, innerHTML: ticker }];
+      // Ticker is in the watchlist → brown override
+      mockWatchlistManager.getTickers.mockReturnValue([ticker]);
 
       await headerManager.paintHeader();
 
       // No category but ticker is in watchlist → brown
-      expect(mockCssFn).toHaveBeenCalledWith('color', Constants.UI.COLORS.LIST[6]);
+      expect(mockCssFn).toHaveBeenCalledWith('color', Constants.UI.COLORS.HEADER_DEFAULT);
     });
 
     it('should use default white for uncategorized ticker not in watchlist', async () => {
@@ -159,8 +170,8 @@ describe('HeaderManager', () => {
       mockFlagManager.getTickerCategory.mockReturnValue(undefined);
       mockFnoManager.isFno.mockReturnValue(false);
 
-      // Mock the watchlist DOM to NOT contain the ticker
-      mockToArrayResult = [{ textContent: 'NSE:OTHER', innerHTML: 'NSE:OTHER' }];
+      // Ticker is NOT in the watchlist → stays default white
+      mockWatchlistManager.getTickers.mockReturnValue(['NSE:OTHER']);
 
       await headerManager.paintHeader();
 

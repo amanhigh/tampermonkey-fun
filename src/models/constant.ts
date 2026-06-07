@@ -47,6 +47,7 @@ export const Constants = Object.freeze({
     COLORS: {
       LIST: ['orange', 'red', 'dodgerblue', 'cyan', 'lime', 'white', 'brown', 'darkkhaki'], // Old name: colorList
       DEFAULT: 'white',
+      HEADER_DEFAULT: 'brown', // Brown fallback for uncategorized ticker in watchlist (header/screener)
       FNO_CSS: { 'border-top-style': 'groove', 'border-width': 'medium' }, // Old name: fnoCss
       // Severity colors for audit results
       SEVERITY: {
