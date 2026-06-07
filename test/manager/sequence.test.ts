@@ -126,8 +126,9 @@ describe('SequenceManager', () => {
 
       await sequenceManager.flipSequence();
 
-      // updateTicker receives only the changed field; it merges internally
+      // updateTicker receives exchange (from fetched ticker) + changed timeframes
       expect(mockTickerClient.updateTicker).toHaveBeenCalledWith('GOOGL', {
+        exchange: 'NASDAQ',
         timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'],
       });
     });
@@ -147,19 +148,27 @@ describe('SequenceManager', () => {
       await sequenceManager.flipSequence();
 
       expect(mockTickerClient.updateTicker).toHaveBeenCalledWith('MSFT', {
+        exchange: 'NASDAQ',
         timeframes: ['MN', 'WK', 'DL'],
       });
     });
 
     it('should silently handle backend update failure on flip', async () => {
-      // getCurrentSequence fails → returns MWD default → flip computes YR timeframes
-      mockTickerClient.getTicker.mockRejectedValue(new Error('Not found'));
+      // getCurrentSequence succeeds (returns MWD), exchange lookup succeeds,
+      // but updateTicker fails — the catch in flipSequence swallows the error
+      mockTickerClient.getTicker.mockResolvedValue(createMockTicker({
+        ticker: 'NONEXISTENT',
+        exchange: 'NSE',
+        timeframes: ['MN', 'WK', 'DL'],
+      }));
       mockDomManager.getTicker.mockReturnValue('NONEXISTENT');
 
-      // updateTicker is called but its internal GET also fails — the catch in
-      // flipSequence swallows the error
+      // Override updateTicker to fail
+      mockTickerClient.updateTicker.mockRejectedValue(new Error('Backend error'));
+
       await expect(sequenceManager.flipSequence()).resolves.toBeUndefined();
       expect(mockTickerClient.updateTicker).toHaveBeenCalledWith('NONEXISTENT', {
+        exchange: 'NSE',
         timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'],
       });
     });
@@ -182,11 +191,17 @@ describe('SequenceManager', () => {
       // Flip should still work and persist to backend
       // When frozen, getCurrentSequence returns YR, so flip should set MWD
       mockTickerClient.getTicker.mockClear();
+      mockTickerClient.getTicker.mockResolvedValue(createMockTicker({
+        ticker: 'TSLA',
+        exchange: 'NASDAQ',
+        timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'],
+      }));
       await sequenceManager.flipSequence();
 
       // With freeze active, getCurrentSequence returns frozen value, but flipSequence
-      // still calls updateTicker with partial timeframes
+      // still calls updateTicker with exchange + changed timeframes
       expect(mockTickerClient.updateTicker).toHaveBeenCalledWith('TSLA', {
+        exchange: 'NASDAQ',
         timeframes: ['MN', 'WK', 'DL'],
       });
     });

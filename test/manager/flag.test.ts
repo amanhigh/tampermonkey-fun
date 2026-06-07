@@ -103,29 +103,33 @@ describe('FlagManager', () => {
   // ── recordCategory ──
 
   describe('recordCategory', () => {
+    beforeEach(() => {
+      mockTickerManager.getTicker.mockResolvedValue(new Ticker({ ticker: 'TEST', exchange: 'NSE' }));
+    });
+
     it('should call updateTicker for SIDEWAYS', () => {
       flagManager.recordCategory(FlagCategoryId.SIDEWAYS, ['TEST']);
 
       expect(flagManager.getTickerCategory('TEST')).toBeUndefined();
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'SIDEWAYS' });
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'SIDEWAYS', exchange: 'NSE' });
     });
 
     it('should call updateTicker for DOWNTREND', () => {
       flagManager.recordCategory(FlagCategoryId.DOWNTREND, ['TEST']);
 
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'DOWNTREND' });
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'DOWNTREND', exchange: 'NSE' });
     });
 
     it('should call updateTicker for CRYPTO', () => {
       flagManager.recordCategory(FlagCategoryId.CRYPTO, ['TEST']);
 
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'CRYPTO' });
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'CRYPTO', exchange: 'NSE' });
     });
 
     it('should call updateTicker for UPTREND', () => {
       flagManager.recordCategory(FlagCategoryId.UPTREND, ['TEST']);
 
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'UPTREND' });
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'UPTREND', exchange: 'NSE' });
     });
 
     it('should reject DEFAULT_UNTRACKED at type level (not recordable)', () => {
@@ -140,13 +144,13 @@ describe('FlagManager', () => {
     it('should call updateTicker for INDEX', () => {
       flagManager.recordCategory(FlagCategoryId.INDEX, ['TEST']);
 
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'INDEX' });
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'INDEX', exchange: 'NSE' });
     });
 
     it('should call updateTicker for GOLD_INDEX', () => {
       flagManager.recordCategory(FlagCategoryId.GOLD_INDEX, ['TEST']);
 
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'COMPOSITE' });
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'COMPOSITE', exchange: 'NSE' });
     });
 
     it('should NOT mutate local getTickerCategory snapshot', () => {

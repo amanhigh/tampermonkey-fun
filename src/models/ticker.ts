@@ -25,7 +25,7 @@ import { Constants } from './constant';
  */
 export class Ticker {
   ticker: string = '';
-  exchange: string | null = null;
+  exchange: string = '';
   timeframes: TickerTimeframe[] = [];
   type: TickerType = 'EQUITY';
   state: TickerState = 'WATCHED';
@@ -50,7 +50,7 @@ export class Ticker {
 /** Request body for POST /v1/api/tickers (create). */
 export interface CreateTickerRequest {
   ticker: string;
-  exchange?: string | null;
+  exchange: string;
   timeframes: TickerTimeframe[];
   type: TickerType;
   state: TickerState;
@@ -60,10 +60,10 @@ export interface CreateTickerRequest {
 }
 
 /** Request body for PUT /v1/api/tickers/{ticker} (update mutable fields).
- * All fields are optional; only provided fields are merged into the current record.
+ * Exchange is required per PRD 2.3.1; other fields are optional and merged.
  */
 export interface TickerUpdateRequest {
-  exchange?: string | null;
+  exchange: string;
   timeframes?: TickerTimeframe[];
   type?: TickerType;
   state?: TickerState;

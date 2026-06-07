@@ -11,7 +11,7 @@ describe('resolveWatchCategory', () => {
   function makeTicker(overrides: Partial<Ticker>): Ticker {
     return new Ticker({
       ticker: 'TEST',
-      exchange: null,
+      exchange: '',
       timeframes: ['MN', 'WK', 'DL'],
       type: 'EQUITY',
       state: 'WATCHED',
@@ -31,7 +31,6 @@ describe('resolveWatchCategory', () => {
       const ticker = makeTicker({
         ticker: 'CNXMIDCAP/USDINR/XAUUSD*100',
         type: 'COMPOSITE',
-        exchange: null,
         timeframes: ['SMN', 'TMN', 'MN', 'WK'],
       });
 
@@ -53,7 +52,6 @@ describe('resolveWatchCategory', () => {
       const ticker = makeTicker({
         ticker: 'GOLD',
         type: 'COMMODITY',
-        exchange: null,
         timeframes: ['WK'],
       });
 

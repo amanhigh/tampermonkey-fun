@@ -24,7 +24,7 @@ describe('WatchManager', () => {
   function makeTicker(overrides: Partial<Ticker> = {}): Ticker {
     const defaults: Partial<Ticker> = {
       ticker: 'TICKER',
-      exchange: null,
+      exchange: '',
       timeframes: ['MN', 'WK', 'DL'],
       type: 'EQUITY',
       state: 'WATCHED',
@@ -212,16 +212,20 @@ describe('WatchManager', () => {
   // ── recordCategory ──
 
   describe('recordCategory', () => {
+    beforeEach(() => {
+      mockTickerManager.getTicker.mockResolvedValue(new Ticker({ ticker: 'TEST', exchange: 'NSE' }));
+    });
+
     it('should update ticker for READY category', () => {
       watchManager.recordCategory(WatchCategoryId.READY, ['TEST']);
 
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { state: 'READY' });
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { state: 'READY', exchange: 'NSE' });
     });
 
     it('should update ticker for INDEX category', () => {
       watchManager.recordCategory(WatchCategoryId.INDEX, ['TEST']);
 
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'INDEX' });
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'INDEX', exchange: 'NSE' });
     });
 
     it('should NOT update backend for COMPOSITE (unsupported)', () => {
