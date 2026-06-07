@@ -263,10 +263,7 @@ export class Factory {
       Factory.getInstance('tickerManager', () => new TickerManager(Factory.client.ticker())),
 
     tv: (): ITradingViewManager =>
-      Factory.getInstance(
-        'tvManager',
-        () => new TradingViewManager(Factory.util.wait(), Factory.client.os())
-      ),
+      Factory.getInstance('tvManager', () => new TradingViewManager(Factory.util.wait(), Factory.client.os())),
 
     alertTicker: (): IAlertTickerManager =>
       Factory.getInstance('alertTickerManager', () => new AlertTickerManager(Factory.client.tickerAlert())),
