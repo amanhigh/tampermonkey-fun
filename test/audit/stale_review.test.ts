@@ -15,6 +15,7 @@ describe('StaleReviewPlugin', () => {
     mockTickerManager = { listTickers: jest.fn().mockResolvedValue([]) };
     mockWatchManager = {
       getTickerCategory: jest.fn().mockResolvedValue(undefined),
+      classifyTickers: jest.fn(),
     };
 
     plugin = new StaleReviewPlugin(

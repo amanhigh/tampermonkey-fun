@@ -19,6 +19,7 @@ describe('GttPlugin', () => {
 
     watchManager = {
       getTickerCategory: jest.fn(),
+      classifyTickers: jest.fn(),
       recordCategory: jest.fn(),
     } as any;
 

@@ -1,4 +1,4 @@
-import { WatchManager, IWatchManager } from '../../src/manager/watch';
+import { WatchManager, IWatchManager, CategoryBuckets } from '../../src/manager/watch';
 import { ITickerManager } from '../../src/manager/ticker';
 import { IJournalManager } from '../../src/manager/journal';
 import { Ticker } from '../../src/models/ticker';
@@ -240,6 +240,71 @@ describe('WatchManager', () => {
       watchManager.recordCategory(WatchCategoryId.READY, []);
 
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('classifyTickers', () => {
+    it('should return empty buckets and uncategorized for empty input', async () => {
+      const result = await watchManager.classifyTickers([]);
+
+      expect(result.buckets.size).toBe(0);
+      expect(result.uncategorized.size).toBe(0);
+    });
+
+    it('should bucket tickers by category', async () => {
+      // SET journal tickers
+      mockGetJournalManager().listJournals.mockImplementation(async (filter: any) => {
+        if (filter.status === 'SET' && filter.ticker === 'SET1') return [{ id: 'j1' }];
+        if (filter.status === 'SET' && filter.ticker === 'SET2') return [{ id: 'j2' }];
+        return [];
+      });
+
+      const result = await watchManager.classifyTickers(['SET1', 'SET2', 'UNCAT']);
+
+      // Both SET1 and SET2 in SET_JOURNAL bucket
+      const setBucket = result.buckets.get(WatchCategoryId.SET_JOURNAL);
+      expect(setBucket?.size).toBe(2);
+      expect(setBucket?.has('SET1')).toBe(true);
+      expect(setBucket?.has('SET2')).toBe(true);
+
+      // UNCAT uncategorized
+      expect(result.uncategorized.has('UNCAT')).toBe(true);
+      expect(result.uncategorized.size).toBe(1);
+    });
+
+    it('should bucket mixed categories correctly', async () => {
+      mockGetJournalManager().listJournals.mockImplementation(async (filter: any) => {
+        if (filter.status === 'SET' && filter.ticker === 'JOURNAL_TICKER') return [{ id: 'j1' }];
+        return [];
+      });
+
+      mockTickerManager.getTicker.mockImplementation(async (ticker: string) => {
+        if (ticker === 'READY_TICKER') return { state: 'READY' } as Ticker;
+        throw new Error('not found');
+      });
+
+      const result = await watchManager.classifyTickers(['JOURNAL_TICKER', 'READY_TICKER', 'UNKNOWN']);
+
+      expect(result.buckets.get(WatchCategoryId.SET_JOURNAL)?.has('JOURNAL_TICKER')).toBe(true);
+      expect(result.buckets.get(WatchCategoryId.READY)?.has('READY_TICKER')).toBe(true);
+      expect(result.uncategorized.has('UNKNOWN')).toBe(true);
+    });
+
+    it('should compose getTickerCategory (no new classification logic)', async () => {
+      // SET journal takes priority over ticker-derived
+      mockGetJournalManager().listJournals.mockImplementation(async (filter: any) => {
+        if (filter.status === 'SET' && filter.ticker === 'PRIORITY') return [{ id: 'j1' }];
+        return [];
+      });
+
+      // Even if ticker says READY, journal wins
+      mockTickerManager.getTicker.mockResolvedValue({ state: 'READY' } as Ticker);
+
+      const result = await watchManager.classifyTickers(['PRIORITY']);
+
+      // Should be SET_JOURNAL, not READY
+      expect(result.buckets.get(WatchCategoryId.SET_JOURNAL)?.has('PRIORITY')).toBe(true);
+      expect(result.buckets.get(WatchCategoryId.READY)).toBeUndefined();
     });
   });
 });

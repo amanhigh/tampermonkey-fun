@@ -2,7 +2,7 @@ import { TradingViewWatchlistManager, ITradingViewWatchlistManager } from '../..
 import { IPaintManager } from '../../src/manager/paint';
 import { IUIUtil } from '../../src/util/ui';
 import { IFnoManager } from '../../src/manager/fno';
-import { IWatchManager } from '../../src/manager/watch';
+import { IWatchManager, CategoryBuckets } from '../../src/manager/watch';
 import { IFlagManager } from '../../src/manager/flag';
 import { Constants } from '../../src/models/constant';
 import { WatchCategoryId } from '../../src/models/watch';
@@ -67,6 +67,7 @@ describe('TradingViewWatchlistManager', () => {
 
     mockWatchManager = {
       getTickerCategory: jest.fn(),
+      classifyTickers: jest.fn(),
       recordCategory: jest.fn(),
     } as unknown as jest.Mocked<IWatchManager>;
 
@@ -144,17 +145,18 @@ describe('TradingViewWatchlistManager', () => {
   });
 
   describe('paintWatchList', () => {
+    let classifyResult: CategoryBuckets;
+
     beforeEach(() => {
       // Mock getTickers to return some tickers
       jest.spyOn(watchlistManager, 'getTickers').mockReturnValue(['AAPL', 'GOOGL']);
 
-      // Mock getTickerCategory to return categories per ticker
-      mockWatchManager.getTickerCategory.mockImplementation(async (ticker: string) => {
-        if (ticker === 'AAPL') {
-          return { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: { state: 'READY' } };
-        }
-        return undefined; // GOOGL has no category -> UI fallback
-      });
+      // Mock classifyTickers — AAPL is READY, GOOGL uncategorized
+      classifyResult = {
+        buckets: new Map([[WatchCategoryId.READY, new Set(['AAPL'])]]),
+        uncategorized: new Set(['GOOGL']),
+      };
+      mockWatchManager.classifyTickers.mockResolvedValue(classifyResult);
     });
 
     it('should execute complete paint workflow', async () => {
@@ -165,10 +167,9 @@ describe('TradingViewWatchlistManager', () => {
       expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.LINE);
       expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.SCREENER.LINE);
 
-      // Verify per-ticker classification was used
-      expect(mockWatchManager.getTickerCategory).toHaveBeenCalledTimes(2);
-      expect(mockWatchManager.getTickerCategory).toHaveBeenCalledWith('AAPL');
-      expect(mockWatchManager.getTickerCategory).toHaveBeenCalledWith('GOOGL');
+      // Verify batch classification was used
+      expect(mockWatchManager.classifyTickers).toHaveBeenCalledTimes(1);
+      expect(mockWatchManager.classifyTickers).toHaveBeenCalledWith(['AAPL', 'GOOGL']);
 
       // Verify color painting was called
       expect(mockPaintManager.paintSymbols).toHaveBeenCalled();
@@ -209,10 +210,10 @@ describe('TradingViewWatchlistManager', () => {
     it('should paint uncategorized DOM tickers as default white', async () => {
       await watchlistManager.paintWatchList();
 
-      // GOOGL has no category -> should be painted as default white
+      // GOOGL is uncategorized -> should be painted as default white
       expect(mockPaintManager.paintSymbols).toHaveBeenCalledWith(
         Constants.DOM.WATCHLIST.SYMBOL,
-        new Set(['GOOGL']),
+        classifyResult.uncategorized,
         { color: Constants.UI.COLORS.DEFAULT }
       );
     });

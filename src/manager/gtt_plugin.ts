@@ -30,14 +30,14 @@ export class GttPlugin extends BaseAuditPlugin {
     const gttData = await this.kiteRepo.getGttRefereshEvent();
     const allGttTickers = Object.keys(gttData.orders);
 
-    // Fetch watch categories for all GTT tickers
-    const categoryMap = await this.watchManager.getTickerCategories(allGttTickers);
-
-    // Find tickers with GTT orders that are not in SET_JOURNAL or RUNNING_JOURNAL
+    // Classify each GTT ticker individually — only SET_JOURNAL and RUNNING_JOURNAL
+    // are treated as watched-for-GTT
     const results: AuditResult[] = [];
-    allGttTickers.forEach((tvTicker: string) => {
-      const cat = categoryMap.get(tvTicker);
-      const isWatchedForGtt = cat?.id === WatchCategoryId.SET_JOURNAL || cat?.id === WatchCategoryId.RUNNING_JOURNAL;
+
+    for (const tvTicker of allGttTickers) {
+      const category = await this.watchManager.getTickerCategory(tvTicker);
+      const isWatchedForGtt =
+        category?.id === WatchCategoryId.SET_JOURNAL || category?.id === WatchCategoryId.RUNNING_JOURNAL;
 
       if (!isWatchedForGtt) {
         const ordersForTicker = gttData.orders[tvTicker] || [];
@@ -46,7 +46,7 @@ export class GttPlugin extends BaseAuditPlugin {
           pluginId: this.id,
           code: 'UNWATCHED_GTT',
           target: tvTicker,
-          message: `${tvTicker}: ${orderIds.length} GTT order(s) exist but ticker not in SET/RUNNING watchlist`,
+          message: `${tvTicker}: ${orderIds.length} GTT order(s) exist but ticker not in SET/RUNNING journal`,
           severity: 'HIGH',
           status: 'FAIL',
           data: {
@@ -54,7 +54,7 @@ export class GttPlugin extends BaseAuditPlugin {
           },
         });
       }
-    });
+    }
 
     return results;
   }

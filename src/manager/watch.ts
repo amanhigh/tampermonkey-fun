@@ -6,6 +6,16 @@ import { WatchCategory, WatchCategoryId } from '../models/watch';
 import { findWatchCategoryById, resolveWatchCategory } from './watch_category';
 
 /**
+ * Result of batch ticker classification — tickers grouped by watch category.
+ */
+export interface CategoryBuckets {
+  /** Tickers grouped by watch category ID. */
+  readonly buckets: Map<WatchCategoryId, Set<string>>;
+  /** Tickers that matched no watch category. */
+  readonly uncategorized: Set<string>;
+}
+
+/**
  * Interface for managing watch category operations.
  *
  * All classification is backend-on-demand — no local snapshot.
@@ -21,6 +31,14 @@ export interface IWatchManager {
    * @param tvTicker Ticker symbol to look up
    */
   getTickerCategory(tvTicker: string): Promise<WatchCategory | undefined>;
+
+  /**
+   * Classify multiple tickers and group them into category buckets.
+   * Composes {@link getTickerCategory} — no new business logic.
+   * Uncategorized tickers are returned separately for UI fallback.
+   * @param tvTickers Ticker symbols to classify
+   */
+  classifyTickers(tvTickers: string[]): Promise<CategoryBuckets>;
 
   /**
    * Records selected tickers in the given watch category.
@@ -60,6 +78,26 @@ export class WatchManager implements IWatchManager {
 
     // 3. No match — let caller apply UI fallback
     return undefined;
+  }
+
+  /** @inheritdoc */
+  async classifyTickers(tvTickers: string[]): Promise<CategoryBuckets> {
+    const entries = await Promise.all(tvTickers.map(async (t) => [t, await this.getTickerCategory(t)] as const));
+
+    const buckets = new Map<WatchCategoryId, Set<string>>();
+    const uncategorized = new Set<string>();
+
+    for (const [ticker, category] of entries) {
+      if (category) {
+        const set = buckets.get(category.id) ?? new Set();
+        set.add(ticker);
+        buckets.set(category.id, set);
+      } else {
+        uncategorized.add(ticker);
+      }
+    }
+
+    return { buckets, uncategorized };
   }
 
   /** @inheritdoc */

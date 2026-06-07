@@ -42,6 +42,7 @@ describe('HeaderManager', () => {
     // Mock WatchManager — getTickerCategory is the only method
     mockWatchManager = {
       getTickerCategory: jest.fn(),
+      classifyTickers: jest.fn(),
       recordCategory: jest.fn(),
     } as jest.Mocked<IWatchManager>;
 
