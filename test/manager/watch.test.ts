@@ -1,6 +1,6 @@
 import { WatchManager, IWatchManager } from '../../src/manager/watch';
 import { ITickerManager } from '../../src/manager/ticker';
-import { IJournalClient } from '../../src/client/journal';
+import { IJournalManager } from '../../src/manager/journal';
 import { Ticker } from '../../src/models/ticker';
 import { WATCH_CATEGORY_COUNT } from '../../src/models/watch';
 
@@ -17,7 +17,7 @@ jest.mock('../../src/util/notify', () => ({
 describe('WatchManager', () => {
   let watchManager: IWatchManager;
   let mockTickerManager: jest.Mocked<ITickerManager>;
-  let mockJournalClient: jest.Mocked<IJournalClient>;
+  let mockJournalManager: jest.Mocked<IJournalManager>;
 
   // ── Helpers ──
 
@@ -50,16 +50,20 @@ describe('WatchManager', () => {
       setExchange: jest.fn(),
     } as unknown as jest.Mocked<ITickerManager>;
 
-    mockJournalClient = {
-      listJournals: jest.fn().mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } }),
+    mockJournalManager = {
+      listJournals: jest.fn().mockResolvedValue([]),
       createJournal: jest.fn(),
-      addJournalImage: jest.fn(),
-      addJournalTag: jest.fn(),
+      screenshotTicker: jest.fn(),
+      findRunningJournal: jest.fn(),
+      addJournalImages: jest.fn(),
+      addReasonTags: jest.fn(),
       updateJournalStatus: jest.fn(),
-      getBaseUrl: jest.fn(),
-    } as unknown as jest.Mocked<IJournalClient>;
+      createReasonText: jest.fn(),
+      publishJournalOpenEvent: jest.fn(),
+    } as unknown as jest.Mocked<IJournalManager>;
 
-    watchManager = new WatchManager(mockTickerManager, mockJournalClient);
+    // Lazy getter to break factory cycle — only called during async refresh
+    watchManager = new WatchManager(mockTickerManager, () => mockJournalManager);
   });
 
   // ── Constructor ──
@@ -72,7 +76,7 @@ describe('WatchManager', () => {
 
     it('should NOT call backend on construction', () => {
       expect(mockTickerManager.listTickers).not.toHaveBeenCalled();
-      expect(mockJournalClient.listJournals).not.toHaveBeenCalled();
+      expect(mockJournalManager.listJournals).not.toHaveBeenCalled();
     });
 
     it('should return empty sets for all categories before any refresh', () => {
@@ -106,7 +110,7 @@ describe('WatchManager', () => {
       mockTickerManager.listTickers.mockResolvedValue([
         makeTicker({ ticker: 'READY_A', state: 'READY' }),
       ]);
-      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+      mockJournalManager.listJournals.mockResolvedValue([]);
 
       watchManager.computeDefaultList([]);
       await waitForAsync();
@@ -141,24 +145,21 @@ describe('WatchManager', () => {
   describe('computeDefaultList (backend refresh)', () => {
     it('should fire backend refresh with tickers and journals', () => {
       mockTickerManager.listTickers.mockResolvedValue([]);
-      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+      mockJournalManager.listJournals.mockResolvedValue([]);
 
       watchManager.computeDefaultList(['TV_A', 'TV_B']);
 
       expect(mockTickerManager.listTickers).toHaveBeenCalledWith({});
-      expect(mockJournalClient.listJournals).toHaveBeenCalledTimes(2);
-      expect(mockJournalClient.listJournals).toHaveBeenCalledWith(expect.objectContaining({ status: 'SET' }));
-      expect(mockJournalClient.listJournals).toHaveBeenCalledWith(expect.objectContaining({ status: 'RUNNING' }));
+      expect(mockJournalManager.listJournals).toHaveBeenCalledTimes(2);
+      expect(mockJournalManager.listJournals).toHaveBeenCalledWith(expect.objectContaining({ status: 'SET' }));
+      expect(mockJournalManager.listJournals).toHaveBeenCalledWith(expect.objectContaining({ status: 'RUNNING' }));
     });
 
     it('should map SET journal tickers to category 0', async () => {
       mockTickerManager.listTickers.mockResolvedValue([]);
-      // Mock SET journals returning tickers
-      const mockSetJournal = { ticker: 'SET_1' };
-      const mockSetJournal2 = { ticker: 'SET_2' };
-      mockJournalClient.listJournals.mockImplementation((params: any) => {
-        if (params.status === 'SET') return Promise.resolve({ journals: [mockSetJournal, mockSetJournal2] as any, metadata: { total: 2, offset: 0, limit: 100 } });
-        return Promise.resolve({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+      mockJournalManager.listJournals.mockImplementation((params: any) => {
+        if (params.status === 'SET') return Promise.resolve([{ ticker: 'SET_1' }, { ticker: 'SET_2' }] as any);
+        return Promise.resolve([]);
       });
 
       watchManager.computeDefaultList([]);
@@ -171,11 +172,9 @@ describe('WatchManager', () => {
 
     it('should map RUNNING journal tickers to category 4', async () => {
       mockTickerManager.listTickers.mockResolvedValue([]);
-      const mockRunningJournal = { ticker: 'RUN_1' };
-      const mockRunningJournal2 = { ticker: 'RUN_2' };
-      mockJournalClient.listJournals.mockImplementation((params: any) => {
-        if (params.status === 'RUNNING') return Promise.resolve({ journals: [mockRunningJournal, mockRunningJournal2] as any, metadata: { total: 2, offset: 0, limit: 100 } });
-        return Promise.resolve({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+      mockJournalManager.listJournals.mockImplementation((params: any) => {
+        if (params.status === 'RUNNING') return Promise.resolve([{ ticker: 'RUN_1' }, { ticker: 'RUN_2' }] as any);
+        return Promise.resolve([]);
       });
 
       watchManager.computeDefaultList([]);
@@ -191,7 +190,7 @@ describe('WatchManager', () => {
         makeTicker({ ticker: 'R_STATE', state: 'READY' }),
         makeTicker({ ticker: 'W_STATE', state: 'WATCHED' }),
       ]);
-      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+      mockJournalManager.listJournals.mockResolvedValue([]);
 
       watchManager.computeDefaultList([]);
       await waitForAsync();
@@ -205,7 +204,7 @@ describe('WatchManager', () => {
       mockTickerManager.listTickers.mockResolvedValue([
         makeTicker({ ticker: 'LONG_NSE', exchange: 'NSE', timeframes: ['MN', 'WK'] }),
       ]);
-      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+      mockJournalManager.listJournals.mockResolvedValue([]);
 
       watchManager.computeDefaultList([]);
       await waitForAsync();
@@ -218,7 +217,7 @@ describe('WatchManager', () => {
       mockTickerManager.listTickers.mockResolvedValue([
         makeTicker({ ticker: 'LONG_US', exchange: 'NASDAQ', timeframes: ['MN', 'WK'] }),
       ]);
-      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+      mockJournalManager.listJournals.mockResolvedValue([]);
 
       watchManager.computeDefaultList([]);
       await waitForAsync();
@@ -234,7 +233,7 @@ describe('WatchManager', () => {
         makeTicker({ ticker: 'FX_A', type: 'FX' }),
         makeTicker({ ticker: 'BND_A', type: 'BOND' }),
       ]);
-      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+      mockJournalManager.listJournals.mockResolvedValue([]);
 
       watchManager.computeDefaultList([]);
       await waitForAsync();
@@ -250,7 +249,7 @@ describe('WatchManager', () => {
       mockTickerManager.listTickers.mockResolvedValue([
         makeTicker({ ticker: 'COMP_A', type: 'COMPOSITE' }),
       ]);
-      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+      mockJournalManager.listJournals.mockResolvedValue([]);
 
       watchManager.computeDefaultList([]);
       await waitForAsync();
@@ -263,7 +262,7 @@ describe('WatchManager', () => {
       mockTickerManager.listTickers.mockResolvedValue([
         makeTicker({ ticker: 'ASSIGNED_1', state: 'READY' }), // goes to category 1
       ]);
-      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+      mockJournalManager.listJournals.mockResolvedValue([]);
 
       watchManager.computeDefaultList(['ASSIGNED_1', 'DEFAULT_1', 'DEFAULT_2']);
       await waitForAsync();
@@ -341,7 +340,7 @@ describe('WatchManager', () => {
       mockTickerManager.listTickers.mockResolvedValue([
         makeTicker({ ticker: 'WATCHED_A', state: 'READY' }),
       ]);
-      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+      mockJournalManager.listJournals.mockResolvedValue([]);
 
       watchManager.computeDefaultList([]);
       await waitForAsync();
@@ -353,7 +352,7 @@ describe('WatchManager', () => {
       mockTickerManager.listTickers.mockResolvedValue([
         makeTicker({ ticker: 'PRESENT', state: 'READY' }),
       ]);
-      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+      mockJournalManager.listJournals.mockResolvedValue([]);
 
       watchManager.computeDefaultList([]);
       await waitForAsync();
@@ -378,7 +377,7 @@ describe('WatchManager', () => {
       mockTickerManager.listTickers.mockResolvedValue([
         makeTicker({ ticker: 'TV_A', state: 'READY' }),
       ]);
-      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+      mockJournalManager.listJournals.mockResolvedValue([]);
 
       watchManager.computeDefaultList([]);
       await waitForAsync();
@@ -394,7 +393,7 @@ describe('WatchManager', () => {
         makeTicker({ ticker: 'STALE', state: 'READY' }),
         makeTicker({ ticker: 'KEEP', state: 'READY' }),
       ]);
-      mockJournalClient.listJournals.mockResolvedValue({ journals: [], metadata: { total: 0, offset: 0, limit: 100 } });
+      mockJournalManager.listJournals.mockResolvedValue([]);
 
       watchManager.computeDefaultList([]);
       await waitForAsync();

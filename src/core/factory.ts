@@ -21,8 +21,7 @@ import { Barkat } from './barkat';
 
 // Repository Imports
 import { RepoCron, IRepoCron } from '../repo/cron';
-import { IWatchlistRepo, Watchlistrepo } from '../repo/watch';
-// TickerRepo removed — audit plugins use Manager/Client now
+// Repository imports — watch removed, WatchManager uses backend data now
 
 // Manager Layer Imports
 import { ITimeFrameManager, TimeFrameManager } from '../manager/timeframe';
@@ -169,7 +168,6 @@ export class Factory {
    */
   public static repo = {
     cron: (): IRepoCron => Factory.getInstance('repoCron', () => new RepoCron()),
-    watch: (): IWatchlistRepo => Factory.getInstance('watchRepo', () => new Watchlistrepo(Factory.repo.cron())),
     kite: (): IKiteRepo => Factory.getInstance('kiteRepo', () => new KiteRepo()),
     imdb: (): IImdbRepo => Factory.getInstance('imdbRepo', () => new ImdbRepo()),
   };
@@ -223,7 +221,11 @@ export class Factory {
           )
       ),
 
-    watch: (): IWatchManager => Factory.getInstance('watchManager', () => new WatchManager(Factory.repo.watch())),
+    watch: (): IWatchManager =>
+      Factory.getInstance(
+        'watchManager',
+        () => new WatchManager(Factory.manager.ticker(), () => Factory.manager.journal())
+      ),
 
     screener: (): ITradingViewScreenerManager =>
       Factory.getInstance(

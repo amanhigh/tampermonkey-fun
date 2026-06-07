@@ -6,8 +6,7 @@
  * with a clear, singular backend update payload.
  */
 
-import { Ticker, TickerUpdateRequest } from './ticker';
-import { JournalRecord } from './journal';
+import { TickerUpdateRequest } from './ticker';
 
 // ── Category Identifier ──
 
@@ -93,38 +92,3 @@ export const ALL_WATCH_CATEGORIES: readonly WatchCategory[] = [
 
 /** Total number of watch categories. */
 export const WATCH_CATEGORY_COUNT: number = ALL_WATCH_CATEGORIES.length;
-
-// ── Derivation Helpers ──
-
-/**
- * Check whether a ticker's timeframes make it a long-watch candidate
- * (does not contain DL).
- */
-export function isLongWatch(ticker: Ticker): boolean {
-  return !ticker.timeframes.includes('DL');
-}
-
-/**
- * Check whether a ticker's timeframes include daily (DL).
- */
-export function isDailyWatch(ticker: Ticker): boolean {
-  return ticker.timeframes.includes('DL');
-}
-
-/**
- * Check whether a ticker is India-listed based on exchange.
- */
-export function isIndiaExchange(ticker: Ticker): boolean {
-  return ticker.exchange === 'NSE';
-}
-
-/**
- * Get the set of ticker symbols from journal records.
- */
-export function journalTickerSet(journals: JournalRecord[]): Set<string> {
-  const tickers = new Set<string>();
-  for (const journal of journals) {
-    tickers.add(journal.ticker);
-  }
-  return tickers;
-}
