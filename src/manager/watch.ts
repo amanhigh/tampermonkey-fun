@@ -1,4 +1,5 @@
 import { LRUCache } from 'lru-cache';
+import { Constants } from '../models/constant';
 import { ITickerManager } from './ticker';
 import { IJournalManager } from './journal';
 import { Notifier } from '../util/notify';
@@ -51,8 +52,8 @@ export interface IWatchManager {
 export class WatchManager implements IWatchManager {
   /** LRU cache for ticker → category lookups. Misses are not cached. */
   private readonly categoryCache = new LRUCache<string, WatchCategory>({
-    max: 1000,
-    ttl: 5 * 60 * 1000,
+    max: Constants.CACHE.CATEGORY.MAX,
+    ttl: Constants.CACHE.CATEGORY.TTL_MS,
     fetchMethod: async (key: string): Promise<WatchCategory | undefined> => {
       return this.loadTickerCategory(key);
     },

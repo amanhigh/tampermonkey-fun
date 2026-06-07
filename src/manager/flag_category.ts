@@ -64,7 +64,7 @@ function matchesCategory(categoryId: FlagCategoryId, ticker: Ticker): boolean {
       return ticker.trend === 'SIDEWAYS';
     case FlagCategoryId.DOWNTREND:
       return ticker.trend === 'DOWNTREND';
-    case FlagCategoryId.DEFAULT_UNTRACKED:
+    default:
       return false;
   }
 }
@@ -73,13 +73,13 @@ function matchesCategory(categoryId: FlagCategoryId, ticker: Ticker): boolean {
 
 /**
  * Find the highest-priority flag category for a ticker.
- * Falls back to DEFAULT_UNTRACKED if no other category matches.
+ * Returns undefined if no category matches (unclassified ticker).
  */
-export function resolveFlagCategory(ticker: Ticker): FlagCategory {
+export function resolveFlagCategory(ticker: Ticker): FlagCategory | undefined {
   for (const id of FLAG_CATEGORY_PRIORITY) {
     if (matchesCategory(id, ticker)) {
       return findFlagCategoryById(id);
     }
   }
-  return findFlagCategoryById(FlagCategoryId.DEFAULT_UNTRACKED);
+  return undefined;
 }

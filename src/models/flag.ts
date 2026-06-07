@@ -9,7 +9,6 @@ export enum FlagCategoryId {
   DOWNTREND = 'DOWNTREND',
   CRYPTO = 'CRYPTO',
   UPTREND = 'UPTREND',
-  DEFAULT_UNTRACKED = 'DEFAULT_UNTRACKED',
   INDEX = 'INDEX',
   GOLD_INDEX = 'GOLD_INDEX',
 }
@@ -35,8 +34,6 @@ export interface FlagCategory {
 
   /**
    * Backend field update applied when a ticker is recorded into this category.
-   * Set to `{}` (no-op) for categories like DEFAULT_UNTRACKED that do not
-   * persist meaningful data to the backend.
    */
   update: TickerUpdateRequest;
 }
@@ -46,6 +43,8 @@ export interface FlagCategory {
 /**
  * All flag categories in UI paint order.
  * This is the canonical list used by the FlagManager for paint, record, and lookup.
+ * Categories that are NOT recordable (e.g. unclassified) are omitted — they
+ * simply are not painted.
  */
 export const ALL_FLAG_CATEGORIES: readonly FlagCategory[] = [
   {
@@ -71,12 +70,6 @@ export const ALL_FLAG_CATEGORIES: readonly FlagCategory[] = [
     color: 'lime',
     label: 'Uptrend / Longs',
     update: { trend: 'UPTREND', type: 'EQUITY', state: 'WATCHED' },
-  },
-  {
-    id: FlagCategoryId.DEFAULT_UNTRACKED,
-    color: 'white',
-    label: 'Default / Untracked',
-    update: {},
   },
   {
     id: FlagCategoryId.INDEX,

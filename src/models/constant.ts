@@ -265,6 +265,16 @@ Support:
     PAGE_LIMIT: 100,
   },
 
+  /** Cache configuration for manager lookups */
+  CACHE: {
+    CATEGORY: {
+      /** Maximum number of entries in the category LRU cache (1000). */
+      MAX: 1000,
+      /** Time-to-live for cached category entries in ms (5 minutes). */
+      TTL_MS: 5 * 60 * 1000,
+    },
+  },
+
   // Recent ticker configuration
   RECENT_CUTOFF_MS: 7 * 24 * 60 * 60 * 1000, // 7 days — default "recent" window,
 

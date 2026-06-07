@@ -1,5 +1,6 @@
 import { LRUCache } from 'lru-cache';
 import { Ticker, TickerUpdateRequest } from '../models/ticker';
+import { Constants } from '../models/constant';
 import { ITickerManager } from './ticker';
 import { IPaintManager } from './paint';
 import { Notifier } from '../util/notify';
@@ -15,7 +16,7 @@ export interface IFlagManager {
   /**
    * Gets the flag category for a ticker.
    * Resolves from backend data with a 5-min LRU cache. Returns undefined
-   * for DEFAULT_UNTRACKED or untracked tickers.
+   * for unclassified or untracked tickers.
    * @param ticker Ticker symbol to look up
    */
   getTickerCategory(ticker: string): Promise<FlagCategory | undefined>;
@@ -44,8 +45,8 @@ export interface IFlagManager {
  * Manages flag-based sets of tickers using backend calls per paint.
  *
  * Per-ticker lookups are cached via LRU (max 1000, ttl 5 min).
- * DEFAULT_UNTRACKED results are treated as cache misses — only known
- * categories are stored.
+ * Unclassified results (undefined) are treated as cache misses —
+ * only known categories are stored.
  *
  * Classification logic (which category a ticker belongs to) is delegated to
  * the flag_category resolver module.
@@ -53,8 +54,8 @@ export interface IFlagManager {
 export class FlagManager implements IFlagManager {
   /** LRU cache for ticker → flag category lookups. Misses are not cached. */
   private readonly categoryCache = new LRUCache<string, FlagCategory>({
-    max: 1000,
-    ttl: 5 * 60 * 1000,
+    max: Constants.CACHE.CATEGORY.MAX,
+    ttl: Constants.CACHE.CATEGORY.TTL_MS,
     fetchMethod: async (key: string): Promise<FlagCategory | undefined> => {
       return this.loadFlagCategory(key);
     },
@@ -99,17 +100,13 @@ export class FlagManager implements IFlagManager {
   /**
    * Load a ticker's flag category from backend data.
    * Used as the fetchMethod callback by the LRU cache.
-   * Returns undefined for DEFAULT_UNTRACKED or untracked tickers;
+   * Returns undefined for unclassified or untracked tickers;
    * the cache does NOT store misses.
    */
   private async loadFlagCategory(ticker: string): Promise<FlagCategory | undefined> {
     try {
       const record = await this.tickerManager.getTicker(ticker);
-      const cat = resolveFlagCategory(record);
-      if (cat.id === FlagCategoryId.DEFAULT_UNTRACKED) {
-        return undefined;
-      }
-      return cat;
+      return resolveFlagCategory(record);
     } catch {
       // Ticker not tracked on backend
       return undefined;
@@ -165,7 +162,9 @@ export class FlagManager implements IFlagManager {
     // Classify each ticker into the first matching category
     for (const ticker of tickers) {
       const cat = resolveFlagCategory(ticker);
-      groups.get(cat.id)?.add(ticker.ticker);
+      if (cat) {
+        groups.get(cat.id)?.add(ticker.ticker);
+      }
     }
 
     return groups;

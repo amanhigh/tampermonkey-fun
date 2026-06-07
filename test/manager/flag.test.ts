@@ -97,16 +97,6 @@ describe('FlagManager', () => {
       expect(result?.id).toBe(FlagCategoryId.CRYPTO);
     });
 
-    it('should return undefined for DEFAULT_UNTRACKED ticker', async () => {
-      // A ticker that doesn't match any FLAG_CATEGORY_PRIORITY entry
-      mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'PLAIN', trend: 'UNKNOWN', type: 'EQUITY' })
-      );
-
-      const result = await flagManager.getTickerCategory('PLAIN');
-      expect(result).toBeUndefined();
-    });
-
     it('should cache resolved categories (single backend call per ticker)', async () => {
       mockTickerManager.getTicker.mockResolvedValue(
         makeTicker({ ticker: 'SIDE_A', trend: 'SIDEWAYS' })
@@ -119,10 +109,8 @@ describe('FlagManager', () => {
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
     });
 
-    it('should NOT cache DEFAULT_UNTRACKED results', async () => {
-      mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'PLAIN', trend: 'UNKNOWN', type: 'EQUITY' })
-      );
+    it('should NOT cache backend failures (repeated calls hit backend)', async () => {
+      mockTickerManager.getTicker.mockRejectedValue(new Error('Backend down'));
 
       await flagManager.getTickerCategory('PLAIN');
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
@@ -158,15 +146,6 @@ describe('FlagManager', () => {
       flagManager.recordCategory(FlagCategoryId.UPTREND, ['TEST']);
 
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'UPTREND', type: 'EQUITY', state: 'WATCHED' });
-    });
-
-    it('should reject DEFAULT_UNTRACKED at type level (not recordable)', () => {
-      // DEFAULT_UNTRACKED is excluded from recordable categories.
-      // A runtime call would still attempt to look up the category.
-      // Verify the category lookup throws for invalid ID.
-      // (This test documents the intent.)
-      flagManager.recordCategory(FlagCategoryId.SIDEWAYS, []);
-      expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
     });
 
     it('should call updateTicker for INDEX', () => {
@@ -240,7 +219,7 @@ describe('FlagManager', () => {
       expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
         '.sym', new Set(['UP_A']), 'lime', '.itm',
       );
-      // DEFAULT_UNTRACKED — empty in this test
+      // Unclassified tickers are simply not painted
       expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
         '.sym', new Set(['NIFTY']), 'brown', '.itm',
       );
