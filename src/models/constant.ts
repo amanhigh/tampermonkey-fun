@@ -39,7 +39,8 @@ export const Constants = Object.freeze({
       /** Stale review audit plugin - identifies tickers not opened within configurable review window */
       STALE_REVIEW: 'stale-review',
     }),
-    STALE_REVIEW_THRESHOLD_DAYS: 180,
+    /** Default page size for backend audit result pagination (10). */
+    DEFAULT_SECTION_LIMIT: 10,
   },
 
   // UI element colors and styles
