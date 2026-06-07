@@ -120,26 +120,6 @@ describe('WatchManager', () => {
     });
   });
 
-  // ── getDefaultWatchlist ──
-
-  describe('getDefaultWatchlist', () => {
-    it('should return empty set before any refresh', () => {
-      const result = watchManager.getDefaultWatchlist();
-      expect(result).toBeInstanceOf(Set);
-      expect(result.size).toBe(0);
-    });
-
-    it('should return category 5 as default watchlist', () => {
-      // Manually trigger first call with TV tickers to set fallback
-      watchManager.computeDefaultList(['DEFAULT_A', 'DEFAULT_B']);
-
-      // Before async refresh resolves, fallback populates category 5
-      const result = watchManager.getDefaultWatchlist();
-      expect(result.has('DEFAULT_A')).toBe(true);
-      expect(result.has('DEFAULT_B')).toBe(true);
-    });
-  });
-
   // ── computeDefaultList / backend refresh ──
 
   describe('computeDefaultList (backend refresh)', () => {
@@ -361,50 +341,5 @@ describe('WatchManager', () => {
     });
   });
 
-  // ── evictTicker ──
 
-  describe('evictTicker', () => {
-    it('should be a no-op for backend-derived categories', () => {
-      const result = watchManager.evictTicker('ANY');
-      expect(result).toBe(false);
-    });
-  });
-
-  // ── Cleanup ──
-
-  describe('dryRunClean', () => {
-    it('should return 0 when all TV tickers are in snapshot', async () => {
-      mockTickerManager.listTickers.mockResolvedValue([
-        makeTicker({ ticker: 'TV_A', state: 'READY' }),
-      ]);
-      mockJournalManager.listJournals.mockResolvedValue([]);
-
-      watchManager.computeDefaultList([]);
-      await waitForAsync();
-
-      const result = watchManager.dryRunClean(['TV_A']);
-      expect(result).toBe(0);
-    });
-  });
-
-  describe('clean', () => {
-    it('should remove items from snapshot and return count', async () => {
-      mockTickerManager.listTickers.mockResolvedValue([
-        makeTicker({ ticker: 'STALE', state: 'READY' }),
-        makeTicker({ ticker: 'KEEP', state: 'READY' }),
-      ]);
-      mockJournalManager.listJournals.mockResolvedValue([]);
-
-      watchManager.computeDefaultList([]);
-      await waitForAsync();
-
-      // STALE is in the snapshot but not in current TV tickers
-      const result = watchManager.clean(['KEEP']);
-      expect(result).toBe(1);
-
-      // Verify KEEP remained and STALE was removed
-      expect(watchManager.isWatched('STALE')).toBe(false);
-      expect(watchManager.isWatched('KEEP')).toBe(true);
-    });
-  });
 });

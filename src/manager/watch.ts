@@ -1,10 +1,17 @@
-import { CategoryLists } from '../models/category';
-import { Constants } from '../models/constant';
-import { IWatchlistRepo } from '../repo/watch';
+import { ITickerManager } from './ticker';
+import { IJournalManager } from './journal';
 import { Notifier } from '../util/notify';
+import { Ticker, TickerUpdateRequest } from '../models/ticker';
+import { JournalRecord } from '../models/journal';
+import { WATCH_CATEGORY_COUNT } from '../models/watch';
+import { findWatchCategoryByIndex, journalTickerSet, resolveWatchCategory } from './watch_category';
 
 /**
- * Interface for managing watch category operations
+ * Interface for managing watch category operations.
+ *
+ * Categories are derived from backend ticker and journal data.
+ * Sync methods read from a snapshot that is refreshed async by
+ * `computeDefaultList()`.
  */
 export interface IWatchManager {
   /**
@@ -15,44 +22,19 @@ export interface IWatchManager {
   getCategory(categoryIndex: number): Set<string>;
 
   /**
-   * Get default watchlist (Index 5)
-   * @returns Set of default watchlist symbols
-   * */
-  getDefaultWatchlist(): Set<string>;
-
-  /**
    * Computes Default Watchlist based on other Lists.
+   * Triggers an async backend refresh to derive categories.
    * @param tvWatchlistTickers Latest watchlist tickers in TradingView for Universe
    */
   computeDefaultList(tvWatchlistTickers: string[]): void;
 
   /**
-   * Records selected tickers in order category
+   * Records selected tickers in order category.
+   * Fires async backend updates for supported categories.
    * @param categoryIndex Category index to record into
    * @param tvTickers List of selected tickers
    */
   recordCategory(categoryIndex: number, tvTickers: string[]): void;
-
-  /**
-   * Evicts ticker from all watchlist categories if present
-   * @param tvTicker Ticker to evict
-   * @returns True if ticker was found and removed, false if not found
-   */
-  evictTicker(tvTicker: string): boolean;
-
-  /**
-   * Check how many order items would be removed by cleanup
-   * @param currentTickers List of current tickers in watchlist
-   * @returns Number of items that would be removed
-   */
-  dryRunClean(currentTickers: string[]): number;
-
-  /**
-   * Remove order items not in watchlist and save changes
-   * @param currentTickers List of current tickers in watchlist
-   * @returns Number of items removed
-   */
-  clean(currentTickers: string[]): number;
 
   /**
    * Check if a ticker is in any watch category
@@ -63,139 +45,189 @@ export interface IWatchManager {
 }
 
 /**
- * Manages watch category operations
+ * Manages watch category operations using backend-derived data.
+ *
+ * Categories are built from async backend fetches (tickers + journals)
+ * and cached in a snapshot for synchronous UI consumers.
+ *
+ * The journal manager is injected as a lazy getter to avoid circular
+ * dependency at factory construction time (watch → journal → sequence →
+ * dom → screener → watch). The getter is only called during the async
+ * backend refresh, by which point all factory singletons are cached.
  */
 export class WatchManager implements IWatchManager {
   DEFAULT_LIST_INDEX = 5;
-  private readonly TOTAL_CATEGORIES = 8; // Based on UI.COLORS.LIST length
+  private readonly TOTAL_CATEGORIES = WATCH_CATEGORY_COUNT;
 
-  constructor(private readonly watchRepo: IWatchlistRepo) {
-    const categoryLists = this.watchRepo.getWatchCategoryLists();
-    this.initializeCategoryLists(categoryLists);
+  /** Snapshot from the last backend refresh: category index → set of ticker symbols. */
+  private lastCategoryGroups: Map<number, Set<string>> = new Map();
+
+  constructor(
+    private readonly tickerManager: ITickerManager,
+    private readonly getJournalManager: () => IJournalManager
+  ) {
+    this.initializeEmptySnapshot();
   }
 
-  private initializeCategoryLists(categoryLists: CategoryLists): void {
-    // Initialize empty sets for all required categories (0-7)
+  /**
+   * Initialize empty sets for all categories.
+   */
+  private initializeEmptySnapshot(): void {
     for (let i = 0; i < this.TOTAL_CATEGORIES; i++) {
-      if (!categoryLists.getList(i)) {
-        categoryLists.setList(i, new Set());
-      }
+      this.lastCategoryGroups.set(i, new Set());
     }
   }
+
   /** @inheritdoc */
   public getCategory(categoryIndex: number): Set<string> {
     if (categoryIndex < 0 || categoryIndex >= this.TOTAL_CATEGORIES) {
       throw new Error(`Invalid category index: ${categoryIndex}. Must be between 0 and ${this.TOTAL_CATEGORIES - 1}`);
     }
 
-    const categoryLists = this.watchRepo.getWatchCategoryLists();
-    const list = categoryLists.getList(categoryIndex);
-    if (!list) {
-      categoryLists.setList(categoryIndex, new Set());
-      throw new Error(`Category list for index ${categoryIndex} not found`);
-    }
-    return list;
-  }
-
-  /** @inheritdoc */
-  recordCategory(categoryIndex: number, tvTickers: string[]): void {
-    const categoryLists = this.watchRepo.getWatchCategoryLists();
-    this.recordCategoryInternal(categoryLists, categoryIndex, tvTickers);
-  }
-
-  /** @inheritdoc */
-  evictTicker(tvTicker: string): boolean {
-    const categoryLists = this.watchRepo.getWatchCategoryLists();
-    let removed = false;
-
-    categoryLists.getLists().forEach((list, categoryIndex) => {
-      if (list.has(tvTicker)) {
-        categoryLists.delete(categoryIndex, tvTicker);
-        removed = true;
-      }
-    });
-
-    return removed;
+    return this.lastCategoryGroups.get(categoryIndex) ?? new Set();
   }
 
   /** @inheritdoc */
   computeDefaultList(tvWatchlistTickers: string[]): void {
-    //Prep Watchlist Set with all Symbols not in other Order Sets
-    const tvWatchSet = new Set(tvWatchlistTickers);
-    const categoryLists = this.watchRepo.getWatchCategoryLists();
-    // Remove tickers from other categories (except index 5 which is watchlist)
-    for (let i = 0; i < Constants.UI.COLORS.LIST.length; i++) {
-      if (i !== this.DEFAULT_LIST_INDEX) {
-        // Skip watchlist category
-        const categorySet = categoryLists.getList(i);
-        if (categorySet) {
-          categorySet.forEach((ticker) => tvWatchSet.delete(ticker));
-        }
-      }
+    // If snapshot is empty (first call before any backend refresh),
+    // use TV watchlist tickers as fallback in category 5
+    const hasData = Array.from(this.lastCategoryGroups.values()).some((s) => s.size > 0);
+    if (!hasData && tvWatchlistTickers.length > 0) {
+      this.lastCategoryGroups.set(this.DEFAULT_LIST_INDEX, new Set(tvWatchlistTickers));
     }
 
-    // Update watchlist category
-    categoryLists.setList(this.DEFAULT_LIST_INDEX, tvWatchSet);
+    // Fire async backend refresh
+    void this.refreshFromBackend(tvWatchlistTickers);
   }
 
   /** @inheritdoc */
-  dryRunClean(currentTickers: string[]): number {
-    return this.processCleanup(currentTickers, false);
-  }
+  recordCategory(categoryIndex: number, tvTickers: string[]): void {
+    let cat;
+    try {
+      cat = findWatchCategoryByIndex(categoryIndex);
+    } catch {
+      Notifier.warn(`Category ${categoryIndex} does not support manual recording`);
+      return;
+    }
 
-  /** @inheritdoc */
-  clean(currentTickers: string[]): number {
-    return this.processCleanup(currentTickers, true);
-  }
+    if (cat.recordUpdate === null) {
+      Notifier.warn(`Category ${categoryIndex} does not support manual recording`);
+      return;
+    }
 
-  /** @inheritdoc */
-  getDefaultWatchlist(): Set<string> {
-    return this.getCategory(this.DEFAULT_LIST_INDEX);
+    for (const ticker of tvTickers) {
+      void this.updateBackend(ticker, cat.recordUpdate);
+    }
   }
 
   /** @inheritdoc */
   public isWatched(tvTicker: string): boolean {
-    const allWatchedItems = this.watchRepo.getAllItems();
-    return allWatchedItems.has(tvTicker);
-  }
-
-  /**
-   * Records tickers in specified category
-   * @private
-   * @param categoryLists Category lists to update
-   * @param categoryIndex Category index
-   * @param tickers Tickers to record
-   */
-  private recordCategoryInternal(categoryLists: CategoryLists, categoryIndex: number, tickers: string[]): void {
-    tickers.forEach((ticker) => {
-      categoryLists.toggle(categoryIndex, ticker);
-    });
-  }
-
-  /**
-   * Process cleanup of order items not in watchlist
-   * @private
-   * @param executeChanges Whether to actually remove items and save
-   * @returns Number of items affected
-   */
-  private processCleanup(currentTickers: string[], executeChanges: boolean): number {
-    let count = 0;
-    const categoryLists = this.watchRepo.getWatchCategoryLists();
-    const watchListTickers = new Set(currentTickers);
-
-    categoryLists.getLists().forEach((list, key) => {
-      for (const ticker of [...list]) {
-        if (!watchListTickers.has(ticker)) {
-          console.log(`Removing ${ticker} from category ${key}`);
-          Notifier.red(`🗑️ ${ticker}`);
-          if (executeChanges) {
-            categoryLists.delete(key, ticker);
-          }
-          count++;
-        }
+    for (const set of this.lastCategoryGroups.values()) {
+      if (set.has(tvTicker)) {
+        return true;
       }
-    });
+    }
+    return false;
+  }
 
-    return count;
+  // ── Backend Refresh ──
+
+  /**
+   * Fetch tickers and journals from backend, derive categories,
+   * and update the local snapshot.
+   */
+  private async refreshFromBackend(tvWatchlistTickers: string[]): Promise<void> {
+    try {
+      const journalManager = this.getJournalManager();
+      const [allTickers, setJournals, runningJournals] = await Promise.all([
+        this.tickerManager.listTickers({}),
+        journalManager.listJournals({ status: 'SET' }),
+        journalManager.listJournals({ status: 'RUNNING' }),
+      ]);
+
+      this.buildCategorySnapshot(allTickers, setJournals, runningJournals, tvWatchlistTickers);
+    } catch (error) {
+      // Backend call failed — keep existing snapshot unchanged
+      Notifier.warn(`Failed to refresh watch categories from backend: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Build category snapshot from backend data using PRD derivation rules.
+   */
+  private buildCategorySnapshot(
+    allTickers: Ticker[],
+    setJournals: JournalRecord[],
+    runningJournals: JournalRecord[],
+    tvWatchlistTickers: string[]
+  ): void {
+    const freshGroups = this.createEmptyGroups();
+
+    // ── Journal-derived categories ──
+
+    // Category 0: tickers with SET journal status
+    freshGroups.set(0, journalTickerSet(setJournals));
+
+    // Category 4: tickers with RUNNING journal status
+    freshGroups.set(4, journalTickerSet(runningJournals));
+
+    // Collect all journal tickers to exclude from ticker-derived categories
+    const journalTickers = new Set([...freshGroups.get(0)!, ...freshGroups.get(4)!]);
+
+    // ── Ticker-derived categories (first-match priority) ──
+
+    const assignedToNonDefault = new Set<string>();
+
+    for (const ticker of allTickers) {
+      // Skip tickers already in journal categories
+      if (journalTickers.has(ticker.ticker)) {
+        assignedToNonDefault.add(ticker.ticker);
+        continue;
+      }
+
+      const category = resolveWatchCategory(ticker);
+      if (category !== undefined) {
+        freshGroups.get(category)?.add(ticker.ticker);
+        assignedToNonDefault.add(ticker.ticker);
+      }
+    }
+
+    // Category 5: TV watchlist tickers not assigned to any other category
+    const defaultTickers = new Set<string>();
+    for (const t of tvWatchlistTickers) {
+      if (!assignedToNonDefault.has(t) && !journalTickers.has(t)) {
+        defaultTickers.add(t);
+      }
+    }
+    freshGroups.set(5, defaultTickers);
+
+    // Update snapshot
+    this.lastCategoryGroups = freshGroups;
+  }
+
+  // ── Backend Update ──
+
+  /**
+   * Persist a category assignment to the backend.
+   */
+  private async updateBackend(ticker: string, update: TickerUpdateRequest): Promise<void> {
+    try {
+      await this.tickerManager.updateTicker(ticker, update);
+    } catch {
+      Notifier.warn(`Failed to update watch category for ${ticker}`);
+    }
+  }
+
+  // ── Helpers ──
+
+  /**
+   * Create a new map with empty sets for every category.
+   */
+  private createEmptyGroups(): Map<number, Set<string>> {
+    const groups = new Map<number, Set<string>>();
+    for (let i = 0; i < this.TOTAL_CATEGORIES; i++) {
+      groups.set(i, new Set());
+    }
+    return groups;
   }
 }

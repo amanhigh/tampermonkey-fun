@@ -42,12 +42,8 @@ describe('AlertFeedManager', () => {
     // Mock WatchManager
     mockWatchManager = {
       getCategory: jest.fn(),
-      getDefaultWatchlist: jest.fn(),
       computeDefaultList: jest.fn(),
       recordCategory: jest.fn(),
-      evictTicker: jest.fn(),
-      dryRunClean: jest.fn(),
-      clean: jest.fn(),
       isWatched: jest.fn(),
     } as any;
 

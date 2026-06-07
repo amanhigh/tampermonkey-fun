@@ -410,8 +410,7 @@ export class Factory {
             Factory.handler.alertSummary(),
             Factory.handler.ticker(),
             Factory.handler.alertTicker(),
-            Factory.manager.alertFeed(),
-            Factory.handler.watchlist()
+            Factory.manager.alertFeed()
           )
       ),
     alertSummary: (): IAlertSummaryHandler =>
@@ -547,8 +546,7 @@ export class Factory {
             Factory.util.sync(),
             Factory.manager.watch(),
             Factory.manager.dom(),
-            Factory.manager.alertFeed(),
-            Factory.util.ui()
+            Factory.manager.alertFeed()
           )
       ),
     flag: (): IFlagHandler =>

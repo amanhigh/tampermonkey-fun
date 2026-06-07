@@ -6,9 +6,7 @@ import { IHeaderManager } from '../manager/header';
 import { ITradingViewScreenerManager } from '../manager/screener';
 import { IWatchManager } from '../manager/watch';
 import { ITradingViewWatchlistManager } from '../manager/watchlist';
-import { Notifier } from '../util/notify';
 import { ISyncUtil } from '../util/sync';
-import { IUIUtil } from '../util/ui';
 import { IDomManager } from '../manager/dom';
 import { IAlertFeedManager } from '../manager/alertfeed';
 
@@ -24,15 +22,6 @@ export interface IWatchListHandler {
    * - Filter application
    */
   onWatchListChange(): void;
-
-  /**
-   * Handles watchlist cleanup operations
-   * - Performs dry run to check potential deletion count
-   * - Auto updates if deletions < 5
-   * - Prompts for confirmation if deletions >= 5
-   * - Saves changes after cleanup
-   */
-  handleWatchlistCleanup(): Promise<void>;
 
   /**
    * Records the selected ticker for a given category index.
@@ -58,8 +47,7 @@ export class WatchListHandler implements IWatchListHandler {
     private readonly syncUtil: ISyncUtil,
     private readonly watchManager: IWatchManager,
     private readonly domManager: IDomManager,
-    private readonly alertFeedManager: IAlertFeedManager,
-    private readonly uiUtil: IUIUtil
+    private readonly alertFeedManager: IAlertFeedManager
   ) {}
 
   /** @inheritdoc */
@@ -77,50 +65,6 @@ export class WatchListHandler implements IWatchListHandler {
       // Update alert feed with watchlist changes
       void this.alertFeedManager.createAlertFeedEvent(this.domManager.getTicker());
     });
-  }
-
-  /** @inheritdoc */
-  public async handleWatchlistCleanup(): Promise<void> {
-    // Get current UI tickers
-    const currentTickers = this.watchlistManager.getTickers();
-
-    // Perform dry run to get potential deletion count
-    const dryRunCount = this.watchManager.dryRunClean(currentTickers);
-
-    // Wait for unfilter to complete
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // Handle cleanup based on deletion count
-    if (dryRunCount < 5) {
-      this.executeCleanup(currentTickers);
-    } else {
-      this.executeCleanupWithConfirmation(currentTickers, dryRunCount);
-    }
-  }
-
-  /**
-   * Executes cleanup for small number of deletions
-   * @private
-   */
-  private executeCleanup(currentTickers: string[]): void {
-    const cleanCount = this.watchManager.clean(currentTickers);
-    Notifier.success(`Cleaned ${cleanCount} items`);
-  }
-
-  /**
-   * Executes cleanup with user confirmation for larger deletions
-   * @private
-   */
-  private executeCleanupWithConfirmation(currentTickers: string[], count: number): void {
-    const confirmDeletion = this.uiUtil.showConfirm(
-      'Watchlist Cleanup',
-      `🚨 Potential Deletions: ${count}. Proceed with cleanup?`
-    );
-    if (confirmDeletion) {
-      this.executeCleanup(currentTickers);
-    } else {
-      Notifier.yellow('🚫 Cleanup aborted by user.');
-    }
   }
 
   /** @inheritdoc */

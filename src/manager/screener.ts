@@ -111,7 +111,7 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
     this.flagManager.paint(screenerSymbolSelector, Constants.DOM.SCREENER.ITEM);
 
     // Paint Watchlist (Overwrite White)
-    const watchlistSet = this.watchManager.getDefaultWatchlist();
+    const watchlistSet = this.watchManager.getCategory(5);
     this.paintManager.paintSymbols(screenerSymbolSelector, watchlistSet, { color: colorList[6] });
   }
 }
