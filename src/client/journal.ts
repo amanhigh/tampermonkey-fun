@@ -108,7 +108,8 @@ export class JournalClient extends BaseClient implements IJournalClient {
         query.set('sort-order', params['sort-order']);
       }
 
-      return await this.makeRequest<JournalListResponse>(`/journals?${query.toString()}`);
+      const response = await this.makeRequest<KohanEnvelope<JournalListResponse>>(`/journals?${query.toString()}`);
+      return response.data;
     } catch (error) {
       throw new Error(`Failed to list journals: ${(error as Error).message}`);
     }
