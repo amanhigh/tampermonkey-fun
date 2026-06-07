@@ -310,12 +310,8 @@ export class Factory {
    */
   public static audit = {
     // ===== PLUGIN CREATION =====
-    // Return a singleton AlertsPlugin instance
-    alerts: () =>
-      Factory.getInstance(
-        'auditPlugin_alerts',
-        () => new AlertsPlugin(Factory.manager.ticker(), Factory.manager.alert(), Factory.manager.watch())
-      ),
+    // Return a singleton AlertsPlugin instance (backend adapter via IAuditClient)
+    alerts: () => Factory.getInstance('auditPlugin_alerts', () => new AlertsPlugin(Factory.client.audit())),
 
     // Return a singleton GttPlugin instance
     gttUnwatched: () =>
@@ -374,6 +370,8 @@ export class Factory {
 
     // ===== REGISTRY =====
     // Build registry by registering all sections
+    // FIXME: Catalogue-based registration — fetch available audits from backend
+    // GET /v1/api/audits instead of hardcoding each section here.
     registry: () =>
       Factory.getInstance('auditRegistry', () => {
         const reg = new AuditSectionRegistry();

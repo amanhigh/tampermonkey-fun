@@ -63,14 +63,14 @@ describe('AuditSectionRegistry', () => {
   describe('mustGetSection', () => {
     it('should return registered section', () => {
       const mockPlugin: IAudit = {
-        id: Constants.AUDIT.PLUGINS.ALERTS,
+        id: Constants.AUDIT.PLUGINS.ALERT_COVERAGE,
         title: 'Test Plugin',
         validate: jest.fn(),
         run: jest.fn().mockResolvedValue([]),
       };
 
       const mockSection: IAuditSection = {
-        id: Constants.AUDIT.PLUGINS.ALERTS,
+        id: Constants.AUDIT.PLUGINS.ALERT_COVERAGE,
         title: 'Test Section',
         order: 0,
         plugin: mockPlugin,
@@ -82,12 +82,12 @@ describe('AuditSectionRegistry', () => {
 
       registry.registerSection(mockSection);
 
-      expect(registry.mustGetSection(Constants.AUDIT.PLUGINS.ALERTS)).toEqual(mockSection);
+      expect(registry.mustGetSection(Constants.AUDIT.PLUGINS.ALERT_COVERAGE)).toEqual(mockSection);
     });
 
     it('should throw error for unregistered section', () => {
-      expect(() => registry.mustGetSection(Constants.AUDIT.PLUGINS.ALERTS)).toThrow(
-        `Audit section '${Constants.AUDIT.PLUGINS.ALERTS}' not found in registry`
+      expect(() => registry.mustGetSection(Constants.AUDIT.PLUGINS.ALERT_COVERAGE)).toThrow(
+        `Audit section '${Constants.AUDIT.PLUGINS.ALERT_COVERAGE}' not found in registry`
       );
     });
   });
@@ -99,7 +99,7 @@ describe('AuditSectionRegistry', () => {
 
     it('should return all registered sections', () => {
       const mockPlugin1: IAudit = {
-        id: Constants.AUDIT.PLUGINS.ALERTS,
+        id: Constants.AUDIT.PLUGINS.ALERT_COVERAGE,
         title: 'Plugin 1',
         validate: jest.fn(),
         run: jest.fn().mockResolvedValue([]),
@@ -113,7 +113,7 @@ describe('AuditSectionRegistry', () => {
       };
 
       const mockSection1: IAuditSection = {
-        id: Constants.AUDIT.PLUGINS.ALERTS,
+        id: Constants.AUDIT.PLUGINS.ALERT_COVERAGE,
         title: 'Section 1',
         order: 0,
         plugin: mockPlugin1,

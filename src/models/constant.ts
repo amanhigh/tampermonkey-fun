@@ -27,8 +27,8 @@ export const Constants = Object.freeze({
       HEADER_TEXT: 'header-text', // Header text with timestamp
     },
     PLUGINS: Object.freeze({
-      /** Alerts audit plugin - identifies tracked TV tickers with missing/weak alert coverage */
-      ALERTS: 'alerts',
+      /** Alert Coverage audit plugin - delegates to Kohan backend alert-coverage plugin */
+      ALERT_COVERAGE: 'alert-coverage',
 
       /** GTT unwatched audit plugin & section - identifies and displays unwatched GTT orders */
       GTT_UNWATCHED: 'gtt-unwatched',
