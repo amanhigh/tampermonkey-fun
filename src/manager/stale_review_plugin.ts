@@ -44,7 +44,6 @@ export class StaleReviewPlugin extends BackendAuditPlugin {
 
     return {
       ...super.toAuditResult(finding),
-      message: `${finding.target}: not recently opened`,
       data,
     };
   }

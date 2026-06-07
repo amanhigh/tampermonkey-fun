@@ -97,12 +97,9 @@ describe('GttPlugin', () => {
 
       expect(results).toHaveLength(1);
       expect(results[0]).toEqual({
-        pluginId: 'gtt-unwatched',
         code: 'UNWATCHED_GTT',
         target: 'TSLA',
-        message: 'TSLA: 1 GTT order(s) exist but ticker not in SET/RUNNING journal',
         severity: 'HIGH',
-        status: 'FAIL',
         data: {
           orderIds: ['1'],
         },

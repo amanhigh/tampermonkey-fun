@@ -43,12 +43,9 @@ export class GttPlugin extends BaseAuditPlugin {
         const ordersForTicker = gttData.orders[tvTicker] || [];
         const orderIds = ordersForTicker.map((order) => order.id);
         results.push({
-          pluginId: this.id,
           code: 'UNWATCHED_GTT',
           target: tvTicker,
-          message: `${tvTicker}: ${orderIds.length} GTT order(s) exist but ticker not in SET/RUNNING journal`,
           severity: 'HIGH',
-          status: 'FAIL',
           data: {
             orderIds: orderIds,
           },

@@ -10,12 +10,9 @@ describe('AlertsAuditSection', () => {
   let notifySuccessSpy: jest.SpyInstance;
 
   const createResult = (target: string, code = 'NO_ALERTS'): AuditResult => ({
-    pluginId: 'alert-coverage',
     code,
     target,
-    message: `${target}: ${code}`,
     severity: 'MEDIUM',
-    status: 'FAIL',
   });
 
   beforeEach(() => {

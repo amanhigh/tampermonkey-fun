@@ -65,12 +65,9 @@ describe('AlertsPlugin (backend adapter)', () => {
 
       expect(results).toHaveLength(1);
       expect(results[0]).toEqual({
-        pluginId: 'alert-coverage',
         code: 'NO_ALERT_TICKER',
         target: 'MCX',
-        message: 'MCX: NO_ALERT_TICKER',
         severity: 'HIGH',
-        status: 'FAIL',
         data: { alert_ticker_count: '0', price_alert_count: '0' },
       });
     });

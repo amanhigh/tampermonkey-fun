@@ -65,12 +65,9 @@ describe('StaleReviewPlugin (backend adapter)', () => {
 
       expect(results).toHaveLength(1);
       expect(results[0]).toMatchObject({
-        pluginId: 'stale-review',
         code: 'STALE_TICKER',
         target: 'MCX',
-        message: 'MCX: not recently opened',
         severity: 'MEDIUM',
-        status: 'FAIL',
       });
     });
 

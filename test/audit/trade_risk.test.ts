@@ -86,7 +86,6 @@ describe('TradeRiskPlugin', () => {
       expect(results[0].target).toBe('SBIN');
       expect(results[0].code).toBe('INVALID_RISK_MULTIPLE');
       expect(results[0].severity).toBe('HIGH');
-      expect(results[0].status).toBe('FAIL');
       expect(results[0].data).toMatchObject({
         tvTicker: 'SBIN',
         orderId: 'oco1',

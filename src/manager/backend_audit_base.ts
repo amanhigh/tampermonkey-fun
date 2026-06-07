@@ -57,25 +57,19 @@ export abstract class BackendAuditPlugin extends BaseAuditPlugin {
    * Maps a backend `AuditFinding` into a frontend `AuditResult`.
    *
    * Default mapping:
-   * - `pluginId` → `this.id`
    * - `code` → `finding.code`
    * - `target` → `finding.target`
-   * - `message` → `"${finding.target}: ${finding.code}"`
-   * - `severity` → `finding.severity` (cast)
-   * - `status` → `'FAIL'`
-   * - `data` → `finding.data` (cast to `Record<string, unknown>`)
+   * - `severity` → `finding.severity`
+   * - `data` → `finding.data` (direct assign — `Record<string, string>` is a subtype of `Record<string, unknown>`)
    *
-   * Subclasses override this to customise `message` or `data`.
+   * Subclasses override this to customise `data`.
    */
   protected toAuditResult(finding: AuditFinding): AuditResult {
     return {
-      pluginId: this.id,
       code: finding.code,
       target: finding.target,
-      message: `${finding.target}: ${finding.code}`,
       severity: finding.severity as AuditResult['severity'],
-      status: 'FAIL',
-      data: finding.data as Record<string, unknown> | undefined,
+      data: finding.data,
     };
   }
 }
