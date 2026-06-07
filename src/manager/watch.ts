@@ -1,3 +1,4 @@
+import { LRUCache } from 'lru-cache';
 import { ITickerManager } from './ticker';
 import { IJournalManager } from './journal';
 import { Notifier } from '../util/notify';
@@ -40,13 +41,23 @@ export interface IWatchManager {
 }
 
 /**
- * Manages watch category operations using backend-on-demand classification.
+ * Manages watch category operations using an LRU-cached classification pipeline.
  *
- * No snapshot — every call to getTickerCategory fetches
- * backend data fresh. Journal manager is injected as a lazy getter to avoid
- * circular dependency at factory construction time.
+ * Results are cached per ticker for 5 minutes to avoid redundant backend calls.
+ * The cache is evicted for affected tickers during {@link recordCategory}.
+ * Journal manager is injected as a lazy getter to avoid circular dependency
+ * at factory construction time.
  */
 export class WatchManager implements IWatchManager {
+  /** LRU cache for ticker → category lookups. Uncategorized results are cached as null. */
+  private readonly categoryCache = new LRUCache<string, WatchCategory | null>({
+    max: 1000,
+    ttl: 5 * 60 * 1000,
+    fetchMethod: async (key: string): Promise<WatchCategory | null> => {
+      return this.loadTickerCategory(key);
+    },
+  });
+
   constructor(
     private readonly tickerManager: ITickerManager,
     private readonly getJournalManager: () => IJournalManager
@@ -54,6 +65,16 @@ export class WatchManager implements IWatchManager {
 
   /** @inheritdoc */
   async getTickerCategory(tvTicker: string): Promise<WatchCategory | undefined> {
+    const result = await this.categoryCache.fetch(tvTicker);
+    return result ?? undefined;
+  }
+
+  /**
+   * Load a ticker's watch category from backend data (journals + ticker record).
+   * Used as the fetchMethod callback by the LRU cache.
+   * Returns null for uncategorized tickers so the result is cached.
+   */
+  private async loadTickerCategory(tvTicker: string): Promise<WatchCategory | null> {
     // 1. Check journals (highest priority)
     const journalCategory = await this.resolveJournalCategory(tvTicker);
     if (journalCategory !== undefined) {
