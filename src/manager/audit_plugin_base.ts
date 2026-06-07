@@ -39,6 +39,7 @@ import { IAudit } from '../models/audit';
  * }
  * ```
  */
+// FIXME: Consolidate into BackendAuditPlugin once all plugins migrate to backend adapter pattern
 export abstract class BaseAuditPlugin implements IAudit {
   abstract readonly id: string;
   abstract readonly title: string;

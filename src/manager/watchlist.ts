@@ -2,9 +2,9 @@ import { Constants } from '../models/constant';
 import { IPaintManager } from './paint';
 import { IUIUtil } from '../util/ui';
 import { IFnoManager } from './fno';
-import { IWatchManager, CategoryBuckets } from './watch';
+import { IWatchManager } from './watch';
 import { IFlagManager } from './flag';
-import { ALL_WATCH_CATEGORIES } from '../models/watch';
+import { ALL_WATCH_CATEGORIES, CategoryBuckets } from '../models/watch';
 
 /**
  * Filter options for watchlist manipulation

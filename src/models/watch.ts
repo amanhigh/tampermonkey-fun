@@ -44,6 +44,18 @@ export interface WatchCategory {
   readonly recordUpdate: TickerUpdateRequest | null;
 }
 
+// ── Classification Result ──
+
+/**
+ * Result of batch ticker classification — tickers grouped by watch category.
+ */
+export interface CategoryBuckets {
+  /** Tickers grouped by watch category ID. */
+  readonly buckets: Map<WatchCategoryId, Set<string>>;
+  /** Tickers that matched no watch category. */
+  readonly uncategorized: Set<string>;
+}
+
 // ── Canonical Category List ──
 
 /**

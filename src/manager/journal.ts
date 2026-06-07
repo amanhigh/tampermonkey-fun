@@ -174,6 +174,7 @@ export class JournalManager implements IJournalManager {
 
   /** @inheritdoc */
   public async listJournals(params: JournalQueryParams): Promise<JournalRecord[]> {
+    // FIXME: Extract auto-pagination (do/while offset<total) into a shared BaseManager helper
     const limit = Constants.KOHAN.PAGE_LIMIT;
     let offset = 0;
     let total = 0;

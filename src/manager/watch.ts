@@ -2,18 +2,8 @@ import { ITickerManager } from './ticker';
 import { IJournalManager } from './journal';
 import { Notifier } from '../util/notify';
 import { isCompositeSymbol, TickerUpdateRequest } from '../models/ticker';
-import { WatchCategory, WatchCategoryId } from '../models/watch';
+import { WatchCategory, WatchCategoryId, CategoryBuckets } from '../models/watch';
 import { findWatchCategoryById, resolveWatchCategory } from './watch_category';
-
-/**
- * Result of batch ticker classification — tickers grouped by watch category.
- */
-export interface CategoryBuckets {
-  /** Tickers grouped by watch category ID. */
-  readonly buckets: Map<WatchCategoryId, Set<string>>;
-  /** Tickers that matched no watch category. */
-  readonly uncategorized: Set<string>;
-}
 
 /**
  * Interface for managing watch category operations.
