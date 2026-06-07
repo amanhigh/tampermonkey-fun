@@ -173,11 +173,10 @@ export class TickerClient extends BaseClient implements ITickerClient {
    * the full mutable payload the backend PUT endpoint expects.
    *
    * Fields that are `undefined` in the partial request are kept from the record.
-   * `exchange` is always present per PRD 2.3.1.
    */
   private buildFullUpdatePayload(record: Ticker, partial: TickerUpdateRequest): Required<TickerUpdateRequest> {
     return {
-      exchange: partial.exchange,
+      exchange: partial.exchange ?? record.exchange,
       timeframes: partial.timeframes ?? record.timeframes,
       type: partial.type ?? record.type,
       state: partial.state ?? record.state,

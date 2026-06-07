@@ -38,8 +38,8 @@ export interface WatchCategory {
   /** Human-readable label. */
   readonly label: string;
   /**
-   * Backend update payload when a ticker is manually recorded into this category.
-   * `null` means manual recording is not supported for this category.
+   * Backend field update to record when a ticker is assigned to this category.
+   * `null` means this category is not directly recordable (e.g. journal-derived).
    */
   readonly recordUpdate: TickerUpdateRequest | null;
 }

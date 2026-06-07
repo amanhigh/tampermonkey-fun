@@ -60,10 +60,11 @@ export interface CreateTickerRequest {
 }
 
 /** Request body for PUT /v1/api/tickers/{ticker} (update mutable fields).
- * Exchange is required per PRD 2.3.1; other fields are optional and merged.
+ * Exchange is optional — when omitted, the client fills it from the current record.
+ * Other fields are optional and merged the same way.
  */
 export interface TickerUpdateRequest {
-  exchange: string;
+  exchange?: string;
   timeframes?: TickerTimeframe[];
   type?: TickerType;
   state?: TickerState;
