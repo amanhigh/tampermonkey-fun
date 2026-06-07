@@ -46,9 +46,9 @@ export const Constants = Object.freeze({
   // UI element colors and styles
   UI: {
     COLORS: {
-      LIST: ['orange', 'red', 'dodgerblue', 'cyan', 'lime', 'white', 'brown', 'darkkhaki'], // Old name: colorList
       DEFAULT: 'white',
       HEADER_DEFAULT: 'brown', // Brown fallback for uncategorized ticker in watchlist (header/screener)
+      SCREENER_RECENT: 'red', // Recent ticker highlight in screener
       FNO_CSS: { 'border-top-style': 'groove', 'border-width': 'medium' }, // Old name: fnoCss
       // Severity colors for audit results
       SEVERITY: {

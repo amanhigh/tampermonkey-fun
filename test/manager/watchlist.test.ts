@@ -5,7 +5,7 @@ import { IFnoManager } from '../../src/manager/fno';
 import { IWatchManager } from '../../src/manager/watch';
 import { IFlagManager } from '../../src/manager/flag';
 import { Constants } from '../../src/models/constant';
-import { WatchCategoryId, CategoryBuckets } from '../../src/models/watch';
+import { ALL_WATCH_CATEGORIES, WatchCategoryId, CategoryBuckets } from '../../src/models/watch';
 
 // Mock jQuery globally for DOM manipulation
 const mockJQuery = jest.fn(() => ({
@@ -192,7 +192,7 @@ describe('TradingViewWatchlistManager', () => {
       await watchlistManager.paintWatchList();
 
       // Should call buildLabel for each color category
-      expect(mockUIUtil.buildLabel).toHaveBeenCalledTimes(Constants.UI.COLORS.LIST.length);
+      expect(mockUIUtil.buildLabel).toHaveBeenCalledTimes(ALL_WATCH_CATEGORIES.length);
     });
 
     it('should set widget height for expansion', async () => {

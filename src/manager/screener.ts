@@ -99,7 +99,7 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
       this.recentManager.isRecent(t, Constants.RECENT_CUTOFF_MS)
     );
     this.paintManager.paintSymbols(screenerSymbolSelector, new Set(recentSymbols), {
-      color: Constants.UI.COLORS.LIST[1],
+      color: Constants.UI.COLORS.SCREENER_RECENT,
     });
 
     // Classify each screener ticker into category buckets

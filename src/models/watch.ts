@@ -60,7 +60,8 @@ export interface CategoryBuckets {
 // ── Canonical Category List ──
 
 /**
- * All watch categories in UI paint order (matching Constants.UI.COLORS.LIST order).
+ * All watch categories in UI paint order (matching Constants.UI.COLORS.DEFAULT).
+ * List order: SET_JOURNAL, READY, LONG_NSE, LONG_NON_NSE, RUNNING, DEFAULT_DAILY, INDEX, COMPOSITE, BLACKLISTED
  */
 // HACK: Change to Map fro both Watch and Flag Categories
 export const ALL_WATCH_CATEGORIES: readonly WatchCategory[] = [

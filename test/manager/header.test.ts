@@ -181,7 +181,7 @@ describe('HeaderManager', () => {
 
     it('should paint flag and exchange elements with flag colors', async () => {
       const ticker = 'NSE:TCS';
-      const flagCategory = { id: FlagCategoryId.DOWNTREND, color: Constants.UI.COLORS.LIST[1], label: '', update: {} };
+      const flagCategory = { id: FlagCategoryId.DOWNTREND, color: Constants.UI.COLORS.SCREENER_RECENT, label: '', update: {} };
 
       mockTickerManager.getTicker.mockReturnValue(ticker);
       mockWatchManager.getTickerCategory.mockResolvedValue(undefined);
