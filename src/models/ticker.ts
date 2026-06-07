@@ -1,5 +1,7 @@
 // ── Enums matching Go models/barkat/ticker.go ──
 
+import { PaginationMetadata } from './api';
+
 /** Ordered timeframe codes. */
 export type TickerTimeframe = 'YR' | 'SMN' | 'TMN' | 'MN' | 'WK' | 'DL';
 
@@ -92,11 +94,7 @@ export interface TickerQueryParams {
 /** Paginated ticker list response. */
 export interface TickerListResponse {
   tickers: Ticker[];
-  metadata: {
-    total: number;
-    offset: number;
-    limit: number;
-  };
+  metadata: PaginationMetadata;
 }
 
 /**

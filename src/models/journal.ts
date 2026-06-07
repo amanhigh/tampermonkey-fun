@@ -1,4 +1,5 @@
 import { ScreenshotResponse } from './os';
+import { PaginationMetadata } from './api';
 
 // ── Journal API Types ──
 
@@ -17,11 +18,6 @@ export type JournalTagType = 'REASON' | 'MANAGEMENT' | 'DIRECTION';
 export type JournalResultStatus = 'SUCCESS' | 'FAIL' | 'MISSED';
 
 export type JournalNoteFormat = 'MARKDOWN' | 'PLAINTEXT';
-
-export interface KohanEnvelope<T> {
-  status: 'success' | 'fail' | 'error';
-  data: T;
-}
 
 export interface CreateJournalImageRequest {
   timeframe: JournalApiTimeframe;
@@ -102,11 +98,7 @@ export interface JournalQueryParams {
 /** Paginated journal list response. */
 export interface JournalListResponse {
   journals: JournalRecord[];
-  metadata: {
-    total: number;
-    offset: number;
-    limit: number;
-  };
+  metadata: PaginationMetadata;
 }
 
 /** Request body for updating a journal's status. */

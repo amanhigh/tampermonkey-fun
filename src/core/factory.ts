@@ -7,6 +7,7 @@ import { OsClient, IOsClient } from '../client/os';
 import { TickerClient, ITickerClient } from '../client/ticker';
 import { AlertTickerClient, IAlertTickerClient } from '../client/alert_ticker';
 import { IPriceAlertClient, PriceAlertClient } from '../client/price_alert';
+import { IAuditClient, AuditClient } from '../client/audit';
 import { UIUtil, IUIUtil } from '../util/ui';
 import { ObserveUtil, IObserveUtil } from '../util/observer';
 import { SearchUtil, ISearchUtil } from '../util/search';
@@ -145,6 +146,7 @@ export class Factory {
     ticker: (): ITickerClient => Factory.getInstance('tickerClient', () => new TickerClient()),
     tickerAlert: (): IAlertTickerClient => Factory.getInstance('tickerAlertClient', () => new AlertTickerClient()),
     priceAlert: (): IPriceAlertClient => Factory.getInstance('priceAlertClient', () => new PriceAlertClient()),
+    audit: (): IAuditClient => Factory.getInstance('auditClient', () => new AuditClient()),
   };
 
   /**

@@ -1,5 +1,5 @@
 import { BaseClient, IBaseClient } from './base';
-import { KohanEnvelope } from '../models/journal';
+import { KohanEnvelope } from '../models/api';
 import { Constants } from '../models/constant';
 import {
   PendingPriceAlertRequest,

@@ -105,4 +105,14 @@ describe('Factory Client Providers', () => {
     const priceAlertAgain = Factory.client.priceAlert();
     expect(priceAlert).toBe(priceAlertAgain);
   });
+
+  it('should provide singleton AuditClient', () => {
+    const audit = Factory.client.audit();
+    expect(audit).toBeDefined();
+    expect(audit.getBaseUrl()).toBe('http://localhost:9091/v1/api');
+
+    // Verify singleton behavior
+    const auditAgain = Factory.client.audit();
+    expect(audit).toBe(auditAgain);
+  });
 });

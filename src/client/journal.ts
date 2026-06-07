@@ -6,10 +6,10 @@ import {
   JournalListResponse,
   JournalQueryParams,
   JournalRecord,
-  KohanEnvelope,
   UpdateJournalStatusRequest,
   UpdateJournalStatusResponse,
 } from '../models/journal';
+import { KohanEnvelope } from '../models/api';
 import { Constants } from '../models/constant';
 
 /**

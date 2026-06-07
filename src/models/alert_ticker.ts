@@ -1,5 +1,7 @@
 // ── Alert Ticker Types ──
 
+import { PaginationMetadata } from './api';
+
 /** Full Alert ticker record returned by the API (matches go-fun models/barkat/alert_ticker.go AlertTicker). */
 export interface AlertTicker {
   symbol: string;
@@ -32,9 +34,5 @@ export interface AlertTickerQueryParams {
 /** Paginated Alert ticker list response. */
 export interface AlertTickerListResponse {
   alert_tickers: AlertTicker[];
-  metadata: {
-    total: number;
-    offset: number;
-    limit: number;
-  };
+  metadata: PaginationMetadata;
 }
