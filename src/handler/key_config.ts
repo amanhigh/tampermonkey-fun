@@ -186,38 +186,10 @@ export class KeyConfig implements IKeyConfig {
 
     this.orderKeys = new Map([
       [
-        'F1',
-        {
-          description: 'SET Journal',
-          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.SET_JOURNAL),
-        },
-      ],
-      [
         'F2',
         {
           description: 'Ready',
           action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.READY),
-        },
-      ],
-      [
-        'F3',
-        {
-          description: 'Long Watch India',
-          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.LONG_NSE),
-        },
-      ],
-      [
-        'F4',
-        {
-          description: 'Long Watch Non-India',
-          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.LONG_NON_NSE),
-        },
-      ],
-      [
-        'F5',
-        {
-          description: 'RUNNING Journal',
-          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.RUNNING),
         },
       ],
     ]);
