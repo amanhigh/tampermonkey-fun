@@ -3,11 +3,11 @@ import { BaseAuditPlugin } from './audit_plugin_base';
 import { IKiteRepo } from '../repo/kite';
 import { IWatchManager } from './watch';
 import { Constants } from '../models/constant';
+import { WatchCategoryId } from '../models/watch';
 
 /**
  * GTT Unwatched Audit plugin: identifies GTT orders for tickers not in watchlists.
- * Checks if GTT order tickers are in Orange (category 0), Red (category 1), or Lime (category 4) watchlists.
- * Emits FAIL results only for unwatched GTT orders.
+ * Only treats SET_JOURNAL and RUNNING_JOURNAL as watched-for-GTT (per PRD).
  */
 export class GttPlugin extends BaseAuditPlugin {
   public readonly id = Constants.AUDIT.PLUGINS.GTT_UNWATCHED;
@@ -30,24 +30,23 @@ export class GttPlugin extends BaseAuditPlugin {
     const gttData = await this.kiteRepo.getGttRefereshEvent();
     const allGttTickers = Object.keys(gttData.orders);
 
-    // Get watched categories (Orange, Red, Running Trades)
-    const firstList = this.watchManager.getCategory(0); // Orange list
-    const secondList = this.watchManager.getCategory(1); // Red list
-    const runningTradesList = this.watchManager.getCategory(4); // Lime list - Running trades
+    // Fetch watch categories for all GTT tickers
+    const categoryMap = await this.watchManager.getTickerCategories(allGttTickers);
 
-    // Find tickers with GTT orders that are not in any watchlist
+    // Find tickers with GTT orders that are not in SET_JOURNAL or RUNNING_JOURNAL
     const results: AuditResult[] = [];
     allGttTickers.forEach((tvTicker: string) => {
-      // Check if GTT ticker is in any watched category
-      const isWatched = firstList.has(tvTicker) || secondList.has(tvTicker) || runningTradesList.has(tvTicker);
-      if (!isWatched) {
+      const cat = categoryMap.get(tvTicker);
+      const isWatchedForGtt = cat?.id === WatchCategoryId.SET_JOURNAL || cat?.id === WatchCategoryId.RUNNING_JOURNAL;
+
+      if (!isWatchedForGtt) {
         const ordersForTicker = gttData.orders[tvTicker] || [];
         const orderIds = ordersForTicker.map((order) => order.id);
         results.push({
           pluginId: this.id,
           code: 'UNWATCHED_GTT',
           target: tvTicker,
-          message: `${tvTicker}: ${orderIds.length} GTT order(s) exist but ticker not in watchlist`,
+          message: `${tvTicker}: ${orderIds.length} GTT order(s) exist but ticker not in SET/RUNNING watchlist`,
           severity: 'HIGH',
           status: 'FAIL',
           data: {

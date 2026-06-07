@@ -1,12 +1,12 @@
 import { Constants } from '../models/constant';
 import { ITimeFrameManager } from '../manager/timeframe';
-import { ISequenceManager } from '../manager/sequence';
 import { IStyleManager } from '../manager/style';
 import { IWatchListHandler } from '../handler/watchlist';
 import { IFlagHandler } from '../handler/flag';
 import { IJournalHandler } from './journal';
 import { IKiteHandler } from './kite';
 import { FlagCategoryId } from '../models/flag';
+import { WatchCategoryId } from '../models/watch';
 
 /**
  * Type definitions for key bindings and actions
@@ -76,15 +76,15 @@ export class KeyConfig implements IKeyConfig {
   private readonly utilityKeys: KeyMap;
 
   /**
-   * @param sequenceManager Sequence manager for timeframes
    * @param timeFrameManager Timeframe operations manager
    * @param watchlistHandler Watchlist handler
    * @param flagHandler Flag handler
    * @param styleManager Style operations manager
+   * @param journalHandler Journal handler
+   * @param kiteHandler Kite handler
    */
   // eslint-disable-next-line max-lines-per-function, max-params
   constructor(
-    private readonly sequenceManager: ISequenceManager,
     private readonly timeFrameManager: ITimeFrameManager,
     private readonly watchlistHandler: IWatchListHandler,
     private readonly flagHandler: IFlagHandler,
@@ -155,13 +155,6 @@ export class KeyConfig implements IKeyConfig {
 
     this.timeframeKeys = new Map([
       [
-        '0',
-        {
-          description: 'Freeze Sequence',
-          action: () => void this.sequenceManager.toggleFreezeSequence(),
-        },
-      ],
-      [
         '1',
         {
           description: 'VHTF (Very High Timeframe)',
@@ -195,36 +188,36 @@ export class KeyConfig implements IKeyConfig {
       [
         'F1',
         {
-          description: 'Order List - Index 0',
-          action: () => this.watchlistHandler.recordSelectedTicker(0),
+          description: 'SET Journal',
+          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.SET_JOURNAL),
         },
       ],
       [
         'F2',
         {
-          description: 'Order List - Index 1',
-          action: () => this.watchlistHandler.recordSelectedTicker(1),
+          description: 'Ready',
+          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.READY),
         },
       ],
       [
         'F3',
         {
-          description: 'Order List - Index 2',
-          action: () => this.watchlistHandler.recordSelectedTicker(2),
+          description: 'Long Watch India',
+          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.LONG_NSE),
         },
       ],
       [
         'F4',
         {
-          description: 'Order List - Index 3',
-          action: () => this.watchlistHandler.recordSelectedTicker(3),
+          description: 'Long Watch Non-India',
+          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.LONG_NON_NSE),
         },
       ],
       [
         'F5',
         {
-          description: 'Order List - Index 4',
-          action: () => this.watchlistHandler.recordSelectedTicker(4),
+          description: 'RUNNING Journal',
+          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.RUNNING_JOURNAL),
         },
       ],
     ]);
@@ -261,15 +254,15 @@ export class KeyConfig implements IKeyConfig {
       [
         'F11',
         {
-          description: 'Normal Composite - Index 6',
-          action: () => this.watchlistHandler.recordSelectedTicker(6),
+          description: 'INDEX',
+          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.INDEX),
         },
       ],
       [
         'F12',
         {
-          description: 'Golden Composite - Index 7',
-          action: () => this.watchlistHandler.recordSelectedTicker(7),
+          description: 'COMPOSITE',
+          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.COMPOSITE),
         },
       ],
     ]);

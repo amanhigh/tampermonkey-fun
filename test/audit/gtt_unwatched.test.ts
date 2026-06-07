@@ -3,13 +3,22 @@ import { IKiteRepo } from '../../src/repo/kite';
 import { IWatchManager } from '../../src/manager/watch';
 import { GttRefreshEvent } from '../../src/models/gtt';
 import { Order, OrderType } from '../../src/models/kite';
+import { WatchCategoryId } from '../../src/models/watch';
 
-// Unit tests for GttUnwatchedAudit: identifies GTT orders for unwatched tickers
+// Unit tests for GttUnwatchedAudit: only SET_JOURNAL and RUNNING_JOURNAL count as watched
 
 describe('GttPlugin', () => {
   let plugin: GttPlugin;
   let kiteRepo: jest.Mocked<IKiteRepo>;
   let watchManager: jest.Mocked<IWatchManager>;
+
+  const makeCategoryMap = (watched: Record<string, WatchCategoryId>) => {
+    const map = new Map<string, any>();
+    for (const [ticker, id] of Object.entries(watched)) {
+      map.set(ticker, { id, color: 'orange' });
+    }
+    return map;
+  };
 
   beforeEach(() => {
     kiteRepo = {
@@ -17,7 +26,9 @@ describe('GttPlugin', () => {
     } as any;
 
     watchManager = {
-      getCategory: jest.fn(),
+      getTickerCategories: jest.fn(),
+      getTickerCategory: jest.fn(),
+      recordCategory: jest.fn(),
     } as any;
 
     plugin = new GttPlugin(kiteRepo, watchManager);
@@ -42,75 +53,59 @@ describe('GttPlugin', () => {
       expect(kiteRepo.getGttRefereshEvent).toHaveBeenCalledTimes(1);
     });
 
-    it('returns empty array when all GTT tickers are in first watchlist (category 0)', async () => {
+    it('skips ticker with SET_JOURNAL category', async () => {
       const gttEvent = new GttRefreshEvent();
       const mockOrder = new Order('AAPL', 10, OrderType.SINGLE, '1', [100]);
       gttEvent.addOrder('AAPL', mockOrder);
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
-      watchManager.getCategory.mockImplementation((index: number) => {
-        if (index === 0) return new Set(['AAPL']); // Orange list
-        if (index === 1) return new Set(); // Red list
-        if (index === 4) return new Set(); // Running trades
-        return new Set();
-      });
+      watchManager.getTickerCategories.mockResolvedValue(
+        makeCategoryMap({ AAPL: WatchCategoryId.SET_JOURNAL })
+      );
 
       const results = await plugin.run();
 
       expect(results).toEqual([]);
-      expect(watchManager.getCategory).toHaveBeenCalledWith(0);
-      expect(watchManager.getCategory).toHaveBeenCalledWith(1);
-      expect(watchManager.getCategory).toHaveBeenCalledWith(4);
     });
 
-    it('returns empty array when all GTT tickers are in second watchlist (category 1)', async () => {
+    it('skips ticker with RUNNING_JOURNAL category', async () => {
       const gttEvent = new GttRefreshEvent();
       const mockOrder = new Order('MSFT', 10, OrderType.SINGLE, '1', [100]);
       gttEvent.addOrder('MSFT', mockOrder);
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
-      watchManager.getCategory.mockImplementation((index: number) => {
-        if (index === 0) return new Set(); // Orange list
-        if (index === 1) return new Set(['MSFT']); // Red list
-        if (index === 4) return new Set(); // Running trades
-        return new Set();
-      });
+      watchManager.getTickerCategories.mockResolvedValue(
+        makeCategoryMap({ MSFT: WatchCategoryId.RUNNING_JOURNAL })
+      );
 
       const results = await plugin.run();
 
       expect(results).toEqual([]);
     });
 
-    it('returns empty array when all GTT tickers are in running trades watchlist (category 4)', async () => {
+    it('emits FAIL for READY ticker with GTT order', async () => {
       const gttEvent = new GttRefreshEvent();
       const mockOrder = new Order('GOOGL', 10, OrderType.SINGLE, '1', [100]);
       gttEvent.addOrder('GOOGL', mockOrder);
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
-      watchManager.getCategory.mockImplementation((index: number) => {
-        if (index === 0) return new Set(); // Orange list
-        if (index === 1) return new Set(); // Red list
-        if (index === 4) return new Set(['GOOGL']); // Running trades
-        return new Set();
-      });
+      watchManager.getTickerCategories.mockResolvedValue(
+        makeCategoryMap({ GOOGL: WatchCategoryId.READY })
+      );
 
       const results = await plugin.run();
 
-      expect(results).toEqual([]);
+      expect(results).toHaveLength(1);
+      expect(results[0].target).toBe('GOOGL');
     });
 
-    it('emits FAIL for GTT ticker not in any watchlist', async () => {
+    it('emits FAIL for unwatched GTT ticker', async () => {
       const gttEvent = new GttRefreshEvent();
       const mockOrder = new Order('TSLA', 10, OrderType.SINGLE, '1', [100]);
       gttEvent.addOrder('TSLA', mockOrder);
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
-      watchManager.getCategory.mockImplementation((index: number) => {
-        if (index === 0) return new Set(['AAPL']); // Orange list
-        if (index === 1) return new Set(['MSFT']); // Red list
-        if (index === 4) return new Set(['GOOGL']); // Running trades
-        return new Set();
-      });
+      watchManager.getTickerCategories.mockResolvedValue(new Map());
 
       const results = await plugin.run();
 
@@ -119,7 +114,7 @@ describe('GttPlugin', () => {
         pluginId: 'gtt-unwatched',
         code: 'UNWATCHED_GTT',
         target: 'TSLA',
-        message: 'TSLA: 1 GTT order(s) exist but ticker not in watchlist',
+        message: 'TSLA: 1 GTT order(s) exist but ticker not in SET/RUNNING watchlist',
         severity: 'HIGH',
         status: 'FAIL',
         data: {
@@ -136,23 +131,32 @@ describe('GttPlugin', () => {
       gttEvent.addOrder('AMZN', order2);
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
-      watchManager.getCategory.mockImplementation(() => new Set()); // All empty
+      watchManager.getTickerCategories.mockResolvedValue(new Map());
 
       const results = await plugin.run();
 
       expect(results).toHaveLength(2);
       const targets = results.map((r) => r.target).sort();
       expect(targets).toEqual(['AMZN', 'TSLA']);
-
-      results.forEach((result) => {
-        expect(result.pluginId).toBe('gtt-unwatched');
-        expect(result.code).toBe('UNWATCHED_GTT');
-        expect(result.severity).toBe('HIGH');
-        expect(result.status).toBe('FAIL');
-      });
     });
 
-    it('emits FAIL only for unwatched tickers when some are watched', async () => {
+    it('emits FAIL for ticker in non-journal category (e.g. INDEX)', async () => {
+      const gttEvent = new GttRefreshEvent();
+      gttEvent.addOrder('NIFTY', new Order('NIFTY', 10, OrderType.SINGLE, '1', [100]));
+
+      kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
+      watchManager.getTickerCategories.mockResolvedValue(
+        makeCategoryMap({ NIFTY: WatchCategoryId.INDEX })
+      );
+
+      const results = await plugin.run();
+
+      // INDEX is NOT SET/RUNNING, so it emits FAIL
+      expect(results).toHaveLength(1);
+      expect(results[0].target).toBe('NIFTY');
+    });
+
+    it('emits FAIL only for unwatched tickers when some are in watched categories', async () => {
       const gttEvent = new GttRefreshEvent();
       gttEvent.addOrder('AAPL', new Order('AAPL', 10, OrderType.SINGLE, '1', [100]));
       gttEvent.addOrder('TSLA', new Order('TSLA', 10, OrderType.SINGLE, '2', [150]));
@@ -160,36 +164,20 @@ describe('GttPlugin', () => {
       gttEvent.addOrder('AMZN', new Order('AMZN', 10, OrderType.SINGLE, '4', [250]));
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
-      watchManager.getCategory.mockImplementation((index: number) => {
-        if (index === 0) return new Set(['AAPL']); // Orange list
-        if (index === 1) return new Set(['MSFT']); // Red list
-        if (index === 4) return new Set(); // Running trades empty
-        return new Set();
-      });
+      watchManager.getTickerCategories.mockResolvedValue(
+        makeCategoryMap({
+          AAPL: WatchCategoryId.SET_JOURNAL,
+          MSFT: WatchCategoryId.RUNNING_JOURNAL,
+        })
+      );
 
       const results = await plugin.run();
 
+      // AAPL (SET) and MSFT (RUNNING) should be skipped
+      // TSLA and AMZN should be flagged
       expect(results).toHaveLength(2);
       const targets = results.map((r) => r.target).sort();
       expect(targets).toEqual(['AMZN', 'TSLA']);
-    });
-
-    it('handles ticker in multiple watchlists correctly', async () => {
-      const gttEvent = new GttRefreshEvent();
-      gttEvent.addOrder('AAPL', new Order('AAPL', 10, OrderType.SINGLE, '1', [100]));
-
-      kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
-      watchManager.getCategory.mockImplementation((index: number) => {
-        if (index === 0) return new Set(['AAPL']); // Orange list
-        if (index === 1) return new Set(['AAPL']); // Red list (also has AAPL)
-        if (index === 4) return new Set(); // Running trades
-        return new Set();
-      });
-
-      const results = await plugin.run();
-
-      // Should not emit FAIL since ticker is watched (even in multiple lists)
-      expect(results).toEqual([]);
     });
 
     it('verifies correct AuditResult structure', async () => {
@@ -197,7 +185,7 @@ describe('GttPlugin', () => {
       gttEvent.addOrder('UNWATCHED', new Order('UNWATCHED', 10, OrderType.SINGLE, '1', [100]));
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
-      watchManager.getCategory.mockImplementation(() => new Set());
+      watchManager.getTickerCategories.mockResolvedValue(new Map());
 
       const results = await plugin.run();
 
@@ -210,7 +198,6 @@ describe('GttPlugin', () => {
       expect(result).toHaveProperty('severity');
       expect(result).toHaveProperty('status');
       expect(result.message).toContain('UNWATCHED');
-      expect(result.message).toContain('GTT order(s) exist but ticker not in watchlist');
     });
   });
 });

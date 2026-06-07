@@ -514,7 +514,6 @@ export class Factory {
         'keyConfig',
         () =>
           new KeyConfig(
-            Factory.manager.sequence(),
             Factory.manager.timeFrame(),
             Factory.handler.watchlist(),
             Factory.handler.flag(),

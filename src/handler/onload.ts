@@ -139,12 +139,14 @@ export class OnLoadHandler implements IOnLoadHandler {
           if (isScreenerOpen) {
             console.log('🟢 SCREENER OPENED - triggering repaint');
             setTimeout(() => {
-              try {
-                this.screenerManager.paintScreener();
-                console.log('✅ Screener repainted successfully');
-              } catch (error) {
-                console.error('❌ Error repainting screener:', error);
-              }
+              void this.screenerManager
+                .paintScreener()
+                .then(() => {
+                  console.log('✅ Screener repainted successfully');
+                })
+                .catch((error) => {
+                  console.error('❌ Error repainting screener:', error);
+                });
             }, 50);
           } else {
             console.log('🔴 SCREENER CLOSED');

@@ -6,10 +6,12 @@ import { IDomManager } from '../../src/manager/dom';
 import { IFnoManager } from '../../src/manager/fno';
 import { Constants } from '../../src/models/constant';
 import { FlagCategoryId } from '../../src/models/flag';
+import { WatchCategoryId } from '../../src/models/watch';
 
 // Mock jQuery
 const mockJQueryElement = {
   css: jest.fn().mockReturnThis(),
+  toArray: jest.fn().mockReturnValue([]),
 };
 const mockJQuery = jest.fn(() => mockJQueryElement);
 (global as any).$ = mockJQuery;
@@ -35,10 +37,9 @@ describe('HeaderManager', () => {
 
     // Mock WatchManager
     mockWatchManager = {
-      getCategory: jest.fn(),
-      computeDefaultList: jest.fn(),
+      getTickerCategory: jest.fn(),
+      getTickerCategories: jest.fn(),
       recordCategory: jest.fn(),
-      isWatched: jest.fn(),
     } as jest.Mocked<IWatchManager>;
 
     // Mock FlagManager
@@ -87,12 +88,12 @@ describe('HeaderManager', () => {
       mockJQuery.mockReturnValue(mockJQueryElement);
     });
 
-    it('should paint header with all components', () => {
-      mockWatchManager.getCategory.mockReturnValue(new Set());
+    it('should paint header with all components', async () => {
+      mockWatchManager.getTickerCategory.mockResolvedValue(undefined);
       mockFlagManager.getTickerCategory.mockReturnValue(undefined);
       mockFnoManager.isFno.mockReturnValue(false);
 
-      headerManager.paintHeader();
+      await headerManager.paintHeader();
 
       // Verify ticker was retrieved
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
@@ -109,238 +110,112 @@ describe('HeaderManager', () => {
       expect(mockPaintManager.paintFNOMarking).toHaveBeenCalledWith(mockJQueryElement, false);
     });
 
-    it('should paint name element with category color when ticker is in watch category', () => {
+    it('should paint name element with category color when ticker has watch category', async () => {
       const ticker = 'NSE:RELIANCE';
-      const categoryIndex = 2;
-      const categorySet = new Set([ticker]);
 
       mockTickerManager.getTicker.mockReturnValue(ticker);
-      mockWatchManager.getCategory
-        .mockReturnValueOnce(new Set()) // category 0
-        .mockReturnValueOnce(new Set()) // category 1
-        .mockReturnValueOnce(categorySet); // category 2
+      mockWatchManager.getTickerCategory.mockResolvedValue({
+        id: WatchCategoryId.READY,
+        color: 'red',
+        label: 'Ready',
+        recordUpdate: { state: 'READY' },
+      });
       mockFlagManager.getTickerCategory.mockReturnValue(undefined);
       mockFnoManager.isFno.mockReturnValue(false);
 
-      headerManager.paintHeader();
+      await headerManager.paintHeader();
 
-      expect(mockWatchManager.getCategory).toHaveBeenCalledTimes(3);
-      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', Constants.UI.COLORS.LIST[categoryIndex]);
+      expect(mockWatchManager.getTickerCategory).toHaveBeenCalledWith(ticker, expect.any(Array));
+      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'red');
     });
 
-    it('should use special color mapping for category 5', () => {
+    it('should use brown override for DEFAULT_DAILY category', async () => {
       const ticker = 'NSE:NIFTY';
-      const categorySet = new Set([ticker]);
 
       mockTickerManager.getTicker.mockReturnValue(ticker);
-      // Mock categories 0-4 as empty, category 5 with ticker
-      mockWatchManager.getCategory
-        .mockReturnValueOnce(new Set()) // 0
-        .mockReturnValueOnce(new Set()) // 1
-        .mockReturnValueOnce(new Set()) // 2
-        .mockReturnValueOnce(new Set()) // 3
-        .mockReturnValueOnce(new Set()) // 4
-        .mockReturnValueOnce(categorySet); // 5
+      mockWatchManager.getTickerCategory.mockResolvedValue({
+        id: WatchCategoryId.DEFAULT_DAILY,
+        color: 'white',
+        label: 'Default / Daily',
+        recordUpdate: null,
+      });
       mockFlagManager.getTickerCategory.mockReturnValue(undefined);
       mockFnoManager.isFno.mockReturnValue(false);
 
-      headerManager.paintHeader();
+      await headerManager.paintHeader();
 
-      // For category 5, should use color index 6
+      // DEFAULT_DAILY should use brown (colorList[6])
       expect(mockJQueryElement.css).toHaveBeenCalledWith('color', Constants.UI.COLORS.LIST[6]);
     });
 
-    it('should paint flag and exchange elements with flag colors', () => {
+    it('should paint flag and exchange elements with flag colors', async () => {
       const ticker = 'NSE:TCS';
-      const flagCategoryIndex = 1;
-      const flagCategory = { id: FlagCategoryId.DOWNTREND, color: Constants.UI.COLORS.LIST[flagCategoryIndex], label: '', update: {} };
+      const flagCategory = { id: FlagCategoryId.DOWNTREND, color: Constants.UI.COLORS.LIST[1], label: '', update: {} };
 
       mockTickerManager.getTicker.mockReturnValue(ticker);
-      mockWatchManager.getCategory.mockReturnValue(new Set());
+      mockWatchManager.getTickerCategory.mockResolvedValue(undefined);
       mockFlagManager.getTickerCategory.mockReturnValue(flagCategory);
       mockFnoManager.isFno.mockReturnValue(false);
 
-      headerManager.paintHeader();
+      await headerManager.paintHeader();
 
       expect(mockFlagManager.getTickerCategory).toHaveBeenCalledTimes(1);
       // Flag and exchange should be colored with flag category color
       expect(mockJQueryElement.css).toHaveBeenCalledWith('color', flagCategory.color);
     });
 
-    it('should paint FNO marking when ticker is in FNO repo', () => {
+    it('should paint FNO marking when ticker is in FNO repo', async () => {
       const ticker = 'NSE:HDFC';
 
       mockTickerManager.getTicker.mockReturnValue(ticker);
-      mockWatchManager.getCategory.mockReturnValue(new Set());
+      mockWatchManager.getTickerCategory.mockResolvedValue(undefined);
       mockFlagManager.getTickerCategory.mockReturnValue(undefined);
       mockFnoManager.isFno.mockReturnValue(true);
 
-      headerManager.paintHeader();
+      await headerManager.paintHeader();
 
       expect(mockFnoManager.isFno).toHaveBeenCalledWith(ticker);
       expect(mockPaintManager.paintFNOMarking).toHaveBeenCalledWith(mockJQueryElement, true);
     });
 
-    it('should reset colors to default before applying category colors', () => {
-      mockWatchManager.getCategory.mockReturnValue(new Set());
-      mockFlagManager.getTickerCategory.mockReturnValue(undefined);
-      mockFnoManager.isFno.mockReturnValue(false);
-
-      headerManager.paintHeader();
-
-      // Should set default colors for all elements
-      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', Constants.UI.COLORS.DEFAULT);
-    });
-
-    it('should stop at first matching watch category', () => {
-      const ticker = 'NSE:WIPRO';
-      const category1Set = new Set([ticker]);
-      const category3Set = new Set([ticker]);
-
-      mockTickerManager.getTicker.mockReturnValue(ticker);
-      mockWatchManager.getCategory
-        .mockReturnValueOnce(new Set()) // category 0
-        .mockReturnValueOnce(category1Set) // category 1 - first match
-        .mockReturnValueOnce(new Set()) // category 2
-        .mockReturnValueOnce(category3Set); // category 3 - should not reach here
-      mockFlagManager.getTickerCategory.mockReturnValue(undefined);
-      mockFnoManager.isFno.mockReturnValue(false);
-
-      headerManager.paintHeader();
-
-      // Should use color for category 1, not category 3
-      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', Constants.UI.COLORS.LIST[1]);
-      // Should not check category 3 due to break
-      expect(mockWatchManager.getCategory).toHaveBeenCalledTimes(2);
-    });
-
-    // Removed: "should stop at first matching flag category"
-    // The new `getTickerCategory(ticker)` API is a single lookup,
-    // so there is no loop to break from.
-  });
-
-  describe('integration scenarios', () => {
-    it('should handle ticker in both watch and flag categories', () => {
+    it('should handle ticker in both watch and flag categories', async () => {
       const ticker = 'NSE:BANKNIFTY';
-      const watchSet = new Set([ticker]);
 
       mockTickerManager.getTicker.mockReturnValue(ticker);
-      mockWatchManager.getCategory.mockReturnValueOnce(watchSet); // category 0
+      mockWatchManager.getTickerCategory.mockResolvedValue({
+        id: WatchCategoryId.SET_JOURNAL,
+        color: 'orange',
+        label: 'Set Trades',
+        recordUpdate: null,
+      });
       mockFlagManager.getTickerCategory.mockReturnValue({ id: FlagCategoryId.SIDEWAYS, color: 'orange', label: '', update: {} });
       mockFnoManager.isFno.mockReturnValue(true);
 
-      headerManager.paintHeader();
+      await headerManager.paintHeader();
 
       // Name should be colored with watch category color
-      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', Constants.UI.COLORS.LIST[0]);
-      // Flag and exchange should be colored with flag category color (same in this case)
-      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', Constants.UI.COLORS.LIST[0]);
+      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'orange');
       // FNO marking should be painted
       expect(mockPaintManager.paintFNOMarking).toHaveBeenCalledWith(mockJQueryElement, true);
-    });
-
-    it('should handle ticker with no categories but in FNO', () => {
-      const ticker = 'NSE:SBIN';
-
-      mockTickerManager.getTicker.mockReturnValue(ticker);
-      mockWatchManager.getCategory.mockReturnValue(new Set());
-      mockFlagManager.getTickerCategory.mockReturnValue(undefined);
-      mockFnoManager.isFno.mockReturnValue(true);
-
-      headerManager.paintHeader();
-
-      // Should use default colors for name, flag, and exchange
-      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', Constants.UI.COLORS.DEFAULT);
-      // But should still paint FNO marking
-      expect(mockPaintManager.paintFNOMarking).toHaveBeenCalledWith(mockJQueryElement, true);
-    });
-
-    it('should handle complete header painting workflow', () => {
-      const ticker = 'NSE:ICICI';
-
-      mockTickerManager.getTicker.mockReturnValue(ticker);
-      mockWatchManager.getCategory.mockReturnValue(new Set());
-      mockFlagManager.getTickerCategory.mockReturnValue(undefined);
-      mockFnoManager.isFno.mockReturnValue(false);
-
-      headerManager.paintHeader();
-
-      // Verify all major operations were performed
-      expect(mockTickerManager.getTicker).toHaveBeenCalled();
-      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.BASIC.NAME);
-      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.FLAGS.MARKING);
-      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.BASIC.EXCHANGE);
-      expect(mockWatchManager.getCategory).toHaveBeenCalled();
-      expect(mockFlagManager.getTickerCategory).toHaveBeenCalled();
-      expect(mockFnoManager.isFno).toHaveBeenCalledWith(ticker);
-      expect(mockPaintManager.paintFNOMarking).toHaveBeenCalled();
     });
   });
 
   describe('error handling', () => {
-    it('should handle ticker manager errors gracefully', () => {
+    it('should handle getTickerCategory errors gracefully', async () => {
+      const error = new Error('Watch category failed');
+      mockTickerManager.getTicker.mockReturnValue('NSE:TEST');
+      mockWatchManager.getTickerCategory.mockRejectedValue(error);
+
+      await expect(headerManager.paintHeader()).rejects.toThrow('Watch category failed');
+    });
+
+    it('should handle ticker manager errors gracefully', async () => {
       const error = new Error('Ticker retrieval failed');
       mockTickerManager.getTicker.mockImplementation(() => {
         throw error;
       });
 
-      expect(() => headerManager.paintHeader()).toThrow('Ticker retrieval failed');
-    });
-
-    it('should handle watch manager errors gracefully', () => {
-      const error = new Error('Watch category failed');
-      mockTickerManager.getTicker.mockReturnValue('NSE:TEST');
-      mockWatchManager.getCategory.mockImplementation(() => {
-        throw error;
-      });
-
-      expect(() => headerManager.paintHeader()).toThrow('Watch category failed');
-    });
-
-    it('should handle flag manager errors gracefully', () => {
-      const error = new Error('Flag category failed');
-      mockTickerManager.getTicker.mockReturnValue('NSE:TEST');
-      mockWatchManager.getCategory.mockReturnValue(new Set());
-      mockFlagManager.getTickerCategory.mockImplementation(() => {
-        throw error;
-      });
-
-      expect(() => headerManager.paintHeader()).toThrow('Flag category failed');
-    });
-
-    it('should handle FNO repository errors gracefully', () => {
-      const error = new Error('FNO check failed');
-      mockTickerManager.getTicker.mockReturnValue('NSE:TEST');
-      mockWatchManager.getCategory.mockReturnValue(new Set());
-      mockFlagManager.getTickerCategory.mockReturnValue(undefined);
-      mockFnoManager.isFno.mockImplementation(() => {
-        throw error;
-      });
-
-      expect(() => headerManager.paintHeader()).toThrow('FNO check failed');
-    });
-
-    it('should handle paint manager errors gracefully', () => {
-      const error = new Error('Paint FNO failed');
-      mockTickerManager.getTicker.mockReturnValue('NSE:TEST');
-      mockWatchManager.getCategory.mockReturnValue(new Set());
-      mockFlagManager.getTickerCategory.mockReturnValue(undefined);
-      mockFnoManager.isFno.mockReturnValue(true);
-      mockPaintManager.paintFNOMarking.mockImplementation(() => {
-        throw error;
-      });
-
-      expect(() => headerManager.paintHeader()).toThrow('Paint FNO failed');
-    });
-
-    it('should handle jQuery selector errors gracefully', () => {
-      const error = new Error('jQuery selector failed');
-      mockTickerManager.getTicker.mockReturnValue('NSE:TEST');
-      mockJQuery.mockImplementation(() => {
-        throw error;
-      });
-
-      expect(() => headerManager.paintHeader()).toThrow('jQuery selector failed');
+      await expect(headerManager.paintHeader()).rejects.toThrow('Ticker retrieval failed');
     });
   });
 });

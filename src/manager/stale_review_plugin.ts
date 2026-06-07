@@ -9,8 +9,7 @@ import { Constants } from '../models/constant';
  * Stale Review Audit plugin (FR-016): detects tickers not opened within a configurable
  * review window so operators can prune or re-validate neglected instruments.
  *
- * Skips watched tickers and emits FAIL results only for unwatched tickers
- * whose last-opened date exceeds the threshold.
+ * Skips tickers that belong to ANY backend-derived watch category.
  */
 export class StaleReviewPlugin extends BaseAuditPlugin {
   public readonly id = Constants.AUDIT.PLUGINS.STALE_REVIEW;
@@ -38,12 +37,17 @@ export class StaleReviewPlugin extends BaseAuditPlugin {
     const cutOffPeriod = this.thresholdDays * 24 * 60 * 60 * 1000;
 
     const trackedTickers = await this.tickerManager.listTickers({});
+    const allTvTickers = trackedTickers.map((t) => t.ticker);
+
+    // Classify all tracked tickers in one backend call
+    const categoryMap = await this.watchManager.getTickerCategories(allTvTickers);
     const results: AuditResult[] = [];
 
     for (const ticker of trackedTickers) {
       const tvTicker = ticker.ticker;
 
-      if (this.watchManager.isWatched(tvTicker)) {
+      // Skip tickers that belong to any watch category
+      if (categoryMap.has(tvTicker)) {
         continue;
       }
 

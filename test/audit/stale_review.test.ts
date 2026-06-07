@@ -3,6 +3,7 @@ import { IRecentManager } from '../../src/manager/recent';
 import { ITickerManager } from '../../src/manager/ticker';
 import { IWatchManager } from '../../src/manager/watch';
 import { Ticker } from '../../src/models/ticker';
+import { WatchCategoryId } from '../../src/models/watch';
 
 describe('StaleReviewPlugin', () => {
   let plugin: StaleReviewPlugin;
@@ -10,10 +11,20 @@ describe('StaleReviewPlugin', () => {
   let mockTickerManager: Partial<ITickerManager>;
   let mockWatchManager: Partial<IWatchManager>;
 
+  const makeCategoryMap = (watchedTickers: string[]) => {
+    const map = new Map<string, any>();
+    for (const t of watchedTickers) {
+      map.set(t, { id: WatchCategoryId.READY, color: 'red' });
+    }
+    return map;
+  };
+
   beforeEach(() => {
     mockRecentManager = { isRecent: jest.fn().mockReturnValue(true) };
     mockTickerManager = { listTickers: jest.fn().mockResolvedValue([]) };
-    mockWatchManager = { isWatched: jest.fn().mockReturnValue(false) };
+    mockWatchManager = {
+      getTickerCategories: jest.fn().mockResolvedValue(new Map()),
+    };
 
     plugin = new StaleReviewPlugin(
       mockRecentManager as IRecentManager,
@@ -41,7 +52,10 @@ describe('StaleReviewPlugin', () => {
   });
 
   test('flags tickers that are not recent (stale) as MEDIUM severity', async () => {
-    (mockTickerManager.listTickers as jest.Mock).mockResolvedValue([new Ticker({ ticker: 'TCS' }), new Ticker({ ticker: 'INFY' })]);
+    (mockTickerManager.listTickers as jest.Mock).mockResolvedValue([
+      new Ticker({ ticker: 'TCS' }),
+      new Ticker({ ticker: 'INFY' }),
+    ]);
     (mockRecentManager.isRecent as jest.Mock).mockReturnValue(false);
 
     const results = await plugin.run();
@@ -58,9 +72,14 @@ describe('StaleReviewPlugin', () => {
     expect(results).toHaveLength(0);
   });
 
-  test('skips watched tickers', async () => {
-    (mockTickerManager.listTickers as jest.Mock).mockResolvedValue([new Ticker({ ticker: 'WATCHED' }), new Ticker({ ticker: 'UNWATCHED' })]);
-    (mockWatchManager.isWatched as jest.Mock).mockImplementation((ticker: string) => ticker === 'WATCHED');
+  test('skips tickers with any watch category', async () => {
+    (mockTickerManager.listTickers as jest.Mock).mockResolvedValue([
+      new Ticker({ ticker: 'WATCHED' }),
+      new Ticker({ ticker: 'UNWATCHED' }),
+    ]);
+    (mockWatchManager.getTickerCategories as jest.Mock).mockResolvedValue(
+      makeCategoryMap(['WATCHED'])
+    );
     (mockRecentManager.isRecent as jest.Mock)
       .mockReturnValueOnce(false)
       .mockReturnValueOnce(false);

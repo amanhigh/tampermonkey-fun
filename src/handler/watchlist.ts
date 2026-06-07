@@ -9,6 +9,7 @@ import { ITradingViewWatchlistManager } from '../manager/watchlist';
 import { ISyncUtil } from '../util/sync';
 import { IDomManager } from '../manager/dom';
 import { IAlertFeedManager } from '../manager/alertfeed';
+import { WatchCategoryId } from '../models/watch';
 
 /**
  * Handles watchlist-related events and UI updates
@@ -24,10 +25,10 @@ export interface IWatchListHandler {
   onWatchListChange(): void;
 
   /**
-   * Records the selected ticker for a given category index.
-   * @param categoryIndex The index of the category.
+   * Records the selected ticker for a given watch category.
+   * @param categoryId The category identifier to record into.
    */
-  recordSelectedTicker(categoryIndex: number): void;
+  recordSelectedTicker(categoryId: WatchCategoryId): void;
 
   /**
    * Applies default filters to the watchlist
@@ -54,13 +55,14 @@ export class WatchListHandler implements IWatchListHandler {
   public onWatchListChange(): void {
     this.syncUtil.waitOn('watchListChangeEvent', 20, () => {
       // Paint watchlist items
-      this.watchlistManager.paintWatchList();
+      void this.watchlistManager.paintWatchList();
 
-      // Paint screener items if visible
-      this.screenerManager.paintScreener();
+      // Paint screener items if visible (pass watchlist tickers for DEFAULT_DAILY brown override)
+      const watchlistTickers = this.watchlistManager.getTickers();
+      void this.screenerManager.paintScreener(watchlistTickers);
 
       // Paint header items
-      this.headerManager.paintHeader();
+      void this.headerManager.paintHeader();
 
       // Update alert feed with watchlist changes
       void this.alertFeedManager.createAlertFeedEvent(this.domManager.getTicker());
@@ -68,9 +70,9 @@ export class WatchListHandler implements IWatchListHandler {
   }
 
   /** @inheritdoc */
-  public recordSelectedTicker(categoryIndex: number): void {
+  public recordSelectedTicker(categoryId: WatchCategoryId): void {
     const selectedTickers = this.domManager.getSelectedTickers();
-    this.watchManager.recordCategory(categoryIndex, selectedTickers);
+    this.watchManager.recordCategory(categoryId, selectedTickers);
     this.onWatchListChange();
   }
 

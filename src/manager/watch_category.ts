@@ -1,18 +1,17 @@
 import { Ticker } from '../models/ticker';
 import { Constants } from '../models/constant';
-import { JournalRecord } from '../models/journal';
-import { ALL_WATCH_CATEGORIES, WatchCategory } from '../models/watch';
+import { ALL_WATCH_CATEGORIES, WatchCategory, WatchCategoryId } from '../models/watch';
 
 // ── Lookup ──
 
 /**
- * Look up a watch category by its numeric index (0-7).
- * @throws If no category exists for the given index
+ * Look up a watch category by its semantic ID.
+ * @throws If no category exists for the given ID
  */
-export function findWatchCategoryByIndex(index: number): WatchCategory {
-  const cat = ALL_WATCH_CATEGORIES.find((c) => c.index === index);
+export function findWatchCategoryById(id: WatchCategoryId): WatchCategory {
+  const cat = ALL_WATCH_CATEGORIES.find((c) => c.id === id);
   if (!cat) {
-    throw new Error(`Invalid watch category index: ${index}`);
+    throw new Error(`Invalid watch category id: ${id}`);
   }
   return cat;
 }
@@ -34,47 +33,36 @@ function isIndiaExchange(ticker: Ticker): boolean {
   return ticker.exchange === 'NSE';
 }
 
-// ── Journal helpers ──
-
-/**
- * Get the set of ticker symbols from journal records.
- */
-export function journalTickerSet(journals: JournalRecord[]): Set<string> {
-  const tickers = new Set<string>();
-  for (const journal of journals) {
-    tickers.add(journal.ticker);
-  }
-  return tickers;
-}
-
 // ── Resolver ──
 
 /**
- * Resolve a single ticker to its watch category index.
- * Returns undefined if the ticker does not match any category
- * (the caller should assign it to the default/category 5).
+ * Resolve a single ticker to its watch category ID based on backend fields only.
+ * Does NOT resolve DEFAULT_DAILY — callers must apply that fallback when the
+ * ticker is present in the TV watchlist.
+ *
+ * Returns undefined if the ticker does not match any backend-derived category.
  */
-export function resolveWatchCategory(ticker: Ticker): number | undefined {
-  // Category 1: state READY
+export function resolveWatchCategory(ticker: Ticker): WatchCategoryId | undefined {
+  // READY
   if (ticker.state === 'READY') {
-    return 1;
+    return WatchCategoryId.READY;
   }
 
-  // Categories 2 & 3: long-watch (timeframes no DL), split by exchange
+  // Long-watch (timeframes no DL), split by exchange
   if (isLongWatch(ticker)) {
-    return isIndiaExchange(ticker) ? 2 : 3;
+    return isIndiaExchange(ticker) ? WatchCategoryId.LONG_NSE : WatchCategoryId.LONG_NON_NSE;
   }
 
-  // Category 6: market instruments
+  // Market instruments
   if (Constants.FLAGS.INDEX_TICKER_TYPES.includes(ticker.type)) {
-    return 6;
+    return WatchCategoryId.INDEX;
   }
 
-  // Category 7: composite instruments
+  // Composite instruments
   if (ticker.type === 'COMPOSITE') {
-    return 7;
+    return WatchCategoryId.COMPOSITE;
   }
 
-  // Category 5: fallback — no match
+  // No match — caller should apply DEFAULT_DAILY fallback
   return undefined;
 }

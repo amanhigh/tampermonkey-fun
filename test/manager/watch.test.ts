@@ -2,7 +2,7 @@ import { WatchManager, IWatchManager } from '../../src/manager/watch';
 import { ITickerManager } from '../../src/manager/ticker';
 import { IJournalManager } from '../../src/manager/journal';
 import { Ticker } from '../../src/models/ticker';
-import { WATCH_CATEGORY_COUNT } from '../../src/models/watch';
+import { WatchCategoryId } from '../../src/models/watch';
 
 // Mock Notifier
 jest.mock('../../src/util/notify', () => ({
@@ -20,10 +20,6 @@ describe('WatchManager', () => {
   let mockJournalManager: jest.Mocked<IJournalManager>;
 
   // ── Helpers ──
-
-  async function waitForAsync(): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  }
 
   function makeTicker(overrides: Partial<Ticker> = {}): Ticker {
     const defaults: Partial<Ticker> = {
@@ -62,7 +58,7 @@ describe('WatchManager', () => {
       publishJournalOpenEvent: jest.fn(),
     } as unknown as jest.Mocked<IJournalManager>;
 
-    // Lazy getter to break factory cycle — only called during async refresh
+    // Lazy getter to break factory cycle
     watchManager = new WatchManager(mockTickerManager, () => mockJournalManager);
   });
 
@@ -78,268 +74,222 @@ describe('WatchManager', () => {
       expect(mockTickerManager.listTickers).not.toHaveBeenCalled();
       expect(mockJournalManager.listJournals).not.toHaveBeenCalled();
     });
-
-    it('should return empty sets for all categories before any refresh', () => {
-      for (let i = 0; i < WATCH_CATEGORY_COUNT; i++) {
-        expect(watchManager.getCategory(i)).toBeInstanceOf(Set);
-        expect(watchManager.getCategory(i).size).toBe(0);
-      }
-    });
   });
 
-  // ── getCategory ──
+  // ── getTickerCategory ──
 
-  describe('getCategory', () => {
-    it('should return empty set for valid index before refresh', () => {
-      const result = watchManager.getCategory(3);
-      expect(result).toBeInstanceOf(Set);
-      expect(result.size).toBe(0);
+  describe('getTickerCategory', () => {
+    it('should return undefined for ticker with no match', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([]);
+      mockJournalManager.listJournals.mockResolvedValue([]);
+
+      const result = await watchManager.getTickerCategory('UNKNOWN');
+
+      expect(result).toBeUndefined();
     });
 
-    it('should throw error for negative category index', () => {
-      expect(() => watchManager.getCategory(-1)).toThrow('Invalid category index: -1');
+    it('should return SET_JOURNAL when ticker has SET journal', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([]);
+      mockJournalManager.listJournals.mockImplementation((params: any) => {
+        if (params.status === 'SET') return Promise.resolve([{ ticker: 'SET_1' }] as any);
+        return Promise.resolve([]);
+      });
+
+      const result = await watchManager.getTickerCategory('SET_1');
+
+      expect(result?.id).toBe(WatchCategoryId.SET_JOURNAL);
+      expect(result?.color).toBe('orange');
     });
 
-    it('should throw error for category index >= TOTAL_CATEGORIES', () => {
-      expect(() => watchManager.getCategory(WATCH_CATEGORY_COUNT)).toThrow(
-        `Invalid category index: ${WATCH_CATEGORY_COUNT}`
-      );
+    it('should return RUNNING_JOURNAL when ticker has RUNNING journal', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([]);
+      mockJournalManager.listJournals.mockImplementation((params: any) => {
+        if (params.status === 'RUNNING') return Promise.resolve([{ ticker: 'RUN_1' }] as any);
+        return Promise.resolve([]);
+      });
+
+      const result = await watchManager.getTickerCategory('RUN_1');
+
+      expect(result?.id).toBe(WatchCategoryId.RUNNING_JOURNAL);
+      expect(result?.color).toBe('lime');
     });
 
-    it('should return populated category after backend refresh', async () => {
+    it('should return READY when ticker state is READY', async () => {
       mockTickerManager.listTickers.mockResolvedValue([
         makeTicker({ ticker: 'READY_A', state: 'READY' }),
       ]);
       mockJournalManager.listJournals.mockResolvedValue([]);
 
-      watchManager.computeDefaultList([]);
-      await waitForAsync();
+      const result = await watchManager.getTickerCategory('READY_A');
 
-      const category1 = watchManager.getCategory(1);
-      expect(category1.has('READY_A')).toBe(true);
-    });
-  });
-
-  // ── computeDefaultList / backend refresh ──
-
-  describe('computeDefaultList (backend refresh)', () => {
-    it('should fire backend refresh with tickers and journals', () => {
-      mockTickerManager.listTickers.mockResolvedValue([]);
-      mockJournalManager.listJournals.mockResolvedValue([]);
-
-      watchManager.computeDefaultList(['TV_A', 'TV_B']);
-
-      expect(mockTickerManager.listTickers).toHaveBeenCalledWith({});
-      expect(mockJournalManager.listJournals).toHaveBeenCalledTimes(2);
-      expect(mockJournalManager.listJournals).toHaveBeenCalledWith(expect.objectContaining({ status: 'SET' }));
-      expect(mockJournalManager.listJournals).toHaveBeenCalledWith(expect.objectContaining({ status: 'RUNNING' }));
+      expect(result?.id).toBe(WatchCategoryId.READY);
     });
 
-    it('should map SET journal tickers to category 0', async () => {
-      mockTickerManager.listTickers.mockResolvedValue([]);
-      mockJournalManager.listJournals.mockImplementation((params: any) => {
-        if (params.status === 'SET') return Promise.resolve([{ ticker: 'SET_1' }, { ticker: 'SET_2' }] as any);
-        return Promise.resolve([]);
-      });
-
-      watchManager.computeDefaultList([]);
-      await waitForAsync();
-
-      const category0 = watchManager.getCategory(0);
-      expect(category0.has('SET_1')).toBe(true);
-      expect(category0.has('SET_2')).toBe(true);
-    });
-
-    it('should map RUNNING journal tickers to category 4', async () => {
-      mockTickerManager.listTickers.mockResolvedValue([]);
-      mockJournalManager.listJournals.mockImplementation((params: any) => {
-        if (params.status === 'RUNNING') return Promise.resolve([{ ticker: 'RUN_1' }, { ticker: 'RUN_2' }] as any);
-        return Promise.resolve([]);
-      });
-
-      watchManager.computeDefaultList([]);
-      await waitForAsync();
-
-      const category4 = watchManager.getCategory(4);
-      expect(category4.has('RUN_1')).toBe(true);
-      expect(category4.has('RUN_2')).toBe(true);
-    });
-
-    it('should map READY tickers to category 1', async () => {
-      mockTickerManager.listTickers.mockResolvedValue([
-        makeTicker({ ticker: 'R_STATE', state: 'READY' }),
-        makeTicker({ ticker: 'W_STATE', state: 'WATCHED' }),
-      ]);
-      mockJournalManager.listJournals.mockResolvedValue([]);
-
-      watchManager.computeDefaultList([]);
-      await waitForAsync();
-
-      const category1 = watchManager.getCategory(1);
-      expect(category1.has('R_STATE')).toBe(true);
-      expect(category1.has('W_STATE')).toBe(false);
-    });
-
-    it('should map long NSE tickers to category 2', async () => {
+    it('should return LONG_NSE for long-watch NSE ticker', async () => {
       mockTickerManager.listTickers.mockResolvedValue([
         makeTicker({ ticker: 'LONG_NSE', exchange: 'NSE', timeframes: ['MN', 'WK'] }),
       ]);
       mockJournalManager.listJournals.mockResolvedValue([]);
 
-      watchManager.computeDefaultList([]);
-      await waitForAsync();
+      const result = await watchManager.getTickerCategory('LONG_NSE');
 
-      const category2 = watchManager.getCategory(2);
-      expect(category2.has('LONG_NSE')).toBe(true);
+      expect(result?.id).toBe(WatchCategoryId.LONG_NSE);
     });
 
-    it('should map long non-NSE tickers to category 3', async () => {
+    it('should return LONG_NON_NSE for long-watch non-NSE ticker', async () => {
       mockTickerManager.listTickers.mockResolvedValue([
         makeTicker({ ticker: 'LONG_US', exchange: 'NASDAQ', timeframes: ['MN', 'WK'] }),
       ]);
       mockJournalManager.listJournals.mockResolvedValue([]);
 
-      watchManager.computeDefaultList([]);
-      await waitForAsync();
+      const result = await watchManager.getTickerCategory('LONG_US');
 
-      const category3 = watchManager.getCategory(3);
-      expect(category3.has('LONG_US')).toBe(true);
+      expect(result?.id).toBe(WatchCategoryId.LONG_NON_NSE);
     });
 
-    it('should map INDEX/COMMODITY/FX/BOND tickers to category 6', async () => {
+    it('should return INDEX for market instrument types', async () => {
       mockTickerManager.listTickers.mockResolvedValue([
         makeTicker({ ticker: 'IND_A', type: 'INDEX' }),
         makeTicker({ ticker: 'COM_A', type: 'COMMODITY' }),
-        makeTicker({ ticker: 'FX_A', type: 'FX' }),
-        makeTicker({ ticker: 'BND_A', type: 'BOND' }),
       ]);
       mockJournalManager.listJournals.mockResolvedValue([]);
 
-      watchManager.computeDefaultList([]);
-      await waitForAsync();
+      const indResult = await watchManager.getTickerCategory('IND_A');
+      const comResult = await watchManager.getTickerCategory('COM_A');
 
-      const category6 = watchManager.getCategory(6);
-      expect(category6.has('IND_A')).toBe(true);
-      expect(category6.has('COM_A')).toBe(true);
-      expect(category6.has('FX_A')).toBe(true);
-      expect(category6.has('BND_A')).toBe(true);
+      expect(indResult?.id).toBe(WatchCategoryId.INDEX);
+      expect(comResult?.id).toBe(WatchCategoryId.INDEX);
     });
 
-    it('should map COMPOSITE tickers to category 7', async () => {
+    it('should return COMPOSITE for composite ticker', async () => {
       mockTickerManager.listTickers.mockResolvedValue([
         makeTicker({ ticker: 'COMP_A', type: 'COMPOSITE' }),
       ]);
       mockJournalManager.listJournals.mockResolvedValue([]);
 
-      watchManager.computeDefaultList([]);
-      await waitForAsync();
+      const result = await watchManager.getTickerCategory('COMP_A');
 
-      const category7 = watchManager.getCategory(7);
-      expect(category7.has('COMP_A')).toBe(true);
+      expect(result?.id).toBe(WatchCategoryId.COMPOSITE);
     });
 
-    it('should place unassigned TV tickers into category 5 (default)', async () => {
+    it('should return DEFAULT_DAILY when ticker is in fallback watchlist', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([]);
+      mockJournalManager.listJournals.mockResolvedValue([]);
+
+      const result = await watchManager.getTickerCategory('WATCH_TICKER', ['WATCH_TICKER', 'OTHER']);
+
+      expect(result?.id).toBe(WatchCategoryId.DEFAULT_DAILY);
+    });
+
+    it('should NOT return DEFAULT_DAILY without fallback watchlist', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([]);
+      mockJournalManager.listJournals.mockResolvedValue([]);
+
+      const result = await watchManager.getTickerCategory('WATCH_TICKER');
+
+      expect(result).toBeUndefined();
+    });
+
+    it('should call backend fresh every invocation (no snapshot)', async () => {
       mockTickerManager.listTickers.mockResolvedValue([
-        makeTicker({ ticker: 'ASSIGNED_1', state: 'READY' }), // goes to category 1
+        makeTicker({ ticker: 'A', state: 'READY' }),
       ]);
       mockJournalManager.listJournals.mockResolvedValue([]);
 
-      watchManager.computeDefaultList(['ASSIGNED_1', 'DEFAULT_1', 'DEFAULT_2']);
-      await waitForAsync();
+      await watchManager.getTickerCategory('A');
+      await watchManager.getTickerCategory('A');
 
-      // ASSIGNED_1 should be in category 1, not category 5
-      const category1 = watchManager.getCategory(1);
-      expect(category1.has('ASSIGNED_1')).toBe(true);
-
-      // DEFAULT_1 and DEFAULT_2 should go to category 5
-      const category5 = watchManager.getCategory(5);
-      expect(category5.has('ASSIGNED_1')).toBe(false);
-      expect(category5.has('DEFAULT_1')).toBe(true);
-      expect(category5.has('DEFAULT_2')).toBe(true);
+      expect(mockTickerManager.listTickers).toHaveBeenCalledTimes(2);
     });
 
-    it('should handle backend failure gracefully', async () => {
-      mockTickerManager.listTickers.mockRejectedValue(new Error('Backend down'));
+    it('should prefer SET_JOURNAL over ticker-derived category', async () => {
+      // Ticker exists as READY in backend but also has SET journal
+      mockTickerManager.listTickers.mockResolvedValue([
+        makeTicker({ ticker: 'DUAL', state: 'READY' }),
+      ]);
+      mockJournalManager.listJournals.mockImplementation((params: any) => {
+        if (params.status === 'SET') return Promise.resolve([{ ticker: 'DUAL' }] as any);
+        return Promise.resolve([]);
+      });
 
-      watchManager.computeDefaultList(['TV_A']);
-      await waitForAsync();
+      const result = await watchManager.getTickerCategory('DUAL');
 
-      // Snapshot falls back to TV tickers in category 5 on first call
-      expect(watchManager.getCategory(5).has('TV_A')).toBe(true);
+      // Journal should win over ticker state
+      expect(result?.id).toBe(WatchCategoryId.SET_JOURNAL);
+    });
+  });
+
+  // ── getTickerCategories ──
+
+  describe('getTickerCategories', () => {
+    it('should classify multiple tickers in one backend call', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([
+        makeTicker({ ticker: 'READY_A', state: 'READY' }),
+        makeTicker({ ticker: 'INDEX_A', type: 'INDEX' }),
+      ]);
+      mockJournalManager.listJournals.mockResolvedValue([]);
+
+      const map = await watchManager.getTickerCategories(['READY_A', 'INDEX_A', 'UNKNOWN']);
+
+      expect(map.get('READY_A')?.id).toBe(WatchCategoryId.READY);
+      expect(map.get('INDEX_A')?.id).toBe(WatchCategoryId.INDEX);
+      expect(map.get('UNKNOWN')).toBeUndefined();
+      expect(mockTickerManager.listTickers).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return empty map for empty input', async () => {
+      mockTickerManager.listTickers.mockResolvedValue([]);
+      mockJournalManager.listJournals.mockResolvedValue([]);
+
+      const map = await watchManager.getTickerCategories([]);
+
+      expect(map.size).toBe(0);
     });
   });
 
   // ── recordCategory ──
 
   describe('recordCategory', () => {
-    it('should update ticker state to READY for category 1', () => {
-      watchManager.recordCategory(1, ['TEST']);
+    it('should update ticker for READY category', () => {
+      watchManager.recordCategory(WatchCategoryId.READY, ['TEST']);
 
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { state: 'READY' });
     });
 
-    it('should update ticker type to INDEX for category 6', () => {
-      watchManager.recordCategory(6, ['TEST']);
+    it('should update ticker for INDEX category', () => {
+      watchManager.recordCategory(WatchCategoryId.INDEX, ['TEST']);
 
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'INDEX' });
     });
 
-    it('should NOT update backend for category 7 (unsupported)', () => {
-      watchManager.recordCategory(7, ['TEST']);
+    it('should NOT update backend for COMPOSITE (unsupported)', () => {
+      watchManager.recordCategory(WatchCategoryId.COMPOSITE, ['TEST']);
 
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
     });
 
-    it('should NOT update backend for category 0 (journal-derived)', () => {
-      watchManager.recordCategory(0, ['TEST']);
+    it('should NOT update backend for SET_JOURNAL (journal-derived)', () => {
+      watchManager.recordCategory(WatchCategoryId.SET_JOURNAL, ['TEST']);
 
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
     });
 
-    it('should NOT update backend for category 4 (journal-derived)', () => {
-      watchManager.recordCategory(4, ['TEST']);
+    it('should NOT update backend for RUNNING_JOURNAL (journal-derived)', () => {
+      watchManager.recordCategory(WatchCategoryId.RUNNING_JOURNAL, ['TEST']);
 
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
     });
 
     it('should handle empty ticker array', () => {
-      watchManager.recordCategory(1, []);
+      watchManager.recordCategory(WatchCategoryId.READY, []);
+
+      expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
+    });
+
+    it('should NOT update backend for DEFAULT_DAILY (unsupported)', () => {
+      watchManager.recordCategory(WatchCategoryId.DEFAULT_DAILY, ['TEST']);
 
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
     });
   });
-
-  // ── isWatched ──
-
-  describe('isWatched', () => {
-    it('should return false before any refresh', () => {
-      expect(watchManager.isWatched('ANY')).toBe(false);
-    });
-
-    it('should return true after backend populates a category', async () => {
-      mockTickerManager.listTickers.mockResolvedValue([
-        makeTicker({ ticker: 'WATCHED_A', state: 'READY' }),
-      ]);
-      mockJournalManager.listJournals.mockResolvedValue([]);
-
-      watchManager.computeDefaultList([]);
-      await waitForAsync();
-
-      expect(watchManager.isWatched('WATCHED_A')).toBe(true);
-    });
-
-    it('should return false for ticker not in any category', async () => {
-      mockTickerManager.listTickers.mockResolvedValue([
-        makeTicker({ ticker: 'PRESENT', state: 'READY' }),
-      ]);
-      mockJournalManager.listJournals.mockResolvedValue([]);
-
-      watchManager.computeDefaultList([]);
-      await waitForAsync();
-
-      expect(watchManager.isWatched('ABSENT')).toBe(false);
-    });
-  });
-
-
 });
