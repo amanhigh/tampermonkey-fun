@@ -80,29 +80,8 @@ export class ModifierKeyConfig implements IModifierKeyConfig {
           action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.COMPOSITE),
         },
       ],
-      // HACK: 'f11' and 'f12' duplicate keys below overwrite the watchlistHandler
-      // bindings above (lines 69-82). Only flagHandler entries survive at runtime.
-      [
-        'f7',
-        {
-          description: 'Flag Red Shorts',
-          action: () => this.flagHandler.recordSelectedTicker(FlagCategoryId.DOWNTREND),
-        },
-      ],
-      [
-        'f8',
-        {
-          description: 'Flag Blue Crypto',
-          action: () => this.flagHandler.recordSelectedTicker(FlagCategoryId.CRYPTO),
-        },
-      ],
-      [
-        'f10',
-        {
-          description: 'Flag Green Longs',
-          action: () => this.flagHandler.recordSelectedTicker(FlagCategoryId.UPTREND),
-        },
-      ],
+      // HACK: 'f11'/'f12' below overwrite the watchlistHandler bindings above
+      // (lines 69-82). Only flagHandler entries survive at runtime.
       [
         'f11',
         {
