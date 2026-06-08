@@ -1,5 +1,5 @@
 import { DomManager, IDomManager } from '../../src/manager/dom';
-import { DomTickerType, DomTickerVisibility } from '../../src/models/dom';
+import { TickerArea, TickerVisibility } from '../../src/models/dom';
 import { IWaitUtil } from '../../src/util/wait';
 import { ITickerManager } from '../../src/manager/ticker';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
@@ -97,7 +97,7 @@ describe('DomManager', () => {
       });
       ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
 
-      const result = tickerManager.getTickers(DomTickerType.WATCHLIST);
+      const result = tickerManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL);
       expect(result).toEqual(new Set(['A', 'B']));
     });
 
@@ -109,7 +109,7 @@ describe('DomManager', () => {
       });
       ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
 
-      const result = tickerManager.getTickers(DomTickerType.WATCHLIST, DomTickerVisibility.VISIBLE);
+      const result = tickerManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.VISIBLE);
       expect(result).toEqual(new Set(['X']));
     });
 
@@ -121,7 +121,7 @@ describe('DomManager', () => {
       });
       ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
 
-      const result = tickerManager.getTickers(DomTickerType.WATCHLIST, DomTickerVisibility.SELECTED);
+      const result = tickerManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.SELECTED);
       expect(result).toEqual(new Set(['SEL']));
     });
 
@@ -135,7 +135,7 @@ describe('DomManager', () => {
       });
       ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
 
-      const result = tickerManager.getTickers(DomTickerType.SCREENER);
+      const result = tickerManager.getTickers(TickerArea.SCREENER, TickerVisibility.ALL);
       expect(result).toEqual(new Set(['S1', 'S2', 'S3']));
     });
 
@@ -147,7 +147,7 @@ describe('DomManager', () => {
       });
       ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
 
-      const result = tickerManager.getTickers(DomTickerType.SCREENER, DomTickerVisibility.VISIBLE);
+      const result = tickerManager.getTickers(TickerArea.SCREENER, TickerVisibility.VISIBLE);
       expect(result).toEqual(new Set(['V1']));
     });
 
@@ -157,22 +157,10 @@ describe('DomManager', () => {
       });
       ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
 
-      const result = tickerManager.getTickers(DomTickerType.SCREENER, DomTickerVisibility.SELECTED);
+      const result = tickerManager.getTickers(TickerArea.SCREENER, TickerVisibility.SELECTED);
       expect(result).toEqual(new Set());
     });
 
-    it('should default to ALL visibility when not specified', () => {
-      const mockEl = makeJQMock({
-        toArray: jest.fn().mockReturnValue([
-          { textContent: 'D1' },
-          { textContent: 'D2' },
-        ]),
-      });
-      ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
-
-      const result = tickerManager.getTickers(DomTickerType.WATCHLIST);
-      expect(result).toEqual(new Set(['D1', 'D2']));
-    });
   });
 
   describe('isScreenerVisible', () => {

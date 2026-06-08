@@ -1,5 +1,5 @@
 import { LRUCache } from 'lru-cache';
-import { DomTickerType } from '../models/dom';
+import { TickerArea, TickerVisibility } from '../models/dom';
 import { Constants } from '../models/constant';
 
 /**
@@ -45,15 +45,15 @@ export interface IPaintManager {
    * Looks up the flag DOM element(s) for the given ticker in the specified
    * panel, resets them to default color, then applies `color` when provided.
    *
-   * Uses an internal LRU cache (with fetchMethod) keyed by `type:ticker`
+   * Uses an internal LRU cache (with fetchMethod) keyed by `area.id:ticker`
    * to avoid repeated DOM scans.
    *
-   * @param type   Which panel to paint (WATCHLIST or SCREENER)
+   * @param area   Which panel to paint (WATCHLIST or SCREENER)
    * @param ticker Ticker symbol to paint
    * @param color  Optional CSS color to apply. When omitted/undefined the
    *               ticker flag is reset to default only.
    */
-  paintFlagV1(type: DomTickerType, ticker: string, color?: string): Promise<void>;
+  paintFlagV1(area: TickerArea, ticker: string, color?: string): Promise<void>;
 }
 
 /**
@@ -117,29 +117,36 @@ export class PaintManager implements IPaintManager {
   // ── V1 Single-Ticker Flag Painter ──
 
   /**
-   * LRU cache mapping `type:ticker` → jQuery flag element collection.
+   * LRU cache mapping `area.id:ticker` → jQuery flag element collection.
    * On cache miss, fetchMethod scans the requested panel automatically.
    */
   private readonly flagElementCache = new LRUCache<string, JQuery<HTMLElement>>({
     max: Constants.CACHE.CATEGORY.MAX,
     ttl: Constants.CACHE.CATEGORY.TTL_MS,
     fetchMethod: async (key: string): Promise<JQuery<HTMLElement> | undefined> => {
-      const [typeStr, ticker] = key.split(':');
-      const type = typeStr as DomTickerType;
-      return await Promise.resolve(this.lookupFlagElementsForTicker(type, ticker));
+      // Parse the first colon as the area/ticker separator
+      // so tickers containing colons (e.g. BINANCE:BTCUSDT) are preserved.
+      const separatorIdx = key.indexOf(':');
+      const areaId = key.substring(0, separatorIdx) as keyof typeof TickerArea;
+      const ticker = key.substring(separatorIdx + 1);
+      const area = TickerArea[areaId];
+      if (!area) {
+        return undefined;
+      }
+      return await Promise.resolve(this.lookupFlagElementsForTicker(area, ticker));
     },
   });
 
   /**
-   * Build a cache key from type and ticker.
+   * Build a cache key from area and ticker.
    */
-  private static cacheKey(type: DomTickerType, ticker: string): string {
-    return `${type}:${ticker}`;
+  private static cacheKey(area: TickerArea, ticker: string): string {
+    return `${area.id}:${ticker}`;
   }
 
   /** @inheritdoc */
-  async paintFlagV1(type: DomTickerType, ticker: string, color?: string): Promise<void> {
-    const $flags = await this.flagElementCache.fetch(PaintManager.cacheKey(type, ticker));
+  async paintFlagV1(area: TickerArea, ticker: string, color?: string): Promise<void> {
+    const $flags = await this.flagElementCache.fetch(PaintManager.cacheKey(area, ticker));
     if (!$flags) {
       return;
     }
@@ -155,24 +162,10 @@ export class PaintManager implements IPaintManager {
    * Look up flag elements for a single ticker in the given panel.
    * Returns undefined when the ticker is not found in that panel.
    */
-  private lookupFlagElementsForTicker(type: DomTickerType, ticker: string): JQuery<HTMLElement> | undefined {
-    let symbolSelector: string;
-    let itemSelector: string;
-
-    switch (type) {
-      case DomTickerType.WATCHLIST:
-        symbolSelector = Constants.DOM.WATCHLIST.SYMBOL;
-        itemSelector = Constants.DOM.WATCHLIST.ITEM;
-        break;
-      case DomTickerType.SCREENER:
-        symbolSelector = Constants.DOM.SCREENER.SYMBOL;
-        itemSelector = Constants.DOM.SCREENER.ITEM;
-        break;
-    }
-
-    const $flags = $(symbolSelector)
+  private lookupFlagElementsForTicker(area: TickerArea, ticker: string): JQuery<HTMLElement> | undefined {
+    const $flags = $(area.getSymbolSelector(TickerVisibility.ALL))
       .filter((_: number, element: HTMLElement) => (element.textContent || element.innerHTML) === ticker)
-      .closest(itemSelector)
+      .closest(area.getItemSelector())
       .find(Constants.DOM.FLAGS.SYMBOL);
 
     return $flags.length > 0 ? $flags : undefined;

@@ -1,5 +1,5 @@
 import { LRUCache } from 'lru-cache';
-import { DomTickerType } from '../models/dom';
+import { TickerArea, TickerVisibility } from '../models/dom';
 import { TickerUpdateRequest } from '../models/ticker';
 import { Constants } from '../models/constant';
 import { ITickerManager } from './ticker';
@@ -92,18 +92,18 @@ export class FlagManager implements IFlagManager {
     void (async () => {
       // Always paint watchlist flags
       await Promise.all(
-        [...this.domManager.getTickers(DomTickerType.WATCHLIST)].map(async (ticker) => {
+        [...this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL)].map(async (ticker) => {
           const category = await this.getTickerCategory(ticker);
-          await this.paintManager.paintFlagV1(DomTickerType.WATCHLIST, ticker, category?.color);
+          await this.paintManager.paintFlagV1(TickerArea.WATCHLIST, ticker, category?.color);
         })
       );
 
       // Paint screener flags only when screener is visible/open
       if (this.domManager.isScreenerVisible()) {
         await Promise.all(
-          [...this.domManager.getTickers(DomTickerType.SCREENER)].map(async (ticker) => {
+          [...this.domManager.getTickers(TickerArea.SCREENER, TickerVisibility.ALL)].map(async (ticker) => {
             const category = await this.getTickerCategory(ticker);
-            await this.paintManager.paintFlagV1(DomTickerType.SCREENER, ticker, category?.color);
+            await this.paintManager.paintFlagV1(TickerArea.SCREENER, ticker, category?.color);
           })
         );
       }

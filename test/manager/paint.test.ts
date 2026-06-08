@@ -1,4 +1,4 @@
-import { DomTickerType } from '../../src/models/dom';
+import { TickerArea } from '../../src/models/dom';
 import { PaintManager, IPaintManager } from '../../src/manager/paint';
 import { Constants } from '../../src/models/constant';
 
@@ -342,7 +342,7 @@ describe('PaintManager', () => {
     });
 
     it('should find ticker in watchlist when type is WATCHLIST', async () => {
-      await paintManager.paintFlagV1(DomTickerType.WATCHLIST, 'NIFTY', 'red');
+      await paintManager.paintFlagV1(TickerArea.WATCHLIST, 'NIFTY', 'red');
 
       // Should search watchlist selectors
       expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.SYMBOL);
@@ -354,7 +354,7 @@ describe('PaintManager', () => {
     });
 
     it('should find ticker in screener when type is SCREENER', async () => {
-      await paintManager.paintFlagV1(DomTickerType.SCREENER, 'NIFTY', 'red');
+      await paintManager.paintFlagV1(TickerArea.SCREENER, 'NIFTY', 'red');
 
       // Should search screener selectors
       expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.SCREENER.SYMBOL);
@@ -362,7 +362,7 @@ describe('PaintManager', () => {
     });
 
     it('should reset to default when color is not provided', async () => {
-      await paintManager.paintFlagV1(DomTickerType.WATCHLIST, 'NIFTY');
+      await paintManager.paintFlagV1(TickerArea.WATCHLIST, 'NIFTY');
 
       // Only reset, no color applied
       expect(mockJQueryElement.css).toHaveBeenCalledTimes(1);
@@ -373,7 +373,7 @@ describe('PaintManager', () => {
       mockJQueryElement.length = 0;
       mockJQueryElement.css.mockClear();
 
-      await paintManager.paintFlagV1(DomTickerType.WATCHLIST, 'UNKNOWN', 'red');
+      await paintManager.paintFlagV1(TickerArea.WATCHLIST, 'UNKNOWN', 'red');
 
       // No paint calls
       expect(mockJQueryElement.css).not.toHaveBeenCalled();
@@ -382,8 +382,8 @@ describe('PaintManager', () => {
     it('should cache flag elements by source and ticker', async () => {
       const spy = jest.spyOn(paintManager as any, 'lookupFlagElementsForTicker');
 
-      await paintManager.paintFlagV1(DomTickerType.WATCHLIST, 'CACHED', 'blue');
-      await paintManager.paintFlagV1(DomTickerType.WATCHLIST, 'CACHED', 'red');
+      await paintManager.paintFlagV1(TickerArea.WATCHLIST, 'CACHED', 'blue');
+      await paintManager.paintFlagV1(TickerArea.WATCHLIST, 'CACHED', 'red');
 
       // lookupFlagElementsForTicker called only once (same type:ticker key)
       expect(spy).toHaveBeenCalledTimes(1);
@@ -393,8 +393,8 @@ describe('PaintManager', () => {
     it('should cache separately for different ticker sources', async () => {
       const spy = jest.spyOn(paintManager as any, 'lookupFlagElementsForTicker');
 
-      await paintManager.paintFlagV1(DomTickerType.WATCHLIST, 'DUAL', 'green');
-      await paintManager.paintFlagV1(DomTickerType.SCREENER, 'DUAL', 'green');
+      await paintManager.paintFlagV1(TickerArea.WATCHLIST, 'DUAL', 'green');
+      await paintManager.paintFlagV1(TickerArea.SCREENER, 'DUAL', 'green');
 
       // lookupFlagElementsForTicker called twice (different type:ticker keys)
       expect(spy).toHaveBeenCalledTimes(2);
