@@ -1,5 +1,5 @@
 import { LRUCache } from 'lru-cache';
-import { Ticker, TickerUpdateRequest } from '../models/ticker';
+import { TickerUpdateRequest } from '../models/ticker';
 import { Constants } from '../models/constant';
 import { ITickerManager } from './ticker';
 import { IPaintManager } from './paint';
@@ -9,8 +9,8 @@ import { findFlagCategoryById, resolveFlagCategory } from './flag_category';
 
 /**
  * Interface for managing flag-based ticker categories.
- * paint() fetches fresh backend data every call. getTickerCategory()
- * resolves from backend with an LRU cache.
+ * paint() reads tickers from the DOM and classifies via LRU cache.
+ * getTickerCategory() resolves from backend with an LRU cache.
  */
 export interface IFlagManager {
   /**
@@ -24,15 +24,18 @@ export interface IFlagManager {
   /**
    * Records selected tickers in the given flag category.
    * Fires an async backend `updateTicker()` per ticker using the category's
-   * defined update payload. Evicts the ticker from cache before the update.
+   * defined update payload. Sets the cache optimistically before the update;
+   * reverts on failure.
    * @param categoryId Category identifier (e.g. 'SIDEWAYS', 'CRYPTO')
    * @param tvTickers List of ticker symbols to assign
    */
   recordCategory(categoryId: FlagCategoryId, tvTickers: string[]): void;
 
   /**
-   * Paints flag indicators based on backend ticker data.
-   * Fetches fresh `listTickers({})` every call and groups by category.
+   * Paints flag indicators for tickers currently visible in the DOM.
+   * Reads ticker symbols from matching DOM elements, classifies each
+   * via the LRU cache, and paints flag colors. Resets existing flags
+   * before repaint.
    * @param selector CSS selector for ticker elements
    * @param itemSelector CSS selector for item container
    */
@@ -42,7 +45,8 @@ export interface IFlagManager {
 // ── Implementation ──
 
 /**
- * Manages flag-based sets of tickers using backend calls per paint.
+ * Manages flag-based sets of tickers using LRU-cached classification.
+ * Paint reads tickers from the DOM instead of fetching all backend records.
  *
  * Per-ticker lookups are cached via LRU (max 1000, ttl 5 min).
  * Unclassified results (undefined) are treated as cache misses —
@@ -78,7 +82,8 @@ export class FlagManager implements IFlagManager {
     const cat = findFlagCategoryById(categoryId);
 
     for (const ticker of tvTickers) {
-      this.evictFlagCategory(ticker);
+      // Optimistic: show new category immediately
+      this.categoryCache.set(ticker, cat);
       void this.updateBackend(ticker, cat.update);
     }
   }
