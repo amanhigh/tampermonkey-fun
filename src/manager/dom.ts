@@ -1,12 +1,8 @@
 import { Constants } from '../models/constant';
+import { DomTickerType, DomTickerVisibility } from '../models/dom';
 import { IWaitUtil } from '../util/wait';
 import { ITickerManager } from './ticker';
 import { IAlertTickerManager } from './alert_ticker';
-
-/**
- * Minimum number of tickers required for selection
- */
-const MIN_SELECTED_TICKERS = 2;
 
 /**
  * Interface for managing ticker operations
@@ -38,10 +34,17 @@ export interface IDomManager {
   openTicker(ticker: string): Promise<void>;
 
   /**
-   * Gets currently selected tickers from watchlist and screener
-   * @returns Selected tickers
+   * Gets tickers from a specific DOM panel with a visibility filter.
+   * @param type  - Which panel to query (WATCHLIST or SCREENER)
+   * @param visibility - Visibility filter: ALL, VISIBLE, or SELECTED (default ALL)
+   * @returns Deduplicated set of ticker symbols from the requested panel
    */
-  getSelectedTickers(): string[];
+  getTickers(type: DomTickerType, visibility?: DomTickerVisibility): Set<string>;
+
+  /**
+   * Check if the screener widget is currently visible/open.
+   */
+  isScreenerVisible(): boolean;
 
   /**
    * Opens current ticker relative to its benchmark
@@ -54,13 +57,6 @@ export interface IDomManager {
    * @throws Error When no visible tickers are available
    */
   navigateTickers(step: number): Promise<void>;
-
-  /**
-   * Gets all rendered tickers from both watchlist and screener panels.
-   * Combines tickers from both panels without deduplication.
-   * @returns Array of ticker symbols from watchlist and screener DOM
-   */
-  getRenderedTickers(): string[];
 }
 
 /**
@@ -117,12 +113,19 @@ export class DomManager implements IDomManager {
   }
 
   /** @inheritdoc */
-  getSelectedTickers(): string[] {
-    let selected = this.getVisibleSelectedTickers();
-    if (selected.length < MIN_SELECTED_TICKERS) {
-      selected = [this.getTicker()];
+  getTickers(type: DomTickerType, visibility: DomTickerVisibility = DomTickerVisibility.ALL): Set<string> {
+    switch (type) {
+      case DomTickerType.WATCHLIST:
+        return new Set(this.getWatchlistTickers(visibility));
+      case DomTickerType.SCREENER:
+        return new Set(this.getScreenerTickers(visibility));
     }
-    return selected;
+  }
+
+  /** @inheritdoc */
+  isScreenerVisible(): boolean {
+    const $widget = $(Constants.DOM.SCREENER.MAIN);
+    return $widget.length > 0 && $widget.is(':visible');
   }
 
   /** @inheritdoc */
@@ -151,7 +154,8 @@ export class DomManager implements IDomManager {
   /** @inheritdoc */
   async navigateTickers(step: number): Promise<void> {
     const currentTicker = this.getTicker();
-    const visibleTickers = this.getVisibleTickers();
+    const type = this.isScreenerVisible() ? DomTickerType.SCREENER : DomTickerType.WATCHLIST;
+    const visibleTickers = [...this.getTickers(type, DomTickerVisibility.VISIBLE)];
 
     if (!visibleTickers.length) {
       throw new Error('No visible tickers available for navigation');
@@ -175,69 +179,33 @@ export class DomManager implements IDomManager {
   }
 
   /**
-   * Gets watchlist tickers from DOM.
-   * @param visible - When true, only returns visible tickers
+   * Gets watchlist tickers from DOM with the given visibility filter.
    * @private
    */
-  private getWatchlistTickers(visible = false): string[] {
-    const selector = visible ? `${Constants.DOM.WATCHLIST.SYMBOL}:visible` : Constants.DOM.WATCHLIST.SYMBOL;
-    return this.tickerTextArray(selector);
+  private getWatchlistTickers(visibility: DomTickerVisibility): string[] {
+    switch (visibility) {
+      case DomTickerVisibility.ALL:
+        return this.tickerTextArray(Constants.DOM.WATCHLIST.SYMBOL);
+      case DomTickerVisibility.VISIBLE:
+        return this.tickerTextArray(`${Constants.DOM.WATCHLIST.SYMBOL}:visible`);
+      case DomTickerVisibility.SELECTED:
+        return this.tickerTextArray(`${Constants.DOM.WATCHLIST.SELECTED} ${Constants.DOM.WATCHLIST.SYMBOL}:visible`);
+    }
   }
 
   /**
-   * Gets screener tickers from DOM.
-   * @param visible - When true, only returns visible tickers
+   * Gets screener tickers from DOM with the given visibility filter.
    * @private
    */
-  private getScreenerTickers(visible = false): string[] {
-    const selector = visible ? `${Constants.DOM.SCREENER.SYMBOL}:visible` : Constants.DOM.SCREENER.SYMBOL;
-    return this.tickerTextArray(selector);
-  }
-
-  /**
-   * Gets selected watchlist tickers.
-   * @private
-   */
-  private getSelectedWatchlistTickers(): string[] {
-    return this.tickerTextArray(`${Constants.DOM.WATCHLIST.SELECTED} ${Constants.DOM.WATCHLIST.SYMBOL}:visible`);
-  }
-
-  /**
-   * Gets selected screener tickers.
-   * @private
-   */
-  private getSelectedScreenerTickers(): string[] {
-    return this.tickerTextArray(`${Constants.DOM.SCREENER.SELECTED} ${Constants.DOM.SCREENER.SYMBOL}:visible`);
-  }
-
-  /**
-   * Check if screener widget is visible in DOM.
-   * @private
-   */
-  private isScreenerVisible(): boolean {
-    const $widget = $(Constants.DOM.SCREENER.MAIN);
-    return $widget.length > 0 && $widget.is(':visible');
-  }
-
-  /**
-   * Gets currently selected tickers based on active view.
-   * @private
-   */
-  private getVisibleSelectedTickers(): string[] {
-    return this.isScreenerVisible() ? this.getSelectedScreenerTickers() : this.getSelectedWatchlistTickers();
-  }
-
-  /**
-   * Gets currently visible tickers based on active view.
-   * @private
-   */
-  private getVisibleTickers(): string[] {
-    return this.isScreenerVisible() ? this.getScreenerTickers(true) : this.getWatchlistTickers(true);
-  }
-
-  /** @inheritdoc */
-  getRenderedTickers(): string[] {
-    return [...this.getWatchlistTickers(), ...this.getScreenerTickers()];
+  private getScreenerTickers(visibility: DomTickerVisibility): string[] {
+    switch (visibility) {
+      case DomTickerVisibility.ALL:
+        return this.tickerTextArray(Constants.DOM.SCREENER.SYMBOL);
+      case DomTickerVisibility.VISIBLE:
+        return this.tickerTextArray(`${Constants.DOM.SCREENER.SYMBOL}:visible`);
+      case DomTickerVisibility.SELECTED:
+        return this.tickerTextArray(`${Constants.DOM.SCREENER.SELECTED} ${Constants.DOM.SCREENER.SYMBOL}:visible`);
+    }
   }
 
   /**

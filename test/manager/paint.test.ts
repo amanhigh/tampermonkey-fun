@@ -1,3 +1,4 @@
+import { DomTickerType } from '../../src/models/dom';
 import { PaintManager, IPaintManager } from '../../src/manager/paint';
 import { Constants } from '../../src/models/constant';
 
@@ -340,10 +341,10 @@ describe('PaintManager', () => {
       mockJQueryElement.length = 1;
     });
 
-    it('should find ticker in watchlist and paint with color', async () => {
-      await paintManager.paintFlagV1('NIFTY', 'red');
+    it('should find ticker in watchlist when type is WATCHLIST', async () => {
+      await paintManager.paintFlagV1(DomTickerType.WATCHLIST, 'NIFTY', 'red');
 
-      // Should search watchlist first via fetchMethod
+      // Should search watchlist selectors
       expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.SYMBOL);
       expect(mockJQueryElement.filter).toHaveBeenCalled();
 
@@ -352,63 +353,52 @@ describe('PaintManager', () => {
       expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'red');
     });
 
-    it('should fall back to screener when watchlist has no match', async () => {
-      mockJQueryElement.length = 0; // watchlist miss
-      mockJQuery.mockClear();
+    it('should find ticker in screener when type is SCREENER', async () => {
+      await paintManager.paintFlagV1(DomTickerType.SCREENER, 'NIFTY', 'red');
 
-      await paintManager.paintFlagV1('NIFTY', 'red');
-
-      // After watchlist miss, should search screener
+      // Should search screener selectors
       expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.SCREENER.SYMBOL);
+      expect(mockJQueryElement.filter).toHaveBeenCalled();
     });
 
     it('should reset to default when color is not provided', async () => {
-      await paintManager.paintFlagV1('NIFTY');
+      await paintManager.paintFlagV1(DomTickerType.WATCHLIST, 'NIFTY');
 
       // Only reset, no color applied
       expect(mockJQueryElement.css).toHaveBeenCalledTimes(1);
       expect(mockJQueryElement.css).toHaveBeenCalledWith('color', Constants.UI.COLORS.DEFAULT);
     });
 
-    it('should do nothing when ticker is not found in DOM', async () => {
+    it('should do nothing when ticker is not found in the requested source', async () => {
       mockJQueryElement.length = 0;
       mockJQueryElement.css.mockClear();
 
-      await paintManager.paintFlagV1('UNKNOWN', 'red');
+      await paintManager.paintFlagV1(DomTickerType.WATCHLIST, 'UNKNOWN', 'red');
 
       // No paint calls
       expect(mockJQueryElement.css).not.toHaveBeenCalled();
     });
 
-    it('should cache flag elements after lookup via fetchMethod', async () => {
+    it('should cache flag elements by source and ticker', async () => {
       const spy = jest.spyOn(paintManager as any, 'lookupFlagElementsForTicker');
 
-      await paintManager.paintFlagV1('CACHED', 'blue');
-      await paintManager.paintFlagV1('CACHED', 'red');
+      await paintManager.paintFlagV1(DomTickerType.WATCHLIST, 'CACHED', 'blue');
+      await paintManager.paintFlagV1(DomTickerType.WATCHLIST, 'CACHED', 'red');
 
-      // lookupFlagElementsForTicker called only once (second call from cache via fetch)
+      // lookupFlagElementsForTicker called only once (same type:ticker key)
       expect(spy).toHaveBeenCalledTimes(1);
       spy.mockRestore();
     });
 
-    it('should paint both watchlist and screener flags when same ticker is in both panels', async () => {
-      // Both panels have the ticker — add() merges the collections
-      mockJQueryElement.length = 1; // watchlist hit (length > 0)
+    it('should cache separately for different ticker sources', async () => {
+      const spy = jest.spyOn(paintManager as any, 'lookupFlagElementsForTicker');
 
-      mockJQuery.mockClear();
-      mockJQueryElement.add.mockClear();
+      await paintManager.paintFlagV1(DomTickerType.WATCHLIST, 'DUAL', 'green');
+      await paintManager.paintFlagV1(DomTickerType.SCREENER, 'DUAL', 'green');
 
-      await paintManager.paintFlagV1('DUAL', 'green');
-
-      // Searched both panels
-      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.SYMBOL);
-      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.SCREENER.SYMBOL);
-
-      // add() called to combine watchlist + screener flag elements
-      expect(mockJQueryElement.add).toHaveBeenCalledWith(mockJQueryElement);
-
-      // Color applied to combined collection
-      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'green');
+      // lookupFlagElementsForTicker called twice (different type:ticker keys)
+      expect(spy).toHaveBeenCalledTimes(2);
+      spy.mockRestore();
     });
   });
 

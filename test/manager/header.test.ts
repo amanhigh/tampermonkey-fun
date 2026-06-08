@@ -61,10 +61,10 @@ describe('HeaderManager', () => {
       getCurrentExchange: jest.fn(),
       getInvestingTicker: jest.fn(),
       openTicker: jest.fn(),
-      getSelectedTickers: jest.fn(),
+      getTickers: jest.fn(),
+      isScreenerVisible: jest.fn(),
       openBenchmarkTicker: jest.fn(),
       navigateTickers: jest.fn(),
-      getRenderedTickers: jest.fn(),
     };
 
     // Mock WatchlistManager

@@ -7,9 +7,10 @@ import { ITradingViewScreenerManager } from '../manager/screener';
 import { IWatchManager } from '../manager/watch';
 import { ITradingViewWatchlistManager } from '../manager/watchlist';
 import { ISyncUtil } from '../util/sync';
+import { DomTickerType, DomTickerVisibility } from '../models/dom';
+import { WatchCategoryId } from '../models/watch';
 import { IDomManager } from '../manager/dom';
 import { IAlertFeedManager } from '../manager/alertfeed';
-import { WatchCategoryId } from '../models/watch';
 
 /**
  * Handles watchlist-related events and UI updates
@@ -70,8 +71,8 @@ export class WatchListHandler implements IWatchListHandler {
 
   /** @inheritdoc */
   public recordSelectedTicker(categoryId: WatchCategoryId): void {
-    const selectedTickers = this.domManager.getSelectedTickers();
-    this.watchManager.recordCategory(categoryId, selectedTickers);
+    const type = this.domManager.isScreenerVisible() ? DomTickerType.SCREENER : DomTickerType.WATCHLIST;
+    this.watchManager.recordCategory(categoryId, [...this.domManager.getTickers(type, DomTickerVisibility.SELECTED)]);
     this.onWatchListChange();
   }
 

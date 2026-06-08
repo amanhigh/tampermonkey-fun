@@ -1,4 +1,5 @@
 import { DomManager, IDomManager } from '../../src/manager/dom';
+import { DomTickerType, DomTickerVisibility } from '../../src/models/dom';
 import { IWaitUtil } from '../../src/util/wait';
 import { ITickerManager } from '../../src/manager/ticker';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
@@ -86,6 +87,127 @@ describe('DomManager', () => {
     });
   });
 
+  describe('getTickers', () => {
+    it('should return watchlist all tickers', () => {
+      const mockEl = makeJQMock({
+        toArray: jest.fn().mockReturnValue([
+          { textContent: 'A' },
+          { textContent: 'B' },
+        ]),
+      });
+      ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
+
+      const result = tickerManager.getTickers(DomTickerType.WATCHLIST);
+      expect(result).toEqual(new Set(['A', 'B']));
+    });
+
+    it('should return watchlist visible tickers', () => {
+      const mockEl = makeJQMock({
+        toArray: jest.fn().mockReturnValue([
+          { textContent: 'X' },
+        ]),
+      });
+      ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
+
+      const result = tickerManager.getTickers(DomTickerType.WATCHLIST, DomTickerVisibility.VISIBLE);
+      expect(result).toEqual(new Set(['X']));
+    });
+
+    it('should return watchlist selected tickers', () => {
+      const mockEl = makeJQMock({
+        toArray: jest.fn().mockReturnValue([
+          { textContent: 'SEL' },
+        ]),
+      });
+      ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
+
+      const result = tickerManager.getTickers(DomTickerType.WATCHLIST, DomTickerVisibility.SELECTED);
+      expect(result).toEqual(new Set(['SEL']));
+    });
+
+    it('should return screener all tickers', () => {
+      const mockEl = makeJQMock({
+        toArray: jest.fn().mockReturnValue([
+          { textContent: 'S1' },
+          { textContent: 'S2' },
+          { textContent: 'S3' },
+        ]),
+      });
+      ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
+
+      const result = tickerManager.getTickers(DomTickerType.SCREENER);
+      expect(result).toEqual(new Set(['S1', 'S2', 'S3']));
+    });
+
+    it('should return screener visible tickers', () => {
+      const mockEl = makeJQMock({
+        toArray: jest.fn().mockReturnValue([
+          { textContent: 'V1' },
+        ]),
+      });
+      ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
+
+      const result = tickerManager.getTickers(DomTickerType.SCREENER, DomTickerVisibility.VISIBLE);
+      expect(result).toEqual(new Set(['V1']));
+    });
+
+    it('should return screener selected tickers', () => {
+      const mockEl = makeJQMock({
+        toArray: jest.fn().mockReturnValue([]),
+      });
+      ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
+
+      const result = tickerManager.getTickers(DomTickerType.SCREENER, DomTickerVisibility.SELECTED);
+      expect(result).toEqual(new Set());
+    });
+
+    it('should default to ALL visibility when not specified', () => {
+      const mockEl = makeJQMock({
+        toArray: jest.fn().mockReturnValue([
+          { textContent: 'D1' },
+          { textContent: 'D2' },
+        ]),
+      });
+      ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
+
+      const result = tickerManager.getTickers(DomTickerType.WATCHLIST);
+      expect(result).toEqual(new Set(['D1', 'D2']));
+    });
+  });
+
+  describe('isScreenerVisible', () => {
+    it('should return true when screener exists and is visible', () => {
+      const mockEl = makeJQMock({
+        length: 1,
+        is: jest.fn().mockReturnValue(true),
+      });
+      ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
+
+      expect(tickerManager.isScreenerVisible()).toBe(true);
+      expect((global as any).$).toHaveBeenCalledWith(Constants.DOM.SCREENER.MAIN);
+    });
+
+    it('should return false when screener element length is 0', () => {
+      const mockEl = makeJQMock({
+        length: 0,
+        is: jest.fn().mockReturnValue(true),
+      });
+      ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
+
+      expect(tickerManager.isScreenerVisible()).toBe(false);
+    });
+
+    it('should return false when screener is not visible', () => {
+      const mockEl = makeJQMock({
+        length: 1,
+        is: jest.fn().mockReturnValue(false),
+      });
+      ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
+
+      expect(tickerManager.isScreenerVisible()).toBe(false);
+    });
+  });
+
   describe('openTicker', () => {
     it('should qualify ticker with exchange from backend and navigate', async () => {
       mockTickerManager.getTicker.mockResolvedValue({ qualifiedName: 'NSE:RELIANCE' } as Ticker);
@@ -103,39 +225,6 @@ describe('DomManager', () => {
       await tickerManager.openTicker('UNKNOWN');
 
       expect(mockWaitUtil.waitInput).toHaveBeenCalledWith(Constants.DOM.POPUPS.SEARCH, 'UNKNOWN');
-    });
-  });
-
-  describe('getSelectedTickers', () => {
-    it('should return ticker from screener when visible', () => {
-      // Mock screener widget visible and 3 selected tickers
-      const mockEl = makeJQMock({
-        toArray: jest.fn().mockReturnValue([
-          { textContent: 'A' },
-          { textContent: 'B' },
-          { textContent: 'C' },
-        ]),
-        is: jest.fn().mockReturnValue(true),
-        length: 3,
-      });
-      ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
-
-      const result = tickerManager.getSelectedTickers();
-      expect(result).toEqual(['A', 'B', 'C']);
-    });
-
-    it('should fallback to single ticker when too few selected', () => {
-      // Only 1 selected ticker — falls back to current ticker
-      const mockEl = makeJQMock({
-        text: jest.fn().mockReturnValue('SOLO'),
-        toArray: jest.fn().mockReturnValue([{ textContent: 'A' }]),
-        is: jest.fn().mockReturnValue(true),
-        length: 1,
-      });
-      ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
-
-      const result = tickerManager.getSelectedTickers();
-      expect(result).toEqual(['SOLO']);
     });
   });
 

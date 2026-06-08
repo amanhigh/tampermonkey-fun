@@ -1,4 +1,5 @@
 import { LRUCache } from 'lru-cache';
+import { DomTickerType } from '../models/dom';
 import { Constants } from '../models/constant';
 
 /**
@@ -41,16 +42,18 @@ export interface IPaintManager {
 
   /**
    * V1 single-ticker flag painter.
-   * Looks up the flag DOM element(s) for the given ticker, resets them to
-   * default color, then applies `color` when provided.
+   * Looks up the flag DOM element(s) for the given ticker in the specified
+   * panel, resets them to default color, then applies `color` when provided.
    *
-   * Uses an internal LRU cache (with fetchMethod) to avoid repeated DOM scans.
+   * Uses an internal LRU cache (with fetchMethod) keyed by `type:ticker`
+   * to avoid repeated DOM scans.
    *
+   * @param type   Which panel to paint (WATCHLIST or SCREENER)
    * @param ticker Ticker symbol to paint
    * @param color  Optional CSS color to apply. When omitted/undefined the
    *               ticker flag is reset to default only.
    */
-  paintFlagV1(ticker: string, color?: string): Promise<void>;
+  paintFlagV1(type: DomTickerType, ticker: string, color?: string): Promise<void>;
 }
 
 /**
@@ -114,20 +117,29 @@ export class PaintManager implements IPaintManager {
   // ── V1 Single-Ticker Flag Painter ──
 
   /**
-   * LRU cache mapping ticker → jQuery flag element collection.
-   * On cache miss, fetchMethod scans the DOM automatically (watchlist → screener).
+   * LRU cache mapping `type:ticker` → jQuery flag element collection.
+   * On cache miss, fetchMethod scans the requested panel automatically.
    */
   private readonly flagElementCache = new LRUCache<string, JQuery<HTMLElement>>({
     max: Constants.CACHE.CATEGORY.MAX,
     ttl: Constants.CACHE.CATEGORY.TTL_MS,
-    fetchMethod: async (ticker: string): Promise<JQuery<HTMLElement> | undefined> => {
-      return await Promise.resolve(this.lookupFlagElementsForTicker(ticker));
+    fetchMethod: async (key: string): Promise<JQuery<HTMLElement> | undefined> => {
+      const [typeStr, ticker] = key.split(':');
+      const type = typeStr as DomTickerType;
+      return await Promise.resolve(this.lookupFlagElementsForTicker(type, ticker));
     },
   });
 
+  /**
+   * Build a cache key from type and ticker.
+   */
+  private static cacheKey(type: DomTickerType, ticker: string): string {
+    return `${type}:${ticker}`;
+  }
+
   /** @inheritdoc */
-  async paintFlagV1(ticker: string, color?: string): Promise<void> {
-    const $flags = await this.flagElementCache.fetch(ticker);
+  async paintFlagV1(type: DomTickerType, ticker: string, color?: string): Promise<void> {
+    const $flags = await this.flagElementCache.fetch(PaintManager.cacheKey(type, ticker));
     if (!$flags) {
       return;
     }
@@ -140,29 +152,29 @@ export class PaintManager implements IPaintManager {
   }
 
   /**
-   * Search watchlist and screener DOM for flag elements matching `ticker`.
-   * Returns combined flag elements from both panels, or undefined when the
-   * ticker is not present in either.
+   * Look up flag elements for a single ticker in the given panel.
+   * Returns undefined when the ticker is not found in that panel.
    */
-  private lookupFlagElementsForTicker(ticker: string): JQuery<HTMLElement> | undefined {
-    const $watch = this.findFlagInSelector(ticker, Constants.DOM.WATCHLIST.SYMBOL, Constants.DOM.WATCHLIST.ITEM);
-    const $screen = this.findFlagInSelector(ticker, Constants.DOM.SCREENER.SYMBOL, Constants.DOM.SCREENER.ITEM);
+  private lookupFlagElementsForTicker(type: DomTickerType, ticker: string): JQuery<HTMLElement> | undefined {
+    let symbolSelector: string;
+    let itemSelector: string;
 
-    if ($watch.length === 0 && $screen.length === 0) {
-      return undefined;
+    switch (type) {
+      case DomTickerType.WATCHLIST:
+        symbolSelector = Constants.DOM.WATCHLIST.SYMBOL;
+        itemSelector = Constants.DOM.WATCHLIST.ITEM;
+        break;
+      case DomTickerType.SCREENER:
+        symbolSelector = Constants.DOM.SCREENER.SYMBOL;
+        itemSelector = Constants.DOM.SCREENER.ITEM;
+        break;
     }
 
-    // Combine both collections — same ticker in both panels gets both painted
-    return $watch.length > 0 ? $watch.add($screen) : $screen;
-  }
-
-  /**
-   * Find flag elements for a single ticker within a given symbol/item selector pair.
-   */
-  private findFlagInSelector(ticker: string, symbolSelector: string, itemSelector: string): JQuery<HTMLElement> {
-    return $(symbolSelector)
+    const $flags = $(symbolSelector)
       .filter((_: number, element: HTMLElement) => (element.textContent || element.innerHTML) === ticker)
       .closest(itemSelector)
       .find(Constants.DOM.FLAGS.SYMBOL);
+
+    return $flags.length > 0 ? $flags : undefined;
   }
 }

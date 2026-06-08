@@ -56,6 +56,8 @@ describe('SequenceHandler', () => {
     mockDomManager = {
       getTicker: jest.fn(),
       getCurrentExchange: jest.fn(),
+      getTickers: jest.fn(),
+      isScreenerVisible: jest.fn(),
     } as any;
 
     mockTickerManager = {

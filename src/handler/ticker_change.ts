@@ -39,7 +39,7 @@ export class TickerChangeHandler implements ITickerChangeHandler {
       void this.sequenceHandler.displaySequence();
 
       // Update Screener
-      if (this.screenManager.isScreenerVisible()) {
+      if (this.domManager.isScreenerVisible()) {
         void this.screenManager.paintScreener();
       }
 
