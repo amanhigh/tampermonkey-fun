@@ -186,38 +186,10 @@ export class KeyConfig implements IKeyConfig {
 
     this.orderKeys = new Map([
       [
-        'F1',
-        {
-          description: 'SET Journal',
-          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.SET_JOURNAL),
-        },
-      ],
-      [
         'F2',
         {
           description: 'Ready',
           action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.READY),
-        },
-      ],
-      [
-        'F3',
-        {
-          description: 'Long Watch India',
-          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.LONG_NSE),
-        },
-      ],
-      [
-        'F4',
-        {
-          description: 'Long Watch Non-India',
-          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.LONG_NON_NSE),
-        },
-      ],
-      [
-        'F5',
-        {
-          description: 'RUNNING Journal',
-          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.RUNNING_JOURNAL),
         },
       ],
     ]);
@@ -240,29 +212,36 @@ export class KeyConfig implements IKeyConfig {
       [
         'F8',
         {
-          description: 'Blue Crypto Flag - CRYPTO',
-          action: () => this.flagHandler.recordSelectedTicker(FlagCategoryId.CRYPTO),
-        },
-      ],
-      [
-        'F10',
-        {
           description: 'Green Longs Flag - UPTREND',
           action: () => this.flagHandler.recordSelectedTicker(FlagCategoryId.UPTREND),
         },
       ],
       [
-        'F11',
+        'F9',
         {
           description: 'INDEX',
           action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.INDEX),
         },
       ],
       [
-        'F12',
+        'F10',
         {
           description: 'COMPOSITE',
           action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.COMPOSITE),
+        },
+      ],
+      [
+        'F11',
+        {
+          description: 'BLACKLISTED',
+          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.BLACKLISTED),
+        },
+      ],
+      [
+        'F12',
+        {
+          description: 'Blue Crypto Flag - CRYPTO',
+          action: () => this.flagHandler.recordSelectedTicker(FlagCategoryId.CRYPTO),
         },
       ],
     ]);

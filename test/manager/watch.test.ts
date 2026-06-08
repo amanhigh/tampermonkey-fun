@@ -24,7 +24,7 @@ describe('WatchManager', () => {
   function makeTicker(overrides: Partial<Ticker> = {}): Ticker {
     const defaults: Partial<Ticker> = {
       ticker: 'TICKER',
-      exchange: null,
+      exchange: '',
       timeframes: ['MN', 'WK', 'DL'],
       type: 'EQUITY',
       state: 'WATCHED',
@@ -88,7 +88,7 @@ describe('WatchManager', () => {
       expect(result).toBeUndefined();
     });
 
-    it('should return SET_JOURNAL when SET journal exists', async () => {
+    it('should return undefined when only SET journal exists (no longer auto-classified)', async () => {
       mockJournalManager.listJournals.mockImplementation(async (params: any) => {
         if (params.status === 'SET') return [{ ticker: 'SET_1' }] as any;
         return [];
@@ -96,11 +96,10 @@ describe('WatchManager', () => {
 
       const result = await watchManager.getTickerCategory('SET_1');
 
-      expect(result?.id).toBe(WatchCategoryId.SET_JOURNAL);
-      expect(result?.color).toBe('orange');
+      expect(result).toBeUndefined();
     });
 
-    it('should return RUNNING_JOURNAL when RUNNING journal exists', async () => {
+    it('should return RUNNING when RUNNING journal exists', async () => {
       mockJournalManager.listJournals.mockImplementation(async (params: any) => {
         if (params.status === 'RUNNING') return [{ ticker: 'RUN_1' }] as any;
         return [];
@@ -108,20 +107,19 @@ describe('WatchManager', () => {
 
       const result = await watchManager.getTickerCategory('RUN_1');
 
-      expect(result?.id).toBe(WatchCategoryId.RUNNING_JOURNAL);
+      expect(result?.id).toBe(WatchCategoryId.RUNNING);
       expect(result?.color).toBe('lime');
     });
 
-    it('should prefer SET over RUNNING when both exist', async () => {
+    it('should return RUNNING when both SET and RUNNING exist', async () => {
       mockJournalManager.listJournals.mockImplementation(async (params: any) => {
-        if (params.status === 'SET') return [{ ticker: 'DUAL' }] as any;
         if (params.status === 'RUNNING') return [{ ticker: 'DUAL' }] as any;
         return [];
       });
 
       const result = await watchManager.getTickerCategory('DUAL');
 
-      expect(result?.id).toBe(WatchCategoryId.SET_JOURNAL);
+      expect(result?.id).toBe(WatchCategoryId.RUNNING);
     });
 
     it('should return READY when ticker state is READY', async () => {
@@ -189,15 +187,13 @@ describe('WatchManager', () => {
       expect(result).toBeUndefined();
     });
 
-    it('should query journals with ticker filter', async () => {
+    it('should query journals with ticker filter (RUNNING only)', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockRejectedValue(new Error('not found'));
 
       await watchManager.getTickerCategory('SOME_TICKER');
 
-      expect(mockJournalManager.listJournals).toHaveBeenCalledWith(
-        expect.objectContaining({ ticker: 'SOME_TICKER', status: 'SET' })
-      );
+      expect(mockJournalManager.listJournals).toHaveBeenCalledTimes(1);
       expect(mockJournalManager.listJournals).toHaveBeenCalledWith(
         expect.objectContaining({ ticker: 'SOME_TICKER', status: 'RUNNING' })
       );
@@ -240,8 +236,8 @@ describe('WatchManager', () => {
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
     });
 
-    it('should NOT update backend for RUNNING_JOURNAL (journal-derived)', () => {
-      watchManager.recordCategory(WatchCategoryId.RUNNING_JOURNAL, ['TEST']);
+    it('should NOT update backend for RUNNING (journal-derived)', () => {
+      watchManager.recordCategory(WatchCategoryId.RUNNING, ['TEST']);
 
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
     });
@@ -262,29 +258,18 @@ describe('WatchManager', () => {
     });
 
     it('should bucket tickers by category', async () => {
-      // SET journal tickers
-      mockJournalManager.listJournals.mockImplementation(async (filter: any) => {
-        if (filter.status === 'SET' && filter.ticker === 'SET1') return [{ ticker: 'SET1' }] as any;
-        if (filter.status === 'SET' && filter.ticker === 'SET2') return [{ ticker: 'SET2' }] as any;
-        return [];
-      });
+      // No journal — all uncategorized
+      const result = await watchManager.classifyTickers(['UNCAT1', 'UNCAT2']);
 
-      const result = await watchManager.classifyTickers(['SET1', 'SET2', 'UNCAT']);
-
-      // Both SET1 and SET2 in SET_JOURNAL bucket
-      const setBucket = result.buckets.get(WatchCategoryId.SET_JOURNAL);
-      expect(setBucket?.size).toBe(2);
-      expect(setBucket?.has('SET1')).toBe(true);
-      expect(setBucket?.has('SET2')).toBe(true);
-
-      // UNCAT uncategorized
-      expect(result.uncategorized.has('UNCAT')).toBe(true);
-      expect(result.uncategorized.size).toBe(1);
+      expect(result.buckets.size).toBe(0);
+      expect(result.uncategorized.size).toBe(2);
+      expect(result.uncategorized.has('UNCAT1')).toBe(true);
+      expect(result.uncategorized.has('UNCAT2')).toBe(true);
     });
 
     it('should bucket mixed categories correctly', async () => {
       mockJournalManager.listJournals.mockImplementation(async (filter: any) => {
-        if (filter.status === 'SET' && filter.ticker === 'JOURNAL_TICKER') return [{ ticker: 'JOURNAL_TICKER' }] as any;
+        if (filter.status === 'RUNNING' && filter.ticker === 'JOURNAL_TICKER') return [{ ticker: 'JOURNAL_TICKER' }] as any;
         return [];
       });
 
@@ -295,15 +280,15 @@ describe('WatchManager', () => {
 
       const result = await watchManager.classifyTickers(['JOURNAL_TICKER', 'READY_TICKER', 'UNKNOWN']);
 
-      expect(result.buckets.get(WatchCategoryId.SET_JOURNAL)?.has('JOURNAL_TICKER')).toBe(true);
+      expect(result.buckets.get(WatchCategoryId.RUNNING)?.has('JOURNAL_TICKER')).toBe(true);
       expect(result.buckets.get(WatchCategoryId.READY)?.has('READY_TICKER')).toBe(true);
       expect(result.uncategorized.has('UNKNOWN')).toBe(true);
     });
 
     it('should compose getTickerCategory (no new classification logic)', async () => {
-      // SET journal takes priority over ticker-derived
+      // RUNNING journal takes priority over ticker-derived
       mockJournalManager.listJournals.mockImplementation(async (filter: any) => {
-        if (filter.status === 'SET' && filter.ticker === 'PRIORITY') return [{ ticker: 'PRIORITY' }] as any;
+        if (filter.status === 'RUNNING' && filter.ticker === 'PRIORITY') return [{ ticker: 'PRIORITY' }] as any;
         return [];
       });
 
@@ -312,8 +297,8 @@ describe('WatchManager', () => {
 
       const result = await watchManager.classifyTickers(['PRIORITY']);
 
-      // Should be SET_JOURNAL, not READY
-      expect(result.buckets.get(WatchCategoryId.SET_JOURNAL)?.has('PRIORITY')).toBe(true);
+      // Should be RUNNING, not READY
+      expect(result.buckets.get(WatchCategoryId.RUNNING)?.has('PRIORITY')).toBe(true);
       expect(result.buckets.get(WatchCategoryId.READY)).toBeUndefined();
     });
   });

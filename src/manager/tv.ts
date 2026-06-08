@@ -85,10 +85,10 @@ export class TradingViewManager implements ITradingViewManager {
   ) {}
 
   public startAutoSave(): void {
-    setInterval(() => void this.autoSave(), TradingViewManager.SAVE_INTERVAL);
+    setInterval(() => this.autoSave(), TradingViewManager.SAVE_INTERVAL);
   }
 
-  private async autoSave(): Promise<void> {
+  private autoSave(): void {
     this.clickSaveButton();
     Notifier.success('Workspace saved');
   }

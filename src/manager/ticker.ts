@@ -61,13 +61,13 @@ export interface ITickerManager {
   listTickers(params: TickerQueryParams): Promise<Ticker[]>;
 
   /**
-   * Set or clear the exchange on a primary ticker.
+   * Set the exchange on a primary ticker.
    * Convenience wrapping updateTicker with { exchange }.
    * @param ticker - Primary ticker identity
-   * @param exchange - Exchange code (e.g. "NSE") or null to clear
+   * @param exchange - Exchange code (e.g. "NSE")
    * @returns Promise resolving with updated ticker record
    */
-  setExchange(ticker: string, exchange: string | null): Promise<Ticker>;
+  setExchange(ticker: string, exchange: string): Promise<Ticker>;
 }
 
 /**
@@ -109,7 +109,7 @@ export class TickerManager implements ITickerManager {
   }
 
   /** @inheritdoc */
-  async setExchange(ticker: string, exchange: string | null): Promise<Ticker> {
+  async setExchange(ticker: string, exchange: string): Promise<Ticker> {
     return this.tickerClient.updateTicker(ticker, { exchange });
   }
 }

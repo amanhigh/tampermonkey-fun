@@ -43,26 +43,22 @@ function isIndiaExchange(ticker: Ticker): boolean {
  * Returns undefined if the ticker does not match any backend-derived category.
  */
 export function resolveWatchCategory(ticker: Ticker): WatchCategoryId | undefined {
+  let result: WatchCategoryId | undefined;
+
   // READY
   if (ticker.state === 'READY') {
-    return WatchCategoryId.READY;
+    result = WatchCategoryId.READY;
+  } else if (ticker.type === 'COMPOSITE') {
+    // Composite instruments (type takes priority over timeframe-based classification)
+    result = WatchCategoryId.COMPOSITE;
+  } else if (Constants.FLAGS.INDEX_TICKER_TYPES.includes(ticker.type)) {
+    // Market instruments (INDEX, COMMODITY, FX, BOND)
+    result = WatchCategoryId.INDEX;
+  } else if (isLongWatch(ticker)) {
+    // Long-watch (timeframes no DL), split by exchange
+    result = isIndiaExchange(ticker) ? WatchCategoryId.LONG_NSE : WatchCategoryId.LONG_NON_NSE;
   }
+  // else: result remains undefined (DEFAULT_DAILY fallback)
 
-  // Long-watch (timeframes no DL), split by exchange
-  if (isLongWatch(ticker)) {
-    return isIndiaExchange(ticker) ? WatchCategoryId.LONG_NSE : WatchCategoryId.LONG_NON_NSE;
-  }
-
-  // Market instruments
-  if (Constants.FLAGS.INDEX_TICKER_TYPES.includes(ticker.type)) {
-    return WatchCategoryId.INDEX;
-  }
-
-  // Composite instruments
-  if (ticker.type === 'COMPOSITE') {
-    return WatchCategoryId.COMPOSITE;
-  }
-
-  // No match — caller should apply DEFAULT_DAILY fallback
-  return undefined;
+  return result;
 }

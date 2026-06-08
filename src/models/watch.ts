@@ -19,10 +19,11 @@ export enum WatchCategoryId {
   READY = 'READY',
   LONG_NSE = 'LONG_NSE',
   LONG_NON_NSE = 'LONG_NON_NSE',
-  RUNNING_JOURNAL = 'RUNNING_JOURNAL',
+  RUNNING = 'RUNNING',
   DEFAULT_DAILY = 'DEFAULT_DAILY',
   INDEX = 'INDEX',
   COMPOSITE = 'COMPOSITE',
+  BLACKLISTED = 'BLACKLISTED',
 }
 
 // ── Category Definition ──
@@ -38,8 +39,8 @@ export interface WatchCategory {
   /** Human-readable label. */
   readonly label: string;
   /**
-   * Backend update payload when a ticker is manually recorded into this category.
-   * `null` means manual recording is not supported for this category.
+   * Backend field update to record when a ticker is assigned to this category.
+   * `null` means this category is not directly recordable (e.g. journal-derived).
    */
   readonly recordUpdate: TickerUpdateRequest | null;
 }
@@ -59,7 +60,8 @@ export interface CategoryBuckets {
 // ── Canonical Category List ──
 
 /**
- * All watch categories in UI paint order (matching Constants.UI.COLORS.LIST order).
+ * All watch categories in UI paint order (matching Constants.UI.COLORS.DEFAULT).
+ * List order: SET_JOURNAL, READY, LONG_NSE, LONG_NON_NSE, RUNNING, DEFAULT_DAILY, INDEX, COMPOSITE, BLACKLISTED
  */
 // HACK: Change to Map fro both Watch and Flag Categories
 export const ALL_WATCH_CATEGORIES: readonly WatchCategory[] = [
@@ -88,7 +90,7 @@ export const ALL_WATCH_CATEGORIES: readonly WatchCategory[] = [
     recordUpdate: null, // Derived from timeframes; not directly recordable
   },
   {
-    id: WatchCategoryId.RUNNING_JOURNAL,
+    id: WatchCategoryId.RUNNING,
     color: 'lime',
     label: 'Running Trades (Journal)',
     recordUpdate: null, // Derived from journal status=RUNNING; not directly recordable
@@ -110,5 +112,11 @@ export const ALL_WATCH_CATEGORIES: readonly WatchCategory[] = [
     color: 'darkkhaki',
     label: 'Composite',
     recordUpdate: null, // Code-derived; recording not currently supported
+  },
+  {
+    id: WatchCategoryId.BLACKLISTED,
+    color: 'dimgrey',
+    label: 'Blacklisted',
+    recordUpdate: { state: 'BLACKLIST' },
   },
 ] as const;

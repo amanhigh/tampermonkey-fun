@@ -7,7 +7,7 @@ import { WatchCategoryId } from '../models/watch';
 
 /**
  * GTT Unwatched Audit plugin: identifies GTT orders for tickers not in watchlists.
- * Only treats SET_JOURNAL and RUNNING_JOURNAL as watched-for-GTT (per PRD).
+ * Only treats SET_JOURNAL and RUNNING as watched-for-GTT (per PRD).
  */
 export class GttPlugin extends BaseAuditPlugin {
   public readonly id = Constants.AUDIT.PLUGINS.GTT_UNWATCHED;
@@ -30,14 +30,13 @@ export class GttPlugin extends BaseAuditPlugin {
     const gttData = await this.kiteRepo.getGttRefereshEvent();
     const allGttTickers = Object.keys(gttData.orders);
 
-    // Classify each GTT ticker individually — only SET_JOURNAL and RUNNING_JOURNAL
+    // Classify each GTT ticker individually — only SET_JOURNAL and RUNNING
     // are treated as watched-for-GTT
     const results: AuditResult[] = [];
 
     for (const tvTicker of allGttTickers) {
       const category = await this.watchManager.getTickerCategory(tvTicker);
-      const isWatchedForGtt =
-        category?.id === WatchCategoryId.SET_JOURNAL || category?.id === WatchCategoryId.RUNNING_JOURNAL;
+      const isWatchedForGtt = category?.id === WatchCategoryId.SET_JOURNAL || category?.id === WatchCategoryId.RUNNING;
 
       if (!isWatchedForGtt) {
         const ordersForTicker = gttData.orders[tvTicker] || [];
