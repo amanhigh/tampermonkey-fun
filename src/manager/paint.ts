@@ -1,3 +1,4 @@
+import { LRUCache } from 'lru-cache';
 import { Constants } from '../models/constant';
 
 /**
@@ -37,6 +38,19 @@ export interface IPaintManager {
    * @returns void
    */
   paintFNOMarking($name: JQuery<HTMLElement>, enabled: boolean): void;
+
+  /**
+   * V1 single-ticker flag painter.
+   * Looks up the flag DOM element(s) for the given ticker, resets them to
+   * default color, then applies `color` when provided.
+   *
+   * Uses an internal LRU cache (with fetchMethod) to avoid repeated DOM scans.
+   *
+   * @param ticker Ticker symbol to paint
+   * @param color  Optional CSS color to apply. When omitted/undefined the
+   *               ticker flag is reset to default only.
+   */
+  paintFlagV1(ticker: string, color?: string): Promise<void>;
 }
 
 /**
@@ -95,5 +109,55 @@ export class PaintManager implements IPaintManager {
 
     // Reset flag colors
     this.paintFlags(selector, null, Constants.UI.COLORS.DEFAULT, Constants.DOM.WATCHLIST.ITEM, true);
+  }
+
+  // ── V1 Single-Ticker Flag Painter ──
+
+  /**
+   * LRU cache mapping ticker → jQuery flag element collection.
+   * On cache miss, fetchMethod scans the DOM automatically (watchlist → screener).
+   */
+  private readonly flagElementCache = new LRUCache<string, JQuery<HTMLElement>>({
+    max: Constants.CACHE.CATEGORY.MAX,
+    ttl: Constants.CACHE.CATEGORY.TTL_MS,
+    fetchMethod: (ticker: string): Promise<JQuery<HTMLElement> | undefined> => {
+      return Promise.resolve(this.lookupFlagElementsForTicker(ticker));
+    },
+  });
+
+  /** @inheritdoc */
+  async paintFlagV1(ticker: string, color?: string): Promise<void> {
+    const $flags = await this.flagElementCache.fetch(ticker);
+    if (!$flags) return;
+
+    $flags.css('color', Constants.UI.COLORS.DEFAULT);
+
+    if (color) {
+      $flags.css('color', color);
+    }
+  }
+
+  /**
+   * Search watchlist and screener DOM for flag elements matching `ticker`.
+   * Returns undefined when the ticker is not present in either panel.
+   */
+  private lookupFlagElementsForTicker(ticker: string): JQuery<HTMLElement> | undefined {
+    const $watch = this.findFlagInSelector(ticker, Constants.DOM.WATCHLIST.SYMBOL, Constants.DOM.WATCHLIST.ITEM);
+    if ($watch.length > 0) return $watch;
+
+    const $screen = this.findFlagInSelector(ticker, Constants.DOM.SCREENER.SYMBOL, Constants.DOM.SCREENER.ITEM);
+    if ($screen.length > 0) return $screen;
+
+    return undefined;
+  }
+
+  /**
+   * Find flag elements for a single ticker within a given symbol/item selector pair.
+   */
+  private findFlagInSelector(ticker: string, symbolSelector: string, itemSelector: string): JQuery<HTMLElement> {
+    return $(symbolSelector)
+      .filter((_: number, element: HTMLElement) => (element.textContent || element.innerHTML) === ticker)
+      .closest(itemSelector)
+      .find(Constants.DOM.FLAGS.SYMBOL);
   }
 }
