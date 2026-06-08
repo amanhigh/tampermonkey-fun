@@ -2,24 +2,32 @@ import { DomManager, IDomManager } from '../../src/manager/dom';
 import { IWaitUtil } from '../../src/util/wait';
 import { ITickerManager } from '../../src/manager/ticker';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
-import { ITradingViewScreenerManager } from '../../src/manager/screener';
-import { ITradingViewWatchlistManager } from '../../src/manager/watchlist';
 import { Constants } from '../../src/models/constant';
 import { Ticker } from '../../src/models/ticker';
 
 // Mock jQuery globally
 const mockTextFn = jest.fn();
-(global as any).$ = jest.fn(() => ({
-  text: mockTextFn,
-}));
+
+/**
+ * Default mock jQuery element with all methods DomManager needs.
+ * Tests override specific methods/selectors via mockReturnValue as needed.
+ */
+function makeJQMock(overrides: Record<string, any> = {}): any {
+  return {
+    text: mockTextFn,
+    toArray: jest.fn().mockReturnValue([]),
+    is: jest.fn().mockReturnValue(false),
+    length: 0,
+    ...overrides,
+  };
+}
+(global as any).$ = jest.fn(() => makeJQMock());
 
 describe('DomManager', () => {
   let tickerManager: IDomManager;
   let mockWaitUtil: jest.Mocked<IWaitUtil>;
   let mockTickerManager: jest.Mocked<ITickerManager>;
   let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
-  let mockScreenerManager: jest.Mocked<ITradingViewScreenerManager>;
-  let mockWatchlistManager: jest.Mocked<ITradingViewWatchlistManager>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -53,34 +61,7 @@ describe('DomManager', () => {
       getAllAlertTickers: jest.fn(),
     } as unknown as jest.Mocked<IAlertTickerManager>;
 
-    // Mock ScreenerManager
-    mockScreenerManager = {
-      getTickers: jest.fn(),
-      getSelectedTickers: jest.fn(),
-      isScreenerVisible: jest.fn(),
-      navigateToTicker: jest.fn(),
-      selectAllTickers: jest.fn(),
-      deselectAllTickers: jest.fn(),
-      invertSelection: jest.fn(),
-      paintTickers: jest.fn(),
-    } as unknown as jest.Mocked<ITradingViewScreenerManager>;
-
-    // Mock WatchlistManager
-    mockWatchlistManager = {
-      getTickers: jest.fn(),
-      getSelectedTickers: jest.fn(),
-      navigateToTicker: jest.fn(),
-      selectAllTickers: jest.fn(),
-      deselectAllTickers: jest.fn(),
-      invertSelection: jest.fn(),
-      paintTickers: jest.fn(),
-      deleteTickers: jest.fn(),
-      filterTickers: jest.fn(),
-      getCurrentWatchlist: jest.fn(),
-      switchWatchlist: jest.fn(),
-    } as unknown as jest.Mocked<ITradingViewWatchlistManager>;
-
-    tickerManager = new DomManager(mockWaitUtil, mockTickerManager, mockAlertTickerManager, mockScreenerManager, mockWatchlistManager);
+    tickerManager = new DomManager(mockWaitUtil, mockTickerManager, mockAlertTickerManager);
   });
 
   describe('getTicker', () => {
@@ -127,18 +108,31 @@ describe('DomManager', () => {
 
   describe('getSelectedTickers', () => {
     it('should return ticker from screener when visible', () => {
-      mockScreenerManager.isScreenerVisible.mockReturnValue(true);
-      mockScreenerManager.getSelectedTickers.mockReturnValue(['A', 'B', 'C']);
+      // Mock screener widget visible and 3 selected tickers
+      const mockEl = makeJQMock({
+        toArray: jest.fn().mockReturnValue([
+          { textContent: 'A' },
+          { textContent: 'B' },
+          { textContent: 'C' },
+        ]),
+        is: jest.fn().mockReturnValue(true),
+        length: 3,
+      });
+      ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
+
       const result = tickerManager.getSelectedTickers();
       expect(result).toEqual(['A', 'B', 'C']);
     });
 
     it('should fallback to single ticker when too few selected', () => {
-      ((global as any).$ as jest.Mock).mockReturnValue({
+      // Only 1 selected ticker — falls back to current ticker
+      const mockEl = makeJQMock({
         text: jest.fn().mockReturnValue('SOLO'),
+        toArray: jest.fn().mockReturnValue([{ textContent: 'A' }]),
+        is: jest.fn().mockReturnValue(true),
+        length: 1,
       });
-      mockScreenerManager.isScreenerVisible.mockReturnValue(true);
-      mockScreenerManager.getSelectedTickers.mockReturnValue(['A']);
+      ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
 
       const result = tickerManager.getSelectedTickers();
       expect(result).toEqual(['SOLO']);
@@ -147,11 +141,18 @@ describe('DomManager', () => {
 
   describe('navigateTickers', () => {
     it('should navigate to next ticker', async () => {
-      ((global as any).$ as jest.Mock).mockReturnValue({
+      const mockEl = makeJQMock({
         text: jest.fn().mockReturnValue('A'),
+        toArray: jest.fn().mockReturnValue([
+          { textContent: 'A' },
+          { textContent: 'B' },
+          { textContent: 'C' },
+        ]),
+        is: jest.fn().mockReturnValue(true),
+        length: 3,
       });
-      mockScreenerManager.isScreenerVisible.mockReturnValue(true);
-      mockScreenerManager.getTickers.mockReturnValue(['A', 'B', 'C']);
+      ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
+
       mockTickerManager.getTicker.mockResolvedValue({ qualifiedName: 'B' } as Ticker);
 
       await tickerManager.navigateTickers(1);
@@ -161,11 +162,18 @@ describe('DomManager', () => {
     });
 
     it('should wrap forward at end of ticker list', async () => {
-      ((global as any).$ as jest.Mock).mockReturnValue({
+      const mockEl = makeJQMock({
         text: jest.fn().mockReturnValue('C'),
+        toArray: jest.fn().mockReturnValue([
+          { textContent: 'A' },
+          { textContent: 'B' },
+          { textContent: 'C' },
+        ]),
+        is: jest.fn().mockReturnValue(true),
+        length: 3,
       });
-      mockScreenerManager.isScreenerVisible.mockReturnValue(true);
-      mockScreenerManager.getTickers.mockReturnValue(['A', 'B', 'C']);
+      ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
+
       mockTickerManager.getTicker.mockResolvedValue({ qualifiedName: 'A' } as Ticker);
 
       await tickerManager.navigateTickers(1);
@@ -174,8 +182,13 @@ describe('DomManager', () => {
     });
 
     it('should throw when no visible tickers', async () => {
-      mockScreenerManager.isScreenerVisible.mockReturnValue(true);
-      mockScreenerManager.getTickers.mockReturnValue([]);
+      const mockEl = makeJQMock({
+        text: jest.fn().mockReturnValue('A'),
+        toArray: jest.fn().mockReturnValue([]),
+        is: jest.fn().mockReturnValue(true),
+        length: 0,
+      });
+      ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
 
       await expect(tickerManager.navigateTickers(1)).rejects.toThrow('No visible tickers available for navigation');
     });

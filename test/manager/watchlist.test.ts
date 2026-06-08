@@ -174,8 +174,8 @@ describe('TradingViewWatchlistManager', () => {
       // Verify color painting was called
       expect(mockPaintManager.paintSymbols).toHaveBeenCalled();
 
-      // Verify flag painting
-      expect(mockFlagManager.paint).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.SYMBOL, Constants.DOM.WATCHLIST.ITEM);
+      // Verify flag painting (parameterless — reads DOM internally)
+      expect(mockFlagManager.paint).toHaveBeenCalledWith();
 
       // Verify FNO painting
       expect(mockPaintManager.paintSymbols).toHaveBeenCalledWith(

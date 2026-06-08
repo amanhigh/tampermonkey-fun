@@ -120,15 +120,17 @@ export class PaintManager implements IPaintManager {
   private readonly flagElementCache = new LRUCache<string, JQuery<HTMLElement>>({
     max: Constants.CACHE.CATEGORY.MAX,
     ttl: Constants.CACHE.CATEGORY.TTL_MS,
-    fetchMethod: (ticker: string): Promise<JQuery<HTMLElement> | undefined> => {
-      return Promise.resolve(this.lookupFlagElementsForTicker(ticker));
+    fetchMethod: async (ticker: string): Promise<JQuery<HTMLElement> | undefined> => {
+      return await Promise.resolve(this.lookupFlagElementsForTicker(ticker));
     },
   });
 
   /** @inheritdoc */
   async paintFlagV1(ticker: string, color?: string): Promise<void> {
     const $flags = await this.flagElementCache.fetch(ticker);
-    if (!$flags) return;
+    if (!$flags) {
+      return;
+    }
 
     $flags.css('color', Constants.UI.COLORS.DEFAULT);
 
@@ -139,16 +141,19 @@ export class PaintManager implements IPaintManager {
 
   /**
    * Search watchlist and screener DOM for flag elements matching `ticker`.
-   * Returns undefined when the ticker is not present in either panel.
+   * Returns combined flag elements from both panels, or undefined when the
+   * ticker is not present in either.
    */
   private lookupFlagElementsForTicker(ticker: string): JQuery<HTMLElement> | undefined {
     const $watch = this.findFlagInSelector(ticker, Constants.DOM.WATCHLIST.SYMBOL, Constants.DOM.WATCHLIST.ITEM);
-    if ($watch.length > 0) return $watch;
-
     const $screen = this.findFlagInSelector(ticker, Constants.DOM.SCREENER.SYMBOL, Constants.DOM.SCREENER.ITEM);
-    if ($screen.length > 0) return $screen;
 
-    return undefined;
+    if ($watch.length === 0 && $screen.length === 0) {
+      return undefined;
+    }
+
+    // Combine both collections — same ticker in both panels gets both painted
+    return $watch.length > 0 ? $watch.add($screen) : $screen;
   }
 
   /**

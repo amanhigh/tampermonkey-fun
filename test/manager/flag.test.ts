@@ -1,8 +1,9 @@
 import { FlagManager, IFlagManager } from '../../src/manager/flag';
 import { ITickerManager } from '../../src/manager/ticker';
 import { IPaintManager } from '../../src/manager/paint';
+import { IDomManager } from '../../src/manager/dom';
 import { Ticker } from '../../src/models/ticker';
-import { ALL_FLAG_CATEGORIES, FlagCategoryId } from '../../src/models/flag';
+import { FlagCategoryId } from '../../src/models/flag';
 
 // Mock Notifier
 jest.mock('../../src/util/notify', () => ({
@@ -15,6 +16,7 @@ describe('FlagManager', () => {
   let flagManager: IFlagManager;
   let mockTickerManager: jest.Mocked<ITickerManager>;
   let mockPaintManager: jest.Mocked<IPaintManager>;
+  let mockDomManager: jest.Mocked<IDomManager>;
 
   // ── Helpers ──
 
@@ -46,9 +48,14 @@ describe('FlagManager', () => {
 
     mockPaintManager = {
       paintFlags: jest.fn(),
+      paintFlagV1: jest.fn(),
     } as unknown as jest.Mocked<IPaintManager>;
 
-    flagManager = new FlagManager(mockTickerManager, mockPaintManager);
+    mockDomManager = {
+      getRenderedTickers: jest.fn().mockReturnValue([]),
+    } as unknown as jest.Mocked<IDomManager>;
+
+    flagManager = new FlagManager(mockTickerManager, mockPaintManager, mockDomManager);
   });
 
   // ── Constructor ──
@@ -160,20 +167,42 @@ describe('FlagManager', () => {
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'COMPOSITE', state: 'WATCHED' });
     });
 
-    it('should evict ticker from cache before backend update', async () => {
-      // Prime the cache
+    it('should optimistically cache category after recordCategory', async () => {
+      // Prime: cache knows SIDEWAYS
       mockTickerManager.getTicker.mockResolvedValue(
         makeTicker({ ticker: 'TICKER_A', trend: 'SIDEWAYS' })
       );
       await flagManager.getTickerCategory('TICKER_A');
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
 
-      // recordCategory evicts the cache entry
+      // Record: set cache to DOWNTREND without backend call
+      flagManager.recordCategory(FlagCategoryId.DOWNTREND, ['TICKER_A']);
+
+      // Next lookup returns from cache — no extra backend call
+      const result = await flagManager.getTickerCategory('TICKER_A');
+      expect(result?.id).toBe(FlagCategoryId.DOWNTREND);
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
+    });
+
+    it('should evict cache on backend update failure', async () => {
+      mockTickerManager.updateTicker.mockRejectedValue(new Error('Backend error'));
+
       flagManager.recordCategory(FlagCategoryId.SIDEWAYS, ['TICKER_A']);
 
-      // Next lookup hits backend again (cache was evicted)
-      await flagManager.getTickerCategory('TICKER_A');
-      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(2);
+      // Cache is set optimistically
+      let result = await flagManager.getTickerCategory('TICKER_A');
+      expect(result?.id).toBe(FlagCategoryId.SIDEWAYS);
+
+      // Let async updateBackend fail and evict
+      await waitForAsync();
+
+      // Next lookup hits backend (cache was evicted on failure)
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'TICKER_A', trend: 'SIDEWAYS' })
+      );
+      result = await flagManager.getTickerCategory('TICKER_A');
+      expect(result?.id).toBe(FlagCategoryId.SIDEWAYS);
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
     });
 
     it('should handle empty ticker array', () => {
@@ -185,104 +214,120 @@ describe('FlagManager', () => {
   // ── paint ──
 
   describe('paint', () => {
-    it('should call listTickers every paint via ITickerManager', () => {
-      flagManager.paint('.sel', '.item');
-
-      expect(mockTickerManager.listTickers).toHaveBeenCalledWith({});
+    beforeEach(() => {
+      // Default: DomManager returns two rendered tickers
+      mockDomManager.getRenderedTickers.mockReturnValue(['SIDE_A', 'BTC']);
     });
 
-    it('should group tickers by FlagCategoryId', async () => {
-      mockTickerManager.listTickers.mockResolvedValue([
-        makeTicker({ ticker: 'SIDE_A', trend: 'SIDEWAYS' }),          // → SIDEWAYS
-        makeTicker({ ticker: 'DOWN_A', trend: 'DOWNTREND' }),         // → DOWNTREND
-        makeTicker({ ticker: 'BTC', type: 'CRYPTO' }),                // → CRYPTO
-        makeTicker({ ticker: 'UP_A', trend: 'UPTREND' }),             // → UPTREND
-        makeTicker({ ticker: 'NIFTY', type: 'INDEX' }),               // → INDEX
-        makeTicker({ ticker: 'GOLDSILVER', type: 'COMPOSITE' }),      // → GOLD_INDEX
-      ]);
+    it('should not call listTickers during paint', () => {
+      flagManager.paint();
 
-      flagManager.paint('.sym', '.itm');
-      await waitForAsync();
-
-      expect(mockPaintManager.paintFlags).toHaveBeenCalledTimes(ALL_FLAG_CATEGORIES.length);
-
-      // Verify each category was painted with correct symbols and color
-      expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
-        '.sym', new Set(['SIDE_A']), 'orange', '.itm',
-      );
-      expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
-        '.sym', new Set(['DOWN_A']), 'red', '.itm',
-      );
-      expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
-        '.sym', new Set(['BTC']), 'dodgerblue', '.itm',
-      );
-      expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
-        '.sym', new Set(['UP_A']), 'lime', '.itm',
-      );
-      // Unclassified tickers are simply not painted
-      expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
-        '.sym', new Set(['NIFTY']), 'brown', '.itm',
-      );
-      expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
-        '.sym', new Set(['GOLDSILVER']), 'darkkhaki', '.itm',
-      );
+      expect(mockTickerManager.listTickers).not.toHaveBeenCalled();
     });
 
-    it('should handle empty ticker list', async () => {
-      mockTickerManager.listTickers.mockResolvedValue([]);
+    it('should read DOM tickers from DomManager and paint via V1', async () => {
+      mockTickerManager.getTicker.mockImplementation((ticker: string) => {
+        if (ticker === 'SIDE_A') return Promise.resolve(makeTicker({ ticker: 'SIDE_A', trend: 'SIDEWAYS' }));
+        if (ticker === 'BTC') return Promise.resolve(makeTicker({ ticker: 'BTC', type: 'CRYPTO' }));
+        return Promise.reject(new Error('Not found'));
+      });
 
-      flagManager.paint('.sel', '.item');
+      flagManager.paint();
       await waitForAsync();
 
-      expect(mockPaintManager.paintFlags).toHaveBeenCalledTimes(ALL_FLAG_CATEGORIES.length);
-      for (const cat of ALL_FLAG_CATEGORIES) {
-        expect(mockPaintManager.paintFlags).toHaveBeenCalledWith('.sel', new Set(), cat.color, '.item');
-      }
+      // Reads rendered tickers from DOM
+      expect(mockDomManager.getRenderedTickers).toHaveBeenCalledTimes(1);
+
+      // No full ticker list fetch
+      expect(mockTickerManager.listTickers).not.toHaveBeenCalled();
+
+      // Each ticker classified via cache
+      expect(mockTickerManager.getTicker).toHaveBeenCalledWith('SIDE_A');
+      expect(mockTickerManager.getTicker).toHaveBeenCalledWith('BTC');
+
+      // Each ticker painted via V1 with its category color
+      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledWith('SIDE_A', 'orange');
+      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledWith('BTC', 'dodgerblue');
+
+      // Exactly 2 V1 calls (no separate reset — reset is internal to V1)
+      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledTimes(2);
     });
 
-    it('should handle backend failure gracefully', async () => {
-      mockTickerManager.listTickers.mockRejectedValue(new Error('Backend down'));
+    it('should skip classification and V1 paint when DomManager returns no tickers', async () => {
+      mockDomManager.getRenderedTickers.mockReturnValue([]);
 
-      flagManager.paint('.sel', '.item');
+      flagManager.paint();
       await waitForAsync();
 
-      expect(mockPaintManager.paintFlags).not.toHaveBeenCalled();
+      // No classification calls
+      expect(mockTickerManager.getTicker).not.toHaveBeenCalled();
+      expect(mockTickerManager.listTickers).not.toHaveBeenCalled();
+
+      // No V1 paint calls
+      expect(mockPaintManager.paintFlagV1).not.toHaveBeenCalled();
     });
 
-    it('should apply display priority: GOLD_INDEX > INDEX > CRYPTO > UPTREND > SIDEWAYS > DOWNTREND', async () => {
-      // Ticker with both CRYPTO type and UPTREND trend → should go to CRYPTO
-      mockTickerManager.listTickers.mockResolvedValue([
-        makeTicker({ ticker: 'ETH', type: 'CRYPTO', trend: 'UPTREND' }),
-      ]);
+    it('should handle all tickers uncategorized gracefully', async () => {
+      mockDomManager.getRenderedTickers.mockReturnValue(['UNCAT_A', 'UNCAT_B']);
+      // Both are untracked — getTickerCategory returns undefined
+      mockTickerManager.getTicker.mockRejectedValue(new Error('Not found'));
 
-      flagManager.paint('.sel', '.item');
+      flagManager.paint();
       await waitForAsync();
 
-      // CRYPTO color is 'dodgerblue'
-      expect(mockPaintManager.paintFlags).toHaveBeenCalledWith(
-        '.sel', new Set(['ETH']), 'dodgerblue', '.item',
+      // Each ticker was looked up
+      expect(mockTickerManager.getTicker).toHaveBeenCalledWith('UNCAT_A');
+      expect(mockTickerManager.getTicker).toHaveBeenCalledWith('UNCAT_B');
+
+      // V1 called for each ticker with undefined color (reset only)
+      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledWith('UNCAT_A', undefined);
+      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledWith('UNCAT_B', undefined);
+
+      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledTimes(2);
+    });
+
+    it('should apply display priority for DOM ticker', async () => {
+      mockDomManager.getRenderedTickers.mockReturnValue(['ETH']);
+      // Ticker with both CRYPTO type and UPTREND trend → resolveFlagCategory returns CRYPTO
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'ETH', type: 'CRYPTO', trend: 'UPTREND' })
       );
-    });
 
-    it('should paint all categories', async () => {
-      mockTickerManager.listTickers.mockResolvedValue([
-        makeTicker({ ticker: 'A', trend: 'SIDEWAYS' }),
-      ]);
-
-      flagManager.paint('.sel', '.item');
+      flagManager.paint();
       await waitForAsync();
 
-      expect(mockPaintManager.paintFlags).toHaveBeenCalledTimes(ALL_FLAG_CATEGORIES.length);
+      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledWith('ETH', 'dodgerblue');
+    });
 
-      // First call is SIDEWAYS with 'A', rest are empty
-      expect(mockPaintManager.paintFlags).toHaveBeenNthCalledWith(
-        1, '.sel', new Set(['A']), ALL_FLAG_CATEGORIES[0].color, '.item',
+    it('should paint categorized DOM ticker with its color via V1', async () => {
+      mockDomManager.getRenderedTickers.mockReturnValue(['SIDE_A']);
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'SIDE_A', trend: 'SIDEWAYS' })
       );
-      for (let i = 1; i < ALL_FLAG_CATEGORIES.length; i++) {
-        expect(mockPaintManager.paintFlags).toHaveBeenNthCalledWith(
-          i + 1, '.sel', new Set(), ALL_FLAG_CATEGORIES[i].color, '.item',
-        );
-      }
+
+      flagManager.paint();
+      await waitForAsync();
+
+      // V1 called once with SIDEWAYS color
+      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledTimes(1);
+      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledWith('SIDE_A', 'orange');
+    });
+
+    it('should dedupe duplicate DOM tickers across panels before classification', async () => {
+      mockDomManager.getRenderedTickers.mockReturnValue(['DUP', 'DUP', 'DUP', 'DUP']);
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'DUP', trend: 'SIDEWAYS' })
+      );
+
+      flagManager.paint();
+      await waitForAsync();
+
+      // getTicker fetched only once despite 4 duplicate entries
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
+
+      // V1 painted only once
+      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledTimes(1);
+      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledWith('DUP', 'orange');
     });
   });
 });

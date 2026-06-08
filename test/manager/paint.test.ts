@@ -2,19 +2,20 @@ import { PaintManager, IPaintManager } from '../../src/manager/paint';
 import { Constants } from '../../src/models/constant';
 
 // Mock jQuery
-const mockJQuery = jest.fn();
-const mockJQueryElement = {
-  filter: jest.fn(),
+const mockJQueryElement: any = {
   css: jest.fn(),
   closest: jest.fn(),
   find: jest.fn(),
+  length: 1,
 };
+mockJQueryElement[0] = { isConnected: true };
+mockJQueryElement.filter = jest.fn().mockReturnValue(mockJQueryElement);
+mockJQueryElement.closest = jest.fn().mockReturnValue(mockJQueryElement);
+mockJQueryElement.find = jest.fn().mockReturnValue(mockJQueryElement);
+mockJQueryElement.add = jest.fn().mockReturnValue(mockJQueryElement);
 
-// Setup jQuery mock chain
+const mockJQuery = jest.fn();
 mockJQuery.mockReturnValue(mockJQueryElement);
-mockJQueryElement.filter.mockReturnValue(mockJQueryElement);
-mockJQueryElement.closest.mockReturnValue(mockJQueryElement);
-mockJQueryElement.find.mockReturnValue(mockJQueryElement);
 
 (global as any).$ = mockJQuery;
 
@@ -331,6 +332,83 @@ describe('PaintManager', () => {
         'border-width': 'medium',
       });
       expect(mockNameElement.css).toHaveBeenCalledWith(Constants.UI.COLORS.FNO_CSS);
+    });
+  });
+
+  describe('paintFlagV1', () => {
+    beforeEach(() => {
+      mockJQueryElement.length = 1;
+    });
+
+    it('should find ticker in watchlist and paint with color', async () => {
+      await paintManager.paintFlagV1('NIFTY', 'red');
+
+      // Should search watchlist first via fetchMethod
+      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.SYMBOL);
+      expect(mockJQueryElement.filter).toHaveBeenCalled();
+
+      // Should reset to default then apply color
+      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', Constants.UI.COLORS.DEFAULT);
+      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'red');
+    });
+
+    it('should fall back to screener when watchlist has no match', async () => {
+      mockJQueryElement.length = 0; // watchlist miss
+      mockJQuery.mockClear();
+
+      await paintManager.paintFlagV1('NIFTY', 'red');
+
+      // After watchlist miss, should search screener
+      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.SCREENER.SYMBOL);
+    });
+
+    it('should reset to default when color is not provided', async () => {
+      await paintManager.paintFlagV1('NIFTY');
+
+      // Only reset, no color applied
+      expect(mockJQueryElement.css).toHaveBeenCalledTimes(1);
+      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', Constants.UI.COLORS.DEFAULT);
+    });
+
+    it('should do nothing when ticker is not found in DOM', async () => {
+      mockJQueryElement.length = 0;
+      mockJQueryElement.css.mockClear();
+
+      await paintManager.paintFlagV1('UNKNOWN', 'red');
+
+      // No paint calls
+      expect(mockJQueryElement.css).not.toHaveBeenCalled();
+    });
+
+    it('should cache flag elements after lookup via fetchMethod', async () => {
+      const spy = jest.spyOn(paintManager as any, 'lookupFlagElementsForTicker');
+
+      await paintManager.paintFlagV1('CACHED', 'blue');
+      await paintManager.paintFlagV1('CACHED', 'red');
+
+      // lookupFlagElementsForTicker called only once (second call from cache via fetch)
+      expect(spy).toHaveBeenCalledTimes(1);
+      spy.mockRestore();
+    });
+
+    it('should paint both watchlist and screener flags when same ticker is in both panels', async () => {
+      // Both panels have the ticker — add() merges the collections
+      mockJQueryElement.length = 1; // watchlist hit (length > 0)
+
+      mockJQuery.mockClear();
+      mockJQueryElement.add.mockClear();
+
+      await paintManager.paintFlagV1('DUAL', 'green');
+
+      // Searched both panels
+      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.SYMBOL);
+      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.SCREENER.SYMBOL);
+
+      // add() called to combine watchlist + screener flag elements
+      expect(mockJQueryElement.add).toHaveBeenCalledWith(mockJQueryElement);
+
+      // Color applied to combined collection
+      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'green');
     });
   });
 

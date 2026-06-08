@@ -246,14 +246,7 @@ export class Factory {
     dom: (): IDomManager =>
       Factory.getInstance(
         'domManager',
-        () =>
-          new DomManager(
-            Factory.util.wait(),
-            Factory.manager.ticker(),
-            Factory.manager.alertTicker(),
-            Factory.manager.screener(),
-            Factory.manager.watchlist()
-          )
+        () => new DomManager(Factory.util.wait(), Factory.manager.ticker(), Factory.manager.alertTicker())
       ),
 
     kite: (): IKiteManager =>
@@ -272,7 +265,10 @@ export class Factory {
       Factory.getInstance('styleManager', () => new StyleManager(Factory.util.wait(), Factory.manager.timeFrame())),
 
     flag: (): IFlagManager =>
-      Factory.getInstance('flagManager', () => new FlagManager(Factory.manager.ticker(), Factory.manager.paint())),
+      Factory.getInstance(
+        'flagManager',
+        () => new FlagManager(Factory.manager.ticker(), Factory.manager.paint(), Factory.manager.dom())
+      ),
 
     recent: (): IRecentManager =>
       Factory.getInstance('recentManager', () => new RecentManager(Factory.client.ticker())),

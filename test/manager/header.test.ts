@@ -39,7 +39,7 @@ describe('HeaderManager', () => {
       paintFlags: jest.fn(),
       resetColors: jest.fn(),
       paintFNOMarking: jest.fn(),
-    } as jest.Mocked<IPaintManager>;
+    } as unknown as jest.Mocked<IPaintManager>;
 
     // Mock WatchManager — getTickerCategory is the only method
     mockWatchManager = {
@@ -64,6 +64,7 @@ describe('HeaderManager', () => {
       getSelectedTickers: jest.fn(),
       openBenchmarkTicker: jest.fn(),
       navigateTickers: jest.fn(),
+      getRenderedTickers: jest.fn(),
     };
 
     // Mock WatchlistManager

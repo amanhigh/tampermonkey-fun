@@ -3,8 +3,9 @@ import { TickerUpdateRequest } from '../models/ticker';
 import { Constants } from '../models/constant';
 import { ITickerManager } from './ticker';
 import { IPaintManager } from './paint';
+import { IDomManager } from './dom';
 import { Notifier } from '../util/notify';
-import { ALL_FLAG_CATEGORIES, FlagCategory, FlagCategoryId } from '../models/flag';
+import { FlagCategory, FlagCategoryId } from '../models/flag';
 import { findFlagCategoryById, resolveFlagCategory } from './flag_category';
 
 /**
@@ -32,14 +33,10 @@ export interface IFlagManager {
   recordCategory(categoryId: FlagCategoryId, tvTickers: string[]): void;
 
   /**
-   * Paints flag indicators for tickers currently visible in the DOM.
-   * Reads ticker symbols from matching DOM elements, classifies each
-   * via the LRU cache, and paints flag colors. Resets existing flags
-   * before repaint.
-   * @param selector CSS selector for ticker elements
-   * @param itemSelector CSS selector for item container
+   * Paints flag indicators for all rendered DOM tickers (watchlist + screener).
+   * Classifies each ticker via LRU cache and paints flag colors through PaintManager.
    */
-  paint(selector: string, itemSelector: string): void;
+  paint(): void;
 }
 
 // ── Implementation ──
@@ -67,7 +64,8 @@ export class FlagManager implements IFlagManager {
 
   constructor(
     private readonly tickerManager: ITickerManager,
-    private readonly paintManager: IPaintManager
+    private readonly paintManager: IPaintManager,
+    private readonly domManager: IDomManager
   ) {}
 
   // ── Public API ──
@@ -89,17 +87,16 @@ export class FlagManager implements IFlagManager {
   }
 
   /** @inheritdoc */
-  paint(selector: string, itemSelector: string): void {
-    void this.paintFromBackend(selector, itemSelector);
-  }
-
-  // ── Cache Management ──
-
-  /**
-   * Evict a ticker from the flag category cache so the next lookup is fresh.
-   */
-  private evictFlagCategory(ticker: string): void {
-    this.categoryCache.delete(ticker);
+  paint(): void {
+    void (async () => {
+      const tickers = [...new Set(this.domManager.getRenderedTickers())];
+      await Promise.all(
+        tickers.map(async (ticker) => {
+          const category = await this.getTickerCategory(ticker);
+          await this.paintManager.paintFlagV1(ticker, category?.color);
+        })
+      );
+    })();
   }
 
   /**
@@ -127,61 +124,9 @@ export class FlagManager implements IFlagManager {
     try {
       await this.tickerManager.updateTicker(ticker, update);
     } catch {
+      // Update failed — revert optimistic cache entry
+      this.categoryCache.delete(ticker);
       Notifier.warn(`Failed to update flag category for ${ticker}`);
-    }
-  }
-
-  /**
-   * Fetch all tickers from the backend, group them into category sets,
-   * and paint each category.
-   */
-  private async paintFromBackend(selector: string, itemSelector: string): Promise<void> {
-    try {
-      const tickers = await this.tickerManager.listTickers({});
-      const groups = this.groupTickersByCategory(tickers);
-      this.paintGroups(selector, itemSelector, groups);
-    } catch {
-      // Backend call failed — nothing to paint
-    }
-  }
-
-  // ── Grouping and painting helpers ──
-
-  /**
-   * Create a new map with empty sets for every flag category.
-   */
-  private createEmptyCategoryGroups(): Map<FlagCategoryId, Set<string>> {
-    const groups = new Map<FlagCategoryId, Set<string>>();
-    for (const cat of ALL_FLAG_CATEGORIES) {
-      groups.set(cat.id, new Set());
-    }
-    return groups;
-  }
-
-  /**
-   * Group a list of ticker records into flag category sets.
-   */
-  private groupTickersByCategory(tickers: Ticker[]): Map<FlagCategoryId, Set<string>> {
-    const groups = this.createEmptyCategoryGroups();
-
-    // Classify each ticker into the first matching category
-    for (const ticker of tickers) {
-      const cat = resolveFlagCategory(ticker);
-      if (cat) {
-        groups.get(cat.id)?.add(ticker.ticker);
-      }
-    }
-
-    return groups;
-  }
-
-  /**
-   * Paint flags for every category using the given group sets.
-   */
-  private paintGroups(selector: string, itemSelector: string, groups: Map<FlagCategoryId, Set<string>>): void {
-    for (const cat of ALL_FLAG_CATEGORIES) {
-      const symbols = groups.get(cat.id) ?? new Set();
-      this.paintManager.paintFlags(selector, symbols, cat.color, itemSelector);
     }
   }
 }

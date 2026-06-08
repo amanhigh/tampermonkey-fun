@@ -115,7 +115,7 @@ export class TradingViewScreenerManager implements ITradingViewScreenerManager {
     }
 
     // Paint Flags
-    this.flagManager.paint(screenerSymbolSelector, Constants.DOM.SCREENER.ITEM);
+    this.flagManager.paint();
 
     // Apply brown override for uncategorized watchlist tickers (legacy DEFAULT_DAILY)
     const watchlistTickers = this.watchlistManager.getTickers();

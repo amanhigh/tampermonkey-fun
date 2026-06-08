@@ -1,9 +1,7 @@
 import { Constants } from '../models/constant';
 import { IWaitUtil } from '../util/wait';
 import { ITickerManager } from './ticker';
-import { ITradingViewScreenerManager } from './screener';
 import { IAlertTickerManager } from './alert_ticker';
-import { ITradingViewWatchlistManager } from './watchlist';
 
 /**
  * Minimum number of tickers required for selection
@@ -56,6 +54,13 @@ export interface IDomManager {
    * @throws Error When no visible tickers are available
    */
   navigateTickers(step: number): Promise<void>;
+
+  /**
+   * Gets all rendered tickers from both watchlist and screener panels.
+   * Combines tickers from both panels without deduplication.
+   * @returns Array of ticker symbols from watchlist and screener DOM
+   */
+  getRenderedTickers(): string[];
 }
 
 /**
@@ -65,9 +70,7 @@ export class DomManager implements IDomManager {
   constructor(
     private readonly waitUtil: IWaitUtil,
     private readonly tickerManager: ITickerManager,
-    private readonly alertTickerManager: IAlertTickerManager,
-    private readonly screenerManager: ITradingViewScreenerManager,
-    private readonly watchlistManager: ITradingViewWatchlistManager
+    private readonly alertTickerManager: IAlertTickerManager
   ) {}
 
   /** @inheritdoc */
@@ -159,26 +162,82 @@ export class DomManager implements IDomManager {
     await this.openTicker(nextTicker);
   }
 
+  // ── Private DOM Query Helpers ──
+
   /**
-   * Gets currently visible tickers based on active view
+   * Extract ticker text from jQuery elements by selector.
    * @private
-   * @returns Array of visible ticker symbols
    */
-  private getVisibleSelectedTickers(): string[] {
-    return this.screenerManager.isScreenerVisible()
-      ? this.screenerManager.getSelectedTickers()
-      : this.watchlistManager.getSelectedTickers();
+  private tickerTextArray(selector: string): string[] {
+    return $(selector)
+      .toArray()
+      .map((s) => s.textContent || s.innerHTML);
   }
 
   /**
-   * Gets currently visible tickers based on active view
+   * Gets watchlist tickers from DOM.
+   * @param visible - When true, only returns visible tickers
    * @private
-   * @returns Array of visible ticker symbols
+   */
+  private getWatchlistTickers(visible = false): string[] {
+    const selector = visible ? `${Constants.DOM.WATCHLIST.SYMBOL}:visible` : Constants.DOM.WATCHLIST.SYMBOL;
+    return this.tickerTextArray(selector);
+  }
+
+  /**
+   * Gets screener tickers from DOM.
+   * @param visible - When true, only returns visible tickers
+   * @private
+   */
+  private getScreenerTickers(visible = false): string[] {
+    const selector = visible ? `${Constants.DOM.SCREENER.SYMBOL}:visible` : Constants.DOM.SCREENER.SYMBOL;
+    return this.tickerTextArray(selector);
+  }
+
+  /**
+   * Gets selected watchlist tickers.
+   * @private
+   */
+  private getSelectedWatchlistTickers(): string[] {
+    return this.tickerTextArray(`${Constants.DOM.WATCHLIST.SELECTED} ${Constants.DOM.WATCHLIST.SYMBOL}:visible`);
+  }
+
+  /**
+   * Gets selected screener tickers.
+   * @private
+   */
+  private getSelectedScreenerTickers(): string[] {
+    return this.tickerTextArray(`${Constants.DOM.SCREENER.SELECTED} ${Constants.DOM.SCREENER.SYMBOL}:visible`);
+  }
+
+  /**
+   * Check if screener widget is visible in DOM.
+   * @private
+   */
+  private isScreenerVisible(): boolean {
+    const $widget = $(Constants.DOM.SCREENER.MAIN);
+    return $widget.length > 0 && $widget.is(':visible');
+  }
+
+  /**
+   * Gets currently selected tickers based on active view.
+   * @private
+   */
+  private getVisibleSelectedTickers(): string[] {
+    return this.isScreenerVisible() ? this.getSelectedScreenerTickers() : this.getSelectedWatchlistTickers();
+  }
+
+  /**
+   * Gets currently visible tickers based on active view.
+   * @private
    */
   private getVisibleTickers(): string[] {
-    return this.screenerManager.isScreenerVisible()
-      ? this.screenerManager.getTickers(true)
-      : this.watchlistManager.getTickers(true);
+    return this.isScreenerVisible() ? this.getScreenerTickers(true) : this.getWatchlistTickers(true);
+  }
+
+  /** @inheritdoc */
+  getRenderedTickers(): string[] {
+    return [...this.getWatchlistTickers(), ...this.getScreenerTickers()];
   }
 
   /**
