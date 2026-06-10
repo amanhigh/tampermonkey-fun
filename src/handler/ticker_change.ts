@@ -1,6 +1,6 @@
 import { IDomManager } from '../manager/dom';
 import { IAlertHandler } from './alert';
-import { IHeaderManager } from '../manager/header';
+import { IPaintManager } from '../manager/paint';
 import { IRecentManager } from '../manager/recent';
 import { ISequenceHandler } from './sequence';
 import { IKiteHandler } from './kite';
@@ -18,7 +18,7 @@ export class TickerChangeHandler implements ITickerChangeHandler {
   constructor(
     private readonly domManager: IDomManager,
     private readonly alertHandler: IAlertHandler,
-    private readonly headerManager: IHeaderManager,
+    private readonly paintManager: IPaintManager,
     private readonly recentManager: IRecentManager,
     private readonly sequenceHandler: ISequenceHandler,
     private readonly kiteHandler: IKiteHandler,
@@ -34,7 +34,7 @@ export class TickerChangeHandler implements ITickerChangeHandler {
       this.alertHandler.refreshAlerts();
 
       // Update UI components
-      void this.headerManager.paintHeader();
+      void this.paintManager.paintHeader();
       void this.recordRecentTicker();
       void this.sequenceHandler.displaySequence();
 

@@ -1,11 +1,12 @@
 import { Constants } from '../models/constant';
+import { TickerArea } from '../models/dom';
 import { IObserveUtil } from '../util/observer';
 import { IWaitUtil } from '../util/wait';
 import { IWatchListHandler } from './watchlist';
 import { ITickerChangeHandler } from './ticker_change';
 import { IHotkeyHandler } from './hotkey';
 import { IAlertHandler } from './alert';
-import { ITradingViewScreenerManager } from '../manager/screener';
+import { IPaintManager } from '../manager/paint';
 
 /**
  * Interface for application initialization handling
@@ -35,7 +36,7 @@ export class OnLoadHandler implements IOnLoadHandler {
     private readonly hotkeyHandler: IHotkeyHandler,
     private readonly alertHandler: IAlertHandler,
     private readonly tickerChangeHandler: ITickerChangeHandler,
-    private readonly screenerManager: ITradingViewScreenerManager
+    private readonly paintManager: IPaintManager
   ) {}
 
   /** @inheritdoc */
@@ -139,8 +140,8 @@ export class OnLoadHandler implements IOnLoadHandler {
           if (isScreenerOpen) {
             console.log('🟢 SCREENER OPENED - triggering repaint');
             setTimeout(() => {
-              void this.screenerManager
-                .paintScreener()
+              void this.paintManager
+                .paintArea(TickerArea.SCREENER)
                 .then(() => {
                   console.log('✅ Screener repainted successfully');
                 })

@@ -5,7 +5,7 @@ import { IWatchListHandler } from '../../src/handler/watchlist';
 import { IHotkeyHandler } from '../../src/handler/hotkey';
 import { IAlertHandler } from '../../src/handler/alert';
 import { ITickerChangeHandler } from '../../src/handler/ticker_change';
-import { ITradingViewScreenerManager } from '../../src/manager/screener';
+import { IPaintManager } from '../../src/manager/paint';
 import { Constants } from '../../src/models/constant';
 
 // Mock document and jQuery
@@ -34,7 +34,7 @@ describe('OnLoadHandler', () => {
   let mockHotkeyHandler: jest.Mocked<IHotkeyHandler>;
   let mockAlertHandler: jest.Mocked<IAlertHandler>;
   let mockTickerChangeHandler: jest.Mocked<ITickerChangeHandler>;
-  let mockScreenerManager: jest.Mocked<ITradingViewScreenerManager>;
+  let mockPaintManager: jest.Mocked<IPaintManager>;
 
   beforeEach(() => {
     // Reset mocks
@@ -75,12 +75,14 @@ describe('OnLoadHandler', () => {
       onTickerChange: jest.fn(),
     } as unknown as jest.Mocked<ITickerChangeHandler>;
 
-    mockScreenerManager = {
-      getTickers: jest.fn(),
-      getSelectedTickers: jest.fn(),
-      isScreenerVisible: jest.fn(),
-      paintScreener: jest.fn().mockResolvedValue(undefined),
-    } as unknown as jest.Mocked<ITradingViewScreenerManager>;
+    mockPaintManager = {
+      paintSymbols: jest.fn(),
+      paintFlags: jest.fn(),
+      resetColors: jest.fn(),
+      paintFNOMarking: jest.fn(),
+      paintArea: jest.fn().mockResolvedValue({ buckets: new Map(), uncategorized: new Set() }),
+      paintHeader: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<IPaintManager>;
 
     onLoadHandler = new OnLoadHandler(
       mockWaitUtil,
@@ -89,7 +91,7 @@ describe('OnLoadHandler', () => {
       mockHotkeyHandler,
       mockAlertHandler,
       mockTickerChangeHandler,
-      mockScreenerManager
+      mockPaintManager
     );
   });
 

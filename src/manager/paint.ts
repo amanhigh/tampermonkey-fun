@@ -1,6 +1,12 @@
 import { LRUCache } from 'lru-cache';
 import { TickerArea, TickerVisibility } from '../models/dom';
+import { IWatchManager } from './watch';
+import { IFlagManager } from './flag';
+import { IDomManager } from './dom';
+import { IFnoManager } from './fno';
+import { IRecentManager } from './recent';
 import { Constants } from '../models/constant';
+import { CategoryBuckets, WatchCategoryId } from '../models/watch';
 
 /**
  * Interface for managing painting operations for TradingView elements
@@ -35,31 +41,38 @@ export interface IPaintManager {
    * Paints flag and exchange elements for a ticker
    * @param $name jQuery element for the name
    * @param enabled Enable/disable FNO Style
-   * @private
-   * @returns void
    */
   paintFNOMarking($name: JQuery<HTMLElement>, enabled: boolean): void;
 
   /**
-   * V1 single-ticker flag painter.
-   * Looks up the flag DOM element(s) for the given ticker in the specified
-   * panel, resets them to default color, then applies `color` when provided.
-   *
-   * Uses an internal LRU cache (with fetchMethod) keyed by `area.id:ticker`
-   * to avoid repeated DOM scans.
-   *
-   * @param area   Which panel to paint (WATCHLIST or SCREENER)
-   * @param ticker Ticker symbol to paint
-   * @param color  Optional CSS color to apply. When omitted/undefined the
-   *               ticker flag is reset to default only.
+   * Paints all tickers in the given area (WATCHLIST or SCREENER).
+   * For each ticker, resolves watch category, flag category, FNO status,
+   * and paints symbol + flag in one pass. Returns watch-category buckets
+   * for the paint caller to use (e.g. UI summary labels).
+   * @param area Which panel to paint (WATCHLIST or SCREENER)
    */
-  paintFlagV1(area: TickerArea, ticker: string, color?: string): Promise<void>;
+  paintArea(area: TickerArea): Promise<CategoryBuckets>;
+
+  /**
+   * Paints the current ticker header (name, flag, exchange, FNO).
+   * Resolves watch category + flag category + FNO status internally.
+   */
+  paintHeader(): Promise<void>;
 }
 
 /**
- * Manages painting operations for TradingView elements
+ * Manages painting operations for TradingView elements.
+ * Orchestrates ticker symbol + flag + FNO painting per area.
  */
 export class PaintManager implements IPaintManager {
+  constructor(
+    private readonly domManager: IDomManager,
+    private readonly watchManager: IWatchManager,
+    private readonly flagManager: IFlagManager,
+    private readonly fnoManager: IFnoManager,
+    private readonly recentManager: IRecentManager
+  ) {}
+
   /** @inheritdoc */
   paintSymbols(selector: string, symbolSet: Set<string> | null, css: JQuery.PlainObject, force = false): void {
     if (!selector || !css) {
@@ -114,6 +127,141 @@ export class PaintManager implements IPaintManager {
     this.paintFlags(selector, null, Constants.UI.COLORS.DEFAULT, Constants.DOM.WATCHLIST.ITEM, true);
   }
 
+  // ── Area-wide painters ──
+
+  /** @inheritdoc */
+  async paintArea(area: TickerArea): Promise<CategoryBuckets> {
+    // For screener, force-reset all symbols to default first
+    // to handle tickers that left the area between paints
+    if (area === TickerArea.SCREENER) {
+      const screenerSelector = area.getSymbolSelector(TickerVisibility.ALL);
+      this.paintSymbols(screenerSelector, null, { color: Constants.UI.COLORS.DEFAULT }, true);
+    }
+
+    const tickers = [...this.domManager.getTickers(area, TickerVisibility.ALL)];
+
+    const buckets = new Map<WatchCategoryId, Set<string>>();
+    const uncategorized = new Set<string>();
+
+    // For screener, cache watchlist tickers for brown fallback + compute recent set
+    let watchlistTickerSet: Set<string> | undefined;
+    let recentTickers: Set<string> | undefined;
+    if (area === TickerArea.SCREENER) {
+      watchlistTickerSet = new Set([...this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL)]);
+      recentTickers = new Set(tickers.filter((t) => this.recentManager.isRecent(t, Constants.RECENT_CUTOFF_MS)));
+    }
+
+    for (const ticker of tickers) {
+      const [watchCat, flagCat] = await Promise.all([
+        this.watchManager.getTickerCategory(ticker),
+        this.flagManager.getTickerCategory(ticker),
+      ]);
+
+      // Build watch-category buckets
+      if (watchCat) {
+        const set = buckets.get(watchCat.id) ?? new Set<string>();
+        set.add(ticker);
+        buckets.set(watchCat.id, set);
+      } else {
+        uncategorized.add(ticker);
+      }
+
+      // Resolve symbol color with priority
+      let symbolColor = Constants.UI.COLORS.DEFAULT;
+      if (watchCat) {
+        symbolColor = watchCat.color;
+      } else if (area === TickerArea.SCREENER && watchlistTickerSet!.has(ticker)) {
+        // Legacy DEFAULT_DAILY fallback: uncategorized ticker in watchlist → brown in screener
+        symbolColor = Constants.UI.COLORS.HEADER_DEFAULT;
+      } else if (area === TickerArea.SCREENER && recentTickers!.has(ticker)) {
+        symbolColor = Constants.UI.COLORS.SCREENER_RECENT;
+      }
+
+      // Paint symbol, flag, and FNO border in one pass per ticker
+      this.paintSingleSymbol(area, ticker, symbolColor);
+
+      // FNO border
+      if (this.fnoManager.isFno(ticker)) {
+        this.paintSingleSymbolBorder(area, ticker);
+      }
+
+      // Flag
+      await this.paintSingleFlag(area, ticker, flagCat?.color);
+    }
+
+    return { buckets, uncategorized };
+  }
+
+  /** @inheritdoc */
+  async paintHeader(): Promise<void> {
+    const ticker = this.domManager.getTicker();
+    const $name = $(Constants.DOM.BASIC.NAME);
+    const $flag = $(Constants.DOM.FLAGS.MARKING);
+    const $exchange = $(Constants.DOM.BASIC.EXCHANGE);
+
+    // Reset header elements
+    $name.css('color', Constants.UI.COLORS.DEFAULT);
+    $flag.css('color', Constants.UI.COLORS.DEFAULT);
+    $exchange.css('color', Constants.UI.COLORS.DEFAULT);
+
+    // Fetch categories in parallel
+    const [watchCategory, flagCategory] = await Promise.all([
+      this.watchManager.getTickerCategory(ticker),
+      this.flagManager.getTickerCategory(ticker),
+    ]);
+
+    // Paint name — watch category color, or brown fallback if in watchlist
+    if (watchCategory) {
+      $name.css('color', watchCategory.color);
+    } else {
+      const watchlistTickers = this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL);
+      if (watchlistTickers.has(ticker)) {
+        $name.css('color', Constants.UI.COLORS.HEADER_DEFAULT);
+      }
+    }
+
+    // Paint flag and exchange — flag category color
+    if (flagCategory) {
+      $flag.css('color', flagCategory.color);
+      $exchange.css('color', flagCategory.color);
+    }
+
+    // FNO marking on header name
+    this.paintFNOMarking($name, this.fnoManager.isFno(ticker));
+  }
+
+  // ── Single-ticker painters ──
+
+  /**
+   * Paint the symbol text for a single ticker in the given area.
+   * Resets to default, then applies color when provided.
+   */
+  private paintSingleSymbol(area: TickerArea, ticker: string, color?: string): void {
+    const $symbol = $(area.getSymbolSelector(TickerVisibility.ALL))
+      .filter((_: number, el: HTMLElement) => (el.textContent || el.innerHTML) === ticker);
+
+    if ($symbol.length === 0) {
+      return;
+    }
+
+    $symbol.css('color', Constants.UI.COLORS.DEFAULT);
+    if (color) {
+      $symbol.css('color', color);
+    }
+  }
+
+  /**
+   * Apply FNO border style to a single ticker's symbol element.
+   */
+  private paintSingleSymbolBorder(area: TickerArea, ticker: string): void {
+    const $symbol = $(area.getSymbolSelector(TickerVisibility.ALL))
+      .filter((_: number, el: HTMLElement) => (el.textContent || el.innerHTML) === ticker);
+
+    if ($symbol.length > 0) {
+      $symbol.css(Constants.UI.COLORS.FNO_CSS);
+    }
+  }
+
   // ── V1 Single-Ticker Flag Painter ──
 
   /**
@@ -124,8 +272,6 @@ export class PaintManager implements IPaintManager {
     max: Constants.CACHE.CATEGORY.MAX,
     ttl: Constants.CACHE.CATEGORY.TTL_MS,
     fetchMethod: async (key: string): Promise<JQuery<HTMLElement> | undefined> => {
-      // Parse the first colon as the area/ticker separator
-      // so tickers containing colons (e.g. BINANCE:BTCUSDT) are preserved.
       const separatorIdx = key.indexOf(':');
       const areaId = key.substring(0, separatorIdx) as keyof typeof TickerArea;
       const ticker = key.substring(separatorIdx + 1);
@@ -144,15 +290,16 @@ export class PaintManager implements IPaintManager {
     return `${area.id}:${ticker}`;
   }
 
-  /** @inheritdoc */
-  async paintFlagV1(area: TickerArea, ticker: string, color?: string): Promise<void> {
+  /**
+   * Paint the flag for a single ticker. Uses LRU cache for DOM lookup.
+   */
+  private async paintSingleFlag(area: TickerArea, ticker: string, color?: string): Promise<void> {
     const $flags = await this.flagElementCache.fetch(PaintManager.cacheKey(area, ticker));
     if (!$flags) {
       return;
     }
 
     $flags.css('color', Constants.UI.COLORS.DEFAULT);
-
     if (color) {
       $flags.css('color', color);
     }
@@ -166,7 +313,7 @@ export class PaintManager implements IPaintManager {
     const $flags = $(area.getSymbolSelector(TickerVisibility.ALL))
       .filter((_: number, element: HTMLElement) => (element.textContent || element.innerHTML) === ticker)
       .closest(area.getItemSelector())
-      .find(Constants.DOM.FLAGS.SYMBOL);
+      .find(area.getFlagSelector());
 
     return $flags.length > 0 ? $flags : undefined;
   }

@@ -40,11 +40,16 @@ export interface TickerArea {
    * Returns the CSS selector for the row/item container in this area.
    */
   getItemSelector(): string;
+
+  /**
+   * Returns the CSS selector for flag elements within a ticker row in this area.
+   */
+  getFlagSelector(): string;
 }
 
 // ── Factory ──
 
-function createTickerArea(id: TickerAreaId, symbol: string, selected: string, item: string): TickerArea {
+function createTickerArea(id: TickerAreaId, symbol: string, selected: string, item: string, flag: string): TickerArea {
   return {
     id,
     getSymbolSelector(visibility: TickerVisibility): string {
@@ -60,6 +65,9 @@ function createTickerArea(id: TickerAreaId, symbol: string, selected: string, it
     getItemSelector(): string {
       return item;
     },
+    getFlagSelector(): string {
+      return flag;
+    },
   };
 }
 
@@ -74,7 +82,8 @@ export const TickerArea: Readonly<{
     'WATCHLIST',
     Constants.DOM.WATCHLIST.SYMBOL,
     Constants.DOM.WATCHLIST.SELECTED,
-    Constants.DOM.WATCHLIST.ITEM
+    Constants.DOM.WATCHLIST.ITEM,
+    Constants.DOM.FLAGS.SYMBOL
   ),
 
   /** Screener panel (may be hidden/closed). */
@@ -82,6 +91,7 @@ export const TickerArea: Readonly<{
     'SCREENER',
     Constants.DOM.SCREENER.SYMBOL,
     Constants.DOM.SCREENER.SELECTED,
-    Constants.DOM.SCREENER.ITEM
+    Constants.DOM.SCREENER.ITEM,
+    Constants.DOM.FLAGS.SYMBOL
   ),
 };

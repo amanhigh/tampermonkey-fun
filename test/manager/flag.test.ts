@@ -1,8 +1,5 @@
 import { FlagManager, IFlagManager } from '../../src/manager/flag';
 import { ITickerManager } from '../../src/manager/ticker';
-import { IPaintManager } from '../../src/manager/paint';
-import { IDomManager } from '../../src/manager/dom';
-import { TickerArea, TickerVisibility } from '../../src/models/dom';
 import { Ticker } from '../../src/models/ticker';
 import { FlagCategoryId } from '../../src/models/flag';
 

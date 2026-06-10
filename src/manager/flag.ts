@@ -1,17 +1,13 @@
 import { LRUCache } from 'lru-cache';
-import { TickerArea, TickerVisibility } from '../models/dom';
 import { TickerUpdateRequest } from '../models/ticker';
 import { Constants } from '../models/constant';
 import { ITickerManager } from './ticker';
-import { IPaintManager } from './paint';
-import { IDomManager } from './dom';
 import { Notifier } from '../util/notify';
 import { FlagCategory, FlagCategoryId } from '../models/flag';
 import { findFlagCategoryById, resolveFlagCategory } from './flag_category';
 
 /**
  * Interface for managing flag-based ticker categories.
- * paint() reads tickers from the DOM and classifies via LRU cache.
  * getTickerCategory() resolves from backend with an LRU cache.
  */
 export interface IFlagManager {
@@ -32,19 +28,12 @@ export interface IFlagManager {
    * @param tvTickers List of ticker symbols to assign
    */
   recordCategory(categoryId: FlagCategoryId, tvTickers: string[]): void;
-
-  /**
-   * Paints flag indicators for all rendered DOM tickers (watchlist + screener).
-   * Classifies each ticker via LRU cache and paints flag colors through PaintManager.
-   */
-  paint(): void;
 }
 
 // ── Implementation ──
 
 /**
  * Manages flag-based sets of tickers using LRU-cached classification.
- * Paint reads tickers from the DOM instead of fetching all backend records.
  *
  * Per-ticker lookups are cached via LRU (max 1000, ttl 5 min).
  * Unclassified results (undefined) are treated as cache misses —
@@ -64,9 +53,7 @@ export class FlagManager implements IFlagManager {
   });
 
   constructor(
-    private readonly tickerManager: ITickerManager,
-    private readonly paintManager: IPaintManager,
-    private readonly domManager: IDomManager
+    private readonly tickerManager: ITickerManager
   ) {}
 
   // ── Public API ──
@@ -85,29 +72,6 @@ export class FlagManager implements IFlagManager {
       this.categoryCache.set(ticker, cat);
       void this.updateBackend(ticker, cat.update);
     }
-  }
-
-  /** @inheritdoc */
-  paint(): void {
-    void (async () => {
-      // Always paint watchlist flags
-      await Promise.all(
-        [...this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL)].map(async (ticker) => {
-          const category = await this.getTickerCategory(ticker);
-          await this.paintManager.paintFlagV1(TickerArea.WATCHLIST, ticker, category?.color);
-        })
-      );
-
-      // Paint screener flags only when screener is visible/open
-      if (this.domManager.isScreenerVisible()) {
-        await Promise.all(
-          [...this.domManager.getTickers(TickerArea.SCREENER, TickerVisibility.ALL)].map(async (ticker) => {
-            const category = await this.getTickerCategory(ticker);
-            await this.paintManager.paintFlagV1(TickerArea.SCREENER, ticker, category?.color);
-          })
-        );
-      }
-    })();
   }
 
   /**

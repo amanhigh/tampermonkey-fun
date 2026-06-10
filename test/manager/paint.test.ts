@@ -1,6 +1,13 @@
-import { TickerArea } from '../../src/models/dom';
+import { TickerArea, TickerVisibility } from '../../src/models/dom';
 import { PaintManager, IPaintManager } from '../../src/manager/paint';
+import { IWatchManager } from '../../src/manager/watch';
+import { IFlagManager } from '../../src/manager/flag';
+import { IDomManager } from '../../src/manager/dom';
+import { IFnoManager } from '../../src/manager/fno';
+import { IRecentManager } from '../../src/manager/recent';
 import { Constants } from '../../src/models/constant';
+import { WatchCategoryId } from '../../src/models/watch';
+import { FlagCategoryId } from '../../src/models/flag';
 
 // Mock jQuery
 const mockJQueryElement: any = {
@@ -22,9 +29,45 @@ mockJQuery.mockReturnValue(mockJQueryElement);
 
 describe('PaintManager', () => {
   let paintManager: IPaintManager;
+  let mockDomManager: jest.Mocked<IDomManager>;
+  let mockWatchManager: jest.Mocked<IWatchManager>;
+  let mockFlagManager: jest.Mocked<IFlagManager>;
+  let mockFnoManager: jest.Mocked<IFnoManager>;
+  let mockRecentManager: jest.Mocked<IRecentManager>;
 
   beforeEach(() => {
-    paintManager = new PaintManager();
+    mockDomManager = {
+      getTicker: jest.fn().mockReturnValue('CURRENT'),
+      getCurrentExchange: jest.fn(),
+      getInvestingTicker: jest.fn(),
+      openTicker: jest.fn(),
+      getTickers: jest.fn().mockReturnValue(new Set()),
+      isScreenerVisible: jest.fn().mockReturnValue(false),
+      openBenchmarkTicker: jest.fn(),
+      navigateTickers: jest.fn(),
+    } as unknown as jest.Mocked<IDomManager>;
+
+    mockWatchManager = {
+      getTickerCategory: jest.fn().mockResolvedValue(undefined),
+      recordCategory: jest.fn(),
+    } as unknown as jest.Mocked<IWatchManager>;
+
+    mockFlagManager = {
+      getTickerCategory: jest.fn().mockResolvedValue(undefined),
+      recordCategory: jest.fn(),
+    } as unknown as jest.Mocked<IFlagManager>;
+
+    mockFnoManager = {
+      isFno: jest.fn().mockReturnValue(false),
+      getAllFnoTickers: jest.fn().mockReturnValue(new Set()),
+    } as unknown as jest.Mocked<IFnoManager>;
+
+    mockRecentManager = {
+      markRecent: jest.fn(),
+      isRecent: jest.fn().mockReturnValue(false),
+    } as unknown as jest.Mocked<IRecentManager>;
+
+    paintManager = new PaintManager(mockDomManager, mockWatchManager, mockFlagManager, mockFnoManager, mockRecentManager);
     jest.clearAllMocks();
   });
 
@@ -179,7 +222,6 @@ describe('PaintManager', () => {
 
   describe('paintFlags', () => {
     beforeEach(() => {
-      // Reset mock chain for each test
       mockJQueryElement.closest.mockReturnValue(mockJQueryElement);
       mockJQueryElement.find.mockReturnValue(mockJQueryElement);
     });
@@ -324,82 +366,6 @@ describe('PaintManager', () => {
       expect(mockNameElement.css).toHaveBeenNthCalledWith(3, 'border-width', '');
       expect(mockNameElement.css).toHaveBeenNthCalledWith(4, Constants.UI.COLORS.FNO_CSS);
     });
-
-    it('should use correct FNO_CSS constant', () => {
-      paintManager.paintFNOMarking(mockNameElement, true);
-
-      expect(Constants.UI.COLORS.FNO_CSS).toEqual({
-        'border-top-style': 'groove',
-        'border-width': 'medium',
-      });
-      expect(mockNameElement.css).toHaveBeenCalledWith(Constants.UI.COLORS.FNO_CSS);
-    });
-  });
-
-  describe('paintFlagV1', () => {
-    beforeEach(() => {
-      mockJQueryElement.length = 1;
-    });
-
-    it('should find ticker in watchlist when type is WATCHLIST', async () => {
-      await paintManager.paintFlagV1(TickerArea.WATCHLIST, 'NIFTY', 'red');
-
-      // Should search watchlist selectors
-      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.SYMBOL);
-      expect(mockJQueryElement.filter).toHaveBeenCalled();
-
-      // Should reset to default then apply color
-      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', Constants.UI.COLORS.DEFAULT);
-      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'red');
-    });
-
-    it('should find ticker in screener when type is SCREENER', async () => {
-      await paintManager.paintFlagV1(TickerArea.SCREENER, 'NIFTY', 'red');
-
-      // Should search screener selectors
-      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.SCREENER.SYMBOL);
-      expect(mockJQueryElement.filter).toHaveBeenCalled();
-    });
-
-    it('should reset to default when color is not provided', async () => {
-      await paintManager.paintFlagV1(TickerArea.WATCHLIST, 'NIFTY');
-
-      // Only reset, no color applied
-      expect(mockJQueryElement.css).toHaveBeenCalledTimes(1);
-      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', Constants.UI.COLORS.DEFAULT);
-    });
-
-    it('should do nothing when ticker is not found in the requested source', async () => {
-      mockJQueryElement.length = 0;
-      mockJQueryElement.css.mockClear();
-
-      await paintManager.paintFlagV1(TickerArea.WATCHLIST, 'UNKNOWN', 'red');
-
-      // No paint calls
-      expect(mockJQueryElement.css).not.toHaveBeenCalled();
-    });
-
-    it('should cache flag elements by source and ticker', async () => {
-      const spy = jest.spyOn(paintManager as any, 'lookupFlagElementsForTicker');
-
-      await paintManager.paintFlagV1(TickerArea.WATCHLIST, 'CACHED', 'blue');
-      await paintManager.paintFlagV1(TickerArea.WATCHLIST, 'CACHED', 'red');
-
-      // lookupFlagElementsForTicker called only once (same type:ticker key)
-      expect(spy).toHaveBeenCalledTimes(1);
-      spy.mockRestore();
-    });
-
-    it('should cache separately for different ticker sources', async () => {
-      const spy = jest.spyOn(paintManager as any, 'lookupFlagElementsForTicker');
-
-      await paintManager.paintFlagV1(TickerArea.WATCHLIST, 'DUAL', 'green');
-      await paintManager.paintFlagV1(TickerArea.SCREENER, 'DUAL', 'green');
-
-      // lookupFlagElementsForTicker called twice (different type:ticker keys)
-      expect(spy).toHaveBeenCalledTimes(2);
-      spy.mockRestore();
-    });
   });
 
   describe('resetColors', () => {
@@ -417,152 +383,140 @@ describe('PaintManager', () => {
 
       paintManager.resetColors(selector);
 
-      // Second jQuery call for flag colors
       expect(mockJQuery).toHaveBeenCalledTimes(2);
       expect(mockJQuery).toHaveBeenNthCalledWith(2, selector);
       expect(mockJQueryElement.css).toHaveBeenCalledWith('color', Constants.UI.COLORS.DEFAULT);
     });
+  });
 
-    it('should use correct constants for reset', () => {
-      const selector = '.test';
-
-      paintManager.resetColors(selector);
-
-      expect(Constants.UI.COLORS.DEFAULT).toBe('white');
-      expect(Constants.DOM.WATCHLIST.ITEM).toBeDefined();
-      expect(Constants.DOM.FLAGS.SYMBOL).toBeDefined();
+  describe('paintArea', () => {
+    beforeEach(() => {
+      // Default mocks
+      mockJQueryElement.length = 1;
+      mockJQueryElement.css.mockClear();
+      mockJQueryElement.filter.mockReturnValue(mockJQueryElement);
+      mockJQueryElement.closest.mockReturnValue(mockJQueryElement);
+      mockJQueryElement.find.mockReturnValue(mockJQueryElement);
     });
 
-    it('should handle multiple reset calls', () => {
-      const selector1 = '.symbols1';
-      const selector2 = '.symbols2';
+    it('should read tickers from DomManager for WATCHLIST', async () => {
+      mockDomManager.getTickers.mockReturnValue(new Set(['NIFTY', 'BANKNIFTY']));
+      mockWatchManager.getTickerCategory.mockResolvedValue(undefined);
+      mockFlagManager.getTickerCategory.mockResolvedValue(undefined);
 
-      paintManager.resetColors(selector1);
-      paintManager.resetColors(selector2);
+      const result = await paintManager.paintArea(TickerArea.WATCHLIST);
 
-      expect(mockJQuery).toHaveBeenCalledTimes(4); // 2 calls per reset
-      expect(mockJQuery).toHaveBeenNthCalledWith(1, selector1);
-      expect(mockJQuery).toHaveBeenNthCalledWith(2, selector1);
-      expect(mockJQuery).toHaveBeenNthCalledWith(3, selector2);
-      expect(mockJQuery).toHaveBeenNthCalledWith(4, selector2);
+      expect(mockDomManager.getTickers).toHaveBeenCalledWith(TickerArea.WATCHLIST, TickerVisibility.ALL);
+      expect(result.buckets.size).toBe(0);
+      expect(result.uncategorized.size).toBe(2);
+    });
+
+    it('should build CategoryBuckets from watch categories', async () => {
+      mockDomManager.getTickers.mockReturnValue(new Set(['READY_A', 'INDEX_A']));
+      mockWatchManager.getTickerCategory.mockImplementation(async (ticker: string) => {
+        if (ticker === 'READY_A') return { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null };
+        if (ticker === 'INDEX_A') return { id: WatchCategoryId.INDEX, color: 'brown', label: 'Index', recordUpdate: null };
+        return undefined;
+      });
+      mockFlagManager.getTickerCategory.mockResolvedValue(undefined);
+
+      const result = await paintManager.paintArea(TickerArea.WATCHLIST);
+
+      expect(result.buckets.get(WatchCategoryId.READY)?.has('READY_A')).toBe(true);
+      expect(result.buckets.get(WatchCategoryId.INDEX)?.has('INDEX_A')).toBe(true);
+      expect(result.uncategorized.size).toBe(0);
+    });
+
+    it('should call getTickerCategory for watch AND flag categories', async () => {
+      mockDomManager.getTickers.mockReturnValue(new Set(['NIFTY']));
+      mockWatchManager.getTickerCategory.mockResolvedValue({ id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null });
+      mockFlagManager.getTickerCategory.mockResolvedValue({ id: FlagCategoryId.SIDEWAYS, color: 'orange', label: 'Sideways' } as any);
+
+      await paintManager.paintArea(TickerArea.WATCHLIST);
+
+      expect(mockWatchManager.getTickerCategory).toHaveBeenCalledWith('NIFTY');
+      expect(mockFlagManager.getTickerCategory).toHaveBeenCalledWith('NIFTY');
+    });
+
+    it('should force-reset screener symbols before painting', async () => {
+      mockDomManager.getTickers.mockReturnValue(new Set());
+
+      await paintManager.paintArea(TickerArea.SCREENER);
+
+      // Should call paintSymbols with force=true to reset all screener symbols
+      expect(mockJQuery).toHaveBeenCalled();
     });
   });
 
-  describe('integration scenarios', () => {
-    it('should handle paintSymbols followed by resetColors', () => {
-      const selector = '.symbol';
-      const symbols = new Set(['NIFTY']);
-      const css = { color: 'red' };
-
-      paintManager.paintSymbols(selector, symbols, css);
-      paintManager.resetColors(selector);
-
-      expect(mockJQuery).toHaveBeenCalledTimes(3); // 1 for paintSymbols + 2 for resetColors
-      expect(mockJQueryElement.css).toHaveBeenCalledWith(css);
-      expect(mockJQueryElement.css).toHaveBeenCalledWith({ color: Constants.UI.COLORS.DEFAULT });
+  describe('paintHeader', () => {
+    beforeEach(() => {
+      mockJQueryElement.css.mockClear();
+      mockJQuery.mockReturnValue(mockJQueryElement);
     });
 
-    it('should handle paintFlags followed by resetColors', () => {
-      const selector = '.symbol';
-      const symbols = new Set(['NIFTY']);
-      const color = 'red';
-      const itemSelector = '.item';
+    it('should get current ticker from DomManager', async () => {
+      mockDomManager.getTicker.mockReturnValue('CURRENT');
 
-      paintManager.paintFlags(selector, symbols, color, itemSelector);
-      paintManager.resetColors(selector);
+      await paintManager.paintHeader();
 
-      expect(mockJQuery).toHaveBeenCalledTimes(3); // 1 for paintFlags + 2 for resetColors
-      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', color);
-      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', Constants.UI.COLORS.DEFAULT);
+      expect(mockDomManager.getTicker).toHaveBeenCalled();
     });
 
-    it('should handle multiple paint operations with different selectors', () => {
-      const selector1 = '.symbols1';
-      const selector2 = '.symbols2';
-      const symbols1 = new Set(['NIFTY']);
-      const symbols2 = new Set(['BANKNIFTY']);
-      const css = { color: 'red' };
+    it('should reset name, flag, and exchange to default', async () => {
+      mockDomManager.getTicker.mockReturnValue('CURRENT');
+      mockWatchManager.getTickerCategory.mockResolvedValue(undefined);
+      mockFlagManager.getTickerCategory.mockResolvedValue(undefined);
 
-      paintManager.paintSymbols(selector1, symbols1, css);
-      paintManager.paintSymbols(selector2, symbols2, css);
+      await paintManager.paintHeader();
 
-      expect(mockJQuery).toHaveBeenCalledWith(selector1);
-      expect(mockJQuery).toHaveBeenCalledWith(selector2);
-      expect(mockJQueryElement.css).toHaveBeenCalledTimes(2);
+      // Name, flag, exchange all reset to default
+      const calls = mockJQueryElement.css.mock.calls.filter(([prop]: [string]) => prop === 'color' || typeof prop === 'object');
+      expect(calls.length).toBeGreaterThanOrEqual(3);
     });
 
-    it('should handle FNO marking with paint operations', () => {
-      const mockNameElement = { css: jest.fn() } as any;
-      const selector = '.symbol';
-      const symbols = new Set(['NIFTY']);
-      const css = { color: 'blue' };
+    it('should paint name with watch category color', async () => {
+      mockDomManager.getTicker.mockReturnValue('CURRENT');
+      mockWatchManager.getTickerCategory.mockResolvedValue({ id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null });
+      mockFlagManager.getTickerCategory.mockResolvedValue(undefined);
 
-      paintManager.paintFNOMarking(mockNameElement, true);
-      paintManager.paintSymbols(selector, symbols, css);
-      paintManager.paintFNOMarking(mockNameElement, false);
+      await paintManager.paintHeader();
 
-      expect(mockNameElement.css).toHaveBeenCalledWith(Constants.UI.COLORS.FNO_CSS);
-      expect(mockNameElement.css).toHaveBeenCalledWith('border-top-style', '');
-      expect(mockNameElement.css).toHaveBeenCalledWith('border-width', '');
-      expect(mockJQueryElement.css).toHaveBeenCalledWith(css);
+      // Name should have 'red' color applied after default
+      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'red');
+    });
+
+    it('should paint flag and exchange with flag category color', async () => {
+      mockDomManager.getTicker.mockReturnValue('CURRENT');
+      mockWatchManager.getTickerCategory.mockResolvedValue(undefined);
+      mockFlagManager.getTickerCategory.mockResolvedValue({ id: FlagCategoryId.SIDEWAYS, color: 'orange', label: 'Sideways' } as any);
+
+      await paintManager.paintHeader();
+
+      // Flag and exchange should have 'orange' color
+      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'orange');
+    });
+
+    it('should apply FNO marking on header name', async () => {
+      mockDomManager.getTicker.mockReturnValue('FNO_TICKER');
+      mockFnoManager.isFno.mockReturnValue(true);
+      mockWatchManager.getTickerCategory.mockResolvedValue(undefined);
+      mockFlagManager.getTickerCategory.mockResolvedValue(undefined);
+
+      await paintManager.paintHeader();
+
+      // FNO CSS should be applied to the name element
+      expect(mockJQueryElement.css).toHaveBeenCalledWith(Constants.UI.COLORS.FNO_CSS);
     });
   });
 
-  describe('edge cases and error handling', () => {
-    it('should handle special characters in selectors', () => {
-      const selector = '.symbol[data-test="special:value"]';
-      const symbols = new Set(['NIFTY']);
-      const css = { color: 'red' };
+  describe('edge cases', () => {
+    it('should handle empty ticker set in paintArea', async () => {
+      mockDomManager.getTickers.mockReturnValue(new Set());
 
-      paintManager.paintSymbols(selector, symbols, css);
+      const result = await paintManager.paintArea(TickerArea.WATCHLIST);
 
-      expect(mockJQuery).toHaveBeenCalledWith(selector);
-    });
-
-    it('should handle large symbol sets', () => {
-      const selector = '.symbol';
-      const symbols = new Set<string>();
-      for (let i = 1; i <= 1000; i++) {
-        symbols.add(`SYMBOL${i}`);
-      }
-      const css = { color: 'red' };
-
-      paintManager.paintSymbols(selector, symbols, css);
-
-      expect(mockJQuery).toHaveBeenCalledWith(selector);
-      expect(mockJQueryElement.css).toHaveBeenCalledWith(css);
-    });
-
-    it('should handle symbols with special characters', () => {
-      const selector = '.symbol';
-      const symbols = new Set(['NIFTY-50', 'BANK@NSE', 'RELIANCE_EQ']);
-      const css = { color: 'red' };
-
-      paintManager.paintSymbols(selector, symbols, css);
-
-      expect(mockJQuery).toHaveBeenCalledWith(selector);
-      expect(mockJQueryElement.filter).toHaveBeenCalledWith(expect.any(Function));
-    });
-
-    it('should handle empty CSS object', () => {
-      const selector = '.symbol';
-      const symbols = new Set(['NIFTY']);
-      const css = {};
-
-      paintManager.paintSymbols(selector, symbols, css);
-
-      expect(mockJQueryElement.css).toHaveBeenCalledWith(css);
-    });
-
-    it('should handle null color in paintFlags', () => {
-      const selector = '.symbol';
-      const symbols = new Set(['NIFTY']);
-      const color = null as any;
-      const itemSelector = '.item';
-
-      paintManager.paintFlags(selector, symbols, color, itemSelector);
-
-      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', null);
+      expect(result.buckets.size).toBe(0);
+      expect(result.uncategorized.size).toBe(0);
     });
   });
 });

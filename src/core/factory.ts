@@ -26,7 +26,6 @@ import { ITimeFrameManager, TimeFrameManager } from '../manager/timeframe';
 import { IJournalManager, JournalManager } from '../manager/journal';
 import { IAlertManager, AlertManager } from '../manager/alert';
 import { ITradingViewWatchlistManager, TradingViewWatchlistManager } from '../manager/watchlist';
-import { ITradingViewScreenerManager, TradingViewScreenerManager } from '../manager/screener';
 import { ISequenceManager, SequenceManager } from '../manager/sequence';
 import { IPaintManager, PaintManager } from '../manager/paint';
 import { IDomManager, DomManager } from '../manager/dom';
@@ -47,7 +46,6 @@ import { IModifierKeyConfig, ModifierKeyConfig } from '../handler/modifier_confi
 import { ISequenceHandler, SequenceHandler } from '../handler/sequence';
 import { IKiteHandler, KiteHandler } from '../handler/kite';
 import { IKiteManager, KiteManager } from '../manager/kite';
-import { IHeaderManager, HeaderManager } from '../manager/header';
 import { IStyleManager, StyleManager } from '../manager/style';
 import { IFlagManager, FlagManager } from '../manager/flag';
 import { IRecentManager, RecentManager } from '../manager/recent';
@@ -198,24 +196,7 @@ export class Factory {
         () =>
           new TradingViewWatchlistManager(
             Factory.manager.paint(),
-            Factory.util.ui(),
-            Factory.manager.fno(),
-            Factory.manager.watch(),
-            Factory.manager.flag()
-          )
-      ),
-
-    header: (): IHeaderManager =>
-      Factory.getInstance(
-        'headerManager',
-        () =>
-          new HeaderManager(
-            Factory.manager.paint(),
-            Factory.manager.watch(),
-            Factory.manager.flag(),
-            Factory.manager.dom(),
-            Factory.manager.fno(),
-            Factory.manager.watchlist()
+            Factory.util.ui()
           )
       ),
 
@@ -225,23 +206,21 @@ export class Factory {
         () => new WatchManager(Factory.manager.ticker(), () => Factory.manager.journal())
       ),
 
-    screener: (): ITradingViewScreenerManager =>
-      Factory.getInstance(
-        'screenerManager',
-        () =>
-          new TradingViewScreenerManager(
-            Factory.manager.paint(),
-            Factory.manager.watch(),
-            Factory.manager.flag(),
-            Factory.manager.recent(),
-            Factory.manager.watchlist()
-          )
-      ),
-
     sequence: (): ISequenceManager =>
       Factory.getInstance('sequenceManager', () => new SequenceManager(Factory.client.ticker(), Factory.manager.dom())),
 
-    paint: (): IPaintManager => Factory.getInstance('paintManager', () => new PaintManager()),
+    paint: (): IPaintManager =>
+      Factory.getInstance(
+        'paintManager',
+        () =>
+          new PaintManager(
+            Factory.manager.dom(),
+            Factory.manager.watch(),
+            Factory.manager.flag(),
+            Factory.manager.fno(),
+            Factory.manager.recent()
+          )
+      ),
 
     dom: (): IDomManager =>
       Factory.getInstance(
@@ -267,7 +246,7 @@ export class Factory {
     flag: (): IFlagManager =>
       Factory.getInstance(
         'flagManager',
-        () => new FlagManager(Factory.manager.ticker(), Factory.manager.paint(), Factory.manager.dom())
+        () => new FlagManager(Factory.manager.ticker())
       ),
 
     recent: (): IRecentManager =>
@@ -430,7 +409,7 @@ export class Factory {
             Factory.handler.hotkey(),
             Factory.handler.alert(),
             Factory.handler.tickerChange(),
-            Factory.manager.screener()
+            Factory.manager.paint()
           )
       ),
     hotkey: (): IHotkeyHandler =>
@@ -487,14 +466,13 @@ export class Factory {
           new TickerChangeHandler(
             Factory.manager.dom(),
             Factory.handler.alert(),
-            Factory.manager.header(),
+            Factory.manager.paint(),
             Factory.manager.recent(),
             Factory.handler.sequence(),
             Factory.handler.kite(),
             Factory.util.sync(),
-            Factory.manager.watch(), // Add dependency
-            Factory.manager.alertFeed(),
-            Factory.manager.screener()
+            Factory.manager.watch(),
+            Factory.manager.alertFeed()
           )
       ),
 
@@ -522,8 +500,7 @@ export class Factory {
         () =>
           new WatchListHandler(
             Factory.manager.watchlist(),
-            Factory.manager.screener(),
-            Factory.manager.header(),
+            Factory.manager.paint(),
             Factory.util.sync(),
             Factory.manager.watch(),
             Factory.manager.dom(),
