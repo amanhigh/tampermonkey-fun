@@ -76,10 +76,7 @@ describe('OnLoadHandler', () => {
     } as unknown as jest.Mocked<ITickerChangeHandler>;
 
     mockPaintManager = {
-      paintSymbols: jest.fn(),
-      paintFlags: jest.fn(),
-      resetColors: jest.fn(),
-      paintFNOMarking: jest.fn(),
+      resetArea: jest.fn(),
       paintArea: jest.fn().mockResolvedValue({ buckets: new Map(), uncategorized: new Set() }),
       paintHeader: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<IPaintManager>;

@@ -46,10 +46,7 @@ describe('TradingViewWatchlistManager', () => {
 
     // Mock dependencies
     mockPaintManager = {
-      paintSymbols: jest.fn(),
-      paintFlags: jest.fn(),
-      resetColors: jest.fn(),
-      paintFNOMarking: jest.fn(),
+      resetArea: jest.fn(),
       paintArea: jest.fn(),
       paintHeader: jest.fn(),
     } as unknown as jest.Mocked<IPaintManager>;
@@ -96,8 +93,8 @@ describe('TradingViewWatchlistManager', () => {
       // Verify paintArea was called for WATCHLIST
       expect(mockPaintManager.paintArea).toHaveBeenCalledWith(TickerArea.WATCHLIST);
 
-      // Verify color reset
-      expect(mockPaintManager.resetColors).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.SYMBOL);
+      // Verify area reset
+      expect(mockPaintManager.resetArea).toHaveBeenCalledWith(TickerArea.WATCHLIST);
     });
 
     it('should build summary labels for all categories', async () => {
@@ -135,7 +132,7 @@ describe('TradingViewWatchlistManager', () => {
       watchlistManager.applyDefaultFilters();
 
       // Just verify no crash — implementation is internal filtering
-      expect(mockPaintManager.resetColors).not.toHaveBeenCalled();
+      expect(mockPaintManager.resetArea).not.toHaveBeenCalled();
     });
   });
 });
