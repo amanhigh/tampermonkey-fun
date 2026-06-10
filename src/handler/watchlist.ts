@@ -2,8 +2,7 @@
  * Interface and implementation for handling watchlist-related events and updates
  */
 
-import { IHeaderManager } from '../manager/header';
-import { ITradingViewScreenerManager } from '../manager/screener';
+import { IPaintManager } from '../manager/paint';
 import { IWatchManager } from '../manager/watch';
 import { ITradingViewWatchlistManager } from '../manager/watchlist';
 import { ISyncUtil } from '../util/sync';
@@ -44,8 +43,7 @@ export class WatchListHandler implements IWatchListHandler {
   // eslint-disable-next-line max-params
   constructor(
     private readonly watchlistManager: ITradingViewWatchlistManager,
-    private readonly screenerManager: ITradingViewScreenerManager,
-    private readonly headerManager: IHeaderManager,
+    private readonly paintManager: IPaintManager,
     private readonly syncUtil: ISyncUtil,
     private readonly watchManager: IWatchManager,
     private readonly domManager: IDomManager,
@@ -59,10 +57,10 @@ export class WatchListHandler implements IWatchListHandler {
       void this.watchlistManager.paintWatchList();
 
       // Paint screener items if visible
-      void this.screenerManager.paintScreener();
+      void this.paintManager.paintArea(TickerArea.SCREENER);
 
       // Paint header items
-      void this.headerManager.paintHeader();
+      void this.paintManager.paintHeader();
 
       // Update alert feed with watchlist changes
       void this.alertFeedManager.createAlertFeedEvent(this.domManager.getTicker());

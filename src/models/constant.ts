@@ -124,6 +124,7 @@ export const Constants = Object.freeze({
         STOP_PRICE: 'input[data-property-id*="StopLevelPrice"]',
       },
     },
+    // HACK: Use Screener and Watchlist only via TickerArea.
     SCREENER: {
       SYMBOL: 'a.tickerName-GrtoTeat', // Old name: screenerSymbolSelector
       MAIN: '[data-qa-id="screener-widget"]', // Old name: screenerSelector

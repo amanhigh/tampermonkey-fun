@@ -13,36 +13,11 @@ import { CategoryBuckets, WatchCategoryId } from '../models/watch';
  */
 export interface IPaintManager {
   /**
-   * Apply CSS to elements matching the given selector based on the symbol set
-   * @param selector The CSS selector for the elements to be styled
-   * @param symbolSet The set of symbols used to filter the elements
-   * @param css The CSS properties to be applied
-   * @param force If true, apply CSS regardless of symbolSet
+   * Resets all visual state (symbol color, flag color, F&O border)
+   * for every ticker in the given panel area back to defaults.
+   * @param panel Which panel to reset
    */
-  paintSymbols(selector: string, symbolSet: Set<string> | null, css: JQuery.PlainObject, force?: boolean): void;
-
-  /**
-   * Apply color to flags for elements matching the selector
-   * @param selector The base selector for finding elements
-   * @param symbols The set of symbols to filter elements
-   * @param color The color to apply
-   * @param itemSelector The selector for the item container
-   * @param force If true, apply color regardless of symbols
-   */
-  paintFlags(selector: string, symbols: Set<string> | null, color: string, itemSelector: string, force?: boolean): void;
-
-  /**
-   * Resets the colors of the specified selector to the default color
-   * @param selector The selector for the elements to reset the colors
-   */
-  resetColors(selector: string): void;
-
-  /**
-   * Paints flag and exchange elements for a ticker
-   * @param $name jQuery element for the name
-   * @param enabled Enable/disable FNO Style
-   */
-  paintFNOMarking($name: JQuery<HTMLElement>, enabled: boolean): void;
+  resetArea(panel: TickerArea): void;
 
   /**
    * Paints all tickers in the given area (WATCHLIST or SCREENER).
@@ -74,69 +49,28 @@ export class PaintManager implements IPaintManager {
   ) {}
 
   /** @inheritdoc */
-  paintSymbols(selector: string, symbolSet: Set<string> | null, css: JQuery.PlainObject, force = false): void {
-    if (!selector || !css) {
-      throw new Error('Selector and CSS object are required');
-    }
+  resetArea(panel: TickerArea): void {
+    const selector = panel.getSymbolSelector(TickerVisibility.ALL);
+    const itemSelector = panel.getItemSelector();
+    const flagSelector = panel.getFlagSelector();
 
-    $(selector)
-      .filter(function (this: HTMLElement, _: number, element: HTMLElement): boolean {
-        if (force) {
-          return true;
-        }
-        return symbolSet ? symbolSet.has(element.innerHTML) : false;
-      })
-      .css(css);
-  }
+    // Reset symbol color
+    $(selector).css('color', Constants.UI.COLORS.DEFAULT);
 
-  /** @inheritdoc */
-  paintFlags(selector: string, symbols: Set<string> | null, color: string, itemSelector: string, force = false): void {
-    if (!selector) {
-      throw new Error('Selector is required');
-    }
+    // Reset flag color
+    $(selector).closest(itemSelector).find(flagSelector).css('color', Constants.UI.COLORS.DEFAULT);
 
-    $(`${selector}`)
-      .filter(function (this: HTMLElement, _: number, element: HTMLElement): boolean {
-        if (force) {
-          return true;
-        }
-        return symbols ? symbols.has(element.innerHTML) : false;
-      })
-      .closest(itemSelector)
-      .find(Constants.DOM.FLAGS.SYMBOL)
-      .css('color', color);
-  }
-
-  /** @inheritdoc */
-  public paintFNOMarking($name: JQuery<HTMLElement>, enabled: boolean): void {
-    if (enabled) {
-      $name.css(Constants.UI.COLORS.FNO_CSS);
-    } else {
-      $name.css('border-top-style', '');
-      $name.css('border-width', '');
-    }
-  }
-
-  /** @inheritdoc */
-  resetColors(selector: string): void {
-    // BUG: After Adding to Watchlist Ticker Name (Header) not painted.
-    // Reset element colors to default
-    this.paintSymbols(selector, null, { color: Constants.UI.COLORS.DEFAULT }, true);
-
-    // Reset flag colors
-    this.paintFlags(selector, null, Constants.UI.COLORS.DEFAULT, Constants.DOM.WATCHLIST.ITEM, true);
+    // Reset F&O border style
+    $(selector).css('border-top-style', '');
+    $(selector).css('border-width', '');
   }
 
   // ── Area-wide painters ──
 
   /** @inheritdoc */
   async paintArea(area: TickerArea): Promise<CategoryBuckets> {
-    // For screener, force-reset all symbols to default first
-    // to handle tickers that left the area between paints
-    if (area === TickerArea.SCREENER) {
-      const screenerSelector = area.getSymbolSelector(TickerVisibility.ALL);
-      this.paintSymbols(screenerSelector, null, { color: Constants.UI.COLORS.DEFAULT }, true);
-    }
+    // Reset all elements in this area before painting
+    this.resetArea(area);
 
     const tickers = [...this.domManager.getTickers(area, TickerVisibility.ALL)];
 
@@ -226,8 +160,8 @@ export class PaintManager implements IPaintManager {
       $exchange.css('color', flagCategory.color);
     }
 
-    // FNO marking on header name
-    this.paintFNOMarking($name, this.fnoManager.isFno(ticker));
+    // FNO marking on header name (private helper)
+    this.applyFnoBorder($name, this.fnoManager.isFno(ticker));
   }
 
   // ── Single-ticker painters ──
@@ -237,8 +171,9 @@ export class PaintManager implements IPaintManager {
    * Resets to default, then applies color when provided.
    */
   private paintSingleSymbol(area: TickerArea, ticker: string, color?: string): void {
-    const $symbol = $(area.getSymbolSelector(TickerVisibility.ALL))
-      .filter((_: number, el: HTMLElement) => (el.textContent || el.innerHTML) === ticker);
+    const $symbol = $(area.getSymbolSelector(TickerVisibility.ALL)).filter(
+      (_: number, el: HTMLElement) => (el.textContent || el.innerHTML) === ticker
+    );
 
     if ($symbol.length === 0) {
       return;
@@ -254,15 +189,29 @@ export class PaintManager implements IPaintManager {
    * Apply FNO border style to a single ticker's symbol element.
    */
   private paintSingleSymbolBorder(area: TickerArea, ticker: string): void {
-    const $symbol = $(area.getSymbolSelector(TickerVisibility.ALL))
-      .filter((_: number, el: HTMLElement) => (el.textContent || el.innerHTML) === ticker);
+    const $symbol = $(area.getSymbolSelector(TickerVisibility.ALL)).filter(
+      (_: number, el: HTMLElement) => (el.textContent || el.innerHTML) === ticker
+    );
 
     if ($symbol.length > 0) {
       $symbol.css(Constants.UI.COLORS.FNO_CSS);
     }
   }
 
-  // ── V1 Single-Ticker Flag Painter ──
+  /**
+   * Apply or clear F&O border style on a header element.
+   * @private
+   */
+  private applyFnoBorder($element: JQuery<HTMLElement>, enabled: boolean): void {
+    if (enabled) {
+      $element.css(Constants.UI.COLORS.FNO_CSS);
+    } else {
+      $element.css('border-top-style', '');
+      $element.css('border-width', '');
+    }
+  }
+
+  // ── Single-Ticker Flag Painter ──
 
   /**
    * LRU cache mapping `area.id:ticker` → jQuery flag element collection.
@@ -306,7 +255,7 @@ export class PaintManager implements IPaintManager {
   }
 
   /**
-   * Look up flag elements for a single ticker in the given panel.
+   * Scan the panel for flag elements belonging to the given ticker.
    * Returns undefined when the ticker is not found in that panel.
    */
   private lookupFlagElementsForTicker(area: TickerArea, ticker: string): JQuery<HTMLElement> | undefined {

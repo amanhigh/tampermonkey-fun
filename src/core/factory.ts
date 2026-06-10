@@ -193,11 +193,7 @@ export class Factory {
     watchlist: (): ITradingViewWatchlistManager =>
       Factory.getInstance(
         'watchlistManager',
-        () =>
-          new TradingViewWatchlistManager(
-            Factory.manager.paint(),
-            Factory.util.ui()
-          )
+        () => new TradingViewWatchlistManager(Factory.manager.paint(), Factory.util.ui())
       ),
 
     watch: (): IWatchManager =>
@@ -243,11 +239,7 @@ export class Factory {
     style: (): IStyleManager =>
       Factory.getInstance('styleManager', () => new StyleManager(Factory.util.wait(), Factory.manager.timeFrame())),
 
-    flag: (): IFlagManager =>
-      Factory.getInstance(
-        'flagManager',
-        () => new FlagManager(Factory.manager.ticker())
-      ),
+    flag: (): IFlagManager => Factory.getInstance('flagManager', () => new FlagManager(Factory.manager.ticker())),
 
     recent: (): IRecentManager =>
       Factory.getInstance('recentManager', () => new RecentManager(Factory.client.ticker())),

@@ -7,7 +7,7 @@ import { IKiteHandler } from './kite';
 import { ISyncUtil } from '../util/sync';
 import { IWatchManager } from '../manager/watch';
 import { IAlertFeedManager } from '../manager/alertfeed';
-import { ITradingViewScreenerManager } from '../manager/screener';
+import { TickerArea } from '../models/dom';
 
 export interface ITickerChangeHandler {
   onTickerChange(): void;
@@ -24,8 +24,7 @@ export class TickerChangeHandler implements ITickerChangeHandler {
     private readonly kiteHandler: IKiteHandler,
     private readonly syncUtil: ISyncUtil,
     private readonly watchManager: IWatchManager,
-    private readonly alertFeedManager: IAlertFeedManager,
-    private readonly screenManager: ITradingViewScreenerManager
+    private readonly alertFeedManager: IAlertFeedManager
   ) {}
 
   public onTickerChange(): void {
@@ -40,7 +39,7 @@ export class TickerChangeHandler implements ITickerChangeHandler {
 
       // Update Screener
       if (this.domManager.isScreenerVisible()) {
-        void this.screenManager.paintScreener();
+        void this.paintManager.paintArea(TickerArea.SCREENER);
       }
 
       // Handle GTT operations

@@ -13,8 +13,6 @@ jest.mock('../../src/util/notify', () => ({
 describe('FlagManager', () => {
   let flagManager: IFlagManager;
   let mockTickerManager: jest.Mocked<ITickerManager>;
-  let mockPaintManager: jest.Mocked<IPaintManager>;
-  let mockDomManager: jest.Mocked<IDomManager>;
 
   // ── Helpers ──
 
@@ -44,17 +42,7 @@ describe('FlagManager', () => {
       setExchange: jest.fn(),
     } as unknown as jest.Mocked<ITickerManager>;
 
-    mockPaintManager = {
-      paintFlags: jest.fn(),
-      paintFlagV1: jest.fn(),
-    } as unknown as jest.Mocked<IPaintManager>;
-
-    mockDomManager = {
-      getTickers: jest.fn().mockReturnValue(new Set()),
-      isScreenerVisible: jest.fn().mockReturnValue(false),
-    } as unknown as jest.Mocked<IDomManager>;
-
-    flagManager = new FlagManager(mockTickerManager, mockPaintManager, mockDomManager);
+    flagManager = new FlagManager(mockTickerManager);
   });
 
   // ── Constructor ──
@@ -207,189 +195,6 @@ describe('FlagManager', () => {
     it('should handle empty ticker array', () => {
       flagManager.recordCategory(FlagCategoryId.SIDEWAYS, []);
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
-    });
-  });
-
-  // ── paint ──
-
-  describe('paint', () => {
-    beforeEach(() => {
-      // Default: DomManager returns watchlist tickers; screener not visible
-      mockDomManager.getTickers.mockImplementation((area: TickerArea, _visibility: TickerVisibility) => {
-        if (area === TickerArea.WATCHLIST) return new Set(['SIDE_A', 'BTC']);
-        return new Set();
-      });
-      mockDomManager.isScreenerVisible.mockReturnValue(false);
-    });
-
-    it('should not call listTickers during paint', () => {
-      flagManager.paint();
-
-      expect(mockTickerManager.listTickers).not.toHaveBeenCalled();
-    });
-
-    it('should paint watchlist always and screener only when visible', async () => {
-      // Screener is visible with its own tickers
-      mockDomManager.isScreenerVisible.mockReturnValue(true);
-      mockDomManager.getTickers.mockImplementation((area: TickerArea, _visibility: TickerVisibility) => {
-        if (area === TickerArea.WATCHLIST) return new Set(['SIDE_A', 'BTC']);
-        if (area === TickerArea.SCREENER) return new Set(['SCREEN_X', 'SCREEN_Y']);
-        return new Set();
-      });
-
-      mockTickerManager.getTicker.mockImplementation((ticker: string) => {
-        if (ticker === 'SIDE_A') return Promise.resolve(makeTicker({ ticker: 'SIDE_A', trend: 'SIDEWAYS' }));
-        if (ticker === 'BTC') return Promise.resolve(makeTicker({ ticker: 'BTC', type: 'CRYPTO' }));
-        if (ticker === 'SCREEN_X') return Promise.resolve(makeTicker({ ticker: 'SCREEN_X', trend: 'UPTREND' }));
-        if (ticker === 'SCREEN_Y') return Promise.resolve(makeTicker({ ticker: 'SCREEN_Y', trend: 'DOWNTREND' }));
-        return Promise.reject(new Error('Not found'));
-      });
-
-      flagManager.paint();
-      await waitForAsync();
-
-      // Gets watchlist AND screener tickers
-      expect(mockDomManager.getTickers).toHaveBeenCalledWith(TickerArea.WATCHLIST, TickerVisibility.ALL);
-      expect(mockDomManager.getTickers).toHaveBeenCalledWith(TickerArea.SCREENER, TickerVisibility.ALL);
-
-      // Watched for visibility
-      expect(mockDomManager.isScreenerVisible).toHaveBeenCalled();
-
-      // Each watchlist ticker painted with source = WATCHLIST
-      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledWith(TickerArea.WATCHLIST, 'SIDE_A', 'orange');
-      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledWith(TickerArea.WATCHLIST, 'BTC', 'dodgerblue');
-
-      // Each screener ticker painted with source = SCREENER
-      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledWith(TickerArea.SCREENER, 'SCREEN_X', 'lime');
-      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledWith(TickerArea.SCREENER, 'SCREEN_Y', 'red');
-
-      // Exactly 4 V1 calls (2 watchlist + 2 screener)
-      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledTimes(4);
-    });
-
-    it('should not query screener tickers when screener is not visible', async () => {
-      mockDomManager.isScreenerVisible.mockReturnValue(false);
-
-      flagManager.paint();
-      await waitForAsync();
-
-      // Only watchlist queried
-      expect(mockDomManager.getTickers).toHaveBeenCalledWith(TickerArea.WATCHLIST, TickerVisibility.ALL);
-      expect(mockDomManager.getTickers).not.toHaveBeenCalledWith(TickerArea.SCREENER, TickerVisibility.ALL);
-
-      // No screener V1 calls
-      const calls = mockPaintManager.paintFlagV1.mock.calls;
-      const screenerCalls = calls.filter(([type]) => type === TickerArea.SCREENER);
-      expect(screenerCalls).toHaveLength(0);
-    });
-
-    it('should skip classification and V1 paint when both panels have no tickers', async () => {
-      mockDomManager.getTickers.mockReturnValue(new Set());
-
-      flagManager.paint();
-      await waitForAsync();
-
-      // No classification calls
-      expect(mockTickerManager.getTicker).not.toHaveBeenCalled();
-      expect(mockTickerManager.listTickers).not.toHaveBeenCalled();
-
-      // No V1 paint calls
-      expect(mockPaintManager.paintFlagV1).not.toHaveBeenCalled();
-    });
-
-    it('should handle all tickers uncategorized gracefully', async () => {
-      mockDomManager.getTickers.mockImplementation((area: TickerArea, _visibility: TickerVisibility) => {
-        if (area === TickerArea.WATCHLIST) return new Set(['UNCAT_A', 'UNCAT_B']);
-        return new Set();
-      });
-      // Both are untracked — getTickerCategory returns undefined
-      mockTickerManager.getTicker.mockRejectedValue(new Error('Not found'));
-
-      flagManager.paint();
-      await waitForAsync();
-
-      // Each ticker was looked up
-      expect(mockTickerManager.getTicker).toHaveBeenCalledWith('UNCAT_A');
-      expect(mockTickerManager.getTicker).toHaveBeenCalledWith('UNCAT_B');
-
-      // V1 called for each ticker with undefined color (reset only)
-      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledWith(TickerArea.WATCHLIST, 'UNCAT_A', undefined);
-      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledWith(TickerArea.WATCHLIST, 'UNCAT_B', undefined);
-
-      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledTimes(2);
-    });
-
-    it('should apply display priority for DOM ticker', async () => {
-      mockDomManager.getTickers.mockImplementation((area: TickerArea, _visibility: TickerVisibility) => {
-        if (area === TickerArea.WATCHLIST) return new Set(['ETH']);
-        return new Set();
-      });
-      // Ticker with both CRYPTO type and UPTREND trend → resolveFlagCategory returns CRYPTO
-      mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'ETH', type: 'CRYPTO', trend: 'UPTREND' })
-      );
-
-      flagManager.paint();
-      await waitForAsync();
-
-      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledWith(TickerArea.WATCHLIST, 'ETH', 'dodgerblue');
-    });
-
-    it('should paint categorized DOM ticker with its color via V1', async () => {
-      mockDomManager.getTickers.mockImplementation((area: TickerArea, _visibility: TickerVisibility) => {
-        if (area === TickerArea.WATCHLIST) return new Set(['SIDE_A']);
-        return new Set();
-      });
-      mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'SIDE_A', trend: 'SIDEWAYS' })
-      );
-
-      flagManager.paint();
-      await waitForAsync();
-
-      // V1 called once with WATCHLIST source and SIDEWAYS color
-      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledTimes(1);
-      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledWith(TickerArea.WATCHLIST, 'SIDE_A', 'orange');
-    });
-
-    it('should dedupe duplicate watchlist tickers before classification', async () => {
-      mockDomManager.getTickers.mockImplementation((area: TickerArea, _visibility: TickerVisibility) => {
-        if (area === TickerArea.WATCHLIST) return new Set(['DUP']);
-        return new Set();
-      });
-      mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'DUP', trend: 'SIDEWAYS' })
-      );
-
-      flagManager.paint();
-      await waitForAsync();
-
-      // getTicker fetched only once despite duplicate entries
-      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
-
-      // V1 painted only once
-      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledTimes(1);
-      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledWith(TickerArea.WATCHLIST, 'DUP', 'orange');
-    });
-
-    it('should paint same ticker once for watchlist and once for screener when present in both panels', async () => {
-      mockDomManager.isScreenerVisible.mockReturnValue(true);
-      mockDomManager.getTickers.mockImplementation((area: TickerArea, _visibility: TickerVisibility) => {
-        if (area === TickerArea.WATCHLIST) return new Set(['COMMON']);
-        if (area === TickerArea.SCREENER) return new Set(['COMMON']);
-        return new Set();
-      });
-      mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'COMMON', trend: 'SIDEWAYS' })
-      );
-
-      flagManager.paint();
-      await waitForAsync();
-
-      // Painted once per source (2 calls total)
-      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledTimes(2);
-      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledWith(TickerArea.WATCHLIST, 'COMMON', 'orange');
-      expect(mockPaintManager.paintFlagV1).toHaveBeenCalledWith(TickerArea.SCREENER, 'COMMON', 'orange');
     });
   });
 });

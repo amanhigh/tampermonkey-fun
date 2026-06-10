@@ -52,9 +52,7 @@ export class FlagManager implements IFlagManager {
     },
   });
 
-  constructor(
-    private readonly tickerManager: ITickerManager
-  ) {}
+  constructor(private readonly tickerManager: ITickerManager) {}
 
   // ── Public API ──
 
