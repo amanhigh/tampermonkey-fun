@@ -3,7 +3,6 @@ import { IPaintManager } from '../../src/manager/paint';
 import { IUIUtil } from '../../src/util/ui';
 import { Constants } from '../../src/models/constant';
 import { ALL_WATCH_CATEGORIES, WatchCategoryId, BucketSummary } from '../../src/models/watch';
-import { TickerArea } from '../../src/models/dom';
 
 // Mock jQuery globally for DOM manipulation
 const mockJQuery = jest.fn(() => ({
@@ -46,8 +45,7 @@ describe('TradingViewWatchlistManager', () => {
 
     // Mock dependencies
     mockPaintManager = {
-      resetArea: jest.fn(),
-      paintArea: jest.fn().mockResolvedValue(undefined),
+      paint: jest.fn().mockResolvedValue(undefined),
       paintTickers: jest.fn().mockResolvedValue(undefined),
       summarizeBuckets: jest.fn(),
     } as unknown as jest.Mocked<IPaintManager>;
@@ -71,11 +69,11 @@ describe('TradingViewWatchlistManager', () => {
     });
   });
 
-  describe('paintWatchList', () => {
+  describe('refreshWatchlistView', () => {
     let classifyResult: BucketSummary;
 
     beforeEach(() => {
-      // Mock paintArea to paint (void) and summarizeBuckets to return counts
+      // Mock paint() and summarizeBuckets() flow
       classifyResult = {
         buckets: new Map([[WatchCategoryId.READY, 1]]),
         uncategorizedCount: 1,
@@ -83,42 +81,42 @@ describe('TradingViewWatchlistManager', () => {
       mockPaintManager.summarizeBuckets.mockResolvedValue(classifyResult);
     });
 
-    it('should execute complete paint workflow via paintArea', async () => {
-      await watchlistManager.paintWatchList();
+    it('should execute complete watchlist refresh via paint()', async () => {
+      await watchlistManager.refreshWatchlistView();
 
       // Verify reset operations
       expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.WIDGET);
       expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.LINE);
       expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.SCREENER.LINE);
 
-      // Verify paintArea was called for WATCHLIST
-      expect(mockPaintManager.paintArea).toHaveBeenCalledWith(TickerArea.WATCHLIST);
+      // Verify paint() was called for full visual refresh
+      expect(mockPaintManager.paint).toHaveBeenCalled();
 
       // Verify summarizeBuckets was called for summary display
-      expect(mockPaintManager.summarizeBuckets).toHaveBeenCalledWith(TickerArea.WATCHLIST);
+      expect(mockPaintManager.summarizeBuckets).toHaveBeenCalledWith();
     });
 
     it('should build summary labels for all categories', async () => {
-      await watchlistManager.paintWatchList();
+      await watchlistManager.refreshWatchlistView();
 
       // Should call buildLabel for each color category
       expect(mockUIUtil.buildLabel).toHaveBeenCalledTimes(ALL_WATCH_CATEGORIES.length);
     });
 
     it('should set widget height for expansion', async () => {
-      await watchlistManager.paintWatchList();
+      await watchlistManager.refreshWatchlistView();
 
       expect(mockJQueryChain.css).toHaveBeenCalledWith('height', '20000px');
     });
 
     it('should show all lines during reset', async () => {
-      await watchlistManager.paintWatchList();
+      await watchlistManager.refreshWatchlistView();
 
       expect(mockJQueryChain.show).toHaveBeenCalled();
     });
 
     it('should use returned buckets for summary display', async () => {
-      await watchlistManager.paintWatchList();
+      await watchlistManager.refreshWatchlistView();
 
       // AAPL is in READY bucket — default_plus plus one uncategorized
       expect(mockUIUtil.buildLabel).toHaveBeenCalledWith(
@@ -132,8 +130,7 @@ describe('TradingViewWatchlistManager', () => {
     it('should add white/default color filter', () => {
       watchlistManager.applyDefaultFilters();
 
-      // Just verify no crash — implementation is internal filtering
-      expect(mockPaintManager.resetArea).not.toHaveBeenCalled();
+      // Just verify no crash
     });
   });
 });

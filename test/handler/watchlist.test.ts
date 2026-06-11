@@ -5,7 +5,6 @@ import { ISyncUtil } from '../../src/util/sync';
 import { IWatchManager } from '../../src/manager/watch';
 import { IDomManager } from '../../src/manager/dom';
 import { IAlertFeedManager } from '../../src/manager/alertfeed';
-import { TickerArea } from '../../src/models/dom';
 import { WatchCategoryId } from '../../src/models/watch';
 
 describe('WatchListHandler', () => {
@@ -21,14 +20,13 @@ describe('WatchListHandler', () => {
     jest.clearAllMocks();
 
     mockWatchlistManager = {
-      paintWatchList: jest.fn().mockResolvedValue(undefined),
+      refreshWatchlistView: jest.fn().mockResolvedValue(undefined),
       refreshSummaryAndFilters: jest.fn().mockResolvedValue(undefined),
       applyDefaultFilters: jest.fn(),
     } as unknown as jest.Mocked<ITradingViewWatchlistManager>;
 
     mockPaintManager = {
-      resetArea: jest.fn(),
-      paintArea: jest.fn().mockResolvedValue(undefined),
+      paint: jest.fn().mockResolvedValue(undefined),
       paintTickers: jest.fn().mockResolvedValue(undefined),
       summarizeBuckets: jest.fn(),
     } as unknown as jest.Mocked<IPaintManager>;
@@ -70,22 +68,22 @@ describe('WatchListHandler', () => {
   });
 
   describe('onWatchListChange', () => {
-    it('should perform full watchlist repaint', () => {
+    it('should delegate to refreshWatchlistView for full refresh', () => {
       handler.onWatchListChange();
 
-      expect(mockWatchlistManager.paintWatchList).toHaveBeenCalled();
+      expect(mockWatchlistManager.refreshWatchlistView).toHaveBeenCalled();
     });
 
-    it('should perform full screener repaint', () => {
+    it('should no longer call paintArea directly', () => {
       handler.onWatchListChange();
 
-      expect(mockPaintManager.paintArea).toHaveBeenCalledWith(TickerArea.SCREENER);
+      expect(mockPaintManager.paint).not.toHaveBeenCalled();
     });
 
-    it('should target-paint current ticker for header refresh', () => {
+    it('should no longer call paintTickers for header refresh directly', () => {
       handler.onWatchListChange();
 
-      expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['CURRENT']);
+      expect(mockPaintManager.paintTickers).not.toHaveBeenCalled();
     });
   });
 
@@ -115,10 +113,10 @@ describe('WatchListHandler', () => {
       expect(mockWatchlistManager.refreshSummaryAndFilters).toHaveBeenCalled();
     });
 
-    it('should NOT do full paintWatchList', () => {
+    it('should NOT do full refreshWatchlistView', () => {
       handler.recordSelectedTicker(WatchCategoryId.READY);
 
-      expect(mockWatchlistManager.paintWatchList).not.toHaveBeenCalled();
+      expect(mockWatchlistManager.refreshWatchlistView).not.toHaveBeenCalled();
     });
   });
 });

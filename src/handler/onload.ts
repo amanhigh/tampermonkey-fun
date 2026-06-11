@@ -1,5 +1,4 @@
 import { Constants } from '../models/constant';
-import { TickerArea } from '../models/dom';
 import { IObserveUtil } from '../util/observer';
 import { IWaitUtil } from '../util/wait';
 import { IWatchListHandler } from './watchlist';
@@ -141,7 +140,7 @@ export class OnLoadHandler implements IOnLoadHandler {
             console.log('🟢 SCREENER OPENED - triggering repaint');
             setTimeout(() => {
               void this.paintManager
-                .paintArea(TickerArea.SCREENER)
+                .paint()
                 .then(() => {
                   console.log('✅ Screener repainted successfully');
                 })

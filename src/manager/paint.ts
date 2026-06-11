@@ -13,21 +13,11 @@ import { FlagCategory } from '../models/flag';
  */
 export interface IPaintManager {
   /**
-   * Resets all visual state (symbol color, flag color, F&O border)
-   * for every ticker in the given panel area back to defaults.
-   * @param panel Which panel to reset
+   * Full visual repaint of all visible panels.
+   * Paints WATCHLIST, then paints SCREENER if visible,
+   * then repaints the current ticker header.
    */
-  resetArea(panel: TickerArea): void;
-
-  /**
-   * Paints all tickers in the given area (WATCHLIST or SCREENER).
-   * Resets the area first, then resolves watch + flag categories
-   * and paints symbol + flag + FNO for every ticker.
-   * Does NOT return a bucket summary — callers should use
-   * summarizeBuckets() if counts are needed.
-   * @param area Which panel to paint (WATCHLIST or SCREENER)
-   */
-  paintArea(area: TickerArea): Promise<void>;
+  paint(): Promise<void>;
 
   /**
    * Targeted paint for one or more tickers.
@@ -39,12 +29,11 @@ export interface IPaintManager {
   paintTickers(tickers: string[]): Promise<void>;
 
   /**
-   * Classifies all tickers in the given area and returns bucket counts
+   * Classifies all tickers in the WATCHLIST and returns bucket counts
    * WITHOUT resetting or painting DOM. Use when summary labels need
    * refreshing after targeted ticker repaints.
-   * @param area Which panel to classify
    */
-  summarizeBuckets(area: TickerArea): Promise<BucketSummary>;
+  summarizeBuckets(): Promise<BucketSummary>;
 }
 
 /**
@@ -83,30 +72,14 @@ export class PaintManager implements IPaintManager {
   ) {}
 
   /** @inheritdoc */
-  resetArea(panel: TickerArea): void {
-    const selector = panel.getSymbolSelector(TickerVisibility.ALL);
-    const itemSelector = panel.getItemSelector();
-    const flagSelector = panel.getFlagSelector();
+  async paint(): Promise<void> {
+    await this.paintArea(TickerArea.WATCHLIST);
 
-    // Reset symbol color
-    $(selector).css('color', Constants.UI.COLORS.DEFAULT);
+    if (this.domManager.isScreenerVisible()) {
+      await this.paintArea(TickerArea.SCREENER);
+    }
 
-    // Reset flag color
-    $(selector).closest(itemSelector).find(flagSelector).css('color', Constants.UI.COLORS.DEFAULT);
-
-    // Reset F&O border style
-    $(selector).css('border-top-style', '');
-    $(selector).css('border-width', '');
-  }
-
-  // ── Area-wide painters ──
-
-  /** @inheritdoc */
-  async paintArea(area: TickerArea): Promise<void> {
-    this.resetArea(area);
-
-    const tickers = [...this.domManager.getTickers(area, TickerVisibility.ALL)];
-    await this.paintTickersInArea(area, tickers);
+    await this.paintHeader();
   }
 
   /** @inheritdoc */
@@ -126,8 +99,8 @@ export class PaintManager implements IPaintManager {
   }
 
   /** @inheritdoc */
-  async summarizeBuckets(area: TickerArea): Promise<BucketSummary> {
-    const tickers = [...this.domManager.getTickers(area, TickerVisibility.ALL)];
+  async summarizeBuckets(): Promise<BucketSummary> {
+    const tickers = [...this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL)];
     const buckets = new Map<WatchCategoryId, number>();
     const uncategorizedTickers: string[] = [];
 
@@ -138,6 +111,40 @@ export class PaintManager implements IPaintManager {
 
     this.logUncategorizedTickers(uncategorizedTickers);
     return this.toBucketSummary(buckets, uncategorizedTickers);
+  }
+
+  // ── Private painters ──
+
+  /**
+   * Reset all visual state (symbol color, flag color, F&O border)
+   * for every ticker in the given panel area back to defaults.
+   */
+  private resetArea(panel: TickerArea): void {
+    const selector = panel.getSymbolSelector(TickerVisibility.ALL);
+    const itemSelector = panel.getItemSelector();
+    const flagSelector = panel.getFlagSelector();
+
+    // Reset symbol color
+    $(selector).css('color', Constants.UI.COLORS.DEFAULT);
+
+    // Reset flag color
+    $(selector).closest(itemSelector).find(flagSelector).css('color', Constants.UI.COLORS.DEFAULT);
+
+    // Reset F&O border style
+    $(selector).css('border-top-style', '');
+    $(selector).css('border-width', '');
+  }
+
+  /**
+   * Paint all tickers in the given area (WATCHLIST or SCREENER).
+   * Resets the area first, then resolves watch + flag categories
+   * and paints symbol + flag + FNO for every ticker.
+   */
+  private async paintArea(area: TickerArea): Promise<void> {
+    this.resetArea(area);
+
+    const tickers = [...this.domManager.getTickers(area, TickerVisibility.ALL)];
+    await this.paintTickersInArea(area, tickers);
   }
 
   // ── Internal helpers ──

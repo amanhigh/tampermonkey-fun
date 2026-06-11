@@ -1,7 +1,7 @@
 // CREATE NEW FILE: src/handler/flag.ts
 import { IFlagManager } from '../manager/flag';
 import { IDomManager } from '../manager/dom';
-import { IWatchListHandler } from './watchlist';
+import { IPaintManager } from '../manager/paint';
 import { FlagCategoryId } from '../models/flag';
 
 /**
@@ -22,13 +22,15 @@ export class FlagHandler implements IFlagHandler {
   constructor(
     private readonly flagManager: IFlagManager,
     private readonly domManager: IDomManager,
-    private readonly watchHandler: IWatchListHandler
+    private readonly paintManager: IPaintManager
   ) {}
 
   /** @inheritdoc */
   public recordSelectedTicker(categoryId: FlagCategoryId): void {
     const tvTicker = this.domManager.getTicker();
     this.flagManager.recordCategory(categoryId, [tvTicker]);
-    this.watchHandler.onWatchListChange();
+
+    // paintTickers handles WATCHLIST + SCREENER (if visible) + header
+    void this.paintManager.paintTickers([tvTicker]);
   }
 }
