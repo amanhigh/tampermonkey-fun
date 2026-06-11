@@ -2,14 +2,14 @@
  * Interface and implementation for handling watchlist-related events and updates
  */
 
-import { IHeaderManager } from '../manager/header';
-import { ITradingViewScreenerManager } from '../manager/screener';
-import { IWatchManager } from '../manager/watch';
+import { IPaintManager } from '../manager/paint';
+import { ICategoryManager } from '../manager/category';
 import { ITradingViewWatchlistManager } from '../manager/watchlist';
 import { ISyncUtil } from '../util/sync';
+import { TickerArea, TickerVisibility } from '../models/dom';
+import { WatchCategoryId } from '../models/watch';
 import { IDomManager } from '../manager/dom';
 import { IAlertFeedManager } from '../manager/alertfeed';
-import { WatchCategoryId } from '../models/watch';
 
 /**
  * Handles watchlist-related events and UI updates
@@ -29,11 +29,6 @@ export interface IWatchListHandler {
    * @param categoryId The category identifier to record into.
    */
   recordSelectedTicker(categoryId: WatchCategoryId): void;
-
-  /**
-   * Applies default filters to the watchlist
-   */
-  applyDefaultFilters(): void;
 }
 
 /**
@@ -43,10 +38,9 @@ export class WatchListHandler implements IWatchListHandler {
   // eslint-disable-next-line max-params
   constructor(
     private readonly watchlistManager: ITradingViewWatchlistManager,
-    private readonly screenerManager: ITradingViewScreenerManager,
-    private readonly headerManager: IHeaderManager,
+    private readonly paintManager: IPaintManager,
     private readonly syncUtil: ISyncUtil,
-    private readonly watchManager: IWatchManager,
+    private readonly categoryManager: ICategoryManager,
     private readonly domManager: IDomManager,
     private readonly alertFeedManager: IAlertFeedManager
   ) {}
@@ -54,14 +48,8 @@ export class WatchListHandler implements IWatchListHandler {
   /** @inheritdoc */
   public onWatchListChange(): void {
     this.syncUtil.waitOn('watchListChangeEvent', 20, () => {
-      // Paint watchlist items
-      void this.watchlistManager.paintWatchList();
-
-      // Paint screener items if visible
-      void this.screenerManager.paintScreener();
-
-      // Paint header items
-      void this.headerManager.paintHeader();
+      // Full watchlist UI refresh: paint decals + summary + filters
+      void this.watchlistManager.refresh();
 
       // Update alert feed with watchlist changes
       void this.alertFeedManager.createAlertFeedEvent(this.domManager.getTicker());
@@ -70,13 +58,18 @@ export class WatchListHandler implements IWatchListHandler {
 
   /** @inheritdoc */
   public recordSelectedTicker(categoryId: WatchCategoryId): void {
-    const selectedTickers = this.domManager.getSelectedTickers();
-    this.watchManager.recordCategory(categoryId, selectedTickers);
-    this.onWatchListChange();
-  }
+    const type = this.domManager.isScreenerVisible() ? TickerArea.SCREENER : TickerArea.WATCHLIST;
+    const selectedTickers = [...this.domManager.getTickers(type, TickerVisibility.SELECTED)];
+    void (async () => {
+      await this.categoryManager.recordWatchCategory(categoryId, selectedTickers);
 
-  /** @inheritdoc */
-  public applyDefaultFilters(): void {
-    this.watchlistManager.applyDefaultFilters();
+      // Targeted repaint: paintTickers handles WATCHLIST + SCREENER (if visible) + header
+      if (selectedTickers.length > 0) {
+        void this.paintManager.paintTickers(selectedTickers);
+      }
+
+      // Fast summary refresh without full visual repaint
+      void this.watchlistManager.refreshSummary();
+    })();
   }
 }

@@ -26,14 +26,13 @@ import { ITimeFrameManager, TimeFrameManager } from '../manager/timeframe';
 import { IJournalManager, JournalManager } from '../manager/journal';
 import { IAlertManager, AlertManager } from '../manager/alert';
 import { ITradingViewWatchlistManager, TradingViewWatchlistManager } from '../manager/watchlist';
-import { ITradingViewScreenerManager, TradingViewScreenerManager } from '../manager/screener';
 import { ISequenceManager, SequenceManager } from '../manager/sequence';
 import { IPaintManager, PaintManager } from '../manager/paint';
 import { IDomManager, DomManager } from '../manager/dom';
 import { ITickerManager, TickerManager } from '../manager/ticker';
+import { ILifecycleManager, LifecycleManager } from '../manager/lifecycle';
 import { ITradingViewManager, TradingViewManager } from '../manager/tv';
 import { IAlertTickerManager, AlertTickerManager } from '../manager/alert_ticker';
-import { IFnoManager, FnoManager } from '../manager/fno';
 
 // Handler Imports
 import { AlertHandler } from '../handler/alert';
@@ -47,11 +46,9 @@ import { IModifierKeyConfig, ModifierKeyConfig } from '../handler/modifier_confi
 import { ISequenceHandler, SequenceHandler } from '../handler/sequence';
 import { IKiteHandler, KiteHandler } from '../handler/kite';
 import { IKiteManager, KiteManager } from '../manager/kite';
-import { IHeaderManager, HeaderManager } from '../manager/header';
 import { IStyleManager, StyleManager } from '../manager/style';
-import { IFlagManager, FlagManager } from '../manager/flag';
+import { ICategoryManager, CategoryManager } from '../manager/category';
 import { IRecentManager, RecentManager } from '../manager/recent';
-import { IWatchManager, WatchManager } from '../manager/watch';
 import { IWatchListHandler, WatchListHandler } from '../handler/watchlist';
 import { IOnLoadHandler, OnLoadHandler } from '../handler/onload';
 import { IFlagHandler, FlagHandler } from '../handler/flag';
@@ -195,65 +192,28 @@ export class Factory {
     watchlist: (): ITradingViewWatchlistManager =>
       Factory.getInstance(
         'watchlistManager',
-        () =>
-          new TradingViewWatchlistManager(
-            Factory.manager.paint(),
-            Factory.util.ui(),
-            Factory.manager.fno(),
-            Factory.manager.watch(),
-            Factory.manager.flag()
-          )
+        () => new TradingViewWatchlistManager(Factory.manager.paint(), Factory.util.ui())
       ),
 
-    header: (): IHeaderManager =>
+    category: (): ICategoryManager =>
       Factory.getInstance(
-        'headerManager',
-        () =>
-          new HeaderManager(
-            Factory.manager.paint(),
-            Factory.manager.watch(),
-            Factory.manager.flag(),
-            Factory.manager.dom(),
-            Factory.manager.fno(),
-            Factory.manager.watchlist()
-          )
-      ),
-
-    watch: (): IWatchManager =>
-      Factory.getInstance(
-        'watchManager',
-        () => new WatchManager(Factory.manager.ticker(), () => Factory.manager.journal())
-      ),
-
-    screener: (): ITradingViewScreenerManager =>
-      Factory.getInstance(
-        'screenerManager',
-        () =>
-          new TradingViewScreenerManager(
-            Factory.manager.paint(),
-            Factory.manager.watch(),
-            Factory.manager.flag(),
-            Factory.manager.recent(),
-            Factory.manager.watchlist()
-          )
+        'categoryManager',
+        () => new CategoryManager(Factory.manager.ticker(), () => Factory.manager.journal())
       ),
 
     sequence: (): ISequenceManager =>
       Factory.getInstance('sequenceManager', () => new SequenceManager(Factory.client.ticker(), Factory.manager.dom())),
 
-    paint: (): IPaintManager => Factory.getInstance('paintManager', () => new PaintManager()),
+    paint: (): IPaintManager =>
+      Factory.getInstance(
+        'paintManager',
+        () => new PaintManager(Factory.manager.dom(), Factory.manager.category(), Factory.manager.recent())
+      ),
 
     dom: (): IDomManager =>
       Factory.getInstance(
         'domManager',
-        () =>
-          new DomManager(
-            Factory.util.wait(),
-            Factory.manager.ticker(),
-            Factory.manager.alertTicker(),
-            Factory.manager.screener(),
-            Factory.manager.watchlist()
-          )
+        () => new DomManager(Factory.util.wait(), Factory.manager.ticker(), Factory.manager.alertTicker())
       ),
 
     kite: (): IKiteManager =>
@@ -261,6 +221,12 @@ export class Factory {
 
     ticker: (): ITickerManager =>
       Factory.getInstance('tickerManager', () => new TickerManager(Factory.client.ticker())),
+
+    lifecycle: (): ILifecycleManager =>
+      Factory.getInstance(
+        'lifecycleManager',
+        () => new LifecycleManager(Factory.client.ticker(), Factory.manager.category(), Factory.manager.paint())
+      ),
 
     tv: (): ITradingViewManager =>
       Factory.getInstance('tvManager', () => new TradingViewManager(Factory.util.wait(), Factory.client.os())),
@@ -270,9 +236,6 @@ export class Factory {
 
     style: (): IStyleManager =>
       Factory.getInstance('styleManager', () => new StyleManager(Factory.util.wait(), Factory.manager.timeFrame())),
-
-    flag: (): IFlagManager =>
-      Factory.getInstance('flagManager', () => new FlagManager(Factory.manager.ticker(), Factory.manager.paint())),
 
     recent: (): IRecentManager =>
       Factory.getInstance('recentManager', () => new RecentManager(Factory.client.ticker())),
@@ -287,11 +250,10 @@ export class Factory {
             Factory.manager.timeFrame()
           )
       ),
-    fno: (): IFnoManager => Factory.getInstance('fnoManager', () => new FnoManager(Factory.client.ticker())),
     alertFeed: (): IAlertFeedManager =>
       Factory.getInstance(
         'alertFeedManager',
-        () => new AlertFeedManager(Factory.manager.alertTicker(), Factory.manager.watch(), Factory.manager.recent())
+        () => new AlertFeedManager(Factory.manager.alertTicker(), Factory.manager.category(), Factory.manager.recent())
       ),
   };
 
@@ -315,7 +277,7 @@ export class Factory {
     gttUnwatched: () =>
       Factory.getInstance(
         'auditPlugin_gttUnwatched',
-        () => new GttPlugin(Factory.repo.kite(), Factory.manager.watch())
+        () => new GttPlugin(Factory.repo.kite(), Factory.manager.category())
       ),
 
     // OrphanFlagsPlugin and TickerCollisionPlugin retired per PRD audit.md §4.2.2
@@ -434,7 +396,7 @@ export class Factory {
             Factory.handler.hotkey(),
             Factory.handler.alert(),
             Factory.handler.tickerChange(),
-            Factory.manager.screener()
+            Factory.manager.paint()
           )
       ),
     hotkey: (): IHotkeyHandler =>
@@ -469,6 +431,7 @@ export class Factory {
             Factory.manager.dom(),
             Factory.manager.style(),
             Factory.manager.ticker(),
+            Factory.manager.lifecycle(),
             Factory.handler.alertTicker()
           )
       ),
@@ -491,14 +454,13 @@ export class Factory {
           new TickerChangeHandler(
             Factory.manager.dom(),
             Factory.handler.alert(),
-            Factory.manager.header(),
+            Factory.manager.paint(),
             Factory.manager.recent(),
             Factory.handler.sequence(),
             Factory.handler.kite(),
             Factory.util.sync(),
-            Factory.manager.watch(), // Add dependency
-            Factory.manager.alertFeed(),
-            Factory.manager.screener()
+            Factory.manager.category(),
+            Factory.manager.alertFeed()
           )
       ),
 
@@ -526,10 +488,9 @@ export class Factory {
         () =>
           new WatchListHandler(
             Factory.manager.watchlist(),
-            Factory.manager.screener(),
-            Factory.manager.header(),
+            Factory.manager.paint(),
             Factory.util.sync(),
-            Factory.manager.watch(),
+            Factory.manager.category(),
             Factory.manager.dom(),
             Factory.manager.alertFeed()
           )
@@ -537,12 +498,18 @@ export class Factory {
     flag: (): IFlagHandler =>
       Factory.getInstance(
         'flagHandler',
-        () => new FlagHandler(Factory.manager.flag(), Factory.manager.dom(), Factory.handler.watchlist())
+        () => new FlagHandler(Factory.manager.category(), Factory.manager.dom(), Factory.manager.paint())
       ),
     sequence: (): ISequenceHandler =>
       Factory.getInstance(
         'sequenceHandler',
-        () => new SequenceHandler(Factory.manager.sequence(), Factory.manager.dom(), Factory.manager.alertTicker())
+        () =>
+          new SequenceHandler(
+            Factory.manager.sequence(),
+            Factory.manager.dom(),
+            Factory.manager.alertTicker(),
+            Factory.manager.lifecycle()
+          )
       ),
     journal: (): IJournalHandler =>
       Factory.getInstance(

@@ -1,8 +1,10 @@
 import { ISequenceManager } from '../manager/sequence';
 import { IDomManager } from '../manager/dom';
 import { IAlertTickerManager } from '../manager/alert_ticker';
+import { ILifecycleManager } from '../manager/lifecycle';
 import { Constants } from '../models/constant';
 import { SequenceType } from '../models/trading';
+import { Notifier } from '../util/notify';
 
 /**
  * Interface for sequence handling operations
@@ -23,6 +25,12 @@ export interface ISequenceHandler {
    * Uses current sequence when enabling freeze
    */
   toggleFreezeSequence(): Promise<void>;
+
+  /**
+   * Starts tracking the current ticker by creating a backend record
+   * using the current sequence's timeframes and DOM context.
+   */
+  startTracking(): Promise<void>;
 }
 
 /**
@@ -32,7 +40,8 @@ export class SequenceHandler implements ISequenceHandler {
   constructor(
     private readonly sequenceManager: ISequenceManager,
     private readonly domManager: IDomManager,
-    private readonly alertTickerManager: IAlertTickerManager
+    private readonly alertTickerManager: IAlertTickerManager,
+    private readonly lifecycleManager: ILifecycleManager
   ) {}
 
   /** @inheritdoc */
@@ -74,5 +83,28 @@ export class SequenceHandler implements ISequenceHandler {
   /** @inheritdoc */
   async toggleFreezeSequence(): Promise<void> {
     await this.sequenceManager.toggleFreezeSequence();
+  }
+
+  /** @inheritdoc */
+  async startTracking(): Promise<void> {
+    const ticker = this.domManager.getTicker();
+    const exchange = this.domManager.getCurrentExchange();
+    const sequence = await this.sequenceManager.getCurrentSequence();
+    const timeframes = Constants.TIME.SEQUENCE_TYPES.TO_TIMEFRAMES[sequence];
+
+    try {
+      await this.lifecycleManager.startTracking({
+        ticker,
+        exchange,
+        timeframes,
+        type: 'EQUITY',
+        state: 'WATCHED',
+        trend: 'SIDEWAYS',
+        last_opened_at: new Date().toISOString(),
+      });
+      Notifier.success(`⏺ Started tracking ${ticker}`);
+    } catch (error) {
+      Notifier.warn(`Failed to start tracking ${ticker}: ${(error as Error).message}`);
+    }
   }
 }

@@ -1,4 +1,6 @@
+import { LRUCache } from 'lru-cache';
 import { ITickerClient } from '../client/ticker';
+import { Constants } from '../models/constant';
 
 /**
  * Interface for managing recent ticker data operations.
@@ -12,50 +14,42 @@ export interface IRecentManager {
   markRecent(tvTicker: string): void;
 
   /**
-   * Check if ticker was opened within cutOffPeriod ms (sync, from cache).
+   * Check if ticker was opened within cutOffPeriod ms.
+   * Resolves from LRU cache — on miss, fetches from backend.
    * @param tvTicker Ticker to check
-   * @param cutOffPeriod Max age in ms to be considered recent, e.g. 7 * 24 * 60 * 60 * 1000
+   * @param cutOffPeriod Max age in ms to be considered recent
    */
-  isRecent(tvTicker: string, cutOffPeriod: number): boolean;
+  isRecent(tvTicker: string, cutOffPeriod: number): Promise<boolean>;
 }
 
 /**
  * Manages recent ticker data loaded from the Kohan backend.
- * Cache populated asynchronously on construction via listTickers().
+ * Uses an LRU cache with on-demand fetch — no pre-load on construction.
  * Writes update cache immediately + fire async to backend.
  */
 export class RecentManager implements IRecentManager {
-  private readonly cache: Map<string, number> = new Map();
+  private readonly cache = new LRUCache<string, number>({
+    max: Constants.CACHE.CATEGORY.MAX,
+    ttl: Constants.RECENT_CUTOFF_MS,
+    fetchMethod: async (key: string): Promise<number | undefined> => {
+      try {
+        const ticker = await this.client.getTicker(key);
+        if (ticker?.last_opened_at) {
+          return new Date(ticker.last_opened_at).getTime();
+        }
+        return undefined;
+      } catch {
+        return undefined;
+      }
+    },
+  });
 
   /**
    * Creates a new RecentManager.
-   * Triggers async cache load from backend on construction.
+   * No cache pre-load — entries are fetched on-demand.
    * @param client - TickerClient for backend API calls
    */
-  constructor(private readonly client: ITickerClient) {
-    void this.loadCache();
-  }
-
-  /**
-   * Loads recent ticker data from backend into cache.
-   * Converts backend RFC3339 timestamps to epoch ms.
-   * @private
-   */
-  private async loadCache(): Promise<void> {
-    try {
-      const tickers = await this.client.listTickers({
-        'sort-by': 'last_opened_at',
-        'sort-order': 'desc',
-      });
-      for (const t of tickers) {
-        if (t.last_opened_at) {
-          this.cache.set(t.ticker, new Date(t.last_opened_at).getTime());
-        }
-      }
-    } catch {
-      // Cache stays empty on failure — retry on next ticker open
-    }
-  }
+  constructor(private readonly client: ITickerClient) {}
 
   /** @inheritdoc */
   public markRecent(tvTicker: string): void {
@@ -71,8 +65,8 @@ export class RecentManager implements IRecentManager {
   }
 
   /** @inheritdoc */
-  public isRecent(tvTicker: string, cutOffPeriod: number): boolean {
-    const timestamp = this.cache.get(tvTicker);
+  public async isRecent(tvTicker: string, cutOffPeriod: number): Promise<boolean> {
+    const timestamp = await this.cache.fetch(tvTicker);
     if (timestamp === undefined) {
       return false;
     }

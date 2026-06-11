@@ -1,14 +1,8 @@
 import { Constants } from '../models/constant';
+import { TickerArea, TickerVisibility } from '../models/dom';
 import { IWaitUtil } from '../util/wait';
 import { ITickerManager } from './ticker';
-import { ITradingViewScreenerManager } from './screener';
 import { IAlertTickerManager } from './alert_ticker';
-import { ITradingViewWatchlistManager } from './watchlist';
-
-/**
- * Minimum number of tickers required for selection
- */
-const MIN_SELECTED_TICKERS = 2;
 
 /**
  * Interface for managing ticker operations
@@ -19,6 +13,12 @@ export interface IDomManager {
    * @returns Current ticker symbol
    */
   getTicker(): string;
+
+  /**
+   * Gets current ticker name from the DOM header.
+   * @returns The ticker name text
+   */
+  getName(): string;
 
   /**
    * Gets current exchange from DOM
@@ -40,10 +40,17 @@ export interface IDomManager {
   openTicker(ticker: string): Promise<void>;
 
   /**
-   * Gets currently selected tickers from watchlist and screener
-   * @returns Selected tickers
+   * Gets tickers from a specific DOM panel with a visibility filter.
+   * @param area      - Which panel to query (WATCHLIST or SCREENER)
+   * @param visibility - Visibility filter: ALL, VISIBLE, or SELECTED (default ALL)
+   * @returns Deduplicated set of ticker symbols from the requested panel
    */
-  getSelectedTickers(): string[];
+  getTickers(area: TickerArea, visibility: TickerVisibility): Set<string>;
+
+  /**
+   * Check if the screener widget is currently visible/open.
+   */
+  isScreenerVisible(): boolean;
 
   /**
    * Opens current ticker relative to its benchmark
@@ -65,9 +72,7 @@ export class DomManager implements IDomManager {
   constructor(
     private readonly waitUtil: IWaitUtil,
     private readonly tickerManager: ITickerManager,
-    private readonly alertTickerManager: IAlertTickerManager,
-    private readonly screenerManager: ITradingViewScreenerManager,
-    private readonly watchlistManager: ITradingViewWatchlistManager
+    private readonly alertTickerManager: IAlertTickerManager
   ) {}
 
   /** @inheritdoc */
@@ -86,6 +91,11 @@ export class DomManager implements IDomManager {
       throw new Error('Exchange not found');
     }
     return exchange;
+  }
+
+  /** @inheritdoc */
+  getName(): string {
+    return $(Constants.DOM.BASIC.NAME)[0].innerHTML;
   }
 
   /** @inheritdoc */
@@ -114,12 +124,15 @@ export class DomManager implements IDomManager {
   }
 
   /** @inheritdoc */
-  getSelectedTickers(): string[] {
-    let selected = this.getVisibleSelectedTickers();
-    if (selected.length < MIN_SELECTED_TICKERS) {
-      selected = [this.getTicker()];
-    }
-    return selected;
+  getTickers(area: TickerArea, visibility: TickerVisibility): Set<string> {
+    const selector = area.getSymbolSelector(visibility);
+    return new Set(this.tickerTextArray(selector));
+  }
+
+  /** @inheritdoc */
+  isScreenerVisible(): boolean {
+    const $widget = $(Constants.DOM.SCREENER.MAIN);
+    return $widget.length > 0 && $widget.is(':visible');
   }
 
   /** @inheritdoc */
@@ -148,7 +161,8 @@ export class DomManager implements IDomManager {
   /** @inheritdoc */
   async navigateTickers(step: number): Promise<void> {
     const currentTicker = this.getTicker();
-    const visibleTickers = this.getVisibleTickers();
+    const type = this.isScreenerVisible() ? TickerArea.SCREENER : TickerArea.WATCHLIST;
+    const visibleTickers = [...this.getTickers(type, TickerVisibility.VISIBLE)];
 
     if (!visibleTickers.length) {
       throw new Error('No visible tickers available for navigation');
@@ -159,26 +173,16 @@ export class DomManager implements IDomManager {
     await this.openTicker(nextTicker);
   }
 
-  /**
-   * Gets currently visible tickers based on active view
-   * @private
-   * @returns Array of visible ticker symbols
-   */
-  private getVisibleSelectedTickers(): string[] {
-    return this.screenerManager.isScreenerVisible()
-      ? this.screenerManager.getSelectedTickers()
-      : this.watchlistManager.getSelectedTickers();
-  }
+  // ── Private DOM Query Helpers ──
 
   /**
-   * Gets currently visible tickers based on active view
+   * Extract ticker text from jQuery elements by selector.
    * @private
-   * @returns Array of visible ticker symbols
    */
-  private getVisibleTickers(): string[] {
-    return this.screenerManager.isScreenerVisible()
-      ? this.screenerManager.getTickers(true)
-      : this.watchlistManager.getTickers(true);
+  private tickerTextArray(selector: string): string[] {
+    return $(selector)
+      .toArray()
+      .map((s) => s.textContent || s.innerHTML);
   }
 
   /**

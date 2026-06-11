@@ -7,17 +7,11 @@ describe('RecentManager', () => {
   let recentManager: IRecentManager;
   let mockClient: jest.Mocked<ITickerClient>;
 
-  const mockRecentTickers: Ticker[] = [
-    new Ticker({ ticker: 'RELIANCE', last_opened_at: '2026-05-05T10:30:00Z' }),
-    new Ticker({ ticker: 'TCS', last_opened_at: '2026-05-04T10:30:00Z' }),
-  ];
-
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Mock TickerClient
     mockClient = {
-      listTickers: jest.fn().mockResolvedValue(mockRecentTickers),
+      getTicker: jest.fn(),
       patchTickerLastOpened: jest.fn().mockResolvedValue({} as any),
     } as unknown as jest.Mocked<ITickerClient>;
 
@@ -30,28 +24,25 @@ describe('RecentManager', () => {
       expect(recentManager).toBeInstanceOf(RecentManager);
     });
 
-    it('should trigger cache load from backend on construction', () => {
-      expect(mockClient.listTickers).toHaveBeenCalledWith({
-        'sort-by': 'last_opened_at',
-        'sort-order': 'desc',
-      });
+    it('should NOT call backend on construction (on-demand fetch)', () => {
+      expect(mockClient.getTicker).not.toHaveBeenCalled();
     });
   });
 
   describe('markRecent', () => {
-    it('should add ticker to cache and fire backend patch', () => {
+    it('should add ticker to cache and fire backend patch', async () => {
       const ticker = 'RELIANCE';
       recentManager.markRecent(ticker);
-      expect(recentManager.isRecent(ticker, Constants.RECENT_CUTOFF_MS)).toBe(true);
+      expect(await recentManager.isRecent(ticker, Constants.RECENT_CUTOFF_MS)).toBe(true);
       expect(mockClient.patchTickerLastOpened).toHaveBeenCalledWith(ticker, {
         last_opened_at: expect.any(String),
       });
     });
 
-    it('should handle empty ticker string', () => {
+    it('should handle empty ticker string', async () => {
       const ticker = '';
       recentManager.markRecent(ticker);
-      expect(recentManager.isRecent(ticker, Constants.RECENT_CUTOFF_MS)).toBe(true);
+      expect(await recentManager.isRecent(ticker, Constants.RECENT_CUTOFF_MS)).toBe(true);
     });
 
     it('should handle multiple tickers', () => {
@@ -62,36 +53,83 @@ describe('RecentManager', () => {
   });
 
   describe('isRecent', () => {
-    it('should return true when ticker was marked within cutOffPeriod', () => {
+    it('should return true when ticker was marked within cutOffPeriod', async () => {
       recentManager.markRecent('TCS');
-      expect(recentManager.isRecent('TCS', Constants.RECENT_CUTOFF_MS)).toBe(true);
+      expect(await recentManager.isRecent('TCS', Constants.RECENT_CUTOFF_MS)).toBe(true);
     });
 
-    it('should return true with very large cutOffPeriod (effectively always)', () => {
+    it('should return true with very large cutOffPeriod (effectively always)', async () => {
       recentManager.markRecent('TCS');
-      expect(recentManager.isRecent('TCS', Number.MAX_SAFE_INTEGER)).toBe(true);
+      expect(await recentManager.isRecent('TCS', Number.MAX_SAFE_INTEGER)).toBe(true);
     });
 
-    it('should return false when ticker does not exist in cache', () => {
-      expect(recentManager.isRecent('UNKNOWN', Constants.RECENT_CUTOFF_MS)).toBe(false);
+    it('should fetch from backend on cache miss and return true if recent', async () => {
+      const recentDate = new Date(Date.now() - 60 * 1000).toISOString(); // 1 min ago
+      mockClient.getTicker.mockResolvedValue(
+        new Ticker({ ticker: 'BACKEND_TICKER', last_opened_at: recentDate })
+      );
+
+      const result = await recentManager.isRecent('BACKEND_TICKER', Constants.RECENT_CUTOFF_MS);
+
+      expect(result).toBe(true);
+      expect(mockClient.getTicker).toHaveBeenCalledWith('BACKEND_TICKER');
     });
 
-    it('should return false for empty ticker string when not cached', () => {
-      expect(recentManager.isRecent('', Constants.RECENT_CUTOFF_MS)).toBe(false);
+    it('should return false when ticker not in cache and not in backend', async () => {
+      mockClient.getTicker.mockRejectedValue(new Error('Not found'));
+
+      const result = await recentManager.isRecent('UNKNOWN', Constants.RECENT_CUTOFF_MS);
+
+      expect(result).toBe(false);
+      expect(mockClient.getTicker).toHaveBeenCalledWith('UNKNOWN');
     });
 
-    it('should return false for negative cutOffPeriod (impossible window)', () => {
+    it('should return false for empty ticker string when not cached', async () => {
+      expect(await recentManager.isRecent('', Constants.RECENT_CUTOFF_MS)).toBe(false);
+    });
+
+    it('should return false for negative cutOffPeriod (impossible window)', async () => {
       recentManager.markRecent('NOW');
-      expect(recentManager.isRecent('NOW', -1)).toBe(false);
+      expect(await recentManager.isRecent('NOW', -1)).toBe(false);
+    });
+
+    it('should cache result and not call backend again on second lookup', async () => {
+      const recentDate = new Date(Date.now() - 60 * 1000).toISOString();
+      mockClient.getTicker.mockResolvedValue(
+        new Ticker({ ticker: 'CACHED', last_opened_at: recentDate })
+      );
+
+      // First call — cache miss, fetches from backend
+      const first = await recentManager.isRecent('CACHED', Constants.RECENT_CUTOFF_MS);
+      expect(first).toBe(true);
+      expect(mockClient.getTicker).toHaveBeenCalledTimes(1);
+
+      // Second call — cache hit
+      jest.clearAllMocks();
+      const second = await recentManager.isRecent('CACHED', Constants.RECENT_CUTOFF_MS);
+      expect(second).toBe(true);
+      expect(mockClient.getTicker).not.toHaveBeenCalled();
+    });
+
+    it('should reflect markRecent in cache immediately (before backend)', async () => {
+      // isRecent returns false initially (not cached, no backend record)
+      mockClient.getTicker.mockRejectedValue(new Error('Not found'));
+      expect(await recentManager.isRecent('NEW_TICKER', Constants.RECENT_CUTOFF_MS)).toBe(false);
+
+      // markRecent sets cache directly
+      recentManager.markRecent('NEW_TICKER');
+      expect(await recentManager.isRecent('NEW_TICKER', Constants.RECENT_CUTOFF_MS)).toBe(true);
+      // No backend getTicker for the isRecent call — cache hit
     });
   });
 
   describe('error handling', () => {
-    it('should handle backend listTickers failure gracefully', () => {
-      mockClient.listTickers.mockRejectedValue(new Error('Backend unavailable'));
-      const resilientManager = new RecentManager(mockClient);
-      // Should not throw during construction
-      expect(resilientManager).toBeDefined();
+    it('should handle backend getTicker failure gracefully', async () => {
+      mockClient.getTicker.mockRejectedValue(new Error('Backend unavailable'));
+
+      const result = await recentManager.isRecent('ANY', Constants.RECENT_CUTOFF_MS);
+
+      expect(result).toBe(false);
     });
 
     it('should handle backend patch failure gracefully', () => {
@@ -101,8 +139,9 @@ describe('RecentManager', () => {
       expect(() => recentManager.markRecent(ticker)).not.toThrow();
     });
 
-    it('should not throw when ticker not in cache', () => {
-      expect(() => recentManager.isRecent('MISSING', Constants.RECENT_CUTOFF_MS)).not.toThrow();
+    it('should not throw when ticker not in cache', async () => {
+      mockClient.getTicker.mockRejectedValue(new Error('Not found'));
+      await expect(recentManager.isRecent('MISSING', Constants.RECENT_CUTOFF_MS)).resolves.toBe(false);
     });
   });
 });

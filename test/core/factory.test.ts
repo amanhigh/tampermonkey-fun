@@ -16,6 +16,13 @@ import { Factory } from '../../src/core/factory';
   attr: jest.fn().mockReturnThis(),
   addClass: jest.fn().mockReturnThis(),
   html: jest.fn().mockReturnThis(),
+  length: 0,
+  has: jest.fn().mockReturnThis(),
+  not: jest.fn().mockReturnThis(),
+  data: jest.fn().mockReturnThis(),
+  mousedown: jest.fn().mockReturnThis(),
+  contextmenu: jest.fn().mockReturnThis(),
+  toArray: jest.fn().mockReturnValue([]),
 }));
 
 (global as any).GM = {

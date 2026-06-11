@@ -9,7 +9,6 @@ export enum FlagCategoryId {
   DOWNTREND = 'DOWNTREND',
   CRYPTO = 'CRYPTO',
   UPTREND = 'UPTREND',
-  DEFAULT_UNTRACKED = 'DEFAULT_UNTRACKED',
   INDEX = 'INDEX',
   GOLD_INDEX = 'GOLD_INDEX',
 }
@@ -35,8 +34,6 @@ export interface FlagCategory {
 
   /**
    * Backend field update applied when a ticker is recorded into this category.
-   * Set to `{}` (no-op) for categories like DEFAULT_UNTRACKED that do not
-   * persist meaningful data to the backend.
    */
   update: TickerUpdateRequest;
 }
@@ -46,48 +43,44 @@ export interface FlagCategory {
 /**
  * All flag categories in UI paint order.
  * This is the canonical list used by the FlagManager for paint, record, and lookup.
+ * Categories that are NOT recordable (e.g. unclassified) are omitted — they
+ * simply are not painted.
  */
 export const ALL_FLAG_CATEGORIES: readonly FlagCategory[] = [
   {
     id: FlagCategoryId.SIDEWAYS,
     color: 'orange',
     label: 'Sideways / Consolidation',
-    update: { trend: 'SIDEWAYS' },
+    update: { trend: 'SIDEWAYS', type: 'EQUITY', state: 'WATCHED' },
   },
   {
     id: FlagCategoryId.DOWNTREND,
     color: 'red',
     label: 'Downtrend / Shorts',
-    update: { trend: 'DOWNTREND' },
+    update: { trend: 'DOWNTREND', type: 'EQUITY', state: 'WATCHED' },
   },
   {
     id: FlagCategoryId.CRYPTO,
     color: 'dodgerblue',
     label: 'Crypto',
-    update: { type: 'CRYPTO' },
+    update: { type: 'CRYPTO', state: 'WATCHED' },
   },
   {
     id: FlagCategoryId.UPTREND,
     color: 'lime',
     label: 'Uptrend / Longs',
-    update: { trend: 'UPTREND' },
-  },
-  {
-    id: FlagCategoryId.DEFAULT_UNTRACKED,
-    color: 'white',
-    label: 'Default / Untracked',
-    update: {},
+    update: { trend: 'UPTREND', type: 'EQUITY', state: 'WATCHED' },
   },
   {
     id: FlagCategoryId.INDEX,
     color: 'brown',
     label: 'Index / Markets',
-    update: { type: 'INDEX' },
+    update: { type: 'INDEX', state: 'WATCHED' },
   },
   {
     id: FlagCategoryId.GOLD_INDEX,
     color: 'darkkhaki',
     label: 'Gold / Composite Index',
-    update: { type: 'COMPOSITE' },
+    update: { type: 'COMPOSITE', state: 'WATCHED' },
   },
 ] as const;

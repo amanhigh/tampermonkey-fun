@@ -1,6 +1,6 @@
 import { GttPlugin } from '../../src/manager/gtt_plugin';
 import { IKiteRepo } from '../../src/repo/kite';
-import { IWatchManager } from '../../src/manager/watch';
+import { ICategoryManager } from '../../src/manager/category';
 import { GttRefreshEvent } from '../../src/models/gtt';
 import { Order, OrderType } from '../../src/models/kite';
 import { WatchCategoryId } from '../../src/models/watch';
@@ -10,20 +10,20 @@ import { WatchCategoryId } from '../../src/models/watch';
 describe('GttPlugin', () => {
   let plugin: GttPlugin;
   let kiteRepo: jest.Mocked<IKiteRepo>;
-  let watchManager: jest.Mocked<IWatchManager>;
+  let categoryManager: jest.Mocked<ICategoryManager>;
 
   beforeEach(() => {
     kiteRepo = {
       getGttRefereshEvent: jest.fn(),
     } as any;
 
-    watchManager = {
+    categoryManager = {
       getTickerCategory: jest.fn(),
-      classifyTickers: jest.fn(),
-      recordCategory: jest.fn(),
+      recordWatchCategory: jest.fn(),
+      recordFlagCategory: jest.fn(),
     } as any;
 
-    plugin = new GttPlugin(kiteRepo, watchManager);
+    plugin = new GttPlugin(kiteRepo, categoryManager);
   });
 
   describe('validate', () => {
@@ -51,7 +51,11 @@ describe('GttPlugin', () => {
       gttEvent.addOrder('AAPL', mockOrder);
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
-      watchManager.getTickerCategory.mockResolvedValue({ id: WatchCategoryId.SET_JOURNAL, color: 'orange', label: '', recordUpdate: null });
+      categoryManager.getTickerCategory.mockResolvedValue({
+        watch: { id: WatchCategoryId.SET_JOURNAL, color: 'orange', label: '', recordUpdate: null },
+        flag: undefined,
+        isFno: false,
+      });
 
       const results = await plugin.run();
 
@@ -64,7 +68,11 @@ describe('GttPlugin', () => {
       gttEvent.addOrder('MSFT', mockOrder);
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
-      watchManager.getTickerCategory.mockResolvedValue({ id: WatchCategoryId.RUNNING, color: 'lime', label: '', recordUpdate: null });
+      categoryManager.getTickerCategory.mockResolvedValue({
+        watch: { id: WatchCategoryId.RUNNING, color: 'lime', label: '', recordUpdate: null },
+        flag: undefined,
+        isFno: false,
+      });
 
       const results = await plugin.run();
 
@@ -77,81 +85,68 @@ describe('GttPlugin', () => {
       gttEvent.addOrder('GOOGL', mockOrder);
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
-      watchManager.getTickerCategory.mockResolvedValue({ id: WatchCategoryId.READY, color: 'red', label: '', recordUpdate: { state: 'READY' } });
+      categoryManager.getTickerCategory.mockResolvedValue({
+        watch: { id: WatchCategoryId.READY, color: 'red', label: '', recordUpdate: { state: 'READY' } },
+        flag: undefined,
+        isFno: false,
+      });
 
       const results = await plugin.run();
 
       expect(results).toHaveLength(1);
-      expect(results[0].target).toBe('GOOGL');
+      expect(results[0]).toMatchObject({
+        code: 'UNWATCHED_GTT',
+        target: 'GOOGL',
+        severity: 'HIGH',
+      });
     });
 
-    it('emits FAIL for unwatched GTT ticker', async () => {
+    it('emits FAIL for uncategorized ticker with GTT order', async () => {
       const gttEvent = new GttRefreshEvent();
       const mockOrder = new Order('TSLA', 10, OrderType.SINGLE, '1', [100]);
       gttEvent.addOrder('TSLA', mockOrder);
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
-      watchManager.getTickerCategory.mockResolvedValue(undefined);
+      categoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, isFno: false });
 
       const results = await plugin.run();
 
       expect(results).toHaveLength(1);
-      expect(results[0]).toEqual({
+      expect(results[0]).toMatchObject({
         code: 'UNWATCHED_GTT',
         target: 'TSLA',
-        severity: 'HIGH',
-        data: {
-          orderIds: ['1'],
-        },
       });
     });
 
-    it('emits FAIL for multiple unwatched GTT tickers', async () => {
+    it('handles multiple GTT tickers with mixed categories', async () => {
       const gttEvent = new GttRefreshEvent();
-      const order1 = new Order('TSLA', 10, OrderType.SINGLE, '1', [100]);
-      const order2 = new Order('AMZN', 10, OrderType.SINGLE, '2', [150]);
-      gttEvent.addOrder('TSLA', order1);
-      gttEvent.addOrder('AMZN', order2);
+      gttEvent.addOrder('WATCHED', new Order('WATCHED', 10, OrderType.SINGLE, '1', [100]));
+      gttEvent.addOrder('UNWATCHED', new Order('UNWATCHED', 10, OrderType.SINGLE, '1', [100]));
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
-      watchManager.getTickerCategory.mockResolvedValue(undefined);
-
-      const results = await plugin.run();
-
-      expect(results).toHaveLength(2);
-      const targets = results.map((r) => r.target).sort();
-      expect(targets).toEqual(['AMZN', 'TSLA']);
-    });
-
-    it('emits FAIL for ticker in non-journal category (e.g. INDEX)', async () => {
-      const gttEvent = new GttRefreshEvent();
-      gttEvent.addOrder('NIFTY', new Order('NIFTY', 10, OrderType.SINGLE, '1', [100]));
-
-      kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
-      watchManager.getTickerCategory.mockResolvedValue({ id: WatchCategoryId.INDEX, color: 'brown', label: '', recordUpdate: { type: 'INDEX' } });
-
-      const results = await plugin.run();
-
-      // INDEX is NOT SET/RUNNING, so it emits FAIL
-      expect(results).toHaveLength(1);
-      expect(results[0].target).toBe('NIFTY');
-    });
-
-    it('handles some tickers watched and some not', async () => {
-      const gttEvent = new GttRefreshEvent();
-      gttEvent.addOrder('AAPL', new Order('AAPL', 10, OrderType.SINGLE, '1', [100]));
-      gttEvent.addOrder('TSLA', new Order('TSLA', 10, OrderType.SINGLE, '2', [150]));
-
-      kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
-      watchManager.getTickerCategory.mockImplementation(async (ticker: string) => {
-        if (ticker === 'AAPL') return { id: WatchCategoryId.SET_JOURNAL, color: 'orange', label: '', recordUpdate: null };
-        return undefined;
+      categoryManager.getTickerCategory.mockImplementation(async (ticker: string) => {
+        if (ticker === 'WATCHED') return { watch: { id: WatchCategoryId.RUNNING, color: 'lime', label: '', recordUpdate: null }, flag: undefined, isFno: false };
+        return { watch: undefined, flag: undefined, isFno: false };
       });
 
       const results = await plugin.run();
 
       expect(results).toHaveLength(1);
-      expect(results[0].target).toBe('TSLA');
+      expect(results[0].target).toBe('UNWATCHED');
+    });
+
+    it('uses correct order ids from GTT event', async () => {
+      const gttEvent = new GttRefreshEvent();
+      gttEvent.addOrder('TICK', new Order('TICK', 15, OrderType.SINGLE, 'order123', [150]));
+      gttEvent.addOrder('TICK', new Order('TICK', 20, OrderType.SINGLE, 'order456', [200]));
+
+      kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
+      categoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, isFno: false });
+
+      const results = await plugin.run();
+
+      expect(results).toHaveLength(1);
+      expect(results[0]?.data?.orderIds).toEqual(['order123', 'order456']);
     });
   });
 });

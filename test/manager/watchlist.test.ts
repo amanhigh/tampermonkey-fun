@@ -1,11 +1,8 @@
 import { TradingViewWatchlistManager, ITradingViewWatchlistManager } from '../../src/manager/watchlist';
 import { IPaintManager } from '../../src/manager/paint';
 import { IUIUtil } from '../../src/util/ui';
-import { IFnoManager } from '../../src/manager/fno';
-import { IWatchManager } from '../../src/manager/watch';
-import { IFlagManager } from '../../src/manager/flag';
 import { Constants } from '../../src/models/constant';
-import { ALL_WATCH_CATEGORIES, WatchCategoryId, CategoryBuckets } from '../../src/models/watch';
+import { ALL_WATCH_CATEGORIES, WatchCategoryId, BucketSummary } from '../../src/models/watch';
 
 // Mock jQuery globally for DOM manipulation
 const mockJQuery = jest.fn(() => ({
@@ -27,9 +24,6 @@ describe('TradingViewWatchlistManager', () => {
   let watchlistManager: ITradingViewWatchlistManager;
   let mockPaintManager: jest.Mocked<IPaintManager>;
   let mockUIUtil: jest.Mocked<IUIUtil>;
-  let mockFnoManager: jest.Mocked<IFnoManager>;
-  let mockWatchManager: jest.Mocked<IWatchManager>;
-  let mockFlagManager: jest.Mocked<IFlagManager>;
 
   const mockElement = { innerHTML: 'MOCKSTOCK' };
   const mockJQueryChain = {
@@ -51,39 +45,21 @@ describe('TradingViewWatchlistManager', () => {
 
     // Mock dependencies
     mockPaintManager = {
-      paintSymbols: jest.fn(),
-      paintFlags: jest.fn(),
-      resetColors: jest.fn(),
+      paint: jest.fn().mockResolvedValue(undefined),
+      paintTickers: jest.fn().mockResolvedValue(undefined),
+      summarizeBuckets: jest.fn(),
     } as unknown as jest.Mocked<IPaintManager>;
 
     mockUIUtil = {
       buildLabel: jest.fn().mockReturnValue(mockJQueryChain),
     } as unknown as jest.Mocked<IUIUtil>;
 
-    mockFnoManager = {
-      getAllFnoTickers: jest.fn().mockReturnValue(new Set(['FNO1', 'FNO2'])),
-      isFno: jest.fn(),
-    } as unknown as jest.Mocked<IFnoManager>;
-
-    mockWatchManager = {
-      getTickerCategory: jest.fn(),
-      classifyTickers: jest.fn(),
-      recordCategory: jest.fn(),
-    } as unknown as jest.Mocked<IWatchManager>;
-
-    mockFlagManager = {
-      paint: jest.fn(),
-    } as unknown as jest.Mocked<IFlagManager>;
-
     // Reset jQuery mock
     mockJQuery.mockReturnValue(mockJQueryChain);
 
     watchlistManager = new TradingViewWatchlistManager(
       mockPaintManager,
-      mockUIUtil,
-      mockFnoManager,
-      mockWatchManager,
-      mockFlagManager
+      mockUIUtil
     );
   });
 
@@ -91,140 +67,69 @@ describe('TradingViewWatchlistManager', () => {
     it('should create instance with all dependencies', () => {
       expect(watchlistManager).toBeInstanceOf(TradingViewWatchlistManager);
     });
-  });
 
-  describe('getTickers', () => {
-    beforeEach(() => {
-      mockJQuery.mockReturnValue({
-        ...mockJQueryChain,
-        toArray: jest.fn().mockReturnValue([{ innerHTML: 'AAPL' }, { innerHTML: 'GOOGL' }, { innerHTML: 'MSFT' }]),
-      });
-    });
-
-    it('should return all tickers when visible is false', () => {
-      const result = watchlistManager.getTickers(false);
-
-      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.SYMBOL);
-      expect(result).toEqual(['AAPL', 'GOOGL', 'MSFT']);
-    });
-
-    it('should return visible tickers when visible is true', () => {
-      const result = watchlistManager.getTickers(true);
-
-      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.SYMBOL + ':visible');
-      expect(result).toEqual(['AAPL', 'GOOGL', 'MSFT']);
-    });
-
-    it('should return empty array when no tickers found', () => {
-      mockJQuery.mockReturnValue({
-        ...mockJQueryChain,
-        toArray: jest.fn().mockReturnValue([]),
-      });
-
-      const result = watchlistManager.getTickers();
-
-      expect(result).toEqual([]);
+    it('should apply default white filter on construction', () => {
+      // Construction triggers hideAllItems() via filterWatchList for the default filter
+      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.LINE);
+      expect(mockJQueryChain.hide).toHaveBeenCalled();
     });
   });
 
-  describe('getSelectedTickers', () => {
-    beforeEach(() => {
-      mockJQuery.mockReturnValue({
-        ...mockJQueryChain,
-        toArray: jest.fn().mockReturnValue([{ innerHTML: 'SELECTED1' }, { innerHTML: 'SELECTED2' }]),
-      });
-    });
-
-    it('should return selected tickers with correct selector', () => {
-      const result = watchlistManager.getSelectedTickers();
-
-      const expectedSelector = `${Constants.DOM.WATCHLIST.SELECTED} ${Constants.DOM.WATCHLIST.SYMBOL}:visible`;
-      expect(mockJQuery).toHaveBeenCalledWith(expectedSelector);
-      expect(result).toEqual(['SELECTED1', 'SELECTED2']);
-    });
-  });
-
-  describe('paintWatchList', () => {
-    let classifyResult: CategoryBuckets;
+  describe('refresh', () => {
+    let classifyResult: BucketSummary;
 
     beforeEach(() => {
-      // Mock getTickers to return some tickers
-      jest.spyOn(watchlistManager, 'getTickers').mockReturnValue(['AAPL', 'GOOGL']);
-
-      // Mock classifyTickers — AAPL is READY, GOOGL uncategorized
+      // Mock paint() and summarizeBuckets() flow
       classifyResult = {
-        buckets: new Map([[WatchCategoryId.READY, new Set(['AAPL'])]]),
-        uncategorized: new Set(['GOOGL']),
+        buckets: new Map([[WatchCategoryId.READY, 1]]),
+        uncategorizedCount: 1,
       };
-      mockWatchManager.classifyTickers.mockResolvedValue(classifyResult);
+      mockPaintManager.summarizeBuckets.mockResolvedValue(classifyResult);
+      jest.clearAllMocks();
     });
 
-    it('should execute complete paint workflow', async () => {
-      await watchlistManager.paintWatchList();
+    it('should execute complete watchlist refresh via paint()', async () => {
+      await watchlistManager.refresh();
 
       // Verify reset operations
       expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.WIDGET);
       expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.LINE);
       expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.SCREENER.LINE);
 
-      // Verify batch classification was used
-      expect(mockWatchManager.classifyTickers).toHaveBeenCalledTimes(1);
-      expect(mockWatchManager.classifyTickers).toHaveBeenCalledWith(['AAPL', 'GOOGL']);
+      // Verify paint() was called for full visual refresh
+      expect(mockPaintManager.paint).toHaveBeenCalled();
 
-      // Verify color painting was called
-      expect(mockPaintManager.paintSymbols).toHaveBeenCalled();
-
-      // Verify flag painting
-      expect(mockFlagManager.paint).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.SYMBOL, Constants.DOM.WATCHLIST.ITEM);
-
-      // Verify FNO painting
-      expect(mockPaintManager.paintSymbols).toHaveBeenCalledWith(
-        Constants.DOM.WATCHLIST.SYMBOL,
-        mockFnoManager.getAllFnoTickers(),
-        Constants.UI.COLORS.FNO_CSS
-      );
-
-      // Verify color reset
-      expect(mockPaintManager.resetColors).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.SYMBOL);
+      // Verify summarizeBuckets was called for summary display
+      expect(mockPaintManager.summarizeBuckets).toHaveBeenCalledWith();
     });
 
     it('should build summary labels for all categories', async () => {
-      await watchlistManager.paintWatchList();
+      await watchlistManager.refresh();
 
       // Should call buildLabel for each color category
       expect(mockUIUtil.buildLabel).toHaveBeenCalledTimes(ALL_WATCH_CATEGORIES.length);
     });
 
     it('should set widget height for expansion', async () => {
-      await watchlistManager.paintWatchList();
+      await watchlistManager.refresh();
 
       expect(mockJQueryChain.css).toHaveBeenCalledWith('height', '20000px');
     });
 
     it('should show all lines during reset', async () => {
-      await watchlistManager.paintWatchList();
+      await watchlistManager.refresh();
 
       expect(mockJQueryChain.show).toHaveBeenCalled();
     });
 
-    it('should paint uncategorized DOM tickers as default white', async () => {
-      await watchlistManager.paintWatchList();
+    it('should use returned buckets for summary display', async () => {
+      await watchlistManager.refresh();
 
-      // GOOGL is uncategorized -> should be painted as default white
-      expect(mockPaintManager.paintSymbols).toHaveBeenCalledWith(
-        Constants.DOM.WATCHLIST.SYMBOL,
-        classifyResult.uncategorized,
-        { color: Constants.UI.COLORS.DEFAULT }
+      // AAPL is in READY bucket — default_plus plus one uncategorized
+      expect(mockUIUtil.buildLabel).toHaveBeenCalledWith(
+        expect.stringMatching(/1\||0\|/),
+        expect.any(String)
       );
-    });
-  });
-
-  describe('applyDefaultFilters', () => {
-    it('should add white/default color filter', () => {
-      watchlistManager.applyDefaultFilters();
-
-      // Just verify no crash — implementation is internal filtering
-      expect(mockPaintManager.resetColors).not.toHaveBeenCalled();
     });
   });
 });

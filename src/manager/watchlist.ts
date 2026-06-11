@@ -1,10 +1,13 @@
 import { Constants } from '../models/constant';
+import { TickerArea, TickerVisibility } from '../models/dom';
 import { IPaintManager } from './paint';
 import { IUIUtil } from '../util/ui';
-import { IFnoManager } from './fno';
-import { IWatchManager } from './watch';
-import { IFlagManager } from './flag';
-import { ALL_WATCH_CATEGORIES, CategoryBuckets } from '../models/watch';
+import { ALL_WATCH_CATEGORIES, BucketSummary } from '../models/watch';
+
+/** Mouse button codes for filtering */
+const LEFT_CLICK = 1;
+const MIDDLE_CLICK = 2;
+const RIGHT_CLICK = 3;
 
 /**
  * Filter options for watchlist manipulation
@@ -17,35 +20,26 @@ interface WatchlistFilter {
 }
 
 /**
- * Interface for managing TradingView watchlist operations
+ * Interface for managing TradingView watchlist operations.
+ * Ticker retrieval and painting are delegated to DomManager and PaintManager.
+ * This interface only handles watchlist-specific UI/filter behaviour.
  */
 export interface ITradingViewWatchlistManager {
   /**
-   * Retrieves watchlist tickers
-   * @param visible - If true, only returns visible tickers
-   * @returns Array of watchlist tickers
+   * Refreshes watchlist UI: layout reset, ticker paint, summary labels, filters.
    */
-  getTickers(visible?: boolean): string[];
+  refresh(): Promise<void>;
 
   /**
-   * Get selected tickers from watchlist
-   * @returns Array of selected ticker symbols
+   * Refreshes summary labels and reapplies active filters without
+   * repainting ticker decals. Use after targeted ticker repaints
+   * (e.g. category hotkeys).
    */
-  getSelectedTickers(): string[];
-
-  /**
-   * Paints the TradingView watchlist using fresh backend classification.
-   */
-  paintWatchList(): Promise<void>;
-
-  /**
-   * Applies default filters to the watchlist
-   */
-  applyDefaultFilters(): void;
+  refreshSummary(): Promise<void>;
 }
 
 /**
- * Manages TradingView watchlist operations
+ * Manages TradingView watchlist layout, summary labels, and filters.
  * @class TradingViewWatchlistManager
  */
 export class TradingViewWatchlistManager implements ITradingViewWatchlistManager {
@@ -57,93 +51,44 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
 
   constructor(
     private readonly paintManager: IPaintManager,
-    private readonly uiUtil: IUIUtil,
-    private readonly fnoManager: IFnoManager,
-    private readonly watchManager: IWatchManager,
-    private readonly flagManager: IFlagManager
-  ) {}
-
-  /** @inheritdoc */
-  getTickers(visible = false): string[] {
-    const selector = Constants.DOM.WATCHLIST.SYMBOL;
-    return this.tickerListHelper(selector, visible);
-  }
-
-  /** @inheritdoc */
-  getSelectedTickers(): string[] {
-    const watchlist = Constants.DOM.WATCHLIST;
-    return $(`${watchlist.SELECTED} ${watchlist.SYMBOL}:visible`)
-      .toArray()
-      .map((s) => s.textContent || s.innerHTML);
-  }
-
-  /**
-   * Helper function for retrieving ticker lists
-   * @private
-   * @param selector - The CSS selector for finding elements
-   * @param visible - Whether to only get visible elements
-   * @returns Array of ticker strings
-   */
-  private tickerListHelper(selector: string, visible: boolean): string[] {
-    const finalSelector = visible ? selector + ':visible' : selector;
-    const elements = $(finalSelector);
-
-    // Use textContent instead of innerHTML to avoid HTML entity encoding issues (M&amp;M → M&M)
-    return elements.toArray().map((s) => s.textContent || s.innerHTML);
-  }
-
-  /** @inheritdoc */
-  async paintWatchList(): Promise<void> {
-    this.resetWatchList();
-
-    const allTickers = this.getTickers();
-
-    // Classify all tickers into category buckets (single backend pass)
-    const { buckets, uncategorized } = await this.watchManager.classifyTickers(allTickers);
-
-    // Paint Symbols in ALL_WATCH_CATEGORIES order
-    for (const cat of ALL_WATCH_CATEGORIES) {
-      const symbols = buckets.get(cat.id);
-      if (symbols?.size) {
-        this.paintManager.paintSymbols(Constants.DOM.WATCHLIST.SYMBOL, symbols, { color: cat.color });
-      }
-    }
-
-    // Paint default white for uncategorized DOM tickers
-    if (uncategorized.size) {
-      this.paintManager.paintSymbols(Constants.DOM.WATCHLIST.SYMBOL, uncategorized, {
-        color: Constants.UI.COLORS.DEFAULT,
-      });
-    }
-
-    // Paint Flags
-    this.flagManager.paint(Constants.DOM.WATCHLIST.SYMBOL, Constants.DOM.WATCHLIST.ITEM);
-
-    // Ticker Set Summary Update
-    this.displaySetSummary({ buckets, uncategorized });
-
-    // Mark FNO
-    this.paintManager.paintSymbols(
-      Constants.DOM.WATCHLIST.SYMBOL,
-      this.fnoManager.getAllFnoTickers(),
-      Constants.UI.COLORS.FNO_CSS
-    );
-
-    // Apply Filters
-    this.applyFilters();
-  }
-
-  /** @inheritdoc */
-  applyDefaultFilters(): void {
-    // Apply white filter by default
+    private readonly uiUtil: IUIUtil
+  ) {
+    // Initialise default white filter
     this.addFilter({
       color: Constants.UI.COLORS.DEFAULT,
-      index: 1, // Left click
+      index: LEFT_CLICK,
       ctrl: false,
       shift: false,
     });
   }
 
+  /** @inheritdoc */
+  async refresh(): Promise<void> {
+    this.resetWatchList();
+
+    // Delegate all ticker painting (symbols, flags, FNO) to PaintManager
+    await this.paintManager.paint();
+
+    // Reuse summary + filter refresh
+    await this.refreshSummary();
+  }
+
+  /** @inheritdoc */
+  async refreshSummary(): Promise<void> {
+    // Recompute bucket counts without repainting DOM
+    const result = await this.paintManager.summarizeBuckets();
+
+    // Update summary labels
+    this.displaySetSummary(result);
+
+    // Re-apply active filters
+    this.applyFilters();
+  }
+
+  /**
+   * Reset watchlist layout and visibility. Does NOT reset visual decals
+   * (colors, flags, F&O borders) — those are handled by PaintManager.paint().
+   */
   private resetWatchList(): void {
     // Increase Widget Height to prevent Line Filtering
     $(Constants.DOM.WATCHLIST.WIDGET).css('height', '20000px');
@@ -155,24 +100,34 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     // Disable List Transformation
     $(Constants.DOM.WATCHLIST.LINE).css('position', '');
     $(Constants.DOM.WATCHLIST.CONTAINER).css('overflow', '');
+  }
 
-    //Reset Color
-    this.paintManager.resetColors(Constants.DOM.WATCHLIST.SYMBOL);
+  /**
+   * Build a WatchlistFilter from a jQuery mouse-down event.
+   * @private
+   */
+  private createFilterFromMouseEvent(e: JQuery.MouseDownEvent): WatchlistFilter {
+    return {
+      color: $(e.target).data('color') as string,
+      index: e.which,
+      ctrl: e.originalEvent?.ctrlKey || false,
+      shift: e.originalEvent?.shiftKey || false,
+    };
   }
 
   /**
    * Displays the ticker set summary in the UI
    * @private
-   * @param result Category bucket results from classification
+   * @param result Bucket summary counts from paint
    */
-  private displaySetSummary(result: CategoryBuckets): void {
+  private displaySetSummary(result: BucketSummary): void {
     const $watchSummary = $(`#${Constants.UI.IDS.AREAS.SUMMARY}`);
     $watchSummary.empty();
 
-    const uncategorizedCount = result.uncategorized.size;
+    const uncategorizedCount = result.uncategorizedCount;
 
     for (const cat of ALL_WATCH_CATEGORIES) {
-      const count = result.buckets.get(cat.id)?.size ?? 0;
+      const count = result.buckets.get(cat.id) ?? 0;
       const displayCount = cat.id === 'DEFAULT_DAILY' ? count + uncategorizedCount : count;
       const color = cat.color;
 
@@ -183,12 +138,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
 
       $label
         .mousedown((e: JQuery.MouseDownEvent) => {
-          this.addFilter({
-            color: $(e.target).data('color') as string,
-            index: e.which,
-            ctrl: e.originalEvent?.ctrlKey || false,
-            shift: e.originalEvent?.shiftKey || false,
-          });
+          this.addFilter(this.createFilterFromMouseEvent(e));
         })
         .contextmenu((e) => {
           e.preventDefault();
@@ -197,8 +147,11 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     }
   }
 
-  /** @inheritdoc */
-  addFilter(filter: WatchlistFilter): void {
+  /**
+   * Add a filter to the current filter chain.
+   * @private
+   */
+  private addFilter(filter: WatchlistFilter): void {
     if (!filter.ctrl && !filter.shift) {
       // Reset chain if no modifier keys
       this.filterChain = [filter];
@@ -209,8 +162,11 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     this.applyFilters();
   }
 
-  /** @inheritdoc */
-  applyFilters(): void {
+  /**
+   * Apply all filters in the current chain.
+   * @private
+   */
+  private applyFilters(): void {
     this.filterChain.forEach((filter) => this.filterWatchList(filter));
   }
 
@@ -230,8 +186,8 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
    * @param shift - If true, hide matching elements instead of showing them
    */
   private filterByColor(color: string, shift: boolean): void {
-    const symbolSelector = `${Constants.DOM.WATCHLIST.SYMBOL}[style*='color: ${color}']`;
-    const screenerSymbolSelector = `${Constants.DOM.SCREENER.SYMBOL}[style*='color: ${color}']`;
+    const symbolSelector = `${TickerArea.WATCHLIST.getSymbolSelector(TickerVisibility.ALL)}[style*='color: ${color}']`;
+    const screenerSymbolSelector = `${TickerArea.SCREENER.getSymbolSelector(TickerVisibility.ALL)}[style*='color: ${color}']`;
 
     if (shift) {
       $(Constants.DOM.WATCHLIST.LINE).not(`:has(${symbolSelector})`).hide();
@@ -269,26 +225,6 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   }
 
   /**
-   * Handles initial filter state setup
-   * @private
-   * @param filter - The filter parameters
-   */
-  private handleFilterInit(filter: WatchlistFilter): void {
-    if (!filter.ctrl && !filter.shift) {
-      this.hideAllItems();
-    }
-  }
-
-  /**
-   * Handles symbol-based filtering (left-click)
-   * @private
-   * @param filter - The filter parameters
-   */
-  private handleSymbolFilter(filter: WatchlistFilter): void {
-    this.filterByColor(filter.color, filter.shift);
-  }
-
-  /**
    * Handles filter reset (middle-click)
    * @private
    */
@@ -298,31 +234,24 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   }
 
   /**
-   * Handles flag-based filtering (right-click)
-   * @private
-   * @param filter - The filter parameters
-   */
-  private handleFlagFilter(filter: WatchlistFilter): void {
-    this.filterByFlag(filter.color, filter.shift);
-  }
-
-  /**
    * Filters the watchlist symbols based on the provided filter parameters
    * @private
-   * @param filter - The filter parameters
    */
   private filterWatchList(filter: WatchlistFilter): void {
-    this.handleFilterInit(filter);
+    // On a new filter chain (non-modifier click), hide all items first
+    if (!filter.ctrl && !filter.shift) {
+      this.hideAllItems();
+    }
 
     switch (filter.index) {
-      case 1: // Left Click
-        this.handleSymbolFilter(filter);
+      case LEFT_CLICK:
+        this.filterByColor(filter.color, filter.shift);
         break;
-      case 2: // Middle Click
+      case MIDDLE_CLICK:
         this.handleResetFilter();
         break;
-      case 3: // Right Click
-        this.handleFlagFilter(filter);
+      case RIGHT_CLICK:
+        this.filterByFlag(filter.color, filter.shift);
         break;
       default:
         throw new Error('You have a strange Mouse!');

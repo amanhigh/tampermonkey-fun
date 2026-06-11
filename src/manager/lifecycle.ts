@@ -1,0 +1,62 @@
+import { ITickerClient } from '../client/ticker';
+import { CreateTickerRequest, Ticker } from '../models/ticker';
+import { IPaintManager } from './paint';
+import { ICategoryManager } from './category';
+
+/**
+ * Request type for starting to track a new primary ticker.
+ * Alias for the backend create-ticker request.
+ */
+export type StartTrackingRequest = CreateTickerRequest;
+
+/**
+ * Interface for managing ticker lifecycle operations — create, delete,
+ * and the cache-invalidation + paint orchestration that wraps them.
+ */
+export interface ILifecycleManager {
+  /**
+   * Start tracking a new primary ticker: evicts stale cache, creates the
+   * backend record, and schedules a repaint so the new category shows
+   * immediately.
+   * @param data - Ticker creation payload
+   * @returns Promise resolving with created ticker record
+   */
+  startTracking(data: StartTrackingRequest): Promise<Ticker>;
+
+  /**
+   * Stop tracking a primary ticker: evicts stale cache, deletes the
+   * backend record, and schedules a repaint.
+   * @param ticker - Ticker symbol to stop tracking
+   */
+  stopTracking(ticker: string): Promise<void>;
+}
+
+/**
+ * Orchestrates ticker lifecycle operations.
+ *
+ * Ensures the category cache is invalidated and the UI repainted
+ * whenever a ticker is created or deleted, without introducing
+ * circular dependencies between TickerManager ↔ PaintManager.
+ */
+export class LifecycleManager implements ILifecycleManager {
+  constructor(
+    private readonly tickerClient: ITickerClient,
+    private readonly categoryManager: ICategoryManager,
+    private readonly paintManager: IPaintManager
+  ) {}
+
+  /** @inheritdoc */
+  async startTracking(data: StartTrackingRequest): Promise<Ticker> {
+    this.categoryManager.evictTicker(data.ticker);
+    const ticker = await this.tickerClient.createTicker(data);
+    void this.paintManager.paintTickers([data.ticker]);
+    return ticker;
+  }
+
+  /** @inheritdoc */
+  async stopTracking(ticker: string): Promise<void> {
+    this.categoryManager.evictTicker(ticker);
+    await this.tickerClient.deleteTicker(ticker);
+    void this.paintManager.paintTickers([ticker]);
+  }
+}

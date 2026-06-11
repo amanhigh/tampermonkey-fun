@@ -1,4 +1,5 @@
 import { SequenceMap, SequenceType, TimeFrameConfig, TimeFrame, TimeFrameMap } from './trading';
+import type { TickerTimeframe } from './ticker';
 
 /**
  * Application-wide constants organized by domain and functionality
@@ -123,6 +124,7 @@ export const Constants = Object.freeze({
         STOP_PRICE: 'input[data-property-id*="StopLevelPrice"]',
       },
     },
+    // HACK: Use Screener and Watchlist only via TickerArea.
     SCREENER: {
       SYMBOL: 'a.tickerName-GrtoTeat', // Old name: screenerSymbolSelector
       MAIN: '[data-qa-id="screener-widget"]', // Old name: screenerSelector
@@ -251,6 +253,11 @@ Support:
         [SequenceType.MWD]: [TimeFrame.THREE_MONTHLY, TimeFrame.MONTHLY, TimeFrame.WEEKLY, TimeFrame.DAILY],
         [SequenceType.YR]: [TimeFrame.SIX_MONTHLY, TimeFrame.THREE_MONTHLY, TimeFrame.MONTHLY, TimeFrame.WEEKLY],
       } as SequenceMap,
+      /** Maps a SequenceType to the ordered backend timeframe list. */
+      TO_TIMEFRAMES: {
+        [SequenceType.MWD]: ['MN', 'WK', 'DL'] as TickerTimeframe[],
+        [SequenceType.YR]: ['YR', 'SMN', 'TMN', 'MN', 'WK'] as TickerTimeframe[],
+      } as Record<SequenceType, TickerTimeframe[]>,
     },
   },
 
@@ -263,6 +270,16 @@ Support:
     PORTS: KOHAN_PORTS,
     BASE_URL: `http://localhost:${KOHAN_PORTS.DEV}/v1/api`,
     PAGE_LIMIT: 100,
+  },
+
+  /** Cache configuration for manager lookups */
+  CACHE: {
+    CATEGORY: {
+      /** Maximum number of entries in the category LRU cache (1000). */
+      MAX: 1000,
+      /** Time-to-live for cached category entries in ms (5 minutes). */
+      TTL_MS: 5 * 60 * 1000,
+    },
   },
 
   // Recent ticker configuration

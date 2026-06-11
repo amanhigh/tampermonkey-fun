@@ -5,7 +5,7 @@ import { IWatchListHandler } from './watchlist';
 import { ITickerChangeHandler } from './ticker_change';
 import { IHotkeyHandler } from './hotkey';
 import { IAlertHandler } from './alert';
-import { ITradingViewScreenerManager } from '../manager/screener';
+import { IPaintManager } from '../manager/paint';
 
 /**
  * Interface for application initialization handling
@@ -35,7 +35,7 @@ export class OnLoadHandler implements IOnLoadHandler {
     private readonly hotkeyHandler: IHotkeyHandler,
     private readonly alertHandler: IAlertHandler,
     private readonly tickerChangeHandler: ITickerChangeHandler,
-    private readonly screenerManager: ITradingViewScreenerManager
+    private readonly paintManager: IPaintManager
   ) {}
 
   /** @inheritdoc */
@@ -108,8 +108,7 @@ export class OnLoadHandler implements IOnLoadHandler {
           this.watchListHandler.onWatchListChange();
         });
 
-        // Apply default filters before first paint
-        this.watchListHandler.applyDefaultFilters();
+        // Full watchlist refresh (default filter is applied on initialization)
         this.watchListHandler.onWatchListChange();
 
         // Set up screener observer
@@ -139,8 +138,8 @@ export class OnLoadHandler implements IOnLoadHandler {
           if (isScreenerOpen) {
             console.log('🟢 SCREENER OPENED - triggering repaint');
             setTimeout(() => {
-              void this.screenerManager
-                .paintScreener()
+              void this.paintManager
+                .paint()
                 .then(() => {
                   console.log('✅ Screener repainted successfully');
                 })

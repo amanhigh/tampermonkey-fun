@@ -17,12 +17,6 @@ const TV_ERRORS = Object.freeze({
  */
 export interface ITradingViewManager {
   /**
-   * Retrieves the name from the DOM
-   * @returns The name retrieved from the DOM
-   */
-  getName(): string;
-
-  /**
    * Retrieves the last traded price
    * @returns The last traded price as a float, or null if parsing fails
    */
@@ -98,11 +92,6 @@ export class TradingViewManager implements ITradingViewManager {
     if ($save.length) {
       $save.click();
     }
-  }
-
-  /** @inheritdoc */
-  getName(): string {
-    return $(Constants.DOM.BASIC.NAME)[0].innerHTML;
   }
 
   /** @inheritdoc */
