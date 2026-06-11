@@ -1,6 +1,7 @@
 import { Notifier } from '../util/notify';
 import { IDomManager } from '../manager/dom';
 import { ITickerManager } from '../manager/ticker';
+import { ILifecycleManager } from '../manager/lifecycle';
 import { IStyleManager } from '../manager/style';
 import { IAlertTickerHandler } from './alert_ticker';
 
@@ -37,6 +38,7 @@ export class TickerHandler implements ITickerHandler {
     private readonly domManager: IDomManager,
     private readonly styleManager: IStyleManager,
     private readonly tickerManager: ITickerManager,
+    private readonly lifecycleManager: ILifecycleManager,
     private readonly alertTickerHandler: IAlertTickerHandler
   ) {}
 
@@ -60,7 +62,7 @@ export class TickerHandler implements ITickerHandler {
     }
 
     try {
-      await this.tickerManager.stopTracking(tvTicker);
+      await this.lifecycleManager.stopTracking(tvTicker);
     } catch (error) {
       Notifier.warn(`Failed to delete ticker ${tvTicker}: ${(error as Error).message}`);
     }

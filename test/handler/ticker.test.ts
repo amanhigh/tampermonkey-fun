@@ -1,6 +1,7 @@
 import { TickerHandler } from '../../src/handler/ticker';
 import { IDomManager } from '../../src/manager/dom';
 import { ITickerManager } from '../../src/manager/ticker';
+import { ILifecycleManager } from '../../src/manager/lifecycle';
 import { IStyleManager } from '../../src/manager/style';
 import { IAlertTickerHandler } from '../../src/handler/alert_ticker';
 import { Notifier } from '../../src/util/notify';
@@ -22,6 +23,7 @@ describe('TickerHandler', () => {
   let mockDomManager: jest.Mocked<IDomManager>;
   let mockStyleManager: jest.Mocked<IStyleManager>;
   let mockTickerManager: jest.Mocked<ITickerManager>;
+  let mockLifecycleManager: jest.Mocked<ILifecycleManager>;
   let mockAlertTickerHandler: jest.Mocked<IAlertTickerHandler>;
 
   beforeEach(() => {
@@ -38,13 +40,16 @@ describe('TickerHandler', () => {
 
     mockTickerManager = {
       getTicker: jest.fn(),
-      startTracking: jest.fn(),
       updateTicker: jest.fn(),
       markRecent: jest.fn(),
-      stopTracking: jest.fn(),
       listTickers: jest.fn(),
       setExchange: jest.fn(),
     } as unknown as jest.Mocked<ITickerManager>;
+
+    mockLifecycleManager = {
+      startTracking: jest.fn(),
+      stopTracking: jest.fn(),
+    } as any;
 
     mockAlertTickerHandler = {
       linkInvestingTicker: jest.fn().mockResolvedValue(undefined),
@@ -54,6 +59,7 @@ describe('TickerHandler', () => {
       mockDomManager,
       mockStyleManager,
       mockTickerManager,
+      mockLifecycleManager,
       mockAlertTickerHandler
     );
   });
@@ -102,7 +108,7 @@ describe('TickerHandler', () => {
   describe('stopTracking', () => {
     test('clears styles when stopped ticker matches current chart ticker', async () => {
       mockDomManager.getTicker.mockReturnValue('TV_TICKER');
-      mockTickerManager.stopTracking.mockResolvedValue(undefined);
+      mockLifecycleManager.stopTracking.mockResolvedValue(undefined);
 
       await handler.stopTracking('TV_TICKER');
 
@@ -111,23 +117,23 @@ describe('TickerHandler', () => {
 
     test('does not clear styles when stopped ticker is not current', async () => {
       mockDomManager.getTicker.mockReturnValue('OTHER_TICKER');
-      mockTickerManager.stopTracking.mockResolvedValue(undefined);
+      mockLifecycleManager.stopTracking.mockResolvedValue(undefined);
 
       await handler.stopTracking('TV_TICKER');
 
       expect(mockStyleManager.clearAll).not.toHaveBeenCalled();
     });
 
-    test('calls tickerManager.stopTracking with tvTicker', async () => {
-      mockTickerManager.stopTracking.mockResolvedValue(undefined);
+    test('calls lifecycleManager.stopTracking with tvTicker', async () => {
+      mockLifecycleManager.stopTracking.mockResolvedValue(undefined);
 
       await handler.stopTracking('TV_TICKER');
 
-      expect(mockTickerManager.stopTracking).toHaveBeenCalledWith('TV_TICKER');
+      expect(mockLifecycleManager.stopTracking).toHaveBeenCalledWith('TV_TICKER');
     });
 
     test('warns when backend delete fails', async () => {
-      mockTickerManager.stopTracking.mockRejectedValue(new Error('Network error'));
+      mockLifecycleManager.stopTracking.mockRejectedValue(new Error('Network error'));
 
       await handler.stopTracking('TV_TICKER');
 
@@ -135,7 +141,7 @@ describe('TickerHandler', () => {
     });
 
     test('notifies success after stop tracking', async () => {
-      mockTickerManager.stopTracking.mockResolvedValue(undefined);
+      mockLifecycleManager.stopTracking.mockResolvedValue(undefined);
 
       await handler.stopTracking('TV_TICKER');
 

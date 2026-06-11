@@ -121,15 +121,6 @@ describe('TradingViewManager', () => {
     });
   });
 
-  describe('getName', () => {
-    test('should return innerHTML of name element', () => {
-      const result = manager.getName();
-
-      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.BASIC.NAME);
-      expect(result).toBe('Test Symbol Name');
-    });
-  });
-
   describe('getLastTradedPrice', () => {
     test('should return parsed LTP when element exists', () => {
       mockJQueryElement.text.mockReturnValue('1,234.56');

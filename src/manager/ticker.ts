@@ -1,6 +1,5 @@
 import { ITickerClient } from '../client/ticker';
 import { CreateTickerRequest, TickerQueryParams, Ticker, TickerUpdateRequest } from '../models/ticker';
-import { IPaintManager } from './paint';
 
 /**
  * Request type for starting to track a new primary ticker.
@@ -12,20 +11,12 @@ export type StartTrackingRequest = CreateTickerRequest;
  * Interface for managing primary TradingView ticker lifecycle and data.
  *
  * Domain methods:
- * - startTracking / stopTracking → user-facing lifecycle
  * - markRecent → convenience over PATCH last-opened
  * - setExchange → convenience over updateTicker
  *
  * Generic read/write methods mirror the backend client.
  */
 export interface ITickerManager {
-  /**
-   * Start tracking a new primary ticker. Creates a backend record.
-   * @param data - Ticker creation payload
-   * @returns Promise resolving with created ticker record
-   */
-  startTracking(data: StartTrackingRequest): Promise<Ticker>;
-
   /**
    * Get one primary ticker record.
    * @param ticker - Primary ticker identity
@@ -49,12 +40,6 @@ export interface ITickerManager {
   markRecent(ticker: string): Promise<void>;
 
   /**
-   * Stop tracking a primary ticker. Backend cascades to linked Alert tickers.
-   * @param ticker - Primary ticker identity
-   */
-  stopTracking(ticker: string): Promise<void>;
-
-  /**
    * List ALL primary tickers matching filters, auto-paginating.
    * @param params - Query parameters
    * @returns Promise resolving with all matching ticker records
@@ -72,22 +57,10 @@ export interface ITickerManager {
 }
 
 /**
- * Manages primary TradingView ticker lifecycle and data against the Kohan backend.
+ * Manages primary TradingView ticker CRUD against the Kohan backend.
  */
 export class TickerManager implements ITickerManager {
-  constructor(
-    private readonly tickerClient: ITickerClient,
-    /** Lazy getter to avoid circular DI at construction time. */
-    private readonly getPaintManager: () => IPaintManager
-  ) {}
-
-  /** @inheritdoc */
-  async startTracking(data: StartTrackingRequest): Promise<Ticker> {
-    const ticker = await this.tickerClient.createTicker(data);
-    this.getCategoryManager().evictTicker(data.ticker);
-    void this.getPaintManager().paintTickers([data.ticker]);
-    return ticker;
-  }
+  constructor(private readonly tickerClient: ITickerClient) {}
 
   /** @inheritdoc */
   async getTicker(ticker: string): Promise<Ticker> {
@@ -104,13 +77,6 @@ export class TickerManager implements ITickerManager {
     await this.tickerClient.patchTickerLastOpened(ticker, {
       last_opened_at: new Date().toISOString(),
     });
-  }
-
-  /** @inheritdoc */
-  async stopTracking(ticker: string): Promise<void> {
-    await this.tickerClient.deleteTicker(ticker);
-    this.getCategoryManager().evictTicker(ticker);
-    void this.getPaintManager().paintTickers([ticker]);
   }
 
   /** @inheritdoc */

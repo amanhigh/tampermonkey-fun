@@ -1,7 +1,7 @@
 import { SequenceHandler } from '../../src/handler/sequence';
 import { ISequenceManager } from '../../src/manager/sequence';
 import { IDomManager } from '../../src/manager/dom';
-import { ITickerManager } from '../../src/manager/ticker';
+import { ILifecycleManager } from '../../src/manager/lifecycle';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { AlertTicker } from '../../src/models/alert_ticker';
 import { SequenceType } from '../../src/models/trading';
@@ -30,7 +30,7 @@ describe('SequenceHandler', () => {
   let sequenceHandler: SequenceHandler;
   let mockSequenceManager: jest.Mocked<ISequenceManager>;
   let mockDomManager: jest.Mocked<IDomManager>;
-  let mockTickerManager: jest.Mocked<ITickerManager>;
+  let mockLifecycleManager: jest.Mocked<ILifecycleManager>;
   let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
   let mockDisplayInput: any;
 
@@ -60,8 +60,9 @@ describe('SequenceHandler', () => {
       isScreenerVisible: jest.fn(),
     } as any;
 
-    mockTickerManager = {
+    mockLifecycleManager = {
       startTracking: jest.fn(),
+      stopTracking: jest.fn(),
     } as any;
 
     mockAlertTickerManager = {
@@ -82,7 +83,7 @@ describe('SequenceHandler', () => {
       mockSequenceManager,
       mockDomManager,
       mockAlertTickerManager,
-      mockTickerManager
+      mockLifecycleManager
     );
   });
 
@@ -143,11 +144,11 @@ describe('SequenceHandler', () => {
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockDomManager.getCurrentExchange.mockReturnValue('NSE');
       mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
-      mockTickerManager.startTracking.mockResolvedValue({ ticker: 'TVTICKER' } as Ticker);
+      mockLifecycleManager.startTracking.mockResolvedValue({ ticker: 'TVTICKER' } as Ticker);
 
       await sequenceHandler.startTracking();
 
-      expect(mockTickerManager.startTracking).toHaveBeenCalledWith({
+      expect(mockLifecycleManager.startTracking).toHaveBeenCalledWith({
         ticker: 'TVTICKER',
         exchange: 'NSE',
         timeframes: ['MN', 'WK', 'DL'],
@@ -163,11 +164,11 @@ describe('SequenceHandler', () => {
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockDomManager.getCurrentExchange.mockReturnValue('NSE');
       mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.YR);
-      mockTickerManager.startTracking.mockResolvedValue({ ticker: 'TVTICKER' } as Ticker);
+      mockLifecycleManager.startTracking.mockResolvedValue({ ticker: 'TVTICKER' } as Ticker);
 
       await sequenceHandler.startTracking();
 
-      expect(mockTickerManager.startTracking).toHaveBeenCalledWith(
+      expect(mockLifecycleManager.startTracking).toHaveBeenCalledWith(
         expect.objectContaining({
           timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'],
         })
@@ -178,7 +179,7 @@ describe('SequenceHandler', () => {
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockDomManager.getCurrentExchange.mockReturnValue('NSE');
       mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
-      mockTickerManager.startTracking.mockRejectedValue(new Error('Already exists'));
+      mockLifecycleManager.startTracking.mockRejectedValue(new Error('Already exists'));
 
       await sequenceHandler.startTracking();
 

@@ -30,6 +30,7 @@ import { ISequenceManager, SequenceManager } from '../manager/sequence';
 import { IPaintManager, PaintManager } from '../manager/paint';
 import { IDomManager, DomManager } from '../manager/dom';
 import { ITickerManager, TickerManager } from '../manager/ticker';
+import { ILifecycleManager, LifecycleManager } from '../manager/lifecycle';
 import { ITradingViewManager, TradingViewManager } from '../manager/tv';
 import { IAlertTickerManager, AlertTickerManager } from '../manager/alert_ticker';
 import { IFnoManager, FnoManager } from '../manager/fno';
@@ -226,9 +227,12 @@ export class Factory {
       Factory.getInstance('kiteManager', () => new KiteManager(Factory.client.kite(), Factory.repo.kite())),
 
     ticker: (): ITickerManager =>
+      Factory.getInstance('tickerManager', () => new TickerManager(Factory.client.ticker())),
+
+    lifecycle: (): ILifecycleManager =>
       Factory.getInstance(
-        'tickerManager',
-        () => new TickerManager(Factory.client.ticker(), () => Factory.manager.paint())
+        'lifecycleManager',
+        () => new LifecycleManager(Factory.client.ticker(), Factory.manager.category(), Factory.manager.paint())
       ),
 
     tv: (): ITradingViewManager =>
@@ -435,6 +439,7 @@ export class Factory {
             Factory.manager.dom(),
             Factory.manager.style(),
             Factory.manager.ticker(),
+            Factory.manager.lifecycle(),
             Factory.handler.alertTicker()
           )
       ),
@@ -511,7 +516,7 @@ export class Factory {
             Factory.manager.sequence(),
             Factory.manager.dom(),
             Factory.manager.alertTicker(),
-            Factory.manager.ticker()
+            Factory.manager.lifecycle()
           )
       ),
     journal: (): IJournalHandler =>

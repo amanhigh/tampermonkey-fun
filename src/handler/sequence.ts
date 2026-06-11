@@ -1,7 +1,7 @@
 import { ISequenceManager } from '../manager/sequence';
 import { IDomManager } from '../manager/dom';
 import { IAlertTickerManager } from '../manager/alert_ticker';
-import { ITickerManager } from '../manager/ticker';
+import { ILifecycleManager } from '../manager/lifecycle';
 import { Constants } from '../models/constant';
 import { SequenceType } from '../models/trading';
 import { Notifier } from '../util/notify';
@@ -41,7 +41,7 @@ export class SequenceHandler implements ISequenceHandler {
     private readonly sequenceManager: ISequenceManager,
     private readonly domManager: IDomManager,
     private readonly alertTickerManager: IAlertTickerManager,
-    private readonly tickerManager: ITickerManager
+    private readonly lifecycleManager: ILifecycleManager
   ) {}
 
   /** @inheritdoc */
@@ -93,7 +93,7 @@ export class SequenceHandler implements ISequenceHandler {
     const timeframes = Constants.TIME.SEQUENCE_TYPES.TO_TIMEFRAMES[sequence];
 
     try {
-      await this.tickerManager.startTracking({
+      await this.lifecycleManager.startTracking({
         ticker,
         exchange,
         timeframes,

@@ -15,6 +15,12 @@ export interface IDomManager {
   getTicker(): string;
 
   /**
+   * Gets current ticker name from the DOM header.
+   * @returns The ticker name text
+   */
+  getName(): string;
+
+  /**
    * Gets current exchange from DOM
    * @returns Current exchange
    */
@@ -85,6 +91,11 @@ export class DomManager implements IDomManager {
       throw new Error('Exchange not found');
     }
     return exchange;
+  }
+
+  /** @inheritdoc */
+  getName(): string {
+    return $(Constants.DOM.BASIC.NAME)[0].innerHTML;
   }
 
   /** @inheritdoc */
