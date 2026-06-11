@@ -1,5 +1,6 @@
 import { ITickerClient } from '../client/ticker';
 import { CreateTickerRequest, TickerQueryParams, Ticker, TickerUpdateRequest } from '../models/ticker';
+import { IPaintManager } from './paint';
 
 /**
  * Request type for starting to track a new primary ticker.
@@ -74,11 +75,17 @@ export interface ITickerManager {
  * Manages primary TradingView ticker lifecycle and data against the Kohan backend.
  */
 export class TickerManager implements ITickerManager {
-  constructor(private readonly tickerClient: ITickerClient) {}
+  constructor(
+    private readonly tickerClient: ITickerClient,
+    /** Lazy getter to avoid circular DI at construction time. */
+    private readonly getPaintManager: () => IPaintManager
+  ) {}
 
   /** @inheritdoc */
   async startTracking(data: StartTrackingRequest): Promise<Ticker> {
-    return this.tickerClient.createTicker(data);
+    const ticker = await this.tickerClient.createTicker(data);
+    void this.getPaintManager().paintTickers([data.ticker]);
+    return ticker;
   }
 
   /** @inheritdoc */
@@ -101,6 +108,7 @@ export class TickerManager implements ITickerManager {
   /** @inheritdoc */
   async stopTracking(ticker: string): Promise<void> {
     await this.tickerClient.deleteTicker(ticker);
+    void this.getPaintManager().paintTickers([ticker]);
   }
 
   /** @inheritdoc */

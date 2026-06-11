@@ -41,6 +41,14 @@ export interface ICategoryManager {
    * @param tickers List of ticker symbols to assign
    */
   recordFlagCategory(categoryId: FlagCategoryId, tickers: string[]): void;
+
+  /**
+   * Resolve categories for many tickers in parallel batches.
+   * Returns a map so callers can iterate without further I/O.
+   * @param tickers Ticker symbols to look up
+   * @param concurrency Max concurrent fetches per batch (default 10)
+   */
+  getBatchCategory(tickers: string[], concurrency?: number): Promise<Map<string, TickerCategory>>;
 }
 
 // ── Implementation ──
@@ -102,18 +110,22 @@ export class CategoryManager implements ICategoryManager {
     }
   }
 
-  // ── Cache helpers ──
-
-  /**
-   * Optimistically set a partial category in the cache.
-   * Merges with any existing cached value so the other side is preserved.
-   */
-  private optimisticSet(ticker: string, partial: Partial<TickerCategory>): void {
-    const current = this.categoryCache.get(ticker);
-    this.categoryCache.set(ticker, {
-      watch: partial.watch !== undefined ? partial.watch : current?.watch,
-      flag: partial.flag !== undefined ? partial.flag : current?.flag,
-    });
+  /** @inheritdoc */
+  async getBatchCategory(tickers: string[], concurrency: number = 10): Promise<Map<string, TickerCategory>> {
+    const results = new Map<string, TickerCategory>();
+    for (let i = 0; i < tickers.length; i += concurrency) {
+      const batch = tickers.slice(i, i + concurrency);
+      const entries = await Promise.all(
+        batch.map(async (ticker) => {
+          const cat = await this.getTickerCategory(ticker);
+          return [ticker, cat] as const;
+        })
+      );
+      for (const [ticker, cat] of entries) {
+        results.set(ticker, cat);
+      }
+    }
+    return results;
   }
 
   // ── Cache fetch method ──

@@ -226,7 +226,10 @@ export class Factory {
       Factory.getInstance('kiteManager', () => new KiteManager(Factory.client.kite(), Factory.repo.kite())),
 
     ticker: (): ITickerManager =>
-      Factory.getInstance('tickerManager', () => new TickerManager(Factory.client.ticker())),
+      Factory.getInstance(
+        'tickerManager',
+        () => new TickerManager(Factory.client.ticker(), () => Factory.manager.paint())
+      ),
 
     tv: (): ITradingViewManager =>
       Factory.getInstance('tvManager', () => new TradingViewManager(Factory.util.wait(), Factory.client.os())),

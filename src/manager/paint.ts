@@ -93,8 +93,9 @@ export class PaintManager implements IPaintManager {
     const buckets = new Map<WatchCategoryId, number>();
     const uncategorizedTickers: string[] = [];
 
+    const categoryMap = await this.categoryManager.getBatchCategory(tickers);
     for (const ticker of tickers) {
-      const { watch: watchCat } = await this.categoryManager.getTickerCategory(ticker);
+      const { watch: watchCat } = categoryMap.get(ticker)!;
       this.recordBucketSummary(buckets, uncategorizedTickers, ticker, watchCat);
     }
 
@@ -148,14 +149,18 @@ export class PaintManager implements IPaintManager {
     }
 
     const context = this.buildAreaPaintContext(area, tickers);
+
+    // Fetch all categories in parallel (10 concurrent) before touching DOM
+    const categoryMap = await this.categoryManager.getBatchCategory(tickers);
+
     for (const ticker of tickers) {
       const $symbol = this.findSingleSymbol(area, ticker);
       if ($symbol.length === 0) {
         continue;
       }
 
+      const categories = categoryMap.get(ticker)!;
       this.resetTickerVisuals($symbol, context);
-      const categories = await this.categoryManager.getTickerCategory(ticker);
       const symbolColor = this.resolveSymbolColor(categories.watch, ticker, context);
       this.paintTickerVisuals(ticker, categories, symbolColor, context, $symbol);
     }

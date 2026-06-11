@@ -5,6 +5,7 @@ import { IDomManager } from '../../src/manager/dom';
 import { IFnoManager } from '../../src/manager/fno';
 import { IRecentManager } from '../../src/manager/recent';
 import { Constants } from '../../src/models/constant';
+import { TickerCategory } from '../../src/models/category';
 import { WatchCategoryId } from '../../src/models/watch';
 
 // Mock jQuery
@@ -46,9 +47,22 @@ describe('PaintManager', () => {
 
     mockCategoryManager = {
       getTickerCategory: jest.fn().mockResolvedValue({ watch: undefined, flag: undefined }),
+      getBatchCategory: jest.fn(),
       recordWatchCategory: jest.fn(),
       recordFlagCategory: jest.fn(),
     } as unknown as jest.Mocked<ICategoryManager>;
+
+    // Wire getBatchCategory to delegate to getTickerCategory so paint tests
+    // continue to work without additional setup in each test.
+    (mockCategoryManager.getBatchCategory as jest.Mock).mockImplementation(
+      async (tickers: string[]) => {
+        const map = new Map<string, TickerCategory>();
+        for (const t of tickers) {
+          map.set(t, await mockCategoryManager.getTickerCategory(t));
+        }
+        return map;
+      },
+    );
 
     mockFnoManager = {
       isFno: jest.fn().mockReturnValue(false),
