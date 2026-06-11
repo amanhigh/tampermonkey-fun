@@ -63,12 +63,13 @@ export class WatchListHandler implements IWatchListHandler {
     void (async () => {
       await this.categoryManager.recordWatchCategory(categoryId, selectedTickers);
 
-    // Targeted repaint: paintTickers handles WATCHLIST + SCREENER (if visible) + header
-    if (selectedTickers.length > 0) {
-      void this.paintManager.paintTickers(selectedTickers);
-    }
+      // Targeted repaint: paintTickers handles WATCHLIST + SCREENER (if visible) + header
+      if (selectedTickers.length > 0) {
+        void this.paintManager.paintTickers(selectedTickers);
+      }
 
-    // Fast summary refresh without full visual repaint
-    void this.watchlistManager.refreshSummary();
+      // Fast summary refresh without full visual repaint
+      void this.watchlistManager.refreshSummary();
+    })();
   }
 }
