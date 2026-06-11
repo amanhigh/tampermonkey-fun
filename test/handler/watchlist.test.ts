@@ -2,7 +2,7 @@ import { WatchListHandler, IWatchListHandler } from '../../src/handler/watchlist
 import { ITradingViewWatchlistManager } from '../../src/manager/watchlist';
 import { IPaintManager } from '../../src/manager/paint';
 import { ISyncUtil } from '../../src/util/sync';
-import { IWatchManager } from '../../src/manager/watch';
+import { ICategoryManager } from '../../src/manager/category';
 import { IDomManager } from '../../src/manager/dom';
 import { IAlertFeedManager } from '../../src/manager/alertfeed';
 import { WatchCategoryId } from '../../src/models/watch';
@@ -12,7 +12,7 @@ describe('WatchListHandler', () => {
   let mockWatchlistManager: jest.Mocked<ITradingViewWatchlistManager>;
   let mockPaintManager: jest.Mocked<IPaintManager>;
   let mockSyncUtil: jest.Mocked<ISyncUtil>;
-  let mockWatchManager: jest.Mocked<IWatchManager>;
+  let mockCategoryManager: jest.Mocked<ICategoryManager>;
   let mockDomManager: jest.Mocked<IDomManager>;
   let mockAlertFeedManager: jest.Mocked<IAlertFeedManager>;
 
@@ -36,10 +36,11 @@ describe('WatchListHandler', () => {
       }),
     } as unknown as jest.Mocked<ISyncUtil>;
 
-    mockWatchManager = {
+    mockCategoryManager = {
       getTickerCategory: jest.fn(),
-      recordCategory: jest.fn(),
-    } as unknown as jest.Mocked<IWatchManager>;
+      recordWatchCategory: jest.fn(),
+      recordFlagCategory: jest.fn(),
+    } as unknown as jest.Mocked<ICategoryManager>;
 
     mockDomManager = {
       getTicker: jest.fn().mockReturnValue('CURRENT'),
@@ -60,7 +61,7 @@ describe('WatchListHandler', () => {
       mockWatchlistManager,
       mockPaintManager,
       mockSyncUtil,
-      mockWatchManager,
+      mockCategoryManager,
       mockDomManager,
       mockAlertFeedManager
     );
@@ -94,7 +95,7 @@ describe('WatchListHandler', () => {
     it('should record selected tickers in watch category', () => {
       handler.recordSelectedTicker(WatchCategoryId.READY);
 
-      expect(mockWatchManager.recordCategory).toHaveBeenCalledWith(
+      expect(mockCategoryManager.recordWatchCategory).toHaveBeenCalledWith(
         WatchCategoryId.READY,
         ['SELECTED1', 'SELECTED2']
       );

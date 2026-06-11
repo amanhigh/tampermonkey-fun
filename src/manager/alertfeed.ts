@@ -1,7 +1,7 @@
 import { AlertFeedEvent, FeedInfo, FeedState } from '../models/alertfeed';
 import { Constants } from '../models/constant';
 import { IAlertTickerManager } from './alert_ticker';
-import { IWatchManager } from './watch';
+import { ICategoryManager } from './category';
 import { IRecentManager } from './recent';
 
 /**
@@ -35,7 +35,7 @@ export interface IAlertFeedManager {
 export class AlertFeedManager implements IAlertFeedManager {
   constructor(
     private readonly alertTickerManager: IAlertTickerManager,
-    private readonly watchManager: IWatchManager,
+    private readonly categoryManager: ICategoryManager,
     private readonly recentManager: IRecentManager
   ) {}
 
@@ -49,7 +49,7 @@ export class AlertFeedManager implements IAlertFeedManager {
     const tvTicker = alertTicker.ticker;
 
     // Check if ticker belongs to any watch category (backend-on-demand)
-    const category = await this.watchManager.getTickerCategory(tvTicker);
+    const { watch: category } = await this.categoryManager.getTickerCategory(tvTicker);
     if (category) {
       return { state: FeedState.WATCHED, color: 'yellow' };
     }

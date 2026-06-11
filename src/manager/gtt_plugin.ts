@@ -1,7 +1,7 @@
 import { AuditResult } from '../models/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
 import { IKiteRepo } from '../repo/kite';
-import { IWatchManager } from './watch';
+import { ICategoryManager } from './category';
 import { Constants } from '../models/constant';
 import { WatchCategoryId } from '../models/watch';
 
@@ -15,7 +15,7 @@ export class GttPlugin extends BaseAuditPlugin {
 
   constructor(
     private readonly kiteRepo: IKiteRepo,
-    private readonly watchManager: IWatchManager
+    private readonly categoryManager: ICategoryManager
   ) {
     super();
   }
@@ -35,7 +35,7 @@ export class GttPlugin extends BaseAuditPlugin {
     const results: AuditResult[] = [];
 
     for (const tvTicker of allGttTickers) {
-      const category = await this.watchManager.getTickerCategory(tvTicker);
+      const { watch: category } = await this.categoryManager.getTickerCategory(tvTicker);
       const isWatchedForGtt = category?.id === WatchCategoryId.SET_JOURNAL || category?.id === WatchCategoryId.RUNNING;
 
       if (!isWatchedForGtt) {

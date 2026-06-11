@@ -47,9 +47,8 @@ import { ISequenceHandler, SequenceHandler } from '../handler/sequence';
 import { IKiteHandler, KiteHandler } from '../handler/kite';
 import { IKiteManager, KiteManager } from '../manager/kite';
 import { IStyleManager, StyleManager } from '../manager/style';
-import { IFlagManager, FlagManager } from '../manager/flag';
+import { ICategoryManager, CategoryManager } from '../manager/category';
 import { IRecentManager, RecentManager } from '../manager/recent';
-import { IWatchManager, WatchManager } from '../manager/watch';
 import { IWatchListHandler, WatchListHandler } from '../handler/watchlist';
 import { IOnLoadHandler, OnLoadHandler } from '../handler/onload';
 import { IFlagHandler, FlagHandler } from '../handler/flag';
@@ -196,10 +195,10 @@ export class Factory {
         () => new TradingViewWatchlistManager(Factory.manager.paint(), Factory.util.ui())
       ),
 
-    watch: (): IWatchManager =>
+    category: (): ICategoryManager =>
       Factory.getInstance(
-        'watchManager',
-        () => new WatchManager(Factory.manager.ticker(), () => Factory.manager.journal())
+        'categoryManager',
+        () => new CategoryManager(Factory.manager.ticker(), () => Factory.manager.journal())
       ),
 
     sequence: (): ISequenceManager =>
@@ -211,8 +210,7 @@ export class Factory {
         () =>
           new PaintManager(
             Factory.manager.dom(),
-            Factory.manager.watch(),
-            Factory.manager.flag(),
+            Factory.manager.category(),
             Factory.manager.fno(),
             Factory.manager.recent()
           )
@@ -239,7 +237,7 @@ export class Factory {
     style: (): IStyleManager =>
       Factory.getInstance('styleManager', () => new StyleManager(Factory.util.wait(), Factory.manager.timeFrame())),
 
-    flag: (): IFlagManager => Factory.getInstance('flagManager', () => new FlagManager(Factory.manager.ticker())),
+
 
     recent: (): IRecentManager =>
       Factory.getInstance('recentManager', () => new RecentManager(Factory.client.ticker())),
@@ -258,7 +256,7 @@ export class Factory {
     alertFeed: (): IAlertFeedManager =>
       Factory.getInstance(
         'alertFeedManager',
-        () => new AlertFeedManager(Factory.manager.alertTicker(), Factory.manager.watch(), Factory.manager.recent())
+        () => new AlertFeedManager(Factory.manager.alertTicker(), Factory.manager.category(), Factory.manager.recent())
       ),
   };
 
@@ -282,7 +280,7 @@ export class Factory {
     gttUnwatched: () =>
       Factory.getInstance(
         'auditPlugin_gttUnwatched',
-        () => new GttPlugin(Factory.repo.kite(), Factory.manager.watch())
+        () => new GttPlugin(Factory.repo.kite(), Factory.manager.category())
       ),
 
     // OrphanFlagsPlugin and TickerCollisionPlugin retired per PRD audit.md §4.2.2
@@ -463,7 +461,7 @@ export class Factory {
             Factory.handler.sequence(),
             Factory.handler.kite(),
             Factory.util.sync(),
-            Factory.manager.watch(),
+            Factory.manager.category(),
             Factory.manager.alertFeed()
           )
       ),
@@ -494,7 +492,7 @@ export class Factory {
             Factory.manager.watchlist(),
             Factory.manager.paint(),
             Factory.util.sync(),
-            Factory.manager.watch(),
+            Factory.manager.category(),
             Factory.manager.dom(),
             Factory.manager.alertFeed()
           )
@@ -502,7 +500,7 @@ export class Factory {
     flag: (): IFlagHandler =>
       Factory.getInstance(
         'flagHandler',
-        () => new FlagHandler(Factory.manager.flag(), Factory.manager.dom(), Factory.manager.paint())
+        () => new FlagHandler(Factory.manager.category(), Factory.manager.dom(), Factory.manager.paint())
       ),
     sequence: (): ISequenceHandler =>
       Factory.getInstance(

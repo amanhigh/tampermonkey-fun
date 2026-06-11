@@ -1,12 +1,11 @@
 import { TickerArea, TickerVisibility } from '../models/dom';
-import { IWatchManager } from './watch';
-import { IFlagManager } from './flag';
+import { ICategoryManager } from './category';
 import { IDomManager } from './dom';
 import { IFnoManager } from './fno';
 import { IRecentManager } from './recent';
 import { Constants } from '../models/constant';
 import { BucketSummary, WatchCategoryId, WatchCategory } from '../models/watch';
-import { FlagCategory } from '../models/flag';
+import { TickerCategory } from '../models/category';
 
 /**
  * Interface for managing painting operations for TradingView elements
@@ -50,23 +49,13 @@ interface AreaPaintContext {
 }
 
 /**
- * Resolved watch + flag categories for a single ticker.
- * @internal
- */
-interface TickerCategories {
-  readonly watch: WatchCategory | undefined;
-  readonly flag: FlagCategory | undefined;
-}
-
-/**
  * Manages painting operations for TradingView elements.
  * Orchestrates ticker symbol + flag + FNO painting per area.
  */
 export class PaintManager implements IPaintManager {
   constructor(
     private readonly domManager: IDomManager,
-    private readonly watchManager: IWatchManager,
-    private readonly flagManager: IFlagManager,
+    private readonly categoryManager: ICategoryManager,
     private readonly fnoManager: IFnoManager,
     private readonly recentManager: IRecentManager
   ) {}
@@ -105,7 +94,7 @@ export class PaintManager implements IPaintManager {
     const uncategorizedTickers: string[] = [];
 
     for (const ticker of tickers) {
-      const watchCat = await this.watchManager.getTickerCategory(ticker);
+      const { watch: watchCat } = await this.categoryManager.getTickerCategory(ticker);
       this.recordBucketSummary(buckets, uncategorizedTickers, ticker, watchCat);
     }
 
@@ -166,7 +155,7 @@ export class PaintManager implements IPaintManager {
       }
 
       this.resetTickerVisuals($symbol, context);
-      const categories = await this.resolveTickerCategories(ticker);
+      const categories = await this.categoryManager.getTickerCategory(ticker);
       const symbolColor = this.resolveSymbolColor(categories.watch, ticker, context);
       this.paintTickerVisuals(ticker, categories, symbolColor, context, $symbol);
     }
@@ -186,11 +175,8 @@ export class PaintManager implements IPaintManager {
     $flag.css('color', Constants.UI.COLORS.DEFAULT);
     $exchange.css('color', Constants.UI.COLORS.DEFAULT);
 
-    // Fetch categories in parallel
-    const [watchCategory, flagCategory] = await Promise.all([
-      this.watchManager.getTickerCategory(ticker),
-      this.flagManager.getTickerCategory(ticker),
-    ]);
+    // Fetch categories via unified manager
+    const { watch: watchCategory, flag: flagCategory } = await this.categoryManager.getTickerCategory(ticker);
 
     // Paint name — watch category color, or brown fallback if in watchlist
     if (watchCategory) {
@@ -237,17 +223,6 @@ export class PaintManager implements IPaintManager {
   // ── Per-ticker workflow ──
 
   /**
-   * Resolve watch and flag categories for a single ticker in parallel.
-   */
-  private async resolveTickerCategories(ticker: string): Promise<TickerCategories> {
-    const [watch, flag] = await Promise.all([
-      this.watchManager.getTickerCategory(ticker),
-      this.flagManager.getTickerCategory(ticker),
-    ]);
-    return { watch, flag };
-  }
-
-  /**
    * Record a ticker's watch category in the bucket counts.
    * Uncategorized tickers are added to the uncategorized list.
    */
@@ -288,7 +263,7 @@ export class PaintManager implements IPaintManager {
    */
   private paintTickerVisuals(
     ticker: string,
-    categories: TickerCategories,
+    categories: TickerCategory,
     symbolColor: string,
     context: AreaPaintContext,
     $symbol?: JQuery<HTMLElement>

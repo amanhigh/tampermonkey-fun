@@ -3,7 +3,7 @@
  */
 
 import { IPaintManager } from '../manager/paint';
-import { IWatchManager } from '../manager/watch';
+import { ICategoryManager } from '../manager/category';
 import { ITradingViewWatchlistManager } from '../manager/watchlist';
 import { ISyncUtil } from '../util/sync';
 import { TickerArea, TickerVisibility } from '../models/dom';
@@ -40,7 +40,7 @@ export class WatchListHandler implements IWatchListHandler {
     private readonly watchlistManager: ITradingViewWatchlistManager,
     private readonly paintManager: IPaintManager,
     private readonly syncUtil: ISyncUtil,
-    private readonly watchManager: IWatchManager,
+    private readonly categoryManager: ICategoryManager,
     private readonly domManager: IDomManager,
     private readonly alertFeedManager: IAlertFeedManager
   ) {}
@@ -60,7 +60,7 @@ export class WatchListHandler implements IWatchListHandler {
   public recordSelectedTicker(categoryId: WatchCategoryId): void {
     const type = this.domManager.isScreenerVisible() ? TickerArea.SCREENER : TickerArea.WATCHLIST;
     const selectedTickers = [...this.domManager.getTickers(type, TickerVisibility.SELECTED)];
-    this.watchManager.recordCategory(categoryId, selectedTickers);
+    this.categoryManager.recordWatchCategory(categoryId, selectedTickers);
 
     // Targeted repaint: paintTickers handles WATCHLIST + SCREENER (if visible) + header
     if (selectedTickers.length > 0) {

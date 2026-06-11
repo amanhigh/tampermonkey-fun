@@ -5,7 +5,7 @@ import { IRecentManager } from '../manager/recent';
 import { ISequenceHandler } from './sequence';
 import { IKiteHandler } from './kite';
 import { ISyncUtil } from '../util/sync';
-import { IWatchManager } from '../manager/watch';
+import { ICategoryManager } from '../manager/category';
 import { IAlertFeedManager } from '../manager/alertfeed';
 
 export interface ITickerChangeHandler {
@@ -22,7 +22,7 @@ export class TickerChangeHandler implements ITickerChangeHandler {
     private readonly sequenceHandler: ISequenceHandler,
     private readonly kiteHandler: IKiteHandler,
     private readonly syncUtil: ISyncUtil,
-    private readonly watchManager: IWatchManager,
+    private readonly categoryManager: ICategoryManager,
     private readonly alertFeedManager: IAlertFeedManager
   ) {}
 
@@ -46,8 +46,8 @@ export class TickerChangeHandler implements ITickerChangeHandler {
     this.recentManager.markRecent(tvTicker);
 
     // Paint if TV ticker is not in any watch category
-    void this.watchManager.getTickerCategory(tvTicker).then((category) => {
-      if (!category) {
+    void this.categoryManager.getTickerCategory(tvTicker).then(({ watch }) => {
+      if (!watch) {
         void this.alertFeedManager.createAlertFeedEvent(tvTicker);
       }
     });
