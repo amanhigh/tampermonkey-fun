@@ -49,6 +49,13 @@ export interface ICategoryManager {
    * @param concurrency Max concurrent fetches per batch (default 10)
    */
   getBatchCategory(tickers: string[], concurrency?: number): Promise<Map<string, TickerCategory>>;
+
+  /**
+   * Evict a single ticker from the category cache.
+   * Next lookup will re-fetch from backend.
+   * @param ticker Ticker symbol to evict
+   */
+  evictTicker(ticker: string): void;
 }
 
 // ── Implementation ──
@@ -126,6 +133,11 @@ export class CategoryManager implements ICategoryManager {
       }
     }
     return results;
+  }
+
+  /** @inheritdoc */
+  evictTicker(ticker: string): void {
+    this.categoryCache.delete(ticker);
   }
 
   // ── Cache fetch method ──
@@ -210,7 +222,7 @@ export class CategoryManager implements ICategoryManager {
       // Success: optimistic cache entry is correct — keep it
     } catch {
       // Failure: revert optimistic cache entry
-      this.categoryCache.delete(ticker);
+      this.evictTicker(ticker);
       Notifier.warn(`Failed to update ${isWatch ? 'watch' : 'flag'} category for ${ticker}`);
     }
   }

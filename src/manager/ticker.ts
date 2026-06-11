@@ -84,6 +84,7 @@ export class TickerManager implements ITickerManager {
   /** @inheritdoc */
   async startTracking(data: StartTrackingRequest): Promise<Ticker> {
     const ticker = await this.tickerClient.createTicker(data);
+    this.getCategoryManager().evictTicker(data.ticker);
     void this.getPaintManager().paintTickers([data.ticker]);
     return ticker;
   }
@@ -108,6 +109,7 @@ export class TickerManager implements ITickerManager {
   /** @inheritdoc */
   async stopTracking(ticker: string): Promise<void> {
     await this.tickerClient.deleteTicker(ticker);
+    this.getCategoryManager().evictTicker(ticker);
     void this.getPaintManager().paintTickers([ticker]);
   }
 
