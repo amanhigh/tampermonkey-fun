@@ -502,7 +502,7 @@ export class Factory {
     flag: (): IFlagHandler =>
       Factory.getInstance(
         'flagHandler',
-        () => new FlagHandler(Factory.manager.flag(), Factory.manager.dom(), Factory.handler.watchlist())
+        () => new FlagHandler(Factory.manager.flag(), Factory.manager.dom(), Factory.manager.paint())
       ),
     sequence: (): ISequenceHandler =>
       Factory.getInstance(

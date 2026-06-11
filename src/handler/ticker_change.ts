@@ -7,7 +7,6 @@ import { IKiteHandler } from './kite';
 import { ISyncUtil } from '../util/sync';
 import { IWatchManager } from '../manager/watch';
 import { IAlertFeedManager } from '../manager/alertfeed';
-import { TickerArea } from '../models/dom';
 
 export interface ITickerChangeHandler {
   onTickerChange(): void;
@@ -32,15 +31,10 @@ export class TickerChangeHandler implements ITickerChangeHandler {
       // Refresh alerts for current ticker
       this.alertHandler.refreshAlerts();
 
-      // Update UI components
-      void this.paintManager.paintHeader();
+      // Update UI components — paintTickers handles WATCHLIST + SCREENER (if visible) + header
+      void this.paintManager.paintTickers([this.domManager.getTicker()]);
       void this.recordRecentTicker();
       void this.sequenceHandler.displaySequence();
-
-      // Update Screener
-      if (this.domManager.isScreenerVisible()) {
-        void this.paintManager.paintArea(TickerArea.SCREENER);
-      }
 
       // Handle GTT operations
       void this.kiteHandler.refreshGttOrders();

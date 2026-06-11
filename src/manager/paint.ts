@@ -5,7 +5,8 @@ import { IDomManager } from './dom';
 import { IFnoManager } from './fno';
 import { IRecentManager } from './recent';
 import { Constants } from '../models/constant';
-import { CategoryBuckets, WatchCategoryId } from '../models/watch';
+import { BucketSummary, WatchCategoryId, WatchCategory } from '../models/watch';
+import { FlagCategory } from '../models/flag';
 
 /**
  * Interface for managing painting operations for TradingView elements
@@ -20,18 +21,52 @@ export interface IPaintManager {
 
   /**
    * Paints all tickers in the given area (WATCHLIST or SCREENER).
-   * For each ticker, resolves watch category, flag category, FNO status,
-   * and paints symbol + flag in one pass. Returns watch-category buckets
-   * for the paint caller to use (e.g. UI summary labels).
+   * Resets the area first, then resolves watch + flag categories
+   * and paints symbol + flag + FNO for every ticker.
+   * Does NOT return a bucket summary — callers should use
+   * summarizeBuckets() if counts are needed.
    * @param area Which panel to paint (WATCHLIST or SCREENER)
    */
-  paintArea(area: TickerArea): Promise<CategoryBuckets>;
+  paintArea(area: TickerArea): Promise<void>;
 
   /**
-   * Paints the current ticker header (name, flag, exchange, FNO).
-   * Resolves watch category + flag category + FNO status internally.
+   * Targeted paint for one or more tickers.
+   * Paints the tickers in WATCHLIST and also in SCREENER
+   * when the screener is visible. Repaints the current ticker
+   * header at the end.
+   * @param tickers Ticker symbols to repaint
    */
-  paintHeader(): Promise<void>;
+  paintTickers(tickers: string[]): Promise<void>;
+
+  /**
+   * Classifies all tickers in the given area and returns bucket counts
+   * WITHOUT resetting or painting DOM. Use when summary labels need
+   * refreshing after targeted ticker repaints.
+   * @param area Which panel to classify
+   */
+  summarizeBuckets(area: TickerArea): Promise<BucketSummary>;
+}
+
+/**
+ * Context for painting all tickers in a single area.
+ * Bundles area metadata, DOM selectors, and screener-only data.
+ * @internal
+ */
+interface AreaPaintContext {
+  readonly area: TickerArea;
+  readonly itemSelector: string;
+  readonly flagSelector: string;
+  readonly watchlistTickerSet: Set<string> | undefined;
+  readonly recentTickers: Set<string> | undefined;
+}
+
+/**
+ * Resolved watch + flag categories for a single ticker.
+ * @internal
+ */
+interface TickerCategories {
+  readonly watch: WatchCategory | undefined;
+  readonly flag: FlagCategory | undefined;
 }
 
 /**
@@ -67,86 +102,73 @@ export class PaintManager implements IPaintManager {
   // ── Area-wide painters ──
 
   /** @inheritdoc */
-  async paintArea(area: TickerArea): Promise<CategoryBuckets> {
-    // Reset all elements in this area before painting
+  async paintArea(area: TickerArea): Promise<void> {
     this.resetArea(area);
 
     const tickers = [...this.domManager.getTickers(area, TickerVisibility.ALL)];
+    await this.paintTickersInArea(area, tickers);
+  }
 
-    const buckets = new Map<WatchCategoryId, Set<string>>();
-    const uncategorized = new Set<string>();
-
-    const symbolSelector = area.getSymbolSelector(TickerVisibility.ALL);
-    const itemSelector = area.getItemSelector();
-    const flagSelector = area.getFlagSelector();
-
-    // For screener, cache watchlist tickers for brown fallback + compute recent set
-    let watchlistTickerSet: Set<string> | undefined;
-    let recentTickers: Set<string> | undefined;
-    if (area === TickerArea.SCREENER) {
-      watchlistTickerSet = new Set([...this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL)]);
-      recentTickers = new Set(tickers.filter((t) => this.recentManager.isRecent(t, Constants.RECENT_CUTOFF_MS)));
+  /** @inheritdoc */
+  async paintTickers(tickers: string[]): Promise<void> {
+    if (tickers.length === 0) {
+      return;
     }
 
+    await this.paintTickersInArea(TickerArea.WATCHLIST, tickers);
+
+    if (this.domManager.isScreenerVisible()) {
+      await this.paintTickersInArea(TickerArea.SCREENER, tickers);
+    }
+
+    // Header shows the current ticker's categories
+    await this.paintHeader();
+  }
+
+  /** @inheritdoc */
+  async summarizeBuckets(area: TickerArea): Promise<BucketSummary> {
+    const tickers = [...this.domManager.getTickers(area, TickerVisibility.ALL)];
+    const buckets = new Map<WatchCategoryId, number>();
+    const uncategorizedTickers: string[] = [];
+
     for (const ticker of tickers) {
-      const [watchCat, flagCat] = await Promise.all([
-        this.watchManager.getTickerCategory(ticker),
-        this.flagManager.getTickerCategory(ticker),
-      ]);
+      const watchCat = await this.watchManager.getTickerCategory(ticker);
+      this.recordBucketSummary(buckets, uncategorizedTickers, ticker, watchCat);
+    }
 
-      // Build watch-category buckets
-      if (watchCat) {
-        const set = buckets.get(watchCat.id) ?? new Set<string>();
-        set.add(ticker);
-        buckets.set(watchCat.id, set);
-      } else {
-        uncategorized.add(ticker);
-      }
+    this.logUncategorizedTickers(uncategorizedTickers);
+    return this.toBucketSummary(buckets, uncategorizedTickers);
+  }
 
-      // Resolve symbol color with priority
-      let symbolColor = Constants.UI.COLORS.DEFAULT;
-      if (watchCat) {
-        symbolColor = watchCat.color;
-      } else if (area === TickerArea.SCREENER && watchlistTickerSet!.has(ticker)) {
-        // Legacy DEFAULT_DAILY fallback: uncategorized ticker in watchlist → brown in screener
-        symbolColor = Constants.UI.COLORS.HEADER_DEFAULT;
-      } else if (area === TickerArea.SCREENER && recentTickers!.has(ticker)) {
-        symbolColor = Constants.UI.COLORS.SCREENER_RECENT;
-      }
+  // ── Internal helpers ──
 
-      // Paint symbol, flag, and FNO border in one pass per ticker
-      const $symbol = $(symbolSelector).filter(
-        (_: number, el: HTMLElement) => (el.textContent || el.innerHTML) === ticker
-      );
+  /**
+   * Paint a set of tickers within a single area.
+   * Shared by paintArea (full reset+repaint) and paintTickers (targeted).
+   */
+  private async paintTickersInArea(area: TickerArea, tickers: string[]): Promise<void> {
+    if (tickers.length === 0) {
+      return;
+    }
 
+    const context = this.buildAreaPaintContext(area, tickers);
+    for (const ticker of tickers) {
+      const $symbol = this.findSingleSymbol(area, ticker);
       if ($symbol.length === 0) {
         continue;
       }
 
-      // Symbol color (resetArea already set default; only override if non-default)
-      if (symbolColor !== Constants.UI.COLORS.DEFAULT) {
-        $symbol.css('color', symbolColor);
-      }
-
-      // FNO border
-      if (this.fnoManager.isFno(ticker)) {
-        $symbol.css(Constants.UI.COLORS.FNO_CSS);
-      }
-
-      // Flag color — derive from the ticker row (resetArea already set default; only override if present)
-      if (flagCat?.color) {
-        const $flags = $symbol.closest(itemSelector).find(flagSelector);
-        if ($flags.length > 0) {
-          $flags.css('color', flagCat.color);
-        }
-      }
+      this.resetTickerVisuals($symbol, context);
+      const categories = await this.resolveTickerCategories(ticker);
+      const symbolColor = this.resolveSymbolColor(categories.watch, ticker, context);
+      this.paintTickerVisuals(ticker, categories, symbolColor, context, $symbol);
     }
-
-    return { buckets, uncategorized };
   }
 
-  /** @inheritdoc */
-  async paintHeader(): Promise<void> {
+  /**
+   * Paint the current ticker header (name, flag, exchange, FNO).
+   */
+  private async paintHeader(): Promise<void> {
     const ticker = this.domManager.getTicker();
     const $name = $(Constants.DOM.BASIC.NAME);
     const $flag = $(Constants.DOM.FLAGS.MARKING);
@@ -183,11 +205,186 @@ export class PaintManager implements IPaintManager {
     this.applyFnoBorder($name, this.fnoManager.isFno(ticker));
   }
 
-  // ── Single-ticker painters (header only) ──
+  // ── Area context ──
+
+  /**
+   * Build painting context for an entire area, including DOM selectors
+   * and screener-only data (watchlist ticker set, recent tickers).
+   */
+  private buildAreaPaintContext(area: TickerArea, tickers: string[]): AreaPaintContext {
+    let watchlistTickerSet: Set<string> | undefined;
+    let recentTickers: Set<string> | undefined;
+    if (area === TickerArea.SCREENER) {
+      watchlistTickerSet = new Set([...this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL)]);
+      recentTickers = new Set(tickers.filter((t) => this.recentManager.isRecent(t, Constants.RECENT_CUTOFF_MS)));
+    }
+    return {
+      area,
+      itemSelector: area.getItemSelector(),
+      flagSelector: area.getFlagSelector(),
+      watchlistTickerSet,
+      recentTickers,
+    };
+  }
+
+  // ── Per-ticker workflow ──
+
+  /**
+   * Resolve watch and flag categories for a single ticker in parallel.
+   */
+  private async resolveTickerCategories(ticker: string): Promise<TickerCategories> {
+    const [watch, flag] = await Promise.all([
+      this.watchManager.getTickerCategory(ticker),
+      this.flagManager.getTickerCategory(ticker),
+    ]);
+    return { watch, flag };
+  }
+
+  /**
+   * Record a ticker's watch category in the bucket counts.
+   * Uncategorized tickers are added to the uncategorized list.
+   */
+  private recordBucketSummary(
+    buckets: Map<WatchCategoryId, number>,
+    uncategorizedTickers: string[],
+    ticker: string,
+    watchCat: WatchCategory | undefined
+  ): void {
+    if (watchCat) {
+      buckets.set(watchCat.id, (buckets.get(watchCat.id) ?? 0) + 1);
+    } else {
+      uncategorizedTickers.push(ticker);
+    }
+  }
+
+  /**
+   * Resolve the symbol text color for a ticker with priority:
+   * watch category color → screener watchlist fallback brown → screener recent → default.
+   */
+  private resolveSymbolColor(watchCat: WatchCategory | undefined, ticker: string, context: AreaPaintContext): string {
+    if (watchCat) {
+      return watchCat.color;
+    }
+    if (context.area === TickerArea.SCREENER && context.watchlistTickerSet!.has(ticker)) {
+      return Constants.UI.COLORS.HEADER_DEFAULT;
+    }
+    if (context.area === TickerArea.SCREENER && context.recentTickers!.has(ticker)) {
+      return Constants.UI.COLORS.SCREENER_RECENT;
+    }
+    return Constants.UI.COLORS.DEFAULT;
+  }
+
+  /**
+   * Paint all visuals (symbol color, FNO border, flag color) for a
+   * single ticker using the context's pre-computed selectors.
+   * Accepts an optional pre-resolved $symbol to avoid re-querying the DOM.
+   */
+  private paintTickerVisuals(
+    ticker: string,
+    categories: TickerCategories,
+    symbolColor: string,
+    context: AreaPaintContext,
+    $symbol?: JQuery<HTMLElement>
+  ): void {
+    if (!$symbol || $symbol.length === 0) {
+      $symbol = this.findSingleSymbol(context.area, ticker);
+      if ($symbol.length === 0) {
+        return;
+      }
+    }
+
+    this.paintSymbolColor($symbol, symbolColor);
+    this.paintFnoBorder($symbol, ticker);
+    this.paintSingleFlag($symbol, context.itemSelector, context.flagSelector, categories.flag?.color);
+  }
+
+  // ── Summary output ──
+
+  /**
+   * Log uncategorized ticker names to console for debugging visibility.
+   */
+  private logUncategorizedTickers(tickers: string[]): void {
+    if (tickers.length > 0) {
+      console.log('Uncategorized tickers:', tickers);
+    }
+  }
+
+  /**
+   * Convert internal bucket accumulator to the public BucketSummary type.
+   */
+  private toBucketSummary(buckets: Map<WatchCategoryId, number>, uncategorizedTickers: string[]): BucketSummary {
+    return { buckets, uncategorizedCount: uncategorizedTickers.length };
+  }
+
+  // ── Single-ticker painters ──
+
+  /**
+   * Reset visual state (symbol color, flag color, F&O border) for a
+   * single ticker row back to defaults.
+   */
+  private resetTickerVisuals($symbol: JQuery<HTMLElement>, context: AreaPaintContext): void {
+    // Reset symbol color
+    $symbol.css('color', Constants.UI.COLORS.DEFAULT);
+
+    // Reset flag color
+    $symbol.closest(context.itemSelector).find(context.flagSelector).css('color', Constants.UI.COLORS.DEFAULT);
+
+    // Clear F&O border style
+    $symbol.css('border-top-style', '');
+    $symbol.css('border-width', '');
+  }
+
+  /**
+   * Find the symbol DOM element for a ticker in the given area.
+   * @returns jQuery collection (may be empty if ticker not found)
+   */
+  private findSingleSymbol(area: TickerArea, ticker: string): JQuery<HTMLElement> {
+    return $(area.getSymbolSelector(TickerVisibility.ALL)).filter(
+      (_: number, el: HTMLElement) => (el.textContent || el.innerHTML) === ticker
+    );
+  }
+
+  /**
+   * Paint the symbol text color for a single ticker.
+   * resetArea already set all symbols to default; this only overrides if non-default.
+   */
+  private paintSymbolColor($symbol: JQuery<HTMLElement>, color: string): void {
+    if (color !== Constants.UI.COLORS.DEFAULT) {
+      $symbol.css('color', color);
+    }
+  }
+
+  /**
+   * Paint the F&O border on a single ticker's symbol element.
+   * No-op if the ticker is not F&O (resetArea already cleared the border).
+   */
+  private paintFnoBorder($symbol: JQuery<HTMLElement>, ticker: string): void {
+    if (this.fnoManager.isFno(ticker)) {
+      $symbol.css(Constants.UI.COLORS.FNO_CSS);
+    }
+  }
+
+  /**
+   * Paint the flag for a single ticker, deriving the flag element from
+   * the ticker row (resetArea already set default; only override if present).
+   */
+  private paintSingleFlag(
+    $symbol: JQuery<HTMLElement>,
+    itemSelector: string,
+    flagSelector: string,
+    flagColor?: string
+  ): void {
+    if (!flagColor) {
+      return;
+    }
+    const $flags = $symbol.closest(itemSelector).find(flagSelector);
+    if ($flags.length > 0) {
+      $flags.css('color', flagColor);
+    }
+  }
 
   /**
    * Apply or clear F&O border style on a header element.
-   * @private
    */
   private applyFnoBorder($element: JQuery<HTMLElement>, enabled: boolean): void {
     if (enabled) {

@@ -115,7 +115,6 @@ describe('PaintManager', () => {
 
   describe('paintArea', () => {
     beforeEach(() => {
-      // Default mocks
       mockJQueryElement.length = 1;
       mockJQueryElement.css.mockClear();
       mockJQueryElement.filter.mockReturnValue(mockJQueryElement);
@@ -128,27 +127,9 @@ describe('PaintManager', () => {
       mockWatchManager.getTickerCategory.mockResolvedValue(undefined);
       mockFlagManager.getTickerCategory.mockResolvedValue(undefined);
 
-      const result = await paintManager.paintArea(TickerArea.WATCHLIST);
+      await paintManager.paintArea(TickerArea.WATCHLIST);
 
       expect(mockDomManager.getTickers).toHaveBeenCalledWith(TickerArea.WATCHLIST, TickerVisibility.ALL);
-      expect(result.buckets.size).toBe(0);
-      expect(result.uncategorized.size).toBe(2);
-    });
-
-    it('should build CategoryBuckets from watch categories', async () => {
-      mockDomManager.getTickers.mockReturnValue(new Set(['READY_A', 'INDEX_A']));
-      mockWatchManager.getTickerCategory.mockImplementation(async (ticker: string) => {
-        if (ticker === 'READY_A') return { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null };
-        if (ticker === 'INDEX_A') return { id: WatchCategoryId.INDEX, color: 'brown', label: 'Index', recordUpdate: null };
-        return undefined;
-      });
-      mockFlagManager.getTickerCategory.mockResolvedValue(undefined);
-
-      const result = await paintManager.paintArea(TickerArea.WATCHLIST);
-
-      expect(result.buckets.get(WatchCategoryId.READY)?.has('READY_A')).toBe(true);
-      expect(result.buckets.get(WatchCategoryId.INDEX)?.has('INDEX_A')).toBe(true);
-      expect(result.uncategorized.size).toBe(0);
     });
 
     it('should call getTickerCategory for watch AND flag categories', async () => {
@@ -167,7 +148,6 @@ describe('PaintManager', () => {
 
       await paintManager.paintArea(TickerArea.SCREENER);
 
-      // resetArea uses area.getSymbolSelector() to reset all elements
       expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.SCREENER.SYMBOL);
     });
 
@@ -176,11 +156,10 @@ describe('PaintManager', () => {
 
       await paintManager.paintArea(TickerArea.WATCHLIST);
 
-      // resetArea uses area.getSymbolSelector() to reset all elements
       expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.SYMBOL);
     });
 
-    it('should paint symbol, flag, and FNO using direct DOM lookup (no cache)', async () => {
+    it('should paint symbol, flag, and FNO using direct DOM lookup', async () => {
       mockDomManager.getTickers.mockReturnValue(new Set(['NIFTY']));
       mockWatchManager.getTickerCategory.mockResolvedValue({
         id: WatchCategoryId.READY,
@@ -195,81 +174,116 @@ describe('PaintManager', () => {
       } as any);
       mockFnoManager.isFno.mockReturnValue(true);
 
-      const result = await paintManager.paintArea(TickerArea.WATCHLIST);
+      await paintManager.paintArea(TickerArea.WATCHLIST);
 
       // Symbol lookup via jQuery filter
       expect(mockJQueryElement.filter).toHaveBeenCalled();
-      // Flag lookup via closest+find from the symbol element (not via async cache)
-      expect(mockJQueryElement.closest).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.ITEM);
-      expect(mockJQueryElement.find).toHaveBeenCalledWith(Constants.DOM.FLAGS.SYMBOL);
       // Colors applied directly
       expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'red');
       expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'orange');
       // FNO border applied directly
       expect(mockJQueryElement.css).toHaveBeenCalledWith(Constants.UI.COLORS.FNO_CSS);
-      // Buckets still built correctly
-      expect(result.buckets.get(WatchCategoryId.READY)?.has('NIFTY')).toBe(true);
+    });
+
+    it('should not return BucketSummary', async () => {
+      mockDomManager.getTickers.mockReturnValue(new Set(['NIFTY']));
+
+      const result = await paintManager.paintArea(TickerArea.WATCHLIST);
+
+      expect(result).toBeUndefined();
     });
   });
 
-  describe('paintHeader', () => {
+  describe('paintTickers', () => {
     beforeEach(() => {
+      mockJQueryElement.length = 1;
       mockJQueryElement.css.mockClear();
-      mockJQuery.mockReturnValue(mockJQueryElement);
-    });
-
-    it('should get current ticker from DomManager', async () => {
-      mockDomManager.getTicker.mockReturnValue('CURRENT');
-
-      await paintManager.paintHeader();
-
-      expect(mockDomManager.getTicker).toHaveBeenCalled();
-    });
-
-    it('should reset name, flag, and exchange to default', async () => {
-      mockDomManager.getTicker.mockReturnValue('CURRENT');
+      mockJQueryElement.filter.mockReturnValue(mockJQueryElement);
+      mockJQueryElement.closest.mockReturnValue(mockJQueryElement);
+      mockJQueryElement.find.mockReturnValue(mockJQueryElement);
+      mockDomManager.getTickers.mockReturnValue(new Set());
       mockWatchManager.getTickerCategory.mockResolvedValue(undefined);
       mockFlagManager.getTickerCategory.mockResolvedValue(undefined);
-
-      await paintManager.paintHeader();
-
-      // Name, flag, exchange all reset to default
-      const calls = mockJQueryElement.css.mock.calls.filter(([prop]: [string]) => prop === 'color' || typeof prop === 'object');
-      expect(calls.length).toBeGreaterThanOrEqual(3);
     });
 
-    it('should paint name with watch category color', async () => {
-      mockDomManager.getTicker.mockReturnValue('CURRENT');
-      mockWatchManager.getTickerCategory.mockResolvedValue({ id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null });
-      mockFlagManager.getTickerCategory.mockResolvedValue(undefined);
+    it('should paint tickers in WATCHLIST area', async () => {
+      mockDomManager.getTickers.mockReturnValue(new Set(['AAPL', 'GOOG']));
+      mockWatchManager.getTickerCategory.mockImplementation(async (ticker: string) => {
+        if (ticker === 'AAPL') return { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null };
+        return undefined;
+      });
+      mockDomManager.isScreenerVisible.mockReturnValue(false);
 
-      await paintManager.paintHeader();
+      await paintManager.paintTickers(['AAPL', 'GOOG']);
 
-      // Name should have 'red' color applied after default
+      // Should find tickers via filter (once per ticker per area)
+      expect(mockJQueryElement.filter).toHaveBeenCalled();
+      // AAPL gets painted red, GOOG stays default
       expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'red');
     });
 
-    it('should paint flag and exchange with flag category color', async () => {
-      mockDomManager.getTicker.mockReturnValue('CURRENT');
-      mockWatchManager.getTickerCategory.mockResolvedValue(undefined);
-      mockFlagManager.getTickerCategory.mockResolvedValue({ id: FlagCategoryId.SIDEWAYS, color: 'orange', label: 'Sideways' } as any);
+    it('should also paint tickers in SCREENER when screener visible', async () => {
+      mockDomManager.isScreenerVisible.mockReturnValue(true);
+      mockDomManager.getTickers.mockReturnValue(new Set(['AAPL']));
 
-      await paintManager.paintHeader();
+      await paintManager.paintTickers(['AAPL']);
 
-      // Flag and exchange should have 'orange' color
-      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'orange');
+      // Should have been called for WATCHLIST and SCREENER ticker lookups
+      expect(mockJQueryElement.filter).toHaveBeenCalled();
     });
 
-    it('should apply FNO marking on header name', async () => {
-      mockDomManager.getTicker.mockReturnValue('FNO_TICKER');
-      mockFnoManager.isFno.mockReturnValue(true);
-      mockWatchManager.getTickerCategory.mockResolvedValue(undefined);
-      mockFlagManager.getTickerCategory.mockResolvedValue(undefined);
+    it('should repaint header after targeted update', async () => {
+      mockDomManager.getTicker.mockReturnValue('CURRENT');
+      mockDomManager.getTickers.mockReturnValue(new Set(['CURRENT']));
 
-      await paintManager.paintHeader();
+      await paintManager.paintTickers(['CURRENT']);
 
-      // FNO CSS should be applied to the name element
-      expect(mockJQueryElement.css).toHaveBeenCalledWith(Constants.UI.COLORS.FNO_CSS);
+      // Header reset + paint uses css calls
+      expect(mockDomManager.getTicker).toHaveBeenCalled();
+    });
+
+    it('should skip missing tickers without error', async () => {
+      mockJQueryElement.length = 0;
+      mockJQueryElement.filter.mockReturnValue(mockJQueryElement);
+
+      await paintManager.paintTickers(['MISSING']);
+
+      // Should not crash
+    });
+
+    it('should no-op on empty array', async () => {
+      await paintManager.paintTickers([]);
+
+      expect(mockJQueryElement.filter).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('summarizeBuckets', () => {
+    beforeEach(() => {
+      mockJQueryElement.css.mockClear();
+    });
+
+    it('should return BucketSummary without painting DOM', async () => {
+      mockDomManager.getTickers.mockReturnValue(new Set(['AAPL', 'GOOG']));
+      mockWatchManager.getTickerCategory.mockImplementation(async (ticker: string) => {
+        if (ticker === 'AAPL') return { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null };
+        return undefined;
+      });
+
+      const result = await paintManager.summarizeBuckets(TickerArea.WATCHLIST);
+
+      expect(result.buckets.get(WatchCategoryId.READY)).toBe(1);
+      expect(result.uncategorizedCount).toBe(1);
+      expect(mockJQuery).not.toHaveBeenCalled();
+    });
+
+    it('should handle empty area without error', async () => {
+      mockDomManager.getTickers.mockReturnValue(new Set());
+
+      const result = await paintManager.summarizeBuckets(TickerArea.WATCHLIST);
+
+      expect(result.buckets.size).toBe(0);
+      expect(result.uncategorizedCount).toBe(0);
     });
   });
 
@@ -277,10 +291,9 @@ describe('PaintManager', () => {
     it('should handle empty ticker set in paintArea', async () => {
       mockDomManager.getTickers.mockReturnValue(new Set());
 
-      const result = await paintManager.paintArea(TickerArea.WATCHLIST);
+      await paintManager.paintArea(TickerArea.WATCHLIST);
 
-      expect(result.buckets.size).toBe(0);
-      expect(result.uncategorized.size).toBe(0);
+      // No crash
     });
   });
 });

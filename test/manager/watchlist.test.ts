@@ -2,7 +2,7 @@ import { TradingViewWatchlistManager, ITradingViewWatchlistManager } from '../..
 import { IPaintManager } from '../../src/manager/paint';
 import { IUIUtil } from '../../src/util/ui';
 import { Constants } from '../../src/models/constant';
-import { ALL_WATCH_CATEGORIES, WatchCategoryId, CategoryBuckets } from '../../src/models/watch';
+import { ALL_WATCH_CATEGORIES, WatchCategoryId, BucketSummary } from '../../src/models/watch';
 import { TickerArea } from '../../src/models/dom';
 
 // Mock jQuery globally for DOM manipulation
@@ -47,8 +47,9 @@ describe('TradingViewWatchlistManager', () => {
     // Mock dependencies
     mockPaintManager = {
       resetArea: jest.fn(),
-      paintArea: jest.fn(),
-      paintHeader: jest.fn(),
+      paintArea: jest.fn().mockResolvedValue(undefined),
+      paintTickers: jest.fn().mockResolvedValue(undefined),
+      summarizeBuckets: jest.fn(),
     } as unknown as jest.Mocked<IPaintManager>;
 
     mockUIUtil = {
@@ -71,15 +72,15 @@ describe('TradingViewWatchlistManager', () => {
   });
 
   describe('paintWatchList', () => {
-    let classifyResult: CategoryBuckets;
+    let classifyResult: BucketSummary;
 
     beforeEach(() => {
-      // Mock paintArea to return classified buckets
+      // Mock paintArea to paint (void) and summarizeBuckets to return counts
       classifyResult = {
-        buckets: new Map([[WatchCategoryId.READY, new Set(['AAPL'])]]),
-        uncategorized: new Set(['GOOGL']),
+        buckets: new Map([[WatchCategoryId.READY, 1]]),
+        uncategorizedCount: 1,
       };
-      mockPaintManager.paintArea.mockResolvedValue(classifyResult);
+      mockPaintManager.summarizeBuckets.mockResolvedValue(classifyResult);
     });
 
     it('should execute complete paint workflow via paintArea', async () => {
@@ -93,8 +94,8 @@ describe('TradingViewWatchlistManager', () => {
       // Verify paintArea was called for WATCHLIST
       expect(mockPaintManager.paintArea).toHaveBeenCalledWith(TickerArea.WATCHLIST);
 
-      // Verify area reset
-      expect(mockPaintManager.resetArea).toHaveBeenCalledWith(TickerArea.WATCHLIST);
+      // Verify summarizeBuckets was called for summary display
+      expect(mockPaintManager.summarizeBuckets).toHaveBeenCalledWith(TickerArea.WATCHLIST);
     });
 
     it('should build summary labels for all categories', async () => {

@@ -282,14 +282,14 @@ describe('WatchManager', () => {
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
     });
 
-    it('should evict cached ticker category before manual backend update', async () => {
+    it('should optimistically cache recorded category for instant repaint', async () => {
       // Populate cache with uncategorized result
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockRejectedValue(new Error('not found'));
       await watchManager.getTickerCategory('EVICT_ME');
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
 
-      // Evict + update via recordCategory
+      // Optimistic cache + update via recordCategory
       jest.clearAllMocks();
       mockTickerManager.updateTicker.mockResolvedValue(undefined as any);
       watchManager.recordCategory(WatchCategoryId.READY, ['EVICT_ME']);
@@ -297,11 +297,12 @@ describe('WatchManager', () => {
       // Verify update was called
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('EVICT_ME', { state: 'READY' });
 
-      // Next getTickerCategory fetches fresh (cache was evicted)
+      // Next getTickerCategory returns cached value (no backend fetch)
       mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'EVICT_ME', state: 'READY' }));
       const result = await watchManager.getTickerCategory('EVICT_ME');
       expect(result?.id).toBe(WatchCategoryId.READY);
-      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
+      // FetchMethod not called because cache was set optimistically
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(0);
     });
   });
 });

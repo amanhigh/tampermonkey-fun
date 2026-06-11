@@ -2,7 +2,7 @@ import { Constants } from '../models/constant';
 import { TickerArea, TickerVisibility } from '../models/dom';
 import { IPaintManager } from './paint';
 import { IUIUtil } from '../util/ui';
-import { ALL_WATCH_CATEGORIES, CategoryBuckets } from '../models/watch';
+import { ALL_WATCH_CATEGORIES, BucketSummary } from '../models/watch';
 
 /**
  * Filter options for watchlist manipulation
@@ -91,16 +91,16 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   /**
    * Displays the ticker set summary in the UI
    * @private
-   * @param result Category bucket results from classification
+   * @param result Bucket summary counts from paint
    */
-  private displaySetSummary(result: CategoryBuckets): void {
+  private displaySetSummary(result: BucketSummary): void {
     const $watchSummary = $(`#${Constants.UI.IDS.AREAS.SUMMARY}`);
     $watchSummary.empty();
 
-    const uncategorizedCount = result.uncategorized.size;
+    const uncategorizedCount = result.uncategorizedCount;
 
     for (const cat of ALL_WATCH_CATEGORIES) {
-      const count = result.buckets.get(cat.id)?.size ?? 0;
+      const count = result.buckets.get(cat.id) ?? 0;
       const displayCount = cat.id === 'DEFAULT_DAILY' ? count + uncategorizedCount : count;
       const color = cat.color;
 

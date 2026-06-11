@@ -92,18 +92,10 @@ export class WatchManager implements IWatchManager {
     }
 
     for (const ticker of tvTickers) {
-      this.evictTickerCategory(ticker);
-      void this.updateBackend(ticker, cat.recordUpdate);
+      // Optimistic: show new category colour immediately
+      this.categoryCache.set(ticker, cat);
+      void this.syncBackend(ticker, cat.recordUpdate);
     }
-  }
-
-  // ── Cache Management ──
-
-  /**
-   * Evict a ticker from the category cache so the next lookup is fresh.
-   */
-  private evictTickerCategory(tvTicker: string): void {
-    this.categoryCache.delete(tvTicker);
   }
 
   // ── Classification step helpers ──
@@ -145,12 +137,15 @@ export class WatchManager implements IWatchManager {
   // ── Backend Update ──
 
   /**
-   * Persist a category assignment to the backend.
+   * Sync a category assignment to the backend.
+   * Reverts optimistic cache entry on failure.
    */
-  private async updateBackend(ticker: string, update: TickerUpdateRequest): Promise<void> {
+  private async syncBackend(ticker: string, update: TickerUpdateRequest): Promise<void> {
     try {
       await this.tickerManager.updateTicker(ticker, update);
     } catch {
+      // Revert optimistic cache entry
+      this.categoryCache.delete(ticker);
       Notifier.warn(`Failed to update watch category for ${ticker}`);
     }
   }

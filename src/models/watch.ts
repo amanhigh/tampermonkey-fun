@@ -48,13 +48,14 @@ export interface WatchCategory {
 // ── Classification Result ──
 
 /**
- * Result of batch ticker classification — tickers grouped by watch category.
+ * Result of batch ticker classification — counts per watch category.
+ * Uncategorized tickers are logged to console, only the count is returned.
  */
-export interface CategoryBuckets {
-  /** Tickers grouped by watch category ID. */
-  readonly buckets: Map<WatchCategoryId, Set<string>>;
-  /** Tickers that matched no watch category. */
-  readonly uncategorized: Set<string>;
+export interface BucketSummary {
+  /** Ticker count per watch category ID. */
+  readonly buckets: Map<WatchCategoryId, number>;
+  /** Number of tickers that matched no watch category. */
+  readonly uncategorizedCount: number;
 }
 
 // ── Canonical Category List ──
