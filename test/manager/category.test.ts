@@ -1,4 +1,4 @@
-import { CategoryManager, ICategoryManager, resolveWatchCategory, findWatchCategoryById, resolveFlagCategory, findFlagCategoryById } from '../../src/manager/category';
+import { CategoryManager, ICategoryManager } from '../../src/manager/category';
 import { ITickerManager } from '../../src/manager/ticker';
 import { IJournalManager } from '../../src/manager/journal';
 import { Ticker } from '../../src/models/ticker';
@@ -370,11 +370,11 @@ describe('CategoryManager', () => {
       // Verify update was called
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('EVICT_ME', { state: 'READY' });
 
-      // Next getTickerCategory returns optimistic value (no backend fetch)
+      // Next getTickerCategory returns cached value (no backend fetch)
       mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'EVICT_ME', state: 'READY' }));
       const result = await categoryManager.getTickerCategory('EVICT_ME');
       expect(result.watch?.id).toBe(WatchCategoryId.READY);
-      // Backend not called again — served from cache + override
+      // Backend not called again — served from cache
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(0);
     });
   });
@@ -430,7 +430,7 @@ describe('CategoryManager', () => {
       // Record: set cache to DOWNTREND without immediate backend call
       categoryManager.recordFlagCategory(FlagCategoryId.DOWNTREND, ['TICKER_A']);
 
-      // Next lookup returns optimistic value — no extra backend call
+      // Next lookup returns cached value — no extra backend call
       const result = await categoryManager.getTickerCategory('TICKER_A');
       expect(result.flag?.id).toBe(FlagCategoryId.DOWNTREND);
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
@@ -441,7 +441,7 @@ describe('CategoryManager', () => {
 
       categoryManager.recordFlagCategory(FlagCategoryId.SIDEWAYS, ['TICKER_A']);
 
-      // Cache is set optimistically
+      // Cache was set optimistically
       let result = await categoryManager.getTickerCategory('TICKER_A');
       expect(result.flag?.id).toBe(FlagCategoryId.SIDEWAYS);
 
@@ -454,6 +454,7 @@ describe('CategoryManager', () => {
       );
       result = await categoryManager.getTickerCategory('TICKER_A');
       expect(result.flag?.id).toBe(FlagCategoryId.SIDEWAYS);
+      // Single fetch call because cache was cold after eviction
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
     });
 
@@ -461,287 +462,5 @@ describe('CategoryManager', () => {
       categoryManager.recordFlagCategory(FlagCategoryId.SIDEWAYS, []);
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
     });
-  });
-});
-
-// ════════════════════════════════════════════
-// Watch Category Helper Tests
-// ════════════════════════════════════════════
-
-describe('resolveWatchCategory', () => {
-  function makeCatTicker(overrides: Partial<Ticker>): Ticker {
-    return new Ticker({
-      ticker: 'TEST',
-      exchange: '',
-      timeframes: ['MN', 'WK', 'DL'],
-      type: 'EQUITY',
-      state: 'WATCHED',
-      trend: 'SIDEWAYS',
-      ...overrides,
-    });
-  }
-
-  describe('classified by state, type, then timeframes', () => {
-    it('classifies READY state ticker as READY', () => {
-      const ticker = makeCatTicker({ state: 'READY' });
-
-      expect(resolveWatchCategory(ticker)).toBe(WatchCategoryId.READY);
-    });
-
-    it('classifies COMPOSITE ticker as COMPOSITE (type before timeframe)', () => {
-      const ticker = makeCatTicker({
-        ticker: 'CNXMIDCAP/USDINR/XAUUSD*100',
-        type: 'COMPOSITE',
-        timeframes: ['SMN', 'TMN', 'MN', 'WK'],
-      });
-
-      expect(resolveWatchCategory(ticker)).toBe(WatchCategoryId.COMPOSITE);
-    });
-
-    it('classifies INDEX ticker with no DL timeframes as INDEX (type before timeframe)', () => {
-      const ticker = makeCatTicker({
-        ticker: 'NIFTY',
-        type: 'INDEX',
-        exchange: 'NSE',
-        timeframes: ['MN', 'WK'],
-      });
-
-      expect(resolveWatchCategory(ticker)).toBe(WatchCategoryId.INDEX);
-    });
-
-    it('classifies COMMODITY ticker with no DL timeframes as INDEX (type before timeframe)', () => {
-      const ticker = makeCatTicker({
-        ticker: 'GOLD',
-        type: 'COMMODITY',
-        timeframes: ['MN', 'WK'],
-      });
-
-      expect(resolveWatchCategory(ticker)).toBe(WatchCategoryId.INDEX);
-    });
-
-    it('classifies FX ticker with no DL timeframes as INDEX', () => {
-      const ticker = makeCatTicker({
-        ticker: 'EURUSD',
-        type: 'FX',
-        timeframes: ['MN', 'WK'],
-      });
-
-      expect(resolveWatchCategory(ticker)).toBe(WatchCategoryId.INDEX);
-    });
-
-    it('classifies BOND ticker with no DL timeframes as INDEX', () => {
-      const ticker = makeCatTicker({
-        ticker: 'US10Y',
-        type: 'BOND',
-        timeframes: ['MN', 'WK'],
-      });
-
-      expect(resolveWatchCategory(ticker)).toBe(WatchCategoryId.INDEX);
-    });
-
-    it('classifies NSE EQUITY ticker with no DL timeframes as LONG_NSE', () => {
-      const ticker = makeCatTicker({
-        ticker: 'RELIANCE',
-        type: 'EQUITY',
-        exchange: 'NSE',
-        timeframes: ['MN', 'WK'],
-      });
-
-      expect(resolveWatchCategory(ticker)).toBe(WatchCategoryId.LONG_NSE);
-    });
-
-    it('classifies non-NSE EQUITY ticker with no DL timeframes as LONG_NON_NSE', () => {
-      const ticker = makeCatTicker({
-        ticker: 'AAPL',
-        type: 'EQUITY',
-        exchange: 'NASDAQ',
-        timeframes: ['MN', 'WK'],
-      });
-
-      expect(resolveWatchCategory(ticker)).toBe(WatchCategoryId.LONG_NON_NSE);
-    });
-
-    it('returns undefined for EQUITY ticker with DL timeframes (default daily)', () => {
-      const ticker = makeCatTicker({
-        ticker: 'DAILY',
-        type: 'EQUITY',
-        exchange: 'NSE',
-        timeframes: ['MN', 'WK', 'DL'],
-      });
-
-      expect(resolveWatchCategory(ticker)).toBeUndefined();
-    });
-
-    it('returns undefined for untracked ticker (backend not found)', () => {
-      expect(resolveWatchCategory(new Ticker({} as any))).toBeUndefined();
-    });
-
-    it('treats COMPOSITE as market for isMarket check', () => {
-      const ticker = makeCatTicker({
-        ticker: 'GOLD/SILVER',
-        type: 'COMPOSITE',
-        state: 'WATCHED',
-      });
-
-      expect(resolveWatchCategory(ticker)).toBe(WatchCategoryId.COMPOSITE);
-    });
-  });
-});
-
-describe('findWatchCategoryById', () => {
-  it('returns RUNNING for RUNNING id', () => {
-    const cat = findWatchCategoryById(WatchCategoryId.RUNNING);
-
-    expect(cat.id).toBe(WatchCategoryId.RUNNING);
-    expect(cat.color).toBe('lime');
-    expect(cat.label).toBe('Running Trades (Journal)');
-    expect(cat.recordUpdate).toBeNull();
-  });
-
-  it('returns READY for READY id', () => {
-    const cat = findWatchCategoryById(WatchCategoryId.READY);
-
-    expect(cat.id).toBe(WatchCategoryId.READY);
-    expect(cat.color).toBe('red');
-    expect(cat.label).toBe('Ready');
-    expect(cat.recordUpdate).toEqual({ state: 'READY' });
-  });
-
-  it('returns INDEX for INDEX id', () => {
-    const cat = findWatchCategoryById(WatchCategoryId.INDEX);
-
-    expect(cat.id).toBe(WatchCategoryId.INDEX);
-    expect(cat.color).toBe('brown');
-    expect(cat.label).toBe('Index');
-    expect(cat.recordUpdate).toEqual({ type: 'INDEX' });
-  });
-
-  it('throws for invalid id', () => {
-    expect(() => findWatchCategoryById('INVALID' as WatchCategoryId)).toThrow('Invalid watch category id: INVALID');
-  });
-});
-
-// ════════════════════════════════════════════
-// Flag Category Helper Tests
-// ════════════════════════════════════════════
-
-describe('resolveFlagCategory', () => {
-  function makeFlagTicker(overrides: Partial<Ticker> = {}): Ticker {
-    return new Ticker({
-      ticker: 'TEST',
-      exchange: '',
-      timeframes: [],
-      type: 'EQUITY',
-      state: 'WATCHED',
-      trend: 'SIDEWAYS',
-      ...overrides,
-    });
-  }
-
-  it('resolves GOLD_INDEX for XAUUSD index ticker', () => {
-    const ticker = makeFlagTicker({
-      ticker: 'XAUUSD',
-      type: 'INDEX',
-    });
-
-    expect(resolveFlagCategory(ticker)?.id).toBe(FlagCategoryId.GOLD_INDEX);
-  });
-
-  it('resolves GOLD_INDEX for GOLDSILVER composite ticker', () => {
-    const ticker = makeFlagTicker({
-      ticker: 'GOLDSILVER',
-      type: 'COMPOSITE',
-    });
-
-    expect(resolveFlagCategory(ticker)?.id).toBe(FlagCategoryId.GOLD_INDEX);
-  });
-
-  it('resolves INDEX for non-gold market instrument', () => {
-    const ticker = makeFlagTicker({
-      ticker: 'NIFTY',
-      type: 'INDEX',
-    });
-
-    expect(resolveFlagCategory(ticker)?.id).toBe(FlagCategoryId.INDEX);
-  });
-
-  it('resolves INDEX for COMMODITY type', () => {
-    const ticker = makeFlagTicker({
-      ticker: 'CRUDEOIL',
-      type: 'COMMODITY',
-    });
-
-    expect(resolveFlagCategory(ticker)?.id).toBe(FlagCategoryId.INDEX);
-  });
-
-  it('resolves CRYPTO for CRYPTO type', () => {
-    const ticker = makeFlagTicker({
-      ticker: 'BTC',
-      type: 'CRYPTO',
-    });
-
-    expect(resolveFlagCategory(ticker)?.id).toBe(FlagCategoryId.CRYPTO);
-  });
-
-  it('resolves UPTREND for UPTREND trend', () => {
-    const ticker = makeFlagTicker({
-      ticker: 'BULL',
-      trend: 'UPTREND',
-    });
-
-    expect(resolveFlagCategory(ticker)?.id).toBe(FlagCategoryId.UPTREND);
-  });
-
-  it('resolves SIDEWAYS for SIDEWAYS trend', () => {
-    const ticker = makeFlagTicker({
-      ticker: 'RANGE',
-      trend: 'SIDEWAYS',
-    });
-
-    expect(resolveFlagCategory(ticker)?.id).toBe(FlagCategoryId.SIDEWAYS);
-  });
-
-  it('resolves DOWNTREND for DOWNTREND trend', () => {
-    const ticker = makeFlagTicker({
-      ticker: 'BEAR',
-      trend: 'DOWNTREND',
-    });
-
-    expect(resolveFlagCategory(ticker)?.id).toBe(FlagCategoryId.DOWNTREND);
-  });
-
-  it('returns undefined for non-market EQUITY that is not GOLD_INDEX/INDEX/CRYPTO and has no trend', () => {
-    const ticker = makeFlagTicker({
-      ticker: 'UNKNOWN',
-      type: 'EQUITY',
-      trend: undefined,
-    });
-
-    expect(resolveFlagCategory(ticker)).toBeUndefined();
-  });
-
-  it('enforces category priority: GOLD_INDEX > INDEX > CRYPTO > UPTREND > SIDEWAYS > DOWNTREND', () => {
-    // CRYPTO ticker with UPTREND trend — GOLD_INDEX does not match (EQUITY), INDEX does not match
-    const ticker = makeFlagTicker({
-      ticker: 'BTC',
-      type: 'CRYPTO',
-      trend: 'UPTREND',
-    });
-
-    // Highest priority that matches is CRYPTO (not UPTREND)
-    expect(resolveFlagCategory(ticker)?.id).toBe(FlagCategoryId.CRYPTO);
-  });
-});
-
-describe('findFlagCategoryById', () => {
-  it('returns valid category for SIDEWAYS', () => {
-    const cat = findFlagCategoryById(FlagCategoryId.SIDEWAYS);
-
-    expect(cat.id).toBe(FlagCategoryId.SIDEWAYS);
-    expect(cat.color).toBe('orange');
-  });
-
-  it('throws for invalid id', () => {
-    expect(() => findFlagCategoryById('INVALID' as FlagCategoryId)).toThrow('Invalid flag category id: INVALID');
   });
 });

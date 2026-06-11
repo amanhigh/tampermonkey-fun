@@ -143,7 +143,7 @@ describe('GttPlugin', () => {
       const results = await plugin.run();
 
       expect(results).toHaveLength(1);
-      expect(results[0].data.orderIds).toEqual(['order123', 'order456']);
+      expect(results[0]?.data?.orderIds).toEqual(['order123', 'order456']);
     });
   });
 });
