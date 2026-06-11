@@ -20,9 +20,8 @@ describe('WatchListHandler', () => {
     jest.clearAllMocks();
 
     mockWatchlistManager = {
-      refreshWatchlistView: jest.fn().mockResolvedValue(undefined),
-      refreshSummaryAndFilters: jest.fn().mockResolvedValue(undefined),
-      applyDefaultFilters: jest.fn(),
+      refresh: jest.fn().mockResolvedValue(undefined),
+      refreshSummary: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<ITradingViewWatchlistManager>;
 
     mockPaintManager = {
@@ -68,13 +67,13 @@ describe('WatchListHandler', () => {
   });
 
   describe('onWatchListChange', () => {
-    it('should delegate to refreshWatchlistView for full refresh', () => {
+    it('should delegate to refresh for full refresh', () => {
       handler.onWatchListChange();
 
-      expect(mockWatchlistManager.refreshWatchlistView).toHaveBeenCalled();
+      expect(mockWatchlistManager.refresh).toHaveBeenCalled();
     });
 
-    it('should no longer call paintArea directly', () => {
+    it('should no longer call paint directly', () => {
       handler.onWatchListChange();
 
       expect(mockPaintManager.paint).not.toHaveBeenCalled();
@@ -107,16 +106,16 @@ describe('WatchListHandler', () => {
       expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['SELECTED1', 'SELECTED2']);
     });
 
-    it('should refresh summary and filters after targeted update', () => {
+    it('should refresh summary after targeted update', () => {
       handler.recordSelectedTicker(WatchCategoryId.READY);
 
-      expect(mockWatchlistManager.refreshSummaryAndFilters).toHaveBeenCalled();
+      expect(mockWatchlistManager.refreshSummary).toHaveBeenCalled();
     });
 
-    it('should NOT do full refreshWatchlistView', () => {
+    it('should NOT do full refresh', () => {
       handler.recordSelectedTicker(WatchCategoryId.READY);
 
-      expect(mockWatchlistManager.refreshWatchlistView).not.toHaveBeenCalled();
+      expect(mockWatchlistManager.refresh).not.toHaveBeenCalled();
     });
   });
 });

@@ -29,11 +29,6 @@ export interface IWatchListHandler {
    * @param categoryId The category identifier to record into.
    */
   recordSelectedTicker(categoryId: WatchCategoryId): void;
-
-  /**
-   * Applies default filters to the watchlist
-   */
-  applyDefaultFilters(): void;
 }
 
 /**
@@ -53,14 +48,8 @@ export class WatchListHandler implements IWatchListHandler {
   /** @inheritdoc */
   public onWatchListChange(): void {
     this.syncUtil.waitOn('watchListChangeEvent', 20, () => {
-      // Paint watchlist items
-      void this.watchlistManager.paintWatchList();
-
-      // Paint screener items if visible
-      void this.paintManager.paintArea(TickerArea.SCREENER);
-
-      // Paint header items
-      void this.paintManager.paintHeader();
+      // Full watchlist UI refresh: paint decals + summary + filters
+      void this.watchlistManager.refresh();
 
       // Update alert feed with watchlist changes
       void this.alertFeedManager.createAlertFeedEvent(this.domManager.getTicker());
@@ -70,12 +59,15 @@ export class WatchListHandler implements IWatchListHandler {
   /** @inheritdoc */
   public recordSelectedTicker(categoryId: WatchCategoryId): void {
     const type = this.domManager.isScreenerVisible() ? TickerArea.SCREENER : TickerArea.WATCHLIST;
-    this.watchManager.recordCategory(categoryId, [...this.domManager.getTickers(type, TickerVisibility.SELECTED)]);
-    this.onWatchListChange();
-  }
+    const selectedTickers = [...this.domManager.getTickers(type, TickerVisibility.SELECTED)];
+    this.watchManager.recordCategory(categoryId, selectedTickers);
 
-  /** @inheritdoc */
-  public applyDefaultFilters(): void {
-    this.watchlistManager.applyDefaultFilters();
+    // Targeted repaint: paintTickers handles WATCHLIST + SCREENER (if visible) + header
+    if (selectedTickers.length > 0) {
+      void this.paintManager.paintTickers(selectedTickers);
+    }
+
+    // Fast summary refresh without full visual repaint
+    void this.watchlistManager.refreshSummary();
   }
 }

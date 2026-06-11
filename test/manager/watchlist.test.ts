@@ -67,9 +67,15 @@ describe('TradingViewWatchlistManager', () => {
     it('should create instance with all dependencies', () => {
       expect(watchlistManager).toBeInstanceOf(TradingViewWatchlistManager);
     });
+
+    it('should apply default white filter on construction', () => {
+      // Construction triggers hideAllItems() via filterWatchList for the default filter
+      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.LINE);
+      expect(mockJQueryChain.hide).toHaveBeenCalled();
+    });
   });
 
-  describe('refreshWatchlistView', () => {
+  describe('refresh', () => {
     let classifyResult: BucketSummary;
 
     beforeEach(() => {
@@ -79,10 +85,11 @@ describe('TradingViewWatchlistManager', () => {
         uncategorizedCount: 1,
       };
       mockPaintManager.summarizeBuckets.mockResolvedValue(classifyResult);
+      jest.clearAllMocks();
     });
 
     it('should execute complete watchlist refresh via paint()', async () => {
-      await watchlistManager.refreshWatchlistView();
+      await watchlistManager.refresh();
 
       // Verify reset operations
       expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.WIDGET);
@@ -97,40 +104,32 @@ describe('TradingViewWatchlistManager', () => {
     });
 
     it('should build summary labels for all categories', async () => {
-      await watchlistManager.refreshWatchlistView();
+      await watchlistManager.refresh();
 
       // Should call buildLabel for each color category
       expect(mockUIUtil.buildLabel).toHaveBeenCalledTimes(ALL_WATCH_CATEGORIES.length);
     });
 
     it('should set widget height for expansion', async () => {
-      await watchlistManager.refreshWatchlistView();
+      await watchlistManager.refresh();
 
       expect(mockJQueryChain.css).toHaveBeenCalledWith('height', '20000px');
     });
 
     it('should show all lines during reset', async () => {
-      await watchlistManager.refreshWatchlistView();
+      await watchlistManager.refresh();
 
       expect(mockJQueryChain.show).toHaveBeenCalled();
     });
 
     it('should use returned buckets for summary display', async () => {
-      await watchlistManager.refreshWatchlistView();
+      await watchlistManager.refresh();
 
       // AAPL is in READY bucket — default_plus plus one uncategorized
       expect(mockUIUtil.buildLabel).toHaveBeenCalledWith(
         expect.stringMatching(/1\||0\|/),
         expect.any(String)
       );
-    });
-  });
-
-  describe('applyDefaultFilters', () => {
-    it('should add white/default color filter', () => {
-      watchlistManager.applyDefaultFilters();
-
-      // Just verify no crash
     });
   });
 });

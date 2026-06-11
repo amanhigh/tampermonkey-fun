@@ -4,6 +4,11 @@ import { IPaintManager } from './paint';
 import { IUIUtil } from '../util/ui';
 import { ALL_WATCH_CATEGORIES, BucketSummary } from '../models/watch';
 
+/** Mouse button codes for filtering */
+const LEFT_CLICK = 1;
+const MIDDLE_CLICK = 2;
+const RIGHT_CLICK = 3;
+
 /**
  * Filter options for watchlist manipulation
  */
@@ -23,12 +28,14 @@ export interface ITradingViewWatchlistManager {
   /**
    * Refreshes watchlist UI: layout reset, ticker paint, summary labels, filters.
    */
-  paintWatchList(): Promise<void>;
+  refresh(): Promise<void>;
 
   /**
-   * Applies default filters to the watchlist.
+   * Refreshes summary labels and reapplies active filters without
+   * repainting ticker decals. Use after targeted ticker repaints
+   * (e.g. category hotkeys).
    */
-  applyDefaultFilters(): void;
+  refreshSummary(): Promise<void>;
 }
 
 /**
@@ -45,33 +52,43 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   constructor(
     private readonly paintManager: IPaintManager,
     private readonly uiUtil: IUIUtil
-  ) {}
-
-  /** @inheritdoc */
-  async paintWatchList(): Promise<void> {
-    this.resetWatchList();
-
-    // Delegate all ticker painting (symbols, flags, FNO) to PaintManager
-    const result = await this.paintManager.paintArea(TickerArea.WATCHLIST);
-
-    // Ticker Set Summary Update
-    this.displaySetSummary(result);
-
-    // Apply Filters
-    this.applyFilters();
-  }
-
-  /** @inheritdoc */
-  applyDefaultFilters(): void {
-    // Apply white filter by default
+  ) {
+    // Initialise default white filter
     this.addFilter({
       color: Constants.UI.COLORS.DEFAULT,
-      index: 1, // Left click
+      index: LEFT_CLICK,
       ctrl: false,
       shift: false,
     });
   }
 
+  /** @inheritdoc */
+  async refresh(): Promise<void> {
+    this.resetWatchList();
+
+    // Delegate all ticker painting (symbols, flags, FNO) to PaintManager
+    await this.paintManager.paint();
+
+    // Reuse summary + filter refresh
+    await this.refreshSummary();
+  }
+
+  /** @inheritdoc */
+  async refreshSummary(): Promise<void> {
+    // Recompute bucket counts without repainting DOM
+    const result = await this.paintManager.summarizeBuckets();
+
+    // Update summary labels
+    this.displaySetSummary(result);
+
+    // Re-apply active filters
+    this.applyFilters();
+  }
+
+  /**
+   * Reset watchlist layout and visibility. Does NOT reset visual decals
+   * (colors, flags, F&O borders) — those are handled by PaintManager.paint().
+   */
   private resetWatchList(): void {
     // Increase Widget Height to prevent Line Filtering
     $(Constants.DOM.WATCHLIST.WIDGET).css('height', '20000px');
@@ -83,9 +100,19 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     // Disable List Transformation
     $(Constants.DOM.WATCHLIST.LINE).css('position', '');
     $(Constants.DOM.WATCHLIST.CONTAINER).css('overflow', '');
+  }
 
-    // Reset area visual state (symbols, flags, F&O borders)
-    this.paintManager.resetArea(TickerArea.WATCHLIST);
+  /**
+   * Build a WatchlistFilter from a jQuery mouse-down event.
+   * @private
+   */
+  private createFilterFromMouseEvent(e: JQuery.MouseDownEvent): WatchlistFilter {
+    return {
+      color: $(e.target).data('color') as string,
+      index: e.which,
+      ctrl: e.originalEvent?.ctrlKey || false,
+      shift: e.originalEvent?.shiftKey || false,
+    };
   }
 
   /**
@@ -111,13 +138,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
 
       $label
         .mousedown((e: JQuery.MouseDownEvent) => {
-          // HACK: Handler Layer logic move from here.
-          this.addFilter({
-            color: $(e.target).data('color') as string,
-            index: e.which,
-            ctrl: e.originalEvent?.ctrlKey || false,
-            shift: e.originalEvent?.shiftKey || false,
-          });
+          this.addFilter(this.createFilterFromMouseEvent(e));
         })
         .contextmenu((e) => {
           e.preventDefault();
@@ -204,24 +225,6 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   }
 
   /**
-   * Handles initial filter state setup
-   * @private
-   */
-  private handleFilterInit(filter: WatchlistFilter): void {
-    if (!filter.ctrl && !filter.shift) {
-      this.hideAllItems();
-    }
-  }
-
-  /**
-   * Handles symbol-based filtering (left-click)
-   * @private
-   */
-  private handleSymbolFilter(filter: WatchlistFilter): void {
-    this.filterByColor(filter.color, filter.shift);
-  }
-
-  /**
    * Handles filter reset (middle-click)
    * @private
    */
@@ -231,29 +234,24 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   }
 
   /**
-   * Handles flag-based filtering (right-click)
-   * @private
-   */
-  private handleFlagFilter(filter: WatchlistFilter): void {
-    this.filterByFlag(filter.color, filter.shift);
-  }
-
-  /**
    * Filters the watchlist symbols based on the provided filter parameters
    * @private
    */
   private filterWatchList(filter: WatchlistFilter): void {
-    this.handleFilterInit(filter);
+    // On a new filter chain (non-modifier click), hide all items first
+    if (!filter.ctrl && !filter.shift) {
+      this.hideAllItems();
+    }
 
     switch (filter.index) {
-      case 1: // Left Click
-        this.handleSymbolFilter(filter);
+      case LEFT_CLICK:
+        this.filterByColor(filter.color, filter.shift);
         break;
-      case 2: // Middle Click
+      case MIDDLE_CLICK:
         this.handleResetFilter();
         break;
-      case 3: // Right Click
-        this.handleFlagFilter(filter);
+      case RIGHT_CLICK:
+        this.filterByFlag(filter.color, filter.shift);
         break;
       default:
         throw new Error('You have a strange Mouse!');

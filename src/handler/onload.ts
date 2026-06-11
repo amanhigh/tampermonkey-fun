@@ -108,8 +108,7 @@ export class OnLoadHandler implements IOnLoadHandler {
           this.watchListHandler.onWatchListChange();
         });
 
-        // Apply default filters before first paint
-        this.watchListHandler.applyDefaultFilters();
+        // Full watchlist refresh (default filter is applied on initialization)
         this.watchListHandler.onWatchListChange();
 
         // Set up screener observer

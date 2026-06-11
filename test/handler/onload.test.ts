@@ -59,7 +59,6 @@ describe('OnLoadHandler', () => {
     mockWatchListHandler = {
       onWatchListChange: jest.fn(),
       recordSelectedTicker: jest.fn(),
-      applyDefaultFilters: jest.fn(),
     } as unknown as jest.Mocked<IWatchListHandler>;
 
     mockHotkeyHandler = {
