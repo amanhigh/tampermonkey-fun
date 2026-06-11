@@ -1,4 +1,3 @@
-import { LRUCache } from 'lru-cache';
 import { TickerArea, TickerVisibility } from '../models/dom';
 import { IWatchManager } from './watch';
 import { IFlagManager } from './flag';
@@ -77,6 +76,10 @@ export class PaintManager implements IPaintManager {
     const buckets = new Map<WatchCategoryId, Set<string>>();
     const uncategorized = new Set<string>();
 
+    const symbolSelector = area.getSymbolSelector(TickerVisibility.ALL);
+    const itemSelector = area.getItemSelector();
+    const flagSelector = area.getFlagSelector();
+
     // For screener, cache watchlist tickers for brown fallback + compute recent set
     let watchlistTickerSet: Set<string> | undefined;
     let recentTickers: Set<string> | undefined;
@@ -112,15 +115,31 @@ export class PaintManager implements IPaintManager {
       }
 
       // Paint symbol, flag, and FNO border in one pass per ticker
-      this.paintSingleSymbol(area, ticker, symbolColor);
+      const $symbol = $(symbolSelector).filter(
+        (_: number, el: HTMLElement) => (el.textContent || el.innerHTML) === ticker
+      );
+
+      if ($symbol.length === 0) {
+        continue;
+      }
+
+      // Symbol color (resetArea already set default; only override if non-default)
+      if (symbolColor !== Constants.UI.COLORS.DEFAULT) {
+        $symbol.css('color', symbolColor);
+      }
 
       // FNO border
       if (this.fnoManager.isFno(ticker)) {
-        this.paintSingleSymbolBorder(area, ticker);
+        $symbol.css(Constants.UI.COLORS.FNO_CSS);
       }
 
-      // Flag
-      await this.paintSingleFlag(area, ticker, flagCat?.color);
+      // Flag color — derive from the ticker row (resetArea already set default; only override if present)
+      if (flagCat?.color) {
+        const $flags = $symbol.closest(itemSelector).find(flagSelector);
+        if ($flags.length > 0) {
+          $flags.css('color', flagCat.color);
+        }
+      }
     }
 
     return { buckets, uncategorized };
@@ -164,39 +183,7 @@ export class PaintManager implements IPaintManager {
     this.applyFnoBorder($name, this.fnoManager.isFno(ticker));
   }
 
-  // ── Single-ticker painters ──
-
-  /**
-   * Paint the symbol text for a single ticker in the given area.
-   * Resets to default, then applies color when provided.
-   */
-  private paintSingleSymbol(area: TickerArea, ticker: string, color?: string): void {
-    const $symbol = $(area.getSymbolSelector(TickerVisibility.ALL)).filter(
-      (_: number, el: HTMLElement) => (el.textContent || el.innerHTML) === ticker
-    );
-
-    if ($symbol.length === 0) {
-      return;
-    }
-
-    $symbol.css('color', Constants.UI.COLORS.DEFAULT);
-    if (color) {
-      $symbol.css('color', color);
-    }
-  }
-
-  /**
-   * Apply FNO border style to a single ticker's symbol element.
-   */
-  private paintSingleSymbolBorder(area: TickerArea, ticker: string): void {
-    const $symbol = $(area.getSymbolSelector(TickerVisibility.ALL)).filter(
-      (_: number, el: HTMLElement) => (el.textContent || el.innerHTML) === ticker
-    );
-
-    if ($symbol.length > 0) {
-      $symbol.css(Constants.UI.COLORS.FNO_CSS);
-    }
-  }
+  // ── Single-ticker painters (header only) ──
 
   /**
    * Apply or clear F&O border style on a header element.
@@ -209,61 +196,5 @@ export class PaintManager implements IPaintManager {
       $element.css('border-top-style', '');
       $element.css('border-width', '');
     }
-  }
-
-  // ── Single-Ticker Flag Painter ──
-
-  /**
-   * LRU cache mapping `area.id:ticker` → jQuery flag element collection.
-   * On cache miss, fetchMethod scans the requested panel automatically.
-   */
-  private readonly flagElementCache = new LRUCache<string, JQuery<HTMLElement>>({
-    max: Constants.CACHE.CATEGORY.MAX,
-    ttl: Constants.CACHE.CATEGORY.TTL_MS,
-    fetchMethod: async (key: string): Promise<JQuery<HTMLElement> | undefined> => {
-      const separatorIdx = key.indexOf(':');
-      const areaId = key.substring(0, separatorIdx) as keyof typeof TickerArea;
-      const ticker = key.substring(separatorIdx + 1);
-      const area = TickerArea[areaId];
-      if (!area) {
-        return undefined;
-      }
-      return await Promise.resolve(this.lookupFlagElementsForTicker(area, ticker));
-    },
-  });
-
-  /**
-   * Build a cache key from area and ticker.
-   */
-  private static cacheKey(area: TickerArea, ticker: string): string {
-    return `${area.id}:${ticker}`;
-  }
-
-  /**
-   * Paint the flag for a single ticker. Uses LRU cache for DOM lookup.
-   */
-  private async paintSingleFlag(area: TickerArea, ticker: string, color?: string): Promise<void> {
-    const $flags = await this.flagElementCache.fetch(PaintManager.cacheKey(area, ticker));
-    if (!$flags) {
-      return;
-    }
-
-    $flags.css('color', Constants.UI.COLORS.DEFAULT);
-    if (color) {
-      $flags.css('color', color);
-    }
-  }
-
-  /**
-   * Scan the panel for flag elements belonging to the given ticker.
-   * Returns undefined when the ticker is not found in that panel.
-   */
-  private lookupFlagElementsForTicker(area: TickerArea, ticker: string): JQuery<HTMLElement> | undefined {
-    const $flags = $(area.getSymbolSelector(TickerVisibility.ALL))
-      .filter((_: number, element: HTMLElement) => (element.textContent || element.innerHTML) === ticker)
-      .closest(area.getItemSelector())
-      .find(area.getFlagSelector());
-
-    return $flags.length > 0 ? $flags : undefined;
   }
 }

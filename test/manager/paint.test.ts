@@ -179,6 +179,37 @@ describe('PaintManager', () => {
       // resetArea uses area.getSymbolSelector() to reset all elements
       expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.SYMBOL);
     });
+
+    it('should paint symbol, flag, and FNO using direct DOM lookup (no cache)', async () => {
+      mockDomManager.getTickers.mockReturnValue(new Set(['NIFTY']));
+      mockWatchManager.getTickerCategory.mockResolvedValue({
+        id: WatchCategoryId.READY,
+        color: 'red',
+        label: 'Ready',
+        recordUpdate: null,
+      });
+      mockFlagManager.getTickerCategory.mockResolvedValue({
+        id: FlagCategoryId.SIDEWAYS,
+        color: 'orange',
+        label: 'Sideways',
+      } as any);
+      mockFnoManager.isFno.mockReturnValue(true);
+
+      const result = await paintManager.paintArea(TickerArea.WATCHLIST);
+
+      // Symbol lookup via jQuery filter
+      expect(mockJQueryElement.filter).toHaveBeenCalled();
+      // Flag lookup via closest+find from the symbol element (not via async cache)
+      expect(mockJQueryElement.closest).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.ITEM);
+      expect(mockJQueryElement.find).toHaveBeenCalledWith(Constants.DOM.FLAGS.SYMBOL);
+      // Colors applied directly
+      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'red');
+      expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'orange');
+      // FNO border applied directly
+      expect(mockJQueryElement.css).toHaveBeenCalledWith(Constants.UI.COLORS.FNO_CSS);
+      // Buckets still built correctly
+      expect(result.buckets.get(WatchCategoryId.READY)?.has('NIFTY')).toBe(true);
+    });
   });
 
   describe('paintHeader', () => {
