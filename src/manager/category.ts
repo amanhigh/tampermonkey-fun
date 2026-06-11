@@ -52,9 +52,10 @@ export interface ICategoryManager {
  * All other categories (watch and flag) are derived from the backend
  * ticker record.
  *
- * Record operations optimistically set the cache to the new category
- * before the backend update completes. On failure the cache is evicted
- * so the next lookup falls back to pre-update backend data.
+ * Record operations delete the cache entry then set only the recorded
+ * side (watch or flag) so the immediate paint shows the new category.
+ * On completion the cache is evicted so the next lookup re-fetches
+ * both sides from current backend data.
  */
 export class CategoryManager implements ICategoryManager {
   /** LRU cache for ticker → combined category lookups. */
@@ -88,8 +89,7 @@ export class CategoryManager implements ICategoryManager {
     }
 
     for (const ticker of tickers) {
-      this.optimisticSet(ticker, { watch: cat });
-      void this.syncBackend(ticker, cat.recordUpdate, /* isWatch */ true);
+      void this.syncBackend(ticker, cat.recordUpdate, { watch: cat, flag: undefined }, /* isWatch */ true);
     }
   }
 
@@ -98,8 +98,7 @@ export class CategoryManager implements ICategoryManager {
     const cat = FlagClassifier.findById(categoryId);
 
     for (const ticker of tickers) {
-      this.optimisticSet(ticker, { flag: cat });
-      void this.syncBackend(ticker, cat.update, /* isWatch */ false);
+      void this.syncBackend(ticker, cat.update, { watch: undefined, flag: cat }, /* isWatch */ false);
     }
   }
 
@@ -180,10 +179,20 @@ export class CategoryManager implements ICategoryManager {
 
   /**
    * Persist a category assignment to the backend.
-   * On failure, evicts the optimistic cache entry so the next lookup
-   * re-fetches from the pre-update backend state.
+   *
+   * Sets the cache optimistically (synchronous, before await) so the
+   * immediate paint shows the new category. On failure the cache entry
+   * is evicted so the next lookup falls back to pre-update backend data.
    */
-  private async syncBackend(ticker: string, update: TickerUpdateRequest, isWatch: boolean): Promise<void> {
+  private async syncBackend(
+    ticker: string,
+    update: TickerUpdateRequest,
+    optimistic: TickerCategory,
+    isWatch: boolean
+  ): Promise<void> {
+    // Optimistic for instant repaint — runs synchronously before await
+    this.categoryCache.set(ticker, optimistic);
+
     try {
       await this.tickerManager.updateTicker(ticker, update);
       // Success: optimistic cache entry is correct — keep it

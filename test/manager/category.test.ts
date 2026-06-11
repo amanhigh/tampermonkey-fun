@@ -355,27 +355,25 @@ describe('CategoryManager', () => {
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
     });
 
-    it('should optimistically cache recorded watch category for instant repaint', async () => {
+    it('should keep optimistic cache after syncBackend success, no re-fetch', async () => {
       // Populate cache with uncategorized result
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockRejectedValue(new Error('not found'));
       await categoryManager.getTickerCategory('EVICT_ME');
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
 
-      // Optimistic cache + update via recordWatchCategory
       jest.clearAllMocks();
       mockTickerManager.updateTicker.mockResolvedValue(undefined as any);
       categoryManager.recordWatchCategory(WatchCategoryId.READY, ['EVICT_ME']);
-
-      // Verify update was called
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('EVICT_ME', { state: 'READY' });
 
-      // Next getTickerCategory returns cached value (no backend fetch)
-      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'EVICT_ME', state: 'READY' }));
+      // syncBackend succeeds, cache stays
+      await waitForAsync();
+
+      // Cache hit — no backend re-fetch needed
       const result = await categoryManager.getTickerCategory('EVICT_ME');
       expect(result.watch?.id).toBe(WatchCategoryId.READY);
-      // Backend not called again — served from cache
-      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(0);
+      expect(mockTickerManager.getTicker).not.toHaveBeenCalled();
     });
   });
 
@@ -418,7 +416,7 @@ describe('CategoryManager', () => {
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'COMPOSITE', state: 'WATCHED' });
     });
 
-    it('should optimistically cache recorded flag category', async () => {
+    it('should keep optimistic flag cache after syncBackend success', async () => {
       // Prime: cache knows SIDEWAYS
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockResolvedValue(
@@ -427,37 +425,87 @@ describe('CategoryManager', () => {
       await categoryManager.getTickerCategory('TICKER_A');
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
 
-      // Record: set cache to DOWNTREND without immediate backend call
+      jest.clearAllMocks();
+      mockTickerManager.updateTicker.mockResolvedValue(undefined as any);
+
       categoryManager.recordFlagCategory(FlagCategoryId.DOWNTREND, ['TICKER_A']);
 
-      // Next lookup returns cached value — no extra backend call
-      const result = await categoryManager.getTickerCategory('TICKER_A');
-      expect(result.flag?.id).toBe(FlagCategoryId.DOWNTREND);
-      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
-    });
-
-    it('should evict cache on backend update failure', async () => {
-      mockTickerManager.updateTicker.mockRejectedValue(new Error('Backend error'));
-
-      categoryManager.recordFlagCategory(FlagCategoryId.SIDEWAYS, ['TICKER_A']);
-
-      // Cache was set optimistically
-      let result = await categoryManager.getTickerCategory('TICKER_A');
-      expect(result.flag?.id).toBe(FlagCategoryId.SIDEWAYS);
-
-      // Let async syncBackend fail and evict
+      // syncBackend succeeds, cache stays
       await waitForAsync();
 
-      // Next lookup hits backend (cache was evicted on failure)
+      const result = await categoryManager.getTickerCategory('TICKER_A');
+      expect(result.flag?.id).toBe(FlagCategoryId.DOWNTREND);
+      expect(mockTickerManager.getTicker).not.toHaveBeenCalled();
+    });
+
+    it('should evict cache on syncBackend failure', async () => {
+      // Populate: cache has SIDEWAYS
+      mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockResolvedValue(
         makeTicker({ ticker: 'TICKER_A', trend: 'SIDEWAYS' })
       );
-      result = await categoryManager.getTickerCategory('TICKER_A');
+      await categoryManager.getTickerCategory('TICKER_A');
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
+
+      // syncBackend will fail
+      jest.clearAllMocks();
+      mockTickerManager.updateTicker.mockRejectedValue(new Error('Backend error'));
+
+      // Record DOWNTREND — optimistic cache set
+      categoryManager.recordFlagCategory(FlagCategoryId.DOWNTREND, ['TICKER_A']);
+
+      // syncBackend fails, cache evicted by catch
+      await waitForAsync();
+
+      // Next lookup re-fetches from backend (cache was evicted)
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'TICKER_A', trend: 'SIDEWAYS' })
+      );
+      const result = await categoryManager.getTickerCategory('TICKER_A');
+      // Falls back to pre-update backend data (SIDEWAYS, not DOWNTREND)
       expect(result.flag?.id).toBe(FlagCategoryId.SIDEWAYS);
       // Single fetch call because cache was cold after eviction
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
     });
 
+    it('should evict stale watch in optimistic cache after flag recording', async () => {
+      // Scenario: ticker is INDEX. User presses F8 (UPTREND). Flag update sets
+      // type=EQUITY, which invalidates the INDEX watch. The cache is set directly
+      // (not merged), so the stale INDEX watch is gone immediately.
+
+      // Prime: cache knows INDEX watch + INDEX flag
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'IND_X', type: 'INDEX' })
+      );
+      let result = await categoryManager.getTickerCategory('IND_X');
+      expect(result.watch?.id).toBe(WatchCategoryId.INDEX);
+      expect(result.flag?.id).toBe(FlagCategoryId.INDEX);
+
+      // Hang syncBackend so we can check the optimistic state
+      let resolveUpdate!: (v: any) => void;
+      mockTickerManager.updateTicker.mockImplementation(
+        () => new Promise((resolve) => { resolveUpdate = resolve; })
+      );
+
+      // Record UPTREND flag — cache set directly: {watch: undefined, flag: UPTREND}
+      categoryManager.recordFlagCategory(FlagCategoryId.UPTREND, ['IND_X']);
+
+      // Optimistic cache: flag=UPTREND, watch=undefined (INDEX evicted)
+      result = await categoryManager.getTickerCategory('IND_X');
+      expect(result.flag?.id).toBe(FlagCategoryId.UPTREND);
+      expect(result.watch).toBeUndefined(); // stale INDEX gone
+
+      // Let syncBackend finish — cache stays on success
+      resolveUpdate(undefined);
+      await waitForAsync();
+
+      // Cache still has optimistic data (no re-fetch needed)
+      result = await categoryManager.getTickerCategory('IND_X');
+      expect(result.flag?.id).toBe(FlagCategoryId.UPTREND);
+      expect(result.watch).toBeUndefined();
+    });
+    
     it('should handle empty ticker array', () => {
       categoryManager.recordFlagCategory(FlagCategoryId.SIDEWAYS, []);
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
