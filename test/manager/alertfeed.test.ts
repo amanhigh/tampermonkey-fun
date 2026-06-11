@@ -81,6 +81,7 @@ describe('AlertFeedManager', () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: { state: 'READY' } },
         flag: undefined,
+        isFno: false,
       });
 
       const result = await alertFeedManager.getAlertFeedState('RELIANCE');
@@ -95,8 +96,8 @@ describe('AlertFeedManager', () => {
 
     it('should return RECENT state when ticker is recent but not watched', async () => {
       mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(makeAlertTicker({ ticker: 'NSE:TCS' }));
-      mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined });
-      mockRecentManager.isRecent.mockReturnValue(true);
+      mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, isFno: false });
+      mockRecentManager.isRecent.mockResolvedValue(true);
 
       const result = await alertFeedManager.getAlertFeedState('TCS');
 
@@ -111,8 +112,8 @@ describe('AlertFeedManager', () => {
 
     it('should return MAPPED state when ticker is mapped but not watched or recent', async () => {
       mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(makeAlertTicker({ ticker: 'NSE:HDFC' }));
-      mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined });
-      mockRecentManager.isRecent.mockReturnValue(false);
+      mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, isFno: false });
+      mockRecentManager.isRecent.mockResolvedValue(false);
 
       const result = await alertFeedManager.getAlertFeedState('HDFC');
 

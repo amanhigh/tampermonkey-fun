@@ -33,7 +33,6 @@ import { ITickerManager, TickerManager } from '../manager/ticker';
 import { ILifecycleManager, LifecycleManager } from '../manager/lifecycle';
 import { ITradingViewManager, TradingViewManager } from '../manager/tv';
 import { IAlertTickerManager, AlertTickerManager } from '../manager/alert_ticker';
-import { IFnoManager, FnoManager } from '../manager/fno';
 
 // Handler Imports
 import { AlertHandler } from '../handler/alert';
@@ -208,13 +207,7 @@ export class Factory {
     paint: (): IPaintManager =>
       Factory.getInstance(
         'paintManager',
-        () =>
-          new PaintManager(
-            Factory.manager.dom(),
-            Factory.manager.category(),
-            Factory.manager.fno(),
-            Factory.manager.recent()
-          )
+        () => new PaintManager(Factory.manager.dom(), Factory.manager.category(), Factory.manager.recent())
       ),
 
     dom: (): IDomManager =>
@@ -257,7 +250,6 @@ export class Factory {
             Factory.manager.timeFrame()
           )
       ),
-    fno: (): IFnoManager => Factory.getInstance('fnoManager', () => new FnoManager(Factory.client.ticker())),
     alertFeed: (): IAlertFeedManager =>
       Factory.getInstance(
         'alertFeedManager',

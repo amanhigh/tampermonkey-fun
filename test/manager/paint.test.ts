@@ -2,7 +2,6 @@ import { TickerArea, TickerVisibility } from '../../src/models/dom';
 import { PaintManager, IPaintManager } from '../../src/manager/paint';
 import { ICategoryManager } from '../../src/manager/category';
 import { IDomManager } from '../../src/manager/dom';
-import { IFnoManager } from '../../src/manager/fno';
 import { IRecentManager } from '../../src/manager/recent';
 import { Constants } from '../../src/models/constant';
 import { TickerCategory } from '../../src/models/category';
@@ -30,7 +29,6 @@ describe('PaintManager', () => {
   let paintManager: IPaintManager;
   let mockDomManager: jest.Mocked<IDomManager>;
   let mockCategoryManager: jest.Mocked<ICategoryManager>;
-  let mockFnoManager: jest.Mocked<IFnoManager>;
   let mockRecentManager: jest.Mocked<IRecentManager>;
 
   beforeEach(() => {
@@ -46,7 +44,7 @@ describe('PaintManager', () => {
     } as unknown as jest.Mocked<IDomManager>;
 
     mockCategoryManager = {
-      getTickerCategory: jest.fn().mockResolvedValue({ watch: undefined, flag: undefined }),
+      getTickerCategory: jest.fn().mockResolvedValue({ watch: undefined, flag: undefined, isFno: false }),
       getBatchCategory: jest.fn(),
       recordWatchCategory: jest.fn(),
       recordFlagCategory: jest.fn(),
@@ -64,17 +62,12 @@ describe('PaintManager', () => {
       },
     );
 
-    mockFnoManager = {
-      isFno: jest.fn().mockReturnValue(false),
-      getAllFnoTickers: jest.fn().mockReturnValue(new Set()),
-    } as unknown as jest.Mocked<IFnoManager>;
-
     mockRecentManager = {
       markRecent: jest.fn(),
-      isRecent: jest.fn().mockReturnValue(false),
+      isRecent: jest.fn().mockResolvedValue(false),
     } as unknown as jest.Mocked<IRecentManager>;
 
-    paintManager = new PaintManager(mockDomManager, mockCategoryManager, mockFnoManager, mockRecentManager);
+    paintManager = new PaintManager(mockDomManager, mockCategoryManager, mockRecentManager);
     jest.clearAllMocks();
   });
 
@@ -93,7 +86,7 @@ describe('PaintManager', () => {
       mockJQueryElement.closest.mockReturnValue(mockJQueryElement);
       mockJQueryElement.find.mockReturnValue(mockJQueryElement);
       mockDomManager.getTickers.mockReturnValue(new Set(['NIFTY']));
-      mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined });
+      mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, isFno: false });
     });
 
     it('should paint WATCHLIST area every time', async () => {
@@ -141,8 +134,8 @@ describe('PaintManager', () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null },
         flag: { id: 'SIDEWAYS' as any, color: 'orange', label: 'Sideways', update: { trend: 'SIDEWAYS' } },
+        isFno: true,
       });
-      mockFnoManager.isFno.mockReturnValue(true);
 
       await paintManager.paint();
 
@@ -162,14 +155,14 @@ describe('PaintManager', () => {
       mockJQueryElement.closest.mockReturnValue(mockJQueryElement);
       mockJQueryElement.find.mockReturnValue(mockJQueryElement);
       mockDomManager.getTickers.mockReturnValue(new Set());
-      mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined });
+      mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, isFno: false });
     });
 
     it('should paint tickers in WATCHLIST area', async () => {
       mockDomManager.getTickers.mockReturnValue(new Set(['AAPL', 'GOOG']));
       mockCategoryManager.getTickerCategory.mockImplementation(async (ticker: string) => {
-        if (ticker === 'AAPL') return { watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null }, flag: undefined };
-        return { watch: undefined, flag: undefined };
+        if (ticker === 'AAPL') return { watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null }, flag: undefined, isFno: false };
+        return { watch: undefined, flag: undefined, isFno: false };
       });
       mockDomManager.isScreenerVisible.mockReturnValue(false);
 
@@ -225,8 +218,8 @@ describe('PaintManager', () => {
     it('should summarize WATCHLIST buckets without painting DOM', async () => {
       mockDomManager.getTickers.mockReturnValue(new Set(['AAPL', 'GOOG']));
       mockCategoryManager.getTickerCategory.mockImplementation(async (ticker: string) => {
-        if (ticker === 'AAPL') return { watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null }, flag: undefined };
-        return { watch: undefined, flag: undefined };
+        if (ticker === 'AAPL') return { watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null }, flag: undefined, isFno: false };
+        return { watch: undefined, flag: undefined, isFno: false };
       });
 
       const result = await paintManager.summarizeBuckets();

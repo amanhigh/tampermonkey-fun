@@ -4,7 +4,7 @@ import { FlagCategory } from './flag';
 /**
  * Unified result of ticker category classification.
  *
- * Both fields are resolved from the same backend ticker record.
+ * All fields are resolved from the same backend ticker record.
  * Either field may be undefined when the ticker does not match
  * any category of that type.
  */
@@ -14,4 +14,7 @@ export interface TickerCategory {
 
   /** Flag/trend-based category (SIDEWAYS, UPTREND, CRYPTO, etc.). */
   readonly flag: FlagCategory | undefined;
+
+  /** Whether the ticker is an F&O (Futures & Options) symbol. */
+  readonly isFno: boolean;
 }

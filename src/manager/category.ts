@@ -91,7 +91,7 @@ export class CategoryManager implements ICategoryManager {
 
   /** @inheritdoc */
   async getTickerCategory(ticker: string): Promise<TickerCategory> {
-    return (await this.categoryCache.fetch(ticker)) ?? { watch: undefined, flag: undefined };
+    return (await this.categoryCache.fetch(ticker)) ?? { watch: undefined, flag: undefined, isFno: false };
   }
 
   /** @inheritdoc */
@@ -104,7 +104,12 @@ export class CategoryManager implements ICategoryManager {
     }
 
     for (const ticker of tickers) {
-      void this.syncBackend(ticker, cat.recordUpdate, { watch: cat, flag: undefined }, /* isWatch */ true);
+      void this.syncBackend(
+        ticker,
+        cat.recordUpdate,
+        { watch: cat, flag: undefined, isFno: false },
+        /* isWatch */ true
+      );
     }
   }
 
@@ -113,7 +118,7 @@ export class CategoryManager implements ICategoryManager {
     const cat = FlagClassifier.findById(categoryId);
 
     for (const ticker of tickers) {
-      void this.syncBackend(ticker, cat.update, { watch: undefined, flag: cat }, /* isWatch */ false);
+      void this.syncBackend(ticker, cat.update, { watch: undefined, flag: cat, isFno: false }, /* isWatch */ false);
     }
   }
 
@@ -145,8 +150,7 @@ export class CategoryManager implements ICategoryManager {
   /**
    * Load a ticker's combined categories from backend data.
    * Fires journal check and ticker fetch in parallel.
-   * Returns undefined when neither watch nor flag category is found
-   * (misses are not cached).
+   * Returns undefined only when no category and not FNO (avoids caching a complete miss).
    */
   private async loadTickerCategory(ticker: string): Promise<TickerCategory | undefined> {
     // Fire journal check and ticker fetch in parallel
@@ -157,6 +161,7 @@ export class CategoryManager implements ICategoryManager {
 
     let watch: WatchCategory | undefined;
     let flag: FlagCategory | undefined;
+    let isFno = false;
 
     // Watch: journal-based (RUNNING) takes priority
     if (journalCategory !== undefined) {
@@ -168,14 +173,15 @@ export class CategoryManager implements ICategoryManager {
     // Flag: derived from ticker record only
     if (tickerRecord !== undefined) {
       flag = FlagClassifier.findByTicker(tickerRecord);
+      isFno = tickerRecord.is_fno;
     }
 
-    // Neither found — avoid caching a complete miss
-    if (watch === undefined && flag === undefined) {
+    // Nothing to cache — avoid caching a complete miss
+    if (watch === undefined && flag === undefined && !isFno) {
       return undefined;
     }
 
-    return { watch, flag };
+    return { watch, flag, isFno };
   }
 
   // ── Classification helpers ──
@@ -207,6 +213,7 @@ export class CategoryManager implements ICategoryManager {
    * Sets the cache optimistically (synchronous, before await) so the
    * immediate paint shows the new category. On failure the cache entry
    * is evicted so the next lookup falls back to pre-update backend data.
+   * isFno is never touched — preserved from the existing cache entry.
    */
   private async syncBackend(
     ticker: string,
@@ -214,8 +221,9 @@ export class CategoryManager implements ICategoryManager {
     optimistic: TickerCategory,
     isWatch: boolean
   ): Promise<void> {
-    // Optimistic for instant repaint — runs synchronously before await
-    this.categoryCache.set(ticker, optimistic);
+    // Preserve existing isFno (FNO is read-only, never modified from UI)
+    const existing = this.categoryCache.get(ticker);
+    this.categoryCache.set(ticker, { ...optimistic, isFno: existing?.isFno ?? false });
 
     try {
       await this.tickerManager.updateTicker(ticker, update);

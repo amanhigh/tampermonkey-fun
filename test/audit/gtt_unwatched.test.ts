@@ -54,6 +54,7 @@ describe('GttPlugin', () => {
       categoryManager.getTickerCategory.mockResolvedValue({
         watch: { id: WatchCategoryId.SET_JOURNAL, color: 'orange', label: '', recordUpdate: null },
         flag: undefined,
+        isFno: false,
       });
 
       const results = await plugin.run();
@@ -70,6 +71,7 @@ describe('GttPlugin', () => {
       categoryManager.getTickerCategory.mockResolvedValue({
         watch: { id: WatchCategoryId.RUNNING, color: 'lime', label: '', recordUpdate: null },
         flag: undefined,
+        isFno: false,
       });
 
       const results = await plugin.run();
@@ -86,6 +88,7 @@ describe('GttPlugin', () => {
       categoryManager.getTickerCategory.mockResolvedValue({
         watch: { id: WatchCategoryId.READY, color: 'red', label: '', recordUpdate: { state: 'READY' } },
         flag: undefined,
+        isFno: false,
       });
 
       const results = await plugin.run();
@@ -104,7 +107,7 @@ describe('GttPlugin', () => {
       gttEvent.addOrder('TSLA', mockOrder);
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
-      categoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined });
+      categoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, isFno: false });
 
       const results = await plugin.run();
 
@@ -122,8 +125,8 @@ describe('GttPlugin', () => {
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
       categoryManager.getTickerCategory.mockImplementation(async (ticker: string) => {
-        if (ticker === 'WATCHED') return { watch: { id: WatchCategoryId.RUNNING, color: 'lime', label: '', recordUpdate: null }, flag: undefined };
-        return { watch: undefined, flag: undefined };
+        if (ticker === 'WATCHED') return { watch: { id: WatchCategoryId.RUNNING, color: 'lime', label: '', recordUpdate: null }, flag: undefined, isFno: false };
+        return { watch: undefined, flag: undefined, isFno: false };
       });
 
       const results = await plugin.run();
@@ -138,7 +141,7 @@ describe('GttPlugin', () => {
       gttEvent.addOrder('TICK', new Order('TICK', 20, OrderType.SINGLE, 'order456', [200]));
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
-      categoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined });
+      categoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, isFno: false });
 
       const results = await plugin.run();
 

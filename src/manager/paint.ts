@@ -1,7 +1,6 @@
 import { TickerArea, TickerVisibility } from '../models/dom';
 import { ICategoryManager } from './category';
 import { IDomManager } from './dom';
-import { IFnoManager } from './fno';
 import { IRecentManager } from './recent';
 import { Constants } from '../models/constant';
 import { BucketSummary, WatchCategoryId, WatchCategory } from '../models/watch';
@@ -56,7 +55,6 @@ export class PaintManager implements IPaintManager {
   constructor(
     private readonly domManager: IDomManager,
     private readonly categoryManager: ICategoryManager,
-    private readonly fnoManager: IFnoManager,
     private readonly recentManager: IRecentManager
   ) {}
 
@@ -99,7 +97,6 @@ export class PaintManager implements IPaintManager {
       this.recordBucketSummary(buckets, uncategorizedTickers, ticker, watchCat);
     }
 
-    this.logUncategorizedTickers(uncategorizedTickers);
     return this.toBucketSummary(buckets, uncategorizedTickers);
   }
 
@@ -148,7 +145,7 @@ export class PaintManager implements IPaintManager {
       return;
     }
 
-    const context = this.buildAreaPaintContext(area, tickers);
+    const context = await this.buildAreaPaintContext(area, tickers);
 
     // Fetch all categories in parallel (10 concurrent) before touching DOM
     const categoryMap = await this.categoryManager.getBatchCategory(tickers);
@@ -181,7 +178,7 @@ export class PaintManager implements IPaintManager {
     $exchange.css('color', Constants.UI.COLORS.DEFAULT);
 
     // Fetch categories via unified manager
-    const { watch: watchCategory, flag: flagCategory } = await this.categoryManager.getTickerCategory(ticker);
+    const { watch: watchCategory, flag: flagCategory, isFno } = await this.categoryManager.getTickerCategory(ticker);
 
     // Paint name — watch category color, or brown fallback if in watchlist
     if (watchCategory) {
@@ -199,8 +196,8 @@ export class PaintManager implements IPaintManager {
       $exchange.css('color', flagCategory.color);
     }
 
-    // FNO marking on header name (private helper)
-    this.applyFnoBorder($name, this.fnoManager.isFno(ticker));
+    // FNO marking on header name
+    this.applyFnoBorder($name, isFno);
   }
 
   // ── Area context ──
@@ -209,12 +206,15 @@ export class PaintManager implements IPaintManager {
    * Build painting context for an entire area, including DOM selectors
    * and screener-only data (watchlist ticker set, recent tickers).
    */
-  private buildAreaPaintContext(area: TickerArea, tickers: string[]): AreaPaintContext {
+  private async buildAreaPaintContext(area: TickerArea, tickers: string[]): Promise<AreaPaintContext> {
     let watchlistTickerSet: Set<string> | undefined;
     let recentTickers: Set<string> | undefined;
     if (area === TickerArea.SCREENER) {
       watchlistTickerSet = new Set([...this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL)]);
-      recentTickers = new Set(tickers.filter((t) => this.recentManager.isRecent(t, Constants.RECENT_CUTOFF_MS)));
+      const recentResults = await Promise.all(
+        tickers.map(async (t) => ({ t, recent: await this.recentManager.isRecent(t, Constants.RECENT_CUTOFF_MS) }))
+      );
+      recentTickers = new Set(recentResults.filter((r) => r.recent).map((r) => r.t));
     }
     return {
       area,
@@ -281,20 +281,11 @@ export class PaintManager implements IPaintManager {
     }
 
     this.paintSymbolColor($symbol, symbolColor);
-    this.paintFnoBorder($symbol, ticker);
+    this.paintFnoBorder($symbol, categories.isFno);
     this.paintSingleFlag($symbol, context.itemSelector, context.flagSelector, categories.flag?.color);
   }
 
   // ── Summary output ──
-
-  /**
-   * Log uncategorized ticker names to console for debugging visibility.
-   */
-  private logUncategorizedTickers(tickers: string[]): void {
-    if (tickers.length > 0) {
-      console.log('Uncategorized tickers:', tickers);
-    }
-  }
 
   /**
    * Convert internal bucket accumulator to the public BucketSummary type.
@@ -345,8 +336,8 @@ export class PaintManager implements IPaintManager {
    * Paint the F&O border on a single ticker's symbol element.
    * No-op if the ticker is not F&O (resetArea already cleared the border).
    */
-  private paintFnoBorder($symbol: JQuery<HTMLElement>, ticker: string): void {
-    if (this.fnoManager.isFno(ticker)) {
+  private paintFnoBorder($symbol: JQuery<HTMLElement>, isFno: boolean): void {
+    if (isFno) {
       $symbol.css(Constants.UI.COLORS.FNO_CSS);
     }
   }

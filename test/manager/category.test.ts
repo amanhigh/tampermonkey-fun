@@ -314,6 +314,59 @@ describe('CategoryManager', () => {
       expect(result.watch?.id).toBe(WatchCategoryId.READY);
       expect(result.flag).toBeUndefined();
     });
+
+    // ── FNO-specific tests ──
+
+    it('should return isFno=true when ticker has is_fno flag', async () => {
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'FNO_TICKER', is_fno: true })
+      );
+
+      const result = await categoryManager.getTickerCategory('FNO_TICKER');
+
+      expect(result.isFno).toBe(true);
+    });
+
+    it('should return isFno=false when ticker has no is_fno flag', async () => {
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'NON_FNO', is_fno: false })
+      );
+
+      const result = await categoryManager.getTickerCategory('NON_FNO');
+
+      expect(result.isFno).toBe(false);
+    });
+
+    it('should cache FNO status even when watch and flag are both undefined', async () => {
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'FNO_ONLY', is_fno: true, type: 'EQUITY', state: 'WATCHED', trend: undefined })
+      );
+
+      // First call — populates cache with isFno=true
+      const first = await categoryManager.getTickerCategory('FNO_ONLY');
+      expect(first.isFno).toBe(true);
+      expect(first.watch).toBeUndefined();
+      expect(first.flag).toBeUndefined();
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
+
+      // Second call — cache hit, no backend call
+      jest.clearAllMocks();
+      const second = await categoryManager.getTickerCategory('FNO_ONLY');
+      expect(second.isFno).toBe(true);
+      expect(mockTickerManager.getTicker).not.toHaveBeenCalled();
+    });
+
+    it('should return isFno=false when backend lookup fails', async () => {
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockRejectedValue(new Error('Not found'));
+
+      const result = await categoryManager.getTickerCategory('UNKNOWN');
+
+      expect(result.isFno).toBe(false);
+    });
   });
 
   // ── recordWatchCategory ──
