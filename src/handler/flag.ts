@@ -27,9 +27,11 @@ export class FlagHandler implements IFlagHandler {
   /** @inheritdoc */
   public recordSelectedTicker(categoryId: FlagCategoryId): void {
     const tvTicker = this.domManager.getTicker();
-    this.categoryManager.recordFlagCategory(categoryId, [tvTicker]);
+    void (async () => {
+      await this.categoryManager.recordFlagCategory(categoryId, [tvTicker]);
 
-    // paintTickers handles WATCHLIST + SCREENER (if visible) + header
-    void this.paintManager.paintTickers([tvTicker]);
+      // paintTickers handles WATCHLIST + SCREENER (if visible) + header
+      await this.paintManager.paintTickers([tvTicker]);
+    })();
   }
 }

@@ -22,10 +22,6 @@ describe('CategoryManager', () => {
 
   // ── Helpers ──
 
-  async function waitForAsync(): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  }
-
   function makeTicker(overrides: Partial<Ticker> = {}): Ticker {
     const defaults: Partial<Ticker> = {
       ticker: 'TICKER',
@@ -372,43 +368,43 @@ describe('CategoryManager', () => {
   // ── recordWatchCategory ──
 
   describe('recordWatchCategory', () => {
-    it('should update ticker for READY category', () => {
-      categoryManager.recordWatchCategory(WatchCategoryId.READY, ['TEST']);
+    it('should update ticker for READY category', async () => {
+      await categoryManager.recordWatchCategory(WatchCategoryId.READY, ['TEST']);
 
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { state: 'READY' });
     });
 
-    it('should update ticker for INDEX category', () => {
-      categoryManager.recordWatchCategory(WatchCategoryId.INDEX, ['TEST']);
+    it('should update ticker for INDEX category', async () => {
+      await categoryManager.recordWatchCategory(WatchCategoryId.INDEX, ['TEST']);
 
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'INDEX' });
     });
 
-    it('should NOT update backend for COMPOSITE (unsupported)', () => {
-      categoryManager.recordWatchCategory(WatchCategoryId.COMPOSITE, ['TEST']);
+    it('should NOT update backend for COMPOSITE (unsupported)', async () => {
+      await categoryManager.recordWatchCategory(WatchCategoryId.COMPOSITE, ['TEST']);
 
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
     });
 
-    it('should NOT update backend for SET_JOURNAL (journal-derived)', () => {
-      categoryManager.recordWatchCategory(WatchCategoryId.SET_JOURNAL, ['TEST']);
+    it('should NOT update backend for SET_JOURNAL (journal-derived)', async () => {
+      await categoryManager.recordWatchCategory(WatchCategoryId.SET_JOURNAL, ['TEST']);
 
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
     });
 
-    it('should NOT update backend for RUNNING (journal-derived)', () => {
-      categoryManager.recordWatchCategory(WatchCategoryId.RUNNING, ['TEST']);
+    it('should NOT update backend for RUNNING (journal-derived)', async () => {
+      await categoryManager.recordWatchCategory(WatchCategoryId.RUNNING, ['TEST']);
 
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
     });
 
-    it('should handle empty ticker array', () => {
-      categoryManager.recordWatchCategory(WatchCategoryId.READY, []);
+    it('should handle empty ticker array', async () => {
+      await categoryManager.recordWatchCategory(WatchCategoryId.READY, []);
 
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
     });
 
-    it('should keep optimistic cache after syncBackend success, no re-fetch', async () => {
+    it('should evict cache after successful watch update and refetch next lookup', async () => {
       // Populate cache with uncategorized result
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockRejectedValue(new Error('not found'));
@@ -417,59 +413,59 @@ describe('CategoryManager', () => {
 
       jest.clearAllMocks();
       mockTickerManager.updateTicker.mockResolvedValue(undefined as any);
-      categoryManager.recordWatchCategory(WatchCategoryId.READY, ['EVICT_ME']);
+
+      // Record READY — evicts cache before/after update
+      await categoryManager.recordWatchCategory(WatchCategoryId.READY, ['EVICT_ME']);
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('EVICT_ME', { state: 'READY' });
 
-      // syncBackend succeeds, cache stays
-      await waitForAsync();
-
-      // Cache hit — no backend re-fetch needed
+      // Cache was evicted — next lookup refetches backend
+      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'EVICT_ME', state: 'READY' }));
       const result = await categoryManager.getTickerCategory('EVICT_ME');
       expect(result.watch?.id).toBe(WatchCategoryId.READY);
-      expect(mockTickerManager.getTicker).not.toHaveBeenCalled();
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
     });
   });
 
   // ── recordFlagCategory ──
 
   describe('recordFlagCategory', () => {
-    it('should call updateTicker for SIDEWAYS', () => {
-      categoryManager.recordFlagCategory(FlagCategoryId.SIDEWAYS, ['TEST']);
+    it('should call updateTicker for SIDEWAYS', async () => {
+      await categoryManager.recordFlagCategory(FlagCategoryId.SIDEWAYS, ['TEST']);
 
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'SIDEWAYS', type: 'EQUITY', state: 'WATCHED' });
     });
 
-    it('should call updateTicker for DOWNTREND', () => {
-      categoryManager.recordFlagCategory(FlagCategoryId.DOWNTREND, ['TEST']);
+    it('should call updateTicker for DOWNTREND', async () => {
+      await categoryManager.recordFlagCategory(FlagCategoryId.DOWNTREND, ['TEST']);
 
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'DOWNTREND', type: 'EQUITY', state: 'WATCHED' });
     });
 
-    it('should call updateTicker for CRYPTO', () => {
-      categoryManager.recordFlagCategory(FlagCategoryId.CRYPTO, ['TEST']);
+    it('should call updateTicker for CRYPTO', async () => {
+      await categoryManager.recordFlagCategory(FlagCategoryId.CRYPTO, ['TEST']);
 
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'CRYPTO', state: 'WATCHED' });
     });
 
-    it('should call updateTicker for UPTREND', () => {
-      categoryManager.recordFlagCategory(FlagCategoryId.UPTREND, ['TEST']);
+    it('should call updateTicker for UPTREND', async () => {
+      await categoryManager.recordFlagCategory(FlagCategoryId.UPTREND, ['TEST']);
 
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'UPTREND', type: 'EQUITY', state: 'WATCHED' });
     });
 
-    it('should call updateTicker for INDEX', () => {
-      categoryManager.recordFlagCategory(FlagCategoryId.INDEX, ['TEST']);
+    it('should call updateTicker for INDEX', async () => {
+      await categoryManager.recordFlagCategory(FlagCategoryId.INDEX, ['TEST']);
 
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'INDEX', state: 'WATCHED' });
     });
 
-    it('should call updateTicker for GOLD_INDEX', () => {
-      categoryManager.recordFlagCategory(FlagCategoryId.GOLD_INDEX, ['TEST']);
+    it('should call updateTicker for GOLD_INDEX', async () => {
+      await categoryManager.recordFlagCategory(FlagCategoryId.GOLD_INDEX, ['TEST']);
 
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'COMPOSITE', state: 'WATCHED' });
     });
 
-    it('should keep optimistic flag cache after syncBackend success', async () => {
+    it('should evict cache after successful flag update and refetch next lookup', async () => {
       // Prime: cache knows SIDEWAYS
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockResolvedValue(
@@ -481,17 +477,19 @@ describe('CategoryManager', () => {
       jest.clearAllMocks();
       mockTickerManager.updateTicker.mockResolvedValue(undefined as any);
 
-      categoryManager.recordFlagCategory(FlagCategoryId.DOWNTREND, ['TICKER_A']);
+      // Record DOWNTREND — evicts cache before/after update
+      await categoryManager.recordFlagCategory(FlagCategoryId.DOWNTREND, ['TICKER_A']);
 
-      // syncBackend succeeds, cache stays
-      await waitForAsync();
-
+      // Cache was evicted — next lookup refetches backend
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'TICKER_A', trend: 'DOWNTREND' })
+      );
       const result = await categoryManager.getTickerCategory('TICKER_A');
       expect(result.flag?.id).toBe(FlagCategoryId.DOWNTREND);
-      expect(mockTickerManager.getTicker).not.toHaveBeenCalled();
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
     });
 
-    it('should evict cache on syncBackend failure', async () => {
+    it('should evict cache on backend failure', async () => {
       // Populate: cache has SIDEWAYS
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockResolvedValue(
@@ -504,11 +502,8 @@ describe('CategoryManager', () => {
       jest.clearAllMocks();
       mockTickerManager.updateTicker.mockRejectedValue(new Error('Backend error'));
 
-      // Record DOWNTREND — optimistic cache set
-      categoryManager.recordFlagCategory(FlagCategoryId.DOWNTREND, ['TICKER_A']);
-
-      // syncBackend fails, cache evicted by catch
-      await waitForAsync();
+      // Record DOWNTREND — cache evicted on failure
+      await categoryManager.recordFlagCategory(FlagCategoryId.DOWNTREND, ['TICKER_A']);
 
       // Next lookup re-fetches from backend (cache was evicted)
       mockTickerManager.getTicker.mockResolvedValue(
@@ -517,14 +512,12 @@ describe('CategoryManager', () => {
       const result = await categoryManager.getTickerCategory('TICKER_A');
       // Falls back to pre-update backend data (SIDEWAYS, not DOWNTREND)
       expect(result.flag?.id).toBe(FlagCategoryId.SIDEWAYS);
-      // Single fetch call because cache was cold after eviction
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
     });
 
-    it('should evict stale watch in optimistic cache after flag recording', async () => {
-      // Scenario: ticker is INDEX. User presses F8 (UPTREND). Flag update sets
-      // type=EQUITY, which invalidates the INDEX watch. The cache is set directly
-      // (not merged), so the stale INDEX watch is gone immediately.
+    it('should refetch backend after flag recording and derive fresh categories', async () => {
+      // Scenario: ticker is INDEX. User presses F8 (UPTREND). After backend update
+      // sets type=EQUITY, next lookup recomputes both watch + flag from fresh data.
 
       // Prime: cache knows INDEX watch + INDEX flag
       mockJournalManager.listJournals.mockResolvedValue([]);
@@ -535,32 +528,27 @@ describe('CategoryManager', () => {
       expect(result.watch?.id).toBe(WatchCategoryId.INDEX);
       expect(result.flag?.id).toBe(FlagCategoryId.INDEX);
 
-      // Hang syncBackend so we can check the optimistic state
-      let resolveUpdate!: (v: any) => void;
-      mockTickerManager.updateTicker.mockImplementation(
-        () => new Promise((resolve) => { resolveUpdate = resolve; })
+      // Record UPTREND flag
+      mockTickerManager.updateTicker.mockResolvedValue(undefined as any);
+      jest.clearAllMocks();
+
+      // After UPTREND update, backend would set type=EQUITY, trend=UPTREND
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'IND_X', type: 'EQUITY', trend: 'UPTREND' })
       );
 
-      // Record UPTREND flag — cache set directly: {watch: undefined, flag: UPTREND}
-      categoryManager.recordFlagCategory(FlagCategoryId.UPTREND, ['IND_X']);
+      await categoryManager.recordFlagCategory(FlagCategoryId.UPTREND, ['IND_X']);
 
-      // Optimistic cache: flag=UPTREND, watch=undefined (INDEX evicted)
+      // Cache was evicted — next lookup refetches from backend
       result = await categoryManager.getTickerCategory('IND_X');
       expect(result.flag?.id).toBe(FlagCategoryId.UPTREND);
-      expect(result.watch).toBeUndefined(); // stale INDEX gone
-
-      // Let syncBackend finish — cache stays on success
-      resolveUpdate(undefined);
-      await waitForAsync();
-
-      // Cache still has optimistic data (no re-fetch needed)
-      result = await categoryManager.getTickerCategory('IND_X');
-      expect(result.flag?.id).toBe(FlagCategoryId.UPTREND);
+      // Watch: EQUITY with DL timeframes → undefined (DEFAULT_DAILY)
       expect(result.watch).toBeUndefined();
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
     });
-    
-    it('should handle empty ticker array', () => {
-      categoryManager.recordFlagCategory(FlagCategoryId.SIDEWAYS, []);
+
+    it('should handle empty ticker array', async () => {
+      await categoryManager.recordFlagCategory(FlagCategoryId.SIDEWAYS, []);
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
     });
   });

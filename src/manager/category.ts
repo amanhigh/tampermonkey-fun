@@ -29,18 +29,20 @@ export interface ICategoryManager {
   /**
    * Records selected tickers in the given watch category.
    * Fires async backend updates for supported categories.
+   * Resolves when all backend updates complete.
    * @param categoryId Watch category identifier to record into
    * @param tickers List of ticker symbols to assign
    */
-  recordWatchCategory(categoryId: WatchCategoryId, tickers: string[]): void;
+  recordWatchCategory(categoryId: WatchCategoryId, tickers: string[]): Promise<void>;
 
   /**
    * Records selected tickers in the given flag category.
    * Fires an async backend update per ticker.
+   * Resolves when all backend updates complete.
    * @param categoryId Flag category identifier to record into
    * @param tickers List of ticker symbols to assign
    */
-  recordFlagCategory(categoryId: FlagCategoryId, tickers: string[]): void;
+  recordFlagCategory(categoryId: FlagCategoryId, tickers: string[]): Promise<void>;
 
   /**
    * Resolve categories for many tickers in parallel batches.
@@ -67,10 +69,10 @@ export interface ICategoryManager {
  * All other categories (watch and flag) are derived from the backend
  * ticker record.
  *
- * Record operations delete the cache entry then set only the recorded
- * side (watch or flag) so the immediate paint shows the new category.
- * On completion the cache is evicted so the next lookup re-fetches
- * both sides from current backend data.
+ * Record operations evict the cache entry before and after the backend
+ * update so the next paint always reflects fresh backend data. No
+ * optimistic partial cache is written — immediate paint fetches from
+ * backend and derives both watch + flag correctly.
  */
 export class CategoryManager implements ICategoryManager {
   /** LRU cache for ticker → combined category lookups. */
@@ -95,31 +97,23 @@ export class CategoryManager implements ICategoryManager {
   }
 
   /** @inheritdoc */
-  recordWatchCategory(categoryId: WatchCategoryId, tickers: string[]): void {
+  async recordWatchCategory(categoryId: WatchCategoryId, tickers: string[]): Promise<void> {
     const cat = WatchClassifier.findById(categoryId);
+    const update = cat.recordUpdate;
 
-    if (cat.recordUpdate === null) {
+    if (update === null) {
       Notifier.warn(`Category ${categoryId} does not support manual recording`);
       return;
     }
 
-    for (const ticker of tickers) {
-      void this.syncBackend(
-        ticker,
-        cat.recordUpdate,
-        { watch: cat, flag: undefined, isFno: false },
-        /* isWatch */ true
-      );
-    }
+    await Promise.all(tickers.map(async (ticker) => this.syncBackend(ticker, update)));
   }
 
   /** @inheritdoc */
-  recordFlagCategory(categoryId: FlagCategoryId, tickers: string[]): void {
+  async recordFlagCategory(categoryId: FlagCategoryId, tickers: string[]): Promise<void> {
     const cat = FlagClassifier.findById(categoryId);
 
-    for (const ticker of tickers) {
-      void this.syncBackend(ticker, cat.update, { watch: undefined, flag: cat, isFno: false }, /* isWatch */ false);
-    }
+    await Promise.all(tickers.map(async (ticker) => this.syncBackend(ticker, cat.update)));
   }
 
   /** @inheritdoc */
@@ -210,28 +204,24 @@ export class CategoryManager implements ICategoryManager {
   /**
    * Persist a category assignment to the backend.
    *
-   * Sets the cache optimistically (synchronous, before await) so the
-   * immediate paint shows the new category. On failure the cache entry
-   * is evicted so the next lookup falls back to pre-update backend data.
-   * isFno is never touched — preserved from the existing cache entry.
+   * Evicts the cache before and after update so the next paint
+   * re-fetches fresh backend data and derives both watch + flag
+   * from the current backend state. No optimistic partial cache
+   * is written — this avoids stale side category bugs.
+   *
+   * On failure the cache is evicted and a warning is shown.
    */
-  private async syncBackend(
-    ticker: string,
-    update: TickerUpdateRequest,
-    optimistic: TickerCategory,
-    isWatch: boolean
-  ): Promise<void> {
-    // Preserve existing isFno (FNO is read-only, never modified from UI)
-    const existing = this.categoryCache.get(ticker);
-    this.categoryCache.set(ticker, { ...optimistic, isFno: existing?.isFno ?? false });
+  private async syncBackend(ticker: string, update: TickerUpdateRequest): Promise<void> {
+    // Evict before update to avoid stale cache during the update window
+    this.evictTicker(ticker);
 
     try {
       await this.tickerManager.updateTicker(ticker, update);
-      // Success: optimistic cache entry is correct — keep it
-    } catch {
-      // Failure: revert optimistic cache entry
+      // Evict after success so next lookup refetches authoritative backend data
       this.evictTicker(ticker);
-      Notifier.warn(`Failed to update ${isWatch ? 'watch' : 'flag'} category for ${ticker}`);
+    } catch {
+      this.evictTicker(ticker);
+      Notifier.warn(`Failed to update category for ${ticker}`);
     }
   }
 }

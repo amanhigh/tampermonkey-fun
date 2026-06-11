@@ -60,7 +60,8 @@ export class WatchListHandler implements IWatchListHandler {
   public recordSelectedTicker(categoryId: WatchCategoryId): void {
     const type = this.domManager.isScreenerVisible() ? TickerArea.SCREENER : TickerArea.WATCHLIST;
     const selectedTickers = [...this.domManager.getTickers(type, TickerVisibility.SELECTED)];
-    this.categoryManager.recordWatchCategory(categoryId, selectedTickers);
+    void (async () => {
+      await this.categoryManager.recordWatchCategory(categoryId, selectedTickers);
 
     // Targeted repaint: paintTickers handles WATCHLIST + SCREENER (if visible) + header
     if (selectedTickers.length > 0) {

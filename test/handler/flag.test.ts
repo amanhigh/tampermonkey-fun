@@ -15,8 +15,8 @@ describe('FlagHandler', () => {
 
     mockCategoryManager = {
       getTickerCategory: jest.fn(),
-      recordWatchCategory: jest.fn(),
-      recordFlagCategory: jest.fn(),
+      recordWatchCategory: jest.fn().mockResolvedValue(undefined),
+      recordFlagCategory: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<ICategoryManager>;
 
     mockDomManager = {
@@ -24,7 +24,7 @@ describe('FlagHandler', () => {
     } as unknown as jest.Mocked<IDomManager>;
 
     mockPaintManager = {
-      paintTickers: jest.fn(),
+      paintTickers: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<IPaintManager>;
 
     handler = new FlagHandler(mockCategoryManager, mockDomManager, mockPaintManager);
@@ -37,9 +37,31 @@ describe('FlagHandler', () => {
       expect(mockCategoryManager.recordFlagCategory).toHaveBeenCalledWith(FlagCategoryId.SIDEWAYS, ['CURRENT']);
     });
 
-    it('should call paintTickers with current ticker', () => {
+    it('should call paintTickers with current ticker after category update resolves', async () => {
       handler.recordSelectedTicker(FlagCategoryId.SIDEWAYS);
 
+      // Wait for internal async execution to complete
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['CURRENT']);
+    });
+
+    it('should not paint before recordFlagCategory resolves', async () => {
+      let resolveRecord!: () => void;
+      mockCategoryManager.recordFlagCategory.mockReturnValue(
+        new Promise((resolve) => { resolveRecord = resolve; })
+      );
+
+      handler.recordSelectedTicker(FlagCategoryId.SIDEWAYS);
+
+      // Paint should NOT be called while record is still pending
+      expect(mockPaintManager.paintTickers).not.toHaveBeenCalled();
+
+      // Resolve and flush microtasks
+      resolveRecord();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // Paint should be called after record resolves
       expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['CURRENT']);
     });
   });

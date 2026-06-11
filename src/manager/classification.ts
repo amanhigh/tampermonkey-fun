@@ -33,6 +33,11 @@ export class WatchClassifier {
    * Returns undefined if the ticker does not match any backend-derived category.
    */
   static findByTicker(ticker: Ticker): WatchCategory | undefined {
+    // BLACKLIST state takes highest priority
+    if (ticker.state === 'BLACKLIST') {
+      return this.findById(WatchCategoryId.BLACKLISTED);
+    }
+
     // READY
     if (ticker.state === 'READY') {
       return this.findById(WatchCategoryId.READY);

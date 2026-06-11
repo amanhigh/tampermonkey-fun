@@ -162,6 +162,46 @@ describe('WatchClassifier.findByTicker', () => {
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.READY);
     });
+
+    // ── BLACKLIST state tests ──
+
+    it('classifies BLACKLIST state ticker as BLACKLISTED', () => {
+      const ticker = makeCatTicker({
+        ticker: 'BAD_TICKER',
+        state: 'BLACKLIST',
+      });
+
+      expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.BLACKLISTED);
+    });
+
+    it('returns BLACKLISTED even for INDEX type when state=BLACKLIST', () => {
+      const ticker = makeCatTicker({
+        ticker: 'NIFTY',
+        type: 'INDEX',
+        state: 'BLACKLIST',
+      });
+
+      expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.BLACKLISTED);
+    });
+
+    it('returns BLACKLISTED even for COMPOSITE type when state=BLACKLIST', () => {
+      const ticker = makeCatTicker({
+        ticker: 'CNX/XAU',
+        type: 'COMPOSITE',
+        state: 'BLACKLIST',
+      });
+
+      expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.BLACKLISTED);
+    });
+
+    it('returns BLACKLISTED even for READY state when state=BLACKLIST', () => {
+      const ticker = makeCatTicker({
+        ticker: 'BOTH_STATES',
+        state: 'BLACKLIST', // BLACKLIST takes priority over READY
+      } as any);
+
+      expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.BLACKLISTED);
+    });
   });
 });
 

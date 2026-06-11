@@ -38,7 +38,7 @@ describe('WatchListHandler', () => {
 
     mockCategoryManager = {
       getTickerCategory: jest.fn(),
-      recordWatchCategory: jest.fn(),
+      recordWatchCategory: jest.fn().mockResolvedValue(undefined),
       recordFlagCategory: jest.fn(),
     } as unknown as jest.Mocked<ICategoryManager>;
 
@@ -101,22 +101,51 @@ describe('WatchListHandler', () => {
       );
     });
 
-    it('should target-paint selected tickers', () => {
+    it('should target-paint selected tickers after category update resolves', async () => {
       handler.recordSelectedTicker(WatchCategoryId.READY);
+
+      // Wait for internal async execution to complete
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['SELECTED1', 'SELECTED2']);
     });
 
-    it('should refresh summary after targeted update', () => {
+    it('should refresh summary after targeted update resolves', async () => {
       handler.recordSelectedTicker(WatchCategoryId.READY);
+
+      // Wait for internal async execution to complete
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(mockWatchlistManager.refreshSummary).toHaveBeenCalled();
     });
 
-    it('should NOT do full refresh', () => {
+    it('should NOT do full refresh', async () => {
       handler.recordSelectedTicker(WatchCategoryId.READY);
 
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
       expect(mockWatchlistManager.refresh).not.toHaveBeenCalled();
+    });
+
+    it('should not paint before recordWatchCategory resolves', async () => {
+      let resolveRecord!: () => void;
+      mockCategoryManager.recordWatchCategory.mockReturnValue(
+        new Promise((resolve) => { resolveRecord = resolve; })
+      );
+
+      handler.recordSelectedTicker(WatchCategoryId.READY);
+
+      // Paint should NOT be called while record is still pending
+      expect(mockPaintManager.paintTickers).not.toHaveBeenCalled();
+      expect(mockWatchlistManager.refreshSummary).not.toHaveBeenCalled();
+
+      // Resolve and flush microtasks
+      resolveRecord();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // Paint and summary should be called after record resolves
+      expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['SELECTED1', 'SELECTED2']);
+      expect(mockWatchlistManager.refreshSummary).toHaveBeenCalled();
     });
   });
 });
