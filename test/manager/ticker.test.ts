@@ -353,6 +353,7 @@ describe('DomManager', () => {
         pair_id: '123',
         name: 'HDFC Bank',
         exchange: 'NSE',
+        type: 'SECONDARY',
         ticker: 'TV:HDFC',
         created_at: '',
         updated_at: '',

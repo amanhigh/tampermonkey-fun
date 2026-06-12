@@ -55,6 +55,7 @@ export class AlertTickerHandler implements IAlertTickerHandler {
           symbol: selectedPair.symbol,
           pair_id: selectedPair.pairId,
           name: selectedPair.name,
+          type: 'SECONDARY',
           exchange: selectedPair.exchange,
         });
       } else {

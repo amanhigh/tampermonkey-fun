@@ -8,6 +8,7 @@ export interface AlertTicker {
   pair_id: string;
   name: string;
   exchange: string | null;
+  type: string;
   ticker: string;
   created_at: string;
   updated_at: string;
@@ -18,6 +19,7 @@ export interface CreateAlertTickerRequest {
   symbol: string;
   pair_id: string;
   name: string;
+  type: string;
   exchange?: string | null;
 }
 
@@ -27,6 +29,7 @@ export interface AlertTickerQueryParams {
   ticker?: string;
   'pair-id'?: string;
   exchange?: string;
+  type?: string;
   offset?: number;
   limit?: number;
 }

@@ -85,6 +85,7 @@ describe('AlertTickerHandler', () => {
         symbol: 'INFY',
         pair_id: 'pair1',
         name: 'Infosys Ltd',
+        type: 'SECONDARY',
         exchange: 'NSE',
       });
     });

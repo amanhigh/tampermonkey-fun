@@ -39,6 +39,7 @@ describe('SequenceHandler', () => {
     pair_id: 'pair1',
     name: 'Test Pair',
     exchange: 'NSE',
+    type: 'SECONDARY',
     ticker: 'TVTICKER',
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',

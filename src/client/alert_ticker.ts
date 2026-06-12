@@ -145,6 +145,7 @@ export class AlertTickerClient extends BaseClient implements IAlertTickerClient 
       ['ticker', params.ticker],
       ['pair-id', params['pair-id']],
       ['exchange', params.exchange],
+      ['type', params.type],
       ['offset', params.offset],
       ['limit', params.limit],
     ]);
