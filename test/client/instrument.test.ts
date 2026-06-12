@@ -1,4 +1,4 @@
-import { InstrumentClientImpl, InstrumentClient } from '../../src/client/instrument';
+import { InstrumentClient, IInstrumentClient } from '../../src/client/instrument';
 import { InvestingResponse } from '../../src/models/investing';
 
 // Mock the BaseClient's makeRequest method
@@ -22,8 +22,8 @@ jest.mock('../../src/client/base', () => {
   };
 });
 
-describe('InstrumentClientImpl', () => {
-  let instrumentClient: InstrumentClient;
+describe('InstrumentClient', () => {
+  let instrumentClient: IInstrumentClient;
   let mockMakeRequest: jest.MockedFunction<any>;
 
   const mockInvestingResponse: InvestingResponse = {
@@ -35,19 +35,19 @@ describe('InstrumentClientImpl', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    instrumentClient = new InstrumentClientImpl();
+    instrumentClient = new InstrumentClient();
     mockMakeRequest = (instrumentClient as any).makeRequest;
   });
 
   describe('constructor', () => {
     it('should create instance with public search base URL', () => {
-      const client = new InstrumentClientImpl();
+      const client = new InstrumentClient();
       expect(client.getBaseUrl()).toBe('https://api.investing.com/api/search');
     });
 
     it('should create instance with custom base URL', () => {
       const customUrl = 'https://custom.api/search';
-      const client = new InstrumentClientImpl(customUrl);
+      const client = new InstrumentClient(customUrl);
       expect(client.getBaseUrl()).toBe(customUrl);
     });
   });

@@ -6,7 +6,7 @@ import { BaseClient, IBaseClient } from './base';
  * Base URL points to https://api.investing.com/api/search which is a different domain
  * than the main InvestingClient (https://in.investing.com).
  */
-export interface InstrumentClient extends IBaseClient {
+export interface IInstrumentClient extends IBaseClient {
   /**
    * Search public Investing instruments by query string.
    * Raw pass-through to GET https://api.investing.com/api/search/
@@ -22,7 +22,7 @@ export interface InstrumentClient extends IBaseClient {
  * Client for the public Investing.com instrument search API.
  * Uses its own base URL (https://api.investing.com/api/search) separate from the main InvestingClient.
  */
-export class InstrumentClientImpl extends BaseClient implements InstrumentClient {
+export class InstrumentClient extends BaseClient implements IInstrumentClient {
   private static readonly DEFAULT_LIMIT = 10;
 
   constructor(baseUrl: string = 'https://api.investing.com/api/search') {
@@ -30,7 +30,7 @@ export class InstrumentClientImpl extends BaseClient implements InstrumentClient
   }
 
   /** @inheritdoc */
-  async getInstruments(query: string, limit: number = InstrumentClientImpl.DEFAULT_LIMIT): Promise<InvestingResponse> {
+  async getInstruments(query: string, limit: number = InstrumentClient.DEFAULT_LIMIT): Promise<InvestingResponse> {
     const params = new URLSearchParams({ q: query, limit: String(limit) });
     const queryString = `?${params.toString()}`;
 

@@ -8,6 +8,7 @@ import { TickerClient, ITickerClient } from '../client/ticker';
 import { AlertTickerClient, IAlertTickerClient } from '../client/alert_ticker';
 import { IPriceAlertClient, PriceAlertClient } from '../client/price_alert';
 import { IAuditClient, AuditClient } from '../client/audit';
+import { InstrumentClient, IInstrumentClient } from '../client/instrument';
 import { UIUtil, IUIUtil } from '../util/ui';
 import { ObserveUtil, IObserveUtil } from '../util/observer';
 import { SearchUtil, ISearchUtil } from '../util/search';
@@ -33,6 +34,7 @@ import { ITickerManager, TickerManager } from '../manager/ticker';
 import { ILifecycleManager, LifecycleManager } from '../manager/lifecycle';
 import { ITradingViewManager, TradingViewManager } from '../manager/tv';
 import { IAlertTickerManager, AlertTickerManager } from '../manager/alert_ticker';
+import { IInvestingManager, InvestingManager } from '../manager/investing';
 
 // Handler Imports
 import { AlertHandler } from '../handler/alert';
@@ -141,6 +143,7 @@ export class Factory {
     tickerAlert: (): IAlertTickerClient => Factory.getInstance('tickerAlertClient', () => new AlertTickerClient()),
     priceAlert: (): IPriceAlertClient => Factory.getInstance('priceAlertClient', () => new PriceAlertClient()),
     audit: (): IAuditClient => Factory.getInstance('auditClient', () => new AuditClient()),
+    instrument: (): IInstrumentClient => Factory.getInstance('instrumentClient', () => new InstrumentClient()),
   };
 
   /**
@@ -233,6 +236,9 @@ export class Factory {
 
     alertTicker: (): IAlertTickerManager =>
       Factory.getInstance('alertTickerManager', () => new AlertTickerManager(Factory.client.tickerAlert())),
+
+    investing: (): IInvestingManager =>
+      Factory.getInstance('investingManager', () => new InvestingManager(Factory.client.instrument())),
 
     style: (): IStyleManager =>
       Factory.getInstance('styleManager', () => new StyleManager(Factory.util.wait(), Factory.manager.timeFrame())),
