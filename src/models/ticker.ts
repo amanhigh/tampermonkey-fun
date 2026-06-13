@@ -112,3 +112,12 @@ export function isCompositeSymbol(symbol: string): boolean {
   }
   return Constants.COMPOSITE.CHARACTERS.some((char) => symbol.includes(char));
 }
+
+// ── Domain Events ──
+
+import { DomainEventType } from './domain_event';
+
+export interface TickerMarkedRecentEvent {
+  type: DomainEventType.TICKER_MARKED_RECENT;
+  tvTicker: string;
+}

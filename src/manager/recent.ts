@@ -1,6 +1,8 @@
 import { LRUCache } from 'lru-cache';
 import { ITickerClient } from '../client/ticker';
 import { Constants } from '../models/constant';
+import { IDomainEventPublisher } from './event_bus';
+import { DomainEventType } from '../models/domain_event_type';
 
 /**
  * Interface for managing recent ticker data operations.
@@ -48,8 +50,12 @@ export class RecentManager implements IRecentManager {
    * Creates a new RecentManager.
    * No cache pre-load — entries are fetched on-demand.
    * @param client - TickerClient for backend API calls
+   * @param eventPublisher - Publisher for domain events
    */
-  constructor(private readonly client: ITickerClient) {}
+  constructor(
+    private readonly client: ITickerClient,
+    private readonly eventPublisher: IDomainEventPublisher
+  ) {}
 
   /** @inheritdoc */
   public markRecent(tvTicker: string): void {

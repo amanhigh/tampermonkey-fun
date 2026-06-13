@@ -9,8 +9,10 @@ import { AlertFeedEvent, FeedInfo, FeedState } from '../models/alertfeed';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { IInvestingManager } from '../manager/investing';
 import { AlertTicker } from '../models/alert_ticker';
+import { IEventBus, IDomainEventConsumer } from '../manager/event_bus';
+import { DomainEventType } from '../models/domain_event_type';
 
-export interface IAlertFeedHandler {
+export interface IAlertFeedHandler extends IDomainEventConsumer {
   /**
    * Initializes alert feed UI and sets up event listeners
    */
@@ -71,6 +73,16 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     setTimeout(() => {
       this.handleHookButton();
     }, 2000);
+  }
+
+  /** @inheritdoc */
+  public registerDomainEvents(eventBus: IEventBus): void {
+    eventBus.subscribeMany(
+      [DomainEventType.ALERT_TICKER_LINKED, DomainEventType.TICKER_MARKED_RECENT],
+      async (event) => {
+        await this.alertFeedManager.createAlertFeedEvent(event.tvTicker);
+      }
+    );
   }
 
   public handleHookButton(): void {

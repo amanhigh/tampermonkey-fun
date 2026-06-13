@@ -10,7 +10,6 @@ import { IUIUtil } from '../../src/util/ui';
 import { IAlertSummaryHandler } from '../../src/handler/alert_summary';
 import { ITickerHandler } from '../../src/handler/ticker';
 import { IAlertTickerHandler } from '../../src/handler/alert_ticker';
-import { IAlertFeedManager } from '../../src/manager/alertfeed';
 import { AlertClicked, AlertClickAction } from '../../src/models/events';
 import { AlertTicker } from '../../src/models/alert_ticker';
 import { IDisplayHandler } from '../../src/handler/display';
@@ -38,7 +37,6 @@ describe('AlertHandler', () => {
   let mockAlertSummaryHandler: jest.Mocked<IAlertSummaryHandler>;
   let mockTickerHandler: jest.Mocked<ITickerHandler>;
   let mockAlertTickerHandler: jest.Mocked<IAlertTickerHandler>;
-  let mockAlertFeedManager: jest.Mocked<IAlertFeedManager>;
   let mockDisplayHandler: jest.Mocked<IDisplayHandler>;
   const { Notifier } = jest.requireMock('../../src/util/notify');
 
@@ -93,12 +91,6 @@ describe('AlertHandler', () => {
       linkInvestingTicker: jest.fn().mockResolvedValue(undefined),
     } as any;
 
-    mockAlertFeedManager = {
-      createAlertFeedEvent: jest.fn().mockResolvedValue(undefined),
-      getAlertFeedState: jest.fn(),
-      createResetFeedEvent: jest.fn(),
-    } as any;
-
     mockDisplayHandler = {
       display: jest.fn().mockResolvedValue(undefined),
       resetExpanded: jest.fn(),
@@ -116,8 +108,7 @@ describe('AlertHandler', () => {
       mockAlertSummaryHandler,
       mockTickerHandler,
       mockAlertTickerHandler,
-      mockDisplayHandler,
-      mockAlertFeedManager
+      mockDisplayHandler
     );
   });
 

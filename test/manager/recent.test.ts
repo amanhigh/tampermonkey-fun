@@ -1,11 +1,14 @@
 import { RecentManager, IRecentManager } from '../../src/manager/recent';
 import { ITickerClient } from '../../src/client/ticker';
+import { IEventBus } from '../../src/manager/event_bus';
+import { DomainEventType } from '../../src/models/domain_event_type';
 import { Ticker } from '../../src/models/ticker';
 import { Constants } from '../../src/models/constant';
 
 describe('RecentManager', () => {
   let recentManager: IRecentManager;
   let mockClient: jest.Mocked<ITickerClient>;
+  let mockEventBus: jest.Mocked<IEventBus>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -15,7 +18,13 @@ describe('RecentManager', () => {
       patchTickerLastOpened: jest.fn().mockResolvedValue({} as any),
     } as unknown as jest.Mocked<ITickerClient>;
 
-    recentManager = new RecentManager(mockClient);
+    mockEventBus = {
+      publish: jest.fn().mockResolvedValue(undefined),
+      subscribe: jest.fn(),
+      subscribeMany: jest.fn(),
+    } as any;
+
+    recentManager = new RecentManager(mockClient, mockEventBus);
   });
 
   describe('constructor', () => {
@@ -49,6 +58,16 @@ describe('RecentManager', () => {
       const tickers = ['RELIANCE', 'TCS', 'HDFC'];
       tickers.forEach((t) => recentManager.markRecent(t));
       expect(mockClient.patchTickerLastOpened).toHaveBeenCalledTimes(3);
+    });
+
+    it('should publish TICKER_MARKED_RECENT after cache update', async () => {
+      recentManager.markRecent('NSE:TCS');
+
+      expect(mockEventBus.publish).toHaveBeenCalledTimes(1);
+      expect(mockEventBus.publish).toHaveBeenCalledWith({
+        type: DomainEventType.TICKER_MARKED_RECENT,
+        tvTicker: 'NSE:TCS',
+      });
     });
   });
 

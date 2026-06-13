@@ -9,6 +9,8 @@ import { AlertTicker } from '../../src/models/alert_ticker';
 import { Instrument } from '../../src/models/investing';
 import { AlertClickAction } from '../../src/models/events';
 import { FeedState } from '../../src/models/alertfeed';
+import { IEventBus } from '../../src/manager/event_bus';
+import { DomainEventType } from '../../src/models/domain_event_type';
 
 // Mock Notifier
 jest.mock('../../src/util/notify', () => ({
@@ -108,6 +110,27 @@ describe('AlertFeedHandler', () => {
       mockAlertTickerManager,
       mockInvestingManager
     );
+  });
+
+  // ── Registration Tests ──
+
+  describe('registerDomainEvents', () => {
+    it('should subscribe to ALERT_TICKER_LINKED and TICKER_MARKED_RECENT via subscribeMany', () => {
+      const mockEventBus: jest.Mocked<IEventBus> = {
+        publish: jest.fn(),
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerDomainEvents(mockEventBus);
+
+      expect(mockEventBus.subscribeMany).toHaveBeenCalledTimes(1);
+      expect(mockEventBus.subscribeMany).toHaveBeenCalledWith(
+        [DomainEventType.ALERT_TICKER_LINKED, DomainEventType.TICKER_MARKED_RECENT],
+        expect.any(Function)
+      );
+      expect(mockEventBus.subscribe).not.toHaveBeenCalled();
+    });
   });
 
   // ── Click Tests ──

@@ -1,10 +1,13 @@
 import { IAlertTickerManager, AlertTickerManager } from '../../src/manager/alert_ticker';
 import { IAlertTickerClient } from '../../src/client/alert_ticker';
+import { IEventBus } from '../../src/manager/event_bus';
+import { DomainEventType } from '../../src/models/domain_event_type';
 import { AlertTicker } from '../../src/models/alert_ticker';
 
 describe('AlertTickerManager', () => {
   let manager: IAlertTickerManager;
   let mockAlertTickerClient: jest.Mocked<IAlertTickerClient>;
+  let mockEventBus: jest.Mocked<IEventBus>;
 
   const makeAlertTicker = (overrides: Partial<AlertTicker> = {}): AlertTicker => ({
     symbol: 'INFY',
@@ -29,7 +32,13 @@ describe('AlertTickerManager', () => {
       getBaseUrl: jest.fn(),
     } as any;
 
-    manager = new AlertTickerManager(mockAlertTickerClient);
+    mockEventBus = {
+      publish: jest.fn().mockResolvedValue(undefined),
+      subscribe: jest.fn(),
+      subscribeMany: jest.fn(),
+    } as any;
+
+    manager = new AlertTickerManager(mockAlertTickerClient, mockEventBus);
   });
 
   describe('getPrimaryAlertTicker', () => {
@@ -106,6 +115,27 @@ describe('AlertTickerManager', () => {
         exchange: 'NSE',
       });
       expect(result.type).toBe('SECONDARY');
+    });
+
+    it('should publish ALERT_TICKER_LINKED after successful create', async () => {
+      mockAlertTickerClient.listAlertTickers.mockResolvedValue([]);
+      mockAlertTickerClient.createAlertTicker.mockImplementation((_ticker, data) =>
+        Promise.resolve(makeAlertTicker({ ...data } as any))
+      );
+
+      await manager.linkAlertTicker('TV:INFY', {
+        symbol: 'INFY',
+        pair_id: 'pair1',
+        name: 'Infosys Ltd',
+        exchange: 'NSE',
+      });
+
+      expect(mockEventBus.publish).toHaveBeenCalledTimes(1);
+      expect(mockEventBus.publish).toHaveBeenCalledWith({
+        type: DomainEventType.ALERT_TICKER_LINKED,
+        tvTicker: 'TV:INFY',
+        alertTicker: 'INFY',
+      });
     });
   });
 

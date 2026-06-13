@@ -42,3 +42,13 @@ export interface AlertTickerListResponse {
   alert_tickers: AlertTicker[];
   metadata: PaginationMetadata;
 }
+
+// ── Domain Events ──
+
+import { DomainEventType } from './domain_event';
+
+export interface AlertTickerLinkedEvent {
+  type: DomainEventType.ALERT_TICKER_LINKED;
+  tvTicker: string;
+  alertTicker: string;
+}
