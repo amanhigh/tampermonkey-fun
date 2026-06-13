@@ -84,7 +84,6 @@ describe('AlertFeedHandler', () => {
 
     mockAlertFeedManager = {
       getAlertFeedState: jest.fn(),
-      getAlertFeedStateForAlertTicker: jest.fn(),
       createAlertFeedEvent: jest.fn(),
       createResetFeedEvent: jest.fn(),
     } as any;
@@ -321,7 +320,7 @@ describe('AlertFeedHandler', () => {
         makeAlertTicker({ symbol: 'INFY', name: 'Infosys Ltd', ticker: 'TV:INFY' }),
       ];
       mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
-      mockAlertFeedManager.getAlertFeedStateForAlertTicker.mockResolvedValue({
+      mockAlertFeedManager.getAlertFeedState.mockResolvedValue({
         state: FeedState.MAPPED,
         color: 'white',
       });
@@ -331,8 +330,7 @@ describe('AlertFeedHandler', () => {
       await handler.paintAlertFeed();
 
       expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledTimes(1);
-      expect(mockAlertFeedManager.getAlertFeedStateForAlertTicker).toHaveBeenCalledWith(alertTickers[0]);
-      expect(mockAlertFeedManager.getAlertFeedState).not.toHaveBeenCalled();
+      expect(mockAlertFeedManager.getAlertFeedState).toHaveBeenCalledWith(alertTickers[0]);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
     });
 
@@ -341,7 +339,7 @@ describe('AlertFeedHandler', () => {
         makeAlertTicker({ symbol: 'XAG/USD', name: 'Silver Spot US Dollar', ticker: 'XAGUSD' }),
       ];
       mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
-      mockAlertFeedManager.getAlertFeedStateForAlertTicker.mockResolvedValue({
+      mockAlertFeedManager.getAlertFeedState.mockResolvedValue({
         state: FeedState.MAPPED,
         color: 'white',
       });
@@ -351,7 +349,7 @@ describe('AlertFeedHandler', () => {
       await handler.paintAlertFeed();
 
       expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledTimes(1);
-      expect(mockAlertFeedManager.getAlertFeedStateForAlertTicker).toHaveBeenCalledWith(alertTickers[0]);
+      expect(mockAlertFeedManager.getAlertFeedState).toHaveBeenCalledWith(alertTickers[0]);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
     });
 
@@ -360,7 +358,7 @@ describe('AlertFeedHandler', () => {
         makeAlertTicker({ symbol: 'Nifty500', name: 'Nifty 500', ticker: 'CNX500' }),
       ];
       mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
-      mockAlertFeedManager.getAlertFeedStateForAlertTicker.mockResolvedValue({
+      mockAlertFeedManager.getAlertFeedState.mockResolvedValue({
         state: FeedState.MAPPED,
         color: 'white',
       });
@@ -370,7 +368,7 @@ describe('AlertFeedHandler', () => {
       await handler.paintAlertFeed();
 
       expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledTimes(1);
-      expect(mockAlertFeedManager.getAlertFeedStateForAlertTicker).toHaveBeenCalledWith(alertTickers[0]);
+      expect(mockAlertFeedManager.getAlertFeedState).toHaveBeenCalledWith(alertTickers[0]);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
     });
 
@@ -379,7 +377,7 @@ describe('AlertFeedHandler', () => {
         makeAlertTicker({ symbol: 'NQ', name: 'Nasdaq 100 Futures', ticker: 'NQ1!' }),
       ];
       mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
-      mockAlertFeedManager.getAlertFeedStateForAlertTicker.mockResolvedValue({
+      mockAlertFeedManager.getAlertFeedState.mockResolvedValue({
         state: FeedState.MAPPED,
         color: 'white',
       });
@@ -389,7 +387,7 @@ describe('AlertFeedHandler', () => {
       await handler.paintAlertFeed();
 
       expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledTimes(1);
-      expect(mockAlertFeedManager.getAlertFeedStateForAlertTicker).toHaveBeenCalledWith(alertTickers[0]);
+      expect(mockAlertFeedManager.getAlertFeedState).toHaveBeenCalledWith(alertTickers[0]);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
     });
 
@@ -398,7 +396,7 @@ describe('AlertFeedHandler', () => {
         makeAlertTicker({ symbol: 'CrudeOilWTI', name: 'Crude Oil WTI Futures', ticker: 'USOIL' }),
       ];
       mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
-      mockAlertFeedManager.getAlertFeedStateForAlertTicker.mockResolvedValue({
+      mockAlertFeedManager.getAlertFeedState.mockResolvedValue({
         state: FeedState.MAPPED,
         color: 'white',
       });
@@ -408,7 +406,7 @@ describe('AlertFeedHandler', () => {
       await handler.paintAlertFeed();
 
       expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledTimes(1);
-      expect(mockAlertFeedManager.getAlertFeedStateForAlertTicker).toHaveBeenCalledWith(alertTickers[0]);
+      expect(mockAlertFeedManager.getAlertFeedState).toHaveBeenCalledWith(alertTickers[0]);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
     });
 
@@ -418,12 +416,13 @@ describe('AlertFeedHandler', () => {
         makeAlertTicker({ symbol: 'NSEI', name: 'Nifty 50', ticker: 'NIFTY' }),
       ];
       mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
+      mockAlertFeedManager.getAlertFeedState.mockResolvedValue({ state: FeedState.UNMAPPED, color: 'red' });
 
       buildPaintMock([{ title: 'Nifty', href: '/indices/nifty', dataType: 'quotes' }]);
 
       await handler.paintAlertFeed();
 
-      expect(mockAlertFeedManager.getAlertFeedStateForAlertTicker).not.toHaveBeenCalled();
+      expect(mockAlertFeedManager.getAlertFeedState).toHaveBeenCalledWith(null);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
       expect(Notifier.warn).toHaveBeenCalledWith(expect.stringContaining('Unmapped'));
     });
@@ -435,19 +434,20 @@ describe('AlertFeedHandler', () => {
 
       await handler.paintAlertFeed();
 
-      expect(mockAlertFeedManager.getAlertFeedStateForAlertTicker).not.toHaveBeenCalled();
       expect(mockAlertFeedManager.getAlertFeedState).not.toHaveBeenCalled();
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
       expect(Notifier.warn).not.toHaveBeenCalled();
     });
 
-    it('should not call InvestingManager.getInstrument during repaint', async () => {
+    it('should not call InvestingManager.getInstrument during repaint and delegate unmapped to manager', async () => {
       mockAlertTickerManager.getAlertTickers.mockResolvedValue([]);
+      mockAlertFeedManager.getAlertFeedState.mockResolvedValue({ state: FeedState.UNMAPPED, color: 'red' });
 
       buildPaintMock([{ title: 'Unknown (ZZZZZ)', href: '/unknown', dataType: 'quotes' }]);
 
       await handler.paintAlertFeed();
 
+      expect(mockAlertFeedManager.getAlertFeedState).toHaveBeenCalledWith(null);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
     });
   });

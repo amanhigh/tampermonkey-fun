@@ -188,6 +188,8 @@ export class AlertHandler implements IAlertHandler {
 
   /** @inheritdoc */
   public refreshAlerts(): void {
+    // FIXME: refreshAlerts should also call displayHandler.display() to keep the
+    // display card alert count in sync; several callers compensate manually.
     this.syncUtil.waitOn('alert-refresh-local', 10, () => {
       void (async () => {
         try {

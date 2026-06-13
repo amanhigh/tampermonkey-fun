@@ -225,11 +225,7 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     const feedInfos = await Promise.all(
       elements.map(async (e) => {
         const resolved = this.resolvePaintAlertTicker(e.name, e.ticker, allAlertTickers);
-        if (!resolved) {
-          // Unmapped or ambiguous
-          return { state: FeedState.UNMAPPED, color: 'red' } as FeedInfo;
-        }
-        return this.alertFeedManager.getAlertFeedStateForAlertTicker(resolved);
+        return this.alertFeedManager.getAlertFeedState(resolved);
       })
     );
 

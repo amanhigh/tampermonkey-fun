@@ -10,19 +10,13 @@ import { AlertTicker } from '../models/alert_ticker';
  */
 export interface IAlertFeedManager {
   /**
-   * Compute feed state from an already-resolved AlertTicker record.
-   * Used during repaint to avoid re-fetching by symbol.
-   * @param alertTicker - The resolved AlertTicker record
+   * Compute feed state from an already-resolved AlertTicker record,
+   * or return UNMAPPED when null is passed (no match found).
+   * Used during repaint and event creation.
+   * @param alertTicker - The resolved AlertTicker record, or null if unmapped
    * @returns Promise resolving to FeedInfo containing state and color
    */
-  getAlertFeedStateForAlertTicker(alertTicker: AlertTicker): Promise<FeedInfo>;
-
-  /**
-   * Get the alert feed state for a specific investing ticker by symbol lookup.
-   * @param investingTicker The investing ticker to retrieve state for
-   * @returns Promise resolving to FeedInfo containing state and color
-   */
-  getAlertFeedState(investingTicker: string): Promise<FeedInfo>;
+  getAlertFeedState(alertTicker: AlertTicker | null): Promise<FeedInfo>;
 
   /**
    * Create an alert feed event for a specific ticker
@@ -49,16 +43,10 @@ export class AlertFeedManager implements IAlertFeedManager {
   ) {}
 
   /** @inheritdoc */
-  public async getAlertFeedState(investingTicker: string): Promise<FeedInfo> {
-    const alertTicker = await this.alertTickerManager.fetchAlertTicker(investingTicker);
+  public async getAlertFeedState(alertTicker: AlertTicker | null): Promise<FeedInfo> {
     if (!alertTicker) {
       return { state: FeedState.UNMAPPED, color: 'red' };
     }
-    return this.getAlertFeedStateForAlertTicker(alertTicker);
-  }
-
-  /** @inheritdoc */
-  public async getAlertFeedStateForAlertTicker(alertTicker: AlertTicker): Promise<FeedInfo> {
     const tvTicker = alertTicker.ticker;
 
     // Check if ticker belongs to any watch category (backend-on-demand)
@@ -80,7 +68,7 @@ export class AlertFeedManager implements IAlertFeedManager {
     if (!investingTicker) {
       throw new Error(`Failed to convert ticker: ${tvTicker}`);
     }
-    const feedInfo = await this.getAlertFeedState(investingTicker);
+    const feedInfo = await this.getAlertFeedState(alertTicker);
     const event = new AlertFeedEvent(investingTicker, feedInfo);
     await GM.setValue(Constants.STORAGE.EVENTS.ALERT_FEED_UPDATE, event.stringify());
   }

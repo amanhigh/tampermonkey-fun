@@ -167,15 +167,18 @@ export class DisplayHandler implements IDisplayHandler {
       return `<div class="${DISPLAY_CLASS.EMPTY_ROW}">${EMOJI.UNMAPPED} No linked alert tickers</div>`;
     }
 
-    return alertTickers
-      .map((t) => {
-        const emoji = t.type === 'PRIMARY' ? EMOJI.PRIMARY : EMOJI.SECONDARY;
-        const cls = t.type === 'PRIMARY' ? DISPLAY_CLASS.PRIMARY_ROW : DISPLAY_CLASS.SECONDARY_ROW;
-        const exchangeInfo = t.exchange ? ` · ${t.exchange}` : '';
-        const nameInfo = t.name ? ` · ${t.name}` : '';
-        return `<div class="${cls}">${emoji} ${t.symbol}${exchangeInfo}${nameInfo}</div>`;
-      })
-      .join('');
+    return alertTickers.map((t) => this.buildAlertTickerRowDiv(t)).join('');
+  }
+
+  /**
+   * Builds a single alert ticker row div with data attributes for delink interaction.
+   */
+  private buildAlertTickerRowDiv(t: AlertTicker): string {
+    const emoji = t.type === 'PRIMARY' ? EMOJI.PRIMARY : EMOJI.SECONDARY;
+    const cls = t.type === 'PRIMARY' ? DISPLAY_CLASS.PRIMARY_ROW : DISPLAY_CLASS.SECONDARY_ROW;
+    const exchangeInfo = t.exchange ? ` · ${t.exchange}` : '';
+    const nameInfo = t.name ? ` · ${t.name}` : '';
+    return `<div class="${cls} ${Constants.UI.IDS.DISPLAY.ALERT_TICKER_ROW}" ${Constants.UI.IDS.DISPLAY.ATTR_ALERT_TICKER_SYMBOL}="${t.symbol}" ${Constants.UI.IDS.DISPLAY.ATTR_ALERT_TICKER_TYPE}="${t.type}">${emoji} ${t.symbol}${exchangeInfo}${nameInfo}</div>`;
   }
 
   /**

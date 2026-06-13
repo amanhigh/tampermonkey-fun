@@ -65,64 +65,64 @@ describe('AlertFeedManager', () => {
   });
 
   describe('getAlertFeedState', () => {
-    it('should return UNMAPPED state when ticker cannot be found', async () => {
-      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(null);
-
-      const result = await alertFeedManager.getAlertFeedState('UNKNOWN_TICKER');
+    it('should return UNMAPPED state when null is passed', async () => {
+      const result = await alertFeedManager.getAlertFeedState(null);
 
       expect(result).toEqual({
         state: FeedState.UNMAPPED,
         color: 'red',
       });
-      expect(mockAlertTickerManager.fetchAlertTicker).toHaveBeenCalledWith('UNKNOWN_TICKER');
+      expect(mockAlertTickerManager.fetchAlertTicker).not.toHaveBeenCalled();
+      expect(mockCategoryManager.getTickerCategory).not.toHaveBeenCalled();
+      expect(mockRecentManager.isRecent).not.toHaveBeenCalled();
     });
 
-    it('should return WATCHED state when ticker has a watch category', async () => {
-      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(makeAlertTicker({ ticker: 'NSE:RELIANCE' }));
+    it('should return WATCHED state when AlertTicker ticker has a watch category', async () => {
+      const alertTicker = makeAlertTicker({ ticker: 'NSE:RELIANCE' });
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: { state: 'READY' } },
         flag: undefined,
         isFno: false,
       });
 
-      const result = await alertFeedManager.getAlertFeedState('RELIANCE');
+      const result = await alertFeedManager.getAlertFeedState(alertTicker);
 
       expect(result).toEqual({
         state: FeedState.WATCHED,
         color: 'yellow',
       });
-      expect(mockAlertTickerManager.fetchAlertTicker).toHaveBeenCalledWith('RELIANCE');
+      expect(mockAlertTickerManager.fetchAlertTicker).not.toHaveBeenCalled();
       expect(mockCategoryManager.getTickerCategory).toHaveBeenCalledWith('NSE:RELIANCE');
     });
 
-    it('should return RECENT state when ticker is recent but not watched', async () => {
-      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(makeAlertTicker({ ticker: 'NSE:TCS' }));
+    it('should return RECENT state when AlertTicker ticker is recent but not watched', async () => {
+      const alertTicker = makeAlertTicker({ ticker: 'NSE:TCS' });
       mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, isFno: false });
       mockRecentManager.isRecent.mockResolvedValue(true);
 
-      const result = await alertFeedManager.getAlertFeedState('TCS');
+      const result = await alertFeedManager.getAlertFeedState(alertTicker);
 
       expect(result).toEqual({
         state: FeedState.RECENT,
         color: 'lime',
       });
-      expect(mockAlertTickerManager.fetchAlertTicker).toHaveBeenCalledWith('TCS');
+      expect(mockAlertTickerManager.fetchAlertTicker).not.toHaveBeenCalled();
       expect(mockCategoryManager.getTickerCategory).toHaveBeenCalledWith('NSE:TCS');
       expect(mockRecentManager.isRecent).toHaveBeenCalledWith('NSE:TCS', Constants.RECENT_CUTOFF_MS);
     });
 
-    it('should return MAPPED state when ticker is mapped but not watched or recent', async () => {
-      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(makeAlertTicker({ ticker: 'NSE:HDFC' }));
+    it('should return MAPPED state when AlertTicker ticker is mapped but not watched or recent', async () => {
+      const alertTicker = makeAlertTicker({ ticker: 'NSE:HDFC' });
       mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, isFno: false });
       mockRecentManager.isRecent.mockResolvedValue(false);
 
-      const result = await alertFeedManager.getAlertFeedState('HDFC');
+      const result = await alertFeedManager.getAlertFeedState(alertTicker);
 
       expect(result).toEqual({
         state: FeedState.MAPPED,
         color: 'white',
       });
-      expect(mockAlertTickerManager.fetchAlertTicker).toHaveBeenCalledWith('HDFC');
+      expect(mockAlertTickerManager.fetchAlertTicker).not.toHaveBeenCalled();
       expect(mockCategoryManager.getTickerCategory).toHaveBeenCalledWith('NSE:HDFC');
       expect(mockRecentManager.isRecent).toHaveBeenCalledWith('NSE:HDFC', Constants.RECENT_CUTOFF_MS);
     });
@@ -132,7 +132,7 @@ describe('AlertFeedManager', () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, isFno: false });
       mockRecentManager.isRecent.mockResolvedValue(true);
 
-      const result = await alertFeedManager.getAlertFeedStateForAlertTicker(alertTicker);
+      const result = await alertFeedManager.getAlertFeedState(alertTicker);
 
       expect(result).toEqual({
         state: FeedState.RECENT,
