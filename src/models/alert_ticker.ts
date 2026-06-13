@@ -10,7 +10,7 @@ export interface AlertTicker {
   symbol: string;
   pair_id: string;
   name: string;
-  exchange: string | null;
+  exchange: string;
   type: AlertTickerType;
   ticker: string;
   created_at: string;
@@ -22,7 +22,7 @@ export interface CreateAlertTickerRequest {
   symbol: string;
   pair_id: string;
   name: string;
-  exchange?: string | null;
+  exchange: string;
   type: AlertTickerType;
 }
 

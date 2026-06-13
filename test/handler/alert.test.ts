@@ -65,6 +65,7 @@ describe('AlertHandler', () => {
 
     mockDomManager = {
       getTicker: jest.fn().mockReturnValue('TV:INFY'),
+      getCurrentExchange: jest.fn().mockReturnValue('NSE'),
     } as any;
 
     mockTickerManager = {} as any;
@@ -152,8 +153,8 @@ describe('AlertHandler', () => {
         expect(mockAlertTickerManager.linkAlertTicker).not.toHaveBeenCalled();
       });
 
-      it('should create PRIMARY link when no primary exists and pairId is present', async () => {
-        mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(null);
+      it('should create link when no alert ticker exists and pairId is present', async () => {
+        mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
 
         const event = new AlertClicked('INFY', AlertClickAction.MAP, '12345');
         handler.handleAlertClick(event);
@@ -161,17 +162,18 @@ describe('AlertHandler', () => {
         // Wait for promises
         await new Promise(process.nextTick);
 
-        expect(mockAlertTickerManager.getPrimaryAlertTicker).toHaveBeenCalledWith('TV:INFY');
+        expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TV:INFY');
         expect(mockAlertTickerManager.linkAlertTicker).toHaveBeenCalledWith('TV:INFY', {
           symbol: 'INFY',
           pair_id: '12345',
           name: 'INFY',
+          exchange: 'NSE',
         });
         expect(Notifier.success).toHaveBeenCalledWith(expect.stringContaining('Mapped'));
       });
 
-      it('should create SECONDARY link when primary symbol differs and pairId is present', async () => {
-        const primary: AlertTicker = {
+      it('should create link when existing alert ticker has different symbol', async () => {
+        const existing: AlertTicker = {
           symbol: 'SBIN',
           pair_id: '678',
           name: 'State Bank',
@@ -181,7 +183,7 @@ describe('AlertHandler', () => {
           created_at: '',
           updated_at: '',
         };
-        mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(primary);
+        mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([existing]);
 
         const event = new AlertClicked('INFY', AlertClickAction.MAP, '12345');
         handler.handleAlertClick(event);
@@ -192,11 +194,12 @@ describe('AlertHandler', () => {
           symbol: 'INFY',
           pair_id: '12345',
           name: 'INFY',
+          exchange: 'NSE',
         });
       });
 
-      it('should skip duplicate linking when primary symbol matches event ticker', async () => {
-        const primary: AlertTicker = {
+      it('should skip duplicate linking when any alert ticker symbol matches', async () => {
+        const existing: AlertTicker = {
           symbol: 'INFY',
           pair_id: '12345',
           name: 'Infosys Ltd',
@@ -206,7 +209,7 @@ describe('AlertHandler', () => {
           created_at: '',
           updated_at: '',
         };
-        mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(primary);
+        mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([existing]);
 
         const event = new AlertClicked('INFY', AlertClickAction.MAP, '12345');
         handler.handleAlertClick(event);

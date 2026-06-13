@@ -19,7 +19,7 @@ export enum AlertClickAction {
 
 export class AlertClicked extends BaseEvent {
   constructor(
-    readonly investingTicker: string,
+    readonly alertTicker: string,
     readonly action: AlertClickAction,
     readonly pairId?: string,
     readonly timestamp: number = Date.now()
@@ -28,8 +28,8 @@ export class AlertClicked extends BaseEvent {
   }
 
   public static fromString(data: string): AlertClicked {
-    const parsed = JSON.parse(data) as { investingTicker: string; action: string; pairId?: string };
-    return new AlertClicked(parsed.investingTicker, parsed.action as AlertClickAction, parsed.pairId);
+    const parsed = JSON.parse(data) as { alertTicker: string; action: string; pairId?: string };
+    return new AlertClicked(parsed.alertTicker, parsed.action as AlertClickAction, parsed.pairId);
   }
 }
 

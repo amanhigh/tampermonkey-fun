@@ -237,7 +237,7 @@ describe('AlertManager', () => {
 
       const serialized = (global as any).GM.setValue.mock.calls[0][1] as string;
       const parsed = JSON.parse(serialized);
-      expect(parsed.investingTicker).toBe('INFY');
+      expect(parsed.alertTicker).toBe('INFY');
       expect(parsed.action).toBe('MAP');
       expect(parsed.pairId).toBe('8874');
     });

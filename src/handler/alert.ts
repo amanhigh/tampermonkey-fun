@@ -249,26 +249,59 @@ export class AlertHandler implements IAlertHandler {
   public handleAlertClick(event: AlertClicked): void {
     switch (event.action) {
       case AlertClickAction.MAP:
-        // Map TV Ticker to Investing Ticker
-        const tvTickerNow = this.domManager.getTicker();
-        void this.alertFeedManager.createAlertFeedEvent(tvTickerNow);
-        void this.alertTickerHandler.linkInvestingTicker(event.investingTicker).then(() => {
-          this.refreshAlerts();
-        });
-        Notifier.success(`Mapped ${this.domManager.getTicker()} to ${event.investingTicker}`);
+        void this.handleMapAction(event);
         break;
       case AlertClickAction.OPEN:
-        void this.alertTickerManager.fetchAlertTicker(event.investingTicker).then((alertTicker) => {
-          if (!alertTicker) {
-            Notifier.warn(`Unmapped: ${event.investingTicker}`);
-            void this.tickerHandler.openTicker(event.investingTicker);
-          } else {
-            void this.tickerHandler.openTicker(alertTicker.ticker);
-          }
-        });
+        void this.handleOpenAction(event);
         break;
       default:
         throw new Error(`Unknown alert action: ${event.action}`);
+    }
+  }
+
+  /**
+   * Handles MAP action: links investing ticker to current TV ticker using pairId.
+   * Skips duplicate linking when primary symbol already matches.
+   */
+  private async handleMapAction(event: AlertClicked): Promise<void> {
+    if (!event.pairId) {
+      Notifier.warn(`Cannot map ${event.alertTicker}: no pairId in event`);
+      return;
+    }
+
+    const ticker = this.domManager.getTicker();
+    const exchange = this.domManager.getCurrentExchange();
+
+    void this.alertFeedManager.createAlertFeedEvent(ticker);
+
+    const alertTickers = await this.alertTickerManager.getAlertTickersForTicker(ticker);
+    const alreadyLinked = alertTickers.some((at) => at.symbol === event.alertTicker);
+    if (alreadyLinked) {
+      Notifier.info(`Already mapped: ${event.alertTicker} → ${ticker}`);
+      return;
+    }
+
+    await this.alertTickerManager.linkAlertTicker(ticker, {
+      symbol: event.alertTicker,
+      pair_id: event.pairId,
+      name: event.alertTicker,
+      exchange,
+    });
+    Notifier.success(`Mapped ${ticker} to ${event.alertTicker}`);
+    this.refreshAlerts();
+  }
+
+  /**
+   * Handles OPEN action: navigates to the appropriate ticker.
+   * Uses mapped TV ticker if available, otherwise opens investing ticker raw.
+   */
+  private async handleOpenAction(event: AlertClicked): Promise<void> {
+    const alertTicker = await this.alertTickerManager.fetchAlertTicker(event.alertTicker);
+    if (!alertTicker) {
+      Notifier.warn(`Unmapped: ${event.alertTicker}`);
+      void this.tickerHandler.openTicker(event.alertTicker);
+    } else {
+      void this.tickerHandler.openTicker(alertTicker.ticker);
     }
   }
 
