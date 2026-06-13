@@ -203,7 +203,7 @@ export class Factory {
     category: (): ICategoryManager =>
       Factory.getInstance(
         'categoryManager',
-        () => new CategoryManager(Factory.manager.ticker(), () => Factory.manager.journal())
+        () => new CategoryManager(Factory.manager.ticker(), () => Factory.manager.journal(), Factory.manager.eventPublisher())
       ),
 
     sequence: (): ISequenceManager =>
@@ -230,7 +230,13 @@ export class Factory {
     lifecycle: (): ILifecycleManager =>
       Factory.getInstance(
         'lifecycleManager',
-        () => new LifecycleManager(Factory.client.ticker(), Factory.manager.category(), Factory.manager.paint())
+        () =>
+          new LifecycleManager(
+            Factory.client.ticker(),
+            Factory.manager.category(),
+            Factory.manager.paint(),
+            Factory.manager.eventPublisher()
+          )
       ),
 
     tv: (): ITradingViewManager =>

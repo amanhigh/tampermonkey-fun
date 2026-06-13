@@ -4,16 +4,37 @@
  */
 export enum DomainEventType {
   ALERT_TICKER_LINKED = 'ALERT_TICKER_LINKED',
+  ALERT_TICKER_DELETED = 'ALERT_TICKER_DELETED',
   TICKER_MARKED_RECENT = 'TICKER_MARKED_RECENT',
+  TICKER_TRACKING_STARTED = 'TICKER_TRACKING_STARTED',
+  TICKER_TRACKING_STOPPED = 'TICKER_TRACKING_STOPPED',
+  TICKER_CATEGORY_CHANGED = 'TICKER_CATEGORY_CHANGED',
 }
 
 /**
  * Central union of all domain event types.
  * Add new event interfaces to the union when expanding.
  */
-import type { AlertTickerLinkedEvent } from './alert_ticker';
-import type { TickerMarkedRecentEvent } from './ticker';
+import type { AlertTickerLinkedEvent, AlertTickerDeletedEvent } from './alert_ticker';
+import type {
+  TickerMarkedRecentEvent,
+  TickerTrackingStartedEvent,
+  TickerTrackingStoppedEvent,
+  TickerCategoryChangedEvent,
+} from './ticker';
 
-export type { AlertTickerLinkedEvent, TickerMarkedRecentEvent };
+export type { AlertTickerLinkedEvent, AlertTickerDeletedEvent };
+export type {
+  TickerMarkedRecentEvent,
+  TickerTrackingStartedEvent,
+  TickerTrackingStoppedEvent,
+  TickerCategoryChangedEvent,
+};
 
-export type DomainEvent = AlertTickerLinkedEvent | TickerMarkedRecentEvent;
+export type DomainEvent =
+  | AlertTickerLinkedEvent
+  | AlertTickerDeletedEvent
+  | TickerMarkedRecentEvent
+  | TickerTrackingStartedEvent
+  | TickerTrackingStoppedEvent
+  | TickerCategoryChangedEvent;

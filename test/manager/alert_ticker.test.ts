@@ -155,12 +155,17 @@ describe('AlertTickerManager', () => {
   });
 
   describe('deleteAlertTicker', () => {
-    it('should delegate delete to AlertTickerClient with the selected symbol', async () => {
+    it('should delegate delete to AlertTickerClient and publish ALERT_TICKER_DELETED', async () => {
       mockAlertTickerClient.deleteAlertTicker.mockResolvedValue(undefined);
 
       await manager.deleteAlertTicker('INFY');
 
       expect(mockAlertTickerClient.deleteAlertTicker).toHaveBeenCalledWith('INFY');
+      expect(mockProducer.publish).toHaveBeenCalledTimes(1);
+      expect(mockProducer.publish).toHaveBeenCalledWith({
+        type: DomainEventType.ALERT_TICKER_DELETED,
+        alertTicker: 'INFY',
+      });
     });
   });
 });

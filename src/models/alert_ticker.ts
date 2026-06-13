@@ -52,3 +52,9 @@ export interface AlertTickerLinkedEvent {
   ticker: string;
   alertTicker: AlertTicker;
 }
+
+export interface AlertTickerDeletedEvent {
+  type: DomainEventType.ALERT_TICKER_DELETED;
+  /** Investing.com symbol that was deleted. */
+  alertTicker: string;
+}

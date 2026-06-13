@@ -82,23 +82,46 @@ export class AlertFeedHandler implements IAlertFeedHandler {
       await this.alertFeedManager.createAlertFeedEvent(event.alertTicker);
     });
 
-    // TICKER_MARKED_RECENT only has ticker string — resolve first
-    subscriber.subscribe(DomainEventType.TICKER_MARKED_RECENT, async (event) => {
-      await this.createAlertFeedEventForTicker(event.ticker);
+    // ALERT_TICKER_DELETED — paint deleted symbol as UNMAPPED
+    subscriber.subscribe(DomainEventType.ALERT_TICKER_DELETED, async (event) => {
+      await this.alertFeedManager.createUnmappedFeedEvent(event.symbol);
+    });
+
+    // TICKER_MARKED_RECENT and TICKER_TRACKING_STARTED both carry ticker string — same handler
+    subscriber.subscribeMany(
+      [DomainEventType.TICKER_MARKED_RECENT, DomainEventType.TICKER_TRACKING_STARTED],
+      async (event) => {
+        await this.createAlertFeedEventsForTicker(event.ticker);
+      }
+    );
+
+    // TICKER_TRACKING_STOPPED — paint captured linked symbols as UNMAPPED
+    subscriber.subscribe(DomainEventType.TICKER_TRACKING_STOPPED, async (event) => {
+      for (const symbol of event.alertTickerSymbols) {
+        await this.alertFeedManager.createUnmappedFeedEvent(symbol);
+      }
+    });
+
+    // TICKER_CATEGORY_CHANGED — repaint all linked alert tickers for affected tickers
+    subscriber.subscribe(DomainEventType.TICKER_CATEGORY_CHANGED, async (event) => {
+      for (const ticker of event.tickers) {
+        await this.createAlertFeedEventsForTicker(ticker);
+      }
     });
   }
 
   /**
-   * Resolve a ticker string to AlertTicker and create an alert feed event.
-   * No-op when no primary alert ticker exists.
+   * Resolve all alert tickers linked to a TV ticker and create alert feed events for each.
+   * No-op when no alert tickers exist.
    */
-  private async createAlertFeedEventForTicker(ticker: string): Promise<void> {
-    const alertTicker = await this.alertTickerManager.getPrimaryAlertTicker(ticker);
-    if (!alertTicker) {
-      Notifier.warn(`No primary alert ticker found for ${ticker} — skipping feed event`);
+  private async createAlertFeedEventsForTicker(ticker: string): Promise<void> {
+    const alertTickers = await this.alertTickerManager.getAlertTickersForTicker(ticker);
+    if (alertTickers.length === 0) {
       return;
     }
-    await this.alertFeedManager.createAlertFeedEvent(alertTicker);
+    for (const alertTicker of alertTickers) {
+      await this.alertFeedManager.createAlertFeedEvent(alertTicker);
+    }
   }
 
   public handleHookButton(): void {

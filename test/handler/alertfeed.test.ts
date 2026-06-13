@@ -87,6 +87,7 @@ describe('AlertFeedHandler', () => {
     mockAlertFeedManager = {
       getAlertFeedState: jest.fn(),
       createAlertFeedEvent: jest.fn(),
+      createUnmappedFeedEvent: jest.fn(),
       createResetFeedEvent: jest.fn(),
     } as any;
 
@@ -96,6 +97,7 @@ describe('AlertFeedHandler', () => {
       linkAlertTicker: jest.fn(),
       getAlertTickers: jest.fn(),
       getAlertTickersForTicker: jest.fn(),
+      deleteAlertTicker: jest.fn(),
     } as any;
 
     mockInvestingManager = {
@@ -129,7 +131,7 @@ describe('AlertFeedHandler', () => {
       );
     });
 
-    it('should subscribe to TICKER_MARKED_RECENT via subscribe', () => {
+    it('should subscribe to ALERT_TICKER_DELETED via subscribe', () => {
       const mockConsumer: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn(),
         subscribeMany: jest.fn(),
@@ -138,12 +140,12 @@ describe('AlertFeedHandler', () => {
       handler.registerEvents(mockConsumer);
 
       expect(mockConsumer.subscribe).toHaveBeenCalledWith(
-        DomainEventType.TICKER_MARKED_RECENT,
+        DomainEventType.ALERT_TICKER_DELETED,
         expect.any(Function)
       );
     });
 
-    it('should not use subscribeMany', () => {
+    it('should use subscribeMany for TICKER_MARKED_RECENT and TICKER_TRACKING_STARTED', () => {
       const mockConsumer: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn(),
         subscribeMany: jest.fn(),
@@ -151,7 +153,38 @@ describe('AlertFeedHandler', () => {
 
       handler.registerEvents(mockConsumer);
 
-      expect(mockConsumer.subscribeMany).not.toHaveBeenCalled();
+      expect(mockConsumer.subscribeMany).toHaveBeenCalledWith(
+        [DomainEventType.TICKER_MARKED_RECENT, DomainEventType.TICKER_TRACKING_STARTED],
+        expect.any(Function)
+      );
+    });
+
+    it('should subscribe to TICKER_TRACKING_STOPPED via subscribe', () => {
+      const mockConsumer: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerEvents(mockConsumer);
+
+      expect(mockConsumer.subscribe).toHaveBeenCalledWith(
+        DomainEventType.TICKER_TRACKING_STOPPED,
+        expect.any(Function)
+      );
+    });
+
+    it('should subscribe to TICKER_CATEGORY_CHANGED via subscribe', () => {
+      const mockConsumer: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerEvents(mockConsumer);
+
+      expect(mockConsumer.subscribe).toHaveBeenCalledWith(
+        DomainEventType.TICKER_CATEGORY_CHANGED,
+        expect.any(Function)
+      );
     });
 
     it('should create alert feed event directly from linked event alertTicker', async () => {
@@ -183,58 +216,160 @@ describe('AlertFeedHandler', () => {
       expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith(alertTicker);
     });
 
-    it('should resolve primary alert ticker for TICKER_MARKED_RECENT before creating event', async () => {
-      const alertTicker: AlertTicker = {
-        symbol: 'INFY',
-        pair_id: '12345',
-        name: 'Infosys Ltd',
-        exchange: 'NSE',
-        type: 'PRIMARY',
-        ticker: 'TV:INFY',
-        created_at: '',
-        updated_at: '',
-      };
-      mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(alertTicker);
-
-      // Capture the callback for TICKER_MARKED_RECENT
-      let recentCallback: Function | undefined;
+    it('should create unmapped feed event for ALERT_TICKER_DELETED', async () => {
+      let deleteCallback: Function | undefined;
       const mockConsumer: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn((type, cb) => {
-          if (type === DomainEventType.TICKER_MARKED_RECENT) {
-            recentCallback = cb;
+          if (type === DomainEventType.ALERT_TICKER_DELETED) {
+            deleteCallback = cb;
           }
         }),
         subscribeMany: jest.fn(),
       };
 
       handler.registerEvents(mockConsumer);
-      await recentCallback!({ type: DomainEventType.TICKER_MARKED_RECENT, ticker: 'TV:INFY' });
+      await deleteCallback!({ type: DomainEventType.ALERT_TICKER_DELETED, alertTicker: 'INFY' });
 
-      expect(mockAlertTickerManager.getPrimaryAlertTicker).toHaveBeenCalledWith('TV:INFY');
-      expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith(alertTicker);
+      expect(mockAlertFeedManager.createUnmappedFeedEvent).toHaveBeenCalledWith('INFY');
     });
 
-    it('should warn and skip event when no primary alert ticker found for TICKER_MARKED_RECENT', async () => {
-      mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(null);
+    it('should resolve all alert tickers for TICKER_MARKED_RECENT and create events', async () => {
+      const alertTickers: AlertTicker[] = [
+        {
+          symbol: 'INFY',
+          pair_id: '12345',
+          name: 'Infosys Ltd',
+          exchange: 'NSE',
+          type: 'PRIMARY',
+          ticker: 'TV:INFY',
+          created_at: '',
+          updated_at: '',
+        },
+        {
+          symbol: 'INFY.NS',
+          pair_id: '67890',
+          name: 'Infosys Ltd (NS)',
+          exchange: 'NSE',
+          type: 'SECONDARY',
+          ticker: 'TV:INFY',
+          created_at: '',
+          updated_at: '',
+        },
+      ];
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue(alertTickers);
 
-      let recentCallback: Function | undefined;
+      // Capture the callback from subscribeMany for TICKER_MARKED_RECENT
+      let manyCallback: Function | undefined;
+      const mockConsumer: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn((types, cb) => {
+          if (types.includes(DomainEventType.TICKER_MARKED_RECENT)) {
+            manyCallback = cb;
+          }
+        }),
+      };
+
+      handler.registerEvents(mockConsumer);
+      await manyCallback!({ type: DomainEventType.TICKER_MARKED_RECENT, ticker: 'TV:INFY' });
+
+      expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TV:INFY');
+      expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledTimes(2);
+      expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith(alertTickers[0]);
+      expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith(alertTickers[1]);
+    });
+
+    it('should warn and skip when no alert tickers found for TICKER_MARKED_RECENT', async () => {
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
+
+      let manyCallback: Function | undefined;
+      const mockConsumer: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn((types, cb) => {
+          if (types.includes(DomainEventType.TICKER_MARKED_RECENT)) {
+            manyCallback = cb;
+          }
+        }),
+      };
+
+      handler.registerEvents(mockConsumer);
+      await manyCallback!({ type: DomainEventType.TICKER_MARKED_RECENT, ticker: 'TV:INFY' });
+
+      expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TV:INFY');
+      expect(mockAlertFeedManager.createAlertFeedEvent).not.toHaveBeenCalled();
+      const { Notifier } = jest.requireMock('../../src/util/notify');
+      expect(Notifier.warn).toHaveBeenCalledWith(expect.stringContaining('No alert tickers found'));
+    });
+
+    it('should resolve all alert tickers for TICKER_TRACKING_STARTED and create events', async () => {
+      const alertTickers: AlertTicker[] = [
+        {
+          symbol: 'INFY',
+          pair_id: '12345',
+          name: 'Infosys Ltd',
+          exchange: 'NSE',
+          type: 'PRIMARY',
+          ticker: 'TV:INFY',
+          created_at: '',
+          updated_at: '',
+        },
+      ];
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue(alertTickers);
+
+      let manyCallback: Function | undefined;
+      const mockConsumer: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn((types, cb) => {
+          if (types.includes(DomainEventType.TICKER_TRACKING_STARTED)) {
+            manyCallback = cb;
+          }
+        }),
+      };
+
+      handler.registerEvents(mockConsumer);
+      await manyCallback!({ type: DomainEventType.TICKER_TRACKING_STARTED, ticker: 'TV:INFY' });
+
+      expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TV:INFY');
+      expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith(alertTickers[0]);
+    });
+
+    it('should trigger full paint on TICKER_TRACKING_STOPPED', async () => {
+      // paintAlertFeed calls getAlertTickers internally via the production path
+      mockAlertTickerManager.getAlertTickers.mockResolvedValue([]);
+
+      let stopCallback: Function | undefined;
       const mockConsumer: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn((type, cb) => {
-          if (type === DomainEventType.TICKER_MARKED_RECENT) {
-            recentCallback = cb;
+          if (type === DomainEventType.TICKER_TRACKING_STOPPED) {
+            stopCallback = cb;
           }
         }),
         subscribeMany: jest.fn(),
       };
 
       handler.registerEvents(mockConsumer);
-      await recentCallback!({ type: DomainEventType.TICKER_MARKED_RECENT, ticker: 'UNMAPPED' });
+      await stopCallback!({ type: DomainEventType.TICKER_TRACKING_STOPPED, ticker: 'TV:INFY' });
 
-      expect(mockAlertTickerManager.getPrimaryAlertTicker).toHaveBeenCalledWith('UNMAPPED');
-      expect(mockAlertFeedManager.createAlertFeedEvent).not.toHaveBeenCalled();
-      expect(Notifier.warn).toHaveBeenCalledWith(
-        'No primary alert ticker found for UNMAPPED — skipping feed event'
-      );
+      expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalled();
+    });
+
+    it('should resolve all alert tickers for TICKER_CATEGORY_CHANGED and create events for each ticker', async () => {
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
+
+      let categoryCallback: Function | undefined;
+      const mockConsumer: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn((type, cb) => {
+          if (type === DomainEventType.TICKER_CATEGORY_CHANGED) {
+            categoryCallback = cb;
+          }
+        }),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerEvents(mockConsumer);
+      await categoryCallback!({ type: DomainEventType.TICKER_CATEGORY_CHANGED, tickers: ['TICKER_A', 'TICKER_B'] });
+
+      expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TICKER_A');
+      expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TICKER_B');
     });
   });
 

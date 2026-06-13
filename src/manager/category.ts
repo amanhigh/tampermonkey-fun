@@ -8,6 +8,8 @@ import { WatchCategory, WatchCategoryId } from '../models/watch';
 import { FlagCategory, FlagCategoryId } from '../models/flag';
 import { TickerCategory } from '../models/category';
 import { WatchClassifier, FlagClassifier } from './classification';
+import { IPublisher } from './event_bus';
+import { DomainEventType } from '../models/domain_event';
 
 // Re-export classification helpers for test and external use
 export { WatchClassifier, FlagClassifier };
@@ -86,7 +88,8 @@ export class CategoryManager implements ICategoryManager {
 
   constructor(
     private readonly tickerManager: ITickerManager,
-    private readonly getJournalManager: () => IJournalManager
+    private readonly getJournalManager: () => IJournalManager,
+    private readonly publisher: IPublisher
   ) {}
 
   // ── Public API ──
@@ -107,6 +110,14 @@ export class CategoryManager implements ICategoryManager {
     }
 
     await Promise.all(tickers.map(async (ticker) => this.syncBackend(ticker, update)));
+
+    // Publish event so alert-feed consumers repaint affected tickers
+    if (tickers.length > 0) {
+      await this.publisher.publish({
+        type: DomainEventType.TICKER_CATEGORY_CHANGED,
+        tickers,
+      });
+    }
   }
 
   /** @inheritdoc */
@@ -114,6 +125,14 @@ export class CategoryManager implements ICategoryManager {
     const cat = FlagClassifier.findById(categoryId);
 
     await Promise.all(tickers.map(async (ticker) => this.syncBackend(ticker, cat.update)));
+
+    // Publish event so alert-feed consumers repaint affected tickers
+    if (tickers.length > 0) {
+      await this.publisher.publish({
+        type: DomainEventType.TICKER_CATEGORY_CHANGED,
+        tickers,
+      });
+    }
   }
 
   /** @inheritdoc */
