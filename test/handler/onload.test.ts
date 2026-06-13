@@ -16,6 +16,7 @@ const mockDocument = {
 
 const mockJQuery = jest.fn(() => ({
   length: 0,
+  on: jest.fn(),
 }));
 
 // Mock Tampermonkey/Greasemonkey functions
@@ -68,6 +69,7 @@ describe('OnLoadHandler', () => {
     mockAlertHandler = {
       handleAlertClick: jest.fn(),
       refreshAlerts: jest.fn(),
+      registerAlertTickerDelinkHandler: jest.fn(),
     } as unknown as jest.Mocked<IAlertHandler>;
 
     mockTickerChangeHandler = {
@@ -104,6 +106,7 @@ describe('OnLoadHandler', () => {
       expect(mockDocument.addEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
       expect(mockObserveUtil.nodeObserver).toHaveBeenCalledWith(expect.any(Object), expect.any(Function));
       expect(mockGM_addValueChangeListener).toHaveBeenCalled();
+      expect(mockAlertHandler.registerAlertTickerDelinkHandler).toHaveBeenCalled();
     });
   });
 

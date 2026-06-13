@@ -46,6 +46,12 @@ export interface IAlertTickerManager {
    * @returns Promise resolving with array of linked Alert tickers (empty if none)
    */
   getAlertTickersForTicker(tvTicker: string): Promise<AlertTicker[]>;
+
+  /**
+   * Delete an Alert ticker by its Investing.com symbol.
+   * @param symbol - Alert ticker symbol to delete
+   */
+  deleteAlertTicker(symbol: string): Promise<void>;
 }
 
 /**
@@ -84,5 +90,10 @@ export class AlertTickerManager implements IAlertTickerManager {
   /** @inheritdoc */
   async getAlertTickersForTicker(tvTicker: string): Promise<AlertTicker[]> {
     return this.alertTickerClient.listAlertTickers({ ticker: tvTicker });
+  }
+
+  /** @inheritdoc */
+  async deleteAlertTicker(symbol: string): Promise<void> {
+    return this.alertTickerClient.deleteAlertTicker(symbol);
   }
 }

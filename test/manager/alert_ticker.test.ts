@@ -120,4 +120,14 @@ describe('AlertTickerManager', () => {
       expect(result).toEqual(tickers);
     });
   });
+
+  describe('deleteAlertTicker', () => {
+    it('should delegate delete to AlertTickerClient with the selected symbol', async () => {
+      mockAlertTickerClient.deleteAlertTicker.mockResolvedValue(undefined);
+
+      await manager.deleteAlertTicker('INFY');
+
+      expect(mockAlertTickerClient.deleteAlertTicker).toHaveBeenCalledWith('INFY');
+    });
+  });
 });

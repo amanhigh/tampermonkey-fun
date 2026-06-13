@@ -44,6 +44,7 @@ export class OnLoadHandler implements IOnLoadHandler {
     this.setupWatchlistObserver();
     this.setupKeydownEventListener();
     this.setupAlertClickListener();
+    this.alertHandler.registerAlertTickerDelinkHandler();
   }
 
   /**

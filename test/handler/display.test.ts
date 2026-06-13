@@ -221,6 +221,29 @@ describe('DisplayHandler', () => {
 
       expect(finalHtml).not.toContain('aman-display-expanded');
     });
+
+    it('should render alert ticker rows with data-symbol and data-type attributes', async () => {
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
+      mockDomManager.getTicker.mockReturnValue('TVTICKER');
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
+        makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', name: 'Infosys Ltd', exchange: 'NSE', ticker: 'TVTICKER' }),
+        makeAlertTicker({ type: 'SECONDARY', symbol: 'INFY.PA', name: 'Infosys CDR', exchange: 'XPAR', ticker: 'TVTICKER' }),
+      ]);
+
+      await handler.display();
+
+      const clickHandler = mockDisplayEl.on.mock.calls[0][1];
+      await clickHandler();
+
+      const htmlCalls = mockDisplayEl.html.mock.calls;
+      const expandedHtml = htmlCalls[htmlCalls.length - 1][0];
+
+      expect(expandedHtml).toContain('aman-display-alert-ticker-row');
+      expect(expandedHtml).toContain('data-alert-ticker-symbol="INFY"');
+      expect(expandedHtml).toContain('data-alert-ticker-type="PRIMARY"');
+      expect(expandedHtml).toContain('data-alert-ticker-symbol="INFY.PA"');
+      expect(expandedHtml).toContain('data-alert-ticker-type="SECONDARY"');
+    });
   });
 
   describe('resetExpanded', () => {

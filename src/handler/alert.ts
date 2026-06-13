@@ -95,6 +95,12 @@ export interface IAlertHandler {
    * Ensures UI is refreshed after operation
    */
   handleResetAlerts(): Promise<void>;
+
+  /**
+   * Registers a delegated right-click handler on display-area alert ticker rows
+   * for delink/delete of individual alert ticker mappings.
+   */
+  registerAlertTickerDelinkHandler(): void;
 }
 
 /**
@@ -244,6 +250,7 @@ export class AlertHandler implements IAlertHandler {
     e.preventDefault();
     void this.alertTickerHandler.linkInvestingTicker(this.domManager.getTicker()).then(() => {
       this.refreshAlerts();
+      void this.displayHandler.display();
     });
   }
 
@@ -313,5 +320,49 @@ export class AlertHandler implements IAlertHandler {
     await this.alertManager.deleteAllAlerts();
     this.refreshAlerts();
     Notifier.red('❌ 🚀 All alerts deleted');
+  }
+
+  // ── Alert Ticker Delink ──
+
+  /** @inheritdoc */
+  public registerAlertTickerDelinkHandler(): void {
+    const $card = $(`#${Constants.UI.IDS.DISPLAY.CARD}`);
+    $card.on('contextmenu', `.${Constants.UI.IDS.DISPLAY.ALERT_TICKER_ROW}`, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      void this.handleAlertTickerDelink($(e.currentTarget));
+    });
+  }
+
+  /**
+   * Handles right-click delink on an alert ticker row.
+   * Confirms deletion, then refreshes display on success.
+   * @param $row - The right-clicked alert ticker row element
+   */
+  private async handleAlertTickerDelink($row: JQuery): Promise<void> {
+    const symbol = $row.attr(Constants.UI.IDS.DISPLAY.ATTR_ALERT_TICKER_SYMBOL) || '';
+    const type = $row.attr(Constants.UI.IDS.DISPLAY.ATTR_ALERT_TICKER_TYPE) || '';
+
+    if (!symbol) {
+      return;
+    }
+
+    const isPrimary = type === 'PRIMARY';
+    const confirmText = isPrimary
+      ? `Delink PRIMARY ${symbol}? This ticker will be unmapped until you map a new primary.`
+      : `Delink ${symbol}?`;
+
+    if (!confirm(confirmText)) {
+      return;
+    }
+
+    try {
+      await this.alertTickerManager.deleteAlertTicker(symbol);
+      Notifier.success(`⏹ Delinked ${symbol}`);
+      this.refreshAlerts();
+      await this.displayHandler.display();
+    } catch (error) {
+      Notifier.warn(`Failed to delink ${symbol}: ${(error as Error).message}`);
+    }
   }
 }

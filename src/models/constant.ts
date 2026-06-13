@@ -81,6 +81,7 @@ export const Constants = Object.freeze({
       DISPLAY: {
         CARD: 'aman-display', // Old Name: displayId (was INPUTS.DISPLAY)
         CARD_CLASS: 'aman-display-card',
+        ALERT_TICKER_ROW: 'aman-display-alert-ticker-row',
       },
       INPUTS: {
         COMMAND: 'aman-input', // Old Name: inputId
