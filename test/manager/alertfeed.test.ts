@@ -1,5 +1,4 @@
 import { AlertFeedManager, IAlertFeedManager } from '../../src/manager/alertfeed';
-import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { ICategoryManager } from '../../src/manager/category';
 import { IRecentManager } from '../../src/manager/recent';
 import { FeedState } from '../../src/models/alertfeed';
@@ -14,7 +13,6 @@ import { WatchCategoryId } from '../../src/models/watch';
 
 describe('AlertFeedManager', () => {
   let alertFeedManager: IAlertFeedManager;
-  let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
   let mockCategoryManager: jest.Mocked<ICategoryManager>;
   let mockRecentManager: jest.Mocked<IRecentManager>;
 
@@ -33,14 +31,6 @@ describe('AlertFeedManager', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Mock AlertTickerManager
-    mockAlertTickerManager = {
-      fetchAlertTicker: jest.fn(),
-      getPrimaryAlertTicker: jest.fn(),
-      linkAlertTicker: jest.fn(),
-      getAlertTickers: jest.fn(),
-    } as any;
-
     // Mock CategoryManager
     mockCategoryManager = {
       getTickerCategory: jest.fn(),
@@ -54,7 +44,7 @@ describe('AlertFeedManager', () => {
       isRecent: jest.fn(),
     } as any;
 
-    alertFeedManager = new AlertFeedManager(mockAlertTickerManager, mockCategoryManager, mockRecentManager);
+    alertFeedManager = new AlertFeedManager(mockCategoryManager, mockRecentManager);
   });
 
   describe('constructor', () => {
@@ -72,7 +62,6 @@ describe('AlertFeedManager', () => {
         state: FeedState.UNMAPPED,
         color: 'red',
       });
-      expect(mockAlertTickerManager.fetchAlertTicker).not.toHaveBeenCalled();
       expect(mockCategoryManager.getTickerCategory).not.toHaveBeenCalled();
       expect(mockRecentManager.isRecent).not.toHaveBeenCalled();
     });
@@ -91,7 +80,7 @@ describe('AlertFeedManager', () => {
         state: FeedState.WATCHED,
         color: 'yellow',
       });
-      expect(mockAlertTickerManager.fetchAlertTicker).not.toHaveBeenCalled();
+
       expect(mockCategoryManager.getTickerCategory).toHaveBeenCalledWith('NSE:RELIANCE');
     });
 
@@ -106,7 +95,7 @@ describe('AlertFeedManager', () => {
         state: FeedState.RECENT,
         color: 'lime',
       });
-      expect(mockAlertTickerManager.fetchAlertTicker).not.toHaveBeenCalled();
+
       expect(mockCategoryManager.getTickerCategory).toHaveBeenCalledWith('NSE:TCS');
       expect(mockRecentManager.isRecent).toHaveBeenCalledWith('NSE:TCS', Constants.RECENT_CUTOFF_MS);
     });
@@ -122,7 +111,7 @@ describe('AlertFeedManager', () => {
         state: FeedState.MAPPED,
         color: 'white',
       });
-      expect(mockAlertTickerManager.fetchAlertTicker).not.toHaveBeenCalled();
+
       expect(mockCategoryManager.getTickerCategory).toHaveBeenCalledWith('NSE:HDFC');
       expect(mockRecentManager.isRecent).toHaveBeenCalledWith('NSE:HDFC', Constants.RECENT_CUTOFF_MS);
     });
@@ -139,7 +128,7 @@ describe('AlertFeedManager', () => {
         color: 'lime',
       });
       // Should NOT call fetchAlertTicker — uses the provided record
-      expect(mockAlertTickerManager.fetchAlertTicker).not.toHaveBeenCalled();
+
       expect(mockCategoryManager.getTickerCategory).toHaveBeenCalledWith('NSE:TCS');
       expect(mockRecentManager.isRecent).toHaveBeenCalledWith('NSE:TCS', Constants.RECENT_CUTOFF_MS);
     });

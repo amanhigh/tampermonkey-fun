@@ -64,6 +64,7 @@ import { ICommandInputHandler, CommandInputHandler } from '../handler/command';
 import { AlertFeedHandler, IAlertFeedHandler } from '../handler/alertfeed';
 import { IGlobalErrorHandler, GlobalErrorHandler } from '../handler/error';
 import { IAlertFeedManager, AlertFeedManager } from '../manager/alertfeed';
+import { IPublisher, ISubscriber, IEventBus, EventBus } from '../manager/event_bus';
 import { IImdbRepo, ImdbRepo } from '../repo/imdb';
 import { IImdbManager as IImdbManager, ImdbManager } from '../manager/imdb';
 import { IPanelHandler, PanelHandler } from '../handler/panel';
@@ -236,7 +237,10 @@ export class Factory {
       Factory.getInstance('tvManager', () => new TradingViewManager(Factory.util.wait(), Factory.client.os())),
 
     alertTicker: (): IAlertTickerManager =>
-      Factory.getInstance('alertTickerManager', () => new AlertTickerManager(Factory.client.tickerAlert())),
+      Factory.getInstance(
+        'alertTickerManager',
+        () => new AlertTickerManager(Factory.client.tickerAlert(), Factory.manager.eventPublisher())
+      ),
 
     investing: (): IInvestingManager =>
       Factory.getInstance('investingManager', () => new InvestingManager(Factory.client.instrument())),
@@ -245,7 +249,15 @@ export class Factory {
       Factory.getInstance('styleManager', () => new StyleManager(Factory.util.wait(), Factory.manager.timeFrame())),
 
     recent: (): IRecentManager =>
-      Factory.getInstance('recentManager', () => new RecentManager(Factory.client.ticker())),
+      Factory.getInstance(
+        'recentManager',
+        () => new RecentManager(Factory.client.ticker(), Factory.manager.eventPublisher())
+      ),
+
+    eventBus: (): IEventBus => Factory.getInstance('eventBus', () => new EventBus()),
+    eventPublisher: (): IPublisher => Factory.manager.eventBus(),
+    eventSubscriber: (): ISubscriber => Factory.manager.eventBus(),
+
     journal: (): IJournalManager =>
       Factory.getInstance(
         'journalManager',
@@ -260,7 +272,7 @@ export class Factory {
     alertFeed: (): IAlertFeedManager =>
       Factory.getInstance(
         'alertFeedManager',
-        () => new AlertFeedManager(Factory.manager.alertTicker(), Factory.manager.category(), Factory.manager.recent())
+        () => new AlertFeedManager(Factory.manager.category(), Factory.manager.recent())
       ),
   };
 
@@ -372,8 +384,7 @@ export class Factory {
             Factory.handler.alertSummary(),
             Factory.handler.ticker(),
             Factory.handler.alertTicker(),
-            Factory.handler.display(),
-            Factory.manager.alertFeed()
+            Factory.handler.display()
           )
       ),
     alertSummary: (): IAlertSummaryHandler =>
@@ -404,7 +415,9 @@ export class Factory {
             Factory.handler.hotkey(),
             Factory.handler.alert(),
             Factory.handler.tickerChange(),
-            Factory.manager.paint()
+            Factory.manager.paint(),
+            Factory.handler.alertFeed(),
+            Factory.manager.eventSubscriber()
           )
       ),
     hotkey: (): IHotkeyHandler =>
@@ -466,9 +479,7 @@ export class Factory {
             Factory.manager.recent(),
             Factory.handler.display(),
             Factory.handler.kite(),
-            Factory.util.sync(),
-            Factory.manager.category(),
-            Factory.manager.alertFeed()
+            Factory.util.sync()
           )
       ),
 
@@ -500,7 +511,8 @@ export class Factory {
             Factory.util.sync(),
             Factory.manager.category(),
             Factory.manager.dom(),
-            Factory.manager.alertFeed()
+            Factory.manager.alertFeed(),
+            Factory.manager.alertTicker()
           )
       ),
     flag: (): IFlagHandler =>

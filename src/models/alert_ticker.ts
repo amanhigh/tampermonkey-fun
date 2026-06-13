@@ -49,6 +49,6 @@ import { DomainEventType } from './domain_event';
 
 export interface AlertTickerLinkedEvent {
   type: DomainEventType.ALERT_TICKER_LINKED;
-  tvTicker: string;
-  alertTicker: string;
+  ticker: string;
+  alertTicker: AlertTicker;
 }

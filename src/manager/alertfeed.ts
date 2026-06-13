@@ -1,6 +1,5 @@
 import { AlertFeedEvent, FeedInfo, FeedState } from '../models/alertfeed';
 import { Constants } from '../models/constant';
-import { IAlertTickerManager } from './alert_ticker';
 import { ICategoryManager } from './category';
 import { IRecentManager } from './recent';
 import { AlertTicker } from '../models/alert_ticker';
@@ -19,11 +18,12 @@ export interface IAlertFeedManager {
   getAlertFeedState(alertTicker: AlertTicker | null): Promise<FeedInfo>;
 
   /**
-   * Create an alert feed event for a specific ticker
-   * @param tvTicker The investing ticker to create event for
+   * Create an alert feed event for a resolved alert ticker record.
+   * Caller must resolve and guard for null before calling.
+   * @param alertTicker - The resolved AlertTicker record
    * @returns Promise that resolves when event is created
    */
-  createAlertFeedEvent(tvTicker: string): Promise<void>;
+  createAlertFeedEvent(alertTicker: AlertTicker): Promise<void>;
 
   /**
    * Create a reset feed event
@@ -37,7 +37,6 @@ export interface IAlertFeedManager {
  */
 export class AlertFeedManager implements IAlertFeedManager {
   constructor(
-    private readonly alertTickerManager: IAlertTickerManager,
     private readonly categoryManager: ICategoryManager,
     private readonly recentManager: IRecentManager
   ) {}
@@ -62,14 +61,9 @@ export class AlertFeedManager implements IAlertFeedManager {
     return { state: FeedState.MAPPED, color: 'white' };
   }
 
-  public async createAlertFeedEvent(tvTicker: string): Promise<void> {
-    const alertTicker = await this.alertTickerManager.getPrimaryAlertTicker(tvTicker);
-    const investingTicker = alertTicker?.symbol;
-    if (!investingTicker) {
-      throw new Error(`Failed to convert ticker: ${tvTicker}`);
-    }
+  public async createAlertFeedEvent(alertTicker: AlertTicker): Promise<void> {
     const feedInfo = await this.getAlertFeedState(alertTicker);
-    const event = new AlertFeedEvent(investingTicker, feedInfo);
+    const event = new AlertFeedEvent(alertTicker.symbol, feedInfo);
     await GM.setValue(Constants.STORAGE.EVENTS.ALERT_FEED_UPDATE, event.stringify());
   }
 

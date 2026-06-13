@@ -10,6 +10,7 @@ import { TickerArea, TickerVisibility } from '../models/dom';
 import { WatchCategoryId } from '../models/watch';
 import { IDomManager } from '../manager/dom';
 import { IAlertFeedManager } from '../manager/alertfeed';
+import { IAlertTickerManager } from '../manager/alert_ticker';
 
 /**
  * Handles watchlist-related events and UI updates
@@ -42,7 +43,8 @@ export class WatchListHandler implements IWatchListHandler {
     private readonly syncUtil: ISyncUtil,
     private readonly categoryManager: ICategoryManager,
     private readonly domManager: IDomManager,
-    private readonly alertFeedManager: IAlertFeedManager
+    private readonly alertFeedManager: IAlertFeedManager,
+    private readonly alertTickerManager: IAlertTickerManager
   ) {}
 
   /** @inheritdoc */
@@ -52,7 +54,11 @@ export class WatchListHandler implements IWatchListHandler {
       void this.watchlistManager.refresh();
 
       // Update alert feed with watchlist changes
-      void this.alertFeedManager.createAlertFeedEvent(this.domManager.getTicker());
+      void this.alertTickerManager.getPrimaryAlertTicker(this.domManager.getTicker()).then((alertTicker) => {
+        if (alertTicker) {
+          void this.alertFeedManager.createAlertFeedEvent(alertTicker);
+        }
+      });
     });
   }
 

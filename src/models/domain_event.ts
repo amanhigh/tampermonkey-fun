@@ -16,6 +16,4 @@ import type { TickerMarkedRecentEvent } from './ticker';
 
 export type { AlertTickerLinkedEvent, TickerMarkedRecentEvent };
 
-export type DomainEvent =
-  | AlertTickerLinkedEvent
-  | TickerMarkedRecentEvent;
+export type DomainEvent = AlertTickerLinkedEvent | TickerMarkedRecentEvent;

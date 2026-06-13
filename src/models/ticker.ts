@@ -119,5 +119,5 @@ import { DomainEventType } from './domain_event';
 
 export interface TickerMarkedRecentEvent {
   type: DomainEventType.TICKER_MARKED_RECENT;
-  tvTicker: string;
+  ticker: string;
 }

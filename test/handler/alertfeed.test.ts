@@ -9,8 +9,8 @@ import { AlertTicker } from '../../src/models/alert_ticker';
 import { Instrument } from '../../src/models/investing';
 import { AlertClickAction } from '../../src/models/events';
 import { FeedState } from '../../src/models/alertfeed';
-import { IEventBus } from '../../src/manager/event_bus';
-import { DomainEventType } from '../../src/models/domain_event_type';
+import { ISubscriber } from '../../src/manager/event_bus';
+import { DomainEventType } from '../../src/models/domain_event';
 
 // Mock Notifier
 jest.mock('../../src/util/notify', () => ({
@@ -114,22 +114,127 @@ describe('AlertFeedHandler', () => {
 
   // ── Registration Tests ──
 
-  describe('registerDomainEvents', () => {
-    it('should subscribe to ALERT_TICKER_LINKED and TICKER_MARKED_RECENT via subscribeMany', () => {
-      const mockEventBus: jest.Mocked<IEventBus> = {
-        publish: jest.fn(),
+  describe('registerEvents', () => {
+    it('should subscribe to ALERT_TICKER_LINKED via subscribe', () => {
+      const mockConsumer: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn(),
         subscribeMany: jest.fn(),
       };
 
-      handler.registerDomainEvents(mockEventBus);
+      handler.registerEvents(mockConsumer);
 
-      expect(mockEventBus.subscribeMany).toHaveBeenCalledTimes(1);
-      expect(mockEventBus.subscribeMany).toHaveBeenCalledWith(
-        [DomainEventType.ALERT_TICKER_LINKED, DomainEventType.TICKER_MARKED_RECENT],
+      expect(mockConsumer.subscribe).toHaveBeenCalledWith(
+        DomainEventType.ALERT_TICKER_LINKED,
         expect.any(Function)
       );
-      expect(mockEventBus.subscribe).not.toHaveBeenCalled();
+    });
+
+    it('should subscribe to TICKER_MARKED_RECENT via subscribe', () => {
+      const mockConsumer: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerEvents(mockConsumer);
+
+      expect(mockConsumer.subscribe).toHaveBeenCalledWith(
+        DomainEventType.TICKER_MARKED_RECENT,
+        expect.any(Function)
+      );
+    });
+
+    it('should not use subscribeMany', () => {
+      const mockConsumer: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerEvents(mockConsumer);
+
+      expect(mockConsumer.subscribeMany).not.toHaveBeenCalled();
+    });
+
+    it('should create alert feed event directly from linked event alertTicker', async () => {
+      const alertTicker: AlertTicker = {
+        symbol: 'INFY',
+        pair_id: '12345',
+        name: 'Infosys Ltd',
+        exchange: 'NSE',
+        type: 'PRIMARY',
+        ticker: 'TV:INFY',
+        created_at: '',
+        updated_at: '',
+      };
+
+      // Capture the callback for ALERT_TICKER_LINKED
+      let linkedCallback: Function | undefined;
+      const mockConsumer: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn((type, cb) => {
+          if (type === DomainEventType.ALERT_TICKER_LINKED) {
+            linkedCallback = cb;
+          }
+        }),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerEvents(mockConsumer);
+      await linkedCallback!({ type: DomainEventType.ALERT_TICKER_LINKED, ticker: 'TV:INFY', alertTicker });
+
+      expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith(alertTicker);
+    });
+
+    it('should resolve primary alert ticker for TICKER_MARKED_RECENT before creating event', async () => {
+      const alertTicker: AlertTicker = {
+        symbol: 'INFY',
+        pair_id: '12345',
+        name: 'Infosys Ltd',
+        exchange: 'NSE',
+        type: 'PRIMARY',
+        ticker: 'TV:INFY',
+        created_at: '',
+        updated_at: '',
+      };
+      mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(alertTicker);
+
+      // Capture the callback for TICKER_MARKED_RECENT
+      let recentCallback: Function | undefined;
+      const mockConsumer: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn((type, cb) => {
+          if (type === DomainEventType.TICKER_MARKED_RECENT) {
+            recentCallback = cb;
+          }
+        }),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerEvents(mockConsumer);
+      await recentCallback!({ type: DomainEventType.TICKER_MARKED_RECENT, ticker: 'TV:INFY' });
+
+      expect(mockAlertTickerManager.getPrimaryAlertTicker).toHaveBeenCalledWith('TV:INFY');
+      expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith(alertTicker);
+    });
+
+    it('should warn and skip event when no primary alert ticker found for TICKER_MARKED_RECENT', async () => {
+      mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(null);
+
+      let recentCallback: Function | undefined;
+      const mockConsumer: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn((type, cb) => {
+          if (type === DomainEventType.TICKER_MARKED_RECENT) {
+            recentCallback = cb;
+          }
+        }),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerEvents(mockConsumer);
+      await recentCallback!({ type: DomainEventType.TICKER_MARKED_RECENT, ticker: 'UNMAPPED' });
+
+      expect(mockAlertTickerManager.getPrimaryAlertTicker).toHaveBeenCalledWith('UNMAPPED');
+      expect(mockAlertFeedManager.createAlertFeedEvent).not.toHaveBeenCalled();
+      expect(Notifier.warn).toHaveBeenCalledWith(
+        'No primary alert ticker found for UNMAPPED — skipping feed event'
+      );
     });
   });
 

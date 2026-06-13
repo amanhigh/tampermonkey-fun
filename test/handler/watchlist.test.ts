@@ -5,6 +5,8 @@ import { ISyncUtil } from '../../src/util/sync';
 import { ICategoryManager } from '../../src/manager/category';
 import { IDomManager } from '../../src/manager/dom';
 import { IAlertFeedManager } from '../../src/manager/alertfeed';
+import { IAlertTickerManager } from '../../src/manager/alert_ticker';
+import { AlertTicker } from '../../src/models/alert_ticker';
 import { WatchCategoryId } from '../../src/models/watch';
 
 describe('WatchListHandler', () => {
@@ -15,6 +17,7 @@ describe('WatchListHandler', () => {
   let mockCategoryManager: jest.Mocked<ICategoryManager>;
   let mockDomManager: jest.Mocked<IDomManager>;
   let mockAlertFeedManager: jest.Mocked<IAlertFeedManager>;
+  let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -57,13 +60,23 @@ describe('WatchListHandler', () => {
       createAlertFeedEvent: jest.fn(),
     } as unknown as jest.Mocked<IAlertFeedManager>;
 
+    mockAlertTickerManager = {
+      getPrimaryAlertTicker: jest.fn().mockResolvedValue(null),
+      linkAlertTicker: jest.fn(),
+      fetchAlertTicker: jest.fn(),
+      getAlertTickers: jest.fn(),
+      getAlertTickersForTicker: jest.fn(),
+      deleteAlertTicker: jest.fn(),
+    } as unknown as jest.Mocked<IAlertTickerManager>;
+
     handler = new WatchListHandler(
       mockWatchlistManager,
       mockPaintManager,
       mockSyncUtil,
       mockCategoryManager,
       mockDomManager,
-      mockAlertFeedManager
+      mockAlertFeedManager,
+      mockAlertTickerManager
     );
   });
 
@@ -84,6 +97,41 @@ describe('WatchListHandler', () => {
       handler.onWatchListChange();
 
       expect(mockPaintManager.paintTickers).not.toHaveBeenCalled();
+    });
+
+    it('should resolve alert ticker and create alert feed event when primary exists', () => {
+      const alertTicker: AlertTicker = {
+        symbol: 'INFY',
+        pair_id: '12345',
+        name: 'Infosys Ltd',
+        exchange: 'NSE',
+        type: 'PRIMARY',
+        ticker: 'CURRENT',
+        created_at: '',
+        updated_at: '',
+      };
+      mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(alertTicker);
+
+      handler.onWatchListChange();
+
+      expect(mockAlertTickerManager.getPrimaryAlertTicker).toHaveBeenCalledWith('CURRENT');
+      // Flush microtasks
+      return new Promise((resolve) => setImmediate(() => {
+        expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith(alertTicker);
+        resolve(undefined);
+      }));
+    });
+
+    it('should not create alert feed event when no primary alert ticker exists', () => {
+      mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(null);
+
+      handler.onWatchListChange();
+
+      // Flush microtasks
+      return new Promise((resolve) => setImmediate(() => {
+        expect(mockAlertFeedManager.createAlertFeedEvent).not.toHaveBeenCalled();
+        resolve(undefined);
+      }));
     });
   });
 

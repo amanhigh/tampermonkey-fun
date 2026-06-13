@@ -9,8 +9,8 @@ import { AlertFeedEvent, FeedInfo, FeedState } from '../models/alertfeed';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { IInvestingManager } from '../manager/investing';
 import { AlertTicker } from '../models/alert_ticker';
-import { IEventBus, IDomainEventConsumer } from '../manager/event_bus';
-import { DomainEventType } from '../models/domain_event_type';
+import { ISubscriber, IDomainEventConsumer } from '../manager/event_bus';
+import { DomainEventType } from '../models/domain_event';
 
 export interface IAlertFeedHandler extends IDomainEventConsumer {
   /**
@@ -76,13 +76,29 @@ export class AlertFeedHandler implements IAlertFeedHandler {
   }
 
   /** @inheritdoc */
-  public registerDomainEvents(eventBus: IEventBus): void {
-    eventBus.subscribeMany(
-      [DomainEventType.ALERT_TICKER_LINKED, DomainEventType.TICKER_MARKED_RECENT],
-      async (event) => {
-        await this.alertFeedManager.createAlertFeedEvent(event.tvTicker);
-      }
-    );
+  public registerEvents(subscriber: ISubscriber): void {
+    // ALERT_TICKER_LINKED carries full AlertTicker — use it directly
+    subscriber.subscribe(DomainEventType.ALERT_TICKER_LINKED, async (event) => {
+      await this.alertFeedManager.createAlertFeedEvent(event.alertTicker);
+    });
+
+    // TICKER_MARKED_RECENT only has ticker string — resolve first
+    subscriber.subscribe(DomainEventType.TICKER_MARKED_RECENT, async (event) => {
+      await this.createAlertFeedEventForTicker(event.ticker);
+    });
+  }
+
+  /**
+   * Resolve a ticker string to AlertTicker and create an alert feed event.
+   * No-op when no primary alert ticker exists.
+   */
+  private async createAlertFeedEventForTicker(ticker: string): Promise<void> {
+    const alertTicker = await this.alertTickerManager.getPrimaryAlertTicker(ticker);
+    if (!alertTicker) {
+      Notifier.warn(`No primary alert ticker found for ${ticker} — skipping feed event`);
+      return;
+    }
+    await this.alertFeedManager.createAlertFeedEvent(alertTicker);
   }
 
   public handleHookButton(): void {

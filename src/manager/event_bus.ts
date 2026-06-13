@@ -4,16 +4,14 @@ import { DomainEvent } from '../models/domain_event';
  * Type alias for a handler function that processes a domain event.
  * Can be async or synchronous.
  */
-export type DomainEventHandler<T extends DomainEvent = DomainEvent> = (
-  event: T
-) => Promise<void> | void;
+export type DomainEventHandler<T extends DomainEvent = DomainEvent> = (event: T) => Promise<void> | void;
 
 /**
- * Interface for the in-process event bus.
- * Handlers subscribe to specific event types;
- * publishers fire events and all matching handlers run.
+ * Interface for publishing domain events.
+ * Producers (managers) depend on this narrow interface
+ * instead of the full IEventBus to avoid accidental subscribe.
  */
-export interface IEventBus {
+export interface IPublisher {
   /**
    * Publish a domain event. All subscribed handlers for the event type
    * are invoked concurrently. Errors from individual handlers are caught
@@ -21,7 +19,14 @@ export interface IEventBus {
    * @param event - The domain event to publish
    */
   publish(event: DomainEvent): Promise<void>;
+}
 
+/**
+ * Interface for subscribing to domain events.
+ * Subscribers (handlers) depend on this narrow interface
+ * to avoid accidental publish.
+ */
+export interface ISubscriber {
   /**
    * Subscribe a handler to a specific domain event type.
    * @param type - The event type to subscribe to
@@ -31,7 +36,24 @@ export interface IEventBus {
     type: T,
     handler: DomainEventHandler<Extract<DomainEvent, { type: T }>>
   ): void;
+
+  /**
+   * Subscribe the same handler to multiple event types.
+   * Useful when different events share the same payload shape and reaction.
+   * @param types - Array of event types to subscribe to
+   * @param handler - The handler function called for each matching event
+   */
+  subscribeMany<T extends DomainEvent['type']>(
+    types: T[],
+    handler: DomainEventHandler<Extract<DomainEvent, { type: T }>>
+  ): void;
 }
+
+/**
+ * Combined event bus interface — convenience for the composition root only.
+ * Publishers depend on IPublisher, subscribers depend on ISubscriber.
+ */
+export interface IEventBus extends IPublisher, ISubscriber {}
 
 /**
  * Interface for components that consume domain events.
@@ -39,11 +61,11 @@ export interface IEventBus {
  */
 export interface IDomainEventConsumer {
   /**
-   * Register domain event subscriptions with the given event bus.
+   * Register event subscriptions with the given subscriber interface.
    * Called once during app initialization.
-   * @param eventBus - The event bus to subscribe to
+   * @param subscriber - The subscriber interface to subscribe with
    */
-  registerDomainEvents(eventBus: IEventBus): void;
+  registerEvents(subscriber: ISubscriber): void;
 }
 
 /**
@@ -54,7 +76,7 @@ export interface IDomainEventConsumer {
  * - A failing handler does not block other handlers.
  * - publish() resolves when all handlers have completed.
  */
-export class EventBus implements IEventBus {
+export class EventBus implements IPublisher, ISubscriber {
   private readonly handlers = new Map<string, DomainEventHandler[]>();
 
   /** @inheritdoc */
@@ -71,6 +93,16 @@ export class EventBus implements IEventBus {
   }
 
   /** @inheritdoc */
+  subscribeMany<T extends DomainEvent['type']>(
+    types: T[],
+    handler: DomainEventHandler<Extract<DomainEvent, { type: T }>>
+  ): void {
+    types.forEach((type) => {
+      this.subscribe(type, handler);
+    });
+  }
+
+  /** @inheritdoc */
   async publish(event: DomainEvent): Promise<void> {
     const handlers = this.handlers.get(event.type) ?? [];
 
@@ -84,10 +116,7 @@ export class EventBus implements IEventBus {
           try {
             await handler(event);
           } catch (error) {
-            console.error(
-              `[EventBus] Handler for ${event.type} failed:`,
-              error
-            );
+            console.error(`[EventBus] Handler for ${event.type} failed:`, error);
           }
         })()
       )

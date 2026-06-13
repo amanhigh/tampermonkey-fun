@@ -1,5 +1,17 @@
 import { EventBus } from '../../src/manager/event_bus';
-import { DomainEventType } from '../../src/models/domain_event_type';
+import { DomainEventType } from '../../src/models/domain_event';
+import { AlertTicker } from '../../src/models/alert_ticker';
+
+const makeAlertTicker = (symbol: string, ticker: string): AlertTicker => ({
+  symbol,
+  pair_id: 'pair1',
+  name: 'Test',
+  exchange: 'NSE',
+  type: 'PRIMARY',
+  ticker,
+  created_at: '',
+  updated_at: '',
+});
 
 describe('EventBus', () => {
   let eventBus: EventBus;
@@ -15,15 +27,15 @@ describe('EventBus', () => {
 
       await eventBus.publish({
         type: DomainEventType.ALERT_TICKER_LINKED,
-        tvTicker: 'TV:INFY',
-        alertTicker: 'INFY',
+        ticker: 'TV:INFY',
+        alertTicker: makeAlertTicker('INFY', 'TV:INFY'),
       });
 
       expect(handler).toHaveBeenCalledTimes(1);
       expect(handler).toHaveBeenCalledWith({
         type: DomainEventType.ALERT_TICKER_LINKED,
-        tvTicker: 'TV:INFY',
-        alertTicker: 'INFY',
+        ticker: 'TV:INFY',
+        alertTicker: makeAlertTicker('INFY', 'TV:INFY'),
       });
     });
 
@@ -35,8 +47,8 @@ describe('EventBus', () => {
 
       await eventBus.publish({
         type: DomainEventType.ALERT_TICKER_LINKED,
-        tvTicker: 'TV:TCS',
-        alertTicker: 'TCS',
+        ticker: 'TV:TCS',
+        alertTicker: makeAlertTicker('TCS', 'TV:TCS'),
       });
 
       expect(handler1).toHaveBeenCalledTimes(1);
@@ -49,7 +61,7 @@ describe('EventBus', () => {
 
       await eventBus.publish({
         type: DomainEventType.TICKER_MARKED_RECENT,
-        tvTicker: 'TV:INFY',
+        ticker: 'TV:INFY',
       });
 
       expect(handler).not.toHaveBeenCalled();
@@ -64,7 +76,7 @@ describe('EventBus', () => {
 
       await eventBus.publish({
         type: DomainEventType.TICKER_MARKED_RECENT,
-        tvTicker: 'TV:INFY',
+        ticker: 'TV:INFY',
       });
 
       expect(resolved).toBe(true);
@@ -81,15 +93,15 @@ describe('EventBus', () => {
 
       await eventBus.publish({
         type: DomainEventType.ALERT_TICKER_LINKED,
-        tvTicker: 'TV:INFY',
-        alertTicker: 'INFY',
+        ticker: 'TV:INFY',
+        alertTicker: makeAlertTicker('INFY', 'TV:INFY'),
       });
 
       expect(handler).toHaveBeenCalledTimes(1);
 
       await eventBus.publish({
         type: DomainEventType.TICKER_MARKED_RECENT,
-        tvTicker: 'TV:TCS',
+        ticker: 'TV:TCS',
       });
 
       expect(handler).toHaveBeenCalledTimes(2);

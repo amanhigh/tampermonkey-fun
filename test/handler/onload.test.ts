@@ -6,6 +6,8 @@ import { IHotkeyHandler } from '../../src/handler/hotkey';
 import { IAlertHandler } from '../../src/handler/alert';
 import { ITickerChangeHandler } from '../../src/handler/ticker_change';
 import { IPaintManager } from '../../src/manager/paint';
+import { IAlertFeedHandler } from '../../src/handler/alertfeed';
+import { ISubscriber } from '../../src/manager/event_bus';
 import { Constants } from '../../src/models/constant';
 
 // Mock document and jQuery
@@ -36,6 +38,8 @@ describe('OnLoadHandler', () => {
   let mockAlertHandler: jest.Mocked<IAlertHandler>;
   let mockTickerChangeHandler: jest.Mocked<ITickerChangeHandler>;
   let mockPaintManager: jest.Mocked<IPaintManager>;
+  let mockAlertFeedHandler: jest.Mocked<IAlertFeedHandler>;
+  let mockSubscriber: jest.Mocked<ISubscriber>;
 
   beforeEach(() => {
     // Reset mocks
@@ -82,6 +86,18 @@ describe('OnLoadHandler', () => {
       summarizeBuckets: jest.fn().mockResolvedValue({ buckets: new Map(), uncategorizedCount: 0 }),
     } as unknown as jest.Mocked<IPaintManager>;
 
+    mockAlertFeedHandler = {
+      registerEvents: jest.fn(),
+      initialize: jest.fn(),
+      handleHookButton: jest.fn(),
+      paintAlertFeed: jest.fn(),
+    } as unknown as jest.Mocked<IAlertFeedHandler>;
+
+    mockSubscriber = {
+      subscribe: jest.fn(),
+      subscribeMany: jest.fn(),
+    } as unknown as jest.Mocked<ISubscriber>;
+
     onLoadHandler = new OnLoadHandler(
       mockWaitUtil,
       mockObserveUtil,
@@ -89,7 +105,9 @@ describe('OnLoadHandler', () => {
       mockHotkeyHandler,
       mockAlertHandler,
       mockTickerChangeHandler,
-      mockPaintManager
+      mockPaintManager,
+      mockAlertFeedHandler,
+      mockSubscriber
     );
   });
 
@@ -107,6 +125,11 @@ describe('OnLoadHandler', () => {
       expect(mockObserveUtil.nodeObserver).toHaveBeenCalledWith(expect.any(Object), expect.any(Function));
       expect(mockGM_addValueChangeListener).toHaveBeenCalled();
       expect(mockAlertHandler.registerAlertTickerDelinkHandler).toHaveBeenCalled();
+    });
+
+    it('should register domain event consumers on init', () => {
+      onLoadHandler.init();
+      expect(mockAlertFeedHandler.registerEvents).toHaveBeenCalledWith(mockSubscriber);
     });
   });
 
