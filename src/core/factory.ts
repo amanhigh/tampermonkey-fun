@@ -554,7 +554,9 @@ export class Factory {
             Factory.util.ui(),
             Factory.util.sync(),
             Factory.manager.alert(),
-            Factory.manager.alertFeed()
+            Factory.manager.alertFeed(),
+            Factory.manager.alertTicker(),
+            Factory.manager.investing()
           )
       ),
     panel: (): IPanelHandler =>

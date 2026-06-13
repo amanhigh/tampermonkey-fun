@@ -6,6 +6,8 @@ import { AlertClickAction } from '../models/events';
 import { IAlertManager } from '../manager/alert';
 import { IAlertFeedManager } from '../manager/alertfeed';
 import { AlertFeedEvent, FeedInfo, FeedState } from '../models/alertfeed';
+import { IAlertTickerManager } from '../manager/alert_ticker';
+import { IInvestingManager } from '../manager/investing';
 
 export interface IAlertFeedHandler {
   /**
@@ -29,7 +31,9 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     private readonly uiUtil: IUIUtil,
     private readonly syncUtil: ISyncUtil,
     private readonly alertManager: IAlertManager,
-    private readonly alertFeedManager: IAlertFeedManager
+    private readonly alertFeedManager: IAlertFeedManager,
+    private readonly alertTickerManager: IAlertTickerManager,
+    private readonly investingManager: IInvestingManager
   ) {}
 
   public initialize(): void {
@@ -81,16 +85,38 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     });
   }
 
-  private handleAlertClick(event: JQuery.ClickEvent): void {
+  private async handleAlertClick(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();
 
     const $element = $(event.currentTarget);
-    const alertName = $element.text();
-    const investingTicker = this.extractTickerFromAlertName(alertName);
+    const { name, ticker, href } = this.extractAlertInfo($element);
 
     const action = event.ctrlKey ? AlertClickAction.MAP : AlertClickAction.OPEN;
-    // HACK: Generic Event to Open/Map Ticker, can be extended in future for more actions
-    void this.alertManager.createAlertClickEvent(investingTicker, action);
+
+    // Resolve pairId and publish event
+    const pairId = await this.resolvePairId(ticker, name, href);
+    void this.alertManager.createAlertClickEvent(ticker, action, pairId);
+  }
+
+  /**
+   * Resolve Investing.com pair ID for a given alert ticker.
+   * Priority: existing AlertTicker by symbol → InvestingManager.getInstrument() via name+href
+   */
+  private async resolvePairId(ticker: string, name: string, href?: string): Promise<string | undefined> {
+    const alertTicker = await this.alertTickerManager.fetchAlertTicker(ticker);
+    if (alertTicker?.pair_id) {
+      return alertTicker.pair_id;
+    }
+
+    // Fallback: resolve via instrument API using name and href
+    if (href) {
+      const instrument = await this.investingManager.getInstrument(name, href);
+      if (instrument) {
+        return instrument.id.toString();
+      }
+    }
+
+    return undefined;
   }
 
   public async paintAlertFeed(): Promise<void> {
@@ -98,9 +124,8 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     const elements: Array<{ $el: JQuery; ticker: string }> = [];
     $(Constants.DOM.ALERT_FEED.ALERT_DATA).each((_, element) => {
       const $element = $(element);
-      const alertName = $element.text();
-      const investingTicker = this.extractTickerFromAlertName(alertName);
-      elements.push({ $el: $element, ticker: investingTicker });
+      const { ticker } = this.extractAlertInfo($element);
+      elements.push({ $el: $element, ticker });
     });
 
     const feedInfos = await Promise.all(elements.map(async (e) => this.alertFeedManager.getAlertFeedState(e.ticker)));
@@ -129,8 +154,7 @@ export class AlertFeedHandler implements IAlertFeedHandler {
   private updateTicker(investingTicker: string, feedInfo: FeedInfo): void {
     $(Constants.DOM.ALERT_FEED.ALERT_DATA).each((_, element) => {
       const $element = $(element);
-      const alertName = $element.text();
-      const ticker = this.extractTickerFromAlertName(alertName);
+      const { ticker } = this.extractAlertInfo($element);
 
       if (ticker === investingTicker) {
         $element.css('color', feedInfo.color);
@@ -138,7 +162,15 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     });
   }
 
-  private extractTickerFromAlertName(alertName: string): string {
+  private extractAlertInfo($element: JQuery): { name: string; ticker: string; href: string | undefined } {
+    const name = $element.text();
+    const ticker = this.extractTicker(name);
+    const $parentAnchor = $element.closest('a');
+    const href = $parentAnchor.attr('href') ?? undefined;
+    return { name, ticker, href };
+  }
+
+  private extractTicker(alertName: string): string {
     const match = alertName.match(/\(([^)]+)\)/);
     return match ? match[1] : alertName;
   }

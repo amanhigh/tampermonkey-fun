@@ -229,5 +229,17 @@ describe('AlertManager', () => {
         expect.stringContaining('HDFC')
       );
     });
+
+    it('should include pairId in serialized event when provided', async () => {
+      (global as any).GM = { setValue: jest.fn().mockResolvedValue(undefined) };
+
+      await alertManager.createAlertClickEvent('INFY', AlertClickAction.MAP, '8874');
+
+      const serialized = (global as any).GM.setValue.mock.calls[0][1] as string;
+      const parsed = JSON.parse(serialized);
+      expect(parsed.investingTicker).toBe('INFY');
+      expect(parsed.action).toBe('MAP');
+      expect(parsed.pairId).toBe('8874');
+    });
   });
 });
