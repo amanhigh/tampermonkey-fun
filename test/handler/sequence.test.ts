@@ -8,14 +8,28 @@ import { SequenceType } from '../../src/models/trading';
 import { Ticker } from '../../src/models/ticker';
 import { Notifier } from '../../src/util/notify';
 
-// Mock jQuery
-const mockJQuery = jest.fn((_selector: string) => ({
-  val: jest.fn(),
-  css: jest.fn(),
-}));
+// ── Mock jQuery ──
+let mockDisplayEl: any;
+
+const mockJQuery = jest.fn((selector: string) => {
+  // Return mock display element for aman-display, otherwise default
+  if (selector === '#aman-display') {
+    return mockDisplayEl;
+  }
+  return {
+    val: jest.fn(),
+    css: jest.fn(),
+    html: jest.fn(),
+    off: jest.fn(),
+    on: jest.fn(),
+    addClass: jest.fn(),
+    removeClass: jest.fn(),
+    text: jest.fn(),
+  };
+});
 (global as any).$ = mockJQuery;
 
-// Mock Notifier
+// ── Mock Notifier ──
 jest.mock('../../src/util/notify', () => ({
   Notifier: {
     info: jest.fn(),
@@ -26,27 +40,44 @@ jest.mock('../../src/util/notify', () => ({
   },
 }));
 
+// ── Helpers ──
+
+const makeAlertTicker = (overrides: Partial<AlertTicker> = {}): AlertTicker => ({
+  symbol: 'INVESTINGTICKER',
+  pair_id: 'pair1',
+  name: 'Test Pair',
+  exchange: 'NSE',
+  type: 'SECONDARY',
+  ticker: 'TVTICKER',
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: '2026-01-01T00:00:00Z',
+  ...overrides,
+});
+
 describe('SequenceHandler', () => {
   let sequenceHandler: SequenceHandler;
   let mockSequenceManager: jest.Mocked<ISequenceManager>;
   let mockDomManager: jest.Mocked<IDomManager>;
   let mockLifecycleManager: jest.Mocked<ILifecycleManager>;
   let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
-  let mockDisplayInput: any;
-
-  const makeAlertTicker = (overrides: Partial<AlertTicker> = {}): AlertTicker => ({
-    symbol: 'INVESTINGTICKER',
-    pair_id: 'pair1',
-    name: 'Test Pair',
-    exchange: 'NSE',
-    type: 'SECONDARY',
-    ticker: 'TVTICKER',
-    created_at: '2026-01-01T00:00:00Z',
-    updated_at: '2026-01-01T00:00:00Z',
-    ...overrides,
-  });
 
   beforeEach(() => {
+    const dataStore: Record<string, any> = {};
+    mockDisplayEl = {
+      html: jest.fn(),
+      off: jest.fn().mockReturnThis(),
+      on: jest.fn().mockReturnThis(),
+      addClass: jest.fn().mockReturnThis(),
+      removeClass: jest.fn().mockReturnThis(),
+      data: jest.fn((key: string, value?: any) => {
+        if (value !== undefined) {
+          dataStore[key] = value;
+          return mockDisplayEl;
+        }
+        return dataStore[key];
+      }),
+    };
+
     mockSequenceManager = {
       getCurrentSequence: jest.fn().mockResolvedValue(SequenceType.MWD),
       flipSequence: jest.fn().mockResolvedValue(undefined),
@@ -71,14 +102,8 @@ describe('SequenceHandler', () => {
       linkAlertTicker: jest.fn(),
       fetchAlertTicker: jest.fn(),
       getAlertTickers: jest.fn(),
+      getAlertTickersForTicker: jest.fn(),
     } as any;
-
-    mockDisplayInput = {
-      val: jest.fn(),
-      css: jest.fn(),
-    };
-
-    mockJQuery.mockReturnValue(mockDisplayInput);
 
     sequenceHandler = new SequenceHandler(
       mockSequenceManager,
@@ -88,57 +113,185 @@ describe('SequenceHandler', () => {
     );
   });
 
+  // ── displaySequence ──
+
   describe('displaySequence', () => {
-    it('should display ticker:sequence when ticker is not mapped', async () => {
+    it('should render compact mapped display with primary ticker, sequence, and alert count', async () => {
       mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
-      mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(null);
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
+        makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', ticker: 'TVTICKER' }),
+      ]);
 
       await sequenceHandler.displaySequence();
 
-      expect(mockDisplayInput.val).toHaveBeenCalledWith('TVTICKER:MWD');
-      expect(mockDisplayInput.css).toHaveBeenCalledWith('background-color', 'maroon');
+      // Verify it fetched linked tickers for the TV ticker
+      expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TVTICKER');
+
+      // Verify compact HTML rendered with mapped emoji, primary ticker, sequence, and count
+      const html = mockDisplayEl.html.mock.calls[0][0];
+      expect(html).toContain('🔗');
+      expect(html).toContain('INFY');
+      expect(html).toContain('MWD');
+      expect(html).toContain('🔔1');
     });
 
-    it('should display ticker:sequence:PairName when ticker has alert ticker with name', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.YR);
-      mockDomManager.getTicker.mockReturnValue('TVTICKER');
-      mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(
-        makeAlertTicker({ symbol: 'INVESTINGTICKER', name: 'NIFTY 50', ticker: 'TVTICKER' })
-      );
-
-      await sequenceHandler.displaySequence();
-
-      expect(mockDisplayInput.val).toHaveBeenCalledWith('INVESTINGTICKER:YR:NIFTY 50');
-      expect(mockDisplayInput.css).toHaveBeenCalledWith('background-color', 'blue');
-    });
-
-    it('should display ticker:sequence when no alert ticker name', async () => {
+    it('should render unmapped compact display with warning emoji and zero alert count', async () => {
       mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
-      mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(
-        makeAlertTicker({ symbol: 'INVESTINGTICKER', name: '', ticker: 'TVTICKER' })
-      );
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
 
       await sequenceHandler.displaySequence();
 
-      expect(mockDisplayInput.val).toHaveBeenCalledWith('INVESTINGTICKER:MWD');
-      expect(mockDisplayInput.css).toHaveBeenCalledWith('background-color', 'black');
+      const html = mockDisplayEl.html.mock.calls[0][0];
+      expect(html).toContain('⚠️');
+      expect(html).toContain('TVTICKER');
+      expect(html).toContain('🔔0');
+    });
+
+    it('should set mapped css class when ticker is mapped', async () => {
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
+      mockDomManager.getTicker.mockReturnValue('TVTICKER');
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
+        makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', ticker: 'TVTICKER' }),
+      ]);
+
+      await sequenceHandler.displaySequence();
+
+      expect(mockDisplayEl.removeClass).toHaveBeenCalledWith('aman-display-mapped aman-display-unmapped');
+      expect(mockDisplayEl.addClass).toHaveBeenCalledWith('aman-display-mapped');
+    });
+
+    it('should set unmapped css class when ticker is unmapped', async () => {
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
+      mockDomManager.getTicker.mockReturnValue('TVTICKER');
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
+
+      await sequenceHandler.displaySequence();
+
+      expect(mockDisplayEl.addClass).toHaveBeenCalledWith('aman-display-unmapped');
+    });
+
+    it('should attach click handler to display element', async () => {
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
+      mockDomManager.getTicker.mockReturnValue('TVTICKER');
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
+
+      await sequenceHandler.displaySequence();
+
+      expect(mockDisplayEl.off).toHaveBeenCalledWith('click');
+      expect(mockDisplayEl.on).toHaveBeenCalledWith('click', expect.any(Function));
     });
   });
+
+  // ── Expanded / Toggle ──
+
+  describe('expanded display toggle', () => {
+    it('should render expanded rows with primary and secondary tickers on click', async () => {
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
+      mockDomManager.getTicker.mockReturnValue('TVTICKER');
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
+        makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', name: 'Infosys Ltd', exchange: 'NSE', ticker: 'TVTICKER' }),
+        makeAlertTicker({ type: 'SECONDARY', symbol: 'INFY.PA', name: 'Infosys CDR', exchange: 'XPAR', ticker: 'TVTICKER' }),
+      ]);
+
+      // Initial render (compact)
+      await sequenceHandler.displaySequence();
+
+      // Click to expand — grab the click handler
+      const clickHandler = mockDisplayEl.on.mock.calls[0][1];
+      await clickHandler();
+
+      // Second render (expanded) — html called again
+      const htmlCalls = mockDisplayEl.html.mock.calls;
+      const expandedHtml = htmlCalls[htmlCalls.length - 1][0];
+
+      // Should contain compact header
+      expect(expandedHtml).toContain('🔗');
+      expect(expandedHtml).toContain('MWD');
+      expect(expandedHtml).toContain('🔔2');
+
+      // Should contain primary row
+      expect(expandedHtml).toContain('⭐');
+      expect(expandedHtml).toContain('INFY');
+      expect(expandedHtml).toContain('Infosys Ltd');
+
+      // Should contain secondary row
+      expect(expandedHtml).toContain('🔹');
+      expect(expandedHtml).toContain('INFY.PA');
+      expect(expandedHtml).toContain('Infosys CDR');
+    });
+
+    it('should render unmapped expanded empty state on click', async () => {
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
+      mockDomManager.getTicker.mockReturnValue('TVTICKER');
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
+
+      // Initial render
+      await sequenceHandler.displaySequence();
+
+      // Click to expand
+      const clickHandler = mockDisplayEl.on.mock.calls[0][1];
+      await clickHandler();
+
+      const htmlCalls = mockDisplayEl.html.mock.calls;
+      const expandedHtml = htmlCalls[htmlCalls.length - 1][0];
+
+      expect(expandedHtml).toContain('No linked alert tickers');
+    });
+
+    it('should toggle back to compact on second click', async () => {
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
+      mockDomManager.getTicker.mockReturnValue('TVTICKER');
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
+        makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', ticker: 'TVTICKER' }),
+      ]);
+
+      // Initial compact render
+      await sequenceHandler.displaySequence();
+
+      // Click to expand
+      const clickHandler = mockDisplayEl.on.mock.calls[0][1];
+      await clickHandler();
+
+      // Click again to collapse back to compact
+      // After expand, a new click handler is attached. We need to call the new one.
+      // The second click handler is the second `on` call
+      const secondClickHandler = mockDisplayEl.on.mock.calls[1][1];
+      await secondClickHandler();
+
+      const htmlCalls = mockDisplayEl.html.mock.calls;
+      const finalHtml = htmlCalls[htmlCalls.length - 1][0];
+
+      // Should be compact again (no expanded section div)
+      expect(finalHtml).not.toContain('aman-display-expanded');
+    });
+  });
+
+  // ── handleSequenceSwitch ──
 
   describe('handleSequenceSwitch', () => {
-    it('should flip sequence and display', async () => {
+    it('should flip sequence, reset expanded, and display', async () => {
       mockSequenceManager.flipSequence.mockResolvedValue(undefined);
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
+      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.YR);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
-      mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(null);
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
 
+      // First expand
+      await sequenceHandler.displaySequence();
+      const clickHandler = mockDisplayEl.on.mock.calls[0][1];
+      await clickHandler(); // now expanded
+
+      // Then switch sequence
       await sequenceHandler.handleSequenceSwitch();
 
-      expect(mockSequenceManager.flipSequence).toHaveBeenCalled();
+      // Should render compact (expanded reset)
+      const htmlAfterSwitch = mockDisplayEl.html.mock.calls[mockDisplayEl.html.mock.calls.length - 1][0];
+      expect(htmlAfterSwitch).not.toContain('aman-display-expanded');
     });
   });
+
+  // ── startTracking ──
 
   describe('startTracking', () => {
     it('should start tracking current ticker with MWD sequence timeframes', async () => {

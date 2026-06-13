@@ -139,7 +139,7 @@ export class Barkat {
     this.uiUtil
       .buildWrapper(Constants.UI.IDS.AREAS.MID)
       .appendTo($area)
-      .append(this.uiUtil.buildInput(Constants.UI.IDS.INPUTS.DISPLAY))
+      .append(this.uiUtil.buildWrapper(Constants.UI.IDS.DISPLAY.CARD).addClass(Constants.UI.IDS.DISPLAY.CARD_CLASS))
       .append(
         this.uiUtil.buildInput(Constants.UI.IDS.INPUTS.COMMAND).on('keydown', (e) => {
           void this.commandHandler.handleInput(e);

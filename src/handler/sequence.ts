@@ -4,7 +4,35 @@ import { IAlertTickerManager } from '../manager/alert_ticker';
 import { ILifecycleManager } from '../manager/lifecycle';
 import { Constants } from '../models/constant';
 import { SequenceType } from '../models/trading';
+import { AlertTicker } from '../models/alert_ticker';
 import { Notifier } from '../util/notify';
+
+// ── CSS class names (defined in _display.less) ──
+
+const DISPLAY_CLASS = {
+  CARD: 'aman-display-card',
+  COMPACT: 'aman-display-compact',
+  EXPANDED: 'aman-display-expanded',
+  MAPPED: 'aman-display-mapped',
+  UNMAPPED: 'aman-display-unmapped',
+  PRIMARY_ROW: 'aman-display-primary',
+  SECONDARY_ROW: 'aman-display-secondary',
+  ALERT_COUNT: 'aman-display-alert-count',
+  SEQUENCE_CHIP: 'aman-display-sequence',
+  TICKER_CHIP: 'aman-display-ticker',
+  EMPTY_ROW: 'aman-display-empty',
+} as const;
+
+// ── Emoji constants ──
+
+const EMOJI = {
+  LINKED: '🔗',
+  UNMAPPED: '⚠️',
+  PRIMARY: '⭐',
+  SECONDARY: '🔹',
+  SEQUENCE: '🧭',
+  ALERT: '🔔',
+} as const;
 
 /**
  * Interface for sequence handling operations
@@ -16,7 +44,7 @@ export interface ISequenceHandler {
   handleSequenceSwitch(): Promise<void>;
 
   /**
-   * Displays sequence information in the input
+   * Displays sequence information in the display area
    */
   displaySequence(): Promise<void>;
 
@@ -34,9 +62,14 @@ export interface ISequenceHandler {
 }
 
 /**
- * Handles sequence operations and display
+ * Handles sequence operations and display rendering.
+ * Manages the compact/expanded display card that shows ticker, sequence,
+ * and linked alert ticker information.
  */
 export class SequenceHandler implements ISequenceHandler {
+  // Expanded state (minimal UI state, not a data cache)
+  private displayExpanded = false;
+
   constructor(
     private readonly sequenceManager: ISequenceManager,
     private readonly domManager: IDomManager,
@@ -47,7 +80,8 @@ export class SequenceHandler implements ISequenceHandler {
   /** @inheritdoc */
   async handleSequenceSwitch(): Promise<void> {
     await this.sequenceManager.flipSequence();
-    // Update the sequence display
+    // Reset to compact on sequence switch
+    this.displayExpanded = false;
     await this.displaySequence();
   }
 
@@ -55,29 +89,110 @@ export class SequenceHandler implements ISequenceHandler {
   async displaySequence(): Promise<void> {
     const sequence = await this.sequenceManager.getCurrentSequence();
     const tvTicker = this.domManager.getTicker();
-    const alertTicker = await this.alertTickerManager.getAlertTicker(tvTicker);
-    const investingTicker = alertTicker?.symbol ?? null;
+    const alertTickers = await this.alertTickerManager.getAlertTickersForTicker(tvTicker);
 
-    // Show investingTicker when unmapped, otherwise show tvTicker
-    const displayTicker = investingTicker || tvTicker;
-    let message = `${displayTicker}:${sequence}`;
+    // Store on DOM element for toggle re-render (avoids handler-level cache)
+    $(`#${Constants.UI.IDS.DISPLAY.CARD}`).data('displayData', { sequence, tvTicker, alertTickers });
 
-    // Add first alert ticker name after sequence if available
-    if (alertTicker && alertTicker.name) {
-      message += `:${alertTicker.name}`;
+    this.renderDisplay();
+  }
+
+  // ── Display Rendering ──
+
+  /**
+   * Renders the display area using data stored on the DOM element and current expanded state.
+   */
+  private renderDisplay(): void {
+    const $card = $(`#${Constants.UI.IDS.DISPLAY.CARD}`);
+    const data = $card.data('displayData') as
+      | { sequence: SequenceType; tvTicker: string; alertTickers: AlertTicker[] }
+      | undefined;
+    if (!data) {
+      return;
     }
 
-    const $displayInput = $(`#${Constants.UI.IDS.INPUTS.DISPLAY}`);
-    $displayInput.val(message);
+    const { sequence, tvTicker, alertTickers } = data;
+    const primaryTicker = alertTickers.find((t) => t.type === 'PRIMARY') ?? null;
+    const isMapped = primaryTicker !== null;
+    const displayTicker = primaryTicker?.symbol ?? tvTicker;
 
-    // Background colors: maroon for unmapped, blue for YR sequence, black otherwise
-    if (!investingTicker) {
-      $displayInput.css('background-color', 'maroon');
-    } else if (sequence === SequenceType.YR) {
-      $displayInput.css('background-color', 'blue');
+    // Update mapped/unmapped state class
+    $card.removeClass(`${DISPLAY_CLASS.MAPPED} ${DISPLAY_CLASS.UNMAPPED}`);
+    $card.addClass(isMapped ? DISPLAY_CLASS.MAPPED : DISPLAY_CLASS.UNMAPPED);
+
+    if (this.displayExpanded) {
+      $card.html(this.buildExpandedHtml(sequence, displayTicker, isMapped, alertTickers));
     } else {
-      $displayInput.css('background-color', 'black');
+      $card.html(this.buildCompactHtml(sequence, displayTicker, isMapped, alertTickers.length));
     }
+
+    // Attach click handler (remove previous first to avoid duplicates)
+    $card.off('click').on('click', () => this.toggleDisplay());
+  }
+
+  /**
+   * Builds compact mode HTML.
+   * Format: 🔗 INFY · 🧭 MWD · 🔔2
+   */
+  private buildCompactHtml(
+    sequence: SequenceType,
+    displayTicker: string,
+    isMapped: boolean,
+    alertCount: number
+  ): string {
+    const statusEmoji = isMapped ? EMOJI.LINKED : EMOJI.UNMAPPED;
+    const sequenceHtml = `<span class="${DISPLAY_CLASS.SEQUENCE_CHIP}">${EMOJI.SEQUENCE} ${sequence}</span>`;
+    const tickerHtml = `<span class="${DISPLAY_CLASS.TICKER_CHIP}">${displayTicker}</span>`;
+    const countHtml = `<span class="${DISPLAY_CLASS.ALERT_COUNT}">${EMOJI.ALERT}${alertCount}</span>`;
+
+    return `${statusEmoji} ${tickerHtml} · ${sequenceHtml} · ${countHtml}`;
+  }
+
+  /**
+   * Builds expanded mode HTML.
+   * Compact header + linked ticker rows.
+   */
+  private buildExpandedHtml(
+    sequence: SequenceType,
+    displayTicker: string,
+    isMapped: boolean,
+    alertTickers: AlertTicker[]
+  ): string {
+    // Compact header at top
+    const headerHtml = this.buildCompactHtml(sequence, displayTicker, isMapped, alertTickers.length);
+
+    // Alert ticker rows
+    const rowsHtml = this.buildAlertTickerRows(alertTickers);
+
+    return `${headerHtml}<div class="${DISPLAY_CLASS.EXPANDED}">${rowsHtml}</div>`;
+  }
+
+  /**
+   * Builds HTML for linked alert ticker rows.
+   * Primary gets ⭐, secondaries get 🔹.
+   */
+  private buildAlertTickerRows(alertTickers: AlertTicker[]): string {
+    if (alertTickers.length === 0) {
+      return `<div class="${DISPLAY_CLASS.EMPTY_ROW}">${EMOJI.UNMAPPED} No linked alert tickers</div>`;
+    }
+
+    return alertTickers
+      .map((t) => {
+        const emoji = t.type === 'PRIMARY' ? EMOJI.PRIMARY : EMOJI.SECONDARY;
+        const cls = t.type === 'PRIMARY' ? DISPLAY_CLASS.PRIMARY_ROW : DISPLAY_CLASS.SECONDARY_ROW;
+        const exchangeInfo = t.exchange ? ` · ${t.exchange}` : '';
+        const nameInfo = t.name ? ` · ${t.name}` : '';
+        return `<div class="${cls}">${emoji} ${t.symbol}${exchangeInfo}${nameInfo}</div>`;
+      })
+      .join('');
+  }
+
+  /**
+   * Toggles between compact and expanded display modes.
+   */
+  private toggleDisplay(): void {
+    this.displayExpanded = !this.displayExpanded;
+    this.renderDisplay();
   }
 
   /** @inheritdoc */

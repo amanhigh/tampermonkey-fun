@@ -18,7 +18,7 @@ export interface IAlertTickerManager {
    * @param data - Alert ticker creation payload (without type)
    * @returns Promise resolving with created Alert ticker record
    */
-  linkAlertTicker(tvTicker: string, data: CreateAlertTickerRequest): Promise<AlertTicker>;
+  linkAlertTicker(tvTicker: string, data: Omit<CreateAlertTickerRequest, 'type'>): Promise<AlertTicker>;
 
   /**
    * Get the PRIMARY Alert ticker for a given TV ticker, or null if none exists.
@@ -39,6 +39,13 @@ export interface IAlertTickerManager {
    * @returns Promise resolving with all Alert ticker records
    */
   getAlertTickers(): Promise<AlertTicker[]>;
+
+  /**
+   * Get all linked alert tickers for a specific TV ticker.
+   * @param tvTicker - TV ticker to lookup linked alert tickers for
+   * @returns Promise resolving with array of linked Alert tickers (empty if none)
+   */
+  getAlertTickersForTicker(tvTicker: string): Promise<AlertTicker[]>;
 }
 
 /**
@@ -48,7 +55,7 @@ export class AlertTickerManager implements IAlertTickerManager {
   constructor(private readonly alertTickerClient: IAlertTickerClient) {}
 
   /** @inheritdoc */
-  async linkAlertTicker(tvTicker: string, data: CreateAlertTickerRequest): Promise<AlertTicker> {
+  async linkAlertTicker(tvTicker: string, data: Omit<CreateAlertTickerRequest, 'type'>): Promise<AlertTicker> {
     const primary = await this.getPrimaryAlertTicker(tvTicker);
     const type: AlertTickerType = primary ? 'SECONDARY' : 'PRIMARY';
     return this.alertTickerClient.createAlertTicker(tvTicker, { ...data, type });
@@ -72,5 +79,10 @@ export class AlertTickerManager implements IAlertTickerManager {
   /** @inheritdoc */
   async getAlertTickers(): Promise<AlertTicker[]> {
     return this.alertTickerClient.listAlertTickers({});
+  }
+
+  /** @inheritdoc */
+  async getAlertTickersForTicker(tvTicker: string): Promise<AlertTicker[]> {
+    return this.alertTickerClient.listAlertTickers({ ticker: tvTicker });
   }
 }

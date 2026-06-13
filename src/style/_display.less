@@ -1,0 +1,150 @@
+// ── Display Card Styles ──
+// Replaces the legacy display input with a colorful clickable card.
+
+@display-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+@display-bg: rgba(20, 20, 28, 0.92);
+@display-border: 1px solid rgba(255, 255, 255, 0.12);
+@display-radius: 6px;
+@display-padding: 6px 10px;
+@display-font-size: 12px;
+@display-margin: 3px;
+
+// Color tokens
+@color-mapped: #34d058;
+@color-unmapped: #f0b429;
+@color-primary: #ffd700;
+@color-secondary: #58a6ff;
+@color-mwd: #a855f7;
+@color-yr: #3b82f6;
+@alert-count-active: #34d058;
+@alert-count-empty: rgba(255, 255, 255, 0.3);
+
+// ============================================
+// Display Card Container
+// ============================================
+.aman-display-card {
+    display: block;
+    background: @display-bg;
+    font-family: @display-font;
+    font-size: @display-font-size;
+    margin: @display-margin;
+    padding: @display-padding;
+    border: @display-border;
+    border-left: 3px solid rgba(255, 255, 255, 0.15);
+    border-radius: @display-radius;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease, border-color 0.2s ease;
+    line-height: 1.5;
+    min-height: 18px;
+
+    &:hover {
+        background: rgba(30, 30, 38, 0.95);
+    }
+
+    // Mapped state
+    &.aman-display-mapped {
+        border-left-color: @color-mapped;
+    }
+
+    // Unmapped state
+    &.aman-display-unmapped {
+        border-left-color: @color-unmapped;
+    }
+}
+
+// ============================================
+// Compact Mode (inline elements)
+// ============================================
+.aman-display-compact {
+    display: inline;
+}
+
+// ============================================
+// Expanded Mode (block below compact header)
+// ============================================
+.aman-display-expanded {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+// ============================================
+// Sequence Chip
+// ============================================
+.aman-display-sequence {
+    display: inline-block;
+    padding: 0 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 11px;
+
+    // MWD = purple
+    &:has(:is(span):contains("MWD")) {
+        background: rgba(168, 85, 247, 0.15);
+        color: @color-mwd;
+    }
+}
+
+// CSS hack: can't use :contains() in pure CSS, use data attribute instead
+// Actually we can use a simpler approach: the sequence is always MWD or YR
+// We'll use inline style from JS or detect via substring
+// Simpler: just make the chip styled generically and specialize via attribute
+
+.aman-display-sequence {
+    background: rgba(168, 85, 247, 0.15);
+    color: @color-mwd;
+}
+
+// ============================================
+// Ticker Chip
+// ============================================
+.aman-display-ticker {
+    font-weight: 600;
+}
+
+// ============================================
+// Alert Count Badge
+// ============================================
+.aman-display-alert-count {
+    display: inline-block;
+    padding: 0 4px;
+    font-weight: 600;
+    font-size: 11px;
+    color: @alert-count-active;
+
+    // When count is "0" we want muted; handled by inline style from JS
+}
+
+// ============================================
+// Primary Row (⭐)
+// ============================================
+.aman-display-primary {
+    color: @color-primary;
+    font-weight: 600;
+    padding: 2px 4px;
+    font-size: 11px;
+}
+
+// ============================================
+// Secondary Row (🔹)
+// ============================================
+.aman-display-secondary {
+    color: @color-secondary;
+    font-weight: 500;
+    padding: 2px 4px;
+    font-size: 11px;
+}
+
+// ============================================
+// Empty State Row
+// ============================================
+.aman-display-empty {
+    color: rgba(255, 255, 255, 0.4);
+    font-style: italic;
+    font-size: 11px;
+    padding: 2px 4px;
+}

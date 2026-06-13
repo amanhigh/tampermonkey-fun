@@ -72,8 +72,11 @@ export const Constants = Object.freeze({
         JOURNAL: 'aman-journal', // Old Name: journalId
         FLASH: 'aman-flash', // Old Name: flashId
       },
+      DISPLAY: {
+        CARD: 'aman-display', // Old Name: displayId (was INPUTS.DISPLAY)
+        CARD_CLASS: 'aman-display-card',
+      },
       INPUTS: {
-        DISPLAY: 'aman-display', // Old Name: displayId
         COMMAND: 'aman-input', // Old Name: inputId
         ENTER_KEY_CODE: 13, // Old Name: ENTER_KEY_CODE
       },

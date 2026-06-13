@@ -23,6 +23,7 @@ export interface CreateAlertTickerRequest {
   pair_id: string;
   name: string;
   exchange?: string | null;
+  type: AlertTickerType;
 }
 
 /** Query parameters for listing Alert tickers. */
