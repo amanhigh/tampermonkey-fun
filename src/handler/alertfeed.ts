@@ -8,6 +8,7 @@ import { IAlertFeedManager } from '../manager/alertfeed';
 import { AlertFeedEvent, FeedInfo, FeedState } from '../models/alertfeed';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { IInvestingManager } from '../manager/investing';
+import { AlertTicker } from '../models/alert_ticker';
 
 export interface IAlertFeedHandler {
   /**
@@ -137,16 +138,100 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     return null;
   }
 
+  /**
+   * Check whether the given element is inside a quote-type alert wrapper.
+   * Economic-calendar (ec) and other non-quote rows are excluded.
+   */
+  private isQuoteAlert($element: JQuery): boolean {
+    const $wrapper = $element.closest(Constants.DOM.ALERT_FEED.WRAPPER);
+    return $wrapper.attr('data-type') === 'quotes';
+  }
+
+  /**
+   * Normalize a string for fuzzy matching: lowercase, remove non-alphanumeric chars.
+   */
+  private normalizeAlertText(value: string): string {
+    return value.toLowerCase().replace(/[^a-z0-9]+/g, '');
+  }
+
+  /**
+   * Resolve a feed row to an AlertTicker record using only mapped backend data.
+   * Order:
+   *   1. Exact symbol match (from parentheses extraction or full title)
+   *   2. Exact normalized name match
+   *   3. Unique normalized prefix match
+   *   4. Unique normalized contains match
+   *   5. null (unmapped)
+   */
+  private resolvePaintAlertTicker(
+    feedTitle: string,
+    extractedTicker: string,
+    alertTickers: AlertTicker[]
+  ): AlertTicker | null {
+    const feedNorm = this.normalizeAlertText(feedTitle);
+    const extractedNorm = this.normalizeAlertText(extractedTicker);
+
+    // 1. Exact symbol match
+    const bySymbol = alertTickers.filter((at) => this.normalizeAlertText(at.symbol) === extractedNorm);
+    if (bySymbol.length === 1) {
+      return bySymbol[0];
+    }
+
+    // 2. Exact normalized name match
+    const byName = alertTickers.filter((at) => this.normalizeAlertText(at.name) === feedNorm);
+    if (byName.length === 1) {
+      return byName[0];
+    }
+
+    // 3. Unique normalized prefix match
+    const byPrefix = alertTickers.filter((at) => {
+      const nameNorm = this.normalizeAlertText(at.name);
+      return nameNorm.startsWith(feedNorm) || feedNorm.startsWith(nameNorm);
+    });
+    if (byPrefix.length === 1) {
+      return byPrefix[0];
+    }
+
+    // 4. Unique normalized contains match (only if exactly one candidate)
+    const byContains = alertTickers.filter((at) => {
+      const nameNorm = this.normalizeAlertText(at.name);
+      return nameNorm.includes(feedNorm) || feedNorm.includes(nameNorm);
+    });
+    if (byContains.length === 1) {
+      return byContains[0];
+    }
+
+    return null;
+  }
+
   public async paintAlertFeed(): Promise<void> {
     Notifier.yellow('🎨 Painting alert feed');
-    const elements: Array<{ $el: JQuery; ticker: string }> = [];
+
+    // Collect quote-only elements upfront
+    const elements: Array<{ $el: JQuery; name: string; ticker: string }> = [];
     $(Constants.DOM.ALERT_FEED.ALERT_DATA).each((_, element) => {
       const $element = $(element);
-      const { ticker } = this.extractAlertInfo($element);
-      elements.push({ $el: $element, ticker });
+      if (!this.isQuoteAlert($element)) {
+        return; // Skip non-quote rows (ec, etc.)
+      }
+      const { name, ticker } = this.extractAlertInfo($element);
+      elements.push({ $el: $element, name, ticker });
     });
 
-    const feedInfos = await Promise.all(elements.map(async (e) => this.alertFeedManager.getAlertFeedState(e.ticker)));
+    // Load all mapped alert tickers once (no per-row search)
+    const allAlertTickers = await this.alertTickerManager.getAlertTickers();
+
+    // Resolve each element's state
+    const feedInfos = await Promise.all(
+      elements.map(async (e) => {
+        const resolved = this.resolvePaintAlertTicker(e.name, e.ticker, allAlertTickers);
+        if (!resolved) {
+          // Unmapped or ambiguous
+          return { state: FeedState.UNMAPPED, color: 'red' } as FeedInfo;
+        }
+        return this.alertFeedManager.getAlertFeedStateForAlertTicker(resolved);
+      })
+    );
 
     elements.forEach(({ $el, ticker }, i) => {
       const feedInfo = feedInfos[i];

@@ -3,13 +3,22 @@ import { Constants } from '../models/constant';
 import { IAlertTickerManager } from './alert_ticker';
 import { ICategoryManager } from './category';
 import { IRecentManager } from './recent';
+import { AlertTicker } from '../models/alert_ticker';
 
 /**
  * Interface for managing alert feed state
  */
 export interface IAlertFeedManager {
   /**
-   * Get the alert feed state for a specific investing ticker
+   * Compute feed state from an already-resolved AlertTicker record.
+   * Used during repaint to avoid re-fetching by symbol.
+   * @param alertTicker - The resolved AlertTicker record
+   * @returns Promise resolving to FeedInfo containing state and color
+   */
+  getAlertFeedStateForAlertTicker(alertTicker: AlertTicker): Promise<FeedInfo>;
+
+  /**
+   * Get the alert feed state for a specific investing ticker by symbol lookup.
    * @param investingTicker The investing ticker to retrieve state for
    * @returns Promise resolving to FeedInfo containing state and color
    */
@@ -39,13 +48,17 @@ export class AlertFeedManager implements IAlertFeedManager {
     private readonly recentManager: IRecentManager
   ) {}
 
+  /** @inheritdoc */
   public async getAlertFeedState(investingTicker: string): Promise<FeedInfo> {
     const alertTicker = await this.alertTickerManager.fetchAlertTicker(investingTicker);
-
     if (!alertTicker) {
       return { state: FeedState.UNMAPPED, color: 'red' };
     }
+    return this.getAlertFeedStateForAlertTicker(alertTicker);
+  }
 
+  /** @inheritdoc */
+  public async getAlertFeedStateForAlertTicker(alertTicker: AlertTicker): Promise<FeedInfo> {
     const tvTicker = alertTicker.ticker;
 
     // Check if ticker belongs to any watch category (backend-on-demand)
@@ -62,7 +75,7 @@ export class AlertFeedManager implements IAlertFeedManager {
   }
 
   public async createAlertFeedEvent(tvTicker: string): Promise<void> {
-    const alertTicker = await this.alertTickerManager.getAlertTicker(tvTicker);
+    const alertTicker = await this.alertTickerManager.getPrimaryAlertTicker(tvTicker);
     const investingTicker = alertTicker?.symbol;
     if (!investingTicker) {
       throw new Error(`Failed to convert ticker: ${tvTicker}`);

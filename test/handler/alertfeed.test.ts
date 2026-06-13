@@ -8,6 +8,7 @@ import { IInvestingManager } from '../../src/manager/investing';
 import { AlertTicker } from '../../src/models/alert_ticker';
 import { Instrument } from '../../src/models/investing';
 import { AlertClickAction } from '../../src/models/events';
+import { FeedState } from '../../src/models/alertfeed';
 
 // Mock Notifier
 jest.mock('../../src/util/notify', () => ({
@@ -33,24 +34,36 @@ describe('AlertFeedHandler', () => {
   let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
   let mockInvestingManager: jest.Mocked<IInvestingManager>;
 
+  const makeAlertTicker = (overrides: Partial<AlertTicker> = {}): AlertTicker => ({
+    symbol: 'INFY',
+    pair_id: '12345',
+    name: 'Infosys Ltd',
+    exchange: 'NSE',
+    type: 'PRIMARY',
+    ticker: 'TV:INFY',
+    created_at: '',
+    updated_at: '',
+    ...overrides,
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Mock global $ for DOM interaction
-    const makeJQueryMock = (overrides: Record<string, any> = {}) => {
-      const mock: any = {
-        text: jest.fn().mockReturnValue(''),
-        closest: jest.fn().mockReturnValue({
-          attr: jest.fn().mockReturnValue(null),
-        }),
-        attr: jest.fn().mockReturnValue(null),
-        css: jest.fn().mockReturnThis(),
-        appendTo: jest.fn().mockReturnThis(),
-        ...overrides,
-      };
-      return mock;
-    };
-    (global as any).$ = jest.fn(() => makeJQueryMock());
+    // Default $ mock: returns object with text, closest, css, attr, each, hide
+    const makeDefaultJQuery = () => ({
+      text: jest.fn().mockReturnValue(''),
+      closest: jest.fn().mockReturnValue({ attr: jest.fn().mockReturnValue(null) }),
+      attr: jest.fn().mockReturnValue(null),
+      css: jest.fn().mockReturnThis(),
+      hide: jest.fn().mockReturnThis(),
+      appendTo: jest.fn().mockReturnThis(),
+      each: jest.fn(),
+      data: jest.fn(),
+      off: jest.fn(),
+      on: jest.fn(),
+      click: jest.fn(),
+    });
+    (global as any).$ = jest.fn(() => makeDefaultJQuery());
 
     // Mock GM
     (global as any).GM = {
@@ -71,6 +84,7 @@ describe('AlertFeedHandler', () => {
 
     mockAlertFeedManager = {
       getAlertFeedState: jest.fn(),
+      getAlertFeedStateForAlertTicker: jest.fn(),
       createAlertFeedEvent: jest.fn(),
       createResetFeedEvent: jest.fn(),
     } as any;
@@ -80,6 +94,7 @@ describe('AlertFeedHandler', () => {
       getPrimaryAlertTicker: jest.fn(),
       linkAlertTicker: jest.fn(),
       getAlertTickers: jest.fn(),
+      getAlertTickersForTicker: jest.fn(),
     } as any;
 
     mockInvestingManager = {
@@ -95,6 +110,8 @@ describe('AlertFeedHandler', () => {
       mockInvestingManager
     );
   });
+
+  // ── Click Tests ──
 
   describe('handleAlertClick', () => {
     it('should resolve identity from existing AlertTicker and emit trusted fields', async () => {
@@ -116,6 +133,7 @@ describe('AlertFeedHandler', () => {
         closest: jest.fn().mockReturnValue({
           attr: jest.fn().mockReturnValue('/equities/infosys'),
         }),
+        preventDefault: jest.fn(),
       }));
 
       await (handler as any).handleAlertClick({ ctrlKey: false, preventDefault: jest.fn() });
@@ -241,6 +259,196 @@ describe('AlertFeedHandler', () => {
         '8874',
         'Nasdaq 100 Futures'
       );
+    });
+  });
+
+  // ── Paint Tests ──
+
+  describe('paintAlertFeed', () => {
+    /**
+     * Build a $ mock that:
+     * - When called with a string selector → returns object with `each` plus `css`
+     * - When called with an element object → returns the element mock with closest/text/css
+     */
+    const buildPaintMock = (
+      rows: Array<{
+        title: string;
+        href: string;
+        dataType: string;
+      }>
+    ) => {
+      // Create element mocks
+      const elementMocks = rows.map((row) => ({
+        text: jest.fn().mockReturnValue(row.title),
+        closest: jest.fn().mockImplementation((selector: string) => {
+          if (selector === 'div.alertWrapper') {
+            return { attr: jest.fn().mockReturnValue(row.dataType) };
+          }
+          return { attr: jest.fn().mockReturnValue(row.href) };
+        }),
+        css: jest.fn().mockReturnThis(),
+        hide: jest.fn().mockReturnThis(),
+      }));
+
+      // Create the outer jQuery mock for selector calls
+      const outerMock = {
+        each: jest.fn((callback: Function) => {
+          elementMocks.forEach((el, i) => callback(i, el));
+        }),
+        css: jest.fn().mockReturnThis(),
+        hide: jest.fn().mockReturnThis(),
+      };
+
+      // $() returns outerMock for string selectors, element mock for element args
+      (global as any).$.mockImplementation((arg: any) => {
+        if (typeof arg === 'string') {
+          return outerMock;
+        }
+        // Called with element — return the corresponding element mock
+        const idx = elementMocks.indexOf(arg);
+        if (idx >= 0) {
+          return arg;
+        }
+        // Fallback to first element mock
+        return elementMocks[0] || { css: jest.fn().mockReturnThis(), hide: jest.fn().mockReturnThis() };
+      });
+
+      return { outerMock, elementMocks };
+    };
+
+    it('should paint symbol-in-parentheses row via AlertTicker.symbol', async () => {
+      const alertTickers = [
+        makeAlertTicker({ symbol: 'INFY', name: 'Infosys Ltd', ticker: 'TV:INFY' }),
+      ];
+      mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
+      mockAlertFeedManager.getAlertFeedStateForAlertTicker.mockResolvedValue({
+        state: FeedState.MAPPED,
+        color: 'white',
+      });
+
+      buildPaintMock([{ title: 'Infosys (INFY)', href: '/equities/infosys', dataType: 'quotes' }]);
+
+      await handler.paintAlertFeed();
+
+      expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledTimes(1);
+      expect(mockAlertFeedManager.getAlertFeedStateForAlertTicker).toHaveBeenCalledWith(alertTickers[0]);
+      expect(mockAlertFeedManager.getAlertFeedState).not.toHaveBeenCalled();
+      expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
+    });
+
+    it('should paint slash-symbol row via AlertTicker.symbol', async () => {
+      const alertTickers = [
+        makeAlertTicker({ symbol: 'XAG/USD', name: 'Silver Spot US Dollar', ticker: 'XAGUSD' }),
+      ];
+      mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
+      mockAlertFeedManager.getAlertFeedStateForAlertTicker.mockResolvedValue({
+        state: FeedState.MAPPED,
+        color: 'white',
+      });
+
+      buildPaintMock([{ title: 'XAG/USD', href: '/currencies/xag-usd', dataType: 'quotes' }]);
+
+      await handler.paintAlertFeed();
+
+      expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledTimes(1);
+      expect(mockAlertFeedManager.getAlertFeedStateForAlertTicker).toHaveBeenCalledWith(alertTickers[0]);
+      expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
+    });
+
+    it('should paint no-symbol row via exact AlertTicker.name', async () => {
+      const alertTickers = [
+        makeAlertTicker({ symbol: 'Nifty500', name: 'Nifty 500', ticker: 'CNX500' }),
+      ];
+      mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
+      mockAlertFeedManager.getAlertFeedStateForAlertTicker.mockResolvedValue({
+        state: FeedState.MAPPED,
+        color: 'white',
+      });
+
+      buildPaintMock([{ title: 'Nifty 500', href: '/indices/s-p-cnx-500', dataType: 'quotes' }]);
+
+      await handler.paintAlertFeed();
+
+      expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledTimes(1);
+      expect(mockAlertFeedManager.getAlertFeedStateForAlertTicker).toHaveBeenCalledWith(alertTickers[0]);
+      expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
+    });
+
+    it('should paint no-symbol row via unique prefix match', async () => {
+      const alertTickers = [
+        makeAlertTicker({ symbol: 'NQ', name: 'Nasdaq 100 Futures', ticker: 'NQ1!' }),
+      ];
+      mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
+      mockAlertFeedManager.getAlertFeedStateForAlertTicker.mockResolvedValue({
+        state: FeedState.MAPPED,
+        color: 'white',
+      });
+
+      buildPaintMock([{ title: 'Nasdaq 100', href: '/indices/nq-100-futures', dataType: 'quotes' }]);
+
+      await handler.paintAlertFeed();
+
+      expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledTimes(1);
+      expect(mockAlertFeedManager.getAlertFeedStateForAlertTicker).toHaveBeenCalledWith(alertTickers[0]);
+      expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
+    });
+
+    it('should paint no-symbol row via unique contains match', async () => {
+      const alertTickers = [
+        makeAlertTicker({ symbol: 'CrudeOilWTI', name: 'Crude Oil WTI Futures', ticker: 'USOIL' }),
+      ];
+      mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
+      mockAlertFeedManager.getAlertFeedStateForAlertTicker.mockResolvedValue({
+        state: FeedState.MAPPED,
+        color: 'white',
+      });
+
+      buildPaintMock([{ title: 'WTI', href: '/commodities/crude-oil', dataType: 'quotes' }]);
+
+      await handler.paintAlertFeed();
+
+      expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledTimes(1);
+      expect(mockAlertFeedManager.getAlertFeedStateForAlertTicker).toHaveBeenCalledWith(alertTickers[0]);
+      expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
+    });
+
+    it('should leave ambiguous fallback unmapped and warn', async () => {
+      const alertTickers = [
+        makeAlertTicker({ symbol: 'Nifty500', name: 'Nifty 500', ticker: 'CNX500' }),
+        makeAlertTicker({ symbol: 'NSEI', name: 'Nifty 50', ticker: 'NIFTY' }),
+      ];
+      mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
+
+      buildPaintMock([{ title: 'Nifty', href: '/indices/nifty', dataType: 'quotes' }]);
+
+      await handler.paintAlertFeed();
+
+      expect(mockAlertFeedManager.getAlertFeedStateForAlertTicker).not.toHaveBeenCalled();
+      expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
+      expect(Notifier.warn).toHaveBeenCalledWith(expect.stringContaining('Unmapped'));
+    });
+
+    it('should skip economic-calendar rows', async () => {
+      mockAlertTickerManager.getAlertTickers.mockResolvedValue([]);
+
+      buildPaintMock([{ title: 'India GDP', href: '/economic-calendar/indian-gdp', dataType: 'ec' }]);
+
+      await handler.paintAlertFeed();
+
+      expect(mockAlertFeedManager.getAlertFeedStateForAlertTicker).not.toHaveBeenCalled();
+      expect(mockAlertFeedManager.getAlertFeedState).not.toHaveBeenCalled();
+      expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
+      expect(Notifier.warn).not.toHaveBeenCalled();
+    });
+
+    it('should not call InvestingManager.getInstrument during repaint', async () => {
+      mockAlertTickerManager.getAlertTickers.mockResolvedValue([]);
+
+      buildPaintMock([{ title: 'Unknown (ZZZZZ)', href: '/unknown', dataType: 'quotes' }]);
+
+      await handler.paintAlertFeed();
+
+      expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
     });
   });
 });

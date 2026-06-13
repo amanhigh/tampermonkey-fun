@@ -126,5 +126,22 @@ describe('AlertFeedManager', () => {
       expect(mockCategoryManager.getTickerCategory).toHaveBeenCalledWith('NSE:HDFC');
       expect(mockRecentManager.isRecent).toHaveBeenCalledWith('NSE:HDFC', Constants.RECENT_CUTOFF_MS);
     });
+
+    it('should compute FeedInfo from provided AlertTicker without re-fetching', async () => {
+      const alertTicker = makeAlertTicker({ ticker: 'NSE:TCS' });
+      mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, isFno: false });
+      mockRecentManager.isRecent.mockResolvedValue(true);
+
+      const result = await alertFeedManager.getAlertFeedStateForAlertTicker(alertTicker);
+
+      expect(result).toEqual({
+        state: FeedState.RECENT,
+        color: 'lime',
+      });
+      // Should NOT call fetchAlertTicker — uses the provided record
+      expect(mockAlertTickerManager.fetchAlertTicker).not.toHaveBeenCalled();
+      expect(mockCategoryManager.getTickerCategory).toHaveBeenCalledWith('NSE:TCS');
+      expect(mockRecentManager.isRecent).toHaveBeenCalledWith('NSE:TCS', Constants.RECENT_CUTOFF_MS);
+    });
   });
 });
