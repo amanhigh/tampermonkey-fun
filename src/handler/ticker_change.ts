@@ -2,7 +2,7 @@ import { IDomManager } from '../manager/dom';
 import { IAlertHandler } from './alert';
 import { IPaintManager } from '../manager/paint';
 import { IRecentManager } from '../manager/recent';
-import { ISequenceHandler } from './sequence';
+import { IDisplayHandler } from './display';
 import { IKiteHandler } from './kite';
 import { ISyncUtil } from '../util/sync';
 import { ICategoryManager } from '../manager/category';
@@ -19,7 +19,7 @@ export class TickerChangeHandler implements ITickerChangeHandler {
     private readonly alertHandler: IAlertHandler,
     private readonly paintManager: IPaintManager,
     private readonly recentManager: IRecentManager,
-    private readonly sequenceHandler: ISequenceHandler,
+    private readonly displayHandler: IDisplayHandler,
     private readonly kiteHandler: IKiteHandler,
     private readonly syncUtil: ISyncUtil,
     private readonly categoryManager: ICategoryManager,
@@ -34,7 +34,7 @@ export class TickerChangeHandler implements ITickerChangeHandler {
       // Update UI components — paintTickers handles WATCHLIST + SCREENER (if visible) + header
       void this.paintManager.paintTickers([this.domManager.getTicker()]);
       void this.recordRecentTicker();
-      void this.sequenceHandler.displaySequence();
+      void this.displayHandler.display();
 
       // Handle GTT operations
       void this.kiteHandler.refreshGttOrders();

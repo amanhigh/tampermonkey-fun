@@ -46,6 +46,7 @@ import { KeyConfig } from '../handler/key_config';
 import { IModifierKeyConfig, ModifierKeyConfig } from '../handler/modifier_config';
 
 import { ISequenceHandler, SequenceHandler } from '../handler/sequence';
+import { IDisplayHandler, DisplayHandler } from '../handler/display';
 import { IKiteHandler, KiteHandler } from '../handler/kite';
 import { IKiteManager, KiteManager } from '../manager/kite';
 import { IStyleManager, StyleManager } from '../manager/style';
@@ -462,7 +463,7 @@ export class Factory {
             Factory.handler.alert(),
             Factory.manager.paint(),
             Factory.manager.recent(),
-            Factory.handler.sequence(),
+            Factory.handler.display(),
             Factory.handler.kite(),
             Factory.util.sync(),
             Factory.manager.category(),
@@ -513,9 +514,14 @@ export class Factory {
           new SequenceHandler(
             Factory.manager.sequence(),
             Factory.manager.dom(),
-            Factory.manager.alertTicker(),
-            Factory.manager.lifecycle()
+            Factory.manager.lifecycle(),
+            Factory.handler.display()
           )
+      ),
+    display: (): IDisplayHandler =>
+      Factory.getInstance(
+        'displayHandler',
+        () => new DisplayHandler(Factory.manager.sequence(), Factory.manager.dom(), Factory.manager.alertTicker())
       ),
     journal: (): IJournalHandler =>
       Factory.getInstance(
