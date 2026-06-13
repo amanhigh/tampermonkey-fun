@@ -22,7 +22,6 @@ export interface CreateAlertTickerRequest {
   symbol: string;
   pair_id: string;
   name: string;
-  type: AlertTickerType;
   exchange?: string | null;
 }
 

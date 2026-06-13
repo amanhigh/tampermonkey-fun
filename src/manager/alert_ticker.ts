@@ -1,5 +1,5 @@
 import { IAlertTickerClient } from '../client/alert_ticker';
-import { AlertTicker, CreateAlertTickerRequest } from '../models/alert_ticker';
+import { AlertTicker, AlertTickerType, CreateAlertTickerRequest } from '../models/alert_ticker';
 
 /**
  * Interface for managing Alert Ticker (Investing.com identity) operations.
@@ -13,8 +13,9 @@ import { AlertTicker, CreateAlertTickerRequest } from '../models/alert_ticker';
 export interface IAlertTickerManager {
   /**
    * Attach an Alert (Investing) ticker under a primary TV ticker.
+   * Type is auto-selected: SECONDARY if a PRIMARY already exists, otherwise PRIMARY.
    * @param tvTicker - Parent primary ticker identity
-   * @param data - Alert ticker creation payload
+   * @param data - Alert ticker creation payload (without type)
    * @returns Promise resolving with created Alert ticker record
    */
   linkAlertTicker(tvTicker: string, data: CreateAlertTickerRequest): Promise<AlertTicker>;
@@ -48,7 +49,9 @@ export class AlertTickerManager implements IAlertTickerManager {
 
   /** @inheritdoc */
   async linkAlertTicker(tvTicker: string, data: CreateAlertTickerRequest): Promise<AlertTicker> {
-    return this.alertTickerClient.createAlertTicker(tvTicker, data);
+    const primary = await this.getPrimaryAlertTicker(tvTicker);
+    const type: AlertTickerType = primary ? 'SECONDARY' : 'PRIMARY';
+    return this.alertTickerClient.createAlertTicker(tvTicker, { ...data, type });
   }
 
   /** @inheritdoc */

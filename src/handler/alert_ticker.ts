@@ -21,8 +21,8 @@ export interface IAlertTickerHandler {
  * Handles investing.com pair linking and alert ticker creation.
  *
  * Searches Investing.com for matching pairs, prompts the user to select one,
- * then creates an alert ticker on the backend and establishes a local
- * TV→Investing mapping.
+ * then creates an alert ticker on the backend. The type (PRIMARY/SECONDARY)
+ * is auto-selected by the manager.
  */
 export class AlertTickerHandler implements IAlertTickerHandler {
   constructor(
@@ -35,6 +35,8 @@ export class AlertTickerHandler implements IAlertTickerHandler {
   /** @inheritdoc */
   public async linkInvestingTicker(searchQuery: string, exchange = ''): Promise<void> {
     Notifier.info(`Searching for ${searchQuery} on ${exchange}`);
+
+    const tvTicker = this.domManager.getTicker();
 
     const pairs = await this.investingClient.fetchSymbolData(searchQuery);
     const options = this.formatPairOptions(pairs);
@@ -50,12 +52,10 @@ export class AlertTickerHandler implements IAlertTickerHandler {
       if (selectedPair) {
         Notifier.info(`Selected: ${this.formatPair(selectedPair)}`);
 
-        const tvTicker = this.domManager.getTicker();
         await this.alertTickerManager.linkAlertTicker(tvTicker, {
           symbol: selectedPair.symbol,
           pair_id: selectedPair.pairId,
           name: selectedPair.name,
-          type: 'SECONDARY',
           exchange: selectedPair.exchange,
         });
       } else {

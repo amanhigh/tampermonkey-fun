@@ -56,18 +56,23 @@ describe('AlertTickerManager', () => {
   });
 
   describe('linkAlertTicker', () => {
-    it('should delegate to client.createAlertTicker', async () => {
-      const created = makeAlertTicker({ type: 'PRIMARY' });
-      mockAlertTickerClient.createAlertTicker.mockResolvedValue(created);
+    it('should create PRIMARY when no existing primary exists', async () => {
+      mockAlertTickerClient.listAlertTickers.mockResolvedValue([]);
+      mockAlertTickerClient.createAlertTicker.mockImplementation((_ticker, data) =>
+        Promise.resolve(makeAlertTicker({ ...data } as any))
+      );
 
       const result = await manager.linkAlertTicker('TV:INFY', {
         symbol: 'INFY',
         pair_id: 'pair1',
         name: 'Infosys Ltd',
-        type: 'PRIMARY',
         exchange: 'NSE',
       });
 
+      expect(mockAlertTickerClient.listAlertTickers).toHaveBeenCalledWith({
+        ticker: 'TV:INFY',
+        type: 'PRIMARY',
+      });
       expect(mockAlertTickerClient.createAlertTicker).toHaveBeenCalledWith('TV:INFY', {
         symbol: 'INFY',
         pair_id: 'pair1',
@@ -75,7 +80,32 @@ describe('AlertTickerManager', () => {
         type: 'PRIMARY',
         exchange: 'NSE',
       });
-      expect(result).toEqual(created);
+      expect(result.type).toBe('PRIMARY');
+    });
+
+    it('should create SECONDARY when primary already exists', async () => {
+      mockAlertTickerClient.listAlertTickers.mockResolvedValue([
+        makeAlertTicker({ type: 'PRIMARY', ticker: 'TV:INFY' }),
+      ]);
+      mockAlertTickerClient.createAlertTicker.mockImplementation((_ticker, data) =>
+        Promise.resolve(makeAlertTicker({ ...data } as any))
+      );
+
+      const result = await manager.linkAlertTicker('TV:INFY', {
+        symbol: 'INFY',
+        pair_id: 'pair1',
+        name: 'Infosys Ltd',
+        exchange: 'NSE',
+      });
+
+      expect(mockAlertTickerClient.createAlertTicker).toHaveBeenCalledWith('TV:INFY', {
+        symbol: 'INFY',
+        pair_id: 'pair1',
+        name: 'Infosys Ltd',
+        type: 'SECONDARY',
+        exchange: 'NSE',
+      });
+      expect(result.type).toBe('SECONDARY');
     });
   });
 
