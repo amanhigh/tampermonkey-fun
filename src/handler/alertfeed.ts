@@ -81,7 +81,7 @@ export class AlertFeedHandler implements IAlertFeedHandler {
 
   private setupAlertClickHandler(): void {
     $(Constants.DOM.ALERT_FEED.ALERT_TITLE).click((e) => {
-      this.handleAlertClick(e);
+      void this.handleAlertClick(e);
     });
   }
 
@@ -93,30 +93,48 @@ export class AlertFeedHandler implements IAlertFeedHandler {
 
     const action = event.ctrlKey ? AlertClickAction.MAP : AlertClickAction.OPEN;
 
-    // Resolve pairId and publish event
-    const pairId = await this.resolvePairId(ticker, name, href);
-    void this.alertManager.createAlertClickEvent(ticker, action, pairId);
+    // Resolve alert identity; only publish event if trusted identity is found
+    const identity = await this.resolveAlertIdentity(ticker, name, href);
+    if (identity) {
+      void this.alertManager.createAlertClickEvent(identity.alertTicker, action, identity.pairId, identity.alertName);
+    } else {
+      Notifier.warn(`Cannot resolve alert identity for ${name}`);
+    }
   }
 
   /**
-   * Resolve Investing.com pair ID for a given alert ticker.
-   * Priority: existing AlertTicker by symbol → InvestingManager.getInstrument() via name+href
+   * Resolve alert identity (backend-safe symbol, pair id, and name) for a given alert.
+   * Returns null when no trusted identity can be resolved.
+   *
+   * Priority:
+   *   1. Existing AlertTicker by extracted symbol
+   *   2. InvestingManager.getInstrument() via name+href
    */
-  private async resolvePairId(ticker: string, name: string, href?: string): Promise<string | undefined> {
+  private async resolveAlertIdentity(
+    ticker: string,
+    name: string,
+    href?: string
+  ): Promise<{ alertTicker: string; pairId: string; alertName: string } | null> {
+    // Priority 1: existing AlertTicker record
     const alertTicker = await this.alertTickerManager.fetchAlertTicker(ticker);
-    if (alertTicker?.pair_id) {
-      return alertTicker.pair_id;
+    if (alertTicker) {
+      return { alertTicker: alertTicker.symbol, pairId: alertTicker.pair_id, alertName: alertTicker.name };
     }
 
-    // Fallback: resolve via instrument API using name and href
+    // Priority 2: resolve via instrument API using name and href
     if (href) {
       const instrument = await this.investingManager.getInstrument(name, href);
       if (instrument) {
-        return instrument.id.toString();
+        return {
+          alertTicker: instrument.symbol,
+          pairId: instrument.id.toString(),
+          alertName: instrument.description,
+        };
       }
     }
 
-    return undefined;
+    // Neither backend nor instrument could resolve — return null
+    return null;
   }
 
   public async paintAlertFeed(): Promise<void> {

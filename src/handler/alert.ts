@@ -17,6 +17,7 @@ import { IAlertSummaryHandler } from './alert_summary';
 import { ITickerHandler } from './ticker';
 import { IAlertTickerHandler } from './alert_ticker';
 import { IAuditHandler } from './audit';
+import { IDisplayHandler } from './display';
 import { IAlertFeedManager } from '../manager/alertfeed';
 import { PairInfo } from '../models/alert';
 
@@ -113,6 +114,7 @@ export class AlertHandler implements IAlertHandler {
     private readonly alertSummaryHandler: IAlertSummaryHandler,
     private readonly tickerHandler: ITickerHandler,
     private readonly alertTickerHandler: IAlertTickerHandler,
+    private readonly displayHandler: IDisplayHandler,
     private readonly alertFeedManager: IAlertFeedManager
   ) {}
 
@@ -289,6 +291,7 @@ export class AlertHandler implements IAlertHandler {
     });
     Notifier.success(`Mapped ${ticker} to ${event.alertTicker}`);
     this.refreshAlerts();
+    await this.displayHandler.display();
   }
 
   /**

@@ -22,14 +22,20 @@ export class AlertClicked extends BaseEvent {
     readonly alertTicker: string,
     readonly action: AlertClickAction,
     readonly pairId?: string,
+    readonly alertName?: string,
     readonly timestamp: number = Date.now()
   ) {
     super();
   }
 
   public static fromString(data: string): AlertClicked {
-    const parsed = JSON.parse(data) as { alertTicker: string; action: string; pairId?: string };
-    return new AlertClicked(parsed.alertTicker, parsed.action as AlertClickAction, parsed.pairId);
+    const parsed = JSON.parse(data) as {
+      alertTicker: string;
+      action: string;
+      pairId?: string;
+      alertName?: string;
+    };
+    return new AlertClicked(parsed.alertTicker, parsed.action as AlertClickAction, parsed.pairId, parsed.alertName);
   }
 }
 

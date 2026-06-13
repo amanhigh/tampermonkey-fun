@@ -372,6 +372,7 @@ export class Factory {
             Factory.handler.alertSummary(),
             Factory.handler.ticker(),
             Factory.handler.alertTicker(),
+            Factory.handler.display(),
             Factory.manager.alertFeed()
           )
       ),

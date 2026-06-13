@@ -13,6 +13,7 @@ import { IAlertTickerHandler } from '../../src/handler/alert_ticker';
 import { IAlertFeedManager } from '../../src/manager/alertfeed';
 import { AlertClicked, AlertClickAction } from '../../src/models/events';
 import { AlertTicker } from '../../src/models/alert_ticker';
+import { IDisplayHandler } from '../../src/handler/display';
 
 jest.mock('../../src/util/notify', () => ({
   Notifier: {
@@ -38,6 +39,7 @@ describe('AlertHandler', () => {
   let mockTickerHandler: jest.Mocked<ITickerHandler>;
   let mockAlertTickerHandler: jest.Mocked<IAlertTickerHandler>;
   let mockAlertFeedManager: jest.Mocked<IAlertFeedManager>;
+  let mockDisplayHandler: jest.Mocked<IDisplayHandler>;
   const { Notifier } = jest.requireMock('../../src/util/notify');
 
   beforeEach(() => {
@@ -96,6 +98,11 @@ describe('AlertHandler', () => {
       createResetFeedEvent: jest.fn(),
     } as any;
 
+    mockDisplayHandler = {
+      display: jest.fn().mockResolvedValue(undefined),
+      resetExpanded: jest.fn(),
+    } as any;
+
     handler = new AlertHandler(
       mockAlertManager,
       mockTradingViewManager,
@@ -108,6 +115,7 @@ describe('AlertHandler', () => {
       mockAlertSummaryHandler,
       mockTickerHandler,
       mockAlertTickerHandler,
+      mockDisplayHandler,
       mockAlertFeedManager
     );
   });
@@ -151,6 +159,7 @@ describe('AlertHandler', () => {
 
         expect(Notifier.warn).toHaveBeenCalledWith(expect.stringContaining('no pairId'));
         expect(mockAlertTickerManager.linkAlertTicker).not.toHaveBeenCalled();
+        expect(mockDisplayHandler.display).not.toHaveBeenCalled();
       });
 
       it('should create link when no alert ticker exists and pairId is present', async () => {
@@ -170,6 +179,7 @@ describe('AlertHandler', () => {
           exchange: 'NSE',
         });
         expect(Notifier.success).toHaveBeenCalledWith(expect.stringContaining('Mapped'));
+        expect(mockDisplayHandler.display).toHaveBeenCalled();
       });
 
       it('should create link when existing alert ticker has different symbol', async () => {
@@ -196,6 +206,7 @@ describe('AlertHandler', () => {
           name: 'INFY',
           exchange: 'NSE',
         });
+        expect(mockDisplayHandler.display).toHaveBeenCalled();
       });
 
       it('should skip duplicate linking when any alert ticker symbol matches', async () => {
@@ -218,6 +229,7 @@ describe('AlertHandler', () => {
 
         expect(mockAlertTickerManager.linkAlertTicker).not.toHaveBeenCalled();
         expect(Notifier.info).toHaveBeenCalledWith(expect.stringContaining('Already mapped'));
+        expect(mockDisplayHandler.display).not.toHaveBeenCalled();
       });
     });
   });

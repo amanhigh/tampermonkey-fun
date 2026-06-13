@@ -230,16 +230,17 @@ describe('AlertManager', () => {
       );
     });
 
-    it('should include pairId in serialized event when provided', async () => {
+    it('should include pairId and alertName in serialized event when provided', async () => {
       (global as any).GM = { setValue: jest.fn().mockResolvedValue(undefined) };
 
-      await alertManager.createAlertClickEvent('INFY', AlertClickAction.MAP, '8874');
+      await alertManager.createAlertClickEvent('INFY', AlertClickAction.MAP, '8874', 'Infosys Ltd');
 
       const serialized = (global as any).GM.setValue.mock.calls[0][1] as string;
       const parsed = JSON.parse(serialized);
       expect(parsed.alertTicker).toBe('INFY');
       expect(parsed.action).toBe('MAP');
       expect(parsed.pairId).toBe('8874');
+      expect(parsed.alertName).toBe('Infosys Ltd');
     });
   });
 });

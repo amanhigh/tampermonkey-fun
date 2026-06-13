@@ -62,7 +62,12 @@ export interface IAlertManager {
   /**
    * Creates alert click event for ticker operations.
    */
-  createAlertClickEvent(alertTicker: string, action: AlertClickAction, pairId?: string): Promise<void>;
+  createAlertClickEvent(
+    alertTicker: string,
+    action: AlertClickAction,
+    pairId?: string,
+    alertName?: string
+  ): Promise<void>;
 }
 
 /**
@@ -142,8 +147,13 @@ export class AlertManager implements IAlertManager {
   }
 
   /** @inheritdoc */
-  async createAlertClickEvent(alertTicker: string, action: AlertClickAction, pairId?: string): Promise<void> {
-    const event = new AlertClicked(alertTicker, action, pairId);
+  async createAlertClickEvent(
+    alertTicker: string,
+    action: AlertClickAction,
+    pairId?: string,
+    alertName?: string
+  ): Promise<void> {
+    const event = new AlertClicked(alertTicker, action, pairId, alertName);
     await GM.setValue(Constants.STORAGE.EVENTS.ALERT_CLICKED, event.stringify());
   }
 
