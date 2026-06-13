@@ -81,12 +81,16 @@ export class Barkat {
   // FIXME: Remove suppressed Errors for eslint, refactor large function
   // eslint-disable-next-line max-lines-per-function
   private setupTradingViewUI() {
-    const $area = this.uiUtil.buildArea(Constants.UI.IDS.AREAS.MAIN, '70%', '6%');
+    const $area = this.uiUtil.buildArea(
+      Constants.UI.IDS.AREAS.MAIN,
+      Constants.UI.POSITIONS.MAIN_LEFT,
+      Constants.UI.POSITIONS.MAIN_TOP
+    );
     $area.appendTo('body');
 
     // TODO: Move UI Build Logic to Handlers
     this.uiUtil
-      .buildWrapper(Constants.UI.IDS.AREAS.TOP)
+      .buildWrapper(Constants.UI.IDS.AREAS.TOP, Constants.UI.POSITIONS.WRAPPER_WIDTH)
       .appendTo($area)
       .append(
         this.uiUtil.buildCheckBox(Constants.UI.IDS.CHECKBOXES.SWIFT, false).change(() => {
@@ -137,7 +141,7 @@ export class Barkat {
       .append(this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.SUMMARY));
 
     this.uiUtil
-      .buildWrapper(Constants.UI.IDS.AREAS.MID)
+      .buildWrapper(Constants.UI.IDS.AREAS.MID, Constants.UI.POSITIONS.WRAPPER_WIDTH)
       .appendTo($area)
       .append(this.uiUtil.buildWrapper(Constants.UI.IDS.DISPLAY.CARD).addClass(Constants.UI.IDS.DISPLAY.CARD_CLASS))
       .append(
@@ -146,8 +150,8 @@ export class Barkat {
         })
       );
 
-    this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.ALERTS).appendTo($area);
-    this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.ORDERS).appendTo($area);
+    this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.ALERTS, Constants.UI.POSITIONS.WRAPPER_WIDTH).appendTo($area);
+    this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.ORDERS, Constants.UI.POSITIONS.WRAPPER_WIDTH).appendTo($area);
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.JOURNAL).hide().appendTo($area);
     // BUG 3.1: Toolbar lives inside journal wrapper so it disappears when journal collapses; move toolbar outside for persistent access
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.AUDIT).hide().appendTo($area);

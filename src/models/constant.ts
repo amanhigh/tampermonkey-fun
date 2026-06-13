@@ -46,6 +46,12 @@ export const Constants = Object.freeze({
 
   // UI element colors and styles
   UI: {
+    POSITIONS: {
+      MAIN_LEFT: '64%',
+      MAIN_TOP: '6%',
+      WRAPPER_WIDTH: '255px',
+    },
+
     COLORS: {
       DEFAULT: 'white',
       HEADER_DEFAULT: 'brown', // Brown fallback for uncategorized ticker in watchlist (header/screener)

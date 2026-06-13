@@ -37,6 +37,11 @@
     transition: background 0.2s ease, border-color 0.2s ease;
     line-height: 1.5;
     min-height: 18px;
+    box-sizing: border-box;
+    width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 
     &:hover {
         background: rgba(30, 30, 38, 0.95);
@@ -50,6 +55,15 @@
     // Unmapped state
     &.aman-display-unmapped {
         border-left-color: @color-unmapped;
+    }
+
+    // Expanded state — wider and wraps
+    &.aman-display-expanded-state {
+        width: 245px;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        height: auto;
     }
 }
 

@@ -13,6 +13,7 @@ const DISPLAY_CLASS = {
   CARD: 'aman-display-card',
   COMPACT: 'aman-display-compact',
   EXPANDED: 'aman-display-expanded',
+  EXPANDED_STATE: 'aman-display-expanded-state',
   MAPPED: 'aman-display-mapped',
   UNMAPPED: 'aman-display-unmapped',
   PRIMARY_ROW: 'aman-display-primary',
@@ -119,6 +120,9 @@ export class SequenceHandler implements ISequenceHandler {
     // Update mapped/unmapped state class
     $card.removeClass(`${DISPLAY_CLASS.MAPPED} ${DISPLAY_CLASS.UNMAPPED}`);
     $card.addClass(isMapped ? DISPLAY_CLASS.MAPPED : DISPLAY_CLASS.UNMAPPED);
+
+    // Toggle expanded-state class for width change
+    $card.toggleClass(DISPLAY_CLASS.EXPANDED_STATE, this.displayExpanded);
 
     if (this.displayExpanded) {
       $card.html(this.buildExpandedHtml(sequence, displayTicker, isMapped, alertTickers));

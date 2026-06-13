@@ -76,6 +76,7 @@ describe('SequenceHandler', () => {
         }
         return dataStore[key];
       }),
+      toggleClass: jest.fn(),
     };
 
     mockSequenceManager = {
