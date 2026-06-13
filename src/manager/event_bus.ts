@@ -111,15 +111,13 @@ export class EventBus implements IPublisher, ISubscriber {
     }
 
     await Promise.all(
-      handlers.map((handler) =>
-        (async () => {
-          try {
-            await handler(event);
-          } catch (error) {
-            console.error(`[EventBus] Handler for ${event.type} failed:`, error);
-          }
-        })()
-      )
+      handlers.map(async (handler) => {
+        try {
+          await handler(event);
+        } catch (error) {
+          console.error(`[EventBus] Handler for ${event.type} failed:`, error);
+        }
+      })
     );
   }
 }
