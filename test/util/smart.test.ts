@@ -134,6 +134,28 @@ describe('SmartPrompt', () => {
         smartPrompt.showModal(reasons);
       }).not.toThrow();
     });
+
+    it('should render optional title as h3 element when provided', () => {
+      const reasons = ['Test'];
+      const title = 'PRIMARY: none — selected pair will become PRIMARY';
+
+      smartPrompt.showModal(reasons, undefined, title);
+
+      expect(mockDocument.createElement).toHaveBeenCalledWith('h3');
+      const createCalls = mockDocument.createElement.mock.calls;
+      const h3Calls = createCalls.filter((call: any) => call[0] === 'h3');
+      expect(h3Calls.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should not render title when title is not provided', () => {
+      const reasons = ['Test'];
+
+      smartPrompt.showModal(reasons);
+
+      const createCalls = mockDocument.createElement.mock.calls;
+      const h3Calls = createCalls.filter((call: any) => call[0] === 'h3');
+      expect(h3Calls.length).toBe(0);
+    });
   });
 
   describe('DOM element creation', () => {

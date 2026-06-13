@@ -102,7 +102,7 @@ export class DomManager implements IDomManager {
   async getInvestingTicker(): Promise<string> {
     // HACK: Remove out of this as its not pure DOM
     const tvTicker = this.getTicker();
-    const alertTicker = await this.alertTickerManager.getAlertTicker(tvTicker);
+    const alertTicker = await this.alertTickerManager.getPrimaryAlertTicker(tvTicker);
     if (!alertTicker) {
       throw new Error(`Investing ticker not found for ${tvTicker}`);
     }

@@ -6,9 +6,9 @@ import { AlertTicker, CreateAlertTickerRequest } from '../models/alert_ticker';
  *
  * Domain methods:
  * - linkAlertTicker → attach an Investing ticker under a TV ticker
- * - getAlertTicker → get default Alert ticker for a TV ticker
+ * - getPrimaryAlertTicker → get the PRIMARY Alert ticker for a TV ticker
+ * - getAlertTickers → list all Alert tickers (audit/global flows)
  * - fetchAlertTicker → look up an Alert ticker by its symbol
- * - getAllAlertTickers → list all Alert tickers (audit/global flows)
  */
 export interface IAlertTickerManager {
   /**
@@ -20,12 +20,11 @@ export interface IAlertTickerManager {
   linkAlertTicker(tvTicker: string, data: CreateAlertTickerRequest): Promise<AlertTicker>;
 
   /**
-   * Get the default Alert ticker for a given TV ticker.
-   * Returns the first Alert ticker from the backend list, or null if none.
+   * Get the PRIMARY Alert ticker for a given TV ticker, or null if none exists.
    * @param tvTicker - Primary ticker identity
-   * @returns Promise resolving with the first Alert ticker, or null
+   * @returns Promise resolving with the PRIMARY Alert ticker, or null
    */
-  getAlertTicker(tvTicker: string): Promise<AlertTicker | null>;
+  getPrimaryAlertTicker(tvTicker: string): Promise<AlertTicker | null>;
 
   /**
    * Fetch an Alert ticker by its Investing.com symbol.
@@ -35,10 +34,10 @@ export interface IAlertTickerManager {
   fetchAlertTicker(investingTicker: string): Promise<AlertTicker | null>;
 
   /**
-   * Get ALL Alert tickers (auto-paginated). Used for audit coverage and global flows.
+   * List all Alert tickers (auto-paginated). Used for audit coverage and global flows.
    * @returns Promise resolving with all Alert ticker records
    */
-  getAllAlertTickers(): Promise<AlertTicker[]>;
+  getAlertTickers(): Promise<AlertTicker[]>;
 }
 
 /**
@@ -53,9 +52,8 @@ export class AlertTickerManager implements IAlertTickerManager {
   }
 
   /** @inheritdoc */
-  async getAlertTicker(tvTicker: string): Promise<AlertTicker | null> {
-    const tickers = await this.alertTickerClient.listAlertTickers({ ticker: tvTicker });
-    // FIXME: Better Default than first
+  async getPrimaryAlertTicker(tvTicker: string): Promise<AlertTicker | null> {
+    const tickers = await this.alertTickerClient.listAlertTickers({ ticker: tvTicker, type: 'PRIMARY' });
     return tickers[0] ?? null;
   }
 
@@ -69,7 +67,7 @@ export class AlertTickerManager implements IAlertTickerManager {
   }
 
   /** @inheritdoc */
-  async getAllAlertTickers(): Promise<AlertTicker[]> {
+  async getAlertTickers(): Promise<AlertTicker[]> {
     return this.alertTickerClient.listAlertTickers({});
   }
 }

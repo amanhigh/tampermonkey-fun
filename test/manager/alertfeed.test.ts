@@ -36,9 +36,9 @@ describe('AlertFeedManager', () => {
     // Mock AlertTickerManager
     mockAlertTickerManager = {
       fetchAlertTicker: jest.fn(),
-      getAlertTicker: jest.fn(),
+      getPrimaryAlertTicker: jest.fn(),
       linkAlertTicker: jest.fn(),
-      getAllAlertTickers: jest.fn(),
+      getAlertTickers: jest.fn(),
     } as any;
 
     // Mock CategoryManager

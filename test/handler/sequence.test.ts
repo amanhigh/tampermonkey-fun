@@ -67,10 +67,10 @@ describe('SequenceHandler', () => {
     } as any;
 
     mockAlertTickerManager = {
-      getAlertTicker: jest.fn(),
+      getPrimaryAlertTicker: jest.fn(),
       linkAlertTicker: jest.fn(),
       fetchAlertTicker: jest.fn(),
-      getAllAlertTickers: jest.fn(),
+      getAlertTickers: jest.fn(),
     } as any;
 
     mockDisplayInput = {
@@ -92,7 +92,7 @@ describe('SequenceHandler', () => {
     it('should display ticker:sequence when ticker is not mapped', async () => {
       mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
-      mockAlertTickerManager.getAlertTicker.mockResolvedValue(null);
+      mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(null);
 
       await sequenceHandler.displaySequence();
 
@@ -103,7 +103,7 @@ describe('SequenceHandler', () => {
     it('should display ticker:sequence:PairName when ticker has alert ticker with name', async () => {
       mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.YR);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
-      mockAlertTickerManager.getAlertTicker.mockResolvedValue(
+      mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(
         makeAlertTicker({ symbol: 'INVESTINGTICKER', name: 'NIFTY 50', ticker: 'TVTICKER' })
       );
 
@@ -116,7 +116,7 @@ describe('SequenceHandler', () => {
     it('should display ticker:sequence when no alert ticker name', async () => {
       mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
-      mockAlertTickerManager.getAlertTicker.mockResolvedValue(
+      mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(
         makeAlertTicker({ symbol: 'INVESTINGTICKER', name: '', ticker: 'TVTICKER' })
       );
 
@@ -132,7 +132,7 @@ describe('SequenceHandler', () => {
       mockSequenceManager.flipSequence.mockResolvedValue(undefined);
       mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
-      mockAlertTickerManager.getAlertTicker.mockResolvedValue(null);
+      mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(null);
 
       await sequenceHandler.handleSequenceSwitch();
 
