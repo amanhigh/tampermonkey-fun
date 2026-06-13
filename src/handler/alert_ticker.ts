@@ -38,6 +38,9 @@ export class AlertTickerHandler implements IAlertTickerHandler {
 
     const tvTicker = this.domManager.getTicker();
 
+    // FIXME: replace fetchSymbolData (old InvestingClient) with InstrumentClient.getInstruments()
+    //        via InvestingManager — this endpoint is legacy; the new public API lives in
+    //        src/client/instrument.ts and is already wrapped by src/manager/investing.ts
     const pairs = await this.investingClient.fetchSymbolData(searchQuery);
     const options = this.formatPairOptions(pairs);
     const response = await this.smartPrompt.showModal(options.slice(0, 10));
