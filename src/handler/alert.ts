@@ -292,7 +292,7 @@ export class AlertHandler implements IAlertHandler {
     await this.alertTickerManager.linkAlertTicker(ticker, {
       symbol: event.alertTicker,
       pair_id: event.pairId,
-      name: event.alertTicker,
+      name: event.alertName ?? event.alertTicker,
       exchange,
     });
     Notifier.success(`Mapped ${ticker} to ${event.alertTicker}`);

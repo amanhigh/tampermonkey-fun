@@ -223,6 +223,40 @@ describe('AlertHandler', () => {
         expect(Notifier.info).toHaveBeenCalledWith(expect.stringContaining('Already mapped'));
         expect(mockDisplayHandler.display).not.toHaveBeenCalled();
       });
+
+      it('should store alertName as name when provided', async () => {
+        mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
+
+        const event = new AlertClicked('SSEC', AlertClickAction.MAP, '40820', 'Shanghai Composite');
+        handler.handleAlertClick(event);
+
+        await new Promise(process.nextTick);
+
+        expect(mockAlertTickerManager.linkAlertTicker).toHaveBeenCalledWith('TV:INFY', {
+          symbol: 'SSEC',
+          pair_id: '40820',
+          name: 'Shanghai Composite',
+          exchange: 'NSE',
+        });
+        expect(Notifier.success).toHaveBeenCalledWith(expect.stringContaining('Mapped'));
+        expect(mockDisplayHandler.display).toHaveBeenCalled();
+      });
+
+      it('should fallback to alertTicker when alertName is not provided', async () => {
+        mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
+
+        const event = new AlertClicked('SSEC', AlertClickAction.MAP, '40820');
+        handler.handleAlertClick(event);
+
+        await new Promise(process.nextTick);
+
+        expect(mockAlertTickerManager.linkAlertTicker).toHaveBeenCalledWith('TV:INFY', {
+          symbol: 'SSEC',
+          pair_id: '40820',
+          name: 'SSEC',
+          exchange: 'NSE',
+        });
+      });
     });
   });
 
