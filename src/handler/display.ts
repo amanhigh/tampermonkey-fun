@@ -41,14 +41,9 @@ const EMOJI = {
 export interface IDisplayHandler {
   /**
    * Fetches current ticker data and renders the display card.
-   * Resets to compact mode on fresh data fetch.
+   * Always starts in compact mode on fresh data fetch.
    */
   display(): Promise<void>;
-
-  /**
-   * Resets expanded state to compact for next render.
-   */
-  resetExpanded(): void;
 }
 
 /**
@@ -70,6 +65,7 @@ export class DisplayHandler implements IDisplayHandler {
 
   /** @inheritdoc */
   async display(): Promise<void> {
+    this.displayExpanded = false;
     const sequence = await this.sequenceManager.getCurrentSequence();
     const tvTicker = this.domManager.getTicker();
     const alertTickers = await this.alertTickerManager.getAlertTickersForTicker(tvTicker);
@@ -78,11 +74,6 @@ export class DisplayHandler implements IDisplayHandler {
     $(`#${Constants.UI.IDS.DISPLAY.CARD}`).data('displayData', { sequence, tvTicker, alertTickers });
 
     this.renderDisplay();
-  }
-
-  /** @inheritdoc */
-  resetExpanded(): void {
-    this.displayExpanded = false;
   }
 
   // ── Display Rendering ──

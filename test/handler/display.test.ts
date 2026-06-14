@@ -246,23 +246,4 @@ describe('DisplayHandler', () => {
     });
   });
 
-  describe('resetExpanded', () => {
-    it('should reset expanded state to compact for next render', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
-      mockDomManager.getTicker.mockReturnValue('TVTICKER');
-      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
-
-      await handler.display();
-      const clickHandler = mockDisplayEl.on.mock.calls[0][1];
-      await clickHandler(); // expanded
-
-      handler.resetExpanded();
-
-      // Next display should be compact
-      await handler.display();
-      const htmlCalls = mockDisplayEl.html.mock.calls;
-      const finalHtml = htmlCalls[htmlCalls.length - 1][0];
-      expect(finalHtml).not.toContain('aman-display-expanded');
-    });
-  });
 });

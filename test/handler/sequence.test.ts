@@ -47,7 +47,6 @@ describe('SequenceHandler', () => {
 
     mockDisplayHandler = {
       display: jest.fn().mockResolvedValue(undefined),
-      resetExpanded: jest.fn(),
     } as any;
 
     sequenceHandler = new SequenceHandler(
@@ -61,13 +60,12 @@ describe('SequenceHandler', () => {
   // ── handleSequenceSwitch ──
 
   describe('handleSequenceSwitch', () => {
-    it('should flip sequence, reset expanded, and refresh display', async () => {
+    it('should flip sequence and refresh display', async () => {
       mockSequenceManager.flipSequence.mockResolvedValue(undefined);
 
       await sequenceHandler.handleSequenceSwitch();
 
       expect(mockSequenceManager.flipSequence).toHaveBeenCalled();
-      expect(mockDisplayHandler.resetExpanded).toHaveBeenCalled();
       expect(mockDisplayHandler.display).toHaveBeenCalled();
     });
   });

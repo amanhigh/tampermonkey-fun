@@ -42,7 +42,6 @@ export class SequenceHandler implements ISequenceHandler {
   /** @inheritdoc */
   async handleSequenceSwitch(): Promise<void> {
     await this.sequenceManager.flipSequence();
-    this.displayHandler.resetExpanded();
     await this.displayHandler.display();
   }
 

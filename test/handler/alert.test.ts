@@ -93,7 +93,6 @@ describe('AlertHandler', () => {
 
     mockDisplayHandler = {
       display: jest.fn().mockResolvedValue(undefined),
-      resetExpanded: jest.fn(),
     } as any;
 
     handler = new AlertHandler(
