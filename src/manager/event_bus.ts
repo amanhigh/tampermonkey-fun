@@ -1,4 +1,4 @@
-import { DomainEvent } from '../models/domain_event';
+import { DomainEvent, DomainEventByType } from '../models/domain_event';
 
 /**
  * Type alias for a handler function that processes a domain event.
@@ -32,10 +32,7 @@ export interface ISubscriber {
    * @param type - The event type to subscribe to
    * @param handler - The handler function
    */
-  subscribe<T extends DomainEvent['type']>(
-    type: T,
-    handler: DomainEventHandler<Extract<DomainEvent, { type: T }>>
-  ): void;
+  subscribe<T extends DomainEvent['type']>(type: T, handler: DomainEventHandler<DomainEventByType[T]>): void;
 
   /**
    * Subscribe the same handler to multiple event types.
@@ -43,10 +40,7 @@ export interface ISubscriber {
    * @param types - Array of event types to subscribe to
    * @param handler - The handler function called for each matching event
    */
-  subscribeMany<T extends DomainEvent['type']>(
-    types: T[],
-    handler: DomainEventHandler<Extract<DomainEvent, { type: T }>>
-  ): void;
+  subscribeMany<T extends DomainEvent['type']>(types: T[], handler: DomainEventHandler<DomainEventByType[T]>): void;
 }
 
 /**
@@ -80,10 +74,7 @@ export class EventBus implements IPublisher, ISubscriber {
   private readonly handlers = new Map<string, DomainEventHandler[]>();
 
   /** @inheritdoc */
-  subscribe<T extends DomainEvent['type']>(
-    type: T,
-    handler: DomainEventHandler<Extract<DomainEvent, { type: T }>>
-  ): void {
+  subscribe<T extends DomainEvent['type']>(type: T, handler: DomainEventHandler<DomainEventByType[T]>): void {
     const existing = this.handlers.get(type);
     if (existing) {
       existing.push(handler as DomainEventHandler);
@@ -93,10 +84,7 @@ export class EventBus implements IPublisher, ISubscriber {
   }
 
   /** @inheritdoc */
-  subscribeMany<T extends DomainEvent['type']>(
-    types: T[],
-    handler: DomainEventHandler<Extract<DomainEvent, { type: T }>>
-  ): void {
+  subscribeMany<T extends DomainEvent['type']>(types: T[], handler: DomainEventHandler<DomainEventByType[T]>): void {
     types.forEach((type) => {
       this.subscribe(type, handler);
     });

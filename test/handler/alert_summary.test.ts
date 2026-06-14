@@ -111,13 +111,13 @@ describe('AlertSummaryHandler', () => {
       expect(mockButton.addClass).toHaveBeenCalledWith('aman-alert-low');
     });
 
-    it('should render amber high-alert pill when price is above LTP', () => {
+    it('should render red high-alert pill when price is above LTP', () => {
       const alert = makeAlert({ price: 300 });
       mockTvManager.getLastTradedPrice.mockReturnValue(200);
 
       handler.displayAlerts([alert]);
 
-      expect(mockUiUtil.colorText).toHaveBeenCalledWith('🟡 300', 'orangered');
+      expect(mockUiUtil.colorText).toHaveBeenCalledWith('🔴 300', 'red');
       expect(mockButton.addClass).toHaveBeenCalledWith('aman-alert-high');
     });
 

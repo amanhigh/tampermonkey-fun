@@ -82,7 +82,9 @@ describe('AlertHandler', () => {
     mockSyncUtil = {
       waitOn: jest.fn(),
     } as any;
-    mockUIUtil = {} as any;
+    mockUIUtil = {
+      showConfirm: jest.fn(),
+    } as any;
     mockAlertSummaryHandler = {} as any;
     mockTickerHandler = {
       openTicker: jest.fn(),
@@ -297,7 +299,7 @@ describe('AlertHandler', () => {
 
     it('deletes SECONDARY after confirm', async () => {
       handler.registerAlertTickerDelinkHandler();
-      (global as any).confirm = jest.fn().mockReturnValue(true);
+      mockUIUtil.showConfirm.mockReturnValue(true);
 
       const mockEvent = {
         preventDefault: jest.fn(),
@@ -308,8 +310,8 @@ describe('AlertHandler', () => {
 
       expect(mockEvent.preventDefault).toHaveBeenCalled();
       expect(mockEvent.stopPropagation).toHaveBeenCalled();
-      expect((global as any).confirm).toHaveBeenCalledWith('Delink INFY.PA?');
-      expect(mockAlertTickerManager.deleteAlertTicker).toHaveBeenCalledWith('', 'INFY.PA');
+      expect(mockUIUtil.showConfirm).toHaveBeenCalledWith('Delink INFY.PA?');
+      expect(mockAlertTickerManager.deleteAlertTicker).toHaveBeenCalledWith('INFY.PA');
       expect(Notifier.success).toHaveBeenCalledWith('⏹ Delinked INFY.PA');
     });
 
@@ -321,7 +323,7 @@ describe('AlertHandler', () => {
       });
 
       handler.registerAlertTickerDelinkHandler();
-      (global as any).confirm = jest.fn().mockReturnValue(true);
+      mockUIUtil.showConfirm.mockReturnValue(true);
 
       const mockEvent = {
         preventDefault: jest.fn(),
@@ -330,15 +332,15 @@ describe('AlertHandler', () => {
       };
       await capturedHandler(mockEvent);
 
-      expect((global as any).confirm).toHaveBeenCalledWith(
+      expect(mockUIUtil.showConfirm).toHaveBeenCalledWith(
         expect.stringContaining('PRIMARY')
       );
-      expect(mockAlertTickerManager.deleteAlertTicker).toHaveBeenCalledWith('', 'INFY');
+      expect(mockAlertTickerManager.deleteAlertTicker).toHaveBeenCalledWith('INFY');
     });
 
     it('does not delete when confirm is cancelled', async () => {
       handler.registerAlertTickerDelinkHandler();
-      (global as any).confirm = jest.fn().mockReturnValue(false);
+      mockUIUtil.showConfirm.mockReturnValue(false);
 
       const mockEvent = {
         preventDefault: jest.fn(),
@@ -358,7 +360,7 @@ describe('AlertHandler', () => {
       });
 
       handler.registerAlertTickerDelinkHandler();
-      (global as any).confirm = jest.fn().mockReturnValue(true);
+      mockUIUtil.showConfirm.mockReturnValue(true);
 
       // Simulate refreshAlerts being a void method; displayHandler.display is already mocked
       const refreshAlertsSpy = jest.spyOn(handler as any, 'refreshAlerts');
@@ -377,7 +379,7 @@ describe('AlertHandler', () => {
     it('warns when delete fails', async () => {
       mockAlertTickerManager.deleteAlertTicker.mockRejectedValue(new Error('Not found'));
       handler.registerAlertTickerDelinkHandler();
-      (global as any).confirm = jest.fn().mockReturnValue(true);
+      mockUIUtil.showConfirm.mockReturnValue(true);
 
       const mockEvent = {
         preventDefault: jest.fn(),
