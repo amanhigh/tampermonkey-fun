@@ -336,6 +336,52 @@ describe('AlertFeedHandler', () => {
       expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TICKER_A');
       expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TICKER_B');
     });
+
+    it('should subscribe to WATCHLIST_CHANGED via subscribe', () => {
+      const mockConsumer: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerEvents(mockConsumer);
+
+      expect(mockConsumer.subscribe).toHaveBeenCalledWith(
+        DomainEventType.WATCHLIST_CHANGED,
+        expect.any(Function)
+      );
+    });
+
+    it('should resolve alert tickers for WATCHLIST_CHANGED and create feed events', async () => {
+      const alertTickers: AlertTicker[] = [
+        {
+          symbol: 'INFY',
+          pair_id: '12345',
+          name: 'Infosys Ltd',
+          exchange: 'NSE',
+          type: 'PRIMARY',
+          ticker: 'TV:INFY',
+          created_at: '',
+          updated_at: '',
+        },
+      ];
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue(alertTickers);
+
+      let watchlistCallback: Function | undefined;
+      const mockConsumer: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn((type, cb) => {
+          if (type === DomainEventType.WATCHLIST_CHANGED) {
+            watchlistCallback = cb;
+          }
+        }),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerEvents(mockConsumer);
+      await watchlistCallback!({ type: DomainEventType.WATCHLIST_CHANGED, ticker: 'TV:INFY' });
+
+      expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TV:INFY');
+      expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith('INFY', 'TV:INFY');
+    });
   });
 
   // ── Click Tests ──

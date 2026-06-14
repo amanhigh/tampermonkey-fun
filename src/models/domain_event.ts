@@ -9,6 +9,7 @@ export enum DomainEventType {
   TICKER_TRACKING_STARTED = 'TICKER_TRACKING_STARTED',
   TICKER_TRACKING_STOPPED = 'TICKER_TRACKING_STOPPED',
   TICKER_CATEGORY_CHANGED = 'TICKER_CATEGORY_CHANGED',
+  WATCHLIST_CHANGED = 'WATCHLIST_CHANGED',
 }
 
 /**
@@ -22,6 +23,7 @@ import type {
   TickerTrackingStoppedEvent,
   TickerCategoryChangedEvent,
 } from './ticker';
+import type { WatchlistChangedEvent } from './watch';
 
 export type { AlertTickerLinkedEvent, AlertTickerDeletedEvent };
 export type {
@@ -30,6 +32,7 @@ export type {
   TickerTrackingStoppedEvent,
   TickerCategoryChangedEvent,
 };
+export type { WatchlistChangedEvent };
 
 export type DomainEvent =
   | AlertTickerLinkedEvent
@@ -37,4 +40,5 @@ export type DomainEvent =
   | TickerMarkedRecentEvent
   | TickerTrackingStartedEvent
   | TickerTrackingStoppedEvent
-  | TickerCategoryChangedEvent;
+  | TickerCategoryChangedEvent
+  | WatchlistChangedEvent;

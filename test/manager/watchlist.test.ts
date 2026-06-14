@@ -1,8 +1,11 @@
 import { TradingViewWatchlistManager, ITradingViewWatchlistManager } from '../../src/manager/watchlist';
 import { IPaintManager } from '../../src/manager/paint';
 import { IUIUtil } from '../../src/util/ui';
+import { IDomManager } from '../../src/manager/dom';
+import { IPublisher } from '../../src/manager/event_bus';
 import { Constants } from '../../src/models/constant';
 import { ALL_WATCH_CATEGORIES, WatchCategoryId, BucketSummary } from '../../src/models/watch';
+import { DomainEventType } from '../../src/models/domain_event';
 
 // Mock jQuery globally for DOM manipulation
 const mockJQuery = jest.fn(() => ({
@@ -24,6 +27,8 @@ describe('TradingViewWatchlistManager', () => {
   let watchlistManager: ITradingViewWatchlistManager;
   let mockPaintManager: jest.Mocked<IPaintManager>;
   let mockUIUtil: jest.Mocked<IUIUtil>;
+  let mockDomManager: jest.Mocked<IDomManager>;
+  let mockPublisher: jest.Mocked<IPublisher>;
 
   const mockElement = { innerHTML: 'MOCKSTOCK' };
   const mockJQueryChain = {
@@ -54,12 +59,22 @@ describe('TradingViewWatchlistManager', () => {
       buildLabel: jest.fn().mockReturnValue(mockJQueryChain),
     } as unknown as jest.Mocked<IUIUtil>;
 
+    mockDomManager = {
+      getTicker: jest.fn().mockReturnValue('CURRENT_TICKER'),
+    } as unknown as jest.Mocked<IDomManager>;
+
+    mockPublisher = {
+      publish: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<IPublisher>;
+
     // Reset jQuery mock
     mockJQuery.mockReturnValue(mockJQueryChain);
 
     watchlistManager = new TradingViewWatchlistManager(
       mockPaintManager,
-      mockUIUtil
+      mockUIUtil,
+      mockDomManager,
+      mockPublisher
     );
   });
 
@@ -130,6 +145,16 @@ describe('TradingViewWatchlistManager', () => {
         expect.stringMatching(/1\||0\|/),
         expect.any(String)
       );
+    });
+
+    it('should publish WATCHLIST_CHANGED with current ticker after refresh', async () => {
+      await watchlistManager.refresh();
+
+      expect(mockDomManager.getTicker).toHaveBeenCalled();
+      expect(mockPublisher.publish).toHaveBeenCalledWith({
+        type: DomainEventType.WATCHLIST_CHANGED,
+        ticker: 'CURRENT_TICKER',
+      });
     });
   });
 });

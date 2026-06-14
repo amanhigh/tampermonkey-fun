@@ -197,7 +197,7 @@ export class Factory {
     watchlist: (): ITradingViewWatchlistManager =>
       Factory.getInstance(
         'watchlistManager',
-        () => new TradingViewWatchlistManager(Factory.manager.paint(), Factory.util.ui())
+        () => new TradingViewWatchlistManager(Factory.manager.paint(), Factory.util.ui(), Factory.manager.dom(), Factory.manager.eventPublisher())
       ),
 
     category: (): ICategoryManager =>
@@ -517,9 +517,7 @@ export class Factory {
             Factory.manager.paint(),
             Factory.util.sync(),
             Factory.manager.category(),
-            Factory.manager.dom(),
-            Factory.manager.alertFeed(),
-            Factory.manager.alertTicker()
+            Factory.manager.dom()
           )
       ),
     flag: (): IFlagHandler =>

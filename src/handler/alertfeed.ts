@@ -101,6 +101,11 @@ export class AlertFeedHandler implements IAlertFeedHandler {
         await this.createAlertFeedEventsForTicker(ticker);
       }
     });
+
+    // WATCHLIST_CHANGED — repaint all linked alert tickers for the current ticker
+    subscriber.subscribe(DomainEventType.WATCHLIST_CHANGED, async (event) => {
+      await this.createAlertFeedEventsForTicker(event.ticker);
+    });
   }
 
   /**
