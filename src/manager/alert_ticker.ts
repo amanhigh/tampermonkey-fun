@@ -75,7 +75,7 @@ export class AlertTickerManager implements IAlertTickerManager {
     await this.publisher.publish({
       type: DomainEventType.ALERT_TICKER_LINKED,
       ticker,
-      alertTicker,
+      alertTicker: alertTicker.symbol,
     });
 
     return alertTicker;

@@ -50,7 +50,8 @@ import { DomainEventType } from './domain_event';
 export interface AlertTickerLinkedEvent {
   type: DomainEventType.ALERT_TICKER_LINKED;
   ticker: string;
-  alertTicker: AlertTicker;
+  /** Investing.com symbol (string, not full AlertTicker record). */
+  alertTicker: string;
 }
 
 export interface AlertTickerDeletedEvent {

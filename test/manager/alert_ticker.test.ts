@@ -137,7 +137,7 @@ describe('AlertTickerManager', () => {
       expect(mockProducer.publish).toHaveBeenCalledWith({
         type: DomainEventType.ALERT_TICKER_LINKED,
         ticker: 'TV:INFY',
-        alertTicker: expectedTicker,
+        alertTicker: expectedTicker.symbol,
       });
     });
   });

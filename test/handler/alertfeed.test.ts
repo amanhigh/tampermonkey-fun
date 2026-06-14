@@ -173,18 +173,6 @@ describe('AlertFeedHandler', () => {
     });
 
     it('should create alert feed event directly from linked event alertTicker', async () => {
-      const alertTicker: AlertTicker = {
-        symbol: 'INFY',
-        pair_id: '12345',
-        name: 'Infosys Ltd',
-        exchange: 'NSE',
-        type: 'PRIMARY',
-        ticker: 'TV:INFY',
-        created_at: '',
-        updated_at: '',
-      };
-
-      // Capture the callback for ALERT_TICKER_LINKED
       let linkedCallback: Function | undefined;
       const mockConsumer: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn((type, cb) => {
@@ -196,7 +184,7 @@ describe('AlertFeedHandler', () => {
       };
 
       handler.registerEvents(mockConsumer);
-      await linkedCallback!({ type: DomainEventType.ALERT_TICKER_LINKED, ticker: 'TV:INFY', alertTicker });
+      await linkedCallback!({ type: DomainEventType.ALERT_TICKER_LINKED, ticker: 'TV:INFY', alertTicker: 'INFY' });
 
       expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith('INFY', 'TV:INFY');
     });

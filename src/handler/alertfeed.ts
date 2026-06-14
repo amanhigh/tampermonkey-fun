@@ -77,9 +77,9 @@ export class AlertFeedHandler implements IAlertFeedHandler {
 
   /** @inheritdoc */
   public registerEvents(subscriber: ISubscriber): void {
-    // ALERT_TICKER_LINKED carries full AlertTicker — use it directly
+    // ALERT_TICKER_LINKED carries ticker + alertTicker symbol string
     subscriber.subscribe(DomainEventType.ALERT_TICKER_LINKED, async (event) => {
-      await this.alertFeedManager.createAlertFeedEvent(event.alertTicker.symbol, event.alertTicker.ticker);
+      await this.alertFeedManager.createAlertFeedEvent(event.alertTicker, event.ticker);
     });
 
     // ALERT_TICKER_DELETED — paint deleted symbol as UNMAPPED (no ticker = unmapped)

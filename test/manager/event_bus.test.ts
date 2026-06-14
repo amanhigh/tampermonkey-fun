@@ -1,17 +1,5 @@
 import { EventBus } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
-import { AlertTicker } from '../../src/models/alert_ticker';
-
-const makeAlertTicker = (symbol: string, ticker: string): AlertTicker => ({
-  symbol,
-  pair_id: 'pair1',
-  name: 'Test',
-  exchange: 'NSE',
-  type: 'PRIMARY',
-  ticker,
-  created_at: '',
-  updated_at: '',
-});
 
 describe('EventBus', () => {
   let eventBus: EventBus;
@@ -28,14 +16,14 @@ describe('EventBus', () => {
       await eventBus.publish({
         type: DomainEventType.ALERT_TICKER_LINKED,
         ticker: 'TV:INFY',
-        alertTicker: makeAlertTicker('INFY', 'TV:INFY'),
+        alertTicker: 'INFY',
       });
 
       expect(handler).toHaveBeenCalledTimes(1);
       expect(handler).toHaveBeenCalledWith({
         type: DomainEventType.ALERT_TICKER_LINKED,
         ticker: 'TV:INFY',
-        alertTicker: makeAlertTicker('INFY', 'TV:INFY'),
+        alertTicker: 'INFY',
       });
     });
 
@@ -48,7 +36,7 @@ describe('EventBus', () => {
       await eventBus.publish({
         type: DomainEventType.ALERT_TICKER_LINKED,
         ticker: 'TV:TCS',
-        alertTicker: makeAlertTicker('TCS', 'TV:TCS'),
+        alertTicker: 'TCS',
       });
 
       expect(handler1).toHaveBeenCalledTimes(1);
@@ -94,7 +82,7 @@ describe('EventBus', () => {
       await eventBus.publish({
         type: DomainEventType.ALERT_TICKER_LINKED,
         ticker: 'TV:INFY',
-        alertTicker: makeAlertTicker('INFY', 'TV:INFY'),
+        alertTicker: 'INFY',
       });
 
       expect(handler).toHaveBeenCalledTimes(1);
