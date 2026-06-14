@@ -123,7 +123,7 @@ export class AlertSummaryHandler implements IAlertSummaryHandler {
     if (alert.price < ltp) {
       return this.uiUtil.colorText(`🟢 ${priceString}`, 'seagreen');
     }
-    return this.uiUtil.colorText(`🟡 ${priceString}`, 'orangered');
+    return this.uiUtil.colorText(`🔴 ${priceString}`, 'red');
   }
 
   /**
