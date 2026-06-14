@@ -87,9 +87,14 @@ export class AlertFeedHandler implements IAlertFeedHandler {
       await this.alertFeedManager.createAlertFeedEvent(event.alertTicker);
     });
 
-    // TICKER_MARKED_RECENT and TICKER_TRACKING_STARTED both carry ticker string — same handler
+    // TICKER_MARKED_RECENT, TICKER_TRACKING_STARTED, WATCHLIST_CHANGED
+    // all carry a single ticker string and rebind all linked alert tickers
     subscriber.subscribeMany(
-      [DomainEventType.TICKER_MARKED_RECENT, DomainEventType.TICKER_TRACKING_STARTED],
+      [
+        DomainEventType.TICKER_MARKED_RECENT,
+        DomainEventType.TICKER_TRACKING_STARTED,
+        DomainEventType.WATCHLIST_CHANGED,
+      ],
       async (event) => {
         await this.createAlertFeedEventsForTicker(event.ticker);
       }
@@ -100,11 +105,6 @@ export class AlertFeedHandler implements IAlertFeedHandler {
       for (const ticker of event.tickers) {
         await this.createAlertFeedEventsForTicker(ticker);
       }
-    });
-
-    // WATCHLIST_CHANGED — repaint all linked alert tickers for the current ticker
-    subscriber.subscribe(DomainEventType.WATCHLIST_CHANGED, async (event) => {
-      await this.createAlertFeedEventsForTicker(event.ticker);
     });
   }
 

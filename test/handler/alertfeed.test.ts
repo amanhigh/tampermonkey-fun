@@ -144,7 +144,7 @@ describe('AlertFeedHandler', () => {
       );
     });
 
-    it('should use subscribeMany for TICKER_MARKED_RECENT and TICKER_TRACKING_STARTED', () => {
+    it('should use subscribeMany for TickerPayload events (TICKER_MARKED_RECENT, TICKER_TRACKING_STARTED, WATCHLIST_CHANGED)', () => {
       const mockConsumer: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn(),
         subscribeMany: jest.fn(),
@@ -153,7 +153,11 @@ describe('AlertFeedHandler', () => {
       handler.registerEvents(mockConsumer);
 
       expect(mockConsumer.subscribeMany).toHaveBeenCalledWith(
-        [DomainEventType.TICKER_MARKED_RECENT, DomainEventType.TICKER_TRACKING_STARTED],
+        [
+          DomainEventType.TICKER_MARKED_RECENT,
+          DomainEventType.TICKER_TRACKING_STARTED,
+          DomainEventType.WATCHLIST_CHANGED,
+        ],
         expect.any(Function)
       );
     });
@@ -325,7 +329,7 @@ describe('AlertFeedHandler', () => {
       expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TICKER_B');
     });
 
-    it('should subscribe to WATCHLIST_CHANGED via subscribe', () => {
+    it('should include WATCHLIST_CHANGED in the subscribeMany TickerPayload group', () => {
       const mockConsumer: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn(),
         subscribeMany: jest.fn(),
@@ -333,10 +337,13 @@ describe('AlertFeedHandler', () => {
 
       handler.registerEvents(mockConsumer);
 
-      expect(mockConsumer.subscribe).toHaveBeenCalledWith(
-        DomainEventType.WATCHLIST_CHANGED,
-        expect.any(Function)
+      const calls = mockConsumer.subscribeMany.mock.calls;
+      const tickerPayloadGroup = calls.find(([types]) =>
+        (types as string[]).includes(DomainEventType.WATCHLIST_CHANGED)
       );
+      expect(tickerPayloadGroup).toBeDefined();
+      expect(tickerPayloadGroup![0]).toContain(DomainEventType.TICKER_MARKED_RECENT);
+      expect(tickerPayloadGroup![0]).toContain(DomainEventType.TICKER_TRACKING_STARTED);
     });
 
     it('should resolve alert tickers for WATCHLIST_CHANGED and create feed events', async () => {
@@ -356,12 +363,12 @@ describe('AlertFeedHandler', () => {
 
       let watchlistCallback: Function | undefined;
       const mockConsumer: jest.Mocked<ISubscriber> = {
-        subscribe: jest.fn((type, cb) => {
-          if (type === DomainEventType.WATCHLIST_CHANGED) {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn((types, cb) => {
+          if ((types as string[]).includes(DomainEventType.WATCHLIST_CHANGED)) {
             watchlistCallback = cb;
           }
         }),
-        subscribeMany: jest.fn(),
       };
 
       handler.registerEvents(mockConsumer);
