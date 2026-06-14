@@ -201,7 +201,7 @@ describe('AlertFeedHandler', () => {
       };
 
       handler.registerEvents(mockConsumer);
-      await deleteCallback!({ type: DomainEventType.ALERT_TICKER_DELETED, alertTicker: 'INFY' });
+      await deleteCallback!({ type: DomainEventType.ALERT_TICKER_DELETED, ticker: '', alertTicker: 'INFY' });
 
       expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith('INFY');
     });

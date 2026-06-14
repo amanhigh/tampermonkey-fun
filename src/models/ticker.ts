@@ -112,27 +112,3 @@ export function isCompositeSymbol(symbol: string): boolean {
   }
   return Constants.COMPOSITE.CHARACTERS.some((char) => symbol.includes(char));
 }
-
-// ── Domain Events ──
-
-import { DomainEventType } from './domain_event';
-
-export interface TickerMarkedRecentEvent {
-  type: DomainEventType.TICKER_MARKED_RECENT;
-  ticker: string;
-}
-
-export interface TickerTrackingStartedEvent {
-  type: DomainEventType.TICKER_TRACKING_STARTED;
-  ticker: string;
-}
-
-export interface TickerTrackingStoppedEvent {
-  type: DomainEventType.TICKER_TRACKING_STOPPED;
-  ticker: string;
-}
-
-export interface TickerCategoryChangedEvent {
-  type: DomainEventType.TICKER_CATEGORY_CHANGED;
-  tickers: string[];
-}

@@ -58,17 +58,6 @@ export interface BucketSummary {
   readonly uncategorizedCount: number;
 }
 
-// ── Domain Events ──
-
-/**
- * Event published when the TradingView watchlist is refreshed.
- * Carries the current TV ticker so subscribers can update alert feed etc.
- */
-export interface WatchlistChangedEvent {
-  readonly type: 'WATCHLIST_CHANGED';
-  readonly ticker: string;
-}
-
 // ── Canonical Category List ──
 
 /**

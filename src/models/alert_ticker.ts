@@ -42,20 +42,3 @@ export interface AlertTickerListResponse {
   alert_tickers: AlertTicker[];
   metadata: PaginationMetadata;
 }
-
-// ── Domain Events ──
-
-import { DomainEventType } from './domain_event';
-
-export interface AlertTickerLinkedEvent {
-  type: DomainEventType.ALERT_TICKER_LINKED;
-  ticker: string;
-  /** Investing.com symbol (string, not full AlertTicker record). */
-  alertTicker: string;
-}
-
-export interface AlertTickerDeletedEvent {
-  type: DomainEventType.ALERT_TICKER_DELETED;
-  /** Investing.com symbol that was deleted. */
-  alertTicker: string;
-}

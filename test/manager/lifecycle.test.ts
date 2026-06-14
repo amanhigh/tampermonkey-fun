@@ -135,10 +135,12 @@ describe('LifecycleManager', () => {
       // Should publish ALERT_TICKER_DELETED for each linked alert ticker
       expect(mockPublisher.publish).toHaveBeenCalledWith({
         type: DomainEventType.ALERT_TICKER_DELETED,
+        ticker: 'RELIANCE',
         alertTicker: 'INFY',
       });
       expect(mockPublisher.publish).toHaveBeenCalledWith({
         type: DomainEventType.ALERT_TICKER_DELETED,
+        ticker: 'RELIANCE',
         alertTicker: 'RELIANCE.NS',
       });
 

@@ -76,6 +76,7 @@ export class LifecycleManager implements ILifecycleManager {
     for (const at of alertTickers) {
       await this.publisher.publish({
         type: DomainEventType.ALERT_TICKER_DELETED,
+        ticker,
         alertTicker: at.symbol,
       });
     }

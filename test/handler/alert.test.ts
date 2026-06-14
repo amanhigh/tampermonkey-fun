@@ -310,7 +310,7 @@ describe('AlertHandler', () => {
       expect(mockEvent.preventDefault).toHaveBeenCalled();
       expect(mockEvent.stopPropagation).toHaveBeenCalled();
       expect((global as any).confirm).toHaveBeenCalledWith('Delink INFY.PA?');
-      expect(mockAlertTickerManager.deleteAlertTicker).toHaveBeenCalledWith('INFY.PA');
+      expect(mockAlertTickerManager.deleteAlertTicker).toHaveBeenCalledWith('', 'INFY.PA');
       expect(Notifier.success).toHaveBeenCalledWith('⏹ Delinked INFY.PA');
     });
 
@@ -334,7 +334,7 @@ describe('AlertHandler', () => {
       expect((global as any).confirm).toHaveBeenCalledWith(
         expect.stringContaining('PRIMARY')
       );
-      expect(mockAlertTickerManager.deleteAlertTicker).toHaveBeenCalledWith('INFY');
+      expect(mockAlertTickerManager.deleteAlertTicker).toHaveBeenCalledWith('', 'INFY');
     });
 
     it('does not delete when confirm is cancelled', async () => {

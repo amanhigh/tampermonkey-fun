@@ -197,13 +197,24 @@ export class Factory {
     watchlist: (): ITradingViewWatchlistManager =>
       Factory.getInstance(
         'watchlistManager',
-        () => new TradingViewWatchlistManager(Factory.manager.paint(), Factory.util.ui(), Factory.manager.dom(), Factory.manager.eventPublisher())
+        () =>
+          new TradingViewWatchlistManager(
+            Factory.manager.paint(),
+            Factory.util.ui(),
+            Factory.manager.dom(),
+            Factory.manager.eventPublisher()
+          )
       ),
 
     category: (): ICategoryManager =>
       Factory.getInstance(
         'categoryManager',
-        () => new CategoryManager(Factory.manager.ticker(), () => Factory.manager.journal(), Factory.manager.eventPublisher())
+        () =>
+          new CategoryManager(
+            Factory.manager.ticker(),
+            () => Factory.manager.journal(),
+            Factory.manager.eventPublisher()
+          )
       ),
 
     sequence: (): ISequenceManager =>

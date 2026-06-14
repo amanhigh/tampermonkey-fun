@@ -12,27 +12,64 @@ export enum DomainEventType {
   WATCHLIST_CHANGED = 'WATCHLIST_CHANGED',
 }
 
-/**
- * Central union of all domain event types.
- * Add new event interfaces to the union when expanding.
- */
-import type { AlertTickerLinkedEvent, AlertTickerDeletedEvent } from './alert_ticker';
-import type {
-  TickerMarkedRecentEvent,
-  TickerTrackingStartedEvent,
-  TickerTrackingStoppedEvent,
-  TickerCategoryChangedEvent,
-} from './ticker';
-import type { WatchlistChangedEvent } from './watch';
+// ── Reusable Payload Interfaces ──
 
-export type { AlertTickerLinkedEvent, AlertTickerDeletedEvent };
-export type {
-  TickerMarkedRecentEvent,
-  TickerTrackingStartedEvent,
-  TickerTrackingStoppedEvent,
-  TickerCategoryChangedEvent,
-};
-export type { WatchlistChangedEvent };
+/**
+ * Payload containing a single TV/backend ticker string.
+ */
+export interface TickerPayload {
+  ticker: string;
+}
+
+/**
+ * Payload containing multiple ticker strings (for batch events).
+ */
+export interface TickersPayload {
+  tickers: string[];
+}
+
+/**
+ * Payload containing a TV ticker and an Investing.com alert ticker symbol.
+ * Extends TickerPayload — wherever alertTicker appears, ticker is also available.
+ */
+export interface AlertTickerPayload extends TickerPayload {
+  /** Investing.com symbol (string, not full AlertTicker record). */
+  alertTicker: string;
+}
+
+// ── Event Base Interface ──
+
+export interface DomainEventBase<TType extends DomainEventType = DomainEventType> {
+  type: TType;
+}
+
+// ── Event Interface Aliases ──
+
+export interface AlertTickerLinkedEvent
+  extends DomainEventBase<DomainEventType.ALERT_TICKER_LINKED>,
+    AlertTickerPayload {}
+
+export interface AlertTickerDeletedEvent
+  extends DomainEventBase<DomainEventType.ALERT_TICKER_DELETED>,
+    AlertTickerPayload {}
+
+export interface TickerMarkedRecentEvent extends DomainEventBase<DomainEventType.TICKER_MARKED_RECENT>, TickerPayload {}
+
+export interface TickerTrackingStartedEvent
+  extends DomainEventBase<DomainEventType.TICKER_TRACKING_STARTED>,
+    TickerPayload {}
+
+export interface TickerTrackingStoppedEvent
+  extends DomainEventBase<DomainEventType.TICKER_TRACKING_STOPPED>,
+    TickerPayload {}
+
+export interface TickerCategoryChangedEvent
+  extends DomainEventBase<DomainEventType.TICKER_CATEGORY_CHANGED>,
+    TickersPayload {}
+
+export interface WatchlistChangedEvent extends DomainEventBase<DomainEventType.WATCHLIST_CHANGED>, TickerPayload {}
+
+// ── Event Union ──
 
 export type DomainEvent =
   | AlertTickerLinkedEvent
