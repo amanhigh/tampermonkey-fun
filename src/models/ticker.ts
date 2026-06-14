@@ -25,7 +25,7 @@ import { Constants } from './constant';
  */
 export class Ticker {
   ticker: string = '';
-  exchange: string = '';
+  private exchange: string = '';
   timeframes: TickerTimeframe[] = [];
   type: TickerType = 'EQUITY';
   state: TickerState = 'WATCHED';
@@ -41,9 +41,43 @@ export class Ticker {
     Object.assign(this, data);
   }
 
-  /** Exchange-qualified name: "EXCHANGE:ticker" or raw ticker when exchange absent. */
+  /**
+   * Returns the exchange name denormalized for TradingView symbol search.
+   *
+   * The backend stores exchanges in a canonical format (e.g. `NYSE_ARCA`),
+   * but TradingView's symbol search recognizes different prefixes (e.g. `AMEX`).
+   * This method applies the required mapping so {@link qualifiedName} produces
+   * a symbol that TradingView can resolve.
+   *
+   * Current mappings:
+   *   NYSE_ARCA → AMEX (TradingView uses the legacy AMEX prefix for NYSE ARCA stocks)
+   *
+   * @returns Denormalized exchange name, or the raw exchange when no mapping exists.
+   */
+  getExchange(): string {
+    const exchangeDenormalization: Record<string, string> = {
+      NYSE_ARCA: 'AMEX',
+    };
+    return exchangeDenormalization[this.exchange] ?? this.exchange;
+  }
+
+  /**
+   * Returns the raw exchange value as stored on the backend.
+   * Use this for backend API calls and business logic that need the canonical value.
+   *
+   * @returns Raw exchange name, or empty string when not set.
+   */
+  getRawExchange(): string {
+    return this.exchange;
+  }
+
+  /**
+   * Exchange-qualified name: "EXCHANGE:ticker" or raw ticker when exchange absent.
+   * Uses {@link getExchange} so TradingView-recognizable exchange prefixes are emitted.
+   */
   get qualifiedName(): string {
-    return this.exchange ? `${this.exchange}:${this.ticker}` : this.ticker;
+    const exchange = this.getExchange();
+    return exchange ? `${exchange}:${this.ticker}` : this.ticker;
   }
 }
 
