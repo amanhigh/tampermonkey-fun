@@ -113,7 +113,7 @@ describe('TickerClient', () => {
   });
 
   describe('getTicker', () => {
-    it('should GET encoded ticker path and unwrap envelope.data', async () => {
+    it('should GET encoded ticker path, hydrate Ticker, and expose qualifiedName', async () => {
       const apiEnvelope = {
         status: 'success',
         data: { ticker: 'MCX', exchange: 'NSE', timeframes: ['MN'], type: 'EQUITY', state: 'WATCHED', trend: 'UPTREND', last_opened_at: '2026-05-05T10:30:00Z', is_fno: false, created_at: '', updated_at: '' },
@@ -125,6 +125,7 @@ describe('TickerClient', () => {
 
       expect(mockMakeRequest).toHaveBeenCalledWith('/tickers/MCX');
       expect(result).toEqual(apiEnvelope.data);
+      expect(result.qualifiedName).toBe('NSE:MCX');
     });
 
     it('should encode composite ticker path values', async () => {
@@ -222,11 +223,9 @@ describe('TickerClient', () => {
   });
 
   describe('patchTickerLastOpened', () => {
-    it('should PATCH encoded ticker path with last_opened_at only', async () => {
-      const apiEnvelope = {
-        status: 'success',
-        data: { ticker: 'MCX', last_opened_at: '2026-05-05T11:00:00Z', updated_at: '2026-05-05T11:00:01Z' },
-      };
+    it('should PATCH encoded ticker path and hydrate Ticker with default fields', async () => {
+      const apiData = { ticker: 'MCX', last_opened_at: '2026-05-05T11:00:00Z', updated_at: '2026-05-05T11:00:01Z' };
+      const apiEnvelope = { status: 'success', data: apiData };
 
       mockMakeRequest.mockResolvedValue(apiEnvelope as any);
 
@@ -239,7 +238,14 @@ describe('TickerClient', () => {
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({ last_opened_at: '2026-05-05T11:00:00Z' }),
       });
-      expect(result).toEqual(apiEnvelope.data);
+      // Hydrated Ticker preserves API fields and fills defaults for missing ones
+      expect(result.ticker).toBe('MCX');
+      expect(result.last_opened_at).toBe('2026-05-05T11:00:00Z');
+      // Default fields from Ticker class
+      expect(result.exchange).toBe('');
+      expect(result.timeframes).toEqual([]);
+      expect(result.type).toBe('EQUITY');
+      expect(result.state).toBe('WATCHED');
     });
   });
 

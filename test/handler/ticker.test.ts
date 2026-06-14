@@ -83,6 +83,7 @@ describe('TickerHandler', () => {
       expect(mockDomManager.openTicker).toHaveBeenCalledWith('UNKNOWN');
       expect(Notifier.success).toHaveBeenCalledWith('Opened UNKNOWN');
     });
+
   });
 
   describe('processCommand', () => {

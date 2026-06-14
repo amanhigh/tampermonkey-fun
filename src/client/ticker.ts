@@ -85,7 +85,7 @@ export class TickerClient extends BaseClient implements ITickerClient {
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify(data),
       });
-      return response.data;
+      return new Ticker(response.data);
     } catch (error) {
       throw new Error(`Failed to create ticker: ${(error as Error).message}`);
     }
@@ -95,7 +95,7 @@ export class TickerClient extends BaseClient implements ITickerClient {
   async getTicker(ticker: string): Promise<Ticker> {
     try {
       const response = await this.makeRequest<KohanEnvelope<Ticker>>(`/tickers/${encodeURIComponent(ticker)}`);
-      return response.data;
+      return new Ticker(response.data);
     } catch (error) {
       throw new Error(`Failed to get ticker: ${(error as Error).message}`);
     }
@@ -113,7 +113,7 @@ export class TickerClient extends BaseClient implements ITickerClient {
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify(fullData),
       });
-      return response.data;
+      return new Ticker(response.data);
     } catch (error) {
       throw new Error(`Failed to update ticker: ${(error as Error).message}`);
     }
@@ -127,7 +127,7 @@ export class TickerClient extends BaseClient implements ITickerClient {
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify(data),
       });
-      return response.data;
+      return new Ticker(response.data);
     } catch (error) {
       throw new Error(`Failed to patch ticker last opened: ${(error as Error).message}`);
     }
@@ -157,7 +157,7 @@ export class TickerClient extends BaseClient implements ITickerClient {
         const query = this.buildTickerQuery({ ...params, limit, offset });
         const response = await this.makeRequest<KohanEnvelope<TickerListResponse>>(`/tickers?${query.toString()}`);
         const data = response.data;
-        all.push(...data.tickers);
+        all.push(...data.tickers.map((t) => new Ticker(t)));
         total = data.metadata.total;
         offset += limit;
       } while (offset < total);
