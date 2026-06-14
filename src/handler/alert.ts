@@ -351,7 +351,7 @@ export class AlertHandler implements IAlertHandler {
       ? `Delink PRIMARY ${symbol}? This ticker will be unmapped until you map a new primary.`
       : `Delink ${symbol}?`;
 
-    if (!confirm(confirmText)) {
+    if (!this.uiUtil.showConfirm(confirmText)) {
       return;
     }
 
