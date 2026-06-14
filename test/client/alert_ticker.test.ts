@@ -49,7 +49,7 @@ describe('AlertTickerClient', () => {
     it('should POST to encoded ticker/alert-tickers and unwrap', async () => {
       const apiEnvelope = {
         status: 'success',
-        data: { symbol: 'MCIX', pair_id: '941982', name: 'Multi Commodity Exchange of India', exchange: null, ticker: 'MCX', created_at: '2026-05-05T10:31:00Z', updated_at: '2026-05-05T10:31:00Z' },
+        data: { symbol: 'MCIX', pair_id: '941982', name: 'Multi Commodity Exchange of India', exchange: 'NSE', type: 'SECONDARY', ticker: 'MCX', created_at: '2026-05-05T10:31:00Z', updated_at: '2026-05-05T10:31:00Z' },
       };
 
       mockMakeRequest.mockResolvedValue(apiEnvelope as any);
@@ -58,13 +58,14 @@ describe('AlertTickerClient', () => {
         symbol: 'MCIX',
         pair_id: '941982',
         name: 'Multi Commodity Exchange of India',
-        exchange: null,
+        type: 'SECONDARY',
+        exchange: 'NSE',
       });
 
       expect(mockMakeRequest).toHaveBeenCalledWith('/tickers/MCX/alert-tickers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        data: JSON.stringify({ symbol: 'MCIX', pair_id: '941982', name: 'Multi Commodity Exchange of India', exchange: null }),
+        data: JSON.stringify({ symbol: 'MCIX', pair_id: '941982', name: 'Multi Commodity Exchange of India', type: 'SECONDARY', exchange: 'NSE' }),
       });
       expect(result).toEqual(apiEnvelope.data);
     });
@@ -74,7 +75,7 @@ describe('AlertTickerClient', () => {
     it('should GET encoded symbol path and unwrap envelope.data', async () => {
       const apiEnvelope = {
         status: 'success',
-        data: { symbol: 'MCIX', pair_id: '941982', name: 'Multi Commodity Exchange of India', exchange: null, ticker: 'MCX', created_at: '', updated_at: '' },
+        data: { symbol: 'MCIX', pair_id: '941982', name: 'Multi Commodity Exchange of India', exchange: 'NASDAQ', type: 'PRIMARY', ticker: 'MCX', created_at: '', updated_at: '' },
       };
 
       mockMakeRequest.mockResolvedValue(apiEnvelope as any);
@@ -106,7 +107,7 @@ describe('AlertTickerClient', () => {
         status: 'success',
         data: {
           alert_tickers: [
-            { symbol: 'MCIX', pair_id: '941982', name: 'MCX', exchange: null, ticker: 'MCX' },
+            { symbol: 'MCIX', pair_id: '941982', name: 'MCX', exchange: 'NSE', type: 'SECONDARY', ticker: 'MCX' },
           ],
           metadata: { total: 1, offset: 0, limit: 100 },
         },
@@ -125,7 +126,7 @@ describe('AlertTickerClient', () => {
           status: 'success',
           data: {
             alert_tickers: Array.from({ length: 100 }, (_, i) => ({
-              symbol: `S${i}`, pair_id: `${i}`, name: `Name${i}`, exchange: null,
+              symbol: `S${i}`, pair_id: `${i}`, name: `Name${i}`, exchange: 'NSE', type: 'SECONDARY',
             })),
             metadata: { total: 150, offset: 0, limit: 100 },
           },
@@ -134,7 +135,7 @@ describe('AlertTickerClient', () => {
           status: 'success',
           data: {
             alert_tickers: Array.from({ length: 50 }, (_, i) => ({
-              symbol: `S${100 + i}`, pair_id: `${100 + i}`, name: `Name${100 + i}`, exchange: null,
+              symbol: `S${100 + i}`, pair_id: `${100 + i}`, name: `Name${100 + i}`, exchange: 'NSE', type: 'SECONDARY',
             })),
             metadata: { total: 150, offset: 100, limit: 100 },
           },
@@ -166,7 +167,7 @@ describe('AlertTickerClient', () => {
       mockMakeRequest.mockRejectedValue(new Error('409 Conflict: Alert ticker already exists'));
 
       await expect(
-        alertTickerClient.createAlertTicker('MCX', { symbol: 'MCIX', pair_id: '941982', name: 'Test' })
+        alertTickerClient.createAlertTicker('MCX', { symbol: 'MCIX', pair_id: '941982', name: 'Test', exchange: 'NSE', type: 'SECONDARY' })
       ).rejects.toThrow('Failed to create Alert ticker: 409 Conflict: Alert ticker already exists');
     });
 

@@ -2,6 +2,9 @@ import { ITickerClient } from '../client/ticker';
 import { CreateTickerRequest, Ticker } from '../models/ticker';
 import { IPaintManager } from './paint';
 import { ICategoryManager } from './category';
+import { IAlertTickerManager } from './alert_ticker';
+import { IPublisher } from './event_bus';
+import { DomainEventType } from '../models/domain_event';
 
 /**
  * Request type for starting to track a new primary ticker.
@@ -42,7 +45,9 @@ export class LifecycleManager implements ILifecycleManager {
   constructor(
     private readonly tickerClient: ITickerClient,
     private readonly categoryManager: ICategoryManager,
-    private readonly paintManager: IPaintManager
+    private readonly paintManager: IPaintManager,
+    private readonly alertTickerManager: IAlertTickerManager,
+    private readonly publisher: IPublisher
   ) {}
 
   /** @inheritdoc */
@@ -50,13 +55,39 @@ export class LifecycleManager implements ILifecycleManager {
     this.categoryManager.evictTicker(data.ticker);
     const ticker = await this.tickerClient.createTicker(data);
     void this.paintManager.paintTickers([data.ticker]);
+
+    // Publish domain event for alert-feed consumers
+    await this.publisher.publish({
+      type: DomainEventType.TICKER_TRACKING_STARTED,
+      ticker: data.ticker,
+    });
+
     return ticker;
   }
 
   /** @inheritdoc */
   async stopTracking(ticker: string): Promise<void> {
     this.categoryManager.evictTicker(ticker);
+
+    // Capture linked alert tickers before backend delete cascades them
+    const alertTickers = await this.alertTickerManager.getAlertTickersForTicker(ticker);
+
+    // Publish ALERT_TICKER_DELETED for each linked alert ticker before cascade delete
+    for (const at of alertTickers) {
+      await this.publisher.publish({
+        type: DomainEventType.ALERT_TICKER_DELETED,
+        ticker,
+        alertTicker: at.symbol,
+      });
+    }
+
     await this.tickerClient.deleteTicker(ticker);
     void this.paintManager.paintTickers([ticker]);
+
+    // Keep TICKER_TRACKING_STOPPED for other consumers (alert-feed no longer reacts)
+    await this.publisher.publish({
+      type: DomainEventType.TICKER_TRACKING_STOPPED,
+      ticker,
+    });
   }
 }

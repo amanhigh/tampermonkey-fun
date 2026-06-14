@@ -1,0 +1,114 @@
+// ── Alert Bar Styles ──
+// One-line modern alert bar below the command input.
+
+@alert-bar-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+@alert-bar-bg: rgba(20, 20, 28, 0.88);
+@alert-bar-border: 1px solid rgba(255, 255, 255, 0.08);
+@alert-bar-radius: 6px;
+@alert-bar-padding: 4px 8px;
+@alert-bar-margin: 3px;
+@alert-bar-font-size: 11px;
+
+// Tint tokens
+@alert-green: #34d058;
+@alert-amber: #f0b429;
+@alert-orange: #f07529;
+@alert-red: #f85149;
+
+// ============================================
+// Alert Bar Container
+// ============================================
+#aman-alerts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    max-width: 255px;
+    background: @alert-bar-bg;
+    font-family: @alert-bar-font;
+    font-size: @alert-bar-font-size;
+    margin: @alert-bar-margin;
+    padding: @alert-bar-padding;
+    border: @alert-bar-border;
+    border-radius: @alert-bar-radius;
+    min-height: 24px;
+    box-sizing: border-box;
+
+    // Alert pill buttons
+    .aman-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        font-size: 11px;
+        padding: 3px 8px;
+        margin: 0;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        background: rgba(30, 30, 36, 0.92);
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease;
+
+        &:hover {
+            background: rgba(50, 50, 60, 0.95);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        &:active {
+            transform: scale(0.95);
+        }
+
+        // Low alert tint (below LTP)
+        &.aman-alert-low {
+            color: @alert-green;
+            border-color: fade(@alert-green, 40%);
+            background: fade(@alert-green, 8%);
+
+            &:hover {
+                background: fade(@alert-green, 15%);
+                border-color: fade(@alert-green, 60%);
+            }
+        }
+
+        // High alert tint (above LTP)
+        &.aman-alert-high {
+            color: @alert-amber;
+            border-color: fade(@alert-amber, 40%);
+            background: fade(@alert-amber, 8%);
+
+            &:hover {
+                background: fade(@alert-amber, 15%);
+                border-color: fade(@alert-amber, 60%);
+            }
+        }
+
+        // Pending alert tint (unsynced)
+        &.aman-alert-pending {
+            color: @alert-orange;
+            border-color: fade(@alert-orange, 40%);
+            background: fade(@alert-orange, 8%);
+
+            &:hover {
+                background: fade(@alert-orange, 15%);
+                border-color: fade(@alert-orange, 60%);
+            }
+        }
+    }
+}
+
+// ============================================
+// Empty / No-Pair States (inline labels inside alert bar)
+// ============================================
+.aman-alert-empty {
+    color: @alert-red;
+    font-family: @alert-bar-font;
+    font-size: 11px;
+    padding: 2px 4px;
+}
+
+.aman-alert-no-pair {
+    color: @alert-orange;
+    font-family: @alert-bar-font;
+    font-size: 11px;
+    padding: 2px 4px;
+}

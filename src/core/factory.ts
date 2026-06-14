@@ -8,6 +8,7 @@ import { TickerClient, ITickerClient } from '../client/ticker';
 import { AlertTickerClient, IAlertTickerClient } from '../client/alert_ticker';
 import { IPriceAlertClient, PriceAlertClient } from '../client/price_alert';
 import { IAuditClient, AuditClient } from '../client/audit';
+import { InstrumentClient, IInstrumentClient } from '../client/instrument';
 import { UIUtil, IUIUtil } from '../util/ui';
 import { ObserveUtil, IObserveUtil } from '../util/observer';
 import { SearchUtil, ISearchUtil } from '../util/search';
@@ -33,6 +34,7 @@ import { ITickerManager, TickerManager } from '../manager/ticker';
 import { ILifecycleManager, LifecycleManager } from '../manager/lifecycle';
 import { ITradingViewManager, TradingViewManager } from '../manager/tv';
 import { IAlertTickerManager, AlertTickerManager } from '../manager/alert_ticker';
+import { IInvestingManager, InvestingManager } from '../manager/investing';
 
 // Handler Imports
 import { AlertHandler } from '../handler/alert';
@@ -44,6 +46,7 @@ import { KeyConfig } from '../handler/key_config';
 import { IModifierKeyConfig, ModifierKeyConfig } from '../handler/modifier_config';
 
 import { ISequenceHandler, SequenceHandler } from '../handler/sequence';
+import { IDisplayHandler, DisplayHandler } from '../handler/display';
 import { IKiteHandler, KiteHandler } from '../handler/kite';
 import { IKiteManager, KiteManager } from '../manager/kite';
 import { IStyleManager, StyleManager } from '../manager/style';
@@ -61,6 +64,7 @@ import { ICommandInputHandler, CommandInputHandler } from '../handler/command';
 import { AlertFeedHandler, IAlertFeedHandler } from '../handler/alertfeed';
 import { IGlobalErrorHandler, GlobalErrorHandler } from '../handler/error';
 import { IAlertFeedManager, AlertFeedManager } from '../manager/alertfeed';
+import { IPublisher, ISubscriber, IEventBus, EventBus } from '../manager/event_bus';
 import { IImdbRepo, ImdbRepo } from '../repo/imdb';
 import { IImdbManager as IImdbManager, ImdbManager } from '../manager/imdb';
 import { IPanelHandler, PanelHandler } from '../handler/panel';
@@ -141,6 +145,7 @@ export class Factory {
     tickerAlert: (): IAlertTickerClient => Factory.getInstance('tickerAlertClient', () => new AlertTickerClient()),
     priceAlert: (): IPriceAlertClient => Factory.getInstance('priceAlertClient', () => new PriceAlertClient()),
     audit: (): IAuditClient => Factory.getInstance('auditClient', () => new AuditClient()),
+    instrument: (): IInstrumentClient => Factory.getInstance('instrumentClient', () => new InstrumentClient()),
   };
 
   /**
@@ -192,13 +197,24 @@ export class Factory {
     watchlist: (): ITradingViewWatchlistManager =>
       Factory.getInstance(
         'watchlistManager',
-        () => new TradingViewWatchlistManager(Factory.manager.paint(), Factory.util.ui())
+        () =>
+          new TradingViewWatchlistManager(
+            Factory.manager.paint(),
+            Factory.util.ui(),
+            Factory.manager.dom(),
+            Factory.manager.eventPublisher()
+          )
       ),
 
     category: (): ICategoryManager =>
       Factory.getInstance(
         'categoryManager',
-        () => new CategoryManager(Factory.manager.ticker(), () => Factory.manager.journal())
+        () =>
+          new CategoryManager(
+            Factory.manager.ticker(),
+            () => Factory.manager.journal(),
+            Factory.manager.eventPublisher()
+          )
       ),
 
     sequence: (): ISequenceManager =>
@@ -225,20 +241,41 @@ export class Factory {
     lifecycle: (): ILifecycleManager =>
       Factory.getInstance(
         'lifecycleManager',
-        () => new LifecycleManager(Factory.client.ticker(), Factory.manager.category(), Factory.manager.paint())
+        () =>
+          new LifecycleManager(
+            Factory.client.ticker(),
+            Factory.manager.category(),
+            Factory.manager.paint(),
+            Factory.manager.alertTicker(),
+            Factory.manager.eventPublisher()
+          )
       ),
 
     tv: (): ITradingViewManager =>
       Factory.getInstance('tvManager', () => new TradingViewManager(Factory.util.wait(), Factory.client.os())),
 
     alertTicker: (): IAlertTickerManager =>
-      Factory.getInstance('alertTickerManager', () => new AlertTickerManager(Factory.client.tickerAlert())),
+      Factory.getInstance(
+        'alertTickerManager',
+        () => new AlertTickerManager(Factory.client.tickerAlert(), Factory.manager.eventPublisher())
+      ),
+
+    investing: (): IInvestingManager =>
+      Factory.getInstance('investingManager', () => new InvestingManager(Factory.client.instrument())),
 
     style: (): IStyleManager =>
       Factory.getInstance('styleManager', () => new StyleManager(Factory.util.wait(), Factory.manager.timeFrame())),
 
     recent: (): IRecentManager =>
-      Factory.getInstance('recentManager', () => new RecentManager(Factory.client.ticker())),
+      Factory.getInstance(
+        'recentManager',
+        () => new RecentManager(Factory.client.ticker(), Factory.manager.eventPublisher())
+      ),
+
+    eventBus: (): IEventBus => Factory.getInstance('eventBus', () => new EventBus()),
+    eventPublisher: (): IPublisher => Factory.manager.eventBus(),
+    eventSubscriber: (): ISubscriber => Factory.manager.eventBus(),
+
     journal: (): IJournalManager =>
       Factory.getInstance(
         'journalManager',
@@ -253,7 +290,7 @@ export class Factory {
     alertFeed: (): IAlertFeedManager =>
       Factory.getInstance(
         'alertFeedManager',
-        () => new AlertFeedManager(Factory.manager.alertTicker(), Factory.manager.category(), Factory.manager.recent())
+        () => new AlertFeedManager(Factory.manager.category(), Factory.manager.recent())
       ),
   };
 
@@ -365,7 +402,7 @@ export class Factory {
             Factory.handler.alertSummary(),
             Factory.handler.ticker(),
             Factory.handler.alertTicker(),
-            Factory.manager.alertFeed()
+            Factory.handler.display()
           )
       ),
     alertSummary: (): IAlertSummaryHandler =>
@@ -396,7 +433,9 @@ export class Factory {
             Factory.handler.hotkey(),
             Factory.handler.alert(),
             Factory.handler.tickerChange(),
-            Factory.manager.paint()
+            Factory.manager.paint(),
+            Factory.handler.alertFeed(),
+            Factory.manager.eventSubscriber()
           )
       ),
     hotkey: (): IHotkeyHandler =>
@@ -456,11 +495,9 @@ export class Factory {
             Factory.handler.alert(),
             Factory.manager.paint(),
             Factory.manager.recent(),
-            Factory.handler.sequence(),
+            Factory.handler.display(),
             Factory.handler.kite(),
-            Factory.util.sync(),
-            Factory.manager.category(),
-            Factory.manager.alertFeed()
+            Factory.util.sync()
           )
       ),
 
@@ -491,8 +528,7 @@ export class Factory {
             Factory.manager.paint(),
             Factory.util.sync(),
             Factory.manager.category(),
-            Factory.manager.dom(),
-            Factory.manager.alertFeed()
+            Factory.manager.dom()
           )
       ),
     flag: (): IFlagHandler =>
@@ -507,9 +543,14 @@ export class Factory {
           new SequenceHandler(
             Factory.manager.sequence(),
             Factory.manager.dom(),
-            Factory.manager.alertTicker(),
-            Factory.manager.lifecycle()
+            Factory.manager.lifecycle(),
+            Factory.handler.display()
           )
+      ),
+    display: (): IDisplayHandler =>
+      Factory.getInstance(
+        'displayHandler',
+        () => new DisplayHandler(Factory.manager.sequence(), Factory.manager.dom(), Factory.manager.alertTicker())
       ),
     journal: (): IJournalHandler =>
       Factory.getInstance(
@@ -542,7 +583,9 @@ export class Factory {
             Factory.util.ui(),
             Factory.util.sync(),
             Factory.manager.alert(),
-            Factory.manager.alertFeed()
+            Factory.manager.alertFeed(),
+            Factory.manager.alertTicker(),
+            Factory.manager.investing()
           )
       ),
     panel: (): IPanelHandler =>

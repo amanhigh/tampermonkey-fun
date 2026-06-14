@@ -37,9 +37,7 @@ describe('AlertTickerHandler', () => {
 
     mockAlertTickerManager = {
       linkAlertTicker: jest.fn().mockResolvedValue({} as any),
-      getAlertTicker: jest.fn(),
       fetchAlertTicker: jest.fn(),
-      getAllAlertTickers: jest.fn(),
     } as any;
 
     mockSmartPrompt = {
@@ -72,7 +70,7 @@ describe('AlertTickerHandler', () => {
       expect(options[0]).toContain('Infosys Ltd');
     });
 
-    test('creates backend alert ticker via manager for selected pair', async () => {
+    test('passes selected pair to linkAlertTicker without type', async () => {
       mockInvestingClient.fetchSymbolData.mockResolvedValue(mockPairs);
       mockSmartPrompt.showModal.mockResolvedValue({
         type: 'reason',

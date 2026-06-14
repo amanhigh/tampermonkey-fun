@@ -3,7 +3,7 @@ import { SearchResponse, SearchResultItem } from '../models/investing';
 import { BaseClient, IBaseClient } from './base';
 
 /**
- * Client for interacting with Investing.com API
+ * Interface for interacting with Investing.com API
  */
 export interface IInvestingClient extends IBaseClient {
   /**

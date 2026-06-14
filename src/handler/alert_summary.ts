@@ -5,6 +5,16 @@ import { ITradingViewManager } from '../manager/tv';
 import { IUIUtil } from '../util/ui';
 import { Notifier } from '../util/notify';
 
+// ── Alert tint CSS classes (defined in _alert_bar.less) ──
+
+const ALERT_CLASS = {
+  LOW: 'aman-alert-low',
+  HIGH: 'aman-alert-high',
+  PENDING: 'aman-alert-pending',
+  EMPTY: 'aman-alert-empty',
+  NO_PAIR: 'aman-alert-no-pair',
+} as const;
+
 /**
  * Interface for alert summary display operations
  */
@@ -52,14 +62,29 @@ export class AlertSummaryHandler implements IAlertSummaryHandler {
   }
 
   /**
-   * Creates delete button for alert
+   * Creates delete button for alert with tint class
    * @private
    * @param alert Alert to create button for
    * @returns Button element
    */
   private createAlertButton(alert: Alert): JQuery {
     const displayText = this.formatAlertDisplay(alert);
-    return this.uiUtil.buildButton('', displayText);
+    const tintClass = this.getTintClass(alert);
+    return this.uiUtil.buildButton('', displayText).addClass(tintClass);
+  }
+
+  /**
+   * Determines the tint CSS class based on alert state and LTP.
+   * @private
+   * @param alert Alert to evaluate
+   * @returns CSS class name
+   */
+  private getTintClass(alert: Alert): string {
+    if (alert.id === '') {
+      return ALERT_CLASS.PENDING;
+    }
+    const ltp = this.tvManager.getLastTradedPrice();
+    return alert.price < ltp ? ALERT_CLASS.LOW : ALERT_CLASS.HIGH;
   }
 
   /**
@@ -82,7 +107,7 @@ export class AlertSummaryHandler implements IAlertSummaryHandler {
   }
 
   /**
-   * Formats alert display text with color based on price comparison
+   * Formats alert display text with emoji prefix and color based on price comparison
    * @private
    * @param alert Alert to format
    * @returns Formatted HTML string
@@ -92,26 +117,30 @@ export class AlertSummaryHandler implements IAlertSummaryHandler {
     const priceString = alert.price.toString();
 
     // Pending alerts are orange, others colored based on price comparison
-    const color = alert.id === '' ? 'orange' : alert.price < ltp ? 'seagreen' : 'orangered';
-
-    return this.uiUtil.colorText(priceString, color);
+    if (alert.id === '') {
+      return this.uiUtil.colorText(`🟠 ${priceString}`, 'orange');
+    }
+    if (alert.price < ltp) {
+      return this.uiUtil.colorText(`🟢 ${priceString}`, 'seagreen');
+    }
+    return this.uiUtil.colorText(`🔴 ${priceString}`, 'red');
   }
 
   /**
-   * Shows empty state message in container
+   * Shows empty state — one-line "No Alerts"
    * @private
    * @param $container Container element
    */
   private showEmptyState($container: JQuery): void {
-    this.uiUtil.buildLabel('No Alerts', 'red').appendTo($container);
+    this.uiUtil.buildLabel('🔴 No Alerts', 'red').addClass(ALERT_CLASS.EMPTY).appendTo($container);
   }
 
   /**
-   * Shows no pair info state in container
+   * Shows no pair info state — one-line "No Pair"
    * @private
    * @param $container Container element
    */
   private showNoPairState($container: JQuery): void {
-    this.uiUtil.buildLabel('NO PAIR', 'orange').appendTo($container);
+    this.uiUtil.buildLabel('⚠️ No Pair', 'orange').addClass(ALERT_CLASS.NO_PAIR).appendTo($container);
   }
 }

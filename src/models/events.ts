@@ -19,16 +19,23 @@ export enum AlertClickAction {
 
 export class AlertClicked extends BaseEvent {
   constructor(
-    readonly investingTicker: string,
+    readonly alertTicker: string,
     readonly action: AlertClickAction,
+    readonly pairId?: string,
+    readonly alertName?: string,
     readonly timestamp: number = Date.now()
   ) {
     super();
   }
 
   public static fromString(data: string): AlertClicked {
-    const parsed = JSON.parse(data) as { ticker: string; action: string };
-    return new AlertClicked(parsed.ticker, parsed.action as AlertClickAction);
+    const parsed = JSON.parse(data) as {
+      alertTicker: string;
+      action: string;
+      pairId?: string;
+      alertName?: string;
+    };
+    return new AlertClicked(parsed.alertTicker, parsed.action as AlertClickAction, parsed.pairId, parsed.alertName);
   }
 }
 

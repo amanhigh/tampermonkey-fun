@@ -4,6 +4,8 @@ import { IJournalManager } from '../../src/manager/journal';
 import { Ticker } from '../../src/models/ticker';
 import { WatchCategoryId } from '../../src/models/watch';
 import { FlagCategoryId } from '../../src/models/flag';
+import { IPublisher } from '../../src/manager/event_bus';
+import { DomainEventType } from '../../src/models/domain_event';
 
 // Mock Notifier
 jest.mock('../../src/util/notify', () => ({
@@ -19,6 +21,7 @@ describe('CategoryManager', () => {
   let categoryManager: ICategoryManager;
   let mockTickerManager: jest.Mocked<ITickerManager>;
   let mockJournalManager: jest.Mocked<IJournalManager>;
+  let mockPublisher: jest.Mocked<IPublisher>;
 
   // ── Helpers ──
 
@@ -59,8 +62,12 @@ describe('CategoryManager', () => {
       publishJournalOpenEvent: jest.fn(),
     } as unknown as jest.Mocked<IJournalManager>;
 
+    mockPublisher = {
+      publish: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<IPublisher>;
+
     // Lazy getter to break factory cycle
-    categoryManager = new CategoryManager(mockTickerManager, () => mockJournalManager);
+    categoryManager = new CategoryManager(mockTickerManager, () => mockJournalManager, mockPublisher);
   });
 
   // ── Constructor ──
@@ -424,6 +431,30 @@ describe('CategoryManager', () => {
       expect(result.watch?.id).toBe(WatchCategoryId.READY);
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
     });
+
+    it('should publish TICKER_CATEGORY_CHANGED for supported watch update', async () => {
+      mockTickerManager.updateTicker.mockResolvedValue(undefined as any);
+
+      await categoryManager.recordWatchCategory(WatchCategoryId.READY, ['TICKER_A', 'TICKER_B']);
+
+      expect(mockPublisher.publish).toHaveBeenCalledTimes(1);
+      expect(mockPublisher.publish).toHaveBeenCalledWith({
+        type: DomainEventType.TICKER_CATEGORY_CHANGED,
+        tickers: ['TICKER_A', 'TICKER_B'],
+      });
+    });
+
+    it('should NOT publish event for unsupported category', async () => {
+      await categoryManager.recordWatchCategory(WatchCategoryId.COMPOSITE, ['TEST']);
+
+      expect(mockPublisher.publish).not.toHaveBeenCalled();
+    });
+
+    it('should NOT publish event for empty ticker array', async () => {
+      await categoryManager.recordWatchCategory(WatchCategoryId.READY, []);
+
+      expect(mockPublisher.publish).not.toHaveBeenCalled();
+    });
   });
 
   // ── recordFlagCategory ──
@@ -545,6 +576,18 @@ describe('CategoryManager', () => {
       // Watch: EQUITY with DL timeframes → undefined (DEFAULT_DAILY)
       expect(result.watch).toBeUndefined();
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
+    });
+
+    it('should publish TICKER_CATEGORY_CHANGED after flag update', async () => {
+      mockTickerManager.updateTicker.mockResolvedValue(undefined as any);
+
+      await categoryManager.recordFlagCategory(FlagCategoryId.UPTREND, ['FLAG_A', 'FLAG_B']);
+
+      expect(mockPublisher.publish).toHaveBeenCalledTimes(1);
+      expect(mockPublisher.publish).toHaveBeenCalledWith({
+        type: DomainEventType.TICKER_CATEGORY_CHANGED,
+        tickers: ['FLAG_A', 'FLAG_B'],
+      });
     });
 
     it('should handle empty ticker array', async () => {

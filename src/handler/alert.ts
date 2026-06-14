@@ -17,7 +17,8 @@ import { IAlertSummaryHandler } from './alert_summary';
 import { ITickerHandler } from './ticker';
 import { IAlertTickerHandler } from './alert_ticker';
 import { IAuditHandler } from './audit';
-import { IAlertFeedManager } from '../manager/alertfeed';
+import { IDisplayHandler } from './display';
+
 import { PairInfo } from '../models/alert';
 
 /**
@@ -94,6 +95,12 @@ export interface IAlertHandler {
    * Ensures UI is refreshed after operation
    */
   handleResetAlerts(): Promise<void>;
+
+  /**
+   * Registers a delegated right-click handler on display-area alert ticker rows
+   * for delink/delete of individual alert ticker mappings.
+   */
+  registerAlertTickerDelinkHandler(): void;
 }
 
 /**
@@ -113,7 +120,7 @@ export class AlertHandler implements IAlertHandler {
     private readonly alertSummaryHandler: IAlertSummaryHandler,
     private readonly tickerHandler: ITickerHandler,
     private readonly alertTickerHandler: IAlertTickerHandler,
-    private readonly alertFeedManager: IAlertFeedManager
+    private readonly displayHandler: IDisplayHandler
   ) {}
 
   /** @inheritdoc */
@@ -180,6 +187,8 @@ export class AlertHandler implements IAlertHandler {
 
   /** @inheritdoc */
   public refreshAlerts(): void {
+    // FIXME: refreshAlerts should also call displayHandler.display() to keep the
+    // display card alert count in sync; several callers compensate manually.
     this.syncUtil.waitOn('alert-refresh-local', 10, () => {
       void (async () => {
         try {
@@ -242,6 +251,7 @@ export class AlertHandler implements IAlertHandler {
     e.preventDefault();
     void this.alertTickerHandler.linkInvestingTicker(this.domManager.getTicker()).then(() => {
       this.refreshAlerts();
+      void this.displayHandler.display();
     });
   }
 
@@ -249,26 +259,58 @@ export class AlertHandler implements IAlertHandler {
   public handleAlertClick(event: AlertClicked): void {
     switch (event.action) {
       case AlertClickAction.MAP:
-        // Map TV Ticker to Investing Ticker
-        const tvTickerNow = this.domManager.getTicker();
-        void this.alertFeedManager.createAlertFeedEvent(tvTickerNow);
-        void this.alertTickerHandler.linkInvestingTicker(event.investingTicker).then(() => {
-          this.refreshAlerts();
-        });
-        Notifier.success(`Mapped ${this.domManager.getTicker()} to ${event.investingTicker}`);
+        void this.handleMapAction(event);
         break;
       case AlertClickAction.OPEN:
-        void this.alertTickerManager.fetchAlertTicker(event.investingTicker).then((alertTicker) => {
-          if (!alertTicker) {
-            Notifier.warn(`Unmapped: ${event.investingTicker}`);
-            void this.tickerHandler.openTicker(event.investingTicker);
-          } else {
-            void this.tickerHandler.openTicker(alertTicker.ticker);
-          }
-        });
+        void this.handleOpenAction(event);
         break;
       default:
         throw new Error(`Unknown alert action: ${event.action}`);
+    }
+  }
+
+  /**
+   * Handles MAP action: links investing ticker to current TV ticker using pairId.
+   * Skips duplicate linking when primary symbol already matches.
+   */
+  private async handleMapAction(event: AlertClicked): Promise<void> {
+    if (!event.pairId) {
+      Notifier.warn(`Cannot map ${event.alertTicker}: no pairId in event`);
+      return;
+    }
+
+    const ticker = this.domManager.getTicker();
+    const exchange = this.domManager.getCurrentExchange();
+
+    const alertTickers = await this.alertTickerManager.getAlertTickersForTicker(ticker);
+    const alreadyLinked = alertTickers.some((at) => at.symbol === event.alertTicker);
+    if (alreadyLinked) {
+      Notifier.info(`Already mapped: ${event.alertTicker} → ${ticker}`);
+      return;
+    }
+
+    await this.alertTickerManager.linkAlertTicker(ticker, {
+      symbol: event.alertTicker,
+      pair_id: event.pairId,
+      name: event.alertName ?? event.alertTicker,
+      exchange,
+    });
+    Notifier.success(`Mapped ${ticker} to ${event.alertTicker}`);
+    this.refreshAlerts();
+    await this.displayHandler.display();
+  }
+
+  /**
+   * Handles OPEN action: navigates to the appropriate ticker.
+   * Uses mapped TV ticker if available, otherwise opens investing ticker raw.
+   */
+  private async handleOpenAction(event: AlertClicked): Promise<void> {
+    const alertTicker = await this.alertTickerManager.fetchAlertTicker(event.alertTicker);
+    if (!alertTicker) {
+      Notifier.warn(`Unmapped: ${event.alertTicker}`);
+      void this.tickerHandler.openTicker(event.alertTicker);
+    } else {
+      void this.tickerHandler.openTicker(alertTicker.ticker);
     }
   }
 
@@ -277,5 +319,49 @@ export class AlertHandler implements IAlertHandler {
     await this.alertManager.deleteAllAlerts();
     this.refreshAlerts();
     Notifier.red('❌ 🚀 All alerts deleted');
+  }
+
+  // ── Alert Ticker Delink ──
+
+  /** @inheritdoc */
+  public registerAlertTickerDelinkHandler(): void {
+    const $card = $(`#${Constants.UI.IDS.DISPLAY.CARD}`);
+    $card.on('contextmenu', `.${Constants.UI.IDS.DISPLAY.ALERT_TICKER_ROW}`, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      void this.handleAlertTickerDelink($(e.currentTarget));
+    });
+  }
+
+  /**
+   * Handles right-click delink on an alert ticker row.
+   * Confirms deletion, then refreshes display on success.
+   * @param $row - The right-clicked alert ticker row element
+   */
+  private async handleAlertTickerDelink($row: JQuery): Promise<void> {
+    const symbol = $row.attr(Constants.UI.IDS.DISPLAY.ATTR_ALERT_TICKER_SYMBOL) || '';
+    const type = $row.attr(Constants.UI.IDS.DISPLAY.ATTR_ALERT_TICKER_TYPE) || '';
+
+    if (!symbol) {
+      return;
+    }
+
+    const isPrimary = type === 'PRIMARY';
+    const confirmText = isPrimary
+      ? `Delink PRIMARY ${symbol}? This ticker will be unmapped until you map a new primary.`
+      : `Delink ${symbol}?`;
+
+    if (!this.uiUtil.showConfirm(confirmText)) {
+      return;
+    }
+
+    try {
+      await this.alertTickerManager.deleteAlertTicker(symbol);
+      Notifier.success(`⏹ Delinked ${symbol}`);
+      this.refreshAlerts();
+      await this.displayHandler.display();
+    } catch (error) {
+      Notifier.warn(`Failed to delink ${symbol}: ${(error as Error).message}`);
+    }
   }
 }

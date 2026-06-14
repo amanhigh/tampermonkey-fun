@@ -6,8 +6,13 @@ import { AlertClickAction } from '../models/events';
 import { IAlertManager } from '../manager/alert';
 import { IAlertFeedManager } from '../manager/alertfeed';
 import { AlertFeedEvent, FeedInfo, FeedState } from '../models/alertfeed';
+import { IAlertTickerManager } from '../manager/alert_ticker';
+import { IInvestingManager } from '../manager/investing';
+import { AlertTicker } from '../models/alert_ticker';
+import { ISubscriber, IDomainEventConsumer } from '../manager/event_bus';
+import { DomainEventType } from '../models/domain_event';
 
-export interface IAlertFeedHandler {
+export interface IAlertFeedHandler extends IDomainEventConsumer {
   /**
    * Initializes alert feed UI and sets up event listeners
    */
@@ -29,7 +34,9 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     private readonly uiUtil: IUIUtil,
     private readonly syncUtil: ISyncUtil,
     private readonly alertManager: IAlertManager,
-    private readonly alertFeedManager: IAlertFeedManager
+    private readonly alertFeedManager: IAlertFeedManager,
+    private readonly alertTickerManager: IAlertTickerManager,
+    private readonly investingManager: IInvestingManager
   ) {}
 
   public initialize(): void {
@@ -68,6 +75,54 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     }, 2000);
   }
 
+  /** @inheritdoc */
+  public registerEvents(subscriber: ISubscriber): void {
+    // ALERT_TICKER_LINKED carries ticker + alertTicker symbol string
+    subscriber.subscribe(DomainEventType.ALERT_TICKER_LINKED, async (event) => {
+      await this.alertFeedManager.createAlertFeedEvent(event.alertTicker, event.ticker);
+    });
+
+    // ALERT_TICKER_DELETED — paint deleted symbol as UNMAPPED (no ticker = unmapped)
+    subscriber.subscribe(DomainEventType.ALERT_TICKER_DELETED, async (event) => {
+      await this.alertFeedManager.createAlertFeedEvent(event.alertTicker);
+    });
+
+    // TICKER_MARKED_RECENT, TICKER_TRACKING_STARTED, WATCHLIST_CHANGED
+    // all carry a single ticker string and rebind all linked alert tickers
+    subscriber.subscribeMany(
+      [
+        DomainEventType.TICKER_MARKED_RECENT,
+        DomainEventType.TICKER_TRACKING_STARTED,
+        DomainEventType.WATCHLIST_CHANGED,
+      ],
+      async (event) => {
+        await this.createAlertFeedEventsForTicker(event.ticker);
+      }
+    );
+
+    // TICKER_CATEGORY_CHANGED — repaint all linked alert tickers for affected tickers
+    subscriber.subscribe(DomainEventType.TICKER_CATEGORY_CHANGED, async (event) => {
+      for (const ticker of event.tickers) {
+        await this.createAlertFeedEventsForTicker(ticker);
+      }
+    });
+  }
+
+  /**
+   * Resolve all alert tickers linked to a TV ticker and create alert feed events for each.
+   * Warns when no alert tickers are found.
+   */
+  private async createAlertFeedEventsForTicker(ticker: string): Promise<void> {
+    const alertTickers = await this.alertTickerManager.getAlertTickersForTicker(ticker);
+    if (alertTickers.length === 0) {
+      Notifier.warn(`No alert tickers found for ${ticker} — skipping feed events`);
+      return;
+    }
+    for (const alertTicker of alertTickers) {
+      await this.alertFeedManager.createAlertFeedEvent(alertTicker.symbol, alertTicker.ticker);
+    }
+  }
+
   public handleHookButton(): void {
     // Setup alert click handlers
     this.setupAlertClickHandler();
@@ -77,33 +132,152 @@ export class AlertFeedHandler implements IAlertFeedHandler {
 
   private setupAlertClickHandler(): void {
     $(Constants.DOM.ALERT_FEED.ALERT_TITLE).click((e) => {
-      this.handleAlertClick(e);
+      void this.handleAlertClick(e);
     });
   }
 
-  private handleAlertClick(event: JQuery.ClickEvent): void {
+  private async handleAlertClick(event: JQuery.ClickEvent): Promise<void> {
     event.preventDefault();
 
     const $element = $(event.currentTarget);
-    const alertName = $element.text();
-    const investingTicker = this.extractTickerFromAlertName(alertName);
+    const { name, ticker, href } = this.extractAlertInfo($element);
 
     const action = event.ctrlKey ? AlertClickAction.MAP : AlertClickAction.OPEN;
-    // HACK: Generic Event to Open/Map Ticker, can be extended in future for more actions
-    void this.alertManager.createAlertClickEvent(investingTicker, action);
+
+    // Resolve alert identity; only publish event if trusted identity is found
+    const identity = await this.resolveAlertIdentity(ticker, name, href);
+    if (identity) {
+      void this.alertManager.createAlertClickEvent(identity.alertTicker, action, identity.pairId, identity.alertName);
+    } else {
+      Notifier.warn(`Cannot resolve alert identity for ${name}`);
+    }
+  }
+
+  /**
+   * Resolve alert identity (backend-safe symbol, pair id, and name) for a given alert.
+   * Returns null when no trusted identity can be resolved.
+   *
+   * Priority:
+   *   1. Existing AlertTicker by extracted symbol
+   *   2. InvestingManager.getInstrument() via name+href
+   */
+  private async resolveAlertIdentity(
+    ticker: string,
+    name: string,
+    href?: string
+  ): Promise<{ alertTicker: string; pairId: string; alertName: string } | null> {
+    // Priority 1: existing AlertTicker record
+    const alertTicker = await this.alertTickerManager.fetchAlertTicker(ticker);
+    if (alertTicker) {
+      return { alertTicker: alertTicker.symbol, pairId: alertTicker.pair_id, alertName: alertTicker.name };
+    }
+
+    // Priority 2: resolve via instrument API using name and href
+    if (href) {
+      const instrument = await this.investingManager.getInstrument(name, href);
+      if (instrument) {
+        return {
+          alertTicker: instrument.symbol,
+          pairId: instrument.id.toString(),
+          alertName: instrument.description,
+        };
+      }
+    }
+
+    // Neither backend nor instrument could resolve — return null
+    return null;
+  }
+
+  /**
+   * Check whether the given element is inside a quote-type alert wrapper.
+   * Economic-calendar (ec) and other non-quote rows are excluded.
+   */
+  private isQuoteAlert($element: JQuery): boolean {
+    const $wrapper = $element.closest(Constants.DOM.ALERT_FEED.WRAPPER);
+    return $wrapper.attr('data-type') === 'quotes';
+  }
+
+  /**
+   * Normalize a string for fuzzy matching: lowercase, remove non-alphanumeric chars.
+   */
+  private normalizeAlertText(value: string): string {
+    return value.toLowerCase().replace(/[^a-z0-9]+/g, '');
+  }
+
+  /**
+   * Resolve a feed row to an AlertTicker record using only mapped backend data.
+   * Order:
+   *   1. Exact symbol match (from parentheses extraction or full title)
+   *   2. Exact normalized name match
+   *   3. Unique normalized prefix match
+   *   4. Unique normalized contains match
+   *   5. null (unmapped)
+   */
+  private resolvePaintAlertTicker(
+    feedTitle: string,
+    extractedTicker: string,
+    alertTickers: AlertTicker[]
+  ): AlertTicker | null {
+    const feedNorm = this.normalizeAlertText(feedTitle);
+    const extractedNorm = this.normalizeAlertText(extractedTicker);
+
+    // 1. Exact symbol match
+    const bySymbol = alertTickers.filter((at) => this.normalizeAlertText(at.symbol) === extractedNorm);
+    if (bySymbol.length === 1) {
+      return bySymbol[0];
+    }
+
+    // 2. Exact normalized name match
+    const byName = alertTickers.filter((at) => this.normalizeAlertText(at.name) === feedNorm);
+    if (byName.length === 1) {
+      return byName[0];
+    }
+
+    // 3. Unique normalized prefix match
+    const byPrefix = alertTickers.filter((at) => {
+      const nameNorm = this.normalizeAlertText(at.name);
+      return nameNorm.startsWith(feedNorm) || feedNorm.startsWith(nameNorm);
+    });
+    if (byPrefix.length === 1) {
+      return byPrefix[0];
+    }
+
+    // 4. Unique normalized contains match (only if exactly one candidate)
+    const byContains = alertTickers.filter((at) => {
+      const nameNorm = this.normalizeAlertText(at.name);
+      return nameNorm.includes(feedNorm) || feedNorm.includes(nameNorm);
+    });
+    if (byContains.length === 1) {
+      return byContains[0];
+    }
+
+    return null;
   }
 
   public async paintAlertFeed(): Promise<void> {
     Notifier.yellow('🎨 Painting alert feed');
-    const elements: Array<{ $el: JQuery; ticker: string }> = [];
+
+    // Collect quote-only elements upfront
+    const elements: Array<{ $el: JQuery; name: string; ticker: string }> = [];
     $(Constants.DOM.ALERT_FEED.ALERT_DATA).each((_, element) => {
       const $element = $(element);
-      const alertName = $element.text();
-      const investingTicker = this.extractTickerFromAlertName(alertName);
-      elements.push({ $el: $element, ticker: investingTicker });
+      if (!this.isQuoteAlert($element)) {
+        return; // Skip non-quote rows (ec, etc.)
+      }
+      const { name, ticker } = this.extractAlertInfo($element);
+      elements.push({ $el: $element, name, ticker });
     });
 
-    const feedInfos = await Promise.all(elements.map(async (e) => this.alertFeedManager.getAlertFeedState(e.ticker)));
+    // Load all mapped alert tickers once (no per-row search)
+    const allAlertTickers = await this.alertTickerManager.getAlertTickers();
+
+    // Resolve each element's state
+    const feedInfos = await Promise.all(
+      elements.map(async (e) => {
+        const resolved = this.resolvePaintAlertTicker(e.name, e.ticker, allAlertTickers);
+        return this.alertFeedManager.getAlertFeedState(resolved?.ticker ?? null);
+      })
+    );
 
     elements.forEach(({ $el, ticker }, i) => {
       const feedInfo = feedInfos[i];
@@ -129,8 +303,7 @@ export class AlertFeedHandler implements IAlertFeedHandler {
   private updateTicker(investingTicker: string, feedInfo: FeedInfo): void {
     $(Constants.DOM.ALERT_FEED.ALERT_DATA).each((_, element) => {
       const $element = $(element);
-      const alertName = $element.text();
-      const ticker = this.extractTickerFromAlertName(alertName);
+      const { ticker } = this.extractAlertInfo($element);
 
       if (ticker === investingTicker) {
         $element.css('color', feedInfo.color);
@@ -138,7 +311,15 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     });
   }
 
-  private extractTickerFromAlertName(alertName: string): string {
+  private extractAlertInfo($element: JQuery): { name: string; ticker: string; href: string | undefined } {
+    const name = $element.text();
+    const ticker = this.extractTicker(name);
+    const $parentAnchor = $element.closest('a');
+    const href = $parentAnchor.attr('href') ?? undefined;
+    return { name, ticker, href };
+  }
+
+  private extractTicker(alertName: string): string {
     const match = alertName.match(/\(([^)]+)\)/);
     return match ? match[1] : alertName;
   }

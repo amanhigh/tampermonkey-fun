@@ -2,12 +2,16 @@
 
 import { PaginationMetadata } from './api';
 
+/** Alert ticker type: PRIMARY is the canonical alert-bearing ticker; SECONDARY is a lookup alias. */
+export type AlertTickerType = 'PRIMARY' | 'SECONDARY';
+
 /** Full Alert ticker record returned by the API (matches go-fun models/barkat/alert_ticker.go AlertTicker). */
 export interface AlertTicker {
   symbol: string;
   pair_id: string;
   name: string;
-  exchange: string | null;
+  exchange: string;
+  type: AlertTickerType;
   ticker: string;
   created_at: string;
   updated_at: string;
@@ -18,7 +22,8 @@ export interface CreateAlertTickerRequest {
   symbol: string;
   pair_id: string;
   name: string;
-  exchange?: string | null;
+  exchange: string;
+  type: AlertTickerType;
 }
 
 /** Query parameters for listing Alert tickers. */
@@ -27,6 +32,7 @@ export interface AlertTickerQueryParams {
   ticker?: string;
   'pair-id'?: string;
   exchange?: string;
+  type?: AlertTickerType;
   offset?: number;
   limit?: number;
 }

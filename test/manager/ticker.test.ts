@@ -56,10 +56,10 @@ describe('DomManager', () => {
 
     // Mock AlertTickerManager
     mockAlertTickerManager = {
-      getAlertTicker: jest.fn(),
+      getPrimaryAlertTicker: jest.fn(),
       fetchAlertTicker: jest.fn(),
       linkAlertTicker: jest.fn(),
-      getAllAlertTickers: jest.fn(),
+      getAlertTickers: jest.fn(),
     } as unknown as jest.Mocked<IAlertTickerManager>;
 
     tickerManager = new DomManager(mockWaitUtil, mockTickerManager, mockAlertTickerManager);
@@ -348,11 +348,12 @@ describe('DomManager', () => {
       ((global as any).$ as jest.Mock).mockReturnValue({
         text: jest.fn().mockReturnValue('TV:HDFC'),
       });
-      mockAlertTickerManager.getAlertTicker.mockResolvedValue({
+      mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue({
         symbol: 'HDFC',
         pair_id: '123',
         name: 'HDFC Bank',
         exchange: 'NSE',
+        type: 'SECONDARY',
         ticker: 'TV:HDFC',
         created_at: '',
         updated_at: '',
@@ -360,7 +361,7 @@ describe('DomManager', () => {
 
       const result = await tickerManager.getInvestingTicker();
 
-      expect(mockAlertTickerManager.getAlertTicker).toHaveBeenCalledWith('TV:HDFC');
+      expect(mockAlertTickerManager.getPrimaryAlertTicker).toHaveBeenCalledWith('TV:HDFC');
       expect(result).toBe('HDFC');
     });
 
@@ -368,7 +369,7 @@ describe('DomManager', () => {
       ((global as any).$ as jest.Mock).mockReturnValue({
         text: jest.fn().mockReturnValue('TV:UNKNOWN'),
       });
-      mockAlertTickerManager.getAlertTicker.mockResolvedValue(null);
+      mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(null);
 
       await expect(tickerManager.getInvestingTicker()).rejects.toThrow('Investing ticker not found for TV:UNKNOWN');
     });

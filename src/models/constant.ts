@@ -46,6 +46,12 @@ export const Constants = Object.freeze({
 
   // UI element colors and styles
   UI: {
+    POSITIONS: {
+      MAIN_LEFT: '64%',
+      MAIN_TOP: '6%',
+      WRAPPER_WIDTH: '255px',
+    },
+
     COLORS: {
       DEFAULT: 'white',
       HEADER_DEFAULT: 'brown', // Brown fallback for uncategorized ticker in watchlist (header/screener)
@@ -72,8 +78,14 @@ export const Constants = Object.freeze({
         JOURNAL: 'aman-journal', // Old Name: journalId
         FLASH: 'aman-flash', // Old Name: flashId
       },
+      DISPLAY: {
+        CARD: 'aman-display', // Old Name: displayId (was INPUTS.DISPLAY)
+        CARD_CLASS: 'aman-display-card',
+        ALERT_TICKER_ROW: 'aman-display-alert-ticker-row',
+        ATTR_ALERT_TICKER_SYMBOL: 'data-alert-ticker-symbol',
+        ATTR_ALERT_TICKER_TYPE: 'data-alert-ticker-type',
+      },
       INPUTS: {
-        DISPLAY: 'aman-display', // Old Name: displayId
         COMMAND: 'aman-input', // Old Name: inputId
         ENTER_KEY_CODE: 13, // Old Name: ENTER_KEY_CODE
       },

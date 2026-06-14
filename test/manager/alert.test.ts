@@ -31,6 +31,7 @@ describe('AlertManager', () => {
     pair_id: '123',
     name: 'HDFC Bank',
     exchange: 'NSE',
+    type: 'SECONDARY',
     ticker: 'TV:HDFC',
     created_at: '',
     updated_at: '',
@@ -49,9 +50,9 @@ describe('AlertManager', () => {
 
     mockAlertTickerManager = {
       linkAlertTicker: jest.fn(),
-      getAlertTicker: jest.fn(),
+      getPrimaryAlertTicker: jest.fn(),
       fetchAlertTicker: jest.fn(),
-      getAllAlertTickers: jest.fn(),
+      getAlertTickers: jest.fn(),
     } as any;
 
     mockDomManager = {
@@ -118,7 +119,7 @@ describe('AlertManager', () => {
   describe('createAlertForCurrentTicker', () => {
     it('should create Investing alert and backend pending price alert', async () => {
       mockDomManager.getTicker.mockReturnValue('TV:HDFC');
-      mockAlertTickerManager.getAlertTicker.mockResolvedValue(defaultAlertTicker);
+      mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(defaultAlertTicker);
       mockTradingViewManager.getLastTradedPrice.mockReturnValue(500);
       mockInvestingClient.createAlert.mockResolvedValue({ name: 'HDFC', pairId: '123', price: 550 });
       mockPriceAlertClient.createPendingPriceAlert.mockResolvedValue({
@@ -129,7 +130,7 @@ describe('AlertManager', () => {
 
       const result = await alertManager.createAlertForCurrentTicker(550);
 
-      expect(mockAlertTickerManager.getAlertTicker).toHaveBeenCalledWith('TV:HDFC');
+      expect(mockAlertTickerManager.getPrimaryAlertTicker).toHaveBeenCalledWith('TV:HDFC');
       expect(mockInvestingClient.createAlert).toHaveBeenCalledWith('HDFC Bank', '123', 550, 500);
       expect(mockPriceAlertClient.createPendingPriceAlert).toHaveBeenCalledWith('TV:HDFC', { trigger_price: 550 });
       expect(result).toBeInstanceOf(PairInfo);
@@ -138,9 +139,10 @@ describe('AlertManager', () => {
 
     it('should throw error when no alert ticker found', async () => {
       mockDomManager.getTicker.mockReturnValue('TV:UNKNOWN');
-      mockAlertTickerManager.getAlertTicker.mockResolvedValue(null);
+      mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(null);
+      mockDomManager.getTicker.mockReturnValue('TV:UNKNOWN');
 
-      await expect(alertManager.createAlertForCurrentTicker(550)).rejects.toThrow('No alert ticker found');
+      await expect(alertManager.createAlertForCurrentTicker(550)).rejects.toThrow('No primary alert ticker found');
     });
   });
 
@@ -226,6 +228,19 @@ describe('AlertManager', () => {
         Constants.STORAGE.EVENTS.ALERT_CLICKED,
         expect.stringContaining('HDFC')
       );
+    });
+
+    it('should include pairId and alertName in serialized event when provided', async () => {
+      (global as any).GM = { setValue: jest.fn().mockResolvedValue(undefined) };
+
+      await alertManager.createAlertClickEvent('INFY', AlertClickAction.MAP, '8874', 'Infosys Ltd');
+
+      const serialized = (global as any).GM.setValue.mock.calls[0][1] as string;
+      const parsed = JSON.parse(serialized);
+      expect(parsed.alertTicker).toBe('INFY');
+      expect(parsed.action).toBe('MAP');
+      expect(parsed.pairId).toBe('8874');
+      expect(parsed.alertName).toBe('Infosys Ltd');
     });
   });
 });

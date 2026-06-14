@@ -9,7 +9,6 @@ import { ISyncUtil } from '../util/sync';
 import { TickerArea, TickerVisibility } from '../models/dom';
 import { WatchCategoryId } from '../models/watch';
 import { IDomManager } from '../manager/dom';
-import { IAlertFeedManager } from '../manager/alertfeed';
 
 /**
  * Handles watchlist-related events and UI updates
@@ -41,18 +40,13 @@ export class WatchListHandler implements IWatchListHandler {
     private readonly paintManager: IPaintManager,
     private readonly syncUtil: ISyncUtil,
     private readonly categoryManager: ICategoryManager,
-    private readonly domManager: IDomManager,
-    private readonly alertFeedManager: IAlertFeedManager
+    private readonly domManager: IDomManager
   ) {}
 
   /** @inheritdoc */
   public onWatchListChange(): void {
     this.syncUtil.waitOn('watchListChangeEvent', 20, () => {
-      // Full watchlist UI refresh: paint decals + summary + filters
       void this.watchlistManager.refresh();
-
-      // Update alert feed with watchlist changes
-      void this.alertFeedManager.createAlertFeedEvent(this.domManager.getTicker());
     });
   }
 

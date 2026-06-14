@@ -62,7 +62,12 @@ export interface IAlertManager {
   /**
    * Creates alert click event for ticker operations.
    */
-  createAlertClickEvent(investingTicker: string, action: AlertClickAction): Promise<void>;
+  createAlertClickEvent(
+    alertTicker: string,
+    action: AlertClickAction,
+    pairId?: string,
+    alertName?: string
+  ): Promise<void>;
 }
 
 /**
@@ -142,8 +147,13 @@ export class AlertManager implements IAlertManager {
   }
 
   /** @inheritdoc */
-  async createAlertClickEvent(investingTicker: string, action: AlertClickAction): Promise<void> {
-    const event = new AlertClicked(investingTicker, action);
+  async createAlertClickEvent(
+    alertTicker: string,
+    action: AlertClickAction,
+    pairId?: string,
+    alertName?: string
+  ): Promise<void> {
+    const event = new AlertClicked(alertTicker, action, pairId, alertName);
     await GM.setValue(Constants.STORAGE.EVENTS.ALERT_CLICKED, event.stringify());
   }
 
@@ -152,9 +162,9 @@ export class AlertManager implements IAlertManager {
    */
   private async createAlert(price: number): Promise<PairInfo> {
     const tvTicker = this.domManager.getTicker();
-    const alertTicker = await this.alertTickerManager.getAlertTicker(tvTicker);
+    const alertTicker = await this.alertTickerManager.getPrimaryAlertTicker(tvTicker);
     if (!alertTicker) {
-      throw new Error(`No alert ticker found for ${tvTicker}`);
+      throw new Error(`No primary alert ticker found for ${tvTicker}`);
     }
 
     const pairInfo = new PairInfo(

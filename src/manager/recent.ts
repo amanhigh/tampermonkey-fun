@@ -1,6 +1,8 @@
 import { LRUCache } from 'lru-cache';
 import { ITickerClient } from '../client/ticker';
 import { Constants } from '../models/constant';
+import { IPublisher } from './event_bus';
+import { DomainEventType } from '../models/domain_event';
 
 /**
  * Interface for managing recent ticker data operations.
@@ -9,17 +11,17 @@ import { Constants } from '../models/constant';
 export interface IRecentManager {
   /**
    * Record ticker as recently opened. Updates cache + backend.
-   * @param tvTicker Ticker to record
+   * @param ticker Ticker to record
    */
-  markRecent(tvTicker: string): void;
+  markRecent(ticker: string): void;
 
   /**
    * Check if ticker was opened within cutOffPeriod ms.
    * Resolves from LRU cache — on miss, fetches from backend.
-   * @param tvTicker Ticker to check
+   * @param ticker Ticker to check
    * @param cutOffPeriod Max age in ms to be considered recent
    */
-  isRecent(tvTicker: string, cutOffPeriod: number): Promise<boolean>;
+  isRecent(ticker: string, cutOffPeriod: number): Promise<boolean>;
 }
 
 /**
@@ -48,25 +50,35 @@ export class RecentManager implements IRecentManager {
    * Creates a new RecentManager.
    * No cache pre-load — entries are fetched on-demand.
    * @param client - TickerClient for backend API calls
+   * @param publisher - Publisher for domain events
    */
-  constructor(private readonly client: ITickerClient) {}
+  constructor(
+    private readonly client: ITickerClient,
+    private readonly publisher: IPublisher
+  ) {}
 
   /** @inheritdoc */
-  public markRecent(tvTicker: string): void {
+  public markRecent(ticker: string): void {
     const now = Date.now();
-    this.cache.set(tvTicker, now);
+    this.cache.set(ticker, now);
     void this.client
-      .patchTickerLastOpened(tvTicker, {
+      .patchTickerLastOpened(ticker, {
         last_opened_at: new Date(now).toISOString(),
       })
       .catch(() => {
         // Silently fail — cache still has the latest timestamp
       });
+
+    // Publish domain event so consumers (alert feed, etc.) react
+    void this.publisher.publish({
+      type: DomainEventType.TICKER_MARKED_RECENT,
+      ticker,
+    });
   }
 
   /** @inheritdoc */
-  public async isRecent(tvTicker: string, cutOffPeriod: number): Promise<boolean> {
-    const timestamp = await this.cache.fetch(tvTicker);
+  public async isRecent(ticker: string, cutOffPeriod: number): Promise<boolean> {
+    const timestamp = await this.cache.fetch(ticker);
     if (timestamp === undefined) {
       return false;
     }

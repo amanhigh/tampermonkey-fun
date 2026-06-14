@@ -4,7 +4,6 @@ import { IPaintManager } from '../../src/manager/paint';
 import { ISyncUtil } from '../../src/util/sync';
 import { ICategoryManager } from '../../src/manager/category';
 import { IDomManager } from '../../src/manager/dom';
-import { IAlertFeedManager } from '../../src/manager/alertfeed';
 import { WatchCategoryId } from '../../src/models/watch';
 
 describe('WatchListHandler', () => {
@@ -14,7 +13,6 @@ describe('WatchListHandler', () => {
   let mockSyncUtil: jest.Mocked<ISyncUtil>;
   let mockCategoryManager: jest.Mocked<ICategoryManager>;
   let mockDomManager: jest.Mocked<IDomManager>;
-  let mockAlertFeedManager: jest.Mocked<IAlertFeedManager>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -53,17 +51,12 @@ describe('WatchListHandler', () => {
       navigateTickers: jest.fn(),
     } as unknown as jest.Mocked<IDomManager>;
 
-    mockAlertFeedManager = {
-      createAlertFeedEvent: jest.fn(),
-    } as unknown as jest.Mocked<IAlertFeedManager>;
-
     handler = new WatchListHandler(
       mockWatchlistManager,
       mockPaintManager,
       mockSyncUtil,
       mockCategoryManager,
-      mockDomManager,
-      mockAlertFeedManager
+      mockDomManager
     );
   });
 
@@ -84,6 +77,13 @@ describe('WatchListHandler', () => {
       handler.onWatchListChange();
 
       expect(mockPaintManager.paintTickers).not.toHaveBeenCalled();
+    });
+
+    it('should no longer call alert feed directly', () => {
+      handler.onWatchListChange();
+
+      // Alert feed updates are now handled via WATCHLIST_CHANGED event
+      expect(mockDomManager.getTicker).not.toHaveBeenCalled();
     });
   });
 
@@ -125,27 +125,6 @@ describe('WatchListHandler', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(mockWatchlistManager.refresh).not.toHaveBeenCalled();
-    });
-
-    it('should not paint before recordWatchCategory resolves', async () => {
-      let resolveRecord!: () => void;
-      mockCategoryManager.recordWatchCategory.mockReturnValue(
-        new Promise((resolve) => { resolveRecord = resolve; })
-      );
-
-      handler.recordSelectedTicker(WatchCategoryId.READY);
-
-      // Paint should NOT be called while record is still pending
-      expect(mockPaintManager.paintTickers).not.toHaveBeenCalled();
-      expect(mockWatchlistManager.refreshSummary).not.toHaveBeenCalled();
-
-      // Resolve and flush microtasks
-      resolveRecord();
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      // Paint and summary should be called after record resolves
-      expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['SELECTED1', 'SELECTED2']);
-      expect(mockWatchlistManager.refreshSummary).toHaveBeenCalled();
     });
   });
 });

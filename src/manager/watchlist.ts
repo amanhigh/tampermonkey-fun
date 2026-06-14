@@ -2,7 +2,10 @@ import { Constants } from '../models/constant';
 import { TickerArea, TickerVisibility } from '../models/dom';
 import { IPaintManager } from './paint';
 import { IUIUtil } from '../util/ui';
+import { IPublisher } from './event_bus';
+import { IDomManager } from './dom';
 import { ALL_WATCH_CATEGORIES, BucketSummary } from '../models/watch';
+import { DomainEventType } from '../models/domain_event';
 
 /** Mouse button codes for filtering */
 const LEFT_CLICK = 1;
@@ -51,7 +54,9 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
 
   constructor(
     private readonly paintManager: IPaintManager,
-    private readonly uiUtil: IUIUtil
+    private readonly uiUtil: IUIUtil,
+    private readonly domManager: IDomManager,
+    private readonly publisher: IPublisher
   ) {
     // Initialise default white filter
     this.addFilter({
@@ -71,6 +76,12 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
 
     // Reuse summary + filter refresh
     await this.refreshSummary();
+
+    // Notify subscribers that watchlist has been refreshed
+    void this.publisher.publish({
+      type: DomainEventType.WATCHLIST_CHANGED,
+      ticker: this.domManager.getTicker(),
+    });
   }
 
   /** @inheritdoc */
