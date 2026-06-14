@@ -79,12 +79,12 @@ export class AlertFeedHandler implements IAlertFeedHandler {
   public registerEvents(subscriber: ISubscriber): void {
     // ALERT_TICKER_LINKED carries full AlertTicker — use it directly
     subscriber.subscribe(DomainEventType.ALERT_TICKER_LINKED, async (event) => {
-      await this.alertFeedManager.createAlertFeedEvent(event.alertTicker);
+      await this.alertFeedManager.createAlertFeedEvent(event.alertTicker.symbol, event.alertTicker.ticker);
     });
 
     // ALERT_TICKER_DELETED — paint deleted symbol as UNMAPPED
     subscriber.subscribe(DomainEventType.ALERT_TICKER_DELETED, async (event) => {
-      await this.alertFeedManager.createUnmappedFeedEvent(event.symbol);
+      await this.alertFeedManager.createAlertFeedEvent(event.alertTicker, null);
     });
 
     // TICKER_MARKED_RECENT and TICKER_TRACKING_STARTED both carry ticker string — same handler

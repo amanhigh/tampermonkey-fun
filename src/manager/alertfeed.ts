@@ -2,28 +2,32 @@ import { AlertFeedEvent, FeedInfo, FeedState } from '../models/alertfeed';
 import { Constants } from '../models/constant';
 import { ICategoryManager } from './category';
 import { IRecentManager } from './recent';
-import { AlertTicker } from '../models/alert_ticker';
 
 /**
- * Interface for managing alert feed state
+ * Interface for managing alert feed state.
+ *
+ * All methods use primitive identifiers rather than full AlertTicker records
+ * because the feed event travels through Greasemonkey GM.setValue (cross-context
+ * serialisation) and the manager only needs the Investing symbol and TV ticker.
+ *
+ * A null ticker means the symbol is unmapped — the state will be UNMAPPED (red).
  */
 export interface IAlertFeedManager {
   /**
-   * Compute feed state from an already-resolved AlertTicker record,
-   * or return UNMAPPED when null is passed (no match found).
-   * Used during repaint and event creation.
-   * @param alertTicker - The resolved AlertTicker record, or null if unmapped
+   * Compute feed state from a TV ticker string (or null for unmapped).
+   * @param ticker - The TV ticker to look up category/recent state, or null if unmapped
    * @returns Promise resolving to FeedInfo containing state and color
    */
-  getAlertFeedState(alertTicker: AlertTicker | null): Promise<FeedInfo>;
+  getAlertFeedState(ticker: string | null): Promise<FeedInfo>;
 
   /**
-   * Create an alert feed event for a resolved alert ticker record.
-   * Caller must resolve and guard for null before calling.
-   * @param alertTicker - The resolved AlertTicker record
-   * @returns Promise that resolves when event is created
+   * Create an alert feed event for an Investing symbol.
+   * Pass null as ticker when the alert ticker has been deleted / is unmapped.
+   * @param alertTicker - The Investing.com symbol for the feed row
+   * @param ticker - The TV ticker for category/recent lookups, or null if unmapped
+   * @returns Promise that resolves when event is written to GM storage
    */
-  createAlertFeedEvent(alertTicker: AlertTicker): Promise<void>;
+  createAlertFeedEvent(alertTicker: string, ticker: string | null): Promise<void>;
 
   /**
    * Create a reset feed event
@@ -42,31 +46,32 @@ export class AlertFeedManager implements IAlertFeedManager {
   ) {}
 
   /** @inheritdoc */
-  public async getAlertFeedState(alertTicker: AlertTicker | null): Promise<FeedInfo> {
-    if (!alertTicker) {
+  public async getAlertFeedState(ticker: string | null): Promise<FeedInfo> {
+    if (!ticker) {
       return { state: FeedState.UNMAPPED, color: 'red' };
     }
-    const tvTicker = alertTicker.ticker;
 
     // Check if ticker belongs to any watch category (backend-on-demand)
-    const { watch: category } = await this.categoryManager.getTickerCategory(tvTicker);
+    const { watch: category } = await this.categoryManager.getTickerCategory(ticker);
     if (category) {
       return { state: FeedState.WATCHED, color: 'yellow' };
     }
 
-    if (await this.recentManager.isRecent(tvTicker, Constants.RECENT_CUTOFF_MS)) {
+    if (await this.recentManager.isRecent(ticker, Constants.RECENT_CUTOFF_MS)) {
       return { state: FeedState.RECENT, color: 'lime' };
     }
 
     return { state: FeedState.MAPPED, color: 'white' };
   }
 
-  public async createAlertFeedEvent(alertTicker: AlertTicker): Promise<void> {
-    const feedInfo = await this.getAlertFeedState(alertTicker);
-    const event = new AlertFeedEvent(alertTicker.symbol, feedInfo);
+  /** @inheritdoc */
+  public async createAlertFeedEvent(alertTicker: string, ticker: string | null): Promise<void> {
+    const feedInfo = await this.getAlertFeedState(ticker);
+    const event = new AlertFeedEvent(alertTicker, feedInfo);
     await GM.setValue(Constants.STORAGE.EVENTS.ALERT_FEED_UPDATE, event.stringify());
   }
 
+  /** @inheritdoc */
   public async createResetFeedEvent(): Promise<void> {
     // Special values to Paint all tickers during Reset
     const event = new AlertFeedEvent(Constants.MISC.RESET_FEED, { state: FeedState.UNMAPPED, color: 'red' });
