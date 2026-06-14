@@ -22,12 +22,12 @@ export interface IAlertFeedManager {
 
   /**
    * Create an alert feed event for an Investing symbol.
-   * Pass null as ticker when the alert ticker has been deleted / is unmapped.
+   * When ticker is omitted or undefined the feed row is treated as unmapped (red).
    * @param alertTicker - The Investing.com symbol for the feed row
-   * @param ticker - The TV ticker for category/recent lookups, or null if unmapped
+   * @param ticker - The TV ticker for category/recent lookups; omit for unmapped rows
    * @returns Promise that resolves when event is written to GM storage
    */
-  createAlertFeedEvent(alertTicker: string, ticker: string | null): Promise<void>;
+  createAlertFeedEvent(alertTicker: string, ticker?: string): Promise<void>;
 
   /**
    * Create a reset feed event
@@ -65,8 +65,8 @@ export class AlertFeedManager implements IAlertFeedManager {
   }
 
   /** @inheritdoc */
-  public async createAlertFeedEvent(alertTicker: string, ticker: string | null): Promise<void> {
-    const feedInfo = await this.getAlertFeedState(ticker);
+  public async createAlertFeedEvent(alertTicker: string, ticker?: string): Promise<void> {
+    const feedInfo = await this.getAlertFeedState(ticker ?? null);
     const event = new AlertFeedEvent(alertTicker, feedInfo);
     await GM.setValue(Constants.STORAGE.EVENTS.ALERT_FEED_UPDATE, event.stringify());
   }

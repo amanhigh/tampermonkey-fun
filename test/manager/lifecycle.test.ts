@@ -2,16 +2,31 @@ import { LifecycleManager, ILifecycleManager, StartTrackingRequest } from '../..
 import { ITickerClient } from '../../src/client/ticker';
 import { ICategoryManager } from '../../src/manager/category';
 import { IPaintManager } from '../../src/manager/paint';
+import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { IPublisher } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
 import { Ticker } from '../../src/models/ticker';
+import { AlertTicker } from '../../src/models/alert_ticker';
 
 describe('LifecycleManager', () => {
   let manager: ILifecycleManager;
   let mockTickerClient: jest.Mocked<ITickerClient>;
   let mockCategoryManager: jest.Mocked<ICategoryManager>;
   let mockPaintManager: jest.Mocked<IPaintManager>;
+  let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
   let mockPublisher: jest.Mocked<IPublisher>;
+
+  const makeAlertTicker = (overrides: Partial<AlertTicker> = {}): AlertTicker => ({
+    symbol: 'INFY',
+    pair_id: 'pair1',
+    name: 'Infosys Ltd',
+    exchange: 'NSE',
+    type: 'PRIMARY',
+    ticker: 'TV:INFY',
+    created_at: '',
+    updated_at: '',
+    ...overrides,
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -37,6 +52,15 @@ describe('LifecycleManager', () => {
       summarizeBuckets: jest.fn(),
     } as unknown as jest.Mocked<IPaintManager>;
 
+    mockAlertTickerManager = {
+      getAlertTickersForTicker: jest.fn(),
+      getPrimaryAlertTicker: jest.fn(),
+      fetchAlertTicker: jest.fn(),
+      getAlertTickers: jest.fn(),
+      linkAlertTicker: jest.fn(),
+      deleteAlertTicker: jest.fn(),
+    } as unknown as jest.Mocked<IAlertTickerManager>;
+
     mockPublisher = {
       publish: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<IPublisher>;
@@ -45,6 +69,7 @@ describe('LifecycleManager', () => {
       mockTickerClient,
       mockCategoryManager,
       mockPaintManager,
+      mockAlertTickerManager,
       mockPublisher
     );
   });
@@ -94,15 +119,52 @@ describe('LifecycleManager', () => {
   });
 
   describe('stopTracking', () => {
-    it('should evict cache, delete ticker, paint, and publish event', async () => {
+    it('should capture linked alert tickers, publish ALERT_TICKER_DELETED, then delete and paint', async () => {
+      const linked = [
+        makeAlertTicker({ symbol: 'INFY', ticker: 'RELIANCE' }),
+        makeAlertTicker({ symbol: 'RELIANCE.NS', ticker: 'RELIANCE' }),
+      ];
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue(linked);
       mockTickerClient.deleteTicker.mockResolvedValue(undefined);
 
       await manager.stopTracking('RELIANCE');
 
-      expect(mockCategoryManager.evictTicker).toHaveBeenCalledWith('RELIANCE');
+      // Should fetch linked alert tickers before delete
+      expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('RELIANCE');
+
+      // Should publish ALERT_TICKER_DELETED for each linked alert ticker
+      expect(mockPublisher.publish).toHaveBeenCalledWith({
+        type: DomainEventType.ALERT_TICKER_DELETED,
+        alertTicker: 'INFY',
+      });
+      expect(mockPublisher.publish).toHaveBeenCalledWith({
+        type: DomainEventType.ALERT_TICKER_DELETED,
+        alertTicker: 'RELIANCE.NS',
+      });
+
+      // Should delete ticker after publishing deletion events
       expect(mockTickerClient.deleteTicker).toHaveBeenCalledWith('RELIANCE');
       expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['RELIANCE']);
-      expect(mockPublisher.publish).toHaveBeenCalledTimes(1);
+
+      // Should still publish TICKER_TRACKING_STOPPED for other consumers
+      expect(mockPublisher.publish).toHaveBeenCalledWith({
+        type: DomainEventType.TICKER_TRACKING_STOPPED,
+        ticker: 'RELIANCE',
+      });
+    });
+
+    it('should handle stop tracking when no linked alert tickers exist', async () => {
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
+      mockTickerClient.deleteTicker.mockResolvedValue(undefined);
+
+      await manager.stopTracking('RELIANCE');
+
+      // Should NOT publish ALERT_TICKER_DELETED when no linked alert tickers
+      expect(mockPublisher.publish).not.toHaveBeenCalledWith(
+        expect.objectContaining({ type: DomainEventType.ALERT_TICKER_DELETED })
+      );
+
+      // Should still publish TICKER_TRACKING_STOPPED
       expect(mockPublisher.publish).toHaveBeenCalledWith({
         type: DomainEventType.TICKER_TRACKING_STOPPED,
         ticker: 'RELIANCE',

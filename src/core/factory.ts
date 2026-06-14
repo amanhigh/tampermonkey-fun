@@ -235,6 +235,7 @@ export class Factory {
             Factory.client.ticker(),
             Factory.manager.category(),
             Factory.manager.paint(),
+            Factory.manager.alertTicker(),
             Factory.manager.eventPublisher()
           )
       ),

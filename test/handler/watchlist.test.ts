@@ -117,7 +117,7 @@ describe('WatchListHandler', () => {
       expect(mockAlertTickerManager.getPrimaryAlertTicker).toHaveBeenCalledWith('CURRENT');
       // Flush microtasks
       return new Promise((resolve) => setImmediate(() => {
-        expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith(alertTicker);
+        expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith('INFY', 'CURRENT');
         resolve(undefined);
       }));
     });

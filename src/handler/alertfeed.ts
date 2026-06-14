@@ -82,9 +82,9 @@ export class AlertFeedHandler implements IAlertFeedHandler {
       await this.alertFeedManager.createAlertFeedEvent(event.alertTicker.symbol, event.alertTicker.ticker);
     });
 
-    // ALERT_TICKER_DELETED — paint deleted symbol as UNMAPPED
+    // ALERT_TICKER_DELETED — paint deleted symbol as UNMAPPED (no ticker = unmapped)
     subscriber.subscribe(DomainEventType.ALERT_TICKER_DELETED, async (event) => {
-      await this.alertFeedManager.createAlertFeedEvent(event.alertTicker, null);
+      await this.alertFeedManager.createAlertFeedEvent(event.alertTicker);
     });
 
     // TICKER_MARKED_RECENT and TICKER_TRACKING_STARTED both carry ticker string — same handler
@@ -94,13 +94,6 @@ export class AlertFeedHandler implements IAlertFeedHandler {
         await this.createAlertFeedEventsForTicker(event.ticker);
       }
     );
-
-    // TICKER_TRACKING_STOPPED — paint captured linked symbols as UNMAPPED
-    subscriber.subscribe(DomainEventType.TICKER_TRACKING_STOPPED, async (event) => {
-      for (const symbol of event.alertTickerSymbols) {
-        await this.alertFeedManager.createUnmappedFeedEvent(symbol);
-      }
-    });
 
     // TICKER_CATEGORY_CHANGED — repaint all linked alert tickers for affected tickers
     subscriber.subscribe(DomainEventType.TICKER_CATEGORY_CHANGED, async (event) => {
@@ -112,15 +105,16 @@ export class AlertFeedHandler implements IAlertFeedHandler {
 
   /**
    * Resolve all alert tickers linked to a TV ticker and create alert feed events for each.
-   * No-op when no alert tickers exist.
+   * Warns when no alert tickers are found.
    */
   private async createAlertFeedEventsForTicker(ticker: string): Promise<void> {
     const alertTickers = await this.alertTickerManager.getAlertTickersForTicker(ticker);
     if (alertTickers.length === 0) {
+      Notifier.warn(`No alert tickers found for ${ticker} — skipping feed events`);
       return;
     }
     for (const alertTicker of alertTickers) {
-      await this.alertFeedManager.createAlertFeedEvent(alertTicker);
+      await this.alertFeedManager.createAlertFeedEvent(alertTicker.symbol, alertTicker.ticker);
     }
   }
 
@@ -276,7 +270,7 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     const feedInfos = await Promise.all(
       elements.map(async (e) => {
         const resolved = this.resolvePaintAlertTicker(e.name, e.ticker, allAlertTickers);
-        return this.alertFeedManager.getAlertFeedState(resolved);
+        return this.alertFeedManager.getAlertFeedState(resolved?.ticker ?? null);
       })
     );
 
