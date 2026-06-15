@@ -76,7 +76,7 @@ export class WatchClassifier {
    * Check whether a ticker is India-listed based on exchange.
    */
   private static isIndiaExchange(ticker: Ticker): boolean {
-    return ticker.getExchange() === 'NSE';
+    return ticker.exchange === 'NSE';
   }
 }
 
