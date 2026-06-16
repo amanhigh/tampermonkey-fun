@@ -290,7 +290,7 @@ export class Factory {
     alertFeed: (): IAlertFeedManager =>
       Factory.getInstance(
         'alertFeedManager',
-        () => new AlertFeedManager(Factory.manager.category(), Factory.manager.recent())
+        () => new AlertFeedManager(Factory.manager.recent(), Factory.manager.watchlist())
       ),
   };
 

@@ -7,6 +7,11 @@ import { Constants } from '../../src/models/constant';
 import { ALL_WATCH_CATEGORIES, WatchCategoryId, BucketSummary } from '../../src/models/watch';
 import { DomainEventType } from '../../src/models/domain_event';
 
+// Mock GM global
+(global as any).GM = {
+  setValue: jest.fn().mockResolvedValue(undefined),
+};
+
 // Mock jQuery globally for DOM manipulation
 const mockJQuery = jest.fn(() => ({
   toArray: jest.fn().mockReturnValue([]),
@@ -61,6 +66,7 @@ describe('TradingViewWatchlistManager', () => {
 
     mockDomManager = {
       getTicker: jest.fn().mockReturnValue('CURRENT_TICKER'),
+      getTickers: jest.fn().mockReturnValue(new Set(['AAPL', 'GOOGL', 'MSFT'])),
     } as unknown as jest.Mocked<IDomManager>;
 
     mockPublisher = {
@@ -155,6 +161,22 @@ describe('TradingViewWatchlistManager', () => {
         type: DomainEventType.WATCHLIST_CHANGED,
         ticker: 'CURRENT_TICKER',
       });
+    });
+
+    it('should persist all DOM watchlist tickers to Constants.STORAGE.SILOS.WATCHLIST', async () => {
+      const expectedTickers = new Set(['AAPL', 'GOOGL', 'MSFT']);
+      mockDomManager.getTickers.mockReturnValue(expectedTickers);
+
+      await watchlistManager.refresh();
+
+      expect(mockDomManager.getTickers).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'WATCHLIST' }),
+        expect.anything()
+      );
+      expect(global.GM.setValue).toHaveBeenCalledWith(
+        Constants.STORAGE.SILOS.WATCHLIST,
+        JSON.stringify({ tickers: ['AAPL', 'GOOGL', 'MSFT'] })
+      );
     });
   });
 });

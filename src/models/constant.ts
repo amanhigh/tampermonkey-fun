@@ -237,6 +237,7 @@ Support:
       ORDER_INFO: 'orderSilo', // Old Name: orderInfoStore
       FLAG_INFO: 'flagSilo', // Old Name: flagInfoStore
       PAIR_MAP: 'pairSilo', // Old Name: pairMapStore
+      WATCHLIST: 'watchlistSilo', // Current TradingView watchlist ticker snapshot
     },
     EVENTS: {
       ALERT_FEED_UPDATE: 'alertFeedEvent', // Old Name: tvWatchChangeEvent
