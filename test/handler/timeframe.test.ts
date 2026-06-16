@@ -72,7 +72,7 @@ describe('TimeFrameHandler', () => {
         TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN,
         TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL,
       ]),
-      getExactTimeframesForCurrentTicker: jest.fn().mockResolvedValue(['TMN', 'MN', 'WK', 'DL']),
+      getActiveTimeframesForCurrentTicker: jest.fn().mockResolvedValue(['TMN', 'MN', 'WK', 'DL']),
       getSequenceForCurrentTicker: jest.fn(),
       toggleTimeframeForCurrentTicker: jest.fn(),
     } as any;
@@ -101,7 +101,7 @@ describe('TimeFrameHandler', () => {
     });
 
     it('should mark backend-active chips with active class', async () => {
-      mockTimeFrameManager.getExactTimeframesForCurrentTicker.mockResolvedValue([
+      mockTimeFrameManager.getActiveTimeframesForCurrentTicker.mockResolvedValue([
         TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL,
       ]);
 
@@ -117,7 +117,7 @@ describe('TimeFrameHandler', () => {
     });
 
     it('should mark non-backend chips with inactive class', async () => {
-      mockTimeFrameManager.getExactTimeframesForCurrentTicker.mockResolvedValue([
+      mockTimeFrameManager.getActiveTimeframesForCurrentTicker.mockResolvedValue([
         TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL,
       ]);
 

@@ -71,7 +71,7 @@ export class TimeFrameHandler implements ITimeFrameHandler {
     }
 
     // Manager handles errors internally and returns default timeframes on failure
-    const activeCodes = await this.timeFrameManager.getExactTimeframesForCurrentTicker();
+    const activeCodes = await this.timeFrameManager.getActiveTimeframesForCurrentTicker();
     const activeSet = new Set(activeCodes);
     const chipsHtml = this.buildChipsHtml(activeSet);
 

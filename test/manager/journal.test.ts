@@ -70,16 +70,12 @@ describe('JournalManager', () => {
     mockTimeFrameManager = {
       applyTimeFrame: jest.fn().mockResolvedValue(true),
       getCurrentTimeFrameConfig: jest.fn().mockReturnValue({ code: TickerTimeframe.TMN, label: '3M', rank: 2, toolbar: 5, style: 'T' }),
-      getExactTimeframesForCurrentTicker: jest.fn(),
+      getActiveTimeframesForCurrentTicker: jest.fn(),
       getSequenceForCurrentTicker: jest.fn().mockResolvedValue(
         ['TMN', 'MN', 'WK', 'DL'] as Sequence
       ),
-      getTimeFrameConfigByCode: jest.fn(),
       toggleTimeframeForCurrentTicker: jest.fn(),
       getDefaultTimeframesForExchange: jest.fn(),
-      getLegacyJournalSequenceFromTimeframes: jest.fn().mockImplementation(
-        (timeframes: string[]) => timeframes.includes('DL') ? 'MWD' as any : 'YR' as any
-      ),
     } as unknown as jest.Mocked<ITimeFrameManager>;
 
     journalManager = new JournalManager(mockJournalClient, mockOsClient, mockTimeFrameManager);

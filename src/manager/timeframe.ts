@@ -40,11 +40,11 @@ export interface ITimeFrameManager {
   getCurrentTimeFrameConfig(): Timeframe;
 
   /**
-   * Get the exact backend timeframe codes for the current ticker,
+   * Returns the active backend timeframe codes for the current ticker,
    * sorted by catalog order.
    * Falls back to DEFAULT_SEQUENCE when backend read fails.
    */
-  getExactTimeframesForCurrentTicker(): Promise<TickerTimeframe[]>;
+  getActiveTimeframesForCurrentTicker(): Promise<readonly TickerTimeframe[]>;
 
   /**
    * Get the derived Sequence (4-tuple) for the current ticker.
@@ -67,15 +67,6 @@ export interface ITimeFrameManager {
    * Used when starting tracking for a new ticker.
    */
   getDefaultTimeframesForExchange(exchange: string): TickerTimeframe[];
-
-  /**
-   * Derives the legacy journal API sequence string from a list of timeframe codes.
-   *
-   * Current rule: if the list contains 'DL', return 'MWD'; otherwise return 'YR'.
-   *
-   * FIXME: Replace this heuristic with user-prompted selection or backend-provided type.
-   */
-  getLegacyJournalSequenceFromTimeframes(timeframes: string[]): 'MWD' | 'YR';
 
   /**
    * Toggle a timeframe code for the current ticker on/off in the backend.
@@ -134,22 +125,22 @@ export class TimeFrameManager implements ITimeFrameManager {
   }
 
   /** @inheritdoc */
-  async getExactTimeframesForCurrentTicker(): Promise<TickerTimeframe[]> {
+  async getActiveTimeframesForCurrentTicker(): Promise<readonly TickerTimeframe[]> {
     const tvTicker = this.domManager.getTicker();
     try {
       const record = await this.tickerManager.getTicker(tvTicker);
       const active = this.getActiveTimeframes(record.timeframes as TickerTimeframe[]);
       return active.map((tf) => tf.code);
     } catch (error) {
-      Notifier.warn(`getExactTimeframes: ${(error as Error).message}. Falling back to default timeframes.`);
+      Notifier.warn(`getActiveTimeframes: ${(error as Error).message}. Falling back to default timeframes.`);
       return [...DEFAULT_SEQUENCE];
     }
   }
 
   /** @inheritdoc */
   async getSequenceForCurrentTicker(): Promise<Sequence> {
-    const exact = await this.getExactTimeframesForCurrentTicker();
-    return this.deriveSequence(exact);
+    const active = await this.getActiveTimeframesForCurrentTicker();
+    return this.deriveSequence(active as TickerTimeframe[]);
   }
 
   /** @inheritdoc */
@@ -163,14 +154,6 @@ export class TimeFrameManager implements ITimeFrameManager {
       return [TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL];
     }
     return TIMEFRAMES.filter((tf) => tf.code !== TickerTimeframe.DL).map((tf) => tf.code);
-  }
-
-  /** @inheritdoc */
-  getLegacyJournalSequenceFromTimeframes(timeframes: string[]): 'MWD' | 'YR' {
-    if (timeframes.includes('DL')) {
-      return 'MWD';
-    }
-    return 'YR';
   }
 
   /** @inheritdoc */

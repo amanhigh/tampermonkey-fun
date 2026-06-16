@@ -7,6 +7,7 @@ import {
   CreateJournalImageRequest,
   CreateJournalRequest,
   CreateJournalTagRequest,
+  JournalApiSequence,
   JournalApiTimeframe,
   JournalQueryParams,
   JournalRecord,
@@ -88,7 +89,7 @@ export interface IJournalManager {
  * Manages trading journal entries and operations.
  *
  * The legacy API `sequence` field is derived from the screenshot timeframe codes
- * using getLegacyJournalSequenceFromTimeframes() (currently: contains DL → MWD, else YR).
+ * using a private helper (currently: contains DL → MWD, else YR).
  * FIXME: Replace with user-prompted or backend-provided type selection.
  */
 export class JournalManager implements IJournalManager {
@@ -105,7 +106,7 @@ export class JournalManager implements IJournalManager {
       .filter((t): t is JournalApiTimeframe => t !== undefined);
     const request: CreateJournalRequest = {
       ticker: input.ticker.toUpperCase(),
-      sequence: this.timeframeManager.getLegacyJournalSequenceFromTimeframes(screenshotCodes),
+      sequence: this.getLegacyJournalSequenceFromTimeframes(screenshotCodes),
       type: input.type,
       status: input.status,
       images: input.screenshots.map((screenshot) => ({
@@ -261,5 +262,19 @@ export class JournalManager implements IJournalManager {
     };
 
     return [tagRequest];
+  }
+
+  /**
+   * Derives the legacy journal API sequence from a list of screenshot timeframe codes.
+   *
+   * Rule: if the list contains 'DL', return 'MWD'; otherwise return 'YR'.
+   *
+   * FIXME: Replace this heuristic with user-prompted selection or backend-provided type.
+   */
+  private getLegacyJournalSequenceFromTimeframes(timeframes: readonly JournalApiTimeframe[]): JournalApiSequence {
+    if (timeframes.includes('DL' as JournalApiTimeframe)) {
+      return 'MWD';
+    }
+    return 'YR';
   }
 }
