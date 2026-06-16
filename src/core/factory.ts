@@ -27,7 +27,7 @@ import { ITimeFrameManager, TimeFrameManager } from '../manager/timeframe';
 import { IJournalManager, JournalManager } from '../manager/journal';
 import { IAlertManager, AlertManager } from '../manager/alert';
 import { ITradingViewWatchlistManager, TradingViewWatchlistManager } from '../manager/watchlist';
-import { ISequenceManager, SequenceManager } from '../manager/sequence';
+
 import { IPaintManager, PaintManager } from '../manager/paint';
 import { IDomManager, DomManager } from '../manager/dom';
 import { ITickerManager, TickerManager } from '../manager/ticker';
@@ -45,8 +45,8 @@ import { HotkeyHandler, IHotkeyHandler } from '../handler/hotkey';
 import { KeyConfig } from '../handler/key_config';
 import { IModifierKeyConfig, ModifierKeyConfig } from '../handler/modifier_config';
 
-import { ISequenceHandler, SequenceHandler } from '../handler/sequence';
 import { IDisplayHandler, DisplayHandler } from '../handler/display';
+import { ITimeFrameHandler, TimeFrameHandler } from '../handler/timeframe';
 import { IKiteHandler, KiteHandler } from '../handler/kite';
 import { IKiteManager, KiteManager } from '../manager/kite';
 import { IStyleManager, StyleManager } from '../manager/style';
@@ -110,7 +110,7 @@ export class Factory {
           new Barkat(
             Factory.handler.global(),
             Factory.util.ui(),
-            Factory.handler.sequence(),
+            Factory.handler.ticker(),
             Factory.handler.onload(),
             Factory.handler.alert(),
             Factory.handler.journal(),
@@ -177,7 +177,10 @@ export class Factory {
    */
   public static manager = {
     timeFrame: (): ITimeFrameManager =>
-      Factory.getInstance('timeframeManager', () => new TimeFrameManager(Factory.manager.sequence())),
+      Factory.getInstance(
+        'timeframeManager',
+        () => new TimeFrameManager(Factory.manager.ticker(), Factory.manager.dom(), Factory.manager.eventPublisher())
+      ),
 
     alert: (): IAlertManager =>
       Factory.getInstance(
@@ -216,9 +219,6 @@ export class Factory {
             Factory.manager.eventPublisher()
           )
       ),
-
-    sequence: (): ISequenceManager =>
-      Factory.getInstance('sequenceManager', () => new SequenceManager(Factory.client.ticker(), Factory.manager.dom())),
 
     paint: (): IPaintManager =>
       Factory.getInstance(
@@ -279,13 +279,7 @@ export class Factory {
     journal: (): IJournalManager =>
       Factory.getInstance(
         'journalManager',
-        () =>
-          new JournalManager(
-            Factory.manager.sequence(),
-            Factory.client.journal(),
-            Factory.client.os(),
-            Factory.manager.timeFrame()
-          )
+        () => new JournalManager(Factory.client.journal(), Factory.client.os(), Factory.manager.timeFrame())
       ),
     alertFeed: (): IAlertFeedManager =>
       Factory.getInstance(
@@ -434,7 +428,12 @@ export class Factory {
             Factory.handler.alert(),
             Factory.handler.tickerChange(),
             Factory.manager.paint(),
-            Factory.handler.alertFeed(),
+            [
+              Factory.handler.alertFeed(),
+              Factory.handler.timeFrame(),
+              Factory.handler.display(),
+              Factory.handler.kite(),
+            ],
             Factory.manager.eventSubscriber()
           )
       ),
@@ -495,8 +494,6 @@ export class Factory {
             Factory.handler.alert(),
             Factory.manager.paint(),
             Factory.manager.recent(),
-            Factory.handler.display(),
-            Factory.handler.kite(),
             Factory.util.sync()
           )
       ),
@@ -536,22 +533,13 @@ export class Factory {
         'flagHandler',
         () => new FlagHandler(Factory.manager.category(), Factory.manager.dom(), Factory.manager.paint())
       ),
-    sequence: (): ISequenceHandler =>
-      Factory.getInstance(
-        'sequenceHandler',
-        () =>
-          new SequenceHandler(
-            Factory.manager.sequence(),
-            Factory.manager.dom(),
-            Factory.manager.lifecycle(),
-            Factory.handler.display()
-          )
-      ),
     display: (): IDisplayHandler =>
       Factory.getInstance(
         'displayHandler',
-        () => new DisplayHandler(Factory.manager.sequence(), Factory.manager.dom(), Factory.manager.alertTicker())
+        () => new DisplayHandler(Factory.manager.dom(), Factory.manager.alertTicker())
       ),
+    timeFrame: (): ITimeFrameHandler =>
+      Factory.getInstance('timeFrameHandler', () => new TimeFrameHandler(Factory.manager.timeFrame())),
     journal: (): IJournalHandler =>
       Factory.getInstance(
         'journalHandler',

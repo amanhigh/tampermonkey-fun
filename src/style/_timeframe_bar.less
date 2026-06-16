@@ -1,0 +1,92 @@
+// ── Timeframe Bar Styles ──
+// Dedicated bar below the display card showing clickable timeframe chips.
+
+@tf-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+@tf-bg: rgba(20, 20, 28, 0.92);
+@tf-border: 1px solid rgba(255, 255, 255, 0.12);
+@tf-radius: 6px;
+@tf-padding: 4px 10px;
+@tf-font-size: 11px;
+@tf-margin: 3px;
+
+// Per-timeframe active colors — Heatmap Spectrum (long = warm, short = cool)
+@tf-color-yr: #f87171;    // Coral Red   — hottest
+@tf-color-smn: #fb923c;   // Orange
+@tf-color-tmn: #fbbf24;   // Amber
+@tf-color-mn: #34d399;    // Emerald
+@tf-color-wk: #60a5fa;    // Sky Blue
+@tf-color-dl: #a78bfa;    // Violet      — coolest
+
+// Inactive / muted
+@tf-color-inactive: rgba(255, 255, 255, 0.3);
+@tf-bg-inactive: rgba(255, 255, 255, 0.06);
+
+// Loading state
+@tf-color-loading: rgba(255, 255, 255, 0.2);
+
+// ============================================
+// Timeframe Bar Container
+// ============================================
+#aman-tf-bar {
+    display: block;
+    background: @tf-bg;
+    font-family: @tf-font;
+    font-size: @tf-font-size;
+    margin: @tf-margin;
+    padding: @tf-padding;
+    border: @tf-border;
+    border-radius: @tf-radius;
+    line-height: 1.6;
+    box-sizing: border-box;
+    width: 180px;
+    user-select: none;
+
+    // ============================================
+    // Timeframe Chip
+    // ============================================
+    .aman-tf-chip {
+        display: inline-block;
+        padding: 0 5px;
+        border-radius: 3px;
+        font-weight: 600;
+        font-size: 10px;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+
+        // Inactive state
+        &.aman-tf-inactive {
+            color: @tf-color-inactive;
+            background: @tf-bg-inactive;
+
+            &:hover {
+                color: rgba(255, 255, 255, 0.6);
+                background: rgba(255, 255, 255, 0.10);
+            }
+        }
+
+        // Active state colors per timeframe (via mixin)
+        .tf-active-color(@code, @color) {
+            &.aman-tf-chip[data-tf-code="@{code}"] {
+                color: @color;
+                background: fade(@color, 15%);
+                &:hover { background: fade(@color, 25%); }
+            }
+        }
+
+        &.aman-tf-active {
+            .tf-active-color(YR, @tf-color-yr);   // Coral Red
+            .tf-active-color(SMN, @tf-color-smn);  // Orange
+            .tf-active-color(TMN, @tf-color-tmn);  // Amber
+            .tf-active-color(MN, @tf-color-mn);    // Emerald
+            .tf-active-color(WK, @tf-color-wk);    // Sky Blue
+            .tf-active-color(DL, @tf-color-dl);    // Violet
+        }
+
+        // Loading state
+        &.aman-tf-loading {
+            opacity: 0.5;
+            pointer-events: none;
+            cursor: default;
+        }
+    }
+}

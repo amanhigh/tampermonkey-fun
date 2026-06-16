@@ -1,18 +1,32 @@
 // ── Enums matching Go models/barkat/ticker.go ──
 
 import { PaginationMetadata } from './api';
-
-/** Ordered timeframe codes. */
-export type TickerTimeframe = 'YR' | 'SMN' | 'TMN' | 'MN' | 'WK' | 'DL';
+import { TickerTimeframe } from './timeframe';
 
 /** Broad ticker classification. */
-export type TickerType = 'EQUITY' | 'INDEX' | 'CRYPTO' | 'COMMODITY' | 'FX' | 'BOND' | 'COMPOSITE';
+export enum TickerType {
+  EQUITY = 'EQUITY',
+  INDEX = 'INDEX',
+  CRYPTO = 'CRYPTO',
+  COMMODITY = 'COMMODITY',
+  FX = 'FX',
+  BOND = 'BOND',
+  COMPOSITE = 'COMPOSITE',
+}
 
 /** Ticker workflow state. */
-export type TickerState = 'WATCHED' | 'READY' | 'BLACKLIST';
+export enum TickerState {
+  WATCHED = 'WATCHED',
+  READY = 'READY',
+  BLACKLIST = 'BLACKLIST',
+}
 
 /** Trend classification. */
-export type TickerTrend = 'UPTREND' | 'SIDEWAYS' | 'DOWNTREND';
+export enum TickerTrend {
+  UPTREND = 'UPTREND',
+  SIDEWAYS = 'SIDEWAYS',
+  DOWNTREND = 'DOWNTREND',
+}
 
 import { AlertTicker } from './alert_ticker';
 
@@ -27,9 +41,9 @@ export class Ticker {
   ticker: string = '';
   exchange: string = '';
   timeframes: TickerTimeframe[] = [];
-  type: TickerType = 'EQUITY';
-  state: TickerState = 'WATCHED';
-  trend: TickerTrend = 'SIDEWAYS';
+  type: TickerType = TickerType.EQUITY;
+  state: TickerState = TickerState.WATCHED;
+  trend: TickerTrend = TickerTrend.SIDEWAYS;
   last_opened_at: string = '';
   is_fno: boolean = false;
   created_at: string = '';
@@ -41,7 +55,9 @@ export class Ticker {
     Object.assign(this, data);
   }
 
-  /** Exchange-qualified name: "EXCHANGE:ticker" or raw ticker when exchange absent. */
+  /**
+   * Exchange-qualified name: "EXCHANGE:ticker" or raw ticker when exchange absent.
+   */
   get qualifiedName(): string {
     return this.exchange ? `${this.exchange}:${this.ticker}` : this.ticker;
   }

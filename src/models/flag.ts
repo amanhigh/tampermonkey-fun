@@ -1,4 +1,4 @@
-import { TickerUpdateRequest } from './ticker';
+import { TickerUpdateRequest, TickerType, TickerState, TickerTrend } from './ticker';
 
 /**
  * Category identifier enum for flag classification.
@@ -51,36 +51,36 @@ export const ALL_FLAG_CATEGORIES: readonly FlagCategory[] = [
     id: FlagCategoryId.SIDEWAYS,
     color: 'orange',
     label: 'Sideways / Consolidation',
-    update: { trend: 'SIDEWAYS', type: 'EQUITY', state: 'WATCHED' },
+    update: { trend: TickerTrend.SIDEWAYS, type: TickerType.EQUITY, state: TickerState.WATCHED },
   },
   {
     id: FlagCategoryId.DOWNTREND,
     color: 'red',
     label: 'Downtrend / Shorts',
-    update: { trend: 'DOWNTREND', type: 'EQUITY', state: 'WATCHED' },
+    update: { trend: TickerTrend.DOWNTREND, type: TickerType.EQUITY, state: TickerState.WATCHED },
   },
   {
     id: FlagCategoryId.CRYPTO,
     color: 'dodgerblue',
     label: 'Crypto',
-    update: { type: 'CRYPTO', state: 'WATCHED' },
+    update: { type: TickerType.CRYPTO, state: TickerState.WATCHED },
   },
   {
     id: FlagCategoryId.UPTREND,
     color: 'lime',
     label: 'Uptrend / Longs',
-    update: { trend: 'UPTREND', type: 'EQUITY', state: 'WATCHED' },
+    update: { trend: TickerTrend.UPTREND, type: TickerType.EQUITY, state: TickerState.WATCHED },
   },
   {
     id: FlagCategoryId.INDEX,
     color: 'brown',
     label: 'Index / Markets',
-    update: { type: 'INDEX', state: 'WATCHED' },
+    update: { type: TickerType.INDEX, state: TickerState.WATCHED },
   },
   {
     id: FlagCategoryId.GOLD_INDEX,
     color: 'darkkhaki',
     label: 'Gold / Composite Index',
-    update: { type: 'COMPOSITE', state: 'WATCHED' },
+    update: { type: TickerType.COMPOSITE, state: TickerState.WATCHED },
   },
 ] as const;

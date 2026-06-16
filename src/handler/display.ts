@@ -1,9 +1,9 @@
-import { ISequenceManager } from '../manager/sequence';
 import { IDomManager } from '../manager/dom';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { Constants } from '../models/constant';
-import { SequenceType } from '../models/trading';
 import { AlertTicker } from '../models/alert_ticker';
+import { IDomainEventConsumer, ISubscriber } from '../manager/event_bus';
+import { DomainEventType } from '../models/domain_event';
 
 // ── CSS class names (defined in _display.less) ──
 
@@ -17,7 +17,6 @@ const DISPLAY_CLASS = {
   PRIMARY_ROW: 'aman-display-primary',
   SECONDARY_ROW: 'aman-display-secondary',
   ALERT_COUNT: 'aman-display-alert-count',
-  SEQUENCE_CHIP: 'aman-display-sequence',
   TICKER_CHIP: 'aman-display-ticker',
   EMPTY_ROW: 'aman-display-empty',
 } as const;
@@ -29,16 +28,16 @@ const EMOJI = {
   UNMAPPED: '⚠️',
   PRIMARY: '⭐',
   SECONDARY: '🔹',
-  SEQUENCE: '🧭',
   ALERT: '🔔',
 } as const;
 
 /**
  * Interface for display area operations.
- * Owns the compact/expanded display card that shows ticker, sequence,
- * and linked alert ticker information.
+ * Owns the compact/expanded display card that shows ticker status
+ * and linked alert ticker information. Timeframes are shown in the
+ * dedicated timeframe bar below this card.
  */
-export interface IDisplayHandler {
+export interface IDisplayHandler extends IDomainEventConsumer {
   /**
    * Fetches current ticker data and renders the display card.
    * Always starts in compact mode on fresh data fetch.
@@ -48,7 +47,7 @@ export interface IDisplayHandler {
 
 /**
  * Handles display area rendering.
- * Manages the compact/expanded display card that shows ticker, sequence,
+ * Manages the compact/expanded display card that shows ticker status
  * and linked alert ticker information.
  */
 // FIXME: Extract BaseBar with shared expand/collapse logic that DisplayHandler,
@@ -58,20 +57,25 @@ export class DisplayHandler implements IDisplayHandler {
   private displayExpanded = false;
 
   constructor(
-    private readonly sequenceManager: ISequenceManager,
     private readonly domManager: IDomManager,
     private readonly alertTickerManager: IAlertTickerManager
   ) {}
 
   /** @inheritdoc */
+  registerEvents(subscriber: ISubscriber): void {
+    subscriber.subscribe(DomainEventType.TICKER_CHANGED, async () => {
+      await this.display();
+    });
+  }
+
+  /** @inheritdoc */
   async display(): Promise<void> {
     this.displayExpanded = false;
-    const sequence = await this.sequenceManager.getCurrentSequence();
     const tvTicker = this.domManager.getTicker();
     const alertTickers = await this.alertTickerManager.getAlertTickersForTicker(tvTicker);
 
     // Store on DOM element for toggle re-render (avoids handler-level cache)
-    $(`#${Constants.UI.IDS.DISPLAY.CARD}`).data('displayData', { sequence, tvTicker, alertTickers });
+    $(`#${Constants.UI.IDS.DISPLAY.CARD}`).data('displayData', { tvTicker, alertTickers });
 
     this.renderDisplay();
   }
@@ -83,14 +87,12 @@ export class DisplayHandler implements IDisplayHandler {
    */
   private renderDisplay(): void {
     const $card = $(`#${Constants.UI.IDS.DISPLAY.CARD}`);
-    const data = $card.data('displayData') as
-      | { sequence: SequenceType; tvTicker: string; alertTickers: AlertTicker[] }
-      | undefined;
+    const data = $card.data('displayData') as { tvTicker: string; alertTickers: AlertTicker[] } | undefined;
     if (!data) {
       return;
     }
 
-    const { sequence, tvTicker, alertTickers } = data;
+    const { tvTicker, alertTickers } = data;
     const primaryTicker = alertTickers.find((t) => t.type === 'PRIMARY') ?? null;
     const isMapped = primaryTicker !== null;
     const displayTicker = primaryTicker?.symbol ?? tvTicker;
@@ -103,9 +105,9 @@ export class DisplayHandler implements IDisplayHandler {
     $card.toggleClass(DISPLAY_CLASS.EXPANDED_STATE, this.displayExpanded);
 
     if (this.displayExpanded) {
-      $card.html(this.buildExpandedHtml(sequence, displayTicker, isMapped, alertTickers));
+      $card.html(this.buildExpandedHtml(displayTicker, isMapped, alertTickers));
     } else {
-      $card.html(this.buildCompactHtml(sequence, displayTicker, isMapped, alertTickers.length));
+      $card.html(this.buildCompactHtml(displayTicker, isMapped, alertTickers.length));
     }
 
     // Attach click handler (remove previous first to avoid duplicates)
@@ -114,34 +116,23 @@ export class DisplayHandler implements IDisplayHandler {
 
   /**
    * Builds compact mode HTML.
-   * Format: 🔗 INFY · 🧭 MWD · 🔔2
+   * Format: 🔗 INFY · 🔔2
    */
-  private buildCompactHtml(
-    sequence: SequenceType,
-    displayTicker: string,
-    isMapped: boolean,
-    alertCount: number
-  ): string {
+  private buildCompactHtml(displayTicker: string, isMapped: boolean, alertCount: number): string {
     const statusEmoji = isMapped ? EMOJI.LINKED : EMOJI.UNMAPPED;
-    const sequenceHtml = `<span class="${DISPLAY_CLASS.SEQUENCE_CHIP}">${EMOJI.SEQUENCE} ${sequence}</span>`;
     const tickerHtml = `<span class="${DISPLAY_CLASS.TICKER_CHIP}">${displayTicker}</span>`;
     const countHtml = `<span class="${DISPLAY_CLASS.ALERT_COUNT}">${EMOJI.ALERT}${alertCount}</span>`;
 
-    return `${statusEmoji} ${tickerHtml} · ${sequenceHtml} · ${countHtml}`;
+    return `${statusEmoji} ${tickerHtml} · ${countHtml}`;
   }
 
   /**
    * Builds expanded mode HTML.
    * Compact header + linked ticker rows.
    */
-  private buildExpandedHtml(
-    sequence: SequenceType,
-    displayTicker: string,
-    isMapped: boolean,
-    alertTickers: AlertTicker[]
-  ): string {
+  private buildExpandedHtml(displayTicker: string, isMapped: boolean, alertTickers: AlertTicker[]): string {
     // Compact header at top
-    const headerHtml = this.buildCompactHtml(sequence, displayTicker, isMapped, alertTickers.length);
+    const headerHtml = this.buildCompactHtml(displayTicker, isMapped, alertTickers.length);
 
     // Alert ticker rows
     const rowsHtml = this.buildAlertTickerRows(alertTickers);

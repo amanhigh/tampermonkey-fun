@@ -5,11 +5,12 @@
 export enum DomainEventType {
   ALERT_TICKER_LINKED = 'ALERT_TICKER_LINKED',
   ALERT_TICKER_DELETED = 'ALERT_TICKER_DELETED',
-  TICKER_MARKED_RECENT = 'TICKER_MARKED_RECENT',
   TICKER_TRACKING_STARTED = 'TICKER_TRACKING_STARTED',
   TICKER_TRACKING_STOPPED = 'TICKER_TRACKING_STOPPED',
   TICKER_CATEGORY_CHANGED = 'TICKER_CATEGORY_CHANGED',
   WATCHLIST_CHANGED = 'WATCHLIST_CHANGED',
+  TICKER_TIMEFRAMES_CHANGED = 'TICKER_TIMEFRAMES_CHANGED',
+  TICKER_CHANGED = 'TICKER_CHANGED',
 }
 
 // ── Reusable Payload Interfaces ──
@@ -48,28 +49,26 @@ export interface DomainEventBase<TType extends DomainEventType = DomainEventType
 // ── Event Interface Aliases ──
 
 export interface AlertTickerLinkedEvent
-  extends DomainEventBase<DomainEventType.ALERT_TICKER_LINKED>,
-    AlertTickerPayload {}
+  extends DomainEventBase<DomainEventType.ALERT_TICKER_LINKED>, AlertTickerPayload {}
 
 export interface AlertTickerDeletedEvent
-  extends DomainEventBase<DomainEventType.ALERT_TICKER_DELETED>,
-    AlertTickerPayload {}
-
-export interface TickerMarkedRecentEvent extends DomainEventBase<DomainEventType.TICKER_MARKED_RECENT>, TickerPayload {}
+  extends DomainEventBase<DomainEventType.ALERT_TICKER_DELETED>, AlertTickerPayload {}
 
 export interface TickerTrackingStartedEvent
-  extends DomainEventBase<DomainEventType.TICKER_TRACKING_STARTED>,
-    TickerPayload {}
+  extends DomainEventBase<DomainEventType.TICKER_TRACKING_STARTED>, TickerPayload {}
 
 export interface TickerTrackingStoppedEvent
-  extends DomainEventBase<DomainEventType.TICKER_TRACKING_STOPPED>,
-    TickerPayload {}
+  extends DomainEventBase<DomainEventType.TICKER_TRACKING_STOPPED>, TickerPayload {}
 
 export interface TickerCategoryChangedEvent
-  extends DomainEventBase<DomainEventType.TICKER_CATEGORY_CHANGED>,
-    TickersPayload {}
+  extends DomainEventBase<DomainEventType.TICKER_CATEGORY_CHANGED>, TickersPayload {}
 
 export interface WatchlistChangedEvent extends DomainEventBase<DomainEventType.WATCHLIST_CHANGED>, TickerPayload {}
+
+export interface TickerTimeframesChangedEvent
+  extends DomainEventBase<DomainEventType.TICKER_TIMEFRAMES_CHANGED>, TickerPayload {}
+
+export interface TickerChangedEvent extends DomainEventBase<DomainEventType.TICKER_CHANGED>, TickerPayload {}
 
 // ── Event-by-Type Map ──
 
@@ -81,11 +80,12 @@ export interface WatchlistChangedEvent extends DomainEventBase<DomainEventType.W
 export interface DomainEventByType {
   [DomainEventType.ALERT_TICKER_LINKED]: AlertTickerLinkedEvent;
   [DomainEventType.ALERT_TICKER_DELETED]: AlertTickerDeletedEvent;
-  [DomainEventType.TICKER_MARKED_RECENT]: TickerMarkedRecentEvent;
   [DomainEventType.TICKER_TRACKING_STARTED]: TickerTrackingStartedEvent;
   [DomainEventType.TICKER_TRACKING_STOPPED]: TickerTrackingStoppedEvent;
   [DomainEventType.TICKER_CATEGORY_CHANGED]: TickerCategoryChangedEvent;
   [DomainEventType.WATCHLIST_CHANGED]: WatchlistChangedEvent;
+  [DomainEventType.TICKER_TIMEFRAMES_CHANGED]: TickerTimeframesChangedEvent;
+  [DomainEventType.TICKER_CHANGED]: TickerChangedEvent;
 }
 
 // ── Event Union ──
@@ -93,8 +93,9 @@ export interface DomainEventByType {
 export type DomainEvent =
   | AlertTickerLinkedEvent
   | AlertTickerDeletedEvent
-  | TickerMarkedRecentEvent
   | TickerTrackingStartedEvent
   | TickerTrackingStoppedEvent
   | TickerCategoryChangedEvent
-  | WatchlistChangedEvent;
+  | WatchlistChangedEvent
+  | TickerTimeframesChangedEvent
+  | TickerChangedEvent;

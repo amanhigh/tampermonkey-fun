@@ -87,14 +87,10 @@ export class AlertFeedHandler implements IAlertFeedHandler {
       await this.alertFeedManager.createAlertFeedEvent(event.alertTicker);
     });
 
-    // TICKER_MARKED_RECENT, TICKER_TRACKING_STARTED, WATCHLIST_CHANGED
+    // TICKER_CHANGED, TICKER_TRACKING_STARTED, WATCHLIST_CHANGED
     // all carry a single ticker string and rebind all linked alert tickers
     subscriber.subscribeMany(
-      [
-        DomainEventType.TICKER_MARKED_RECENT,
-        DomainEventType.TICKER_TRACKING_STARTED,
-        DomainEventType.WATCHLIST_CHANGED,
-      ],
+      [DomainEventType.TICKER_CHANGED, DomainEventType.TICKER_TRACKING_STARTED, DomainEventType.WATCHLIST_CHANGED],
       async (event) => {
         await this.createAlertFeedEventsForTicker(event.ticker);
       }
@@ -265,6 +261,15 @@ export class AlertFeedHandler implements IAlertFeedHandler {
         return; // Skip non-quote rows (ec, etc.)
       }
       const { name, ticker } = this.extractAlertInfo($element);
+      // HACK: Skip Crude Oil WTI — symbol "CL" collides with Colgate-Palmolive (CL:NYSE).
+      // Proper fix: resolve alert identity by pair_id instead of bare symbol.
+      // See: https://api.investing.com/api/search → pair_id 8849 (Crude Oil) vs 7938 (Colgate).
+      if (name.toLowerCase().includes('crude oil')) {
+        console.warn(
+          `Skipping alert feed row: "${name}" — symbol "CL" collision with Colgate-Palmolive (CL:NYSE). Fix pending: use pair_id for identity resolution.`
+        );
+        return;
+      }
       elements.push({ $el: $element, name, ticker });
     });
 

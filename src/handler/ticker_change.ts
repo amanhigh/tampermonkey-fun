@@ -2,23 +2,24 @@ import { IDomManager } from '../manager/dom';
 import { IAlertHandler } from './alert';
 import { IPaintManager } from '../manager/paint';
 import { IRecentManager } from '../manager/recent';
-import { IDisplayHandler } from './display';
-import { IKiteHandler } from './kite';
 import { ISyncUtil } from '../util/sync';
 
 export interface ITickerChangeHandler {
   onTickerChange(): void;
 }
 
+/**
+ * Handles ticker change events from the DOM observer.
+ *
+ * Delegates to sub-handlers. Decoupled consumers (TimeFrame, Display, Kite, etc.)
+ * listen to the TICKER_CHANGED domain event published by RecentManager.markRecent().
+ */
 export class TickerChangeHandler implements ITickerChangeHandler {
-  // eslint-disable-next-line max-params
   constructor(
     private readonly domManager: IDomManager,
     private readonly alertHandler: IAlertHandler,
     private readonly paintManager: IPaintManager,
     private readonly recentManager: IRecentManager,
-    private readonly displayHandler: IDisplayHandler,
-    private readonly kiteHandler: IKiteHandler,
     private readonly syncUtil: ISyncUtil
   ) {}
 
@@ -30,10 +31,6 @@ export class TickerChangeHandler implements ITickerChangeHandler {
       // Update UI components — paintTickers handles WATCHLIST + SCREENER (if visible) + header
       void this.paintManager.paintTickers([this.domManager.getTicker()]);
       void this.recordRecentTicker();
-      void this.displayHandler.display();
-
-      // Handle GTT operations
-      void this.kiteHandler.refreshGttOrders();
     });
   }
 

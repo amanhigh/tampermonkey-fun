@@ -4,6 +4,7 @@ import { IRecentManager } from '../../src/manager/recent';
 import { FeedState } from '../../src/models/alertfeed';
 import { Constants } from '../../src/models/constant';
 import { WatchCategoryId } from '../../src/models/watch';
+import { TickerState } from '../../src/models/ticker';
 
 // Mock GM global
 (global as any).GM = {
@@ -55,7 +56,7 @@ describe('AlertFeedManager', () => {
 
     it('should return WATCHED state when ticker has a watch category', async () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
-        watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: { state: 'READY' } },
+        watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: { state: TickerState.READY } },
         flag: undefined,
         isFno: false,
       });

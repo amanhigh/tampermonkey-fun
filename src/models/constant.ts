@@ -1,6 +1,3 @@
-import { SequenceMap, SequenceType, TimeFrameConfig, TimeFrame, TimeFrameMap } from './trading';
-import type { TickerTimeframe } from './ticker';
-
 /**
  * Application-wide constants organized by domain and functionality
  */
@@ -13,10 +10,6 @@ const KOHAN_PORTS = {
 export const Constants = Object.freeze({
   // Audit Configuration
   AUDIT: {
-    IDS: {
-      AREA: 'aman-audit', // Audit area container
-      GLOBAL_REFRESH_BUTTON: 'aman-audit-global-refresh', // Global refresh button for all audits
-    },
     CLASSES: {
       SECTION: 'aman-audit-section', // Main audit section container
       STATUS_PASS: 'audit-status-pass', // When no issues found
@@ -76,7 +69,6 @@ export const Constants = Object.freeze({
         AUDIT: 'aman-audit', // Old Name: auditId
         ORDERS: 'aman-orders', // Old Name: ordersId
         JOURNAL: 'aman-journal', // Old Name: journalId
-        FLASH: 'aman-flash', // Old Name: flashId
       },
       DISPLAY: {
         CARD: 'aman-display', // Old Name: displayId (was INPUTS.DISPLAY)
@@ -85,9 +77,16 @@ export const Constants = Object.freeze({
         ATTR_ALERT_TICKER_SYMBOL: 'data-alert-ticker-symbol',
         ATTR_ALERT_TICKER_TYPE: 'data-alert-ticker-type',
       },
+      TIMEFRAME_BAR: {
+        CONTAINER: 'aman-tf-bar',
+        CHIP_CLASS: 'aman-tf-chip',
+        ACTIVE_CLASS: 'aman-tf-active',
+        INACTIVE_CLASS: 'aman-tf-inactive',
+        LOADING_CLASS: 'aman-tf-loading',
+        ATTR_CODE: 'data-tf-code',
+      },
       INPUTS: {
         COMMAND: 'aman-input', // Old Name: inputId
-        ENTER_KEY_CODE: 13, // Old Name: ENTER_KEY_CODE
       },
       BUTTONS: {
         SEQUENCE: 'aman-seq', // Old Name: seqId
@@ -124,12 +123,8 @@ export const Constants = Object.freeze({
       CLOSE_TEXTBOX: 'button:contains("Ok")', // Old name: closeTextboxSelector
       AUTO_ALERT: "span:contains('Copy price')", // Old name: autoAlertSelector
     },
-    REPLAY: {
-      PLAY_PAUSE: 'div[class*=replayToolbar] span[class*=icon]:nth(1)', // Old name: replayPlayPauseSelector
-    },
     ORDER_PANEL: {
       CLOSE: 'button[data-name="close"]', // Old name: orderPanelCloseSelector
-      GTT_BUTTON: '[data-role="gtt-button"]',
       INPUTS: {
         ENTRY_PRICE: 'input[data-property-id*="EntryPrice"]',
         PROFIT_PRICE: 'input[data-property-id*="ProfitLevelPrice"]',
@@ -142,9 +137,7 @@ export const Constants = Object.freeze({
       MAIN: '[data-qa-id="screener-widget"]', // Old name: screenerSelector
       LINE: 'tr.row-RdUXZpkv', // Old name: screenerLineSelector
       ITEM: 'tr.row-RdUXZpkv', // Screener item selector for flag painting
-      BUTTON: 'button[data-name=toggle-visibility-button]', // Old name: screenerButtonSelector
       SELECTED: '.tv-screener-table__result-row--selected', // Old name: screenerSelectedSelector
-      PERSISTENT_PARENT: '.buttons-dA6R3Y1X', // Persistent parent for observer
     },
     WATCHLIST: {
       SYMBOL: 'span[class*=symbolNameText]', // Old Name: watchListSymbolSelector
@@ -233,10 +226,7 @@ Support:
   // Storage keys for persistent data
   STORAGE: {
     SILOS: {
-      DATA: 'dataSilo', // Old Name: dataSiloStore
-      ORDER_INFO: 'orderSilo', // Old Name: orderInfoStore
-      FLAG_INFO: 'flagSilo', // Old Name: flagInfoStore
-      PAIR_MAP: 'pairSilo', // Old Name: pairMapStore
+      WATCHLIST: 'watchlistSilo', // Current TradingView watchlist ticker snapshot
     },
     EVENTS: {
       ALERT_FEED_UPDATE: 'alertFeedEvent', // Old Name: tvWatchChangeEvent
@@ -245,31 +235,6 @@ Support:
       GTT_REFERSH: 'gttRefereshEvent', // Old Name: gttOrderEvent
       GTT_CREATE: 'gttCreateEvent', // Old Name: gttRequest
       GTT_DELETE: 'gttDeleteEvent',
-    },
-  },
-
-  // Time frame and sequence configurations
-  TIME: {
-    SEQUENCE_TYPES: {
-      DEFAULT: SequenceType.MWD,
-      HIGH: SequenceType.YR,
-      FRAMES: {
-        [TimeFrame.DAILY]: new TimeFrameConfig('DL', 'I', 2),
-        [TimeFrame.WEEKLY]: new TimeFrameConfig('WK', 'H', 3),
-        [TimeFrame.MONTHLY]: new TimeFrameConfig('MN', 'VH', 4),
-        [TimeFrame.THREE_MONTHLY]: new TimeFrameConfig('TMN', 'T', 5),
-        [TimeFrame.SIX_MONTHLY]: new TimeFrameConfig('SMN', 'I', 6),
-      } as TimeFrameMap,
-      SEQUENCES: {
-        // Old name: timeFrameBar
-        [SequenceType.MWD]: [TimeFrame.THREE_MONTHLY, TimeFrame.MONTHLY, TimeFrame.WEEKLY, TimeFrame.DAILY],
-        [SequenceType.YR]: [TimeFrame.SIX_MONTHLY, TimeFrame.THREE_MONTHLY, TimeFrame.MONTHLY, TimeFrame.WEEKLY],
-      } as SequenceMap,
-      /** Maps a SequenceType to the ordered backend timeframe list. */
-      TO_TIMEFRAMES: {
-        [SequenceType.MWD]: ['MN', 'WK', 'DL'] as TickerTimeframe[],
-        [SequenceType.YR]: ['YR', 'SMN', 'TMN', 'MN', 'WK'] as TickerTimeframe[],
-      } as Record<SequenceType, TickerTimeframe[]>,
     },
   },
 
@@ -302,7 +267,6 @@ Support:
     TYPES: {
       NSE: 'NSE', // Old Name: NSE_EXCHANGE
     },
-    PREFERRED: ['NSE', 'NYSE', 'NASDAQ'],
   },
   COMPOSITE: {
     /** Characters that indicate a composite symbol */

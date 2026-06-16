@@ -214,6 +214,7 @@ describe('DomManager', () => {
 
       expect(mockWaitUtil.waitInput).toHaveBeenCalledWith(Constants.DOM.POPUPS.SEARCH, 'UNKNOWN');
     });
+
   });
 
   describe('navigateTickers', () => {

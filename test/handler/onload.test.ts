@@ -6,8 +6,7 @@ import { IHotkeyHandler } from '../../src/handler/hotkey';
 import { IAlertHandler } from '../../src/handler/alert';
 import { ITickerChangeHandler } from '../../src/handler/ticker_change';
 import { IPaintManager } from '../../src/manager/paint';
-import { IAlertFeedHandler } from '../../src/handler/alertfeed';
-import { ISubscriber } from '../../src/manager/event_bus';
+import { IDomainEventConsumer, ISubscriber } from '../../src/manager/event_bus';
 import { Constants } from '../../src/models/constant';
 
 // Mock document and jQuery
@@ -38,7 +37,7 @@ describe('OnLoadHandler', () => {
   let mockAlertHandler: jest.Mocked<IAlertHandler>;
   let mockTickerChangeHandler: jest.Mocked<ITickerChangeHandler>;
   let mockPaintManager: jest.Mocked<IPaintManager>;
-  let mockAlertFeedHandler: jest.Mocked<IAlertFeedHandler>;
+  let mockDomainEventConsumers: jest.Mocked<IDomainEventConsumer>[];
   let mockSubscriber: jest.Mocked<ISubscriber>;
 
   beforeEach(() => {
@@ -86,12 +85,10 @@ describe('OnLoadHandler', () => {
       summarizeBuckets: jest.fn().mockResolvedValue({ buckets: new Map(), uncategorizedCount: 0 }),
     } as unknown as jest.Mocked<IPaintManager>;
 
-    mockAlertFeedHandler = {
-      registerEvents: jest.fn(),
-      initialize: jest.fn(),
-      handleHookButton: jest.fn(),
-      paintAlertFeed: jest.fn(),
-    } as unknown as jest.Mocked<IAlertFeedHandler>;
+    mockDomainEventConsumers = [
+      { registerEvents: jest.fn() },
+      { registerEvents: jest.fn() },
+    ] as unknown as jest.Mocked<IDomainEventConsumer>[];
 
     mockSubscriber = {
       subscribe: jest.fn(),
@@ -106,7 +103,7 @@ describe('OnLoadHandler', () => {
       mockAlertHandler,
       mockTickerChangeHandler,
       mockPaintManager,
-      mockAlertFeedHandler,
+      mockDomainEventConsumers,
       mockSubscriber
     );
   });
@@ -127,16 +124,16 @@ describe('OnLoadHandler', () => {
       expect(mockAlertHandler.registerAlertTickerDelinkHandler).toHaveBeenCalled();
     });
 
-    it('should register domain event consumers on init', () => {
+    it('should register all domain event consumers on init', () => {
       onLoadHandler.init();
-      expect(mockAlertFeedHandler.registerEvents).toHaveBeenCalledWith(mockSubscriber);
+      for (const consumer of mockDomainEventConsumers) {
+        expect(consumer.registerEvents).toHaveBeenCalledWith(mockSubscriber);
+      }
     });
   });
 
   describe('constants integration', () => {
     it('should use correct DOM selectors from constants', () => {
-      expect(Constants.DOM.SCREENER.BUTTON).toBe('button[data-name=toggle-visibility-button]');
-      expect(Constants.DOM.SCREENER.PERSISTENT_PARENT).toBe('.buttons-dA6R3Y1X');
       expect(Constants.DOM.SCREENER.MAIN).toBe('[data-qa-id="screener-widget"]');
     });
   });

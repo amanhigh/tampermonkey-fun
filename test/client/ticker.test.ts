@@ -1,4 +1,6 @@
 import { TickerClient, ITickerClient } from '../../src/client/ticker';
+import { TickerType, TickerState, TickerTrend } from '../../src/models/ticker';
+import { TickerTimeframe } from '../../src/models/timeframe';
 import { Constants } from '../../src/models/constant';
 
 // Mock the BaseClient's makeRequest method
@@ -54,10 +56,10 @@ describe('TickerClient', () => {
         data: {
           ticker: 'MCX',
           exchange: 'NSE',
-          timeframes: ['MN', 'WK', 'DL'],
-          type: 'EQUITY',
-          state: 'WATCHED',
-          trend: 'UPTREND',
+          timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
+          type: TickerType.EQUITY,
+          state: TickerState.WATCHED,
+          trend: TickerTrend.UPTREND,
           last_opened_at: '2026-05-05T10:30:00Z',
           is_fno: true,
           created_at: '2026-05-05T10:30:01Z',
@@ -70,10 +72,10 @@ describe('TickerClient', () => {
       const result = await tickerClient.createTicker({
         ticker: 'MCX',
         exchange: 'NSE',
-        timeframes: ['MN', 'WK', 'DL'],
-        type: 'EQUITY',
-        state: 'WATCHED',
-        trend: 'UPTREND',
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
+        type: TickerType.EQUITY,
+        state: TickerState.WATCHED,
+        trend: TickerTrend.UPTREND,
         last_opened_at: '2026-05-05T10:30:00Z',
         is_fno: true,
       });
@@ -84,10 +86,10 @@ describe('TickerClient', () => {
         data: JSON.stringify({
           ticker: 'MCX',
           exchange: 'NSE',
-          timeframes: ['MN', 'WK', 'DL'],
-          type: 'EQUITY',
-          state: 'WATCHED',
-          trend: 'UPTREND',
+          timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
+          type: TickerType.EQUITY,
+          state: TickerState.WATCHED,
+          trend: TickerTrend.UPTREND,
           last_opened_at: '2026-05-05T10:30:00Z',
           is_fno: true,
         }),
@@ -102,10 +104,10 @@ describe('TickerClient', () => {
         tickerClient.createTicker({
           ticker: 'MCX',
           exchange: 'NSE',
-          timeframes: ['MN'],
-          type: 'EQUITY',
-          state: 'WATCHED',
-          trend: 'UPTREND',
+          timeframes: [TickerTimeframe.MN],
+          type: TickerType.EQUITY,
+          state: TickerState.WATCHED,
+          trend: TickerTrend.UPTREND,
           last_opened_at: '2026-05-05T10:30:00Z',
         })
       ).rejects.toThrow('Failed to create ticker: 409 Conflict: Ticker already exists');
@@ -113,10 +115,10 @@ describe('TickerClient', () => {
   });
 
   describe('getTicker', () => {
-    it('should GET encoded ticker path and unwrap envelope.data', async () => {
+    it('should GET encoded ticker path, hydrate Ticker, and expose qualifiedName', async () => {
       const apiEnvelope = {
         status: 'success',
-        data: { ticker: 'MCX', exchange: 'NSE', timeframes: ['MN'], type: 'EQUITY', state: 'WATCHED', trend: 'UPTREND', last_opened_at: '2026-05-05T10:30:00Z', is_fno: false, created_at: '', updated_at: '' },
+        data: { ticker: 'MCX', exchange: 'NSE', timeframes: ['MN'], type: TickerType.EQUITY, state: TickerState.WATCHED, trend: TickerTrend.UPTREND, last_opened_at: '2026-05-05T10:30:00Z', is_fno: false, created_at: '', updated_at: '' },
       };
 
       mockMakeRequest.mockResolvedValue(apiEnvelope as any);
@@ -125,6 +127,7 @@ describe('TickerClient', () => {
 
       expect(mockMakeRequest).toHaveBeenCalledWith('/tickers/MCX');
       expect(result).toEqual(apiEnvelope.data);
+      expect(result.qualifiedName).toBe('NSE:MCX');
     });
 
     it('should encode composite ticker path values', async () => {
@@ -142,9 +145,9 @@ describe('TickerClient', () => {
         ticker: 'MCX',
         exchange: 'NSE',
         timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'] as any[],
-        type: 'EQUITY' as any,
-        state: 'WATCHED' as any,
-        trend: 'UPTREND' as any,
+        type: TickerType.EQUITY as any,
+        state: TickerState.WATCHED as any,
+        trend: TickerTrend.UPTREND as any,
         is_fno: false,
         last_opened_at: '',
         created_at: '',
@@ -152,7 +155,7 @@ describe('TickerClient', () => {
       };
       const updatedRecord = {
         ...currentRecord,
-        state: 'READY',
+        state: TickerState.READY,
         updated_at: '2026-05-05T11:00:01Z',
       };
       const putEnvelope = { status: 'success', data: updatedRecord };
@@ -162,7 +165,7 @@ describe('TickerClient', () => {
         .mockResolvedValueOnce(putEnvelope as any);
 
       // Partial update — only change `state`
-      const result = await tickerClient.updateTicker('MCX', { exchange: 'NSE', state: 'READY' });
+      const result = await tickerClient.updateTicker('MCX', { exchange: 'NSE', state: TickerState.READY });
 
       // First call: GET current record
       expect(mockMakeRequest).toHaveBeenNthCalledWith(1, '/tickers/MCX');
@@ -173,9 +176,9 @@ describe('TickerClient', () => {
         data: JSON.stringify({
           exchange: 'NSE',
           timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'],
-          type: 'EQUITY',
-          state: 'READY',
-          trend: 'UPTREND',
+          type: TickerType.EQUITY,
+          state: TickerState.READY,
+          trend: TickerTrend.UPTREND,
           is_fno: false,
         }),
       });
@@ -187,9 +190,9 @@ describe('TickerClient', () => {
         ticker: 'MCX',
         exchange: 'NSE',
         timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'] as any[],
-        type: 'EQUITY' as any,
-        state: 'WATCHED' as any,
-        trend: 'UPTREND' as any,
+        type: TickerType.EQUITY as any,
+        state: TickerState.WATCHED as any,
+        trend: TickerTrend.UPTREND as any,
         is_fno: true,
         last_opened_at: '',
         created_at: '',
@@ -212,9 +215,9 @@ describe('TickerClient', () => {
         data: JSON.stringify({
           exchange: 'NSE',
           timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'],
-          type: 'EQUITY',
-          state: 'WATCHED',
-          trend: 'UPTREND',
+          type: TickerType.EQUITY,
+          state: TickerState.WATCHED,
+          trend: TickerTrend.UPTREND,
           is_fno: false,
         }),
       });
@@ -222,11 +225,9 @@ describe('TickerClient', () => {
   });
 
   describe('patchTickerLastOpened', () => {
-    it('should PATCH encoded ticker path with last_opened_at only', async () => {
-      const apiEnvelope = {
-        status: 'success',
-        data: { ticker: 'MCX', last_opened_at: '2026-05-05T11:00:00Z', updated_at: '2026-05-05T11:00:01Z' },
-      };
+    it('should PATCH encoded ticker path and hydrate Ticker with default fields', async () => {
+      const apiData = { ticker: 'MCX', last_opened_at: '2026-05-05T11:00:00Z', updated_at: '2026-05-05T11:00:01Z' };
+      const apiEnvelope = { status: 'success', data: apiData };
 
       mockMakeRequest.mockResolvedValue(apiEnvelope as any);
 
@@ -239,7 +240,14 @@ describe('TickerClient', () => {
         headers: { 'Content-Type': 'application/json' },
         data: JSON.stringify({ last_opened_at: '2026-05-05T11:00:00Z' }),
       });
-      expect(result).toEqual(apiEnvelope.data);
+      // Hydrated Ticker preserves API fields and fills defaults for missing ones
+      expect(result.ticker).toBe('MCX');
+      expect(result.last_opened_at).toBe('2026-05-05T11:00:00Z');
+      // Default fields from Ticker class
+      expect(result.exchange).toBe('');
+      expect(result.timeframes).toEqual([]);
+      expect(result.type).toBe('EQUITY');
+      expect(result.state).toBe('WATCHED');
     });
   });
 
@@ -270,8 +278,8 @@ describe('TickerClient', () => {
   describe('listTickers', () => {
     it('should return all records from a single page when total <= 100', async () => {
       const page = Array.from({ length: 3 }, (_, i) => ({
-        ticker: `T${i}`, exchange: '', timeframes: ['MN'] as any, type: 'EQUITY' as any,
-        state: 'WATCHED' as any, trend: 'UPTREND' as any, last_opened_at: '', is_fno: false,
+        ticker: `T${i}`, exchange: '', timeframes: ['MN'] as any, type: TickerType.EQUITY as any,
+        state: TickerState.WATCHED as any, trend: TickerTrend.UPTREND as any, last_opened_at: '', is_fno: false,
         created_at: '', updated_at: '',
       }));
       mockMakeRequest.mockResolvedValue({
@@ -292,7 +300,7 @@ describe('TickerClient', () => {
         data: {
           tickers: Array.from({ length: 100 }, (_, i) => ({
             ticker: `T${start + i}`, exchange: '', timeframes: ['MN'] as any,
-            type: 'EQUITY' as any, state: 'WATCHED' as any, trend: 'UPTREND' as any,
+            type: TickerType.EQUITY as any, state: TickerState.WATCHED as any, trend: TickerTrend.UPTREND as any,
             last_opened_at: '', is_fno: false, created_at: '', updated_at: '',
           })),
           metadata: { total: 250, offset: start, limit: 100 },
@@ -307,7 +315,7 @@ describe('TickerClient', () => {
           data: {
             tickers: Array.from({ length: 50 }, (_, i) => ({
               ticker: `T${200 + i}`, exchange: '', timeframes: ['MN'] as any,
-              type: 'EQUITY' as any, state: 'WATCHED' as any, trend: 'UPTREND' as any,
+              type: TickerType.EQUITY as any, state: TickerState.WATCHED as any, trend: TickerTrend.UPTREND as any,
               last_opened_at: '', is_fno: false, created_at: '', updated_at: '',
             })),
             metadata: { total: 250, offset: 200, limit: 100 },
@@ -350,7 +358,7 @@ describe('TickerClient', () => {
       mockMakeRequest
         .mockResolvedValueOnce({
           status: 'success',
-          data: { tickers: [{ ticker: 'A', exchange: '', timeframes: ['MN'] as any, type: 'EQUITY' as any, state: 'WATCHED' as any, trend: 'UPTREND' as any, last_opened_at: '', is_fno: false, created_at: '', updated_at: '' }], metadata: { total: 150, offset: 0, limit: 100 } },
+          data: { tickers: [{ ticker: 'A', exchange: '', timeframes: ['MN'] as any, type: TickerType.EQUITY as any, state: TickerState.WATCHED as any, trend: TickerTrend.UPTREND as any, last_opened_at: '', is_fno: false, created_at: '', updated_at: '' }], metadata: { total: 150, offset: 0, limit: 100 } },
         })
         .mockRejectedValue(new Error('500 Server Error'));
 
@@ -370,10 +378,10 @@ describe('TickerClient', () => {
         tickerClient.createTicker({
           ticker: 'MCX',
           exchange: 'NSE',
-          timeframes: ['MN'],
-          type: 'EQUITY',
-          state: 'WATCHED',
-          trend: 'UPTREND',
+          timeframes: [TickerTimeframe.MN],
+          type: TickerType.EQUITY,
+          state: TickerState.WATCHED,
+          trend: TickerTrend.UPTREND,
           last_opened_at: '2026-05-05T10:30:00Z',
         })
       ).rejects.toThrow('Failed to create ticker: 503 Service Unavailable');
@@ -389,17 +397,17 @@ describe('TickerClient', () => {
       mockMakeRequest.mockRejectedValue(new Error('404 Not Found'));
 
       await expect(
-        tickerClient.updateTicker('UNKNOWN', { exchange: 'NSE', state: 'WATCHED' })
+        tickerClient.updateTicker('UNKNOWN', { exchange: 'NSE', state: TickerState.WATCHED })
       ).rejects.toThrow('Failed to update ticker: Failed to get ticker: 404 Not Found');
     });
 
     it('should wrap update ticker errors from PUT after successful GET', async () => {
       mockMakeRequest
-        .mockResolvedValueOnce({ status: 'success', data: { ticker: 'MCX', exchange: 'NSE', timeframes: ['MN'], type: 'EQUITY', state: 'WATCHED', trend: 'UPTREND', is_fno: false, last_opened_at: '', created_at: '', updated_at: '' } } as any)
+        .mockResolvedValueOnce({ status: 'success', data: { ticker: 'MCX', exchange: 'NSE', timeframes: ['MN'], type: TickerType.EQUITY, state: TickerState.WATCHED, trend: TickerTrend.UPTREND, is_fno: false, last_opened_at: '', created_at: '', updated_at: '' } } as any)
         .mockRejectedValueOnce(new Error('500 Server Error'));
 
       await expect(
-        tickerClient.updateTicker('MCX', { exchange: 'NSE', state: 'READY' })
+        tickerClient.updateTicker('MCX', { exchange: 'NSE', state: TickerState.READY })
       ).rejects.toThrow('Failed to update ticker: 500 Server Error');
     });
 

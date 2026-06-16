@@ -48,7 +48,7 @@ describe('EventBus', () => {
       eventBus.subscribe(DomainEventType.ALERT_TICKER_LINKED, handler);
 
       await eventBus.publish({
-        type: DomainEventType.TICKER_MARKED_RECENT,
+        type: DomainEventType.TICKER_CHANGED,
         ticker: 'TV:INFY',
       });
 
@@ -57,13 +57,13 @@ describe('EventBus', () => {
 
     it('should await async handlers', async () => {
       let resolved = false;
-      eventBus.subscribe(DomainEventType.TICKER_MARKED_RECENT, async () => {
+      eventBus.subscribe(DomainEventType.TICKER_CHANGED, async () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
         resolved = true;
       });
 
       await eventBus.publish({
-        type: DomainEventType.TICKER_MARKED_RECENT,
+        type: DomainEventType.TICKER_CHANGED,
         ticker: 'TV:INFY',
       });
 
@@ -75,7 +75,7 @@ describe('EventBus', () => {
     it('should call the handler for every matching event type', async () => {
       const handler = jest.fn();
       eventBus.subscribeMany(
-        [DomainEventType.ALERT_TICKER_LINKED, DomainEventType.TICKER_MARKED_RECENT],
+        [DomainEventType.ALERT_TICKER_LINKED, DomainEventType.TICKER_CHANGED],
         handler
       );
 
@@ -88,7 +88,7 @@ describe('EventBus', () => {
       expect(handler).toHaveBeenCalledTimes(1);
 
       await eventBus.publish({
-        type: DomainEventType.TICKER_MARKED_RECENT,
+        type: DomainEventType.TICKER_CHANGED,
         ticker: 'TV:TCS',
       });
 

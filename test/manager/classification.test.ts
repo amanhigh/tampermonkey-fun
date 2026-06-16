@@ -2,7 +2,8 @@ import {
   WatchClassifier,
   FlagClassifier,
 } from '../../src/manager/classification';
-import { Ticker } from '../../src/models/ticker';
+import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/ticker';
+import { TickerTimeframe } from '../../src/models/timeframe';
 import { WatchCategoryId } from '../../src/models/watch';
 import { FlagCategoryId } from '../../src/models/flag';
 
@@ -15,17 +16,17 @@ describe('WatchClassifier.findByTicker', () => {
     return new Ticker({
       ticker: 'TEST',
       exchange: '',
-      timeframes: ['MN', 'WK', 'DL'],
-      type: 'EQUITY',
-      state: 'WATCHED',
-      trend: 'SIDEWAYS',
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
+      type: TickerType.EQUITY,
+      state: TickerState.WATCHED,
+      trend: TickerTrend.SIDEWAYS,
       ...overrides,
     });
   }
 
   describe('classified by state, type, then timeframes', () => {
     it('classifies READY state ticker as READY', () => {
-      const ticker = makeCatTicker({ state: 'READY' });
+      const ticker = makeCatTicker({ state: TickerState.READY });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.READY);
     });
@@ -33,8 +34,8 @@ describe('WatchClassifier.findByTicker', () => {
     it('classifies COMPOSITE ticker as COMPOSITE (type before timeframe)', () => {
       const ticker = makeCatTicker({
         ticker: 'CNXMIDCAP/USDINR/XAUUSD*100',
-        type: 'COMPOSITE',
-        timeframes: ['SMN', 'TMN', 'MN', 'WK'],
+        type: TickerType.COMPOSITE,
+        timeframes: [TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK],
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.COMPOSITE);
@@ -43,9 +44,9 @@ describe('WatchClassifier.findByTicker', () => {
     it('classifies INDEX ticker with no DL timeframes as INDEX (type before timeframe)', () => {
       const ticker = makeCatTicker({
         ticker: 'NIFTY',
-        type: 'INDEX',
+        type: TickerType.INDEX,
         exchange: 'NSE',
-        timeframes: ['MN', 'WK'],
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK],
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.INDEX);
@@ -54,8 +55,8 @@ describe('WatchClassifier.findByTicker', () => {
     it('classifies COMMODITY ticker with no DL timeframes as INDEX (type before timeframe)', () => {
       const ticker = makeCatTicker({
         ticker: 'GOLD',
-        type: 'COMMODITY',
-        timeframes: ['MN', 'WK'],
+        type: TickerType.COMMODITY,
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK],
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.INDEX);
@@ -64,8 +65,8 @@ describe('WatchClassifier.findByTicker', () => {
     it('classifies FX ticker with no DL timeframes as INDEX', () => {
       const ticker = makeCatTicker({
         ticker: 'EURUSD',
-        type: 'FX',
-        timeframes: ['MN', 'WK'],
+        type: TickerType.FX,
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK],
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.INDEX);
@@ -74,8 +75,8 @@ describe('WatchClassifier.findByTicker', () => {
     it('classifies BOND ticker with no DL timeframes as INDEX', () => {
       const ticker = makeCatTicker({
         ticker: 'US10Y',
-        type: 'BOND',
-        timeframes: ['MN', 'WK'],
+        type: TickerType.BOND,
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK],
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.INDEX);
@@ -84,9 +85,9 @@ describe('WatchClassifier.findByTicker', () => {
     it('classifies NSE EQUITY ticker with no DL timeframes as LONG_NSE', () => {
       const ticker = makeCatTicker({
         ticker: 'RELIANCE',
-        type: 'EQUITY',
+        type: TickerType.EQUITY,
         exchange: 'NSE',
-        timeframes: ['MN', 'WK'],
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK],
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.LONG_NSE);
@@ -95,9 +96,9 @@ describe('WatchClassifier.findByTicker', () => {
     it('classifies non-NSE EQUITY ticker with no DL timeframes as LONG_NON_NSE', () => {
       const ticker = makeCatTicker({
         ticker: 'AAPL',
-        type: 'EQUITY',
+        type: TickerType.EQUITY,
         exchange: 'NASDAQ',
-        timeframes: ['MN', 'WK'],
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK],
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.LONG_NON_NSE);
@@ -106,9 +107,9 @@ describe('WatchClassifier.findByTicker', () => {
     it('returns undefined for EQUITY ticker with DL timeframes (default daily)', () => {
       const ticker = makeCatTicker({
         ticker: 'DAILY',
-        type: 'EQUITY',
+        type: TickerType.EQUITY,
         exchange: 'NSE',
-        timeframes: ['MN', 'WK', 'DL'],
+      timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
       });
 
       expect(WatchClassifier.findByTicker(ticker)).toBeUndefined();
@@ -125,7 +126,7 @@ describe('WatchClassifier.findByTicker', () => {
     it('returns INDEX for BOND ticker (market type before timeframe check)', () => {
       const ticker = makeCatTicker({
         ticker: 'US10Y',
-        type: 'BOND',
+        type: TickerType.BOND,
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.INDEX);
@@ -134,8 +135,8 @@ describe('WatchClassifier.findByTicker', () => {
     it('treats COMPOSITE as market for isMarket-like priority', () => {
       const ticker = makeCatTicker({
         ticker: 'GOLD/SILVER',
-        type: 'COMPOSITE',
-        state: 'WATCHED',
+        type: TickerType.COMPOSITE,
+        state: TickerState.WATCHED,
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.COMPOSITE);
@@ -146,8 +147,8 @@ describe('WatchClassifier.findByTicker', () => {
     it('returns READY even for COMPOSITE type when state=READY', () => {
       const ticker = makeCatTicker({
         ticker: 'CNX/XAU',
-        type: 'COMPOSITE',
-        state: 'READY',
+        type: TickerType.COMPOSITE,
+        state: TickerState.READY,
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.READY);
@@ -156,8 +157,8 @@ describe('WatchClassifier.findByTicker', () => {
     it('returns READY even for INDEX type when state=READY', () => {
       const ticker = makeCatTicker({
         ticker: 'NIFTY',
-        type: 'INDEX',
-        state: 'READY',
+        type: TickerType.INDEX,
+        state: TickerState.READY,
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.READY);
@@ -168,7 +169,7 @@ describe('WatchClassifier.findByTicker', () => {
     it('classifies BLACKLIST state ticker as BLACKLISTED', () => {
       const ticker = makeCatTicker({
         ticker: 'BAD_TICKER',
-        state: 'BLACKLIST',
+        state: TickerState.BLACKLIST,
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.BLACKLISTED);
@@ -177,8 +178,8 @@ describe('WatchClassifier.findByTicker', () => {
     it('returns BLACKLISTED even for INDEX type when state=BLACKLIST', () => {
       const ticker = makeCatTicker({
         ticker: 'NIFTY',
-        type: 'INDEX',
-        state: 'BLACKLIST',
+        type: TickerType.INDEX,
+        state: TickerState.BLACKLIST,
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.BLACKLISTED);
@@ -187,8 +188,8 @@ describe('WatchClassifier.findByTicker', () => {
     it('returns BLACKLISTED even for COMPOSITE type when state=BLACKLIST', () => {
       const ticker = makeCatTicker({
         ticker: 'CNX/XAU',
-        type: 'COMPOSITE',
-        state: 'BLACKLIST',
+        type: TickerType.COMPOSITE,
+        state: TickerState.BLACKLIST,
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.BLACKLISTED);
@@ -197,7 +198,7 @@ describe('WatchClassifier.findByTicker', () => {
     it('returns BLACKLISTED even for READY state when state=BLACKLIST', () => {
       const ticker = makeCatTicker({
         ticker: 'BOTH_STATES',
-        state: 'BLACKLIST', // BLACKLIST takes priority over READY
+        state: TickerState.BLACKLIST, // BLACKLIST takes priority over READY
       } as any);
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.BLACKLISTED);
@@ -221,7 +222,7 @@ describe('WatchClassifier.findById', () => {
     expect(cat.id).toBe(WatchCategoryId.READY);
     expect(cat.color).toBe('red');
     expect(cat.label).toBe('Ready');
-    expect(cat.recordUpdate).toEqual({ state: 'READY' });
+    expect(cat.recordUpdate).toEqual({ state: TickerState.READY });
   });
 
   it('returns INDEX for INDEX id', () => {
@@ -230,7 +231,7 @@ describe('WatchClassifier.findById', () => {
     expect(cat.id).toBe(WatchCategoryId.INDEX);
     expect(cat.color).toBe('brown');
     expect(cat.label).toBe('Index');
-    expect(cat.recordUpdate).toEqual({ type: 'INDEX' });
+    expect(cat.recordUpdate).toEqual({ type: TickerType.INDEX });
   });
 
   it('returns SET_JOURNAL for SET_JOURNAL id', () => {
@@ -277,7 +278,7 @@ describe('WatchClassifier.findById', () => {
 
     expect(cat.id).toBe(WatchCategoryId.BLACKLISTED);
     expect(cat.color).toBe('dimgrey');
-    expect(cat.recordUpdate).toEqual({ state: 'BLACKLIST' });
+    expect(cat.recordUpdate).toEqual({ state: TickerState.BLACKLIST });
   });
 
   it('throws for invalid id', () => {
@@ -295,9 +296,9 @@ describe('FlagClassifier.findByTicker', () => {
       ticker: 'TEST',
       exchange: '',
       timeframes: [],
-      type: 'EQUITY',
-      state: 'WATCHED',
-      trend: 'SIDEWAYS',
+      type: TickerType.EQUITY,
+      state: TickerState.WATCHED,
+      trend: TickerTrend.SIDEWAYS,
       ...overrides,
     });
   }
@@ -305,7 +306,7 @@ describe('FlagClassifier.findByTicker', () => {
   it('resolves GOLD_INDEX for XAUUSD index ticker', () => {
     const ticker = makeFlagTicker({
       ticker: 'XAUUSD',
-      type: 'INDEX',
+      type: TickerType.INDEX,
     });
 
     expect(FlagClassifier.findByTicker(ticker)?.id).toBe(FlagCategoryId.GOLD_INDEX);
@@ -314,7 +315,7 @@ describe('FlagClassifier.findByTicker', () => {
   it('resolves GOLD_INDEX for GOLDSILVER composite ticker', () => {
     const ticker = makeFlagTicker({
       ticker: 'GOLDSILVER',
-      type: 'COMPOSITE',
+      type: TickerType.COMPOSITE,
     });
 
     expect(FlagClassifier.findByTicker(ticker)?.id).toBe(FlagCategoryId.GOLD_INDEX);
@@ -323,7 +324,7 @@ describe('FlagClassifier.findByTicker', () => {
   it('resolves INDEX for non-gold market instrument', () => {
     const ticker = makeFlagTicker({
       ticker: 'NIFTY',
-      type: 'INDEX',
+      type: TickerType.INDEX,
     });
 
     expect(FlagClassifier.findByTicker(ticker)?.id).toBe(FlagCategoryId.INDEX);
@@ -332,7 +333,7 @@ describe('FlagClassifier.findByTicker', () => {
   it('resolves INDEX for COMMODITY type', () => {
     const ticker = makeFlagTicker({
       ticker: 'CRUDEOIL',
-      type: 'COMMODITY',
+      type: TickerType.COMMODITY,
     });
 
     expect(FlagClassifier.findByTicker(ticker)?.id).toBe(FlagCategoryId.INDEX);
@@ -341,7 +342,7 @@ describe('FlagClassifier.findByTicker', () => {
   it('resolves INDEX for FX type', () => {
     const ticker = makeFlagTicker({
       ticker: 'EURUSD',
-      type: 'FX',
+      type: TickerType.FX,
     });
 
     expect(FlagClassifier.findByTicker(ticker)?.id).toBe(FlagCategoryId.INDEX);
@@ -350,7 +351,7 @@ describe('FlagClassifier.findByTicker', () => {
   it('resolves CRYPTO for CRYPTO type', () => {
     const ticker = makeFlagTicker({
       ticker: 'BTC',
-      type: 'CRYPTO',
+      type: TickerType.CRYPTO,
     });
 
     expect(FlagClassifier.findByTicker(ticker)?.id).toBe(FlagCategoryId.CRYPTO);
@@ -359,7 +360,7 @@ describe('FlagClassifier.findByTicker', () => {
   it('resolves UPTREND for UPTREND trend', () => {
     const ticker = makeFlagTicker({
       ticker: 'BULL',
-      trend: 'UPTREND',
+      trend: TickerTrend.UPTREND,
     });
 
     expect(FlagClassifier.findByTicker(ticker)?.id).toBe(FlagCategoryId.UPTREND);
@@ -368,7 +369,7 @@ describe('FlagClassifier.findByTicker', () => {
   it('resolves SIDEWAYS for SIDEWAYS trend', () => {
     const ticker = makeFlagTicker({
       ticker: 'RANGE',
-      trend: 'SIDEWAYS',
+      trend: TickerTrend.SIDEWAYS,
     });
 
     expect(FlagClassifier.findByTicker(ticker)?.id).toBe(FlagCategoryId.SIDEWAYS);
@@ -377,7 +378,7 @@ describe('FlagClassifier.findByTicker', () => {
   it('resolves DOWNTREND for DOWNTREND trend', () => {
     const ticker = makeFlagTicker({
       ticker: 'BEAR',
-      trend: 'DOWNTREND',
+      trend: TickerTrend.DOWNTREND,
     });
 
     expect(FlagClassifier.findByTicker(ticker)?.id).toBe(FlagCategoryId.DOWNTREND);
@@ -386,7 +387,7 @@ describe('FlagClassifier.findByTicker', () => {
   it('returns undefined for non-market EQUITY that is not GOLD_INDEX/INDEX/CRYPTO and has no trend', () => {
     const ticker = makeFlagTicker({
       ticker: 'UNKNOWN',
-      type: 'EQUITY',
+      type: TickerType.EQUITY,
       trend: undefined,
     });
 
@@ -397,8 +398,8 @@ describe('FlagClassifier.findByTicker', () => {
     // CRYPTO ticker with UPTREND trend — GOLD_INDEX and INDEX do not match (EQUITY)
     const ticker = makeFlagTicker({
       ticker: 'BTC',
-      type: 'CRYPTO',
-      trend: 'UPTREND',
+      type: TickerType.CRYPTO,
+      trend: TickerTrend.UPTREND,
     });
 
     // Highest priority that matches is CRYPTO (not UPTREND)
@@ -408,8 +409,8 @@ describe('FlagClassifier.findByTicker', () => {
   it('prefers INDEX over UPTREND for market instrument with trend', () => {
     const ticker = makeFlagTicker({
       ticker: 'NIFTY',
-      type: 'INDEX',
-      trend: 'UPTREND',
+      type: TickerType.INDEX,
+      trend: TickerTrend.UPTREND,
     });
 
     // INDEX is higher priority than UPTREND
@@ -419,8 +420,8 @@ describe('FlagClassifier.findByTicker', () => {
   it('prefers GOLD_INDEX over INDEX for gold symbol', () => {
     const ticker = makeFlagTicker({
       ticker: 'XAUUSD',
-      type: 'INDEX',
-      trend: 'SIDEWAYS',
+      type: TickerType.INDEX,
+      trend: TickerTrend.SIDEWAYS,
     });
 
     expect(FlagClassifier.findByTicker(ticker)?.id).toBe(FlagCategoryId.GOLD_INDEX);

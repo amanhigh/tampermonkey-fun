@@ -1,4 +1,3 @@
-import { ISequenceManager } from './sequence';
 import { ITimeFrameManager } from './timeframe';
 import { Notifier } from '../util/notify';
 import { IJournalClient } from '../client/journal';
@@ -8,6 +7,7 @@ import {
   CreateJournalImageRequest,
   CreateJournalRequest,
   CreateJournalTagRequest,
+  JournalApiSequence,
   JournalApiTimeframe,
   JournalQueryParams,
   JournalRecord,
@@ -29,7 +29,7 @@ export interface IJournalManager {
   createJournal(input: CreateJournalInput): Promise<JournalRecord>;
 
   /**
-   * Takes screenshots for the given ticker using the configured sequence order.
+   * Takes screenshots for the given ticker using the ticker's applied timeframes.
    * @param ticker Trading symbol to capture
    * @param type Screenshot purpose/type used in filenames
    * @returns Promise resolving with screenshot metadata
@@ -86,15 +86,14 @@ export interface IJournalManager {
 }
 
 /**
- * Manages trading journal entries and operations
+ * Manages trading journal entries and operations.
+ *
+ * The legacy API `sequence` field is derived from the screenshot timeframe codes
+ * using a private helper (currently: contains DL → MWD, else YR).
+ * FIXME: Replace with user-prompted or backend-provided type selection.
  */
 export class JournalManager implements IJournalManager {
-  /**
-   * @param watchManager - Watch manager for checking ticker status
-   * @param sequenceManager - Manager for getting current sequence
-   */
   constructor(
-    private readonly sequenceManager: ISequenceManager,
     private readonly journalClient: IJournalClient,
     private readonly osClient: IOsClient,
     private readonly timeframeManager: ITimeFrameManager
@@ -102,9 +101,12 @@ export class JournalManager implements IJournalManager {
 
   /** @inheritdoc */
   public async createJournal(input: CreateJournalInput): Promise<JournalRecord> {
+    const screenshotCodes = input.screenshots
+      .map((s) => s.timeframe)
+      .filter((t): t is JournalApiTimeframe => t !== undefined);
     const request: CreateJournalRequest = {
       ticker: input.ticker.toUpperCase(),
-      sequence: (await this.sequenceManager.getCurrentSequence()) as CreateJournalRequest['sequence'],
+      sequence: this.getLegacyJournalSequenceFromTimeframes(screenshotCodes),
       type: input.type,
       status: input.status,
       images: input.screenshots.map((screenshot) => ({
@@ -200,23 +202,25 @@ export class JournalManager implements IJournalManager {
   }
 
   /**
-   * Takes screenshots for a journal using the sequence-defined timeframe order.
+   * Takes screenshots for a journal using the ticker's applied timeframes.
    * @param ticker Trading symbol to capture
    * @param type Screenshot purpose/type used in filenames
    * @returns Promise resolving with screenshot metadata
    */
   public async screenshotTicker(ticker: string, type: string): Promise<ScreenshotResponse[]> {
-    const sequence = await this.sequenceManager.getCurrentSequence();
+    const sequence = await this.timeframeManager.getSequence();
     const screenshots: ScreenshotResponse[] = [];
     const screenshotType = type.toLowerCase();
 
-    for (const position of [0, 1, 2, 3]) {
-      await this.timeframeManager.applyTimeFrame(position);
-      const config = this.sequenceManager.sequenceToTimeFrameConfig(sequence, position);
-      const timeframe = config.symbol;
+    for (let position = 0; position < sequence.length; position++) {
+      // BUG 3.10: Ignored return value from apply() — when a timeframe is
+      // deactivated, apply returns false silently and screenshot proceeds
+      // on the wrong timeframe. Must warn user and skip the deactivated position.
+      await this.timeframeManager.apply(position);
+      const code = sequence[position];
       const order = position + 1;
 
-      const fileName = `${ticker.toUpperCase()}_${this.getScreenshotTimestamp()}_${order}_${timeframe.toLowerCase()}_${screenshotType}.png`;
+      const fileName = `${ticker.toUpperCase()}_${this.getScreenshotTimestamp()}_${order}_${code.toLowerCase()}_${screenshotType}.png`;
       const screenshot = await this.osClient.screenshot({
         file_name: fileName,
         directory_type: 'JOURNAL',
@@ -224,7 +228,7 @@ export class JournalManager implements IJournalManager {
         window: 'TradingView',
         notify: false,
       });
-      screenshot.timeframe = timeframe as JournalApiTimeframe;
+      screenshot.timeframe = code as JournalApiTimeframe;
       screenshots.push(screenshot);
     }
 
@@ -233,7 +237,7 @@ export class JournalManager implements IJournalManager {
 
   /** @inheritdoc */
   createReasonText(reason: string): string {
-    const timeframe = this.timeframeManager.getCurrentTimeFrameConfig().symbol;
+    const timeframe = this.timeframeManager.getCurrentConfig().code;
     return `${timeframe} - ${reason}`;
   }
 
@@ -258,5 +262,19 @@ export class JournalManager implements IJournalManager {
     };
 
     return [tagRequest];
+  }
+
+  /**
+   * Derives the legacy journal API sequence from a list of screenshot timeframe codes.
+   *
+   * Rule: if the list contains 'DL', return 'MWD'; otherwise return 'YR'.
+   *
+   * FIXME: Replace this heuristic with user-prompted selection or backend-provided type.
+   */
+  private getLegacyJournalSequenceFromTimeframes(timeframes: readonly JournalApiTimeframe[]): JournalApiSequence {
+    if (timeframes.includes('DL' as JournalApiTimeframe)) {
+      return 'MWD';
+    }
+    return 'YR';
   }
 }

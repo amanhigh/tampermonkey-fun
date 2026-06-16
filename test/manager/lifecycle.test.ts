@@ -5,7 +5,8 @@ import { IPaintManager } from '../../src/manager/paint';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { IPublisher } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
-import { Ticker } from '../../src/models/ticker';
+import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/ticker';
+import { TickerTimeframe } from '../../src/models/timeframe';
 import { AlertTicker } from '../../src/models/alert_ticker';
 
 describe('LifecycleManager', () => {
@@ -82,10 +83,10 @@ describe('LifecycleManager', () => {
       const data: StartTrackingRequest = {
         ticker: 'RELIANCE',
         exchange: 'NSE',
-        timeframes: ['MN', 'WK', 'DL'],
-        type: 'EQUITY',
-        state: 'WATCHED',
-        trend: 'SIDEWAYS',
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
+        type: TickerType.EQUITY,
+        state: TickerState.WATCHED,
+        trend: TickerTrend.SIDEWAYS,
         last_opened_at: new Date().toISOString(),
       };
 
@@ -103,10 +104,10 @@ describe('LifecycleManager', () => {
       await manager.startTracking({
         ticker: 'RELIANCE',
         exchange: 'NSE',
-        timeframes: ['MN', 'WK', 'DL'],
-        type: 'EQUITY',
-        state: 'WATCHED',
-        trend: 'SIDEWAYS',
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
+        type: TickerType.EQUITY,
+        state: TickerState.WATCHED,
+        trend: TickerTrend.SIDEWAYS,
         last_opened_at: new Date().toISOString(),
       });
 

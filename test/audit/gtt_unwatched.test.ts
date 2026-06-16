@@ -4,6 +4,7 @@ import { ICategoryManager } from '../../src/manager/category';
 import { GttRefreshEvent } from '../../src/models/gtt';
 import { Order, OrderType } from '../../src/models/kite';
 import { WatchCategoryId } from '../../src/models/watch';
+import { TickerState } from '../../src/models/ticker';
 
 // Unit tests for GttUnwatchedAudit: only SET_JOURNAL and RUNNING count as watched
 
@@ -86,7 +87,7 @@ describe('GttPlugin', () => {
 
       kiteRepo.getGttRefereshEvent.mockResolvedValue(gttEvent);
       categoryManager.getTickerCategory.mockResolvedValue({
-        watch: { id: WatchCategoryId.READY, color: 'red', label: '', recordUpdate: { state: 'READY' } },
+        watch: { id: WatchCategoryId.READY, color: 'red', label: '', recordUpdate: { state: TickerState.READY } },
         flag: undefined,
         isFno: false,
       });

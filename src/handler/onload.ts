@@ -6,8 +6,7 @@ import { ITickerChangeHandler } from './ticker_change';
 import { IHotkeyHandler } from './hotkey';
 import { IAlertHandler } from './alert';
 import { IPaintManager } from '../manager/paint';
-import { IAlertFeedHandler } from './alertfeed';
-import { ISubscriber } from '../manager/event_bus';
+import { IDomainEventConsumer, ISubscriber } from '../manager/event_bus';
 
 /**
  * Interface for application initialization handling
@@ -38,14 +37,16 @@ export class OnLoadHandler implements IOnLoadHandler {
     private readonly alertHandler: IAlertHandler,
     private readonly tickerChangeHandler: ITickerChangeHandler,
     private readonly paintManager: IPaintManager,
-    private readonly alertFeedHandler: IAlertFeedHandler,
+    private readonly domainEventConsumers: IDomainEventConsumer[],
     private readonly subscriber: ISubscriber
   ) {}
 
   /** @inheritdoc */
   public init(): void {
-    // Register domain event consumers
-    this.alertFeedHandler.registerEvents(this.subscriber);
+    // Register all domain event consumers
+    for (const consumer of this.domainEventConsumers) {
+      consumer.registerEvents(this.subscriber);
+    }
 
     this.setupTickerObserver();
     this.setupWatchlistObserver();

@@ -6,6 +6,7 @@ import { IRecentManager } from '../../src/manager/recent';
 import { Constants } from '../../src/models/constant';
 import { TickerCategory } from '../../src/models/category';
 import { WatchCategoryId } from '../../src/models/watch';
+import { TickerTrend } from '../../src/models/ticker';
 
 // Mock jQuery
 const mockJQueryElement: any = {
@@ -133,7 +134,7 @@ describe('PaintManager', () => {
       mockDomManager.getTickers.mockReturnValue(new Set(['NIFTY']));
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null },
-        flag: { id: 'SIDEWAYS' as any, color: 'orange', label: 'Sideways', update: { trend: 'SIDEWAYS' } },
+        flag: { id: 'SIDEWAYS' as any, color: 'orange', label: 'Sideways', update: { trend: TickerTrend.SIDEWAYS } },
         isFno: true,
       });
 

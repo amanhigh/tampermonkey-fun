@@ -1,7 +1,8 @@
 import { CategoryManager, ICategoryManager } from '../../src/manager/category';
 import { ITickerManager } from '../../src/manager/ticker';
 import { IJournalManager } from '../../src/manager/journal';
-import { Ticker } from '../../src/models/ticker';
+import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/ticker';
+import { TickerTimeframe } from '../../src/models/timeframe';
 import { WatchCategoryId } from '../../src/models/watch';
 import { FlagCategoryId } from '../../src/models/flag';
 import { IPublisher } from '../../src/manager/event_bus';
@@ -29,10 +30,10 @@ describe('CategoryManager', () => {
     const defaults: Partial<Ticker> = {
       ticker: 'TICKER',
       exchange: '',
-      timeframes: ['MN', 'WK', 'DL'],
-      type: 'EQUITY',
-      state: 'WATCHED',
-      trend: 'SIDEWAYS',
+      timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
+      type: TickerType.EQUITY,
+      state: TickerState.WATCHED,
+      trend: TickerTrend.SIDEWAYS,
     };
     return new Ticker({ ...defaults, ...overrides });
   }
@@ -139,7 +140,7 @@ describe('CategoryManager', () => {
 
     it('should return READY watch when ticker state is READY', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
-      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'READY_A', state: 'READY' }));
+      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'READY_A', state: TickerState.READY }));
 
       const result = await categoryManager.getTickerCategory('READY_A');
 
@@ -148,7 +149,7 @@ describe('CategoryManager', () => {
 
     it('should return LONG_NSE watch for long-watch NSE ticker', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
-      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'LONG_NSE', exchange: 'NSE', timeframes: ['MN', 'WK'] }));
+      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'LONG_NSE', exchange: 'NSE', timeframes: [TickerTimeframe.MN, TickerTimeframe.WK] }));
 
       const result = await categoryManager.getTickerCategory('LONG_NSE');
 
@@ -157,7 +158,7 @@ describe('CategoryManager', () => {
 
     it('should return LONG_NON_NSE watch for long-watch non-NSE ticker', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
-      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'LONG_US', exchange: 'NASDAQ', timeframes: ['MN', 'WK'] }));
+      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'LONG_US', exchange: 'NASDAQ', timeframes: [TickerTimeframe.MN, TickerTimeframe.WK] }));
 
       const result = await categoryManager.getTickerCategory('LONG_US');
 
@@ -166,7 +167,7 @@ describe('CategoryManager', () => {
 
     it('should return INDEX watch for market instrument types', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
-      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'IND_A', type: 'INDEX' }));
+      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'IND_A', type: TickerType.INDEX }));
 
       const result = await categoryManager.getTickerCategory('IND_A');
 
@@ -175,7 +176,7 @@ describe('CategoryManager', () => {
 
     it('should return COMPOSITE watch for composite ticker', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
-      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'COMP_A', type: 'COMPOSITE' }));
+      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'COMP_A', type: TickerType.COMPOSITE }));
 
       const result = await categoryManager.getTickerCategory('COMP_A');
 
@@ -222,7 +223,7 @@ describe('CategoryManager', () => {
 
     it('should reuse cached category for repeated categorized ticker lookup', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
-      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'CACHED', state: 'READY' }));
+      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'CACHED', state: TickerState.READY }));
 
       // First call — populates cache
       const first = await categoryManager.getTickerCategory('CACHED');
@@ -261,7 +262,7 @@ describe('CategoryManager', () => {
     it('should return SIDEWAYS flag for SIDEWAYS trend ticker', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'SIDE_A', trend: 'SIDEWAYS' })
+        makeTicker({ ticker: 'SIDE_A', trend: TickerTrend.SIDEWAYS })
       );
 
       const result = await categoryManager.getTickerCategory('SIDE_A');
@@ -271,7 +272,7 @@ describe('CategoryManager', () => {
     it('should return CRYPTO flag for CRYPTO type ticker', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'BTC', type: 'CRYPTO' })
+        makeTicker({ ticker: 'BTC', type: TickerType.CRYPTO })
       );
 
       const result = await categoryManager.getTickerCategory('BTC');
@@ -281,7 +282,7 @@ describe('CategoryManager', () => {
     it('should return both watch and flag categories from a single lookup', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'BOTH', state: 'READY', trend: 'UPTREND' })
+        makeTicker({ ticker: 'BOTH', state: TickerState.READY, trend: TickerTrend.UPTREND })
       );
 
       const result = await categoryManager.getTickerCategory('BOTH');
@@ -297,7 +298,7 @@ describe('CategoryManager', () => {
     it('should return flag even when watch is undefined', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'FLAG_ONLY', trend: 'UPTREND', type: 'EQUITY', state: 'WATCHED', timeframes: ['MN', 'WK', 'DL'] })
+        makeTicker({ ticker: 'FLAG_ONLY', trend: TickerTrend.UPTREND, type: TickerType.EQUITY, state: TickerState.WATCHED, timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL] })
       );
 
       const result = await categoryManager.getTickerCategory('FLAG_ONLY');
@@ -309,7 +310,7 @@ describe('CategoryManager', () => {
     it('should return watch even when flag is undefined', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'WATCH_ONLY', state: 'READY', trend: undefined, type: 'EQUITY' })
+        makeTicker({ ticker: 'WATCH_ONLY', state: TickerState.READY, trend: undefined, type: TickerType.EQUITY })
       );
 
       const result = await categoryManager.getTickerCategory('WATCH_ONLY');
@@ -345,7 +346,7 @@ describe('CategoryManager', () => {
     it('should cache FNO status even when watch and flag are both undefined', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'FNO_ONLY', is_fno: true, type: 'EQUITY', state: 'WATCHED', trend: undefined })
+        makeTicker({ ticker: 'FNO_ONLY', is_fno: true, type: TickerType.EQUITY, state: TickerState.WATCHED, trend: undefined })
       );
 
       // First call — populates cache with isFno=true
@@ -378,13 +379,13 @@ describe('CategoryManager', () => {
     it('should update ticker for READY category', async () => {
       await categoryManager.recordWatchCategory(WatchCategoryId.READY, ['TEST']);
 
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { state: 'READY' });
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { state: TickerState.READY });
     });
 
     it('should update ticker for INDEX category', async () => {
       await categoryManager.recordWatchCategory(WatchCategoryId.INDEX, ['TEST']);
 
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'INDEX' });
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: TickerType.INDEX });
     });
 
     it('should NOT update backend for COMPOSITE (unsupported)', async () => {
@@ -423,10 +424,10 @@ describe('CategoryManager', () => {
 
       // Record READY — evicts cache before/after update
       await categoryManager.recordWatchCategory(WatchCategoryId.READY, ['EVICT_ME']);
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('EVICT_ME', { state: 'READY' });
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('EVICT_ME', { state: TickerState.READY });
 
       // Cache was evicted — next lookup refetches backend
-      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'EVICT_ME', state: 'READY' }));
+      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'EVICT_ME', state: TickerState.READY }));
       const result = await categoryManager.getTickerCategory('EVICT_ME');
       expect(result.watch?.id).toBe(WatchCategoryId.READY);
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
@@ -463,44 +464,44 @@ describe('CategoryManager', () => {
     it('should call updateTicker for SIDEWAYS', async () => {
       await categoryManager.recordFlagCategory(FlagCategoryId.SIDEWAYS, ['TEST']);
 
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'SIDEWAYS', type: 'EQUITY', state: 'WATCHED' });
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: TickerTrend.SIDEWAYS, type: TickerType.EQUITY, state: TickerState.WATCHED });
     });
 
     it('should call updateTicker for DOWNTREND', async () => {
       await categoryManager.recordFlagCategory(FlagCategoryId.DOWNTREND, ['TEST']);
 
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'DOWNTREND', type: 'EQUITY', state: 'WATCHED' });
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: TickerTrend.DOWNTREND, type: TickerType.EQUITY, state: TickerState.WATCHED });
     });
 
     it('should call updateTicker for CRYPTO', async () => {
       await categoryManager.recordFlagCategory(FlagCategoryId.CRYPTO, ['TEST']);
 
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'CRYPTO', state: 'WATCHED' });
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: TickerType.CRYPTO, state: TickerState.WATCHED });
     });
 
     it('should call updateTicker for UPTREND', async () => {
       await categoryManager.recordFlagCategory(FlagCategoryId.UPTREND, ['TEST']);
 
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: 'UPTREND', type: 'EQUITY', state: 'WATCHED' });
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { trend: TickerTrend.UPTREND, type: TickerType.EQUITY, state: TickerState.WATCHED });
     });
 
     it('should call updateTicker for INDEX', async () => {
       await categoryManager.recordFlagCategory(FlagCategoryId.INDEX, ['TEST']);
 
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'INDEX', state: 'WATCHED' });
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: TickerType.INDEX, state: TickerState.WATCHED });
     });
 
     it('should call updateTicker for GOLD_INDEX', async () => {
       await categoryManager.recordFlagCategory(FlagCategoryId.GOLD_INDEX, ['TEST']);
 
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: 'COMPOSITE', state: 'WATCHED' });
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TEST', { type: TickerType.COMPOSITE, state: TickerState.WATCHED });
     });
 
     it('should evict cache after successful flag update and refetch next lookup', async () => {
       // Prime: cache knows SIDEWAYS
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'TICKER_A', trend: 'SIDEWAYS' })
+        makeTicker({ ticker: 'TICKER_A', trend: TickerTrend.SIDEWAYS })
       );
       await categoryManager.getTickerCategory('TICKER_A');
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
@@ -513,7 +514,7 @@ describe('CategoryManager', () => {
 
       // Cache was evicted — next lookup refetches backend
       mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'TICKER_A', trend: 'DOWNTREND' })
+        makeTicker({ ticker: 'TICKER_A', trend: TickerTrend.DOWNTREND })
       );
       const result = await categoryManager.getTickerCategory('TICKER_A');
       expect(result.flag?.id).toBe(FlagCategoryId.DOWNTREND);
@@ -524,7 +525,7 @@ describe('CategoryManager', () => {
       // Populate: cache has SIDEWAYS
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'TICKER_A', trend: 'SIDEWAYS' })
+        makeTicker({ ticker: 'TICKER_A', trend: TickerTrend.SIDEWAYS })
       );
       await categoryManager.getTickerCategory('TICKER_A');
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
@@ -538,7 +539,7 @@ describe('CategoryManager', () => {
 
       // Next lookup re-fetches from backend (cache was evicted)
       mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'TICKER_A', trend: 'SIDEWAYS' })
+        makeTicker({ ticker: 'TICKER_A', trend: TickerTrend.SIDEWAYS })
       );
       const result = await categoryManager.getTickerCategory('TICKER_A');
       // Falls back to pre-update backend data (SIDEWAYS, not DOWNTREND)
@@ -553,7 +554,7 @@ describe('CategoryManager', () => {
       // Prime: cache knows INDEX watch + INDEX flag
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'IND_X', type: 'INDEX' })
+        makeTicker({ ticker: 'IND_X', type: TickerType.INDEX })
       );
       let result = await categoryManager.getTickerCategory('IND_X');
       expect(result.watch?.id).toBe(WatchCategoryId.INDEX);
@@ -565,7 +566,7 @@ describe('CategoryManager', () => {
 
       // After UPTREND update, backend would set type=EQUITY, trend=UPTREND
       mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'IND_X', type: 'EQUITY', trend: 'UPTREND' })
+        makeTicker({ ticker: 'IND_X', type: TickerType.EQUITY, trend: TickerTrend.UPTREND })
       );
 
       await categoryManager.recordFlagCategory(FlagCategoryId.UPTREND, ['IND_X']);

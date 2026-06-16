@@ -4,6 +4,8 @@ import { ITickerManager } from '../manager/ticker';
 import { ILifecycleManager } from '../manager/lifecycle';
 import { IStyleManager } from '../manager/style';
 import { IAlertTickerHandler } from './alert_ticker';
+import { TickerTimeframe, DEFAULT_SEQUENCE, NON_NSE_DEFAULT_TIMEFRAMES } from '../models/timeframe';
+import { TickerType, TickerState, TickerTrend } from '../models/ticker';
 
 /**
  * Interface for managing ticker operations
@@ -21,6 +23,15 @@ export interface ITickerHandler {
    * @param tvTicker The TradingView ticker to stop tracking
    */
   stopTracking(tvTicker: string): Promise<void>;
+
+  /**
+   * Starts tracking the current ticker by creating a backend record
+   * using exchange-based default timeframes.
+   *
+   * - NSE → TMN, MN, WK, DL
+   * - Non-NSE → YR, SMN, TMN, MN, WK
+   */
+  startTracking(): Promise<void>;
 
   /**
    * Processes command strings for ticker operations
@@ -71,6 +82,28 @@ export class TickerHandler implements ITickerHandler {
   }
 
   /** @inheritdoc */
+  public async startTracking(): Promise<void> {
+    const ticker = this.domManager.getTicker();
+    const exchange = this.domManager.getCurrentExchange();
+    const timeframes = this.getDefaultTimeframesForExchange(exchange);
+
+    try {
+      await this.lifecycleManager.startTracking({
+        ticker,
+        exchange,
+        timeframes,
+        type: TickerType.EQUITY,
+        state: TickerState.WATCHED,
+        trend: TickerTrend.SIDEWAYS,
+        last_opened_at: new Date().toISOString(),
+      });
+      Notifier.success(`⏺ Started tracking ${ticker}`);
+    } catch (error) {
+      Notifier.warn(`Failed to start tracking ${ticker}: ${(error as Error).message}`);
+    }
+  }
+
+  /** @inheritdoc */
   async processCommand(action: string, value: string): Promise<void> {
     switch (action.toUpperCase()) {
       case 'E': {
@@ -86,5 +119,20 @@ export class TickerHandler implements ITickerHandler {
       default:
         throw new Error(`Unsupported command action: ${action}`);
     }
+  }
+
+  /**
+   * Returns the default persisted timeframe list based on exchange.
+   *
+   * - NSE → TMN, MN, WK, DL
+   * - All other exchanges → YR, SMN, TMN, MN, WK
+   *
+   * Used when starting tracking for a new ticker.
+   */
+  private getDefaultTimeframesForExchange(exchange: string): TickerTimeframe[] {
+    if (exchange.toUpperCase() === 'NSE') {
+      return [...DEFAULT_SEQUENCE];
+    }
+    return [...NON_NSE_DEFAULT_TIMEFRAMES];
   }
 }

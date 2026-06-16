@@ -1,9 +1,7 @@
 import { DisplayHandler, IDisplayHandler } from '../../src/handler/display';
-import { ISequenceManager } from '../../src/manager/sequence';
 import { IDomManager } from '../../src/manager/dom';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { AlertTicker } from '../../src/models/alert_ticker';
-import { SequenceType } from '../../src/models/trading';
 
 // ── Mock jQuery ──
 let mockDisplayEl: any;
@@ -43,7 +41,6 @@ const makeAlertTicker = (overrides: Partial<AlertTicker> = {}): AlertTicker => (
 
 describe('DisplayHandler', () => {
   let handler: IDisplayHandler;
-  let mockSequenceManager: jest.Mocked<ISequenceManager>;
   let mockDomManager: jest.Mocked<IDomManager>;
   let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
 
@@ -65,13 +62,6 @@ describe('DisplayHandler', () => {
       toggleClass: jest.fn(),
     };
 
-    mockSequenceManager = {
-      getCurrentSequence: jest.fn().mockResolvedValue(SequenceType.MWD),
-      flipSequence: jest.fn(),
-      sequenceToTimeFrameConfig: jest.fn(),
-      toggleFreezeSequence: jest.fn(),
-    } as any;
-
     mockDomManager = {
       getTicker: jest.fn(),
       getCurrentExchange: jest.fn(),
@@ -87,12 +77,11 @@ describe('DisplayHandler', () => {
       getAlertTickersForTicker: jest.fn(),
     } as any;
 
-    handler = new DisplayHandler(mockSequenceManager, mockDomManager, mockAlertTickerManager);
+    handler = new DisplayHandler(mockDomManager, mockAlertTickerManager);
   });
 
   describe('display', () => {
-    it('should render compact mapped display with primary ticker, sequence, and alert count', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
+    it('should render compact mapped display with primary ticker and alert count', async () => {
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
         makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', ticker: 'TVTICKER' }),
@@ -105,12 +94,10 @@ describe('DisplayHandler', () => {
       const html = mockDisplayEl.html.mock.calls[0][0];
       expect(html).toContain('🔗');
       expect(html).toContain('INFY');
-      expect(html).toContain('MWD');
       expect(html).toContain('🔔1');
     });
 
     it('should render unmapped compact display with warning emoji and zero alert count', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
 
@@ -123,7 +110,6 @@ describe('DisplayHandler', () => {
     });
 
     it('should set mapped css class when ticker is mapped', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
         makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', ticker: 'TVTICKER' }),
@@ -136,7 +122,6 @@ describe('DisplayHandler', () => {
     });
 
     it('should set unmapped css class when ticker is unmapped', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
 
@@ -146,7 +131,6 @@ describe('DisplayHandler', () => {
     });
 
     it('should attach click handler to display element', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
 
@@ -155,11 +139,20 @@ describe('DisplayHandler', () => {
       expect(mockDisplayEl.off).toHaveBeenCalledWith('click');
       expect(mockDisplayEl.on).toHaveBeenCalledWith('click', expect.any(Function));
     });
+
+    it('should render the current ticker as display ticker when unmapped', async () => {
+      mockDomManager.getTicker.mockReturnValue('BANKNIFTY');
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
+
+      await handler.display();
+
+      const html = mockDisplayEl.html.mock.calls[0][0];
+      expect(html).toContain('BANKNIFTY');
+    });
   });
 
   describe('expanded display toggle', () => {
     it('should render expanded rows with primary and secondary tickers on click', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
         makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', name: 'Infosys Ltd', exchange: 'NSE', ticker: 'TVTICKER' }),
@@ -175,10 +168,9 @@ describe('DisplayHandler', () => {
       const expandedHtml = htmlCalls[htmlCalls.length - 1][0];
 
       expect(expandedHtml).toContain('🔗');
-      expect(expandedHtml).toContain('MWD');
+      expect(expandedHtml).toContain('INFY');
       expect(expandedHtml).toContain('🔔2');
       expect(expandedHtml).toContain('⭐');
-      expect(expandedHtml).toContain('INFY');
       expect(expandedHtml).toContain('Infosys Ltd');
       expect(expandedHtml).toContain('🔹');
       expect(expandedHtml).toContain('INFY.PA');
@@ -186,7 +178,6 @@ describe('DisplayHandler', () => {
     });
 
     it('should render unmapped expanded empty state on click', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
 
@@ -202,7 +193,6 @@ describe('DisplayHandler', () => {
     });
 
     it('should toggle back to compact on second click', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
         makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', ticker: 'TVTICKER' }),
@@ -223,7 +213,6 @@ describe('DisplayHandler', () => {
     });
 
     it('should render alert ticker rows with data-symbol and data-type attributes', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
         makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', name: 'Infosys Ltd', exchange: 'NSE', ticker: 'TVTICKER' }),
@@ -245,5 +234,4 @@ describe('DisplayHandler', () => {
       expect(expandedHtml).toContain('data-alert-ticker-type="SECONDARY"');
     });
   });
-
 });
