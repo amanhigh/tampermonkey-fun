@@ -40,7 +40,10 @@ export type Sequence = readonly [TickerTimeframe, TickerTimeframe, TickerTimefra
  * Used when starting tracking for a new NSE ticker.
  */
 export const NSE_DEFAULT_TIMEFRAMES: readonly TickerTimeframe[] = [
-  TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL,
+  TickerTimeframe.TMN,
+  TickerTimeframe.MN,
+  TickerTimeframe.WK,
+  TickerTimeframe.DL,
 ];
 
 /**
@@ -48,5 +51,9 @@ export const NSE_DEFAULT_TIMEFRAMES: readonly TickerTimeframe[] = [
  * Used when starting tracking for a new ticker on other exchanges.
  */
 export const NON_NSE_DEFAULT_TIMEFRAMES: readonly TickerTimeframe[] = [
-  TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK,
+  TickerTimeframe.YR,
+  TickerTimeframe.SMN,
+  TickerTimeframe.TMN,
+  TickerTimeframe.MN,
+  TickerTimeframe.WK,
 ];

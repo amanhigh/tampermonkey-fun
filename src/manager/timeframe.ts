@@ -75,7 +75,7 @@ export class TimeFrameManager implements ITimeFrameManager {
     const tvTicker = this.domManager.getTicker();
     try {
       const record = await this.tickerManager.getTicker(tvTicker);
-      const active = this.getActiveTimeframes(record.timeframes as TickerTimeframe[]);
+      const active = this.filterActiveTimeframes(record.timeframes as TickerTimeframe[]);
       return active.map((tf) => tf.code);
     } catch (error) {
       Notifier.warn(`getActiveTimeframes: ${(error as Error).message}. Falling back to default timeframes.`);
@@ -90,7 +90,7 @@ export class TimeFrameManager implements ITimeFrameManager {
     const current = record.timeframes as TickerTimeframe[];
     const isActive = current.includes(code);
     const updated = isActive ? current.filter((c) => c !== code) : [...current, code];
-    const active = this.getActiveTimeframes(updated);
+    const active = this.filterActiveTimeframes(updated);
     const sorted = active.map((tf) => tf.code);
     await this.tickerManager.updateTicker(tvTicker, { timeframes: sorted });
 
@@ -144,7 +144,7 @@ export class TimeFrameManager implements ITimeFrameManager {
    * Filters timeframe codes to only those in the catalog, preserving catalog order.
    * Unknown/invalid codes are silently dropped.
    */
-  private getActiveTimeframes(codes: TickerTimeframe[]): Timeframe[] {
+  private filterActiveTimeframes(codes: TickerTimeframe[]): Timeframe[] {
     const active = new Set(codes);
     return TIMEFRAMES.filter((tf) => active.has(tf.code));
   }
@@ -176,7 +176,7 @@ export class TimeFrameManager implements ITimeFrameManager {
    * 5. Otherwise DEFAULT_SEQUENCE is returned
    */
   private deriveSequence(codes: TickerTimeframe[]): Sequence {
-    const supported = this.getActiveTimeframes(codes);
+    const supported = this.filterActiveTimeframes(codes);
 
     if (supported.length === 0) {
       return DEFAULT_SEQUENCE;

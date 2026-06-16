@@ -36,13 +36,11 @@ describe('StyleManager', () => {
 
     // Mock TimeFrameManager
     mockTimeFrameManager = {
-      applyTimeFrame: jest.fn(),
-      getCurrentTimeFrameConfig: jest.fn(),
-      getTimeframeCodes: jest.fn(),
-      getActiveTimeframesForCurrentTicker: jest.fn(),
-      getSequenceForCurrentTicker: jest.fn(),
-      getDefaultTimeframesForExchange: jest.fn(),
-      toggleTimeframeForCurrentTicker: jest.fn(),
+      getActiveTimeframes: jest.fn(),
+      toggleTimeframe: jest.fn(),
+      getSequence: jest.fn(),
+      apply: jest.fn(),
+      getCurrentConfig: jest.fn(),
     };
 
     styleManager = new StyleManager(mockWaitUtil, mockTimeFrameManager);
@@ -111,11 +109,11 @@ describe('StyleManager', () => {
     it('should apply zone style with current timeframe style', () => {
       const zoneType = 'DZ';
       const mockTimeFrameConfig = { code: TickerTimeframe.DL, label: 'D', rank: 5, toolbar: 2, style: 'I' };
-      mockTimeFrameManager.getCurrentTimeFrameConfig.mockReturnValue(mockTimeFrameConfig);
+      mockTimeFrameManager.getCurrentConfig.mockReturnValue(mockTimeFrameConfig);
 
       styleManager.applyZoneStyle(zoneType);
 
-      expect(mockTimeFrameManager.getCurrentTimeFrameConfig).toHaveBeenCalledTimes(1);
+      expect(mockTimeFrameManager.getCurrentConfig).toHaveBeenCalledTimes(1);
       expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(Constants.DOM.TOOLBARS.STYLE, expect.any(Function));
     });
 
@@ -123,22 +121,22 @@ describe('StyleManager', () => {
       // Test with different timeframe config
       const zoneType = 'SZ';
       const mockTimeFrameConfig = { code: TickerTimeframe.WK, label: 'W', rank: 4, toolbar: 3, style: 'H' };
-      mockTimeFrameManager.getCurrentTimeFrameConfig.mockReturnValue(mockTimeFrameConfig);
+      mockTimeFrameManager.getCurrentConfig.mockReturnValue(mockTimeFrameConfig);
 
       styleManager.applyZoneStyle(zoneType);
 
-      expect(mockTimeFrameManager.getCurrentTimeFrameConfig).toHaveBeenCalledTimes(1);
+      expect(mockTimeFrameManager.getCurrentConfig).toHaveBeenCalledTimes(1);
       expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(Constants.DOM.TOOLBARS.STYLE, expect.any(Function));
     });
 
     it('should handle empty zone type', () => {
       const zoneType = '';
       const mockTimeFrameConfig = { code: TickerTimeframe.MN, label: 'M', rank: 3, toolbar: 4, style: 'VH' };
-      mockTimeFrameManager.getCurrentTimeFrameConfig.mockReturnValue(mockTimeFrameConfig);
+      mockTimeFrameManager.getCurrentConfig.mockReturnValue(mockTimeFrameConfig);
 
       styleManager.applyZoneStyle(zoneType);
 
-      expect(mockTimeFrameManager.getCurrentTimeFrameConfig).toHaveBeenCalledTimes(1);
+      expect(mockTimeFrameManager.getCurrentConfig).toHaveBeenCalledTimes(1);
       expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(Constants.DOM.TOOLBARS.STYLE, expect.any(Function));
     });
   });
@@ -242,11 +240,11 @@ describe('StyleManager', () => {
     it('should handle zone style application workflow', () => {
       const zoneType = Constants.TRADING.ZONES.DEMAND;
       const mockTimeFrameConfig = { code: TickerTimeframe.DL, label: 'D', rank: 5, toolbar: 2, style: 'I' };
-      mockTimeFrameManager.getCurrentTimeFrameConfig.mockReturnValue(mockTimeFrameConfig);
+      mockTimeFrameManager.getCurrentConfig.mockReturnValue(mockTimeFrameConfig);
 
       styleManager.applyZoneStyle(zoneType);
 
-      expect(mockTimeFrameManager.getCurrentTimeFrameConfig).toHaveBeenCalled();
+      expect(mockTimeFrameManager.getCurrentConfig).toHaveBeenCalled();
       expect(mockWaitUtil.waitJClick).toHaveBeenCalledWith(Constants.DOM.TOOLBARS.STYLE, expect.any(Function));
     });
 
@@ -291,7 +289,7 @@ describe('StyleManager', () => {
 
     it('should handle timeframe manager errors gracefully', () => {
       const error = new Error('TimeFrame config failed');
-      mockTimeFrameManager.getCurrentTimeFrameConfig.mockImplementation(() => {
+      mockTimeFrameManager.getCurrentConfig.mockImplementation(() => {
         throw error;
       });
 
@@ -386,11 +384,11 @@ describe('StyleManager', () => {
       ];
 
       configs.forEach((config) => {
-        mockTimeFrameManager.getCurrentTimeFrameConfig.mockReturnValueOnce(config);
+        mockTimeFrameManager.getCurrentConfig.mockReturnValueOnce(config);
         styleManager.applyZoneStyle('DZ');
       });
 
-      expect(mockTimeFrameManager.getCurrentTimeFrameConfig).toHaveBeenCalledTimes(3);
+      expect(mockTimeFrameManager.getCurrentConfig).toHaveBeenCalledTimes(3);
       expect(mockWaitUtil.waitJClick).toHaveBeenCalledTimes(3);
     });
   });

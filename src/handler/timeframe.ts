@@ -137,9 +137,7 @@ export class TimeFrameHandler implements ITimeFrameHandler {
   private buildChipsHtml(activeSet: Set<TickerTimeframe>): string {
     // All timeframe codes in catalog order — enum values match static catalog order
     const allCodes = Object.values(TickerTimeframe);
-    return allCodes
-      .map((code) => this.buildChip(code, activeSet.has(code)))
-      .join('');
+    return allCodes.map((code) => this.buildChip(code, activeSet.has(code))).join('');
   }
 
   /**
