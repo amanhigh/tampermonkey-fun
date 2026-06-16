@@ -1,5 +1,6 @@
 import { TimeFrameHandler } from '../../src/handler/timeframe';
 import { ITimeFrameManager } from '../../src/manager/timeframe';
+import { TickerTimeframe } from '../../src/models/timeframe';
 import { ISubscriber } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
 import { Notifier } from '../../src/util/notify';

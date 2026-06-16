@@ -1,3 +1,4 @@
+import { TickerTimeframe } from '../models/timeframe';
 import { Constants } from '../models/constant';
 import { Ticker, TickerType, TickerState, TickerTrend } from '../models/ticker';
 import { ALL_WATCH_CATEGORIES, WatchCategory, WatchCategoryId } from '../models/watch';
@@ -69,7 +70,7 @@ export class WatchClassifier {
    * (does not contain DL).
    */
   private static isLongWatch(ticker: Ticker): boolean {
-    return !ticker.timeframes.includes('DL');
+    return !ticker.timeframes.includes(TickerTimeframe.DL);
   }
 
   /**

@@ -1,5 +1,6 @@
 import { TickerClient, ITickerClient } from '../../src/client/ticker';
 import { TickerType, TickerState, TickerTrend } from '../../src/models/ticker';
+import { TickerTimeframe } from '../../src/models/timeframe';
 import { Constants } from '../../src/models/constant';
 
 // Mock the BaseClient's makeRequest method

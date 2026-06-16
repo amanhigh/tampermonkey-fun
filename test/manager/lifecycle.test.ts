@@ -6,6 +6,7 @@ import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { IPublisher } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
 import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/ticker';
+import { TickerTimeframe } from '../../src/models/timeframe';
 import { AlertTicker } from '../../src/models/alert_ticker';
 
 describe('LifecycleManager', () => {

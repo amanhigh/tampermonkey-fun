@@ -7,10 +7,14 @@
  * Ordered timeframe codes representing TradingView interval presets.
  * Mirrors the Go backend model in barkat/ticker.go.
  */
-export type TickerTimeframe = 'YR' | 'SMN' | 'TMN' | 'MN' | 'WK' | 'DL';
-
-/**
- * Canonical ordering of supported timeframe codes, highest to lowest.
+export enum TickerTimeframe {
+  YR = 'YR',
+  SMN = 'SMN',
+  TMN = 'TMN',
+  MN = 'MN',
+  WK = 'WK',
+  DL = 'DL',
+}
 
 /**
  * Canonical ordering of supported timeframe codes, highest to lowest.
@@ -21,13 +25,26 @@ export type TickerTimeframe = 'YR' | 'SMN' | 'TMN' | 'MN' | 'WK' | 'DL';
  *
  * FIXME: Include 'YR' once TimeFrameConfig for yearly is defined in FRAMES_BY_CODE.
  */
-export const CANONICAL_TIMEFRAMES: readonly TickerTimeframe[] = ['SMN', 'TMN', 'MN', 'WK', 'DL'] as const;
+export const CANONICAL_TIMEFRAMES: readonly TickerTimeframe[] = [
+  TickerTimeframe.SMN,
+  TickerTimeframe.TMN,
+  TickerTimeframe.MN,
+  TickerTimeframe.WK,
+  TickerTimeframe.DL,
+];
 
 /**
  * Display order of all timeframe codes including YR.
  * Used by the timeframe bar to show all possible chips in consistent order.
  */
-export const DISPLAY_TIMEFRAMES: readonly TickerTimeframe[] = ['YR', 'SMN', 'TMN', 'MN', 'WK', 'DL'] as const;
+export const DISPLAY_TIMEFRAMES: readonly TickerTimeframe[] = [
+  TickerTimeframe.YR,
+  TickerTimeframe.SMN,
+  TickerTimeframe.TMN,
+  TickerTimeframe.MN,
+  TickerTimeframe.WK,
+  TickerTimeframe.DL,
+];
 
 /**
  * A fixed 4-tuple of timeframe codes derived from the top of the backend
@@ -45,7 +62,22 @@ export const SEQUENCE_LENGTH = 4;
  * Default Sequence used when the backend timeframe list is empty or
  * cannot produce a valid 4-tuple from the top.
  */
-export const DEFAULT_SEQUENCE: Sequence = ['TMN', 'MN', 'WK', 'DL'];
+export const DEFAULT_SEQUENCE: Sequence = [
+  TickerTimeframe.TMN,
+  TickerTimeframe.MN,
+  TickerTimeframe.WK,
+  TickerTimeframe.DL,
+];
+
+// Precomputed display-order rank for each timeframe code. Unknown codes get rank 99.
+const TIMEFRAME_RANK: Record<string, number> = {
+  [TickerTimeframe.YR]: 0,
+  [TickerTimeframe.SMN]: 1,
+  [TickerTimeframe.TMN]: 2,
+  [TickerTimeframe.MN]: 3,
+  [TickerTimeframe.WK]: 4,
+  [TickerTimeframe.DL]: 5,
+};
 
 /**
  * Sorts an array of timeframe codes into the display order.
@@ -54,22 +86,11 @@ export const DEFAULT_SEQUENCE: Sequence = ['TMN', 'MN', 'WK', 'DL'];
  * @returns Sorted array in display order
  */
 export function sortTimeframesForDisplay(codes: TickerTimeframe[]): TickerTimeframe[] {
-  const order = new Map<TickerTimeframe, number>();
-  DISPLAY_TIMEFRAMES.forEach((code, idx) => order.set(code, idx));
   return [...codes].sort((a, b) => {
-    const idxA = order.get(a) ?? 99;
-    const idxB = order.get(b) ?? 99;
+    const idxA = TIMEFRAME_RANK[a] ?? 99;
+    const idxB = TIMEFRAME_RANK[b] ?? 99;
     return idxA - idxB;
   });
-}
-
-/**
- * Returns the index of a timeframe code within the canonical order.
- * @param code - Timeframe code to look up
- * @returns Index in CANONICAL_TIMEFRAMES, or -1 if not found
- */
-export function getTimeFrameCodeIndex(code: TickerTimeframe): number {
-  return CANONICAL_TIMEFRAMES.indexOf(code);
 }
 
 /**
@@ -84,20 +105,8 @@ export function getTimeFrameCodeIndex(code: TickerTimeframe): number {
  * @returns Filtered and sorted list of supported codes
  */
 export function normalizeTimeframes(codes: string[]): TickerTimeframe[] {
-  const valid = new Set<TickerTimeframe>(CANONICAL_TIMEFRAMES as unknown as TickerTimeframe[]);
-  const seen = new Set<TickerTimeframe>();
-  const result: TickerTimeframe[] = [];
-
-  for (const code of codes) {
-    const tfCode = code as TickerTimeframe;
-    if (valid.has(tfCode) && !seen.has(tfCode)) {
-      seen.add(tfCode);
-      result.push(tfCode);
-    }
-  }
-
-  // Sort by canonical order (highest first)
-  return result.sort((a, b) => CANONICAL_TIMEFRAMES.indexOf(a) - CANONICAL_TIMEFRAMES.indexOf(b));
+  const codeSet = new Set(codes);
+  return CANONICAL_TIMEFRAMES.filter((tf) => codeSet.has(tf));
 }
 
 /**
@@ -114,31 +123,18 @@ export function normalizeTimeframes(codes: string[]): TickerTimeframe[] {
  * @returns Sequence (always exactly 4 entries)
  */
 export function deriveSequence(timeframes: string[]): Sequence {
-  // Filter to supported codes (drop YR) and sort canonically
   const supported = normalizeTimeframes(timeframes);
 
-  // If no supported frames found, fall back to default
   if (supported.length === 0) {
     return DEFAULT_SEQUENCE;
   }
 
-  // Start from the top supported frame and take the next 4 contiguous
-  // canonical frames (including the top), filling in any gaps.
-  const startIdx = getTimeFrameCodeIndex(supported[0]);
-  if (startIdx < 0) {
+  const startIdx = CANONICAL_TIMEFRAMES.indexOf(supported[0]);
+  if (startIdx < 0 || startIdx + SEQUENCE_LENGTH > CANONICAL_TIMEFRAMES.length) {
     return DEFAULT_SEQUENCE;
   }
 
-  const endIdx = Math.min(startIdx + SEQUENCE_LENGTH, CANONICAL_TIMEFRAMES.length);
-  if (endIdx - startIdx < SEQUENCE_LENGTH) {
-    return DEFAULT_SEQUENCE;
-  }
-
-  const result: TickerTimeframe[] = [];
-  for (let i = startIdx; i < endIdx; i++) {
-    result.push(CANONICAL_TIMEFRAMES[i]);
-  }
-  return result as unknown as Sequence;
+  return CANONICAL_TIMEFRAMES.slice(startIdx, startIdx + SEQUENCE_LENGTH) as unknown as Sequence;
 }
 
 /**
@@ -155,32 +151,8 @@ export function deriveSequence(timeframes: string[]): Sequence {
  */
 export class TimeFrameConfig {
   constructor(
-    private _symbol: string,
-    private _style: string,
-    private _toolbar: number
+    public readonly symbol: string,
+    public readonly style: string,
+    public readonly toolbar: number
   ) {}
-
-  get symbol(): string {
-    return this._symbol;
-  }
-
-  get style(): string {
-    return this._style;
-  }
-
-  get toolbar(): number {
-    return this._toolbar;
-  }
-
-  set symbol(value: string) {
-    this._symbol = value;
-  }
-
-  set style(value: string) {
-    this._style = value;
-  }
-
-  set toolbar(value: number) {
-    this._toolbar = value;
-  }
 }
