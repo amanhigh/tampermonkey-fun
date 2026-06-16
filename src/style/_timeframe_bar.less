@@ -64,38 +64,22 @@
             }
         }
 
-        // Active state colors per timeframe
+        // Active state colors per timeframe (via mixin)
+        .tf-active-color(@code, @color) {
+            &.aman-tf-chip[data-tf-code="@{code}"] {
+                color: @color;
+                background: fade(@color, 15%);
+                &:hover { background: fade(@color, 25%); }
+            }
+        }
+
         &.aman-tf-active {
-            &.aman-tf-chip[data-tf-code="YR"] {
-                color: @tf-color-yr;               // Coral Red
-                background: fade(@tf-color-yr, 15%);
-                &:hover { background: fade(@tf-color-yr, 25%); }
-            }
-            &.aman-tf-chip[data-tf-code="SMN"] {
-                color: @tf-color-smn;              // Orange
-                background: fade(@tf-color-smn, 15%);
-                &:hover { background: fade(@tf-color-smn, 25%); }
-            }
-            &.aman-tf-chip[data-tf-code="TMN"] {
-                color: @tf-color-tmn;              // Amber
-                background: fade(@tf-color-tmn, 15%);
-                &:hover { background: fade(@tf-color-tmn, 25%); }
-            }
-            &.aman-tf-chip[data-tf-code="MN"] {
-                color: @tf-color-mn;               // Emerald
-                background: fade(@tf-color-mn, 15%);
-                &:hover { background: fade(@tf-color-mn, 25%); }
-            }
-            &.aman-tf-chip[data-tf-code="WK"] {
-                color: @tf-color-wk;               // Sky Blue
-                background: fade(@tf-color-wk, 15%);
-                &:hover { background: fade(@tf-color-wk, 25%); }
-            }
-            &.aman-tf-chip[data-tf-code="DL"] {
-                color: @tf-color-dl;               // Violet
-                background: fade(@tf-color-dl, 15%);
-                &:hover { background: fade(@tf-color-dl, 25%); }
-            }
+            .tf-active-color(YR, @tf-color-yr);   // Coral Red
+            .tf-active-color(SMN, @tf-color-smn);  // Orange
+            .tf-active-color(TMN, @tf-color-tmn);  // Amber
+            .tf-active-color(MN, @tf-color-mn);    // Emerald
+            .tf-active-color(WK, @tf-color-wk);    // Sky Blue
+            .tf-active-color(DL, @tf-color-dl);    // Violet
         }
 
         // Loading state

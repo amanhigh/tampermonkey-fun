@@ -10,43 +10,16 @@
 export type TickerTimeframe = 'YR' | 'SMN' | 'TMN' | 'MN' | 'WK' | 'DL';
 
 /**
- * Timeframe type distinguishing regular (MWD) vs annual (YR) trading views.
- *
- * - MWD:  Three-monthly, monthly, weekly, daily (typically for NSE equities)
- * - YR:   Yearly, six-monthly, three-monthly, monthly, weekly (typically for non-NSE)
- *
- * FIXME: This replaces the old SequenceType enum. Eventually rename to TradeType.
- */
-export type TimeframeType = 'MWD' | 'YR';
-
-/**
- * Available timeframe keys
- */
-export enum TimeFrame {
-  /** Daily timeframe */
-  DAILY = 'DAILY',
-  /** Weekly timeframe */
-  WEEKLY = 'WEEKLY',
-  /** Monthly timeframe */
-  MONTHLY = 'MONTHLY',
-  /** Three month timeframe */
-  THREE_MONTHLY = 'THREE_MONTHLY',
-  /** Six month timeframe */
-  SIX_MONTHLY = 'SIX_MONTHLY',
-  // FIXME: Add YEARLY = 'YEARLY' support.
-  // TradingView toolbar supports 12M (toolbar index 7),
-  // but frontend TimeFrameConfig does not define it yet.
-  // Once added, update CANONICAL_TIMEFRAMES to include 'YR'.
-}
+ * Canonical ordering of supported timeframe codes, highest to lowest.
 
 /**
  * Canonical ordering of supported timeframe codes, highest to lowest.
  *
  * NOTE: YR is listed in DISPLAY_TIMEFRAMES for the timeframe bar but is
  * NOT yet wired in frontend TimeFrameConfig / toolbar. Code that derives
- * a Sequence must filter YR out until YEARLY enum support is added.
+ * a Sequence must filter YR out until a config entry exists.
  *
- * FIXME: Include 'YR' once TimeFrame.YEARLY config exists.
+ * FIXME: Include 'YR' once TimeFrameConfig for yearly is defined in FRAMES_BY_CODE.
  */
 export const CANONICAL_TIMEFRAMES: readonly TickerTimeframe[] = ['SMN', 'TMN', 'MN', 'WK', 'DL'] as const;
 
@@ -128,31 +101,6 @@ export function normalizeTimeframes(codes: string[]): TickerTimeframe[] {
 }
 
 /**
- * Returns the preferred timeframe codes starting from the current active
- * timeframe, for order placement use cases.
- *
- * Rule: current + next 3 lower timeframes = 4 total.
- *
- * Returns `null` when the current timeframe is too low (MN, WK, DL) to
- * produce 4 meaningful timeframes for order placement.
- *
- * @param currentCode - The currently active timeframe code
- * @returns Array of 4 timeframe codes, or null if invalid for order
- */
-export function getOrderPreferredTimeframes(currentCode: TickerTimeframe): TickerTimeframe[] | null {
-  const currentIdx = CANONICAL_TIMEFRAMES.indexOf(currentCode);
-  if (currentIdx === -1 || currentIdx > 2) {
-    // Position 0=SMN(valid), 1=TMN(valid), 2=MN(invalid), 3=WK(invalid), 4=DL(invalid)
-    return null;
-  }
-
-  // Valid start: YR(0), SMN(1), TMN(2) → return 4 frames
-  // But since YR is deferred, valid starts are SMN(idx=0) and TMN(idx=1)
-  // FIXME: When YR is added at index 0, adjust: YR(0), SMN(1), TMN(2)
-  return CANONICAL_TIMEFRAMES.slice(currentIdx, currentIdx + 4) as TickerTimeframe[];
-}
-
-/**
  * Returns the default persisted timeframe list based on exchange.
  *
  * - NSE → TMN, MN, WK, DL  (MWD type)
@@ -184,21 +132,8 @@ export function getDefaultTimeframesForExchange(exchange: string): TickerTimefra
  * @returns Sequence (always exactly 4 entries)
  */
 export function deriveSequence(timeframes: string[]): Sequence {
-  // Filter to supported codes (drop YR, keep only canonical codes)
-  const canonicalSet = new Set<TickerTimeframe>(CANONICAL_TIMEFRAMES as unknown as TickerTimeframe[]);
-  const supported: TickerTimeframe[] = [];
-  const seen = new Set<TickerTimeframe>();
-
-  for (const code of timeframes) {
-    const tfCode = code as TickerTimeframe;
-    if (canonicalSet.has(tfCode) && !seen.has(tfCode)) {
-      seen.add(tfCode);
-      supported.push(tfCode);
-    }
-  }
-
-  // Sort by canonical order (highest first)
-  supported.sort((a, b) => getTimeFrameCodeIndex(a) - getTimeFrameCodeIndex(b));
+  // Filter to supported codes (drop YR) and sort canonically
+  const supported = normalizeTimeframes(timeframes);
 
   // If no supported frames found, fall back to default
   if (supported.length === 0) {

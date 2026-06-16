@@ -60,13 +60,8 @@ export class TimeframeBarHandler implements ITimeframeBarHandler {
       return;
     }
 
-    let activeCodes: TickerTimeframe[];
-    try {
-      activeCodes = await this.timeFrameManager.getExactTimeframesForCurrentTicker();
-    } catch {
-      activeCodes = [];
-    }
-
+    // Manager handles errors internally and returns default timeframes on failure
+    const activeCodes = await this.timeFrameManager.getExactTimeframesForCurrentTicker();
     const activeSet = new Set(activeCodes);
     const chipsHtml = DISPLAY_TIMEFRAMES.map((code) => {
       const isActive = activeSet.has(code);

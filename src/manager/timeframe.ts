@@ -3,6 +3,7 @@ import {
   TimeFrameConfig,
   TickerTimeframe,
   Sequence,
+  DEFAULT_SEQUENCE,
   deriveSequence,
   sortTimeframesForDisplay,
 } from '../models/timeframe';
@@ -11,12 +12,6 @@ import { Notifier } from '../util/notify';
 import { ITickerManager } from './ticker';
 import { IDomManager } from './dom';
 import { IPublisher } from './event_bus';
-
-/**
- * Default timeframe codes shown when backend ticker record is unavailable.
- * Matches the old MWD sequence: TMN, MN, WK, DL.
- */
-const DEFAULT_TIMEFRAMES: TickerTimeframe[] = ['TMN', 'MN', 'WK', 'DL'];
 
 /**
  * Interface for managing trading timeframe operations
@@ -38,7 +33,7 @@ export interface ITimeFrameManager {
   /**
    * Get the exact backend timeframe codes for the current ticker,
    * preserving YR and any other codes returned by the backend.
-   * Falls back to DEFAULT_TIMEFRAMES when backend read fails.
+   * Falls back to DEFAULT_SEQUENCE when backend read fails.
    * @returns Promise resolving to the exact ordered list of backend timeframe codes
    */
   getExactTimeframesForCurrentTicker(): Promise<TickerTimeframe[]>;
@@ -102,20 +97,14 @@ export class TimeFrameManager implements ITimeFrameManager {
       return sortTimeframesForDisplay(record.timeframes as TickerTimeframe[]);
     } catch (error) {
       Notifier.warn(`getExactTimeframes: ${(error as Error).message}. Falling back to default timeframes.`);
-      return DEFAULT_TIMEFRAMES;
+      return [...DEFAULT_SEQUENCE];
     }
   }
 
   /** @inheritdoc */
   async getSequenceForCurrentTicker(): Promise<Sequence> {
-    const tvTicker = this.domManager.getTicker();
-    try {
-      const record = await this.tickerManager.getTicker(tvTicker);
-      return deriveSequence(record.timeframes);
-    } catch (error) {
-      Notifier.warn(`getSequence: ${(error as Error).message}. Falling back to default sequence.`);
-      return deriveSequence([]);
-    }
+    const exact = await this.getExactTimeframesForCurrentTicker();
+    return deriveSequence(exact);
   }
 
   /** @inheritdoc */

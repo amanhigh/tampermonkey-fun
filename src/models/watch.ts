@@ -65,32 +65,6 @@ export interface BucketSummary {
  * List order: SET_JOURNAL, READY, LONG_NSE, LONG_NON_NSE, RUNNING, DEFAULT_DAILY, INDEX, COMPOSITE, BLACKLISTED
  */
 // HACK: Change to Map fro both Watch and Flag Categories
-/**
- * Class representing a snapshot of current TradingView watchlist tickers.
- * Serialised to GM storage on the TradingView side and read by the Investing.com alert feed.
- */
-export class WatchlistSnapshot {
-  constructor(readonly tickers: string[]) {}
-
-  /**
-   * Serialize to JSON string for storage
-   * @returns JSON string representation
-   */
-  stringify(): string {
-    return JSON.stringify({ tickers: this.tickers });
-  }
-
-  /**
-   * Parse a stringified watchlist snapshot
-   * @param data The stringified snapshot to parse
-   * @returns The parsed watchlist snapshot
-   */
-  static fromString(data: string): WatchlistSnapshot {
-    const parsed = JSON.parse(data) as { tickers: string[] };
-    return new WatchlistSnapshot(parsed.tickers ?? []);
-  }
-}
-
 export const ALL_WATCH_CATEGORIES: readonly WatchCategory[] = [
   {
     id: WatchCategoryId.SET_JOURNAL,
