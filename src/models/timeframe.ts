@@ -1,3 +1,14 @@
+// ── Shared timeframe code type ──
+// Defined here (not in ticker.ts) to avoid circular dependency:
+// ticker.ts → constant.ts → timeframe.ts
+// timeframe.ts must not import from ticker.ts or constant.ts.
+
+/**
+ * Ordered timeframe codes representing TradingView interval presets.
+ * Mirrors the Go backend model in barkat/ticker.go.
+ */
+export type TickerTimeframe = 'YR' | 'SMN' | 'TMN' | 'MN' | 'WK' | 'DL';
+
 /**
  * Timeframe type distinguishing regular (MWD) vs annual (YR) trading views.
  *
@@ -29,41 +40,48 @@ export enum TimeFrame {
 }
 
 /**
- * Backend timeframe code — mirrors TickerTimeframe from ticker.ts
- * to avoid circular dependency.
- *
- * Ordered from highest (longest) to lowest (shortest):
- * YR > SMN > TMN > MN > WK > DL
- *
- * FIXME: Unify with TickerTimeframe in ticker.ts.
- */
-export type TimeFrameCode = 'YR' | 'SMN' | 'TMN' | 'MN' | 'WK' | 'DL';
-
-/**
  * Canonical ordering of supported timeframe codes, highest to lowest.
  *
- * NOTE: YR is listed here for completeness but is NOT yet wired in
- * frontend TimeFrameConfig / toolbar. Code that uses this array must
- * filter YR out until YEARLY enum support is added.
+ * NOTE: YR is listed in DISPLAY_TIMEFRAMES for the timeframe bar but is
+ * NOT yet wired in frontend TimeFrameConfig / toolbar. Code that derives
+ * a Sequence must filter YR out until YEARLY enum support is added.
  *
  * FIXME: Include 'YR' once TimeFrame.YEARLY config exists.
  */
-export const CANONICAL_TIMEFRAMES: readonly TimeFrameCode[] = ['SMN', 'TMN', 'MN', 'WK', 'DL'] as const;
+export const CANONICAL_TIMEFRAMES: readonly TickerTimeframe[] = ['SMN', 'TMN', 'MN', 'WK', 'DL'] as const;
 
 /**
  * Display order of all timeframe codes including YR.
  * Used by the timeframe bar to show all possible chips in consistent order.
  */
-export const DISPLAY_TIMEFRAMES: readonly TimeFrameCode[] = ['YR', 'SMN', 'TMN', 'MN', 'WK', 'DL'] as const;
+export const DISPLAY_TIMEFRAMES: readonly TickerTimeframe[] = ['YR', 'SMN', 'TMN', 'MN', 'WK', 'DL'] as const;
 
 /**
- * Sorts an array of timeframe codes into the canonical display order.
+ * A fixed 4-tuple of timeframe codes derived from the top of the backend
+ * ticker timeframe list. Used by chart hotkeys (positions 0-3) and
+ * screenshot flows.
+ */
+export type Sequence = readonly [TickerTimeframe, TickerTimeframe, TickerTimeframe, TickerTimeframe];
+
+/**
+ * Number of timeframe codes in a Sequence (always 4).
+ */
+export const SEQUENCE_LENGTH = 4;
+
+/**
+ * Default Sequence used when the backend timeframe list is empty or
+ * cannot produce a valid 4-tuple from the top.
+ */
+export const DEFAULT_SEQUENCE: Sequence = ['TMN', 'MN', 'WK', 'DL'];
+
+/**
+ * Sorts an array of timeframe codes into the display order.
  * Handles YR and any valid code; unknown codes go to the end.
  * @param codes - Timeframe codes to sort
  * @returns Sorted array in display order
  */
-export function sortTimeframesForDisplay(codes: TimeFrameCode[]): TimeFrameCode[] {
-  const order = new Map<TimeFrameCode, number>();
+export function sortTimeframesForDisplay(codes: TickerTimeframe[]): TickerTimeframe[] {
+  const order = new Map<TickerTimeframe, number>();
   DISPLAY_TIMEFRAMES.forEach((code, idx) => order.set(code, idx));
   return [...codes].sort((a, b) => {
     const idxA = order.get(a) ?? 99;
@@ -77,7 +95,7 @@ export function sortTimeframesForDisplay(codes: TimeFrameCode[]): TimeFrameCode[
  * @param code - Timeframe code to look up
  * @returns Index in CANONICAL_TIMEFRAMES, or -1 if not found
  */
-export function getTimeFrameCodeIndex(code: TimeFrameCode): number {
+export function getTimeFrameCodeIndex(code: TickerTimeframe): number {
   return CANONICAL_TIMEFRAMES.indexOf(code);
 }
 
@@ -92,13 +110,13 @@ export function getTimeFrameCodeIndex(code: TimeFrameCode): number {
  * @param codes - Raw timeframe codes from backend or config
  * @returns Filtered and sorted list of supported codes
  */
-export function normalizeTimeframes(codes: string[]): TimeFrameCode[] {
-  const valid = new Set<TimeFrameCode>(CANONICAL_TIMEFRAMES as unknown as TimeFrameCode[]);
-  const seen = new Set<TimeFrameCode>();
-  const result: TimeFrameCode[] = [];
+export function normalizeTimeframes(codes: string[]): TickerTimeframe[] {
+  const valid = new Set<TickerTimeframe>(CANONICAL_TIMEFRAMES as unknown as TickerTimeframe[]);
+  const seen = new Set<TickerTimeframe>();
+  const result: TickerTimeframe[] = [];
 
   for (const code of codes) {
-    const tfCode = code as TimeFrameCode;
+    const tfCode = code as TickerTimeframe;
     if (valid.has(tfCode) && !seen.has(tfCode)) {
       seen.add(tfCode);
       result.push(tfCode);
@@ -121,7 +139,7 @@ export function normalizeTimeframes(codes: string[]): TimeFrameCode[] {
  * @param currentCode - The currently active timeframe code
  * @returns Array of 4 timeframe codes, or null if invalid for order
  */
-export function getOrderPreferredTimeframes(currentCode: TimeFrameCode): TimeFrameCode[] | null {
+export function getOrderPreferredTimeframes(currentCode: TickerTimeframe): TickerTimeframe[] | null {
   const currentIdx = CANONICAL_TIMEFRAMES.indexOf(currentCode);
   if (currentIdx === -1 || currentIdx > 2) {
     // Position 0=SMN(valid), 1=TMN(valid), 2=MN(invalid), 3=WK(invalid), 4=DL(invalid)
@@ -131,15 +149,8 @@ export function getOrderPreferredTimeframes(currentCode: TimeFrameCode): TimeFra
   // Valid start: YR(0), SMN(1), TMN(2) → return 4 frames
   // But since YR is deferred, valid starts are SMN(idx=0) and TMN(idx=1)
   // FIXME: When YR is added at index 0, adjust: YR(0), SMN(1), TMN(2)
-  return CANONICAL_TIMEFRAMES.slice(currentIdx, currentIdx + 4) as TimeFrameCode[];
+  return CANONICAL_TIMEFRAMES.slice(currentIdx, currentIdx + 4) as TickerTimeframe[];
 }
-
-/**
- * A fixed 4-tuple of timeframe codes derived from the top of the backend
- * allowed timeframe list. Used by chart hotkeys (positions 0-3) and
- * screenshot flows.
- */
-export type AppliedTimeframeTuple = readonly [TimeFrameCode, TimeFrameCode, TimeFrameCode, TimeFrameCode];
 
 /**
  * Returns the default persisted timeframe list based on exchange.
@@ -152,7 +163,7 @@ export type AppliedTimeframeTuple = readonly [TimeFrameCode, TimeFrameCode, Time
  * @param exchange - Exchange code (e.g. "NSE", "BSE", "NASDAQ")
  * @returns Default ordered timeframe codes for the exchange
  */
-export function getDefaultTimeframesForExchange(exchange: string): TimeFrameCode[] {
+export function getDefaultTimeframesForExchange(exchange: string): TickerTimeframe[] {
   if (exchange.toUpperCase() === 'NSE') {
     return ['TMN', 'MN', 'WK', 'DL'];
   }
@@ -160,54 +171,57 @@ export function getDefaultTimeframesForExchange(exchange: string): TimeFrameCode
 }
 
 /**
- * Derives a 4-frame applied tuple from the backend allowed timeframe list.
+ * Derives a 4-frame Sequence from the backend ticker timeframe list.
  *
  * Rules:
- * 1. Unsupported 'YR' codes are silently dropped
+ * 1. Unsupported codes (outside CANONICAL_TIMEFRAMES, e.g. 'YR') are silently dropped
  * 2. Codes are sorted in canonical order (highest → lowest)
- * 3. The top 4 supported codes form the applied tuple
- * 4. If fewer than 4 codes remain, the tuple is padded with lower frames
- *    from the canonical set to ensure exactly 4 entries
+ * 3. The highest supported timeframe is used as the start of the sequence
+ * 4. If start + 4 contiguous canonical codes fit, that 4-tuple is returned
+ * 5. If they do not fit, DEFAULT_SEQUENCE is returned
  *
  * @param timeframes - Raw timeframe codes from backend
- * @returns Applied 4-tuple (always exactly 4 entries)
+ * @returns Sequence (always exactly 4 entries)
  */
-export function getAppliedTimeframeTuple(timeframes: string[]): AppliedTimeframeTuple {
+export function deriveSequence(timeframes: string[]): Sequence {
   // Filter to supported codes (drop YR, keep only canonical codes)
-  const canonicalSet = new Set<TimeFrameCode>(CANONICAL_TIMEFRAMES as unknown as TimeFrameCode[]);
-  const supported: TimeFrameCode[] = [];
-  const seen = new Set<TimeFrameCode>();
+  const canonicalSet = new Set<TickerTimeframe>(CANONICAL_TIMEFRAMES as unknown as TickerTimeframe[]);
+  const supported: TickerTimeframe[] = [];
+  const seen = new Set<TickerTimeframe>();
 
   for (const code of timeframes) {
-    const tfCode = code as TimeFrameCode;
+    const tfCode = code as TickerTimeframe;
     if (canonicalSet.has(tfCode) && !seen.has(tfCode)) {
       seen.add(tfCode);
       supported.push(tfCode);
     }
   }
 
-  // Sort by canonical order (highest first) and take the top supported frame
+  // Sort by canonical order (highest first)
   supported.sort((a, b) => getTimeFrameCodeIndex(a) - getTimeFrameCodeIndex(b));
+
+  // If no supported frames found, fall back to default
+  if (supported.length === 0) {
+    return DEFAULT_SEQUENCE;
+  }
 
   // Start from the top supported frame and take the next 4 contiguous
   // canonical frames (including the top), filling in any gaps.
-  const result: TimeFrameCode[] = [];
-  if (supported.length > 0) {
-    const startIdx = getTimeFrameCodeIndex(supported[0]);
-    if (startIdx >= 0) {
-      const endIdx = Math.min(startIdx + 4, CANONICAL_TIMEFRAMES.length);
-      for (let i = startIdx; i < endIdx; i++) {
-        result.push(CANONICAL_TIMEFRAMES[i]);
-      }
-    }
+  const startIdx = getTimeFrameCodeIndex(supported[0]);
+  if (startIdx < 0) {
+    return DEFAULT_SEQUENCE;
   }
 
-  // Fallback if nothing supported found
-  if (result.length === 0) {
-    return ['TMN', 'MN', 'WK', 'DL'] as unknown as AppliedTimeframeTuple;
+  const endIdx = Math.min(startIdx + SEQUENCE_LENGTH, CANONICAL_TIMEFRAMES.length);
+  if (endIdx - startIdx < SEQUENCE_LENGTH) {
+    return DEFAULT_SEQUENCE;
   }
 
-  return result as unknown as AppliedTimeframeTuple;
+  const result: TickerTimeframe[] = [];
+  for (let i = startIdx; i < endIdx; i++) {
+    result.push(CANONICAL_TIMEFRAMES[i]);
+  }
+  return result as unknown as Sequence;
 }
 
 /**
@@ -237,8 +251,8 @@ export function getLegacyJournalSequenceFromTimeframes(timeframes: string[]): 'M
  * - A style identifier used for applying visual styles to chart elements
  * - A toolbar position that indicates which toolbar button corresponds to this timeframe
  *
- * TimeFrameConfigs are organized by code in FRAMES_BY_CODE. The applied tuple
- * (4 frames) is derived dynamically from the backend ticker timeframes.
+ * TimeFrameConfigs are organized by code in FRAMES_BY_CODE. The Sequence
+ * (4-tuple) is derived dynamically from the backend ticker timeframes.
  */
 export class TimeFrameConfig {
   constructor(

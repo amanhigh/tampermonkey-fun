@@ -179,7 +179,7 @@ export class Factory {
     timeFrame: (): ITimeFrameManager =>
       Factory.getInstance(
         'timeframeManager',
-        () => new TimeFrameManager(Factory.manager.ticker(), Factory.manager.dom())
+        () => new TimeFrameManager(Factory.manager.ticker(), Factory.manager.dom(), Factory.manager.eventPublisher())
       ),
 
     alert: (): IAlertManager =>
@@ -428,7 +428,7 @@ export class Factory {
             Factory.handler.alert(),
             Factory.handler.tickerChange(),
             Factory.manager.paint(),
-            Factory.handler.alertFeed(),
+            [Factory.handler.alertFeed(), Factory.handler.timeframeBar()],
             Factory.manager.eventSubscriber()
           )
       ),

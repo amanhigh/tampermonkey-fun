@@ -208,13 +208,13 @@ export class JournalManager implements IJournalManager {
    * @returns Promise resolving with screenshot metadata
    */
   public async screenshotTicker(ticker: string, type: string): Promise<ScreenshotResponse[]> {
-    const appliedTimeframes = await this.timeframeManager.getAppliedTimeframesForCurrentTicker();
+    const sequence = await this.timeframeManager.getSequenceForCurrentTicker();
     const screenshots: ScreenshotResponse[] = [];
     const screenshotType = type.toLowerCase();
 
-    for (let position = 0; position < appliedTimeframes.length; position++) {
+    for (let position = 0; position < sequence.length; position++) {
       await this.timeframeManager.applyTimeFrame(position);
-      const code = appliedTimeframes[position];
+      const code = sequence[position];
       const order = position + 1;
 
       const fileName = `${ticker.toUpperCase()}_${this.getScreenshotTimestamp()}_${order}_${code.toLowerCase()}_${screenshotType}.png`;

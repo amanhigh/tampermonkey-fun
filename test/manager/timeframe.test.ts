@@ -1,10 +1,12 @@
 import { TimeFrameManager, ITimeFrameManager } from '../../src/manager/timeframe';
 import { ITickerManager } from '../../src/manager/ticker';
 import { IDomManager } from '../../src/manager/dom';
+import { IPublisher } from '../../src/manager/event_bus';
 import { Ticker } from '../../src/models/ticker';
 import { Constants } from '../../src/models/constant';
 import { Notifier } from '../../src/util/notify';
-import { AppliedTimeframeTuple } from '../../src/models/timeframe';
+import { Sequence, DEFAULT_SEQUENCE } from '../../src/models/timeframe';
+import { DomainEventType } from '../../src/models/domain_event';
 
 // Mock jQuery with simplified approach - avoid complex interface typing
 const mockJQuery = jest.fn();
@@ -25,6 +27,7 @@ describe('TimeFrameManager', () => {
   let timeFrameManager: ITimeFrameManager;
   let mockTickerManager: jest.Mocked<ITickerManager>;
   let mockDomManager: jest.Mocked<IDomManager>;
+  let mockPublisher: jest.Mocked<IPublisher>;
 
   const createMockTicker = (overrides: Partial<Ticker> = {}): Ticker =>
     new Ticker({
@@ -64,11 +67,15 @@ describe('TimeFrameManager', () => {
       navigateTickers: jest.fn(),
     } as unknown as jest.Mocked<IDomManager>;
 
-    timeFrameManager = new TimeFrameManager(mockTickerManager, mockDomManager);
+    mockPublisher = {
+      publish: jest.fn(),
+    } as unknown as jest.Mocked<IPublisher>;
+
+    timeFrameManager = new TimeFrameManager(mockTickerManager, mockDomManager, mockPublisher);
   });
 
   describe('Constructor', () => {
-    it('should create instance with ticker and dom dependencies', () => {
+    it('should create instance with ticker, dom and publisher dependencies', () => {
       expect(timeFrameManager).toBeInstanceOf(TimeFrameManager);
     });
   });
@@ -109,32 +116,17 @@ describe('TimeFrameManager', () => {
     });
   });
 
-  // ── getAllowedTimeframesForCurrentTicker (alias) ──
+  // ── Sequence (4-tuple, YR dropped) ──
 
-  describe('getAllowedTimeframesForCurrentTicker', () => {
-    it('should delegate to getExactTimeframesForCurrentTicker', async () => {
-      mockTickerManager.getTicker.mockResolvedValue(
-        createMockTicker({ timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'] })
-      );
-
-      const result = await timeFrameManager.getAllowedTimeframesForCurrentTicker();
-
-      // Should include YR since it delegates to exact
-      expect(result).toEqual(['YR', 'SMN', 'TMN', 'MN', 'WK']);
-    });
-  });
-
-  // ── Applied Timeframes (4-tuple, YR dropped) ──
-
-  describe('getAppliedTimeframesForCurrentTicker', () => {
+  describe('getSequenceForCurrentTicker', () => {
     it('should return TMN, MN, WK, DL for MWD backend list', async () => {
       mockTickerManager.getTicker.mockResolvedValue(
         createMockTicker({ timeframes: ['TMN', 'MN', 'WK', 'DL'] })
       );
 
-      const result = await timeFrameManager.getAppliedTimeframesForCurrentTicker();
+      const result = await timeFrameManager.getSequenceForCurrentTicker();
 
-      expect(result).toEqual(['TMN', 'MN', 'WK', 'DL'] as AppliedTimeframeTuple);
+      expect(result).toEqual(['TMN', 'MN', 'WK', 'DL'] as Sequence);
     });
 
     it('should return SMN, TMN, MN, WK for YR, SMN, TMN, MN, WK backend list', async () => {
@@ -142,31 +134,29 @@ describe('TimeFrameManager', () => {
         createMockTicker({ timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'] })
       );
 
-      const result = await timeFrameManager.getAppliedTimeframesForCurrentTicker();
+      const result = await timeFrameManager.getSequenceForCurrentTicker();
 
       // YR should be dropped, top 4 become SMN, TMN, MN, WK
-      expect(result).toEqual(['SMN', 'TMN', 'MN', 'WK'] as AppliedTimeframeTuple);
+      expect(result).toEqual(['SMN', 'TMN', 'MN', 'WK'] as Sequence);
     });
 
-    it('should always return exactly 4 frames', async () => {
+    it('should return DEFAULT_SEQUENCE when backend list starts too low', async () => {
       mockTickerManager.getTicker.mockResolvedValue(
-        createMockTicker({ timeframes: ['TMN', 'DL'] })
+        createMockTicker({ timeframes: ['WK', 'DL'] })
       );
 
-      const result = await timeFrameManager.getAppliedTimeframesForCurrentTicker();
+      const result = await timeFrameManager.getSequenceForCurrentTicker();
 
-      // Padded with missing lower frames
-      expect(result).toHaveLength(4);
-      expect(result[0]).toBe('TMN');
-      expect(result[3]).toBe('DL');
+      // WK (index 3) + 4 = 7 > 5 canonical frames → cannot produce 4 contiguous → DEFAULT_SEQUENCE
+      expect(result).toEqual(DEFAULT_SEQUENCE);
     });
 
-    it('should fall back to default applied tuple when backend read fails', async () => {
+    it('should fall back to DEFAULT_SEQUENCE when backend read fails', async () => {
       mockTickerManager.getTicker.mockRejectedValue(new Error('Not found'));
 
-      const result = await timeFrameManager.getAppliedTimeframesForCurrentTicker();
+      const result = await timeFrameManager.getSequenceForCurrentTicker();
 
-      expect(result).toEqual(['TMN', 'MN', 'WK', 'DL'] as AppliedTimeframeTuple);
+      expect(result).toEqual(DEFAULT_SEQUENCE);
     });
   });
 
@@ -230,7 +220,21 @@ describe('TimeFrameManager', () => {
       });
     });
 
-    it('should propagate backend errors when update fails', async () => {
+    it('should publish TICKER_TIMEFRAMES_CHANGED after successful update', async () => {
+      mockTickerManager.getTicker.mockResolvedValue(
+        createMockTicker({ timeframes: ['TMN', 'MN', 'WK'] }) // DL is missing
+      );
+
+      await timeFrameManager.toggleTimeframeForCurrentTicker('DL');
+
+      expect(mockPublisher.publish).toHaveBeenCalledWith({
+        type: DomainEventType.TICKER_TIMEFRAMES_CHANGED,
+        ticker: 'AAPL',
+        timeframes: ['TMN', 'MN', 'WK', 'DL'],
+      });
+    });
+
+    it('should not publish when backend update fails', async () => {
       mockTickerManager.getTicker.mockResolvedValue(
         createMockTicker({ timeframes: ['TMN', 'MN', 'WK', 'DL'] })
       );
@@ -239,13 +243,15 @@ describe('TimeFrameManager', () => {
       await expect(timeFrameManager.toggleTimeframeForCurrentTicker('DL')).rejects.toThrow(
         'Backend timeout'
       );
+
+      expect(mockPublisher.publish).not.toHaveBeenCalled();
     });
   });
 
-  // ── Apply TimeFrame (uses applied tuple) ──
+  // ── Apply TimeFrame (uses Sequence) ──
 
   describe('applyTimeFrame', () => {
-    it('should apply applied tuple position 0', async () => {
+    it('should apply sequence position 0', async () => {
       const mockClick = jest.fn();
       mockJQuery.mockReturnValue({ length: 1, click: mockClick });
 
@@ -257,7 +263,7 @@ describe('TimeFrameManager', () => {
       expect(mockClick).toHaveBeenCalled();
     });
 
-    it('should apply applied tuple position 1', async () => {
+    it('should apply sequence position 1', async () => {
       const mockClick = jest.fn();
       mockJQuery.mockReturnValue({ length: 1, click: mockClick });
 
@@ -268,7 +274,7 @@ describe('TimeFrameManager', () => {
       expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(4)`);
     });
 
-    it('should apply applied tuple position 2', async () => {
+    it('should apply sequence position 2', async () => {
       const mockClick = jest.fn();
       mockJQuery.mockReturnValue({ length: 1, click: mockClick });
 
@@ -279,7 +285,7 @@ describe('TimeFrameManager', () => {
       expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(3)`);
     });
 
-    it('should apply applied tuple position 3', async () => {
+    it('should apply sequence position 3', async () => {
       const mockClick = jest.fn();
       mockJQuery.mockReturnValue({ length: 1, click: mockClick });
 
@@ -290,7 +296,7 @@ describe('TimeFrameManager', () => {
       expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(2)`);
     });
 
-    it('should use backend applied tuple when YR backend list is provided', async () => {
+    it('should use backend Sequence when YR backend list is provided', async () => {
       mockTickerManager.getTicker.mockResolvedValue(
         createMockTicker({ timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'] })
       );
@@ -299,7 +305,7 @@ describe('TimeFrameManager', () => {
       const result = await timeFrameManager.applyTimeFrame(0);
 
       expect(result).toBe(true);
-      // Position 0 in applied tuple ['SMN','TMN','MN','WK'] → SMN → toolbar 6
+      // Position 0 in Sequence ['SMN','TMN','MN','WK'] → SMN → toolbar 6
       expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(6)`);
     });
 
@@ -311,8 +317,8 @@ describe('TimeFrameManager', () => {
       expect(result).toBe(false);
     });
 
-    it('should return false for position 4 (beyond applied tuple size)', async () => {
-      // Applied tuple always has 4 frames, position 4 should fail
+    it('should return false for position 4 (beyond Sequence size)', async () => {
+      // Sequence always has 4 frames, position 4 should fail
       const result = await timeFrameManager.applyTimeFrame(4);
 
       expect(result).toBe(false);
@@ -478,7 +484,7 @@ describe('TimeFrameManager', () => {
       });
     });
 
-    it('should verify exact vs applied consistency with YR backend timeframes', async () => {
+    it('should verify exact vs Sequence consistency with YR backend timeframes', async () => {
       mockTickerManager.getTicker.mockResolvedValue(
         createMockTicker({ timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'] })
       );
@@ -489,11 +495,11 @@ describe('TimeFrameManager', () => {
       const exact = await timeFrameManager.getExactTimeframesForCurrentTicker();
       expect(exact).toEqual(['YR', 'SMN', 'TMN', 'MN', 'WK']);
 
-      // Applied drops YR and uses SMN as top
-      const applied = await timeFrameManager.getAppliedTimeframesForCurrentTicker();
-      expect(applied).toEqual(['SMN', 'TMN', 'MN', 'WK'] as AppliedTimeframeTuple);
+      // Sequence drops YR and uses SMN as top
+      const sequence = await timeFrameManager.getSequenceForCurrentTicker();
+      expect(sequence).toEqual(['SMN', 'TMN', 'MN', 'WK'] as Sequence);
 
-      // Position 0 in applied tuple = SMN → toolbar 6
+      // Position 0 in Sequence = SMN → toolbar 6
       await timeFrameManager.applyTimeFrame(0);
       expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(6)`);
     });

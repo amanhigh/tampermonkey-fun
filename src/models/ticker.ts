@@ -1,9 +1,7 @@
 // ── Enums matching Go models/barkat/ticker.go ──
 
 import { PaginationMetadata } from './api';
-
-/** Ordered timeframe codes. */
-export type TickerTimeframe = 'YR' | 'SMN' | 'TMN' | 'MN' | 'WK' | 'DL';
+import { TickerTimeframe } from './timeframe';
 
 /** Broad ticker classification. */
 export type TickerType = 'EQUITY' | 'INDEX' | 'CRYPTO' | 'COMMODITY' | 'FX' | 'BOND' | 'COMPOSITE';

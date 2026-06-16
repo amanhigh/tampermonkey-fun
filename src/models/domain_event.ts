@@ -2,6 +2,8 @@
  * Enum for domain event types used across the application.
  * These are in-process events that trigger side effects / UI refreshes.
  */
+import { TickerTimeframe } from './timeframe';
+
 export enum DomainEventType {
   ALERT_TICKER_LINKED = 'ALERT_TICKER_LINKED',
   ALERT_TICKER_DELETED = 'ALERT_TICKER_DELETED',
@@ -10,6 +12,7 @@ export enum DomainEventType {
   TICKER_TRACKING_STOPPED = 'TICKER_TRACKING_STOPPED',
   TICKER_CATEGORY_CHANGED = 'TICKER_CATEGORY_CHANGED',
   WATCHLIST_CHANGED = 'WATCHLIST_CHANGED',
+  TICKER_TIMEFRAMES_CHANGED = 'TICKER_TIMEFRAMES_CHANGED',
 }
 
 // ── Reusable Payload Interfaces ──
@@ -26,6 +29,17 @@ export interface TickerPayload {
  */
 export interface TickersPayload {
   tickers: string[];
+}
+
+/**
+ * Payload containing a ticker and its associated timeframe codes.
+ * Used by TICKER_TIMEFRAMES_CHANGED.
+ */
+export interface TimeframesPayload {
+  /** TV/backend ticker string. */
+  ticker: string;
+  /** Updated timeframe codes from the backend. */
+  timeframes: TickerTimeframe[];
 }
 
 /**
@@ -66,6 +80,9 @@ export interface TickerCategoryChangedEvent
 
 export interface WatchlistChangedEvent extends DomainEventBase<DomainEventType.WATCHLIST_CHANGED>, TickerPayload {}
 
+export interface TickerTimeframesChangedEvent
+  extends DomainEventBase<DomainEventType.TICKER_TIMEFRAMES_CHANGED>, TimeframesPayload {}
+
 // ── Event-by-Type Map ──
 
 /**
@@ -81,6 +98,7 @@ export interface DomainEventByType {
   [DomainEventType.TICKER_TRACKING_STOPPED]: TickerTrackingStoppedEvent;
   [DomainEventType.TICKER_CATEGORY_CHANGED]: TickerCategoryChangedEvent;
   [DomainEventType.WATCHLIST_CHANGED]: WatchlistChangedEvent;
+  [DomainEventType.TICKER_TIMEFRAMES_CHANGED]: TickerTimeframesChangedEvent;
 }
 
 // ── Event Union ──
@@ -92,4 +110,5 @@ export type DomainEvent =
   | TickerTrackingStartedEvent
   | TickerTrackingStoppedEvent
   | TickerCategoryChangedEvent
-  | WatchlistChangedEvent;
+  | WatchlistChangedEvent
+  | TickerTimeframesChangedEvent;

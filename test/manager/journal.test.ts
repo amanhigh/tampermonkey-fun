@@ -9,7 +9,7 @@ import {
   JournalApiSequence,
   JournalResultStatus,
 } from '../../src/models/journal';
-import { AppliedTimeframeTuple } from '../../src/models/timeframe';
+import { Sequence } from '../../src/models/timeframe';
 import { ScreenshotResponse } from '../../src/models/os';
 
 // Mock Notifier
@@ -71,9 +71,8 @@ describe('JournalManager', () => {
       applyTimeFrame: jest.fn().mockResolvedValue(true),
       getCurrentTimeFrameConfig: jest.fn().mockReturnValue({ symbol: 'TMN', style: 'T', toolbar: 5 }),
       getExactTimeframesForCurrentTicker: jest.fn(),
-      getAllowedTimeframesForCurrentTicker: jest.fn(),
-      getAppliedTimeframesForCurrentTicker: jest.fn().mockResolvedValue(
-        ['TMN', 'MN', 'WK', 'DL'] as AppliedTimeframeTuple
+      getSequenceForCurrentTicker: jest.fn().mockResolvedValue(
+        ['TMN', 'MN', 'WK', 'DL'] as Sequence
       ),
       getTimeFrameConfigByCode: jest.fn(),
       toggleTimeframeForCurrentTicker: jest.fn(),
@@ -243,8 +242,8 @@ describe('JournalManager', () => {
     });
 
     it('should capture screenshots for applied tuple TMN, MN, WK, DL', async () => {
-      mockTimeFrameManager.getAppliedTimeframesForCurrentTicker.mockResolvedValue(
-        ['TMN', 'MN', 'WK', 'DL'] as AppliedTimeframeTuple
+      mockTimeFrameManager.getSequenceForCurrentTicker.mockResolvedValue(
+        ['TMN', 'MN', 'WK', 'DL'] as Sequence
       );
 
       const screenshots = await journalManager.screenshotTicker('AAPL', 'set');
@@ -262,8 +261,8 @@ describe('JournalManager', () => {
     });
 
     it('should capture screenshots for applied tuple SMN, TMN, MN, WK', async () => {
-      mockTimeFrameManager.getAppliedTimeframesForCurrentTicker.mockResolvedValue(
-        ['SMN', 'TMN', 'MN', 'WK'] as AppliedTimeframeTuple
+      mockTimeFrameManager.getSequenceForCurrentTicker.mockResolvedValue(
+        ['SMN', 'TMN', 'MN', 'WK'] as Sequence
       );
 
       const screenshots = await journalManager.screenshotTicker('AAPL', 'set');
@@ -281,8 +280,8 @@ describe('JournalManager', () => {
         .mockResolvedValueOnce({ file_name: 'ok.png', full_path: '/ok.png', timeframe: 'TMN' as JournalApiTimeframe })
         .mockRejectedValue(new Error('Screenshot failed'));
 
-      mockTimeFrameManager.getAppliedTimeframesForCurrentTicker.mockResolvedValue(
-        ['TMN', 'MN', 'WK', 'DL'] as AppliedTimeframeTuple
+      mockTimeFrameManager.getSequenceForCurrentTicker.mockResolvedValue(
+        ['TMN', 'MN', 'WK', 'DL'] as Sequence
       );
 
       await expect(journalManager.screenshotTicker('AAPL', 'error')).rejects.toThrow('Screenshot failed');
@@ -290,8 +289,8 @@ describe('JournalManager', () => {
     });
 
     it('should always capture exactly 4 screenshots from applied tuple', async () => {
-      mockTimeFrameManager.getAppliedTimeframesForCurrentTicker.mockResolvedValue(
-        ['SMN', 'TMN', 'MN', 'WK'] as AppliedTimeframeTuple
+      mockTimeFrameManager.getSequenceForCurrentTicker.mockResolvedValue(
+        ['SMN', 'TMN', 'MN', 'WK'] as Sequence
       );
 
       const screenshots = await journalManager.screenshotTicker('AAPL', 'journal');

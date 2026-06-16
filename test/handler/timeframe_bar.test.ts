@@ -1,5 +1,7 @@
 import { TimeframeBarHandler, ITimeframeBarHandler } from '../../src/handler/timeframe_bar';
 import { ITimeFrameManager } from '../../src/manager/timeframe';
+import { ISubscriber } from '../../src/manager/event_bus';
+import { DomainEventType } from '../../src/models/domain_event';
 import { Notifier } from '../../src/util/notify';
 
 // ── Mock jQuery ──
@@ -65,10 +67,9 @@ describe('TimeframeBarHandler', () => {
     mockTimeFrameManager = {
       applyTimeFrame: jest.fn(),
       getCurrentTimeFrameConfig: jest.fn(),
-      getAllowedTimeframesForCurrentTicker: jest.fn(),
       getTimeFrameConfigByCode: jest.fn(),
       getExactTimeframesForCurrentTicker: jest.fn().mockResolvedValue(['TMN', 'MN', 'WK', 'DL']),
-      getAppliedTimeframesForCurrentTicker: jest.fn(),
+      getSequenceForCurrentTicker: jest.fn(),
       toggleTimeframeForCurrentTicker: jest.fn(),
     } as any;
 
@@ -142,6 +143,22 @@ describe('TimeframeBarHandler', () => {
     });
   });
 
+  describe('registerEvents', () => {
+    it('should subscribe to TICKER_TIMEFRAMES_CHANGED', () => {
+      const mockSubscriber: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerEvents(mockSubscriber);
+
+      expect(mockSubscriber.subscribe).toHaveBeenCalledWith(
+        DomainEventType.TICKER_TIMEFRAMES_CHANGED,
+        expect.any(Function)
+      );
+    });
+  });
+
   describe('chip click handling', () => {
     /**
      * Simulates a click on a timeframe chip by invoking the delegated click handler
@@ -185,23 +202,6 @@ describe('TimeframeBarHandler', () => {
       expect(stopPropagation).toHaveBeenCalled();
     });
 
-    it('should re-render after successful toggle', async () => {
-      mockTimeFrameManager.toggleTimeframeForCurrentTicker.mockReturnValue(
-        Promise.resolve(['TMN', 'MN', 'DL'])
-      );
-
-      await handler.render();
-
-      mockBarEl.html.mockClear();
-
-      simulateChipClick('WK');
-
-      // Flush microtasks so the async handler completes
-      await flushMicrotasks();
-
-      expect(mockBarEl.html).toHaveBeenCalled();
-    });
-
     it('should show warning and re-render when toggle fails', async () => {
       mockTimeFrameManager.toggleTimeframeForCurrentTicker.mockReturnValue(
         Promise.reject(new Error('Network error'))
@@ -219,6 +219,7 @@ describe('TimeframeBarHandler', () => {
       expect(Notifier.warn).toHaveBeenCalledWith(
         expect.stringContaining('Failed to toggle timeframe WK')
       );
+      // Error path calls render() directly (no event published on failure)
       expect(mockBarEl.html).toHaveBeenCalled();
     });
 
