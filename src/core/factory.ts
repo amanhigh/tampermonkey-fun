@@ -470,8 +470,7 @@ export class Factory {
             Factory.manager.style(),
             Factory.manager.ticker(),
             Factory.manager.lifecycle(),
-            Factory.handler.alertTicker(),
-            Factory.manager.timeFrame()
+            Factory.handler.alertTicker()
           )
       ),
     alertTicker: (): IAlertTickerHandler =>

@@ -34,3 +34,19 @@ export type Timeframe = Readonly<{
  * screenshot flows.
  */
 export type Sequence = readonly [TickerTimeframe, TickerTimeframe, TickerTimeframe, TickerTimeframe];
+
+/**
+ * Default timeframe list for NSE tickers (TMN, MN, WK, DL).
+ * Used when starting tracking for a new NSE ticker.
+ */
+export const NSE_DEFAULT_TIMEFRAMES: readonly TickerTimeframe[] = [
+  TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL,
+];
+
+/**
+ * Default timeframe list for non-NSE tickers (YR, SMN, TMN, MN, WK).
+ * Used when starting tracking for a new ticker on other exchanges.
+ */
+export const NON_NSE_DEFAULT_TIMEFRAMES: readonly TickerTimeframe[] = [
+  TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK,
+];

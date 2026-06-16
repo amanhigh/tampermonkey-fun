@@ -208,7 +208,7 @@ export class JournalManager implements IJournalManager {
    * @returns Promise resolving with screenshot metadata
    */
   public async screenshotTicker(ticker: string, type: string): Promise<ScreenshotResponse[]> {
-    const sequence = await this.timeframeManager.getSequenceForCurrentTicker();
+    const sequence = await this.timeframeManager.getSequence();
     const screenshots: ScreenshotResponse[] = [];
     const screenshotType = type.toLowerCase();
 
@@ -216,7 +216,7 @@ export class JournalManager implements IJournalManager {
       // BUG 3.10: Ignored return value from applyTimeFrame() — when a timeframe is
       // deactivated, applyTimeFrame returns false silently and screenshot proceeds
       // on the wrong timeframe. Must warn user and skip the deactivated position.
-      await this.timeframeManager.applyTimeFrame(position);
+      await this.timeframeManager.apply(position);
       const code = sequence[position];
       const order = position + 1;
 
@@ -237,7 +237,7 @@ export class JournalManager implements IJournalManager {
 
   /** @inheritdoc */
   createReasonText(reason: string): string {
-    const timeframe = this.timeframeManager.getCurrentTimeFrameConfig().code;
+    const timeframe = this.timeframeManager.getCurrentConfig().code;
     return `${timeframe} - ${reason}`;
   }
 

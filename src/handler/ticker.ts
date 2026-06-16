@@ -4,7 +4,7 @@ import { ITickerManager } from '../manager/ticker';
 import { ILifecycleManager } from '../manager/lifecycle';
 import { IStyleManager } from '../manager/style';
 import { IAlertTickerHandler } from './alert_ticker';
-import { ITimeFrameManager } from '../manager/timeframe';
+import { TickerTimeframe, NSE_DEFAULT_TIMEFRAMES, NON_NSE_DEFAULT_TIMEFRAMES } from '../models/timeframe';
 import { TickerType, TickerState, TickerTrend } from '../models/ticker';
 
 /**
@@ -50,8 +50,7 @@ export class TickerHandler implements ITickerHandler {
     private readonly styleManager: IStyleManager,
     private readonly tickerManager: ITickerManager,
     private readonly lifecycleManager: ILifecycleManager,
-    private readonly alertTickerHandler: IAlertTickerHandler,
-    private readonly timeFrameManager: ITimeFrameManager
+    private readonly alertTickerHandler: IAlertTickerHandler
   ) {}
 
   /** @inheritdoc */
@@ -86,7 +85,7 @@ export class TickerHandler implements ITickerHandler {
   public async startTracking(): Promise<void> {
     const ticker = this.domManager.getTicker();
     const exchange = this.domManager.getCurrentExchange();
-    const timeframes = this.timeFrameManager.getDefaultTimeframesForExchange(exchange);
+    const timeframes = this.getDefaultTimeframesForExchange(exchange);
 
     try {
       await this.lifecycleManager.startTracking({
@@ -120,5 +119,20 @@ export class TickerHandler implements ITickerHandler {
       default:
         throw new Error(`Unsupported command action: ${action}`);
     }
+  }
+
+  /**
+   * Returns the default persisted timeframe list based on exchange.
+   *
+   * - NSE → TMN, MN, WK, DL
+   * - All other exchanges → YR, SMN, TMN, MN, WK
+   *
+   * Used when starting tracking for a new ticker.
+   */
+  private getDefaultTimeframesForExchange(exchange: string): TickerTimeframe[] {
+    if (exchange.toUpperCase() === 'NSE') {
+      return [...NSE_DEFAULT_TIMEFRAMES];
+    }
+    return [...NON_NSE_DEFAULT_TIMEFRAMES];
   }
 }

@@ -70,7 +70,7 @@ export class TimeFrameHandler implements ITimeFrameHandler {
     }
 
     // Manager handles errors internally and returns default timeframes on failure
-    const activeCodes = await this.timeFrameManager.getActiveTimeframesForCurrentTicker();
+    const activeCodes = await this.timeFrameManager.getActiveTimeframes();
     const activeSet = new Set(activeCodes);
     const chipsHtml = this.buildChipsHtml(activeSet);
 
@@ -118,7 +118,7 @@ export class TimeFrameHandler implements ITimeFrameHandler {
 
     try {
       // Successful toggle publishes TICKER_TIMEFRAMES_CHANGED → event handler calls render()
-      await this.timeFrameManager.toggleTimeframeForCurrentTicker(code);
+      await this.timeFrameManager.toggleTimeframe(code);
     } catch (error) {
       Notifier.warn(`Failed to toggle timeframe ${code}: ${(error as Error).message}`);
       // Re-render to restore actual backend state (no event published on failure)
@@ -135,8 +135,9 @@ export class TimeFrameHandler implements ITimeFrameHandler {
    * @param activeSet - Set of backend-active timeframe codes
    */
   private buildChipsHtml(activeSet: Set<TickerTimeframe>): string {
-    return this.timeFrameManager
-      .getTimeframeCodes()
+    // All timeframe codes in catalog order — enum values match static catalog order
+    const allCodes = Object.values(TickerTimeframe);
+    return allCodes
       .map((code) => this.buildChip(code, activeSet.has(code)))
       .join('');
   }

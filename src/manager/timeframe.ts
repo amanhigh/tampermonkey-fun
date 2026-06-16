@@ -24,69 +24,32 @@ const TIMEFRAMES: readonly Timeframe[] = [
 ];
 
 // ── Public Interface ──
-// Grouped by consumer workflow:
-//   1. Catalog/read policy — static metadata and defaults
-//   2. Backend active state — read/write the persistent ticker timeframe list
-//   3. Sequence and chart application — derive 4-tuple and apply via toolbar
-//   4. DOM current timeframe detection — detect currently selected toolbar button
+// Methods are named without "forCurrentTicker" suffix because the manager
+// always operates on the current TradingView ticker.
 
 export interface ITimeFrameManager {
-  // ── 1.0 Catalog / Read Policy ──
+  /** Returns the active backend timeframe codes for the current ticker,
+   * sorted by catalog order. Falls back to DEFAULT_SEQUENCE when backend
+   * read fails. */
+  getActiveTimeframes(): Promise<readonly TickerTimeframe[]>;
 
-  /**
-   * Returns all timeframe codes in catalog order.
-   * Used by the timeframe handler for rendering chips.
-   */
-  getTimeframeCodes(): readonly TickerTimeframe[];
-
-  /**
-   * Returns the default persisted timeframe list based on exchange.
-   *
-   * - NSE → TMN, MN, WK, DL
-   * - All other exchanges → YR, SMN, TMN, MN, WK
-   *
-   * Used when starting tracking for a new ticker.
-   */
-  getDefaultTimeframesForExchange(exchange: string): TickerTimeframe[];
-
-  // ── 2.0 Backend Active State ──
-
-  /**
-   * Returns the active backend timeframe codes for the current ticker,
-   * sorted by catalog order.
-   * Falls back to DEFAULT_SEQUENCE when backend read fails.
-   */
-  getActiveTimeframesForCurrentTicker(): Promise<readonly TickerTimeframe[]>;
-
-  /**
-   * Toggle a timeframe code for the current ticker on/off in the backend.
+  /** Toggle a timeframe code for the current ticker on/off in the backend.
    * Publishes TICKER_TIMEFRAMES_CHANGED on success.
-   * @throws Error if backend update fails
-   */
-  toggleTimeframeForCurrentTicker(code: TickerTimeframe): Promise<TickerTimeframe[]>;
+   * @throws Error if backend update fails */
+  toggleTimeframe(code: TickerTimeframe): Promise<TickerTimeframe[]>;
 
-  // ── 3.0 Sequence and Chart Application ──
+  /** Get the derived Sequence (4-tuple) for the current ticker.
+   * Returns exactly 4 frames from the top, or DEFAULT_SEQUENCE. */
+  getSequence(): Promise<Sequence>;
 
-  /**
-   * Get the derived Sequence (4-tuple) for the current ticker.
-   * Returns exactly 4 frames from the top, or DEFAULT_SEQUENCE.
-   */
-  getSequenceForCurrentTicker(): Promise<Sequence>;
-
-  /**
-   * Apply timeframe to chart at given position in the current ticker's Sequence.
+  /** Apply timeframe to chart at given position in the current ticker's Sequence.
    * @param position - Position in Sequence (0-3)
-   * @returns True if successfully applied
-   */
-  applyTimeFrame(position: number): Promise<boolean>;
+   * @returns True if successfully applied */
+  apply(position: number): Promise<boolean>;
 
-  // ── 4.0 DOM Current Timeframe Detection ──
-
-  /**
-   * Get currently selected timeframe from the DOM toolbar.
-   * @returns Current timeframe metadata
-   */
-  getCurrentTimeFrameConfig(): Timeframe;
+  /** Get currently selected timeframe from the DOM toolbar.
+   * @returns Current timeframe metadata */
+  getCurrentConfig(): Timeframe;
 }
 
 // ── Manager Implementation ──
@@ -107,25 +70,8 @@ export class TimeFrameManager implements ITimeFrameManager {
     private readonly publisher: IPublisher
   ) {}
 
-  // ── 1.0 Catalog / Read Policy ──
-
   /** @inheritdoc */
-  getTimeframeCodes(): readonly TickerTimeframe[] {
-    return TIMEFRAMES.map((tf) => tf.code);
-  }
-
-  /** @inheritdoc */
-  getDefaultTimeframesForExchange(exchange: string): TickerTimeframe[] {
-    if (exchange.toUpperCase() === 'NSE') {
-      return [TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL];
-    }
-    return TIMEFRAMES.filter((tf) => tf.code !== TickerTimeframe.DL).map((tf) => tf.code);
-  }
-
-  // ── 2.0 Backend Active State ──
-
-  /** @inheritdoc */
-  async getActiveTimeframesForCurrentTicker(): Promise<readonly TickerTimeframe[]> {
+  async getActiveTimeframes(): Promise<readonly TickerTimeframe[]> {
     const tvTicker = this.domManager.getTicker();
     try {
       const record = await this.tickerManager.getTicker(tvTicker);
@@ -138,7 +84,7 @@ export class TimeFrameManager implements ITimeFrameManager {
   }
 
   /** @inheritdoc */
-  async toggleTimeframeForCurrentTicker(code: TickerTimeframe): Promise<TickerTimeframe[]> {
+  async toggleTimeframe(code: TickerTimeframe): Promise<TickerTimeframe[]> {
     const tvTicker = this.domManager.getTicker();
     const record = await this.tickerManager.getTicker(tvTicker);
     const current = record.timeframes as TickerTimeframe[];
@@ -156,17 +102,15 @@ export class TimeFrameManager implements ITimeFrameManager {
     return sorted;
   }
 
-  // ── 3.0 Sequence and Chart Application ──
-
   /** @inheritdoc */
-  async getSequenceForCurrentTicker(): Promise<Sequence> {
-    const active = await this.getActiveTimeframesForCurrentTicker();
+  async getSequence(): Promise<Sequence> {
+    const active = await this.getActiveTimeframes();
     return this.deriveSequence(active as TickerTimeframe[]);
   }
 
   /** @inheritdoc */
-  async applyTimeFrame(position: number): Promise<boolean> {
-    const sequence = await this.getSequenceForCurrentTicker();
+  async apply(position: number): Promise<boolean> {
+    const sequence = await this.getSequence();
 
     if (position < 0 || position >= sequence.length) {
       return false;
@@ -181,10 +125,8 @@ export class TimeFrameManager implements ITimeFrameManager {
     return this.clickTimeFrameToolbar(config.toolbar);
   }
 
-  // ── 4.0 DOM Current Timeframe Detection ──
-
   /** @inheritdoc */
-  getCurrentTimeFrameConfig(): Timeframe {
+  getCurrentConfig(): Timeframe {
     const $activeButton = $(`${Constants.DOM.HEADER.TIMEFRAME}[aria-checked="true"]`);
 
     if ($activeButton.length === 0) {

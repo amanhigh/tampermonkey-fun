@@ -63,7 +63,7 @@ export class StyleManager implements IStyleManager {
 
   /** @inheritdoc */
   applyZoneStyle(zoneType: string): void {
-    const currentTimeFrame = this.timeFrameManager.getCurrentTimeFrameConfig();
+    const currentTimeFrame = this.timeFrameManager.getCurrentConfig();
 
     // Get style ID (e.g. 'I', 'H', 'VH') from timeframe config
     const styleId = currentTimeFrame.style;

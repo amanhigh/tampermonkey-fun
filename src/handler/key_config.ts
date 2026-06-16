@@ -158,28 +158,28 @@ export class KeyConfig implements IKeyConfig {
         '1',
         {
           description: 'VHTF (Very High Timeframe)',
-          action: () => void this.timeFrameManager.applyTimeFrame(0),
+          action: () => void this.timeFrameManager.apply(0),
         },
       ],
       [
         '2',
         {
           description: 'HTF (High Timeframe)',
-          action: () => void this.timeFrameManager.applyTimeFrame(1),
+          action: () => void this.timeFrameManager.apply(1),
         },
       ],
       [
         '3',
         {
           description: 'ITF (Intermediate Timeframe)',
-          action: () => void this.timeFrameManager.applyTimeFrame(2),
+          action: () => void this.timeFrameManager.apply(2),
         },
       ],
       [
         '4',
         {
           description: 'TTF (Trading Timeframe)',
-          action: () => void this.timeFrameManager.applyTimeFrame(3),
+          action: () => void this.timeFrameManager.apply(3),
         },
       ],
     ]);

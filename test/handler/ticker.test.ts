@@ -4,7 +4,6 @@ import { ITickerManager } from '../../src/manager/ticker';
 import { ILifecycleManager } from '../../src/manager/lifecycle';
 import { IStyleManager } from '../../src/manager/style';
 import { IAlertTickerHandler } from '../../src/handler/alert_ticker';
-import { ITimeFrameManager } from '../../src/manager/timeframe';
 import { Notifier } from '../../src/util/notify';
 import { Ticker } from '../../src/models/ticker';
 
@@ -26,7 +25,6 @@ describe('TickerHandler', () => {
   let mockTickerManager: jest.Mocked<ITickerManager>;
   let mockLifecycleManager: jest.Mocked<ILifecycleManager>;
   let mockAlertTickerHandler: jest.Mocked<IAlertTickerHandler>;
-  let mockTimeFrameManager: jest.Mocked<ITimeFrameManager>;
 
   beforeEach(() => {
     jest.clearAllMocks();

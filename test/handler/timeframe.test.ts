@@ -66,15 +66,11 @@ describe('TimeFrameHandler', () => {
     mockWrappedEl = makeJQueryEl({ attr: jest.fn().mockReturnValue(undefined) });
 
     mockTimeFrameManager = {
-      applyTimeFrame: jest.fn(),
-      getCurrentTimeFrameConfig: jest.fn(),
-      getTimeframeCodes: jest.fn().mockReturnValue([
-        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN,
-        TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL,
-      ]),
-      getActiveTimeframesForCurrentTicker: jest.fn().mockResolvedValue(['TMN', 'MN', 'WK', 'DL']),
-      getSequenceForCurrentTicker: jest.fn(),
-      toggleTimeframeForCurrentTicker: jest.fn(),
+      apply: jest.fn(),
+      getCurrentConfig: jest.fn(),
+      getActiveTimeframes: jest.fn().mockResolvedValue(['TMN', 'MN', 'WK', 'DL']),
+      getSequence: jest.fn(),
+      toggleTimeframe: jest.fn(),
     } as any;
 
     handler = new TimeFrameHandler(mockTimeFrameManager);
@@ -101,7 +97,7 @@ describe('TimeFrameHandler', () => {
     });
 
     it('should mark backend-active chips with active class', async () => {
-      mockTimeFrameManager.getActiveTimeframesForCurrentTicker.mockResolvedValue([
+      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
         TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL,
       ]);
 
@@ -117,7 +113,7 @@ describe('TimeFrameHandler', () => {
     });
 
     it('should mark non-backend chips with inactive class', async () => {
-      mockTimeFrameManager.getActiveTimeframesForCurrentTicker.mockResolvedValue([
+      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
         TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL,
       ]);
 
@@ -189,7 +185,7 @@ describe('TimeFrameHandler', () => {
 
       simulateChipClick(TickerTimeframe.WK);
 
-      expect(mockTimeFrameManager.toggleTimeframeForCurrentTicker).toHaveBeenCalledWith(TickerTimeframe.WK);
+      expect(mockTimeFrameManager.toggleTimeframe).toHaveBeenCalledWith(TickerTimeframe.WK);
     });
 
     it('should stop event propagation to prevent display card toggle', async () => {
@@ -208,7 +204,7 @@ describe('TimeFrameHandler', () => {
     });
 
     it('should show warning and re-render when toggle fails', async () => {
-      mockTimeFrameManager.toggleTimeframeForCurrentTicker.mockRejectedValue(
+      mockTimeFrameManager.toggleTimeframe.mockRejectedValue(
         new Error('Network error')
       );
 
@@ -233,7 +229,7 @@ describe('TimeFrameHandler', () => {
 
       simulateChipClick(undefined);
 
-      expect(mockTimeFrameManager.toggleTimeframeForCurrentTicker).not.toHaveBeenCalled();
+      expect(mockTimeFrameManager.toggleTimeframe).not.toHaveBeenCalled();
     });
   });
 });
