@@ -69,9 +69,9 @@ export class RecentManager implements IRecentManager {
         // Silently fail — cache still has the latest timestamp
       });
 
-    // Publish domain event so consumers (alert feed, etc.) react
+    // Publish domain event so consumers (TimeFrame, alert feed, etc.) react
     void this.publisher.publish({
-      type: DomainEventType.TICKER_MARKED_RECENT,
+      type: DomainEventType.TICKER_CHANGED,
       ticker,
     });
   }

@@ -58,12 +58,12 @@ describe('RecentManager', () => {
       expect(mockClient.patchTickerLastOpened).toHaveBeenCalledTimes(3);
     });
 
-    it('should publish TICKER_MARKED_RECENT after cache update', async () => {
+    it('should publish TICKER_CHANGED after cache update', async () => {
       recentManager.markRecent('NSE:TCS');
 
       expect(mockProducer.publish).toHaveBeenCalledTimes(1);
       expect(mockProducer.publish).toHaveBeenCalledWith({
-        type: DomainEventType.TICKER_MARKED_RECENT,
+        type: DomainEventType.TICKER_CHANGED,
         ticker: 'NSE:TCS',
       });
     });
