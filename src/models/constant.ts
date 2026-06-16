@@ -1,4 +1,4 @@
-import { TimeFrameConfig } from './trading';
+import { TimeFrameConfig } from './timeframe';
 
 /**
  * Application-wide constants organized by domain and functionality
@@ -232,14 +232,14 @@ Support:
     },
   },
 
-  // Time frame and sequence configurations
+  // Timeframe configurations
   TIME: {
     // FIXME: Add TimeFrame.YEARLY config ('YR', <style>, 7).
     //       TradingView toolbar supports 12M at index 7 but frontend
     //       does not define TimeFrameConfig for it yet.
     //
     //       Currently configured: SMN(6), TMN(5), MN(4), WK(3), DL(2)
-    /** Maps a timeframe code string → TimeFrameConfig. Sequence-independent. */
+    /** Maps a timeframe code string → TimeFrameConfig. */
     FRAMES_BY_CODE: {
       DL: new TimeFrameConfig('DL', 'I', 2),
       WK: new TimeFrameConfig('WK', 'H', 3),
@@ -248,9 +248,8 @@ Support:
       SMN: new TimeFrameConfig('SMN', 'I', 6),
     } as Record<string, TimeFrameConfig>,
 
-    // NOTE: SEQUENCE_TYPES removed in migration. FRAMES_BY_CODE is the
-    // canonical source of truth. Legacy journal sequence is derived via
-    // getLegacyJournalSequenceFromTimeframes() in trading.ts.
+    // NOTE: Legacy journal sequence field is derived via
+    // getLegacyJournalSequenceFromTimeframes() in timeframe.ts.
   },
 
   MISC: {

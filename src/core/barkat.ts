@@ -98,7 +98,7 @@ export class Barkat {
       .append(
         this.uiUtil
           // FIXME: S button left-click temporarily disabled. The toggle
-          // between MWD/YR timeframe types was removed in sequence→type
+          // between MWD/YR timeframe types was removed in timeframe→type
           // migration. Re-enable as a timeframe type toggle once the UI
           // for type switching is designed.
           // Right-click starts tracking with exchange-based default timeframes.

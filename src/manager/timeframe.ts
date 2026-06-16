@@ -1,5 +1,5 @@
 import { Constants } from '../models/constant';
-import { TimeFrameConfig, TimeFrameCode, AppliedTimeframeTuple, getAppliedTimeframeTuple } from '../models/trading';
+import { TimeFrameConfig, TimeFrameCode, AppliedTimeframeTuple, getAppliedTimeframeTuple } from '../models/timeframe';
 import { Notifier } from '../util/notify';
 import { ITickerManager } from './ticker';
 import { IDomManager } from './dom';

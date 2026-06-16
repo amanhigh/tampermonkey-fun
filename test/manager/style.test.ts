@@ -1,7 +1,7 @@
 import { StyleManager, IStyleManager } from '../../src/manager/style';
 import { ITimeFrameManager } from '../../src/manager/timeframe';
 import { WaitUtil } from '../../src/util/wait';
-import { TimeFrameConfig } from '../../src/models/trading';
+import { TimeFrameConfig } from '../../src/models/timeframe';
 import { Constants } from '../../src/models/constant';
 
 // Mock jQuery

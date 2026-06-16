@@ -4,7 +4,7 @@ import { IDomManager } from '../../src/manager/dom';
 import { Ticker } from '../../src/models/ticker';
 import { Constants } from '../../src/models/constant';
 import { Notifier } from '../../src/util/notify';
-import { AppliedTimeframeTuple } from '../../src/models/trading';
+import { AppliedTimeframeTuple } from '../../src/models/timeframe';
 
 // Mock jQuery with simplified approach - avoid complex interface typing
 const mockJQuery = jest.fn();

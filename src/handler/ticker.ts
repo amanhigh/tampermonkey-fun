@@ -4,7 +4,7 @@ import { ITickerManager } from '../manager/ticker';
 import { ILifecycleManager } from '../manager/lifecycle';
 import { IStyleManager } from '../manager/style';
 import { IAlertTickerHandler } from './alert_ticker';
-import { getDefaultTimeframesForExchange } from '../models/trading';
+import { getDefaultTimeframesForExchange } from '../models/timeframe';
 
 /**
  * Interface for managing ticker operations

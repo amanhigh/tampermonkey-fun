@@ -1,4 +1,3 @@
-import { ISequenceManager } from './sequence';
 import { ITimeFrameManager } from './timeframe';
 import { Notifier } from '../util/notify';
 import { IJournalClient } from '../client/journal';
@@ -16,6 +15,7 @@ import {
 import { ScreenshotResponse } from '../models/os';
 import { Constants } from '../models/constant';
 import { JournalOpenEvent } from '../models/events';
+import { getLegacyJournalSequenceFromTimeframes } from '../models/timeframe';
 
 /**
  * Interface for managing trading journal operations
@@ -29,7 +29,7 @@ export interface IJournalManager {
   createJournal(input: CreateJournalInput): Promise<JournalRecord>;
 
   /**
-   * Takes screenshots for the given ticker using the ticker's allowed timeframes.
+   * Takes screenshots for the given ticker using the ticker's applied timeframes.
    * @param ticker Trading symbol to capture
    * @param type Screenshot purpose/type used in filenames
    * @returns Promise resolving with screenshot metadata
@@ -86,15 +86,14 @@ export interface IJournalManager {
 }
 
 /**
- * Manages trading journal entries and operations
+ * Manages trading journal entries and operations.
+ *
+ * The legacy API `sequence` field is derived from the screenshot timeframe codes
+ * using getLegacyJournalSequenceFromTimeframes() (currently: contains DL → MWD, else YR).
+ * FIXME: Replace with user-prompted or backend-provided type selection.
  */
 export class JournalManager implements IJournalManager {
-  /**
-   * @param watchManager - Watch manager for checking ticker status
-   * @param sequenceManager - Manager for getting current sequence
-   */
   constructor(
-    private readonly sequenceManager: ISequenceManager,
     private readonly journalClient: IJournalClient,
     private readonly osClient: IOsClient,
     private readonly timeframeManager: ITimeFrameManager
@@ -102,9 +101,12 @@ export class JournalManager implements IJournalManager {
 
   /** @inheritdoc */
   public async createJournal(input: CreateJournalInput): Promise<JournalRecord> {
+    const screenshotCodes = input.screenshots
+      .map((s) => s.timeframe)
+      .filter((t): t is JournalApiTimeframe => t !== undefined);
     const request: CreateJournalRequest = {
       ticker: input.ticker.toUpperCase(),
-      sequence: (await this.sequenceManager.getCurrentSequence()) as CreateJournalRequest['sequence'],
+      sequence: getLegacyJournalSequenceFromTimeframes(screenshotCodes),
       type: input.type,
       status: input.status,
       images: input.screenshots.map((screenshot) => ({
@@ -200,19 +202,19 @@ export class JournalManager implements IJournalManager {
   }
 
   /**
-   * Takes screenshots for a journal using the ticker's allowed timeframes.
+   * Takes screenshots for a journal using the ticker's applied timeframes.
    * @param ticker Trading symbol to capture
    * @param type Screenshot purpose/type used in filenames
    * @returns Promise resolving with screenshot metadata
    */
   public async screenshotTicker(ticker: string, type: string): Promise<ScreenshotResponse[]> {
-    const allowedTimeframes = await this.timeframeManager.getAllowedTimeframesForCurrentTicker();
+    const appliedTimeframes = await this.timeframeManager.getAppliedTimeframesForCurrentTicker();
     const screenshots: ScreenshotResponse[] = [];
     const screenshotType = type.toLowerCase();
 
-    for (let position = 0; position < allowedTimeframes.length; position++) {
+    for (let position = 0; position < appliedTimeframes.length; position++) {
       await this.timeframeManager.applyTimeFrame(position);
-      const code = allowedTimeframes[position];
+      const code = appliedTimeframes[position];
       const order = position + 1;
 
       const fileName = `${ticker.toUpperCase()}_${this.getScreenshotTimestamp()}_${order}_${code.toLowerCase()}_${screenshotType}.png`;

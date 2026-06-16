@@ -2,7 +2,7 @@ import { ITimeFrameManager } from '../manager/timeframe';
 import { IDomManager } from '../manager/dom';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { Constants } from '../models/constant';
-import { TimeFrameCode } from '../models/trading';
+import { TimeFrameCode } from '../models/timeframe';
 import { AlertTicker } from '../models/alert_ticker';
 
 // ── CSS class names (defined in _display.less) ──
@@ -17,7 +17,7 @@ const DISPLAY_CLASS = {
   PRIMARY_ROW: 'aman-display-primary',
   SECONDARY_ROW: 'aman-display-secondary',
   ALERT_COUNT: 'aman-display-alert-count',
-  TIMEFRAME_CHIP: 'aman-display-sequence',
+  TIMEFRAME_CHIP: 'aman-display-timeframe',
   TICKER_CHIP: 'aman-display-ticker',
   EMPTY_ROW: 'aman-display-empty',
 } as const;

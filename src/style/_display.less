@@ -87,9 +87,9 @@
 }
 
 // ============================================
-// Sequence Chip
+// Timeframe Chip
 // ============================================
-.aman-display-sequence {
+.aman-display-timeframe {
     display: inline-block;
     padding: 0 6px;
     border-radius: 4px;
@@ -103,12 +103,7 @@
     }
 }
 
-// CSS hack: can't use :contains() in pure CSS, use data attribute instead
-// Actually we can use a simpler approach: the sequence is always MWD or YR
-// We'll use inline style from JS or detect via substring
-// Simpler: just make the chip styled generically and specialize via attribute
-
-.aman-display-sequence {
+.aman-display-timeframe {
     background: rgba(168, 85, 247, 0.15);
     color: @color-mwd;
 }

@@ -9,7 +9,7 @@ import {
   JournalApiSequence,
   JournalResultStatus,
 } from '../../src/models/journal';
-import { AppliedTimeframeTuple } from '../../src/models/trading';
+import { AppliedTimeframeTuple } from '../../src/models/timeframe';
 import { ScreenshotResponse } from '../../src/models/os';
 
 // Mock Notifier
