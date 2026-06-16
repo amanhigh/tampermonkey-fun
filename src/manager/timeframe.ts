@@ -24,33 +24,14 @@ const TIMEFRAMES: readonly Timeframe[] = [
 ];
 
 // ── Public Interface ──
+// Grouped by consumer workflow:
+//   1. Catalog/read policy — static metadata and defaults
+//   2. Backend active state — read/write the persistent ticker timeframe list
+//   3. Sequence and chart application — derive 4-tuple and apply via toolbar
+//   4. DOM current timeframe detection — detect currently selected toolbar button
 
 export interface ITimeFrameManager {
-  /**
-   * Apply timeframe to chart at given position in the current ticker's Sequence.
-   * @param position - Position in Sequence (0-3)
-   * @returns True if successfully applied
-   */
-  applyTimeFrame(position: number): Promise<boolean>;
-
-  /**
-   * Get currently selected timeframe from the DOM toolbar.
-   * @returns Current timeframe metadata
-   */
-  getCurrentTimeFrameConfig(): Timeframe;
-
-  /**
-   * Returns the active backend timeframe codes for the current ticker,
-   * sorted by catalog order.
-   * Falls back to DEFAULT_SEQUENCE when backend read fails.
-   */
-  getActiveTimeframesForCurrentTicker(): Promise<readonly TickerTimeframe[]>;
-
-  /**
-   * Get the derived Sequence (4-tuple) for the current ticker.
-   * Returns exactly 4 frames from the top, or DEFAULT_SEQUENCE.
-   */
-  getSequenceForCurrentTicker(): Promise<Sequence>;
+  // ── 1.0 Catalog / Read Policy ──
 
   /**
    * Returns all timeframe codes in catalog order.
@@ -68,12 +49,44 @@ export interface ITimeFrameManager {
    */
   getDefaultTimeframesForExchange(exchange: string): TickerTimeframe[];
 
+  // ── 2.0 Backend Active State ──
+
+  /**
+   * Returns the active backend timeframe codes for the current ticker,
+   * sorted by catalog order.
+   * Falls back to DEFAULT_SEQUENCE when backend read fails.
+   */
+  getActiveTimeframesForCurrentTicker(): Promise<readonly TickerTimeframe[]>;
+
   /**
    * Toggle a timeframe code for the current ticker on/off in the backend.
    * Publishes TICKER_TIMEFRAMES_CHANGED on success.
    * @throws Error if backend update fails
    */
   toggleTimeframeForCurrentTicker(code: TickerTimeframe): Promise<TickerTimeframe[]>;
+
+  // ── 3.0 Sequence and Chart Application ──
+
+  /**
+   * Get the derived Sequence (4-tuple) for the current ticker.
+   * Returns exactly 4 frames from the top, or DEFAULT_SEQUENCE.
+   */
+  getSequenceForCurrentTicker(): Promise<Sequence>;
+
+  /**
+   * Apply timeframe to chart at given position in the current ticker's Sequence.
+   * @param position - Position in Sequence (0-3)
+   * @returns True if successfully applied
+   */
+  applyTimeFrame(position: number): Promise<boolean>;
+
+  // ── 4.0 DOM Current Timeframe Detection ──
+
+  /**
+   * Get currently selected timeframe from the DOM toolbar.
+   * @returns Current timeframe metadata
+   */
+  getCurrentTimeFrameConfig(): Timeframe;
 }
 
 // ── Manager Implementation ──
@@ -94,54 +107,7 @@ export class TimeFrameManager implements ITimeFrameManager {
     private readonly publisher: IPublisher
   ) {}
 
-  /** @inheritdoc */
-  async applyTimeFrame(position: number): Promise<boolean> {
-    const sequence = await this.getSequenceForCurrentTicker();
-
-    if (position < 0 || position >= sequence.length) {
-      return false;
-    }
-
-    const code = sequence[position];
-    const config = this.findTimeframeByCode(code);
-    if (!config) {
-      return false;
-    }
-
-    return this.clickTimeFrameToolbar(config.toolbar);
-  }
-
-  /** @inheritdoc */
-  getCurrentTimeFrameConfig(): Timeframe {
-    const $activeButton = $(`${Constants.DOM.HEADER.TIMEFRAME}[aria-checked="true"]`);
-
-    if ($activeButton.length === 0) {
-      Notifier.warn('Timeframe Detection Failed - Using Monthly as Fallback');
-      return this.findTimeframeByCode(TickerTimeframe.MN)!;
-    }
-
-    const index = $(Constants.DOM.HEADER.TIMEFRAME).index($activeButton);
-    return this.findTimeframeByToolbar(index) ?? this.findTimeframeByCode(TickerTimeframe.MN)!;
-  }
-
-  /** @inheritdoc */
-  async getActiveTimeframesForCurrentTicker(): Promise<readonly TickerTimeframe[]> {
-    const tvTicker = this.domManager.getTicker();
-    try {
-      const record = await this.tickerManager.getTicker(tvTicker);
-      const active = this.getActiveTimeframes(record.timeframes as TickerTimeframe[]);
-      return active.map((tf) => tf.code);
-    } catch (error) {
-      Notifier.warn(`getActiveTimeframes: ${(error as Error).message}. Falling back to default timeframes.`);
-      return [...DEFAULT_SEQUENCE];
-    }
-  }
-
-  /** @inheritdoc */
-  async getSequenceForCurrentTicker(): Promise<Sequence> {
-    const active = await this.getActiveTimeframesForCurrentTicker();
-    return this.deriveSequence(active as TickerTimeframe[]);
-  }
+  // ── 1.0 Catalog / Read Policy ──
 
   /** @inheritdoc */
   getTimeframeCodes(): readonly TickerTimeframe[] {
@@ -154,6 +120,21 @@ export class TimeFrameManager implements ITimeFrameManager {
       return [TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL];
     }
     return TIMEFRAMES.filter((tf) => tf.code !== TickerTimeframe.DL).map((tf) => tf.code);
+  }
+
+  // ── 2.0 Backend Active State ──
+
+  /** @inheritdoc */
+  async getActiveTimeframesForCurrentTicker(): Promise<readonly TickerTimeframe[]> {
+    const tvTicker = this.domManager.getTicker();
+    try {
+      const record = await this.tickerManager.getTicker(tvTicker);
+      const active = this.getActiveTimeframes(record.timeframes as TickerTimeframe[]);
+      return active.map((tf) => tf.code);
+    } catch (error) {
+      Notifier.warn(`getActiveTimeframes: ${(error as Error).message}. Falling back to default timeframes.`);
+      return [...DEFAULT_SEQUENCE];
+    }
   }
 
   /** @inheritdoc */
@@ -173,6 +154,46 @@ export class TimeFrameManager implements ITimeFrameManager {
     });
 
     return sorted;
+  }
+
+  // ── 3.0 Sequence and Chart Application ──
+
+  /** @inheritdoc */
+  async getSequenceForCurrentTicker(): Promise<Sequence> {
+    const active = await this.getActiveTimeframesForCurrentTicker();
+    return this.deriveSequence(active as TickerTimeframe[]);
+  }
+
+  /** @inheritdoc */
+  async applyTimeFrame(position: number): Promise<boolean> {
+    const sequence = await this.getSequenceForCurrentTicker();
+
+    if (position < 0 || position >= sequence.length) {
+      return false;
+    }
+
+    const code = sequence[position];
+    const config = this.findTimeframeByCode(code);
+    if (!config) {
+      return false;
+    }
+
+    return this.clickTimeFrameToolbar(config.toolbar);
+  }
+
+  // ── 4.0 DOM Current Timeframe Detection ──
+
+  /** @inheritdoc */
+  getCurrentTimeFrameConfig(): Timeframe {
+    const $activeButton = $(`${Constants.DOM.HEADER.TIMEFRAME}[aria-checked="true"]`);
+
+    if ($activeButton.length === 0) {
+      Notifier.warn('Timeframe Detection Failed - Using Monthly as Fallback');
+      return this.findTimeframeByCode(TickerTimeframe.MN)!;
+    }
+
+    const index = $(Constants.DOM.HEADER.TIMEFRAME).index($activeButton);
+    return this.findTimeframeByToolbar(index) ?? this.findTimeframeByCode(TickerTimeframe.MN)!;
   }
 
   // ── Private Catalog Helpers ──

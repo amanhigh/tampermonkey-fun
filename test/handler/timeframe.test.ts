@@ -148,7 +148,7 @@ describe('TimeFrameHandler', () => {
   });
 
   describe('registerEvents', () => {
-    it('should subscribe to TICKER_CHANGED', () => {
+    it('should subscribe to both timeframe refresh events through subscribeMany', () => {
       const mockSubscriber: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn(),
         subscribeMany: jest.fn(),
@@ -156,24 +156,11 @@ describe('TimeFrameHandler', () => {
 
       handler.registerEvents(mockSubscriber);
 
-      expect(mockSubscriber.subscribe).toHaveBeenCalledWith(
-        DomainEventType.TICKER_CHANGED,
+      expect(mockSubscriber.subscribeMany).toHaveBeenCalledWith(
+        [DomainEventType.TICKER_CHANGED, DomainEventType.TICKER_TIMEFRAMES_CHANGED],
         expect.any(Function)
       );
-    });
-
-    it('should subscribe to TICKER_TIMEFRAMES_CHANGED', () => {
-      const mockSubscriber: jest.Mocked<ISubscriber> = {
-        subscribe: jest.fn(),
-        subscribeMany: jest.fn(),
-      };
-
-      handler.registerEvents(mockSubscriber);
-
-      expect(mockSubscriber.subscribe).toHaveBeenCalledWith(
-        DomainEventType.TICKER_TIMEFRAMES_CHANGED,
-        expect.any(Function)
-      );
+      expect(mockSubscriber.subscribe).not.toHaveBeenCalled();
     });
   });
 
