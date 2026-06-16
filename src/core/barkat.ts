@@ -1,7 +1,7 @@
 import '../style/main.less';
 import { UIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
-import { ISequenceHandler } from '../handler/sequence';
+import { ITickerHandler } from '../handler/ticker';
 import { IOnLoadHandler } from '../handler/onload';
 import { IAlertHandler } from '../handler/alert';
 import { IJournalHandler } from '../handler/journal';
@@ -16,11 +16,10 @@ import { IAuditHandler } from '../handler/audit';
 import { Factory } from './factory';
 
 export class Barkat {
-  // eslint-disable-next-line max-params
   constructor(
     private readonly errorHandler: IGlobalErrorHandler,
     private readonly uiUtil: UIUtil,
-    private readonly sequenceHandler: ISequenceHandler,
+    private readonly tickerHandler: ITickerHandler,
     private readonly onloadHandler: IOnLoadHandler,
     private readonly alertHandler: IAlertHandler,
     private readonly journalHandler: IJournalHandler,
@@ -78,7 +77,6 @@ export class Barkat {
     }
   }
 
-  // FIXME: Remove suppressed Errors for eslint, refactor large function
   // eslint-disable-next-line max-lines-per-function
   private setupTradingViewUI() {
     const $area = this.uiUtil.buildArea(
@@ -99,12 +97,15 @@ export class Barkat {
       )
       .append(
         this.uiUtil
-          .buildButton(Constants.UI.IDS.BUTTONS.SEQUENCE, 'S', () => {
-            void this.sequenceHandler.handleSequenceSwitch();
-          })
+          // FIXME: S button left-click temporarily disabled. The toggle
+          // between MWD/YR timeframe types was removed in sequence→type
+          // migration. Re-enable as a timeframe type toggle once the UI
+          // for type switching is designed.
+          // Right-click starts tracking with exchange-based default timeframes.
+          .buildButton(Constants.UI.IDS.BUTTONS.SEQUENCE, 'S')
           .on('contextmenu', (e) => {
             e.preventDefault();
-            void this.sequenceHandler.startTracking();
+            void this.tickerHandler.startTracking();
           })
       )
       .append(

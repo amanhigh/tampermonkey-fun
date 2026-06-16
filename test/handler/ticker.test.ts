@@ -31,6 +31,7 @@ describe('TickerHandler', () => {
 
     mockDomManager = {
       getTicker: jest.fn().mockReturnValue('TV_TICKER'),
+      getCurrentExchange: jest.fn().mockReturnValue('NSE'),
       openTicker: jest.fn(),
     } as any;
 
@@ -84,6 +85,50 @@ describe('TickerHandler', () => {
       expect(Notifier.success).toHaveBeenCalledWith('Opened UNKNOWN');
     });
 
+  });
+
+  describe('startTracking', () => {
+    test('starts NSE ticker with TMN, MN, WK, DL default timeframes', async () => {
+      mockDomManager.getCurrentExchange.mockReturnValue('NSE');
+      mockLifecycleManager.startTracking.mockResolvedValue({ ticker: 'TV_TICKER' } as any);
+
+      await handler.startTracking();
+
+      expect(mockDomManager.getTicker).toHaveBeenCalled();
+      expect(mockDomManager.getCurrentExchange).toHaveBeenCalled();
+      expect(mockLifecycleManager.startTracking).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ticker: 'TV_TICKER',
+          exchange: 'NSE',
+          timeframes: ['TMN', 'MN', 'WK', 'DL'],
+          type: 'EQUITY',
+          state: 'WATCHED',
+        })
+      );
+      expect(Notifier.success).toHaveBeenCalledWith(expect.stringContaining('Started tracking TV_TICKER'));
+    });
+
+    test('starts non-NSE ticker with YR, SMN, TMN, MN, WK default timeframes', async () => {
+      mockDomManager.getCurrentExchange.mockReturnValue('NASDAQ');
+      mockLifecycleManager.startTracking.mockResolvedValue({ ticker: 'TV_TICKER' } as any);
+
+      await handler.startTracking();
+
+      expect(mockLifecycleManager.startTracking).toHaveBeenCalledWith(
+        expect.objectContaining({
+          exchange: 'NASDAQ',
+          timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'],
+        })
+      );
+    });
+
+    test('warns when lifecycle start tracking fails', async () => {
+      mockLifecycleManager.startTracking.mockRejectedValue(new Error('Already tracked'));
+
+      await handler.startTracking();
+
+      expect(Notifier.warn).toHaveBeenCalledWith(expect.stringContaining('Failed to start tracking'));
+    });
   });
 
   describe('processCommand', () => {

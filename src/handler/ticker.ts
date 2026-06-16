@@ -4,6 +4,7 @@ import { ITickerManager } from '../manager/ticker';
 import { ILifecycleManager } from '../manager/lifecycle';
 import { IStyleManager } from '../manager/style';
 import { IAlertTickerHandler } from './alert_ticker';
+import { getDefaultTimeframesForExchange } from '../models/trading';
 
 /**
  * Interface for managing ticker operations
@@ -21,6 +22,15 @@ export interface ITickerHandler {
    * @param tvTicker The TradingView ticker to stop tracking
    */
   stopTracking(tvTicker: string): Promise<void>;
+
+  /**
+   * Starts tracking the current ticker by creating a backend record
+   * using exchange-based default timeframes.
+   *
+   * - NSE → TMN, MN, WK, DL
+   * - Non-NSE → YR, SMN, TMN, MN, WK
+   */
+  startTracking(): Promise<void>;
 
   /**
    * Processes command strings for ticker operations
@@ -68,6 +78,28 @@ export class TickerHandler implements ITickerHandler {
     }
 
     Notifier.success(`⏹ Stopped tracking ${tvTicker}`);
+  }
+
+  /** @inheritdoc */
+  public async startTracking(): Promise<void> {
+    const ticker = this.domManager.getTicker();
+    const exchange = this.domManager.getCurrentExchange();
+    const timeframes = getDefaultTimeframesForExchange(exchange);
+
+    try {
+      await this.lifecycleManager.startTracking({
+        ticker,
+        exchange,
+        timeframes,
+        type: 'EQUITY',
+        state: 'WATCHED',
+        trend: 'SIDEWAYS',
+        last_opened_at: new Date().toISOString(),
+      });
+      Notifier.success(`⏺ Started tracking ${ticker}`);
+    } catch (error) {
+      Notifier.warn(`Failed to start tracking ${ticker}: ${(error as Error).message}`);
+    }
   }
 
   /** @inheritdoc */

@@ -1,5 +1,4 @@
-import { SequenceMap, SequenceType, TimeFrameConfig, TimeFrame, TimeFrameMap } from './trading';
-import type { TickerTimeframe } from './ticker';
+import { TimeFrameConfig } from './trading';
 
 /**
  * Application-wide constants organized by domain and functionality
@@ -249,25 +248,9 @@ Support:
       SMN: new TimeFrameConfig('SMN', 'I', 6),
     } as Record<string, TimeFrameConfig>,
 
-    SEQUENCE_TYPES: {
-      FRAMES: {
-        [TimeFrame.DAILY]: new TimeFrameConfig('DL', 'I', 2),
-        [TimeFrame.WEEKLY]: new TimeFrameConfig('WK', 'H', 3),
-        [TimeFrame.MONTHLY]: new TimeFrameConfig('MN', 'VH', 4),
-        [TimeFrame.THREE_MONTHLY]: new TimeFrameConfig('TMN', 'T', 5),
-        [TimeFrame.SIX_MONTHLY]: new TimeFrameConfig('SMN', 'I', 6),
-      } as TimeFrameMap,
-      SEQUENCES: {
-        // Old name: timeFrameBar
-        [SequenceType.MWD]: [TimeFrame.THREE_MONTHLY, TimeFrame.MONTHLY, TimeFrame.WEEKLY, TimeFrame.DAILY],
-        [SequenceType.YR]: [TimeFrame.SIX_MONTHLY, TimeFrame.THREE_MONTHLY, TimeFrame.MONTHLY, TimeFrame.WEEKLY],
-      } as SequenceMap,
-      /** Maps a SequenceType to the ordered backend timeframe list. */
-      TO_TIMEFRAMES: {
-        [SequenceType.MWD]: ['MN', 'WK', 'DL'] as TickerTimeframe[],
-        [SequenceType.YR]: ['YR', 'SMN', 'TMN', 'MN', 'WK'] as TickerTimeframe[],
-      } as Record<SequenceType, TickerTimeframe[]>,
-    },
+    // NOTE: SEQUENCE_TYPES removed in migration. FRAMES_BY_CODE is the
+    // canonical source of truth. Legacy journal sequence is derived via
+    // getLegacyJournalSequenceFromTimeframes() in trading.ts.
   },
 
   MISC: {

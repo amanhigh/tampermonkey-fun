@@ -1,5 +1,5 @@
 import { Constants } from '../models/constant';
-import { TimeFrameConfig, TimeFrameCode, normalizeTimeframes } from '../models/trading';
+import { TimeFrameConfig, TimeFrameCode, AppliedTimeframeTuple, getAppliedTimeframeTuple } from '../models/trading';
 import { Notifier } from '../util/notify';
 import { ITickerManager } from './ticker';
 import { IDomManager } from './dom';
@@ -11,13 +11,18 @@ import { IDomManager } from './dom';
 const DEFAULT_TIMEFRAMES: TimeFrameCode[] = ['TMN', 'MN', 'WK', 'DL'];
 
 /**
+ * Default applied tuple when backend is unreachable.
+ */
+const DEFAULT_APPLIED_TUPLE: AppliedTimeframeTuple = ['TMN', 'MN', 'WK', 'DL'];
+
+/**
  * Interface for managing trading timeframe operations
  */
 export interface ITimeFrameManager {
   /**
    * Apply timeframe to chart at given position in the current ticker's
-   * allowed timeframe list.
-   * @param position - Position in allowed timeframes (0-based)
+   * applied 4-frame tuple.
+   * @param position - Position in applied timeframes (0-3)
    * @returns True if successfully applied
    */
   applyTimeFrame(position: number): Promise<boolean>;
@@ -29,11 +34,28 @@ export interface ITimeFrameManager {
   getCurrentTimeFrameConfig(): TimeFrameConfig;
 
   /**
-   * Get the allowed timeframe codes for the current ticker from the backend.
+   * Get the exact backend timeframe codes for the current ticker,
+   * preserving YR and any other codes returned by the backend.
    * Falls back to DEFAULT_TIMEFRAMES when backend read fails.
+   * @returns Promise resolving to the exact ordered list of backend timeframe codes
+   */
+  getExactTimeframesForCurrentTicker(): Promise<TimeFrameCode[]>;
+
+  /**
+   * Get the allowed timeframe codes for the current ticker from the backend
+   * (alias for getExactTimeframesForCurrentTicker, kept for compatibility).
+   * @deprecated Use getExactTimeframesForCurrentTicker instead.
    * @returns Promise resolving to ordered list of allowed timeframe codes
    */
   getAllowedTimeframesForCurrentTicker(): Promise<TimeFrameCode[]>;
+
+  /**
+   * Get the applied 4-frame tuple for the current ticker.
+   * Drops YR and other unsupported codes, sorts canonically,
+   * returns exactly 4 frames from the top.
+   * @returns Promise resolving to applied 4-tuple
+   */
+  getAppliedTimeframesForCurrentTicker(): Promise<AppliedTimeframeTuple>;
 
   /**
    * Look up a TimeFrameConfig by its timeframe code (e.g. 'DL', 'MN').
@@ -46,8 +68,12 @@ export interface ITimeFrameManager {
 /**
  * Manages all timeframe operations and state for trading view.
  *
- * Reads allowed timeframes from the current ticker's backend record.
- * Hotkeys 1-4 apply timeframes by position in the allowed list rather
+ * Provides two views of ticker timeframes:
+ * - **Exact**: The raw backend list (with YR if present). Used by the display chip.
+ * - **Applied**: A 4-frame tuple derived from the top of the exact list,
+ *   dropping unsupported codes like YR. Used by chart hotkeys and screenshots.
+ *
+ * Hotkeys 1-4 apply timeframes by position in the applied tuple rather
  * than from a fixed sequence (MWD/YR).
  */
 export class TimeFrameManager implements ITimeFrameManager {
@@ -61,14 +87,36 @@ export class TimeFrameManager implements ITimeFrameManager {
   ) {}
 
   /** @inheritdoc */
-  async getAllowedTimeframesForCurrentTicker(): Promise<TimeFrameCode[]> {
+  async getExactTimeframesForCurrentTicker(): Promise<TimeFrameCode[]> {
     const tvTicker = this.domManager.getTicker();
     try {
       const record = await this.tickerManager.getTicker(tvTicker);
-      return normalizeTimeframes(record.timeframes);
+      // Sort backend timeframes in canonical order but preserve YR
+      return record.timeframes.sort((a, b) => {
+        const idxA = this.getCanonicalIndexWithYR(a);
+        const idxB = this.getCanonicalIndexWithYR(b);
+        return idxA - idxB;
+      }) as TimeFrameCode[];
     } catch (error) {
-      Notifier.warn(`getAllowedTimeframes: ${(error as Error).message}. Falling back to default timeframes.`);
+      Notifier.warn(`getExactTimeframes: ${(error as Error).message}. Falling back to default timeframes.`);
       return DEFAULT_TIMEFRAMES;
+    }
+  }
+
+  /** @inheritdoc */
+  async getAllowedTimeframesForCurrentTicker(): Promise<TimeFrameCode[]> {
+    return this.getExactTimeframesForCurrentTicker();
+  }
+
+  /** @inheritdoc */
+  async getAppliedTimeframesForCurrentTicker(): Promise<AppliedTimeframeTuple> {
+    const tvTicker = this.domManager.getTicker();
+    try {
+      const record = await this.tickerManager.getTicker(tvTicker);
+      return getAppliedTimeframeTuple(record.timeframes);
+    } catch (error) {
+      Notifier.warn(`getAppliedTimeframes: ${(error as Error).message}. Falling back to default applied tuple.`);
+      return DEFAULT_APPLIED_TUPLE;
     }
   }
 
@@ -79,13 +127,13 @@ export class TimeFrameManager implements ITimeFrameManager {
 
   /** @inheritdoc */
   async applyTimeFrame(position: number): Promise<boolean> {
-    const allowed = await this.getAllowedTimeframesForCurrentTicker();
+    const applied = await this.getAppliedTimeframesForCurrentTicker();
 
-    if (position < 0 || position >= allowed.length) {
+    if (position < 0 || position >= applied.length) {
       return false;
     }
 
-    const code = allowed[position];
+    const code = applied[position];
     const config = this.getTimeFrameConfigByCode(code);
     if (!config) {
       return false;
@@ -102,7 +150,7 @@ export class TimeFrameManager implements ITimeFrameManager {
     if ($activeButton.length === 0) {
       // Warning: Unable to detect current timeframe from DOM
       Notifier.warn('Timeframe Detection Failed - Using Monthly as Fallback');
-      return Constants.TIME.FRAMES_BY_CODE['MN'] ?? Object.values(Constants.TIME.SEQUENCE_TYPES.FRAMES)[0];
+      return Constants.TIME.FRAMES_BY_CODE['MN']!;
     }
 
     // Get index of active button
@@ -141,6 +189,26 @@ export class TimeFrameManager implements ITimeFrameManager {
       }
     }
 
-    return Constants.TIME.FRAMES_BY_CODE['MN'] ?? Object.values(Constants.TIME.SEQUENCE_TYPES.FRAMES)[0];
+    return Constants.TIME.FRAMES_BY_CODE['MN']!;
+  }
+
+  /**
+   * Get canonical index for sorting, including YR.
+   * YR is placed before SMN in sort order.
+   * @private
+   * @param code - Timeframe code string
+   * @returns Sort index (lower = earlier in order)
+   */
+  private getCanonicalIndexWithYR(code: string): number {
+    const yrIdx = 0;
+    const order: Record<string, number> = {
+      YR: yrIdx,
+      SMN: 1,
+      TMN: 2,
+      MN: 3,
+      WK: 4,
+      DL: 5,
+    };
+    return order[code] ?? 99;
   }
 }
