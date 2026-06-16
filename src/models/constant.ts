@@ -235,6 +235,20 @@ Support:
 
   // Time frame and sequence configurations
   TIME: {
+    // FIXME: Add TimeFrame.YEARLY config ('YR', <style>, 7).
+    //       TradingView toolbar supports 12M at index 7 but frontend
+    //       does not define TimeFrameConfig for it yet.
+    //
+    //       Currently configured: SMN(6), TMN(5), MN(4), WK(3), DL(2)
+    /** Maps a timeframe code string → TimeFrameConfig. Sequence-independent. */
+    FRAMES_BY_CODE: {
+      DL: new TimeFrameConfig('DL', 'I', 2),
+      WK: new TimeFrameConfig('WK', 'H', 3),
+      MN: new TimeFrameConfig('MN', 'VH', 4),
+      TMN: new TimeFrameConfig('TMN', 'T', 5),
+      SMN: new TimeFrameConfig('SMN', 'I', 6),
+    } as Record<string, TimeFrameConfig>,
+
     SEQUENCE_TYPES: {
       FRAMES: {
         [TimeFrame.DAILY]: new TimeFrameConfig('DL', 'I', 2),

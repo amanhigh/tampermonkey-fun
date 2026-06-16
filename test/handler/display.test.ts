@@ -1,9 +1,8 @@
 import { DisplayHandler, IDisplayHandler } from '../../src/handler/display';
-import { ISequenceManager } from '../../src/manager/sequence';
+import { ITimeFrameManager } from '../../src/manager/timeframe';
 import { IDomManager } from '../../src/manager/dom';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { AlertTicker } from '../../src/models/alert_ticker';
-import { SequenceType } from '../../src/models/trading';
 
 // ── Mock jQuery ──
 let mockDisplayEl: any;
@@ -43,7 +42,7 @@ const makeAlertTicker = (overrides: Partial<AlertTicker> = {}): AlertTicker => (
 
 describe('DisplayHandler', () => {
   let handler: IDisplayHandler;
-  let mockSequenceManager: jest.Mocked<ISequenceManager>;
+  let mockTimeFrameManager: jest.Mocked<ITimeFrameManager>;
   let mockDomManager: jest.Mocked<IDomManager>;
   let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
 
@@ -65,11 +64,11 @@ describe('DisplayHandler', () => {
       toggleClass: jest.fn(),
     };
 
-    mockSequenceManager = {
-      getCurrentSequence: jest.fn().mockResolvedValue(SequenceType.MWD),
-      flipSequence: jest.fn(),
-      sequenceToTimeFrameConfig: jest.fn(),
-      toggleFreezeSequence: jest.fn(),
+    mockTimeFrameManager = {
+      getAllowedTimeframesForCurrentTicker: jest.fn().mockResolvedValue(['TMN', 'MN', 'WK', 'DL']),
+      applyTimeFrame: jest.fn(),
+      getCurrentTimeFrameConfig: jest.fn(),
+      getTimeFrameConfigByCode: jest.fn(),
     } as any;
 
     mockDomManager = {
@@ -87,12 +86,11 @@ describe('DisplayHandler', () => {
       getAlertTickersForTicker: jest.fn(),
     } as any;
 
-    handler = new DisplayHandler(mockSequenceManager, mockDomManager, mockAlertTickerManager);
+    handler = new DisplayHandler(mockTimeFrameManager, mockDomManager, mockAlertTickerManager);
   });
 
   describe('display', () => {
-    it('should render compact mapped display with primary ticker, sequence, and alert count', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
+    it('should render compact mapped display with primary ticker, allowed timeframes, and alert count', async () => {
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
         makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', ticker: 'TVTICKER' }),
@@ -100,17 +98,17 @@ describe('DisplayHandler', () => {
 
       await handler.display();
 
+      expect(mockTimeFrameManager.getAllowedTimeframesForCurrentTicker).toHaveBeenCalled();
       expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TVTICKER');
 
       const html = mockDisplayEl.html.mock.calls[0][0];
       expect(html).toContain('🔗');
       expect(html).toContain('INFY');
-      expect(html).toContain('MWD');
+      expect(html).toContain('TMN MN WK DL');
       expect(html).toContain('🔔1');
     });
 
     it('should render unmapped compact display with warning emoji and zero alert count', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
 
@@ -123,7 +121,6 @@ describe('DisplayHandler', () => {
     });
 
     it('should set mapped css class when ticker is mapped', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
         makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', ticker: 'TVTICKER' }),
@@ -136,7 +133,6 @@ describe('DisplayHandler', () => {
     });
 
     it('should set unmapped css class when ticker is unmapped', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
 
@@ -146,7 +142,6 @@ describe('DisplayHandler', () => {
     });
 
     it('should attach click handler to display element', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
 
@@ -155,11 +150,23 @@ describe('DisplayHandler', () => {
       expect(mockDisplayEl.off).toHaveBeenCalledWith('click');
       expect(mockDisplayEl.on).toHaveBeenCalledWith('click', expect.any(Function));
     });
+
+    it('should render allowed timeframes from backend', async () => {
+      mockTimeFrameManager.getAllowedTimeframesForCurrentTicker.mockResolvedValue(['SMN', 'TMN', 'MN', 'WK']);
+      mockDomManager.getTicker.mockReturnValue('BANKNIFTY');
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
+        makeAlertTicker({ type: 'PRIMARY', symbol: 'BNF', ticker: 'BANKNIFTY' }),
+      ]);
+
+      await handler.display();
+
+      const html = mockDisplayEl.html.mock.calls[0][0];
+      expect(html).toContain('SMN TMN MN WK');
+    });
   });
 
   describe('expanded display toggle', () => {
     it('should render expanded rows with primary and secondary tickers on click', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
         makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', name: 'Infosys Ltd', exchange: 'NSE', ticker: 'TVTICKER' }),
@@ -175,7 +182,7 @@ describe('DisplayHandler', () => {
       const expandedHtml = htmlCalls[htmlCalls.length - 1][0];
 
       expect(expandedHtml).toContain('🔗');
-      expect(expandedHtml).toContain('MWD');
+      expect(expandedHtml).toContain('TMN MN WK DL');
       expect(expandedHtml).toContain('🔔2');
       expect(expandedHtml).toContain('⭐');
       expect(expandedHtml).toContain('INFY');
@@ -186,7 +193,6 @@ describe('DisplayHandler', () => {
     });
 
     it('should render unmapped expanded empty state on click', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
 
@@ -202,7 +208,6 @@ describe('DisplayHandler', () => {
     });
 
     it('should toggle back to compact on second click', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
         makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', ticker: 'TVTICKER' }),
@@ -223,7 +228,6 @@ describe('DisplayHandler', () => {
     });
 
     it('should render alert ticker rows with data-symbol and data-type attributes', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
         makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', name: 'Infosys Ltd', exchange: 'NSE', ticker: 'TVTICKER' }),
@@ -244,6 +248,27 @@ describe('DisplayHandler', () => {
       expect(expandedHtml).toContain('data-alert-ticker-symbol="INFY.PA"');
       expect(expandedHtml).toContain('data-alert-ticker-type="SECONDARY"');
     });
-  });
 
+    it('should preserve allowed timeframe chip after expand/collapse', async () => {
+      mockDomManager.getTicker.mockReturnValue('TVTICKER');
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
+        makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', ticker: 'TVTICKER' }),
+      ]);
+
+      await handler.display();
+
+      // Expand
+      const clickHandler = mockDisplayEl.on.mock.calls[0][1];
+      await clickHandler();
+
+      // Collapse
+      const secondClickHandler = mockDisplayEl.on.mock.calls[1][1];
+      await secondClickHandler();
+
+      const htmlCalls = mockDisplayEl.html.mock.calls;
+      const finalHtml = htmlCalls[htmlCalls.length - 1][0];
+
+      expect(finalHtml).toContain('TMN MN WK DL');
+    });
+  });
 });

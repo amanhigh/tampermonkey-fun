@@ -75,6 +75,8 @@ describe('JournalManager', () => {
     mockTimeFrameManager = {
       applyTimeFrame: jest.fn().mockResolvedValue(true),
       getCurrentTimeFrameConfig: jest.fn().mockReturnValue(mockTimeFrameConfig),
+      getAllowedTimeframesForCurrentTicker: jest.fn().mockResolvedValue(['TMN', 'MN', 'WK', 'DL']),
+      getTimeFrameConfigByCode: jest.fn(),
     } as unknown as jest.Mocked<ITimeFrameManager>;
 
     journalManager = new JournalManager(mockSequenceManager, mockJournalClient, mockOsClient, mockTimeFrameManager);
@@ -270,26 +272,8 @@ describe('JournalManager', () => {
       (mockOsClient as any).screenshot = jest.fn();
     });
 
-    it('should resolve MWD to TMN, MN, WK, D and call screenshot four times', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
-      mockSequenceManager.sequenceToTimeFrameConfig.mockImplementation((sequence, position) => {
-        const configs: Record<string, TimeFrameConfig[]> = {
-          MWD: [
-            new TimeFrameConfig('TMN', 't', 5),
-            new TimeFrameConfig('MN', 'vh', 4),
-            new TimeFrameConfig('WK', 'h', 3),
-            new TimeFrameConfig('DL', 'i', 2),
-          ],
-          YR: [
-            new TimeFrameConfig('SMN', 'i', 6),
-            new TimeFrameConfig('TMN', 't', 5),
-            new TimeFrameConfig('MN', 'vh', 4),
-            new TimeFrameConfig('WK', 'h', 3),
-          ],
-        };
-
-        return configs[sequence][position];
-      });
+    it('should capture screenshots for default allowed timeframes TMN, MN, WK, DL', async () => {
+      mockTimeFrameManager.getAllowedTimeframesForCurrentTicker.mockResolvedValue(['TMN', 'MN', 'WK', 'DL']);
       (mockOsClient as any).screenshot.mockImplementation(({ file_name }: { file_name: string }) =>
         Promise.resolve({
           file_name,
@@ -299,15 +283,13 @@ describe('JournalManager', () => {
 
       const result = await (journalManager as any).screenshotTicker('TCS', 'Rejected');
 
-      expect(mockSequenceManager.getCurrentSequence).toHaveBeenCalled();
+      expect(mockTimeFrameManager.getAllowedTimeframesForCurrentTicker).toHaveBeenCalled();
       expect(mockTimeFrameManager.applyTimeFrame).toHaveBeenNthCalledWith(1, 0);
       expect(mockTimeFrameManager.applyTimeFrame).toHaveBeenNthCalledWith(2, 1);
       expect(mockTimeFrameManager.applyTimeFrame).toHaveBeenNthCalledWith(3, 2);
       expect(mockTimeFrameManager.applyTimeFrame).toHaveBeenNthCalledWith(4, 3);
-      expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenNthCalledWith(1, SequenceType.MWD, 0);
-      expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenNthCalledWith(2, SequenceType.MWD, 1);
-      expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenNthCalledWith(3, SequenceType.MWD, 2);
-      expect(mockSequenceManager.sequenceToTimeFrameConfig).toHaveBeenNthCalledWith(4, SequenceType.MWD, 3);
+      expect(mockSequenceManager.getCurrentSequence).not.toHaveBeenCalled();
+      expect(mockSequenceManager.sequenceToTimeFrameConfig).not.toHaveBeenCalled();
       expect((mockOsClient as any).screenshot).toHaveBeenNthCalledWith(
         1,
         expect.objectContaining({
@@ -359,26 +341,8 @@ describe('JournalManager', () => {
       expect(result[3].timeframe).toBe('DL');
     });
 
-    it('should resolve YR to SMN, TMN, MN, WK and preserve returned metadata', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.YR);
-      mockSequenceManager.sequenceToTimeFrameConfig.mockImplementation((sequence, position) => {
-        const configs: Record<string, TimeFrameConfig[]> = {
-          MWD: [
-            new TimeFrameConfig('TMN', 't', 5),
-            new TimeFrameConfig('MN', 'vh', 4),
-            new TimeFrameConfig('WK', 'h', 3),
-            new TimeFrameConfig('DL', 'i', 2),
-          ],
-          YR: [
-            new TimeFrameConfig('SMN', 'i', 6),
-            new TimeFrameConfig('TMN', 't', 5),
-            new TimeFrameConfig('MN', 'vh', 4),
-            new TimeFrameConfig('WK', 'h', 3),
-          ],
-        };
-
-        return configs[sequence][position];
-      });
+    it('should capture screenshots for backend allowed timeframes SMN, TMN, MN, WK', async () => {
+      mockTimeFrameManager.getAllowedTimeframesForCurrentTicker.mockResolvedValue(['SMN', 'TMN', 'MN', 'WK']);
       (mockOsClient as any).screenshot.mockImplementation(({ file_name }: { file_name: string }) =>
         Promise.resolve({
           file_name,
@@ -436,11 +400,28 @@ describe('JournalManager', () => {
     });
 
     it('should abort when screenshot fails', async () => {
-      mockSequenceManager.getCurrentSequence.mockResolvedValue(SequenceType.MWD);
-      mockSequenceManager.sequenceToTimeFrameConfig.mockReturnValue(new TimeFrameConfig('TMN', 't', 5));
+      mockTimeFrameManager.getAllowedTimeframesForCurrentTicker.mockResolvedValue(['TMN', 'MN', 'WK', 'DL']);
       (mockOsClient as any).screenshot.mockRejectedValue(new Error('screenshot failed'));
 
       await expect((journalManager as any).screenshotTicker('TCS', 'Rejected')).rejects.toThrow('screenshot failed');
+    });
+
+    it('should use variable length allowed timeframes', async () => {
+      mockTimeFrameManager.getAllowedTimeframesForCurrentTicker.mockResolvedValue(['TMN', 'MN', 'WK']);
+      (mockOsClient as any).screenshot.mockImplementation(({ file_name }: { file_name: string }) =>
+        Promise.resolve({
+          file_name,
+          full_path: `/home/aman/Downloads/${file_name}`,
+        })
+      );
+
+      const result = await (journalManager as any).screenshotTicker('XYZ', 'Setup');
+
+      expect(result).toHaveLength(3);
+      expect(mockTimeFrameManager.applyTimeFrame).toHaveBeenCalledTimes(3);
+      expect(result[0].timeframe).toBe('TMN');
+      expect(result[1].timeframe).toBe('MN');
+      expect(result[2].timeframe).toBe('WK');
     });
   });
 

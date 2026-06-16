@@ -177,7 +177,10 @@ export class Factory {
    */
   public static manager = {
     timeFrame: (): ITimeFrameManager =>
-      Factory.getInstance('timeframeManager', () => new TimeFrameManager(Factory.manager.sequence())),
+      Factory.getInstance(
+        'timeframeManager',
+        () => new TimeFrameManager(Factory.manager.ticker(), Factory.manager.dom())
+      ),
 
     alert: (): IAlertManager =>
       Factory.getInstance(
@@ -550,7 +553,7 @@ export class Factory {
     display: (): IDisplayHandler =>
       Factory.getInstance(
         'displayHandler',
-        () => new DisplayHandler(Factory.manager.sequence(), Factory.manager.dom(), Factory.manager.alertTicker())
+        () => new DisplayHandler(Factory.manager.timeFrame(), Factory.manager.dom(), Factory.manager.alertTicker())
       ),
     journal: (): IJournalHandler =>
       Factory.getInstance(

@@ -29,7 +29,7 @@ export interface IJournalManager {
   createJournal(input: CreateJournalInput): Promise<JournalRecord>;
 
   /**
-   * Takes screenshots for the given ticker using the configured sequence order.
+   * Takes screenshots for the given ticker using the ticker's allowed timeframes.
    * @param ticker Trading symbol to capture
    * @param type Screenshot purpose/type used in filenames
    * @returns Promise resolving with screenshot metadata
@@ -200,23 +200,22 @@ export class JournalManager implements IJournalManager {
   }
 
   /**
-   * Takes screenshots for a journal using the sequence-defined timeframe order.
+   * Takes screenshots for a journal using the ticker's allowed timeframes.
    * @param ticker Trading symbol to capture
    * @param type Screenshot purpose/type used in filenames
    * @returns Promise resolving with screenshot metadata
    */
   public async screenshotTicker(ticker: string, type: string): Promise<ScreenshotResponse[]> {
-    const sequence = await this.sequenceManager.getCurrentSequence();
+    const allowedTimeframes = await this.timeframeManager.getAllowedTimeframesForCurrentTicker();
     const screenshots: ScreenshotResponse[] = [];
     const screenshotType = type.toLowerCase();
 
-    for (const position of [0, 1, 2, 3]) {
+    for (let position = 0; position < allowedTimeframes.length; position++) {
       await this.timeframeManager.applyTimeFrame(position);
-      const config = this.sequenceManager.sequenceToTimeFrameConfig(sequence, position);
-      const timeframe = config.symbol;
+      const code = allowedTimeframes[position];
       const order = position + 1;
 
-      const fileName = `${ticker.toUpperCase()}_${this.getScreenshotTimestamp()}_${order}_${timeframe.toLowerCase()}_${screenshotType}.png`;
+      const fileName = `${ticker.toUpperCase()}_${this.getScreenshotTimestamp()}_${order}_${code.toLowerCase()}_${screenshotType}.png`;
       const screenshot = await this.osClient.screenshot({
         file_name: fileName,
         directory_type: 'JOURNAL',
@@ -224,7 +223,7 @@ export class JournalManager implements IJournalManager {
         window: 'TradingView',
         notify: false,
       });
-      screenshot.timeframe = timeframe as JournalApiTimeframe;
+      screenshot.timeframe = code as JournalApiTimeframe;
       screenshots.push(screenshot);
     }
 
