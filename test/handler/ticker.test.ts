@@ -56,22 +56,12 @@ describe('TickerHandler', () => {
       linkInvestingTicker: jest.fn().mockResolvedValue(undefined),
     } as any;
 
-    mockTimeFrameManager = {
-      getDefaultTimeframesForExchange: jest.fn((exchange: string) => {
-        if (exchange.toUpperCase() === 'NSE') {
-          return ['TMN', 'MN', 'WK', 'DL'];
-        }
-        return ['YR', 'SMN', 'TMN', 'MN', 'WK'];
-      }),
-    } as any;
-
     handler = new TickerHandler(
       mockDomManager,
       mockStyleManager,
       mockTickerManager,
       mockLifecycleManager,
-      mockAlertTickerHandler,
-      mockTimeFrameManager
+      mockAlertTickerHandler
     );
   });
 

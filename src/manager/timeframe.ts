@@ -1,4 +1,4 @@
-import { Timeframe, TickerTimeframe, Sequence } from '../models/timeframe';
+import { Timeframe, TickerTimeframe, Sequence, DEFAULT_SEQUENCE } from '../models/timeframe';
 import { Constants } from '../models/constant';
 import { DomainEventType } from '../models/domain_event';
 import { Notifier } from '../util/notify';
@@ -6,13 +6,9 @@ import { ITickerManager } from './ticker';
 import { IDomManager } from './dom';
 import { IPublisher } from './event_bus';
 
-// ── Timeframe Catalog ──
-// Ordered catalog of all timeframe metadata. Used as the single source of truth
-// for ranking, toolbar position, style, and display order.
-
-const SEQUENCE_LENGTH = 4;
-
-const DEFAULT_SEQUENCE: Sequence = [TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL];
+// ── Catalog & Lookups ──
+// Ordered catalog of all timeframe metadata with pre-built lookup maps.
+// Single source of truth for ranking, toolbar position, style, and display order.
 
 const TIMEFRAMES: readonly Timeframe[] = [
   { code: TickerTimeframe.YR, label: '12M', rank: 0, toolbar: 7, style: 'H' },
@@ -22,6 +18,18 @@ const TIMEFRAMES: readonly Timeframe[] = [
   { code: TickerTimeframe.WK, label: 'W', rank: 4, toolbar: 3, style: 'H' },
   { code: TickerTimeframe.DL, label: 'D', rank: 5, toolbar: 2, style: 'I' },
 ];
+
+const TIMEFRAME_BY_CODE: ReadonlyMap<TickerTimeframe, Timeframe> = new Map(TIMEFRAMES.map((tf) => [tf.code, tf]));
+const TIMEFRAME_BY_TOOLBAR: ReadonlyMap<number, Timeframe> = new Map(TIMEFRAMES.map((tf) => [tf.toolbar, tf]));
+
+/**
+ * Filters timeframe codes to only those in the catalog, preserving catalog order.
+ * Unknown/invalid codes are silently dropped.
+ */
+function toSupportedTimeframes(codes: TickerTimeframe[]): Timeframe[] {
+  const active = new Set(codes);
+  return TIMEFRAMES.filter((tf) => active.has(tf.code));
+}
 
 // ── Public Interface ──
 // Methods are named without "forCurrentTicker" suffix because the manager
@@ -70,12 +78,14 @@ export class TimeFrameManager implements ITimeFrameManager {
     private readonly publisher: IPublisher
   ) {}
 
+  // ── Backend Operations ──
+
   /** @inheritdoc */
   async getActiveTimeframes(): Promise<readonly TickerTimeframe[]> {
     const tvTicker = this.domManager.getTicker();
     try {
       const record = await this.tickerManager.getTicker(tvTicker);
-      const active = this.filterActiveTimeframes(record.timeframes as TickerTimeframe[]);
+      const active = toSupportedTimeframes(record.timeframes as TickerTimeframe[]);
       return active.map((tf) => tf.code);
     } catch (error) {
       Notifier.warn(`getActiveTimeframes: ${(error as Error).message}. Falling back to default timeframes.`);
@@ -90,7 +100,7 @@ export class TimeFrameManager implements ITimeFrameManager {
     const current = record.timeframes as TickerTimeframe[];
     const isActive = current.includes(code);
     const updated = isActive ? current.filter((c) => c !== code) : [...current, code];
-    const active = this.filterActiveTimeframes(updated);
+    const active = toSupportedTimeframes(updated);
     const sorted = active.map((tf) => tf.code);
     await this.tickerManager.updateTicker(tvTicker, { timeframes: sorted });
 
@@ -104,24 +114,31 @@ export class TimeFrameManager implements ITimeFrameManager {
 
   /** @inheritdoc */
   async getSequence(): Promise<Sequence> {
-    const active = await this.getActiveTimeframes();
-    return this.deriveSequence(active as TickerTimeframe[]);
+    const codes = await this.getActiveTimeframes();
+    const supported = toSupportedTimeframes(codes as TickerTimeframe[]);
+    if (supported.length === 0) {
+      return DEFAULT_SEQUENCE;
+    }
+    const startIdx = TIMEFRAMES.findIndex((tf) => tf.code === supported[0].code);
+    if (startIdx < 0 || startIdx + DEFAULT_SEQUENCE.length > TIMEFRAMES.length) {
+      return DEFAULT_SEQUENCE;
+    }
+    return TIMEFRAMES.slice(startIdx, startIdx + DEFAULT_SEQUENCE.length).map((tf) => tf.code) as unknown as Sequence;
   }
+
+  // ── DOM Operations ──
 
   /** @inheritdoc */
   async apply(position: number): Promise<boolean> {
     const sequence = await this.getSequence();
-
     if (position < 0 || position >= sequence.length) {
       return false;
     }
-
     const code = sequence[position];
-    const config = this.findTimeframeByCode(code);
+    const config = TIMEFRAME_BY_CODE.get(code);
     if (!config) {
       return false;
     }
-
     return this.clickTimeFrameToolbar(config.toolbar);
   }
 
@@ -131,66 +148,14 @@ export class TimeFrameManager implements ITimeFrameManager {
 
     if ($activeButton.length === 0) {
       Notifier.warn('Timeframe Detection Failed - Using Monthly as Fallback');
-      return this.findTimeframeByCode(TickerTimeframe.MN)!;
+      return TIMEFRAME_BY_CODE.get(TickerTimeframe.MN)!;
     }
 
     const index = $(Constants.DOM.HEADER.TIMEFRAME).index($activeButton);
-    return this.findTimeframeByToolbar(index) ?? this.findTimeframeByCode(TickerTimeframe.MN)!;
+    return TIMEFRAME_BY_TOOLBAR.get(index) ?? TIMEFRAME_BY_CODE.get(TickerTimeframe.MN)!;
   }
 
-  // ── Private Catalog Helpers ──
-
-  /**
-   * Filters timeframe codes to only those in the catalog, preserving catalog order.
-   * Unknown/invalid codes are silently dropped.
-   */
-  private filterActiveTimeframes(codes: TickerTimeframe[]): Timeframe[] {
-    const active = new Set(codes);
-    return TIMEFRAMES.filter((tf) => active.has(tf.code));
-  }
-
-  /**
-   * Returns the timeframe metadata for the given code, or undefined if not found.
-   */
-  private findTimeframeByCode(code: TickerTimeframe): Timeframe | undefined {
-    return TIMEFRAMES.find((tf) => tf.code === code);
-  }
-
-  /**
-   * Returns the timeframe metadata for the given toolbar index, or undefined if not found.
-   */
-  private findTimeframeByToolbar(toolbar: number): Timeframe | undefined {
-    return TIMEFRAMES.find((tf) => tf.toolbar === toolbar);
-  }
-
-  // ── Private Sequence Helpers ──
-
-  /**
-   * Derives a 4-frame Sequence from an ordered array of timeframe codes.
-   *
-   * Rules:
-   * 1. Only codes in the catalog are kept (others dropped)
-   * 2. Codes are ordered by catalog rank
-   * 3. The highest-ranked timeframe is used as the start
-   * 4. If start + 4 contiguous catalog entries fit, that 4-tuple is returned
-   * 5. Otherwise DEFAULT_SEQUENCE is returned
-   */
-  private deriveSequence(codes: TickerTimeframe[]): Sequence {
-    const supported = this.filterActiveTimeframes(codes);
-
-    if (supported.length === 0) {
-      return DEFAULT_SEQUENCE;
-    }
-
-    const startIdx = TIMEFRAMES.findIndex((tf) => tf.code === supported[0].code);
-    if (startIdx < 0 || startIdx + SEQUENCE_LENGTH > TIMEFRAMES.length) {
-      return DEFAULT_SEQUENCE;
-    }
-
-    return TIMEFRAMES.slice(startIdx, startIdx + SEQUENCE_LENGTH).map((tf) => tf.code) as unknown as Sequence;
-  }
-
-  // ── Private DOM Helpers ──
+  // ── Private Helpers ──
 
   /**
    * Click toolbar button for timeframe selection.

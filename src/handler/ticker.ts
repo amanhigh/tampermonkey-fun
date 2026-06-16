@@ -4,7 +4,7 @@ import { ITickerManager } from '../manager/ticker';
 import { ILifecycleManager } from '../manager/lifecycle';
 import { IStyleManager } from '../manager/style';
 import { IAlertTickerHandler } from './alert_ticker';
-import { TickerTimeframe, NSE_DEFAULT_TIMEFRAMES, NON_NSE_DEFAULT_TIMEFRAMES } from '../models/timeframe';
+import { TickerTimeframe, DEFAULT_SEQUENCE, NON_NSE_DEFAULT_TIMEFRAMES } from '../models/timeframe';
 import { TickerType, TickerState, TickerTrend } from '../models/ticker';
 
 /**
@@ -131,7 +131,7 @@ export class TickerHandler implements ITickerHandler {
    */
   private getDefaultTimeframesForExchange(exchange: string): TickerTimeframe[] {
     if (exchange.toUpperCase() === 'NSE') {
-      return [...NSE_DEFAULT_TIMEFRAMES];
+      return [...DEFAULT_SEQUENCE];
     }
     return [...NON_NSE_DEFAULT_TIMEFRAMES];
   }

@@ -241,18 +241,18 @@ describe('JournalManager', () => {
     });
 
     it('should capture screenshots for applied tuple TMN, MN, WK, DL', async () => {
-      mockTimeFrameManager.getSequenceForCurrentTicker.mockResolvedValue(
+      mockTimeFrameManager.getSequence.mockResolvedValue(
         ['TMN', 'MN', 'WK', 'DL'] as Sequence
       );
 
       const screenshots = await journalManager.screenshotTicker('AAPL', 'set');
 
       expect(screenshots).toHaveLength(4);
-      expect(mockTimeFrameManager.applyTimeFrame).toHaveBeenCalledTimes(4);
-      expect(mockTimeFrameManager.applyTimeFrame).toHaveBeenNthCalledWith(1, 0);
-      expect(mockTimeFrameManager.applyTimeFrame).toHaveBeenNthCalledWith(2, 1);
-      expect(mockTimeFrameManager.applyTimeFrame).toHaveBeenNthCalledWith(3, 2);
-      expect(mockTimeFrameManager.applyTimeFrame).toHaveBeenNthCalledWith(4, 3);
+      expect(mockTimeFrameManager.apply).toHaveBeenCalledTimes(4);
+      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(1, 0);
+      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(2, 1);
+      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(3, 2);
+      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(4, 3);
       expect(screenshots[0].file_name).toContain('_1_tmn_set.png');
       expect(screenshots[1].file_name).toContain('_2_mn_set.png');
       expect(screenshots[2].file_name).toContain('_3_wk_set.png');
@@ -260,7 +260,7 @@ describe('JournalManager', () => {
     });
 
     it('should capture screenshots for applied tuple SMN, TMN, MN, WK', async () => {
-      mockTimeFrameManager.getSequenceForCurrentTicker.mockResolvedValue(
+      mockTimeFrameManager.getSequence.mockResolvedValue(
         ['SMN', 'TMN', 'MN', 'WK'] as Sequence
       );
 
@@ -279,16 +279,16 @@ describe('JournalManager', () => {
         .mockResolvedValueOnce({ file_name: 'ok.png', full_path: '/ok.png', timeframe: 'TMN' as JournalApiTimeframe })
         .mockRejectedValue(new Error('Screenshot failed'));
 
-      mockTimeFrameManager.getSequenceForCurrentTicker.mockResolvedValue(
+      mockTimeFrameManager.getSequence.mockResolvedValue(
         ['TMN', 'MN', 'WK', 'DL'] as Sequence
       );
 
       await expect(journalManager.screenshotTicker('AAPL', 'error')).rejects.toThrow('Screenshot failed');
-      expect(mockTimeFrameManager.applyTimeFrame).toHaveBeenCalledTimes(2);
+      expect(mockTimeFrameManager.apply).toHaveBeenCalledTimes(2);
     });
 
     it('should always capture exactly 4 screenshots from applied tuple', async () => {
-      mockTimeFrameManager.getSequenceForCurrentTicker.mockResolvedValue(
+      mockTimeFrameManager.getSequence.mockResolvedValue(
         ['SMN', 'TMN', 'MN', 'WK'] as Sequence
       );
 
@@ -302,7 +302,7 @@ describe('JournalManager', () => {
     it('should create formatted reason text with current timeframe', () => {
       const result = journalManager.createReasonText('HGS');
 
-      expect(mockTimeFrameManager.getCurrentTimeFrameConfig).toHaveBeenCalledTimes(1);
+      expect(mockTimeFrameManager.getCurrentConfig).toHaveBeenCalledTimes(1);
       expect(result).toBe('TMN - HGS');
     });
   });

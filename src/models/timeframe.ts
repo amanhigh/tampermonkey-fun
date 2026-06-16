@@ -36,10 +36,12 @@ export type Timeframe = Readonly<{
 export type Sequence = readonly [TickerTimeframe, TickerTimeframe, TickerTimeframe, TickerTimeframe];
 
 /**
- * Default timeframe list for NSE tickers (TMN, MN, WK, DL).
- * Used when starting tracking for a new NSE ticker.
+ * Default Sequence (4-tuple) for timeframe hotkeys and screenshot flows.
+ * Represents TMN → MN → WK → DL in catalog order.
+ * Used as fallback when no active timeframes are configured, and as the
+ * default timeframe list for NSE tickers when starting tracking.
  */
-export const NSE_DEFAULT_TIMEFRAMES: readonly TickerTimeframe[] = [
+export const DEFAULT_SEQUENCE: Sequence = [
   TickerTimeframe.TMN,
   TickerTimeframe.MN,
   TickerTimeframe.WK,
