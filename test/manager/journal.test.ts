@@ -9,7 +9,7 @@ import {
   JournalApiSequence,
   JournalResultStatus,
 } from '../../src/models/journal';
-import { Sequence } from '../../src/models/timeframe';
+import { Sequence, TickerTimeframe } from '../../src/models/timeframe';
 import { ScreenshotResponse } from '../../src/models/os';
 
 // Mock Notifier
@@ -69,7 +69,7 @@ describe('JournalManager', () => {
     // Mock TimeFrameManager
     mockTimeFrameManager = {
       applyTimeFrame: jest.fn().mockResolvedValue(true),
-      getCurrentTimeFrameConfig: jest.fn().mockReturnValue({ symbol: 'TMN', style: 'T', toolbar: 5 }),
+      getCurrentTimeFrameConfig: jest.fn().mockReturnValue({ code: TickerTimeframe.TMN, label: '3M', rank: 2, toolbar: 5, style: 'T' }),
       getExactTimeframesForCurrentTicker: jest.fn(),
       getSequenceForCurrentTicker: jest.fn().mockResolvedValue(
         ['TMN', 'MN', 'WK', 'DL'] as Sequence

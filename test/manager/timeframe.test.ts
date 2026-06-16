@@ -5,8 +5,15 @@ import { IPublisher } from '../../src/manager/event_bus';
 import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/ticker';
 import { Constants } from '../../src/models/constant';
 import { Notifier } from '../../src/util/notify';
-import { Sequence, DEFAULT_SEQUENCE, TickerTimeframe, getTimeframeByCode } from '../../src/models/timeframe';
+import { Sequence, TickerTimeframe } from '../../src/models/timeframe';
 import { DomainEventType } from '../../src/models/domain_event';
+
+const DEFAULT_SEQUENCE: Sequence = [
+  TickerTimeframe.TMN,
+  TickerTimeframe.MN,
+  TickerTimeframe.WK,
+  TickerTimeframe.DL,
+];
 
 // Mock jQuery with simplified approach - avoid complex interface typing
 const mockJQuery = jest.fn();

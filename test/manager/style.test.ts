@@ -1,7 +1,7 @@
 import { StyleManager, IStyleManager } from '../../src/manager/style';
 import { ITimeFrameManager } from '../../src/manager/timeframe';
 import { WaitUtil } from '../../src/util/wait';
-import { TimeFrameConfig } from '../../src/models/timeframe';
+import { TickerTimeframe, Timeframe } from '../../src/models/timeframe';
 import { Constants } from '../../src/models/constant';
 
 // Mock jQuery
@@ -111,7 +111,7 @@ describe('StyleManager', () => {
   describe('applyZoneStyle', () => {
     it('should apply zone style with current timeframe style', () => {
       const zoneType = 'DZ';
-      const mockTimeFrameConfig = new TimeFrameConfig('D', 'I', 2);
+      const mockTimeFrameConfig = { code: TickerTimeframe.DL, label: 'D', rank: 5, toolbar: 2, style: 'I' };
       mockTimeFrameManager.getCurrentTimeFrameConfig.mockReturnValue(mockTimeFrameConfig);
 
       styleManager.applyZoneStyle(zoneType);
@@ -123,7 +123,7 @@ describe('StyleManager', () => {
     it('should combine different timeframe styles with zone types', () => {
       // Test with different timeframe config
       const zoneType = 'SZ';
-      const mockTimeFrameConfig = new TimeFrameConfig('W', 'H', 3);
+      const mockTimeFrameConfig = { code: TickerTimeframe.WK, label: 'W', rank: 4, toolbar: 3, style: 'H' };
       mockTimeFrameManager.getCurrentTimeFrameConfig.mockReturnValue(mockTimeFrameConfig);
 
       styleManager.applyZoneStyle(zoneType);
@@ -134,7 +134,7 @@ describe('StyleManager', () => {
 
     it('should handle empty zone type', () => {
       const zoneType = '';
-      const mockTimeFrameConfig = new TimeFrameConfig('M', 'VH', 4);
+      const mockTimeFrameConfig = { code: TickerTimeframe.MN, label: 'M', rank: 3, toolbar: 4, style: 'VH' };
       mockTimeFrameManager.getCurrentTimeFrameConfig.mockReturnValue(mockTimeFrameConfig);
 
       styleManager.applyZoneStyle(zoneType);
@@ -242,7 +242,7 @@ describe('StyleManager', () => {
 
     it('should handle zone style application workflow', () => {
       const zoneType = Constants.TRADING.ZONES.DEMAND;
-      const mockTimeFrameConfig = new TimeFrameConfig('D', 'I', 2);
+      const mockTimeFrameConfig = { code: TickerTimeframe.DL, label: 'D', rank: 5, toolbar: 2, style: 'I' };
       mockTimeFrameManager.getCurrentTimeFrameConfig.mockReturnValue(mockTimeFrameConfig);
 
       styleManager.applyZoneStyle(zoneType);
@@ -380,10 +380,10 @@ describe('StyleManager', () => {
     });
 
     it('should handle zone style with various timeframe configurations', () => {
-      const configs = [
-        new TimeFrameConfig('D', 'I', 1),
-        new TimeFrameConfig('W', 'H', 2),
-        new TimeFrameConfig('M', 'VH', 3),
+      const configs: Timeframe[] = [
+        { code: TickerTimeframe.DL, label: 'D', rank: 5, toolbar: 1, style: 'I' },
+        { code: TickerTimeframe.WK, label: 'W', rank: 4, toolbar: 2, style: 'H' },
+        { code: TickerTimeframe.MN, label: 'M', rank: 3, toolbar: 3, style: 'VH' },
       ];
 
       configs.forEach((config) => {
