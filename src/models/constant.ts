@@ -257,7 +257,7 @@ Support:
     } as Record<string, TimeFrameConfig>,
 
     // NOTE: Legacy journal sequence field is derived via
-    // getLegacyJournalSequenceFromTimeframes() in timeframe.ts.
+    // timeframeManager.getLegacyJournalSequenceFromTimeframes() in manager/timeframe.ts.
   },
 
   MISC: {

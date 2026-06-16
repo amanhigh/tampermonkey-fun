@@ -6,7 +6,7 @@
  * with a clear, singular backend update payload.
  */
 
-import { TickerUpdateRequest } from './ticker';
+import { TickerUpdateRequest, TickerState, TickerType } from './ticker';
 
 // ── Category Identifier ──
 
@@ -76,7 +76,7 @@ export const ALL_WATCH_CATEGORIES: readonly WatchCategory[] = [
     id: WatchCategoryId.READY,
     color: 'red',
     label: 'Ready',
-    recordUpdate: { state: 'READY' },
+    recordUpdate: { state: TickerState.READY },
   },
   {
     id: WatchCategoryId.LONG_NSE,
@@ -106,7 +106,7 @@ export const ALL_WATCH_CATEGORIES: readonly WatchCategory[] = [
     id: WatchCategoryId.INDEX,
     color: 'brown',
     label: 'Index',
-    recordUpdate: { type: 'INDEX' },
+    recordUpdate: { type: TickerType.INDEX },
   },
   {
     id: WatchCategoryId.COMPOSITE,
@@ -118,6 +118,6 @@ export const ALL_WATCH_CATEGORIES: readonly WatchCategory[] = [
     id: WatchCategoryId.BLACKLISTED,
     color: 'dimgrey',
     label: 'Blacklisted',
-    recordUpdate: { state: 'BLACKLIST' },
+    recordUpdate: { state: TickerState.BLACKLIST },
   },
 ] as const;

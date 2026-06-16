@@ -1,5 +1,5 @@
 import { Constants } from '../models/constant';
-import { Ticker } from '../models/ticker';
+import { Ticker, TickerType, TickerState, TickerTrend } from '../models/ticker';
 import { ALL_WATCH_CATEGORIES, WatchCategory, WatchCategoryId } from '../models/watch';
 import { ALL_FLAG_CATEGORIES, FlagCategory, FlagCategoryId } from '../models/flag';
 
@@ -34,16 +34,16 @@ export class WatchClassifier {
    */
   static findByTicker(ticker: Ticker): WatchCategory | undefined {
     // BLACKLIST state takes highest priority
-    if (ticker.state === 'BLACKLIST') {
+    if (ticker.state === TickerState.BLACKLIST) {
       return this.findById(WatchCategoryId.BLACKLISTED);
     }
 
     // READY
-    if (ticker.state === 'READY') {
+    if (ticker.state === TickerState.READY) {
       return this.findById(WatchCategoryId.READY);
     }
 
-    if (ticker.type === 'COMPOSITE') {
+    if (ticker.type === TickerType.COMPOSITE) {
       // Composite instruments (type takes priority over timeframe-based classification)
       return this.findById(WatchCategoryId.COMPOSITE);
     }
@@ -137,7 +137,7 @@ export class FlagClassifier {
    * Check whether a ticker type is a market instrument (INDEX, COMPOSITE, COMMODITY, FX, BOND).
    */
   private static isMarket(ticker: Ticker): boolean {
-    return Constants.FLAGS.INDEX_TICKER_TYPES.includes(ticker.type) || ticker.type === 'COMPOSITE';
+    return Constants.FLAGS.INDEX_TICKER_TYPES.includes(ticker.type) || ticker.type === TickerType.COMPOSITE;
   }
 
   /**
@@ -150,13 +150,13 @@ export class FlagClassifier {
       case FlagCategoryId.INDEX:
         return this.isMarket(ticker);
       case FlagCategoryId.CRYPTO:
-        return ticker.type === 'CRYPTO';
+        return ticker.type === TickerType.CRYPTO;
       case FlagCategoryId.UPTREND:
-        return ticker.trend === 'UPTREND';
+        return ticker.trend === TickerTrend.UPTREND;
       case FlagCategoryId.SIDEWAYS:
-        return ticker.trend === 'SIDEWAYS';
+        return ticker.trend === TickerTrend.SIDEWAYS;
       case FlagCategoryId.DOWNTREND:
-        return ticker.trend === 'DOWNTREND';
+        return ticker.trend === TickerTrend.DOWNTREND;
       default:
         return false;
     }

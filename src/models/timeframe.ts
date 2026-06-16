@@ -101,24 +101,6 @@ export function normalizeTimeframes(codes: string[]): TickerTimeframe[] {
 }
 
 /**
- * Returns the default persisted timeframe list based on exchange.
- *
- * - NSE → TMN, MN, WK, DL  (MWD type)
- * - All other exchanges → YR, SMN, TMN, MN, WK  (YR type)
- *
- * Used when starting tracking for a new ticker.
- *
- * @param exchange - Exchange code (e.g. "NSE", "BSE", "NASDAQ")
- * @returns Default ordered timeframe codes for the exchange
- */
-export function getDefaultTimeframesForExchange(exchange: string): TickerTimeframe[] {
-  if (exchange.toUpperCase() === 'NSE') {
-    return ['TMN', 'MN', 'WK', 'DL'];
-  }
-  return ['YR', 'SMN', 'TMN', 'MN', 'WK'];
-}
-
-/**
  * Derives a 4-frame Sequence from the backend ticker timeframe list.
  *
  * Rules:
@@ -157,24 +139,6 @@ export function deriveSequence(timeframes: string[]): Sequence {
     result.push(CANONICAL_TIMEFRAMES[i]);
   }
   return result as unknown as Sequence;
-}
-
-/**
- * Derives the legacy journal API sequence string from a list of timeframe codes.
- *
- * Current rule (simplified): if the list contains 'DL', return 'MWD';
- * otherwise return 'YR'.
- *
- * FIXME: Replace this heuristic with user-prompted selection or backend-provided type.
- *
- * @param timeframes - Timeframe codes (e.g. from screenshot images)
- * @returns 'MWD' or 'YR' for the legacy journal API
- */
-export function getLegacyJournalSequenceFromTimeframes(timeframes: string[]): 'MWD' | 'YR' {
-  if (timeframes.includes('DL')) {
-    return 'MWD';
-  }
-  return 'YR';
 }
 
 /**

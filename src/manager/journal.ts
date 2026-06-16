@@ -15,7 +15,6 @@ import {
 import { ScreenshotResponse } from '../models/os';
 import { Constants } from '../models/constant';
 import { JournalOpenEvent } from '../models/events';
-import { getLegacyJournalSequenceFromTimeframes } from '../models/timeframe';
 
 /**
  * Interface for managing trading journal operations
@@ -106,7 +105,7 @@ export class JournalManager implements IJournalManager {
       .filter((t): t is JournalApiTimeframe => t !== undefined);
     const request: CreateJournalRequest = {
       ticker: input.ticker.toUpperCase(),
-      sequence: getLegacyJournalSequenceFromTimeframes(screenshotCodes),
+      sequence: this.timeframeManager.getLegacyJournalSequenceFromTimeframes(screenshotCodes),
       type: input.type,
       status: input.status,
       images: input.screenshots.map((screenshot) => ({

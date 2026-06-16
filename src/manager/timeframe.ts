@@ -54,6 +54,32 @@ export interface ITimeFrameManager {
   getTimeFrameConfigByCode(code: string): TimeFrameConfig | null;
 
   /**
+   * Returns the default persisted timeframe list based on exchange.
+   *
+   * - NSE → TMN, MN, WK, DL  (MWD type)
+   * - All other exchanges → YR, SMN, TMN, MN, WK  (YR type)
+   *
+   * Used when starting tracking for a new ticker.
+   *
+   * @param exchange - Exchange code (e.g. "NSE", "BSE", "NASDAQ")
+   * @returns Default ordered timeframe codes for the exchange
+   */
+  getDefaultTimeframesForExchange(exchange: string): TickerTimeframe[];
+
+  /**
+   * Derives the legacy journal API sequence string from a list of timeframe codes.
+   *
+   * Current rule (simplified): if the list contains 'DL', return 'MWD';
+   * otherwise return 'YR'.
+   *
+   * FIXME: Replace this heuristic with user-prompted selection or backend-provided type.
+   *
+   * @param timeframes - Timeframe codes (e.g. from screenshot images)
+   * @returns 'MWD' or 'YR' for the legacy journal API
+   */
+  getLegacyJournalSequenceFromTimeframes(timeframes: string[]): 'MWD' | 'YR';
+
+  /**
    * Toggle a timeframe code for the current ticker on/off in the backend.
    * If the code is already active, it is removed; if inactive, it is added.
    * Updates are persisted via TickerManager.updateTicker.
@@ -130,6 +156,22 @@ export class TimeFrameManager implements ITimeFrameManager {
     });
 
     return sorted;
+  }
+
+  /** @inheritdoc */
+  getDefaultTimeframesForExchange(exchange: string): TickerTimeframe[] {
+    if (exchange.toUpperCase() === 'NSE') {
+      return ['TMN', 'MN', 'WK', 'DL'];
+    }
+    return ['YR', 'SMN', 'TMN', 'MN', 'WK'];
+  }
+
+  /** @inheritdoc */
+  getLegacyJournalSequenceFromTimeframes(timeframes: string[]): 'MWD' | 'YR' {
+    if (timeframes.includes('DL')) {
+      return 'MWD';
+    }
+    return 'YR';
   }
 
   /** @inheritdoc */

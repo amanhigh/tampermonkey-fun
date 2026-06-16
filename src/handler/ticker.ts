@@ -4,7 +4,8 @@ import { ITickerManager } from '../manager/ticker';
 import { ILifecycleManager } from '../manager/lifecycle';
 import { IStyleManager } from '../manager/style';
 import { IAlertTickerHandler } from './alert_ticker';
-import { getDefaultTimeframesForExchange } from '../models/timeframe';
+import { ITimeFrameManager } from '../manager/timeframe';
+import { TickerType, TickerState, TickerTrend } from '../models/ticker';
 
 /**
  * Interface for managing ticker operations
@@ -49,7 +50,8 @@ export class TickerHandler implements ITickerHandler {
     private readonly styleManager: IStyleManager,
     private readonly tickerManager: ITickerManager,
     private readonly lifecycleManager: ILifecycleManager,
-    private readonly alertTickerHandler: IAlertTickerHandler
+    private readonly alertTickerHandler: IAlertTickerHandler,
+    private readonly timeFrameManager: ITimeFrameManager
   ) {}
 
   /** @inheritdoc */
@@ -84,16 +86,16 @@ export class TickerHandler implements ITickerHandler {
   public async startTracking(): Promise<void> {
     const ticker = this.domManager.getTicker();
     const exchange = this.domManager.getCurrentExchange();
-    const timeframes = getDefaultTimeframesForExchange(exchange);
+    const timeframes = this.timeFrameManager.getDefaultTimeframesForExchange(exchange);
 
     try {
       await this.lifecycleManager.startTracking({
         ticker,
         exchange,
         timeframes,
-        type: 'EQUITY',
-        state: 'WATCHED',
-        trend: 'SIDEWAYS',
+        type: TickerType.EQUITY,
+        state: TickerState.WATCHED,
+        trend: TickerTrend.SIDEWAYS,
         last_opened_at: new Date().toISOString(),
       });
       Notifier.success(`⏺ Started tracking ${ticker}`);
