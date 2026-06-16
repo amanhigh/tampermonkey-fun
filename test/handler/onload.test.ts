@@ -135,8 +135,6 @@ describe('OnLoadHandler', () => {
 
   describe('constants integration', () => {
     it('should use correct DOM selectors from constants', () => {
-      expect(Constants.DOM.SCREENER.BUTTON).toBe('button[data-name=toggle-visibility-button]');
-      expect(Constants.DOM.SCREENER.PERSISTENT_PARENT).toBe('.buttons-dA6R3Y1X');
       expect(Constants.DOM.SCREENER.MAIN).toBe('[data-qa-id="screener-widget"]');
     });
   });

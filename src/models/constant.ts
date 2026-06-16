@@ -13,10 +13,6 @@ const KOHAN_PORTS = {
 export const Constants = Object.freeze({
   // Audit Configuration
   AUDIT: {
-    IDS: {
-      AREA: 'aman-audit', // Audit area container
-      GLOBAL_REFRESH_BUTTON: 'aman-audit-global-refresh', // Global refresh button for all audits
-    },
     CLASSES: {
       SECTION: 'aman-audit-section', // Main audit section container
       STATUS_PASS: 'audit-status-pass', // When no issues found
@@ -86,7 +82,6 @@ export const Constants = Object.freeze({
       },
       INPUTS: {
         COMMAND: 'aman-input', // Old Name: inputId
-        ENTER_KEY_CODE: 13, // Old Name: ENTER_KEY_CODE
       },
       BUTTONS: {
         SEQUENCE: 'aman-seq', // Old Name: seqId
@@ -226,10 +221,6 @@ Support:
   // Storage keys for persistent data
   STORAGE: {
     SILOS: {
-      DATA: 'dataSilo', // Old Name: dataSiloStore
-      ORDER_INFO: 'orderSilo', // Old Name: orderInfoStore
-      FLAG_INFO: 'flagSilo', // Old Name: flagInfoStore
-      PAIR_MAP: 'pairSilo', // Old Name: pairMapStore
       WATCHLIST: 'watchlistSilo', // Current TradingView watchlist ticker snapshot
     },
     EVENTS: {
@@ -245,8 +236,6 @@ Support:
   // Time frame and sequence configurations
   TIME: {
     SEQUENCE_TYPES: {
-      DEFAULT: SequenceType.MWD,
-      HIGH: SequenceType.YR,
       FRAMES: {
         [TimeFrame.DAILY]: new TimeFrameConfig('DL', 'I', 2),
         [TimeFrame.WEEKLY]: new TimeFrameConfig('WK', 'H', 3),
