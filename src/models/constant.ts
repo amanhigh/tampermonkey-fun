@@ -76,7 +76,6 @@ export const Constants = Object.freeze({
         AUDIT: 'aman-audit', // Old Name: auditId
         ORDERS: 'aman-orders', // Old Name: ordersId
         JOURNAL: 'aman-journal', // Old Name: journalId
-        FLASH: 'aman-flash', // Old Name: flashId
       },
       DISPLAY: {
         CARD: 'aman-display', // Old Name: displayId (was INPUTS.DISPLAY)
@@ -124,12 +123,8 @@ export const Constants = Object.freeze({
       CLOSE_TEXTBOX: 'button:contains("Ok")', // Old name: closeTextboxSelector
       AUTO_ALERT: "span:contains('Copy price')", // Old name: autoAlertSelector
     },
-    REPLAY: {
-      PLAY_PAUSE: 'div[class*=replayToolbar] span[class*=icon]:nth(1)', // Old name: replayPlayPauseSelector
-    },
     ORDER_PANEL: {
       CLOSE: 'button[data-name="close"]', // Old name: orderPanelCloseSelector
-      GTT_BUTTON: '[data-role="gtt-button"]',
       INPUTS: {
         ENTRY_PRICE: 'input[data-property-id*="EntryPrice"]',
         PROFIT_PRICE: 'input[data-property-id*="ProfitLevelPrice"]',
@@ -142,9 +137,7 @@ export const Constants = Object.freeze({
       MAIN: '[data-qa-id="screener-widget"]', // Old name: screenerSelector
       LINE: 'tr.row-RdUXZpkv', // Old name: screenerLineSelector
       ITEM: 'tr.row-RdUXZpkv', // Screener item selector for flag painting
-      BUTTON: 'button[data-name=toggle-visibility-button]', // Old name: screenerButtonSelector
       SELECTED: '.tv-screener-table__result-row--selected', // Old name: screenerSelectedSelector
-      PERSISTENT_PARENT: '.buttons-dA6R3Y1X', // Persistent parent for observer
     },
     WATCHLIST: {
       SYMBOL: 'span[class*=symbolNameText]', // Old Name: watchListSymbolSelector
@@ -303,7 +296,6 @@ Support:
     TYPES: {
       NSE: 'NSE', // Old Name: NSE_EXCHANGE
     },
-    PREFERRED: ['NSE', 'NYSE', 'NASDAQ'],
   },
   COMPOSITE: {
     /** Characters that indicate a composite symbol */
