@@ -5,7 +5,6 @@ import { IUIUtil } from '../util/ui';
 import { IPublisher } from './event_bus';
 import { IDomManager } from './dom';
 import { ALL_WATCH_CATEGORIES, BucketSummary } from '../models/watch';
-import { WatchlistSnapshot } from '../models/watch';
 import { DomainEventType } from '../models/domain_event';
 
 /** Mouse button codes for filtering */
@@ -40,13 +39,6 @@ export interface ITradingViewWatchlistManager {
    * (e.g. category hotkeys).
    */
   refreshSummary(): Promise<void>;
-
-  /**
-   * Read the current watchlist ticker snapshot from GM storage.
-   * Used by AlertFeedManager on Investing.com to determine WATCHED state.
-   * @returns Promise resolving to a Set of TV ticker symbols in the current watchlist
-   */
-  getWatchlistTickers(): Promise<Set<string>>;
 }
 
 /**
@@ -79,9 +71,6 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   async refresh(): Promise<void> {
     this.resetWatchList();
 
-    // Persist current watchlist DOM tickers for cross-context alert feed
-    await this.persistWatchlistSnapshot();
-
     // Delegate all ticker painting (symbols, flags, FNO) to PaintManager
     await this.paintManager.paint();
 
@@ -105,27 +94,6 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
 
     // Re-apply active filters
     this.applyFilters();
-  }
-
-  /**
-   * Persist all tickers currently in the TradingView watchlist DOM to GM storage.
-   * Used by AlertFeedManager on Investing.com to determine WATCHED state.
-   */
-  private async persistWatchlistSnapshot(): Promise<void> {
-    const tickers = this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL);
-    const snapshot = new WatchlistSnapshot([...tickers]);
-    await GM.setValue(Constants.STORAGE.SILOS.WATCHLIST, snapshot.stringify());
-  }
-
-  /** @inheritdoc */
-  async getWatchlistTickers(): Promise<Set<string>> {
-    try {
-      const value = (await GM.getValue(Constants.STORAGE.SILOS.WATCHLIST, '')) as string;
-      const snapshot = WatchlistSnapshot.fromString(value);
-      return new Set(snapshot.tickers);
-    } catch {
-      return new Set();
-    }
   }
 
   /**

@@ -1,7 +1,7 @@
 import { AlertFeedEvent, FeedInfo, FeedState } from '../models/alertfeed';
 import { Constants } from '../models/constant';
+import { ICategoryManager } from './category';
 import { IRecentManager } from './recent';
-import { ITradingViewWatchlistManager } from './watchlist';
 
 /**
  * Interface for managing alert feed state.
@@ -41,8 +41,8 @@ export interface IAlertFeedManager {
  */
 export class AlertFeedManager implements IAlertFeedManager {
   constructor(
-    private readonly recentManager: IRecentManager,
-    private readonly watchlistManager: ITradingViewWatchlistManager
+    private readonly categoryManager: ICategoryManager,
+    private readonly recentManager: IRecentManager
   ) {}
 
   /** @inheritdoc */
@@ -51,9 +51,9 @@ export class AlertFeedManager implements IAlertFeedManager {
       return { state: FeedState.UNMAPPED, color: 'red' };
     }
 
-    // Check if ticker exists in current TradingView watchlist DOM snapshot
-    const watchlistTickers = await this.watchlistManager.getWatchlistTickers();
-    if (watchlistTickers.has(ticker)) {
+    // Check if ticker belongs to any watch category (backend-on-demand)
+    const { watch: category } = await this.categoryManager.getTickerCategory(ticker);
+    if (category) {
       return { state: FeedState.WATCHED, color: 'yellow' };
     }
 
