@@ -38,7 +38,7 @@ describe('StyleManager', () => {
     mockTimeFrameManager = {
       applyTimeFrame: jest.fn(),
       getCurrentTimeFrameConfig: jest.fn(),
-      getTimeFrameConfigByCode: jest.fn(),
+      getTimeframeCodes: jest.fn(),
       getExactTimeframesForCurrentTicker: jest.fn(),
       getSequenceForCurrentTicker: jest.fn(),
       toggleTimeframeForCurrentTicker: jest.fn(),

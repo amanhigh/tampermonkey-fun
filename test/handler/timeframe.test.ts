@@ -68,7 +68,10 @@ describe('TimeFrameHandler', () => {
     mockTimeFrameManager = {
       applyTimeFrame: jest.fn(),
       getCurrentTimeFrameConfig: jest.fn(),
-      getTimeFrameConfigByCode: jest.fn(),
+      getTimeframeCodes: jest.fn().mockReturnValue([
+        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN,
+        TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL,
+      ]),
       getExactTimeframesForCurrentTicker: jest.fn().mockResolvedValue(['TMN', 'MN', 'WK', 'DL']),
       getSequenceForCurrentTicker: jest.fn(),
       toggleTimeframeForCurrentTicker: jest.fn(),
@@ -218,8 +221,8 @@ describe('TimeFrameHandler', () => {
     });
 
     it('should show warning and re-render when toggle fails', async () => {
-      mockTimeFrameManager.toggleTimeframeForCurrentTicker.mockReturnValue(
-        Promise.reject(new Error('Network error'))
+      mockTimeFrameManager.toggleTimeframeForCurrentTicker.mockRejectedValue(
+        new Error('Network error')
       );
 
       await handler.render();
