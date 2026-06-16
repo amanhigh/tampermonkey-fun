@@ -230,7 +230,6 @@ describe('TimeFrameManager', () => {
       expect(mockPublisher.publish).toHaveBeenCalledWith({
         type: DomainEventType.TICKER_TIMEFRAMES_CHANGED,
         ticker: 'AAPL',
-        timeframes: ['TMN', 'MN', 'WK', 'DL'],
       });
     });
 

@@ -152,7 +152,6 @@ export class TimeFrameManager implements ITimeFrameManager {
     void this.publisher.publish({
       type: DomainEventType.TICKER_TIMEFRAMES_CHANGED,
       ticker: tvTicker,
-      timeframes: sorted,
     });
 
     return sorted;

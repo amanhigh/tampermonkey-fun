@@ -2,8 +2,6 @@
  * Enum for domain event types used across the application.
  * These are in-process events that trigger side effects / UI refreshes.
  */
-import { TickerTimeframe } from './timeframe';
-
 export enum DomainEventType {
   ALERT_TICKER_LINKED = 'ALERT_TICKER_LINKED',
   ALERT_TICKER_DELETED = 'ALERT_TICKER_DELETED',
@@ -29,17 +27,6 @@ export interface TickerPayload {
  */
 export interface TickersPayload {
   tickers: string[];
-}
-
-/**
- * Payload containing a ticker and its associated timeframe codes.
- * Used by TICKER_TIMEFRAMES_CHANGED.
- */
-export interface TimeframesPayload {
-  /** TV/backend ticker string. */
-  ticker: string;
-  /** Updated timeframe codes from the backend. */
-  timeframes: TickerTimeframe[];
 }
 
 /**
@@ -79,7 +66,7 @@ export interface TickerCategoryChangedEvent
 export interface WatchlistChangedEvent extends DomainEventBase<DomainEventType.WATCHLIST_CHANGED>, TickerPayload {}
 
 export interface TickerTimeframesChangedEvent
-  extends DomainEventBase<DomainEventType.TICKER_TIMEFRAMES_CHANGED>, TimeframesPayload {}
+  extends DomainEventBase<DomainEventType.TICKER_TIMEFRAMES_CHANGED>, TickerPayload {}
 
 export interface TickerChangedEvent extends DomainEventBase<DomainEventType.TICKER_CHANGED>, TickerPayload {}
 
