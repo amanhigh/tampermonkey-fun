@@ -2,6 +2,7 @@ import { CategoryManager, ICategoryManager } from '../../src/manager/category';
 import { ITickerManager } from '../../src/manager/ticker';
 import { IJournalManager } from '../../src/manager/journal';
 import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/ticker';
+import { TickerTimeframe } from '../../src/models/timeframe';
 import { WatchCategoryId } from '../../src/models/watch';
 import { FlagCategoryId } from '../../src/models/flag';
 import { IPublisher } from '../../src/manager/event_bus';

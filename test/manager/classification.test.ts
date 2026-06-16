@@ -3,6 +3,7 @@ import {
   FlagClassifier,
 } from '../../src/manager/classification';
 import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/ticker';
+import { TickerTimeframe } from '../../src/models/timeframe';
 import { WatchCategoryId } from '../../src/models/watch';
 import { FlagCategoryId } from '../../src/models/flag';
 

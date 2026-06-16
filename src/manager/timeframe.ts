@@ -6,6 +6,8 @@ import {
   DEFAULT_SEQUENCE,
   deriveSequence,
   sortTimeframesForDisplay,
+  DISPLAY_TIMEFRAMES,
+  CANONICAL_TIMEFRAMES,
 } from '../models/timeframe';
 import { DomainEventType } from '../models/domain_event';
 import { Notifier } from '../util/notify';
@@ -160,9 +162,9 @@ export class TimeFrameManager implements ITimeFrameManager {
   /** @inheritdoc */
   getDefaultTimeframesForExchange(exchange: string): TickerTimeframe[] {
     if (exchange.toUpperCase() === 'NSE') {
-      return ['TMN', 'MN', 'WK', 'DL'];
+      return [...CANONICAL_TIMEFRAMES];
     }
-    return ['YR', 'SMN', 'TMN', 'MN', 'WK'];
+    return DISPLAY_TIMEFRAMES.filter((tf) => tf !== TickerTimeframe.DL);
   }
 
   /** @inheritdoc */
