@@ -213,6 +213,9 @@ export class JournalManager implements IJournalManager {
     const screenshotType = type.toLowerCase();
 
     for (let position = 0; position < sequence.length; position++) {
+      // BUG 3.10: Ignored return value from applyTimeFrame() — when a timeframe is
+      // deactivated, applyTimeFrame returns false silently and screenshot proceeds
+      // on the wrong timeframe. Must warn user and skip the deactivated position.
       await this.timeframeManager.applyTimeFrame(position);
       const code = sequence[position];
       const order = position + 1;
