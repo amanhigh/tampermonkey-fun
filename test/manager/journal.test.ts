@@ -76,6 +76,10 @@ describe('JournalManager', () => {
       ),
       getTimeFrameConfigByCode: jest.fn(),
       toggleTimeframeForCurrentTicker: jest.fn(),
+      getDefaultTimeframesForExchange: jest.fn(),
+      getLegacyJournalSequenceFromTimeframes: jest.fn().mockImplementation(
+        (timeframes: string[]) => timeframes.includes('DL') ? 'MWD' as any : 'YR' as any
+      ),
     } as unknown as jest.Mocked<ITimeFrameManager>;
 
     journalManager = new JournalManager(mockJournalClient, mockOsClient, mockTimeFrameManager);

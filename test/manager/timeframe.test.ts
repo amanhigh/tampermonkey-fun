@@ -2,7 +2,7 @@ import { TimeFrameManager, ITimeFrameManager } from '../../src/manager/timeframe
 import { ITickerManager } from '../../src/manager/ticker';
 import { IDomManager } from '../../src/manager/dom';
 import { IPublisher } from '../../src/manager/event_bus';
-import { Ticker } from '../../src/models/ticker';
+import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/ticker';
 import { Constants } from '../../src/models/constant';
 import { Notifier } from '../../src/util/notify';
 import { Sequence, DEFAULT_SEQUENCE } from '../../src/models/timeframe';
@@ -34,9 +34,9 @@ describe('TimeFrameManager', () => {
       ticker: 'TEST',
       exchange: 'NSE',
       timeframes: ['TMN', 'MN', 'WK', 'DL'],
-      type: 'EQUITY',
-      state: 'WATCHED',
-      trend: 'UPTREND',
+      type: TickerType.EQUITY,
+      state: TickerState.WATCHED,
+      trend: TickerTrend.UPTREND,
       last_opened_at: '2024-01-01T00:00:00Z',
       is_fno: false,
       ...overrides,

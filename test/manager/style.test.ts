@@ -42,6 +42,8 @@ describe('StyleManager', () => {
       getExactTimeframesForCurrentTicker: jest.fn(),
       getSequenceForCurrentTicker: jest.fn(),
       toggleTimeframeForCurrentTicker: jest.fn(),
+      getDefaultTimeframesForExchange: jest.fn(),
+      getLegacyJournalSequenceFromTimeframes: jest.fn(),
     };
 
     styleManager = new StyleManager(mockWaitUtil, mockTimeFrameManager);
