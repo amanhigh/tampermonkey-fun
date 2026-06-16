@@ -99,7 +99,7 @@ describe('TimeFrameHandler', () => {
 
     it('should mark backend-active chips with active class', async () => {
       mockTimeFrameManager.getExactTimeframesForCurrentTicker.mockResolvedValue([
-        'TMN', 'MN', 'WK', 'DL',
+        TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL,
       ]);
 
       await handler.render();
@@ -115,7 +115,7 @@ describe('TimeFrameHandler', () => {
 
     it('should mark non-backend chips with inactive class', async () => {
       mockTimeFrameManager.getExactTimeframesForCurrentTicker.mockResolvedValue([
-        'TMN', 'MN', 'WK', 'DL',
+        TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL,
       ]);
 
       await handler.render();
@@ -197,9 +197,9 @@ describe('TimeFrameHandler', () => {
     it('should toggle active chip through TimeFrameManager', async () => {
       await handler.render();
 
-      simulateChipClick('WK');
+      simulateChipClick(TickerTimeframe.WK);
 
-      expect(mockTimeFrameManager.toggleTimeframeForCurrentTicker).toHaveBeenCalledWith('WK');
+      expect(mockTimeFrameManager.toggleTimeframeForCurrentTicker).toHaveBeenCalledWith(TickerTimeframe.WK);
     });
 
     it('should stop event propagation to prevent display card toggle', async () => {

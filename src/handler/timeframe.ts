@@ -1,7 +1,7 @@
 import { ITimeFrameManager } from '../manager/timeframe';
 import { ISubscriber, IDomainEventConsumer } from '../manager/event_bus';
 import { DomainEventType } from '../models/domain_event';
-import { TickerTimeframe, DISPLAY_TIMEFRAMES } from '../models/timeframe';
+import { TickerTimeframe, TIMEFRAMES } from '../models/timeframe';
 import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 
@@ -84,7 +84,7 @@ export class TimeFrameHandler implements ITimeFrameHandler {
    * @param activeSet - Set of backend-active timeframe codes
    */
   private buildChipsHtml(activeSet: Set<TickerTimeframe>): string {
-    return DISPLAY_TIMEFRAMES.map((code) => this.buildChip(code, activeSet.has(code))).join('');
+    return TIMEFRAMES.map((tf) => this.buildChip(tf.code, activeSet.has(tf.code))).join('');
   }
 
   /**

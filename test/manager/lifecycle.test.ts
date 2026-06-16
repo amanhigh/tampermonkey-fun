@@ -83,7 +83,7 @@ describe('LifecycleManager', () => {
       const data: StartTrackingRequest = {
         ticker: 'RELIANCE',
         exchange: 'NSE',
-        timeframes: ['MN', 'WK', 'DL'],
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
         type: TickerType.EQUITY,
         state: TickerState.WATCHED,
         trend: TickerTrend.SIDEWAYS,
@@ -104,7 +104,7 @@ describe('LifecycleManager', () => {
       await manager.startTracking({
         ticker: 'RELIANCE',
         exchange: 'NSE',
-        timeframes: ['MN', 'WK', 'DL'],
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
         type: TickerType.EQUITY,
         state: TickerState.WATCHED,
         trend: TickerTrend.SIDEWAYS,

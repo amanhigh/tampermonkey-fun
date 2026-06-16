@@ -56,7 +56,7 @@ describe('TickerClient', () => {
         data: {
           ticker: 'MCX',
           exchange: 'NSE',
-          timeframes: ['MN', 'WK', 'DL'],
+          timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
           type: TickerType.EQUITY,
           state: TickerState.WATCHED,
           trend: TickerTrend.UPTREND,
@@ -72,7 +72,7 @@ describe('TickerClient', () => {
       const result = await tickerClient.createTicker({
         ticker: 'MCX',
         exchange: 'NSE',
-        timeframes: ['MN', 'WK', 'DL'],
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
         type: TickerType.EQUITY,
         state: TickerState.WATCHED,
         trend: TickerTrend.UPTREND,
@@ -86,7 +86,7 @@ describe('TickerClient', () => {
         data: JSON.stringify({
           ticker: 'MCX',
           exchange: 'NSE',
-          timeframes: ['MN', 'WK', 'DL'],
+          timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
           type: TickerType.EQUITY,
           state: TickerState.WATCHED,
           trend: TickerTrend.UPTREND,
@@ -104,7 +104,7 @@ describe('TickerClient', () => {
         tickerClient.createTicker({
           ticker: 'MCX',
           exchange: 'NSE',
-          timeframes: ['MN'],
+          timeframes: [TickerTimeframe.MN],
           type: TickerType.EQUITY,
           state: TickerState.WATCHED,
           trend: TickerTrend.UPTREND,
@@ -378,7 +378,7 @@ describe('TickerClient', () => {
         tickerClient.createTicker({
           ticker: 'MCX',
           exchange: 'NSE',
-          timeframes: ['MN'],
+          timeframes: [TickerTimeframe.MN],
           type: TickerType.EQUITY,
           state: TickerState.WATCHED,
           trend: TickerTrend.UPTREND,

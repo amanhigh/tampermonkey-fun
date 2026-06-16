@@ -5,7 +5,7 @@ import { IPublisher } from '../../src/manager/event_bus';
 import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/ticker';
 import { Constants } from '../../src/models/constant';
 import { Notifier } from '../../src/util/notify';
-import { Sequence, DEFAULT_SEQUENCE } from '../../src/models/timeframe';
+import { Sequence, DEFAULT_SEQUENCE, TickerTimeframe, getTimeframeByCode } from '../../src/models/timeframe';
 import { DomainEventType } from '../../src/models/domain_event';
 
 // Mock jQuery with simplified approach - avoid complex interface typing
@@ -85,12 +85,12 @@ describe('TimeFrameManager', () => {
   describe('getExactTimeframesForCurrentTicker', () => {
     it('should preserve exact backend timeframes including YR', async () => {
       mockTickerManager.getTicker.mockResolvedValue(
-        createMockTicker({ timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'] })
+        createMockTicker({ timeframes: [        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK] })
       );
 
       const result = await timeFrameManager.getExactTimeframesForCurrentTicker();
 
-      expect(result).toEqual(['YR', 'SMN', 'TMN', 'MN', 'WK']);
+      expect(result).toEqual([        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK]);
     });
 
     it('should sort exact backend timeframes in canonical order including YR', async () => {
@@ -101,7 +101,7 @@ describe('TimeFrameManager', () => {
       const result = await timeFrameManager.getExactTimeframesForCurrentTicker();
 
       // Canonical with YR: YR, SMN, TMN, MN, WK, DL
-      expect(result).toEqual(['YR', 'SMN', 'TMN', 'MN', 'WK', 'DL']);
+      expect(result).toEqual([        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, 'DL']);
     });
 
     it('should fall back to default timeframes when backend read fails', async () => {
@@ -131,7 +131,7 @@ describe('TimeFrameManager', () => {
 
     it('should return SMN, TMN, MN, WK for YR, SMN, TMN, MN, WK backend list', async () => {
       mockTickerManager.getTicker.mockResolvedValue(
-        createMockTicker({ timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'] })
+        createMockTicker({ timeframes: [        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK] })
       );
 
       const result = await timeFrameManager.getSequenceForCurrentTicker();
@@ -189,7 +189,7 @@ describe('TimeFrameManager', () => {
       // DL should be added and sorted in display order
       expect(result).toEqual(['TMN', 'MN', 'WK', 'DL']);
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('AAPL', {
-        timeframes: ['TMN', 'MN', 'WK', 'DL'],
+      timeframes: [TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
       });
     });
 
@@ -214,9 +214,9 @@ describe('TimeFrameManager', () => {
       const result = await timeFrameManager.toggleTimeframeForCurrentTicker('MN');
 
       // YR should still be present, MN added in sorted order
-      expect(result).toEqual(['YR', 'SMN', 'TMN', 'MN', 'WK']);
+      expect(result).toEqual([        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK]);
       expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('AAPL', {
-        timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'],
+        timeframes: [        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK],
       });
     });
 
@@ -297,7 +297,7 @@ describe('TimeFrameManager', () => {
 
     it('should use backend Sequence when YR backend list is provided', async () => {
       mockTickerManager.getTicker.mockResolvedValue(
-        createMockTicker({ timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'] })
+        createMockTicker({ timeframes: [        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK] })
       );
       mockJQuery.mockReturnValue({ length: 1, click: jest.fn() });
 
@@ -485,14 +485,14 @@ describe('TimeFrameManager', () => {
 
     it('should verify exact vs Sequence consistency with YR backend timeframes', async () => {
       mockTickerManager.getTicker.mockResolvedValue(
-        createMockTicker({ timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'] })
+        createMockTicker({ timeframes: [        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK] })
       );
       const mockClick = jest.fn();
       mockJQuery.mockReturnValue({ length: 1, click: mockClick });
 
       // Exact includes YR
       const exact = await timeFrameManager.getExactTimeframesForCurrentTicker();
-      expect(exact).toEqual(['YR', 'SMN', 'TMN', 'MN', 'WK']);
+      expect(exact).toEqual([        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK]);
 
       // Sequence drops YR and uses SMN as top
       const sequence = await timeFrameManager.getSequenceForCurrentTicker();

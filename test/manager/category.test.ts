@@ -30,7 +30,7 @@ describe('CategoryManager', () => {
     const defaults: Partial<Ticker> = {
       ticker: 'TICKER',
       exchange: '',
-      timeframes: ['MN', 'WK', 'DL'],
+      timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
       type: TickerType.EQUITY,
       state: TickerState.WATCHED,
       trend: TickerTrend.SIDEWAYS,
@@ -149,7 +149,7 @@ describe('CategoryManager', () => {
 
     it('should return LONG_NSE watch for long-watch NSE ticker', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
-      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'LONG_NSE', exchange: 'NSE', timeframes: ['MN', 'WK'] }));
+      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'LONG_NSE', exchange: 'NSE', timeframes: [TickerTimeframe.MN, TickerTimeframe.WK] }));
 
       const result = await categoryManager.getTickerCategory('LONG_NSE');
 
@@ -158,7 +158,7 @@ describe('CategoryManager', () => {
 
     it('should return LONG_NON_NSE watch for long-watch non-NSE ticker', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
-      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'LONG_US', exchange: 'NASDAQ', timeframes: ['MN', 'WK'] }));
+      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'LONG_US', exchange: 'NASDAQ', timeframes: [TickerTimeframe.MN, TickerTimeframe.WK] }));
 
       const result = await categoryManager.getTickerCategory('LONG_US');
 
@@ -298,7 +298,7 @@ describe('CategoryManager', () => {
     it('should return flag even when watch is undefined', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'FLAG_ONLY', trend: TickerTrend.UPTREND, type: TickerType.EQUITY, state: TickerState.WATCHED, timeframes: ['MN', 'WK', 'DL'] })
+        makeTicker({ ticker: 'FLAG_ONLY', trend: TickerTrend.UPTREND, type: TickerType.EQUITY, state: TickerState.WATCHED, timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL] })
       );
 
       const result = await categoryManager.getTickerCategory('FLAG_ONLY');

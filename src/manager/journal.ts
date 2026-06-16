@@ -236,7 +236,7 @@ export class JournalManager implements IJournalManager {
 
   /** @inheritdoc */
   createReasonText(reason: string): string {
-    const timeframe = this.timeframeManager.getCurrentTimeFrameConfig().symbol;
+    const timeframe = this.timeframeManager.getCurrentTimeFrameConfig().code;
     return `${timeframe} - ${reason}`;
   }
 

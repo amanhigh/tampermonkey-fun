@@ -16,7 +16,7 @@ describe('WatchClassifier.findByTicker', () => {
     return new Ticker({
       ticker: 'TEST',
       exchange: '',
-      timeframes: ['MN', 'WK', 'DL'],
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
       type: TickerType.EQUITY,
       state: TickerState.WATCHED,
       trend: TickerTrend.SIDEWAYS,
@@ -35,7 +35,7 @@ describe('WatchClassifier.findByTicker', () => {
       const ticker = makeCatTicker({
         ticker: 'CNXMIDCAP/USDINR/XAUUSD*100',
         type: TickerType.COMPOSITE,
-        timeframes: ['SMN', 'TMN', 'MN', 'WK'],
+        timeframes: [TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK],
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.COMPOSITE);
@@ -46,7 +46,7 @@ describe('WatchClassifier.findByTicker', () => {
         ticker: 'NIFTY',
         type: TickerType.INDEX,
         exchange: 'NSE',
-        timeframes: ['MN', 'WK'],
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK],
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.INDEX);
@@ -56,7 +56,7 @@ describe('WatchClassifier.findByTicker', () => {
       const ticker = makeCatTicker({
         ticker: 'GOLD',
         type: TickerType.COMMODITY,
-        timeframes: ['MN', 'WK'],
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK],
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.INDEX);
@@ -66,7 +66,7 @@ describe('WatchClassifier.findByTicker', () => {
       const ticker = makeCatTicker({
         ticker: 'EURUSD',
         type: TickerType.FX,
-        timeframes: ['MN', 'WK'],
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK],
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.INDEX);
@@ -76,7 +76,7 @@ describe('WatchClassifier.findByTicker', () => {
       const ticker = makeCatTicker({
         ticker: 'US10Y',
         type: TickerType.BOND,
-        timeframes: ['MN', 'WK'],
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK],
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.INDEX);
@@ -87,7 +87,7 @@ describe('WatchClassifier.findByTicker', () => {
         ticker: 'RELIANCE',
         type: TickerType.EQUITY,
         exchange: 'NSE',
-        timeframes: ['MN', 'WK'],
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK],
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.LONG_NSE);
@@ -98,7 +98,7 @@ describe('WatchClassifier.findByTicker', () => {
         ticker: 'AAPL',
         type: TickerType.EQUITY,
         exchange: 'NASDAQ',
-        timeframes: ['MN', 'WK'],
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK],
       });
 
       expect(WatchClassifier.findByTicker(ticker)?.id).toBe(WatchCategoryId.LONG_NON_NSE);
@@ -109,7 +109,7 @@ describe('WatchClassifier.findByTicker', () => {
         ticker: 'DAILY',
         type: TickerType.EQUITY,
         exchange: 'NSE',
-        timeframes: ['MN', 'WK', 'DL'],
+      timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
       });
 
       expect(WatchClassifier.findByTicker(ticker)).toBeUndefined();

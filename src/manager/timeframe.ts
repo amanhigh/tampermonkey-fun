@@ -1,14 +1,15 @@
-import { Constants } from '../models/constant';
 import {
-  TimeFrameConfig,
+  Timeframe,
   TickerTimeframe,
   Sequence,
   DEFAULT_SEQUENCE,
   deriveSequence,
-  sortTimeframesForDisplay,
-  DISPLAY_TIMEFRAMES,
-  CANONICAL_TIMEFRAMES,
+  sortTimeframes,
+  getTimeframeByCode,
+  getTimeframeByToolbar,
+  TIMEFRAMES,
 } from '../models/timeframe';
+import { Constants } from '../models/constant';
 import { DomainEventType } from '../models/domain_event';
 import { Notifier } from '../util/notify';
 import { ITickerManager } from './ticker';
@@ -28,13 +29,13 @@ export interface ITimeFrameManager {
 
   /**
    * Get currently selected timeframe from the DOM toolbar.
-   * @returns Current timeframe configuration
+   * @returns Current timeframe metadata
    */
-  getCurrentTimeFrameConfig(): TimeFrameConfig;
+  getCurrentTimeFrameConfig(): Timeframe;
 
   /**
    * Get the exact backend timeframe codes for the current ticker,
-   * preserving YR and any other codes returned by the backend.
+   * in registry (display) order.
    * Falls back to DEFAULT_SEQUENCE when backend read fails.
    * @returns Promise resolving to the exact ordered list of backend timeframe codes
    */
@@ -42,18 +43,17 @@ export interface ITimeFrameManager {
 
   /**
    * Get the derived Sequence (4-tuple) for the current ticker.
-   * Drops YR and other unsupported codes, sorts canonically,
-   * returns exactly 4 frames from the top, or DEFAULT_SEQUENCE.
+   * Returns exactly 4 frames from the top, or DEFAULT_SEQUENCE.
    * @returns Promise resolving to Sequence
    */
   getSequenceForCurrentTicker(): Promise<Sequence>;
 
   /**
-   * Look up a TimeFrameConfig by its timeframe code (e.g. 'DL', 'MN').
+   * Look up timeframe metadata by its code (e.g. 'DL', 'MN').
    * @param code - Timeframe code string
-   * @returns TimeFrameConfig or null if not found
+   * @returns Timeframe metadata or null if not found
    */
-  getTimeFrameConfigByCode(code: string): TimeFrameConfig | null;
+  getTimeFrameConfigByCode(code: string): Timeframe | null;
 
   /**
    * Returns the default persisted timeframe list based on exchange.
@@ -97,9 +97,9 @@ export interface ITimeFrameManager {
  * Manages all timeframe operations and state for trading view.
  *
  * Provides two views of ticker timeframes:
- * - **Exact**: The raw backend list (with YR if present). Used by the timeframe bar.
- * - **Sequence**: A 4-tuple derived from the top of the exact list,
- *   dropping unsupported codes like YR. Used by chart hotkeys and screenshots.
+ * - **Exact**: The raw backend list sorted in registry order. Used by the timeframe bar.
+ * - **Sequence**: A 4-tuple derived from the top of the sorted list.
+ *   Used by chart hotkeys and screenshots.
  *
  * Hotkeys 1-4 apply timeframes by position in the Sequence rather
  * than from a fixed sequence (MWD/YR).
@@ -121,8 +121,8 @@ export class TimeFrameManager implements ITimeFrameManager {
     const tvTicker = this.domManager.getTicker();
     try {
       const record = await this.tickerManager.getTicker(tvTicker);
-      // Sort backend timeframes in display order preserving YR
-      return sortTimeframesForDisplay(record.timeframes as TickerTimeframe[]);
+      // Sort backend timeframes in registry order
+      return sortTimeframes(record.timeframes as TickerTimeframe[]);
     } catch (error) {
       Notifier.warn(`getExactTimeframes: ${(error as Error).message}. Falling back to default timeframes.`);
       return [...DEFAULT_SEQUENCE];
@@ -136,8 +136,8 @@ export class TimeFrameManager implements ITimeFrameManager {
   }
 
   /** @inheritdoc */
-  getTimeFrameConfigByCode(code: string): TimeFrameConfig | null {
-    return Constants.TIME.FRAMES_BY_CODE[code] ?? null;
+  getTimeFrameConfigByCode(code: string): Timeframe | null {
+    return getTimeframeByCode(code as TickerTimeframe) ?? null;
   }
 
   /** @inheritdoc */
@@ -147,7 +147,7 @@ export class TimeFrameManager implements ITimeFrameManager {
     const current = record.timeframes as TickerTimeframe[];
     const isActive = current.includes(code);
     const updated = isActive ? current.filter((c) => c !== code) : [...current, code];
-    const sorted = sortTimeframesForDisplay(updated);
+    const sorted = sortTimeframes(updated);
     await this.tickerManager.updateTicker(tvTicker, { timeframes: sorted });
 
     // Notify subscribers that timeframes have changed
@@ -162,9 +162,9 @@ export class TimeFrameManager implements ITimeFrameManager {
   /** @inheritdoc */
   getDefaultTimeframesForExchange(exchange: string): TickerTimeframe[] {
     if (exchange.toUpperCase() === 'NSE') {
-      return [...CANONICAL_TIMEFRAMES];
+      return [TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL];
     }
-    return DISPLAY_TIMEFRAMES.filter((tf) => tf !== TickerTimeframe.DL);
+    return TIMEFRAMES.filter((tf) => tf.code !== TickerTimeframe.DL).map((tf) => tf.code);
   }
 
   /** @inheritdoc */
@@ -193,20 +193,20 @@ export class TimeFrameManager implements ITimeFrameManager {
   }
 
   /** @inheritdoc */
-  getCurrentTimeFrameConfig(): TimeFrameConfig {
+  getCurrentTimeFrameConfig(): Timeframe {
     // Find active timeframe button using aria-checked attribute
     const $activeButton = $(`${Constants.DOM.HEADER.TIMEFRAME}[aria-checked="true"]`);
 
     if ($activeButton.length === 0) {
       // Warning: Unable to detect current timeframe from DOM
       Notifier.warn('Timeframe Detection Failed - Using Monthly as Fallback');
-      return Constants.TIME.FRAMES_BY_CODE['MN']!;
+      return getTimeframeByCode(TickerTimeframe.MN)!;
     }
 
     // Get index of active button
     const index = $(Constants.DOM.HEADER.TIMEFRAME).index($activeButton);
 
-    // Map index to TimeFrameConfig
+    // Map index to Timeframe metadata
     return this.getTimeFrameConfigByToolbarIndex(index);
   }
 
@@ -226,19 +226,12 @@ export class TimeFrameManager implements ITimeFrameManager {
   }
 
   /**
-   * Get TimeFrameConfig by toolbar index
+   * Get Timeframe metadata by toolbar index
    * @private
    * @param index - Toolbar button index
-   * @returns TimeFrameConfig for the index
+   * @returns Timeframe metadata for the index
    */
-  private getTimeFrameConfigByToolbarIndex(index: number): TimeFrameConfig {
-    // Search through FRAMES_BY_CODE values
-    for (const config of Object.values(Constants.TIME.FRAMES_BY_CODE)) {
-      if (config.toolbar === index) {
-        return config;
-      }
-    }
-
-    return Constants.TIME.FRAMES_BY_CODE['MN']!;
+  private getTimeFrameConfigByToolbarIndex(index: number): Timeframe {
+    return getTimeframeByToolbar(index) ?? getTimeframeByCode(TickerTimeframe.MN)!;
   }
 }
