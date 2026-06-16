@@ -186,6 +186,62 @@ describe('TimeFrameManager', () => {
     });
   });
 
+  // ── Toggle Timeframe ──
+
+  describe('toggleTimeframeForCurrentTicker', () => {
+    it('should add an inactive timeframe and persist sorted list', async () => {
+      mockTickerManager.getTicker.mockResolvedValue(
+        createMockTicker({ timeframes: ['TMN', 'MN', 'WK'] }) // DL is missing
+      );
+
+      const result = await timeFrameManager.toggleTimeframeForCurrentTicker('DL');
+
+      // DL should be added and sorted in display order
+      expect(result).toEqual(['TMN', 'MN', 'WK', 'DL']);
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('AAPL', {
+        timeframes: ['TMN', 'MN', 'WK', 'DL'],
+      });
+    });
+
+    it('should remove an active timeframe and persist sorted list', async () => {
+      mockTickerManager.getTicker.mockResolvedValue(
+        createMockTicker({ timeframes: ['TMN', 'MN', 'WK', 'DL'] })
+      );
+
+      const result = await timeFrameManager.toggleTimeframeForCurrentTicker('WK');
+
+      expect(result).toEqual(['TMN', 'MN', 'DL']);
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('AAPL', {
+        timeframes: ['TMN', 'MN', 'DL'],
+      });
+    });
+
+    it('should preserve YR when toggling another timeframe', async () => {
+      mockTickerManager.getTicker.mockResolvedValue(
+        createMockTicker({ timeframes: ['YR', 'SMN', 'TMN', 'WK'] }) // MN missing
+      );
+
+      const result = await timeFrameManager.toggleTimeframeForCurrentTicker('MN');
+
+      // YR should still be present, MN added in sorted order
+      expect(result).toEqual(['YR', 'SMN', 'TMN', 'MN', 'WK']);
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('AAPL', {
+        timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'],
+      });
+    });
+
+    it('should propagate backend errors when update fails', async () => {
+      mockTickerManager.getTicker.mockResolvedValue(
+        createMockTicker({ timeframes: ['TMN', 'MN', 'WK', 'DL'] })
+      );
+      mockTickerManager.updateTicker.mockRejectedValue(new Error('Backend timeout'));
+
+      await expect(timeFrameManager.toggleTimeframeForCurrentTicker('DL')).rejects.toThrow(
+        'Backend timeout'
+      );
+    });
+  });
+
   // ── Apply TimeFrame (uses applied tuple) ──
 
   describe('applyTimeFrame', () => {

@@ -1,5 +1,11 @@
 import { Constants } from '../models/constant';
-import { TimeFrameConfig, TimeFrameCode, AppliedTimeframeTuple, getAppliedTimeframeTuple } from '../models/timeframe';
+import {
+  TimeFrameConfig,
+  TimeFrameCode,
+  AppliedTimeframeTuple,
+  getAppliedTimeframeTuple,
+  sortTimeframesForDisplay,
+} from '../models/timeframe';
 import { Notifier } from '../util/notify';
 import { ITickerManager } from './ticker';
 import { IDomManager } from './dom';
@@ -63,6 +69,16 @@ export interface ITimeFrameManager {
    * @returns TimeFrameConfig or null if not found
    */
   getTimeFrameConfigByCode(code: string): TimeFrameConfig | null;
+
+  /**
+   * Toggle a timeframe code for the current ticker on/off in the backend.
+   * If the code is already active, it is removed; if inactive, it is added.
+   * Updates are persisted via TickerManager.updateTicker.
+   * @param code - Timeframe code to toggle
+   * @returns Promise resolving to the updated list of active timeframe codes
+   * @throws Error if backend update fails
+   */
+  toggleTimeframeForCurrentTicker(code: TimeFrameCode): Promise<TimeFrameCode[]>;
 }
 
 /**
@@ -91,12 +107,8 @@ export class TimeFrameManager implements ITimeFrameManager {
     const tvTicker = this.domManager.getTicker();
     try {
       const record = await this.tickerManager.getTicker(tvTicker);
-      // Sort backend timeframes in canonical order but preserve YR
-      return record.timeframes.sort((a, b) => {
-        const idxA = this.getCanonicalIndexWithYR(a);
-        const idxB = this.getCanonicalIndexWithYR(b);
-        return idxA - idxB;
-      }) as TimeFrameCode[];
+      // Sort backend timeframes in display order preserving YR
+      return sortTimeframesForDisplay(record.timeframes as TimeFrameCode[]);
     } catch (error) {
       Notifier.warn(`getExactTimeframes: ${(error as Error).message}. Falling back to default timeframes.`);
       return DEFAULT_TIMEFRAMES;
@@ -123,6 +135,18 @@ export class TimeFrameManager implements ITimeFrameManager {
   /** @inheritdoc */
   getTimeFrameConfigByCode(code: string): TimeFrameConfig | null {
     return Constants.TIME.FRAMES_BY_CODE[code] ?? null;
+  }
+
+  /** @inheritdoc */
+  async toggleTimeframeForCurrentTicker(code: TimeFrameCode): Promise<TimeFrameCode[]> {
+    const tvTicker = this.domManager.getTicker();
+    const record = await this.tickerManager.getTicker(tvTicker);
+    const current = record.timeframes as TimeFrameCode[];
+    const isActive = current.includes(code);
+    const updated = isActive ? current.filter((c) => c !== code) : [...current, code];
+    const sorted = sortTimeframesForDisplay(updated);
+    await this.tickerManager.updateTicker(tvTicker, { timeframes: sorted });
+    return sorted;
   }
 
   /** @inheritdoc */
@@ -190,25 +214,5 @@ export class TimeFrameManager implements ITimeFrameManager {
     }
 
     return Constants.TIME.FRAMES_BY_CODE['MN']!;
-  }
-
-  /**
-   * Get canonical index for sorting, including YR.
-   * YR is placed before SMN in sort order.
-   * @private
-   * @param code - Timeframe code string
-   * @returns Sort index (lower = earlier in order)
-   */
-  private getCanonicalIndexWithYR(code: string): number {
-    const yrIdx = 0;
-    const order: Record<string, number> = {
-      YR: yrIdx,
-      SMN: 1,
-      TMN: 2,
-      MN: 3,
-      WK: 4,
-      DL: 5,
-    };
-    return order[code] ?? 99;
   }
 }

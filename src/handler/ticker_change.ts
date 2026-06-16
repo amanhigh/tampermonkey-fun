@@ -3,6 +3,7 @@ import { IAlertHandler } from './alert';
 import { IPaintManager } from '../manager/paint';
 import { IRecentManager } from '../manager/recent';
 import { IDisplayHandler } from './display';
+import { ITimeframeBarHandler } from './timeframe_bar';
 import { IKiteHandler } from './kite';
 import { ISyncUtil } from '../util/sync';
 
@@ -18,6 +19,7 @@ export class TickerChangeHandler implements ITickerChangeHandler {
     private readonly paintManager: IPaintManager,
     private readonly recentManager: IRecentManager,
     private readonly displayHandler: IDisplayHandler,
+    private readonly timeframeBarHandler: ITimeframeBarHandler,
     private readonly kiteHandler: IKiteHandler,
     private readonly syncUtil: ISyncUtil
   ) {}
@@ -31,6 +33,7 @@ export class TickerChangeHandler implements ITickerChangeHandler {
       void this.paintManager.paintTickers([this.domManager.getTicker()]);
       void this.recordRecentTicker();
       void this.displayHandler.display();
+      void this.timeframeBarHandler.render();
 
       // Handle GTT operations
       void this.kiteHandler.refreshGttOrders();

@@ -79,6 +79,14 @@ export const Constants = Object.freeze({
         ATTR_ALERT_TICKER_SYMBOL: 'data-alert-ticker-symbol',
         ATTR_ALERT_TICKER_TYPE: 'data-alert-ticker-type',
       },
+      TIMEFRAME_BAR: {
+        CONTAINER: 'aman-tf-bar',
+        CHIP_CLASS: 'aman-tf-chip',
+        ACTIVE_CLASS: 'aman-tf-active',
+        INACTIVE_CLASS: 'aman-tf-inactive',
+        LOADING_CLASS: 'aman-tf-loading',
+        ATTR_CODE: 'data-tf-code',
+      },
       INPUTS: {
         COMMAND: 'aman-input', // Old Name: inputId
       },

@@ -42,6 +42,7 @@ describe('StyleManager', () => {
       getTimeFrameConfigByCode: jest.fn(),
       getExactTimeframesForCurrentTicker: jest.fn(),
       getAppliedTimeframesForCurrentTicker: jest.fn(),
+      toggleTimeframeForCurrentTicker: jest.fn(),
     };
 
     styleManager = new StyleManager(mockWaitUtil, mockTimeFrameManager);

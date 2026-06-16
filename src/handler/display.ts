@@ -1,8 +1,6 @@
-import { ITimeFrameManager } from '../manager/timeframe';
 import { IDomManager } from '../manager/dom';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { Constants } from '../models/constant';
-import { TimeFrameCode } from '../models/timeframe';
 import { AlertTicker } from '../models/alert_ticker';
 
 // ── CSS class names (defined in _display.less) ──
@@ -17,7 +15,6 @@ const DISPLAY_CLASS = {
   PRIMARY_ROW: 'aman-display-primary',
   SECONDARY_ROW: 'aman-display-secondary',
   ALERT_COUNT: 'aman-display-alert-count',
-  TIMEFRAME_CHIP: 'aman-display-timeframe',
   TICKER_CHIP: 'aman-display-ticker',
   EMPTY_ROW: 'aman-display-empty',
 } as const;
@@ -29,14 +26,14 @@ const EMOJI = {
   UNMAPPED: '⚠️',
   PRIMARY: '⭐',
   SECONDARY: '🔹',
-  TIMEFRAMES: '🧭',
   ALERT: '🔔',
 } as const;
 
 /**
  * Interface for display area operations.
- * Owns the compact/expanded display card that shows ticker, allowed timeframes,
- * and linked alert ticker information.
+ * Owns the compact/expanded display card that shows ticker status
+ * and linked alert ticker information. Timeframes are shown in the
+ * dedicated timeframe bar below this card.
  */
 export interface IDisplayHandler {
   /**
@@ -48,7 +45,7 @@ export interface IDisplayHandler {
 
 /**
  * Handles display area rendering.
- * Manages the compact/expanded display card that shows ticker, allowed timeframes,
+ * Manages the compact/expanded display card that shows ticker status
  * and linked alert ticker information.
  */
 // FIXME: Extract BaseBar with shared expand/collapse logic that DisplayHandler,
@@ -58,7 +55,6 @@ export class DisplayHandler implements IDisplayHandler {
   private displayExpanded = false;
 
   constructor(
-    private readonly timeFrameManager: ITimeFrameManager,
     private readonly domManager: IDomManager,
     private readonly alertTickerManager: IAlertTickerManager
   ) {}
@@ -66,12 +62,11 @@ export class DisplayHandler implements IDisplayHandler {
   /** @inheritdoc */
   async display(): Promise<void> {
     this.displayExpanded = false;
-    const timeframes = await this.timeFrameManager.getAllowedTimeframesForCurrentTicker();
     const tvTicker = this.domManager.getTicker();
     const alertTickers = await this.alertTickerManager.getAlertTickersForTicker(tvTicker);
 
     // Store on DOM element for toggle re-render (avoids handler-level cache)
-    $(`#${Constants.UI.IDS.DISPLAY.CARD}`).data('displayData', { timeframes, tvTicker, alertTickers });
+    $(`#${Constants.UI.IDS.DISPLAY.CARD}`).data('displayData', { tvTicker, alertTickers });
 
     this.renderDisplay();
   }
@@ -83,14 +78,12 @@ export class DisplayHandler implements IDisplayHandler {
    */
   private renderDisplay(): void {
     const $card = $(`#${Constants.UI.IDS.DISPLAY.CARD}`);
-    const data = $card.data('displayData') as
-      | { timeframes: TimeFrameCode[]; tvTicker: string; alertTickers: AlertTicker[] }
-      | undefined;
+    const data = $card.data('displayData') as { tvTicker: string; alertTickers: AlertTicker[] } | undefined;
     if (!data) {
       return;
     }
 
-    const { timeframes, tvTicker, alertTickers } = data;
+    const { tvTicker, alertTickers } = data;
     const primaryTicker = alertTickers.find((t) => t.type === 'PRIMARY') ?? null;
     const isMapped = primaryTicker !== null;
     const displayTicker = primaryTicker?.symbol ?? tvTicker;
@@ -103,9 +96,9 @@ export class DisplayHandler implements IDisplayHandler {
     $card.toggleClass(DISPLAY_CLASS.EXPANDED_STATE, this.displayExpanded);
 
     if (this.displayExpanded) {
-      $card.html(this.buildExpandedHtml(timeframes, displayTicker, isMapped, alertTickers));
+      $card.html(this.buildExpandedHtml(displayTicker, isMapped, alertTickers));
     } else {
-      $card.html(this.buildCompactHtml(timeframes, displayTicker, isMapped, alertTickers.length));
+      $card.html(this.buildCompactHtml(displayTicker, isMapped, alertTickers.length));
     }
 
     // Attach click handler (remove previous first to avoid duplicates)
@@ -114,34 +107,23 @@ export class DisplayHandler implements IDisplayHandler {
 
   /**
    * Builds compact mode HTML.
-   * Format: 🔗 INFY · 🧭 TMN MN WK DL · 🔔2
+   * Format: 🔗 INFY · 🔔2
    */
-  private buildCompactHtml(
-    timeframes: TimeFrameCode[],
-    displayTicker: string,
-    isMapped: boolean,
-    alertCount: number
-  ): string {
+  private buildCompactHtml(displayTicker: string, isMapped: boolean, alertCount: number): string {
     const statusEmoji = isMapped ? EMOJI.LINKED : EMOJI.UNMAPPED;
-    const tfHtml = `<span class="${DISPLAY_CLASS.TIMEFRAME_CHIP}">${EMOJI.TIMEFRAMES} ${timeframes.join(' ')}</span>`;
     const tickerHtml = `<span class="${DISPLAY_CLASS.TICKER_CHIP}">${displayTicker}</span>`;
     const countHtml = `<span class="${DISPLAY_CLASS.ALERT_COUNT}">${EMOJI.ALERT}${alertCount}</span>`;
 
-    return `${statusEmoji} ${tickerHtml} · ${tfHtml} · ${countHtml}`;
+    return `${statusEmoji} ${tickerHtml} · ${countHtml}`;
   }
 
   /**
    * Builds expanded mode HTML.
    * Compact header + linked ticker rows.
    */
-  private buildExpandedHtml(
-    timeframes: TimeFrameCode[],
-    displayTicker: string,
-    isMapped: boolean,
-    alertTickers: AlertTicker[]
-  ): string {
+  private buildExpandedHtml(displayTicker: string, isMapped: boolean, alertTickers: AlertTicker[]): string {
     // Compact header at top
-    const headerHtml = this.buildCompactHtml(timeframes, displayTicker, isMapped, alertTickers.length);
+    const headerHtml = this.buildCompactHtml(displayTicker, isMapped, alertTickers.length);
 
     // Alert ticker rows
     const rowsHtml = this.buildAlertTickerRows(alertTickers);

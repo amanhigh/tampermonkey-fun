@@ -76,6 +76,7 @@ describe('JournalManager', () => {
         ['TMN', 'MN', 'WK', 'DL'] as AppliedTimeframeTuple
       ),
       getTimeFrameConfigByCode: jest.fn(),
+      toggleTimeframeForCurrentTicker: jest.fn(),
     } as unknown as jest.Mocked<ITimeFrameManager>;
 
     journalManager = new JournalManager(mockJournalClient, mockOsClient, mockTimeFrameManager);

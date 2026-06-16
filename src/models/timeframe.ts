@@ -51,6 +51,28 @@ export type TimeFrameCode = 'YR' | 'SMN' | 'TMN' | 'MN' | 'WK' | 'DL';
 export const CANONICAL_TIMEFRAMES: readonly TimeFrameCode[] = ['SMN', 'TMN', 'MN', 'WK', 'DL'] as const;
 
 /**
+ * Display order of all timeframe codes including YR.
+ * Used by the timeframe bar to show all possible chips in consistent order.
+ */
+export const DISPLAY_TIMEFRAMES: readonly TimeFrameCode[] = ['YR', 'SMN', 'TMN', 'MN', 'WK', 'DL'] as const;
+
+/**
+ * Sorts an array of timeframe codes into the canonical display order.
+ * Handles YR and any valid code; unknown codes go to the end.
+ * @param codes - Timeframe codes to sort
+ * @returns Sorted array in display order
+ */
+export function sortTimeframesForDisplay(codes: TimeFrameCode[]): TimeFrameCode[] {
+  const order = new Map<TimeFrameCode, number>();
+  DISPLAY_TIMEFRAMES.forEach((code, idx) => order.set(code, idx));
+  return [...codes].sort((a, b) => {
+    const idxA = order.get(a) ?? 99;
+    const idxB = order.get(b) ?? 99;
+    return idxA - idxB;
+  });
+}
+
+/**
  * Returns the index of a timeframe code within the canonical order.
  * @param code - Timeframe code to look up
  * @returns Index in CANONICAL_TIMEFRAMES, or -1 if not found

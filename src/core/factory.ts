@@ -46,6 +46,7 @@ import { KeyConfig } from '../handler/key_config';
 import { IModifierKeyConfig, ModifierKeyConfig } from '../handler/modifier_config';
 
 import { IDisplayHandler, DisplayHandler } from '../handler/display';
+import { ITimeframeBarHandler, TimeframeBarHandler } from '../handler/timeframe_bar';
 import { IKiteHandler, KiteHandler } from '../handler/kite';
 import { IKiteManager, KiteManager } from '../manager/kite';
 import { IStyleManager, StyleManager } from '../manager/style';
@@ -489,6 +490,7 @@ export class Factory {
             Factory.manager.paint(),
             Factory.manager.recent(),
             Factory.handler.display(),
+            Factory.handler.timeframeBar(),
             Factory.handler.kite(),
             Factory.util.sync()
           )
@@ -532,8 +534,10 @@ export class Factory {
     display: (): IDisplayHandler =>
       Factory.getInstance(
         'displayHandler',
-        () => new DisplayHandler(Factory.manager.timeFrame(), Factory.manager.dom(), Factory.manager.alertTicker())
+        () => new DisplayHandler(Factory.manager.dom(), Factory.manager.alertTicker())
       ),
+    timeframeBar: (): ITimeframeBarHandler =>
+      Factory.getInstance('timeframeBarHandler', () => new TimeframeBarHandler(Factory.manager.timeFrame())),
     journal: (): IJournalHandler =>
       Factory.getInstance(
         'journalHandler',
