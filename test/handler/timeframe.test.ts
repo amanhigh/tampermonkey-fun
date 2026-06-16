@@ -1,4 +1,4 @@
-import { TimeframeBarHandler, ITimeframeBarHandler } from '../../src/handler/timeframe_bar';
+import { TimeFrameHandler } from '../../src/handler/timeframe';
 import { ITimeFrameManager } from '../../src/manager/timeframe';
 import { ISubscriber } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
@@ -48,8 +48,8 @@ async function flushMicrotasks(): Promise<void> {
   await Promise.resolve();
 }
 
-describe('TimeframeBarHandler', () => {
-  let handler: ITimeframeBarHandler;
+describe('TimeFrameHandler', () => {
+  let handler: TimeFrameHandler;
   let mockTimeFrameManager: jest.Mocked<ITimeFrameManager>;
 
   beforeEach(() => {
@@ -73,7 +73,7 @@ describe('TimeframeBarHandler', () => {
       toggleTimeframeForCurrentTicker: jest.fn(),
     } as any;
 
-    handler = new TimeframeBarHandler(mockTimeFrameManager);
+    handler = new TimeFrameHandler(mockTimeFrameManager);
   });
 
   describe('render', () => {
@@ -144,6 +144,20 @@ describe('TimeframeBarHandler', () => {
   });
 
   describe('registerEvents', () => {
+    it('should subscribe to TICKER_CHANGED', () => {
+      const mockSubscriber: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerEvents(mockSubscriber);
+
+      expect(mockSubscriber.subscribe).toHaveBeenCalledWith(
+        DomainEventType.TICKER_CHANGED,
+        expect.any(Function)
+      );
+    });
+
     it('should subscribe to TICKER_TIMEFRAMES_CHANGED', () => {
       const mockSubscriber: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn(),

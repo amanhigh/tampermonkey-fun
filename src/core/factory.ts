@@ -428,7 +428,12 @@ export class Factory {
             Factory.handler.alert(),
             Factory.handler.tickerChange(),
             Factory.manager.paint(),
-            [Factory.handler.alertFeed(), Factory.handler.timeFrame()],
+            [
+              Factory.handler.alertFeed(),
+              Factory.handler.timeFrame(),
+              Factory.handler.display(),
+              Factory.handler.kite(),
+            ],
             Factory.manager.eventSubscriber()
           )
       ),
@@ -489,8 +494,6 @@ export class Factory {
             Factory.handler.alert(),
             Factory.manager.paint(),
             Factory.manager.recent(),
-            Factory.handler.display(),
-            Factory.handler.kite(),
             Factory.util.sync()
           )
       ),

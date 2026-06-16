@@ -20,16 +20,13 @@ const EMOJI_TIMEFRAMES = '🧭';
 const TOOLTIP_TEXT = 'Recommended timeframe for this ticker. Click to add/remove.';
 
 /**
- * Interface for timeframe bar operations.
- * Renders clickable timeframe chips and handles toggle interactions.
+ * Interface for timeframe display operations.
+ *
+ * Implementations render clickable timeframe chips and handle
+ * toggle interactions. Re-renders are driven exclusively by
+ * domain events (TICKER_CHANGED, TICKER_TIMEFRAMES_CHANGED).
  */
-export interface ITimeframeBarHandler extends IDomainEventConsumer {
-  /**
-   * Fetches current backend ticker timeframes and re-renders the bar.
-   * All six chips (YR → DL) are shown; active ones are highlighted, inactive are muted.
-   */
-  render(): Promise<void>;
-}
+export type ITimeFrameHandler = IDomainEventConsumer;
 
 /**
  * Handles the timeframe bar UI below the display card.
@@ -38,9 +35,10 @@ export interface ITimeframeBarHandler extends IDomainEventConsumer {
  * Active chips (those in the backend ticker.timeframes) are colored;
  * inactive chips are muted. Clicking toggles the code on/off in the backend.
  *
- * Listens to TICKER_TIMEFRAMES_CHANGED to re-render when the backend state changes.
+ * Listens to TICKER_CHANGED (ticker switch) and TICKER_TIMEFRAMES_CHANGED
+ * (toggle result) to re-render when state changes.
  */
-export class TimeframeBarHandler implements ITimeframeBarHandler {
+export class TimeFrameHandler implements ITimeFrameHandler {
   // Prevents concurrent toggle operations
   private toggling = false;
 
@@ -48,12 +46,24 @@ export class TimeframeBarHandler implements ITimeframeBarHandler {
 
   /** @inheritdoc */
   registerEvents(subscriber: ISubscriber): void {
+    subscriber.subscribe(DomainEventType.TICKER_CHANGED, async () => {
+      await this.render();
+    });
+
     subscriber.subscribe(DomainEventType.TICKER_TIMEFRAMES_CHANGED, async () => {
       await this.render();
     });
   }
 
-  /** @inheritdoc */
+  // ── Rendering ──
+
+  /**
+   * Fetches current backend ticker timeframes and re-renders the bar.
+   * All six chips (YR → DL) are shown; active ones are highlighted, inactive are muted.
+   *
+   * Public so tests can invoke directly; external consumers should
+   * drive re-renders via TICKER_CHANGED / TICKER_TIMEFRAMES_CHANGED events.
+   */
   async render(): Promise<void> {
     const $bar = $(`#${TF.CONTAINER}`);
     if ($bar.length === 0) {
@@ -63,21 +73,44 @@ export class TimeframeBarHandler implements ITimeframeBarHandler {
     // Manager handles errors internally and returns default timeframes on failure
     const activeCodes = await this.timeFrameManager.getExactTimeframesForCurrentTicker();
     const activeSet = new Set(activeCodes);
-    const chipsHtml = DISPLAY_TIMEFRAMES.map((code) => {
-      const isActive = activeSet.has(code);
-      const cls = `${TF.CHIP_CLASS} ${isActive ? TF.ACTIVE_CLASS : TF.INACTIVE_CLASS}`;
-      return `<span class="${cls}" ${TF.ATTR_CODE}="${code}" title="${TOOLTIP_TEXT}">${code}</span>`;
-    }).join('');
+    const chipsHtml = this.buildChipsHtml(activeSet);
 
     $bar.html(`${EMOJI_TIMEFRAMES} ${chipsHtml}`);
+    this.attachClickHandler($bar);
+  }
 
-    // Delegate click handler — off/on to avoid duplicates.
+  /**
+   * Builds the inner HTML for all six timeframe chips in display order.
+   * @param activeSet - Set of backend-active timeframe codes
+   */
+  private buildChipsHtml(activeSet: Set<TickerTimeframe>): string {
+    return DISPLAY_TIMEFRAMES.map((code) => this.buildChip(code, activeSet.has(code))).join('');
+  }
+
+  /**
+   * Builds a single timeframe chip `<span>` element.
+   * @param code - Timeframe code (YR, SMN, etc.)
+   * @param isActive - Whether this chip is currently active in the backend
+   */
+  private buildChip(code: TickerTimeframe, isActive: boolean): string {
+    const cls = `${TF.CHIP_CLASS} ${isActive ? TF.ACTIVE_CLASS : TF.INACTIVE_CLASS}`;
+    return `<span class="${cls}" ${TF.ATTR_CODE}="${code}" title="${TOOLTIP_TEXT}">${code}</span>`;
+  }
+
+  /**
+   * Attaches a delegated click handler to the bar.
+   * Off/on to avoid duplicate bindings on re-render.
+   * @param $bar - jQuery-wrapped bar container element
+   */
+  private attachClickHandler($bar: JQuery): void {
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     $bar.off('click', `.${TF.CHIP_CLASS}`).on('click', `.${TF.CHIP_CLASS}`, (e) => {
       e.stopPropagation();
       void this.handleChipClick($(e.currentTarget));
     });
   }
+
+  // ── Toggle Interaction ──
 
   /**
    * Handles click on a timeframe chip.

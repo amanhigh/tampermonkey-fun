@@ -2,6 +2,8 @@ import { IDomManager } from '../manager/dom';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { Constants } from '../models/constant';
 import { AlertTicker } from '../models/alert_ticker';
+import { IDomainEventConsumer, ISubscriber } from '../manager/event_bus';
+import { DomainEventType } from '../models/domain_event';
 
 // ── CSS class names (defined in _display.less) ──
 
@@ -35,7 +37,7 @@ const EMOJI = {
  * and linked alert ticker information. Timeframes are shown in the
  * dedicated timeframe bar below this card.
  */
-export interface IDisplayHandler {
+export interface IDisplayHandler extends IDomainEventConsumer {
   /**
    * Fetches current ticker data and renders the display card.
    * Always starts in compact mode on fresh data fetch.
@@ -58,6 +60,13 @@ export class DisplayHandler implements IDisplayHandler {
     private readonly domManager: IDomManager,
     private readonly alertTickerManager: IAlertTickerManager
   ) {}
+
+  /** @inheritdoc */
+  registerEvents(subscriber: ISubscriber): void {
+    subscriber.subscribe(DomainEventType.TICKER_CHANGED, async () => {
+      await this.display();
+    });
+  }
 
   /** @inheritdoc */
   async display(): Promise<void> {

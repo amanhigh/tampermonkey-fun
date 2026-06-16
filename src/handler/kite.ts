@@ -7,6 +7,8 @@ import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../models/gtt';
 import { Notifier } from '../util/notify';
 import { ITradingViewManager } from '../manager/tv';
 import { IUIUtil } from '../util/ui';
+import { IDomainEventConsumer, ISubscriber } from '../manager/event_bus';
+import { DomainEventType } from '../models/domain_event';
 
 /**
  * Configuration for order button display
@@ -19,7 +21,7 @@ interface ButtonConfig {
 /**
  * Interface for managing Kite platform operations and UI interactions
  */
-export interface IKiteHandler {
+export interface IKiteHandler extends IDomainEventConsumer {
   /**
    * Initializes Kite event handlers and listeners
    */
@@ -52,11 +54,6 @@ export interface IKiteHandler {
    * Generates a summary of GTT orders in the Info Area
    * @param gttOrderMap Object containing GTT orders
    */
-  refreshGttOrders(): Promise<void>;
-
-  /**
-   * Sets up GTT refresh event listener
-   */
   setupGttRefreshListener(): void;
 }
 
@@ -87,6 +84,13 @@ export class KiteHandler implements IKiteHandler {
     private readonly tvManager: ITradingViewManager,
     private readonly uiUtil: IUIUtil
   ) {}
+
+  /** @inheritdoc */
+  registerEvents(subscriber: ISubscriber): void {
+    subscriber.subscribe(DomainEventType.TICKER_CHANGED, async () => {
+      await this.refreshGttOrders();
+    });
+  }
 
   /** @inheritdoc */
   public setupGttRefreshListener(): void {
