@@ -6,9 +6,8 @@ import { IDomManager } from './dom';
 import { IRecentManager } from './recent';
 
 /**
- * Shared display-state resolver for all visual surfaces.
- * Centralizes the mapping from ticker state to display colors for
- * header/name, watchlist, screener, and alert feed.
+ * Display-state resolver for header name and alert feed.
+ * Watchlist/screener symbol colors are resolved directly by PaintManager.
  *
  * Priority order:
  *   1 ticker=null                            → UNMAPPED / red
@@ -33,41 +32,33 @@ export class DisplayManager implements IDisplayManager {
 
   /** @inheritdoc */
   async resolve(request: DisplayRequest): Promise<DisplayInfo> {
-    const { ticker, surface, category: preloadedCategory, watchlistTickers, recentTickers } = request;
+    const { ticker, surface } = request;
 
     // Priority 1: Unmapped
     if (ticker === null) {
       return { state: DisplayState.UNMAPPED, color: 'red' };
     }
 
-    // Resolve watch category from preloaded data or fresh fetch
-    let watchCat = preloadedCategory?.watch;
-    if (preloadedCategory === undefined) {
-      const category = await this.categoryManager.getTickerCategory(ticker);
-      watchCat = category.watch;
-    }
-
-    // Determine DOM watchlist membership
-    let isInWatchlist: boolean;
-    if (watchlistTickers) {
-      isInWatchlist = watchlistTickers.has(ticker);
-    } else {
-      isInWatchlist = this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL).has(ticker);
-    }
+    // Fetch watch category
+    const category = await this.categoryManager.getTickerCategory(ticker);
+    const watchCat = category.watch;
 
     // Priority 2: Watch category + in DOM watchlist
-    if (watchCat && isInWatchlist) {
-      return { state: DisplayState.WATCH_CATEGORY, color: watchCat.color };
+    if (watchCat) {
+      if (surface === DisplaySurface.HEADER_NAME) {
+        // Header always uses watch category color when one exists
+        return { state: DisplayState.WATCH_CATEGORY, color: watchCat.color };
+      }
+      // ALERT_FEED_ROW requires DOM watchlist membership
+      const isInWatchlist = this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL).has(ticker);
+      if (isInWatchlist) {
+        return { state: DisplayState.WATCH_CATEGORY, color: watchCat.color };
+      }
     }
 
     // Priority 3: Alert feed only and recent
     if (surface === DisplaySurface.ALERT_FEED_ROW) {
-      let isRecent: boolean;
-      if (recentTickers) {
-        isRecent = recentTickers.has(ticker);
-      } else {
-        isRecent = await this.recentManager.isRecent(ticker, Constants.RECENT_CUTOFF_MS);
-      }
+      const isRecent = await this.recentManager.isRecent(ticker, Constants.RECENT_CUTOFF_MS);
       if (isRecent) {
         return { state: DisplayState.RECENT, color: 'lime' };
       }

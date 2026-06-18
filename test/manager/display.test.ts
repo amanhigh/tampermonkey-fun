@@ -58,9 +58,42 @@ describe('DisplayManager', () => {
       expect(mockCategoryManager.getTickerCategory).not.toHaveBeenCalled();
     });
 
-    // ── Priority 2: WATCH_CATEGORY ──
+    // ── HEADER_NAME ──
 
-    it('should return WATCH_CATEGORY with category color when watch category exists and ticker is in watchlist', async () => {
+    it('should return WATCH_CATEGORY for HEADER_NAME when watch category exists', async () => {
+      mockCategoryManager.getTickerCategory.mockResolvedValue({
+        watch: READY_CATEGORY,
+        flag: undefined,
+        isFno: false,
+      });
+
+      const result = await displayManager.resolve({
+        ticker: 'TV:RELIANCE',
+        surface: DisplaySurface.HEADER_NAME,
+      });
+
+      expect(result).toEqual({ state: DisplayState.WATCH_CATEGORY, color: 'red' });
+      expect(mockCategoryManager.getTickerCategory).toHaveBeenCalledWith('TV:RELIANCE');
+    });
+
+    it('should return DEFAULT for HEADER_NAME when no watch category exists', async () => {
+      mockCategoryManager.getTickerCategory.mockResolvedValue({
+        watch: undefined,
+        flag: undefined,
+        isFno: false,
+      });
+
+      const result = await displayManager.resolve({
+        ticker: 'TV:PLAIN',
+        surface: DisplaySurface.HEADER_NAME,
+      });
+
+      expect(result).toEqual({ state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT });
+    });
+
+    // ── Priority 2: WATCH_CATEGORY (alert feed) ──
+
+    it('should return WATCH_CATEGORY for ALERT_FEED_ROW when watch category exists and ticker is in watchlist', async () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: READY_CATEGORY,
         flag: undefined,
@@ -117,7 +150,6 @@ describe('DisplayManager', () => {
         flag: undefined,
         isFno: false,
       });
-      mockRecentManager.isRecent.mockResolvedValue(true);
 
       const result = await displayManager.resolve({
         ticker: 'TV:RECENT',
@@ -125,22 +157,8 @@ describe('DisplayManager', () => {
       });
 
       expect(result).toEqual({ state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT });
-    });
-
-    it('should return DEFAULT (not RECENT) for WATCHLIST_SYMBOL when ticker is recent', async () => {
-      mockCategoryManager.getTickerCategory.mockResolvedValue({
-        watch: undefined,
-        flag: undefined,
-        isFno: false,
-      });
-
-      const result = await displayManager.resolve({
-        ticker: 'TV:RECENT',
-        surface: DisplaySurface.WATCHLIST_SYMBOL,
-        watchlistTickers: new Set(['TV:RECENT']),
-      });
-
-      expect(result).toEqual({ state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT });
+      // Header does not check recency
+      expect(mockRecentManager.isRecent).not.toHaveBeenCalled();
     });
 
     // ── Priority 4: DEFAULT ──
@@ -159,56 +177,6 @@ describe('DisplayManager', () => {
       });
 
       expect(result).toEqual({ state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT });
-    });
-
-    // ── Preloaded context ──
-
-    it('should use preloaded category without fetching from backend', async () => {
-      mockDomManager.getTickers.mockReturnValue(new Set(['TV:PRE']));
-
-      const result = await displayManager.resolve({
-        ticker: 'TV:PRE',
-        surface: DisplaySurface.HEADER_NAME,
-        category: { watch: READY_CATEGORY, flag: undefined, isFno: false },
-      });
-
-      expect(result).toEqual({ state: DisplayState.WATCH_CATEGORY, color: 'red' });
-      expect(mockCategoryManager.getTickerCategory).not.toHaveBeenCalled();
-    });
-
-    it('should use preloaded watchlistTickers without calling DOM', async () => {
-      mockCategoryManager.getTickerCategory.mockResolvedValue({
-        watch: undefined,
-        flag: undefined,
-        isFno: false,
-      });
-
-      const result = await displayManager.resolve({
-        ticker: 'TV:WATCHED',
-        surface: DisplaySurface.ALERT_FEED_ROW,
-        watchlistTickers: new Set(['TV:WATCHED']),
-      });
-
-      // No watch category, so falls through to DEFAULT
-      expect(result).toEqual({ state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT });
-      expect(mockDomManager.getTickers).not.toHaveBeenCalled();
-    });
-
-    it('should use preloaded recentTickers without calling recent manager', async () => {
-      mockCategoryManager.getTickerCategory.mockResolvedValue({
-        watch: undefined,
-        flag: undefined,
-        isFno: false,
-      });
-
-      const result = await displayManager.resolve({
-        ticker: 'TV:RECENT',
-        surface: DisplaySurface.ALERT_FEED_ROW,
-        recentTickers: new Set(['TV:RECENT']),
-      });
-
-      expect(result).toEqual({ state: DisplayState.RECENT, color: 'lime' });
-      expect(mockRecentManager.isRecent).not.toHaveBeenCalled();
     });
   });
 

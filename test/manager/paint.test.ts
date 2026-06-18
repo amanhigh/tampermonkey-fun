@@ -3,7 +3,6 @@ import { PaintManager, IPaintManager } from '../../src/manager/paint';
 import { ICategoryManager } from '../../src/manager/category';
 import { IDomManager } from '../../src/manager/dom';
 import { IDisplayManager } from '../../src/manager/display';
-import { IRecentManager } from '../../src/manager/recent';
 import { Constants } from '../../src/models/constant';
 import { TickerCategory } from '../../src/models/category';
 import { WatchCategoryId } from '../../src/models/watch';
@@ -32,7 +31,6 @@ describe('PaintManager', () => {
   let mockDomManager: jest.Mocked<IDomManager>;
   let mockCategoryManager: jest.Mocked<ICategoryManager>;
   let mockDisplayManager: jest.Mocked<IDisplayManager>;
-  let mockRecentManager: jest.Mocked<IRecentManager>;
 
   beforeEach(() => {
     mockDomManager = {
@@ -66,18 +64,10 @@ describe('PaintManager', () => {
     );
 
     mockDisplayManager = {
-      resolve: jest.fn().mockImplementation(async (request: any) => ({
-        state: undefined,
-        color: request.category?.watch?.color ?? Constants.UI.COLORS.DEFAULT,
-      })),
+      resolve: jest.fn().mockResolvedValue({ state: 'DEFAULT', color: Constants.UI.COLORS.DEFAULT }),
     } as unknown as jest.Mocked<IDisplayManager>;
 
-    mockRecentManager = {
-      markRecent: jest.fn(),
-      isRecent: jest.fn().mockResolvedValue(false),
-    } as unknown as jest.Mocked<IRecentManager>;
-
-    paintManager = new PaintManager(mockDomManager, mockCategoryManager, mockDisplayManager, mockRecentManager);
+    paintManager = new PaintManager(mockDomManager, mockCategoryManager, mockDisplayManager);
     jest.clearAllMocks();
   });
 
@@ -139,22 +129,24 @@ describe('PaintManager', () => {
       expect(mockDomManager.getTicker).toHaveBeenCalled();
     });
 
-    it('should delegate header name color to unified DisplayManager.resolve', async () => {
+    it('should delegate header name color to DisplayManager.resolve with simple request', async () => {
       mockDomManager.getTicker.mockReturnValue('HEADER_TICKER');
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null },
         flag: undefined,
         isFno: false,
       });
+      // Make resolve return a color so css is called
+      mockDisplayManager.resolve.mockResolvedValue({ state: 'WATCH_CATEGORY' as any, color: 'red' });
 
       await paintManager.paint();
 
       expect(mockDisplayManager.resolve).toHaveBeenCalledWith(
-        expect.objectContaining({ ticker: 'HEADER_TICKER', surface: expect.stringContaining('HEADER') })
+        { ticker: 'HEADER_TICKER', surface: 'HEADER_NAME' }
       );
     });
 
-    it('should paint symbol, flag, and FNO for each ticker', async () => {
+    it('should paint symbol color directly from watch category for watchlist/screener tickers', async () => {
       mockDomManager.getTickers.mockReturnValue(new Set(['NIFTY']));
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null },
@@ -164,11 +156,14 @@ describe('PaintManager', () => {
 
       await paintManager.paint();
 
-      // Colors applied directly
+      // Symbol color painted directly (not via DisplayManager)
       expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'red');
+      // Flag color painted directly
       expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'orange');
       // FNO border applied
       expect(mockJQueryElement.css).toHaveBeenCalledWith(Constants.UI.COLORS.FNO_CSS);
+      // DisplayManager NOT called for ticker symbols
+      expect(mockDisplayManager.resolve).toHaveBeenCalledTimes(1); // only for header
     });
   });
 
@@ -195,7 +190,7 @@ describe('PaintManager', () => {
 
       // Should find tickers via filter (once per ticker per area)
       expect(mockJQueryElement.filter).toHaveBeenCalled();
-      // AAPL gets painted red, GOOG stays default
+      // AAPL gets painted red directly
       expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'red');
     });
 
