@@ -1,30 +1,21 @@
-import { AuditId, Constants } from '../models/constant';
+import { Constants, AuditId } from '../models/constant';
 import { AuditSectionRegistry } from '../util/audit_registry';
 import { IUIUtil } from '../util/ui';
 import { AuditRenderer } from '../util/audit_renderer';
 import { ITickerHandler } from './ticker';
 import { IAlertTickerHandler } from './alert_ticker';
 import { IDomManager } from '../manager/dom';
+import { ISubscriber, IDomainEventConsumer } from '../manager/event_bus';
+import { DomainEventType } from '../models/domain_event';
 
 /**
- * Interface for managing audit UI operations
+ * Interface for managing audit UI operations.
  *
- * Clean architecture: ONLY handles audit sections (multi-ticker view)
- * No single-ticker button management - keep separation of concerns
+ * Only exposes domain event consumer registration; all audit execution
+ * is event-driven or triggered internally via toolbar button callbacks.
  */
-export interface IAuditHandler {
-  /**
-   * Renders all audit sections showing tickers that need attention
-   * Multi-ticker view: AlertsSection, GttSection, OrphanAlertsSection
-   */
-  auditAll(): Promise<void>;
-
-  /**
-   * Runs audits once on first toggle (lazy-loading)
-   * Subsequent calls do nothing (audit area already populated)
-   */
-  auditAllOnFirstRun(): Promise<void>;
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface IAuditHandler extends IDomainEventConsumer {}
 
 /**
  * Handles audit section UI operations
@@ -34,12 +25,17 @@ export interface IAuditHandler {
  * - Runs plugins via section.plugin.run()
  * - Renders sections via AuditRenderer
  * - NO button management (only audit sections)
+ *
+ * Internal structure:
+ * - Event Registration: registerEvents delegates to named private handlers
+ * - Event Handlers: one method per subscribed event type
+ * - Audit Execution: run full or ordered audits
+ * - Targeted Updates: refresh specific ticker sections
+ * - Toolbar: render toolbar and handle button clicks
+ * - Renderer Lifecycle: get or create cached renderers
  */
 export class AuditHandler implements IAuditHandler {
-  // Track whether audits have ever been run (used for initial vs subsequent toggles)
-  private auditHasRun: boolean = false;
-
-  // Preserve renderer instances across auditAll() calls to retain collapse state
+  // Preserve renderer instances across audit runs to retain collapse state
   private readonly renderers: Map<string, AuditRenderer> = new Map();
 
   constructor(
@@ -50,35 +46,69 @@ export class AuditHandler implements IAuditHandler {
     private readonly domManager: IDomManager
   ) {}
 
-  /**
-   * Runs all audits on first toggle, only on initial invocation
-   * Subsequent calls do nothing (audit area already populated)
-   * Intended for lazy-loading audits when user first opens the audit area
-   */
-  public async auditAllOnFirstRun(): Promise<void> {
-    // Only run if audits haven't been run before
-    if (this.auditHasRun) {
-      return; // Already run, do nothing
-    }
+  // ── Public API ──
 
-    // Run all audits
-    await this.auditAll();
+  /** @inheritdoc */
+  registerEvents(subscriber: ISubscriber): void {
+    subscriber.subscribe(DomainEventType.FIRST_LOAD, this.handleFirstLoad);
+    subscriber.subscribeMany(
+      [DomainEventType.ALERTS_CHANGED, DomainEventType.ALERT_TICKER_LINKED],
+      this.handleAlertAuditChanged
+    );
+    subscriber.subscribe(DomainEventType.ALERT_TICKER_DELETED, this.handleAlertTickerDeleted);
+    subscriber.subscribe(DomainEventType.TICKER_CATEGORY_CHANGED, this.handleTickerCategoryChanged);
+    subscriber.subscribe(DomainEventType.TICKER_TRACKING_STARTED, this.handleTickerTrackingStarted);
+    subscriber.subscribe(DomainEventType.TICKER_TRACKING_STOPPED, this.handleTickerTrackingStopped);
   }
 
-  /**
-   * Updates the audit summary in the UI based on current results
-   */
-  public async auditAll(): Promise<void> {
-    // First run: render toolbar buttons (only once)
-    if (!this.auditHasRun) {
-      this.renderToolbarButtons();
+  // ── Event Handlers ──
+
+  /** FIRST_LOAD: run full audit once during app initialization */
+  private readonly handleFirstLoad = (): void => {
+    void this.runFullAudit();
+  };
+
+  /** ALERTS_CHANGED and ALERT_TICKER_LINKED usually carry a ticker */
+  private readonly handleAlertAuditChanged = async (event: { ticker?: string }): Promise<void> => {
+    if (!event.ticker) {
+      return;
     }
+    await this.refreshTickerAudit(event.ticker, [Constants.AUDIT.PLUGINS.ALERT_COVERAGE]);
+  };
 
-    // Run all audits in order
+  /** ALERT_TICKER_DELETED may not carry ticker (direct delink on current row) */
+  private readonly handleAlertTickerDeleted = async (event: { ticker?: string }): Promise<void> => {
+    if (!event.ticker) {
+      return;
+    }
+    await this.refreshTickerAudit(event.ticker, [Constants.AUDIT.PLUGINS.ALERT_COVERAGE]);
+  };
+
+  /** Category changes affect GTT unwatched status */
+  private readonly handleTickerCategoryChanged = async (event: { tickers: string[] }): Promise<void> => {
+    for (const ticker of event.tickers) {
+      await this.refreshTickerAudit(ticker, [Constants.AUDIT.PLUGINS.GTT_UNWATCHED]);
+    }
+  };
+
+  /** New ticker may affect all audit sections — full refresh */
+  private readonly handleTickerTrackingStarted = (): void => {
+    void this.runFullAudit();
+  };
+
+  /** Stopped tracking — remove ticker from renderers optimistically */
+  private readonly handleTickerTrackingStopped = (event: { ticker: string }): void => {
+    this.removeTickerFromSections(event.ticker);
+  };
+
+  // ── Audit Execution ──
+
+  /**
+   * Runs all audit sections and renders/refreshes the toolbar.
+   */
+  private async runFullAudit(): Promise<void> {
+    this.renderToolbarButtons();
     await this.runOrderedAudits();
-
-    // Mark audits as run
-    this.auditHasRun = true;
   }
 
   /**
@@ -92,6 +122,47 @@ export class AuditHandler implements IAuditHandler {
       await renderer.refresh();
     }
   }
+
+  // ── Targeted Section Updates ──
+
+  /**
+   * Refreshes targeted audit sections for a specific ticker.
+   * Skips sections not yet rendered and plugins that do not support targeted mode.
+   * @param ticker - Ticker symbol to audit
+   * @param auditIds - Audit section IDs to refresh
+   */
+  private async refreshTickerAudit(ticker: string, auditIds: AuditId[]): Promise<void> {
+    for (const auditId of auditIds) {
+      const renderer = this.renderers.get(auditId);
+      if (!renderer) {
+        continue; // Section not yet rendered
+      }
+
+      try {
+        const section = this.auditRegistry.getSection(auditId);
+        if (!section) {
+          continue;
+        }
+        const results = await section.plugin.run([ticker]);
+        renderer.setResults(results);
+      } catch {
+        // Plugin does not support targeted mode — skip auto-refresh
+      }
+    }
+  }
+
+  /**
+   * Removes a ticker from all rendered audit sections optimistically.
+   * Used when a ticker stops being tracked — avoids full recompute.
+   * @param ticker - Ticker symbol to remove
+   */
+  private removeTickerFromSections(ticker: string): void {
+    for (const renderer of this.renderers.values()) {
+      renderer.removeTicker(ticker);
+    }
+  }
+
+  // ── Toolbar ──
 
   /**
    * Renders toolbar buttons at the top of audit area:
@@ -109,37 +180,39 @@ export class AuditHandler implements IAuditHandler {
     const $toolbar = $('<div>').addClass('audit-toolbar');
 
     // Refresh All button
-    this.uiUtil
-      .buildButton(refreshId, '\u{1F504} Refresh', () => {
-        // BUG: Refresh button runs audits but does not update ticker text box/display header
-        void this.auditAll();
-      })
-      .appendTo($toolbar);
+    this.uiUtil.buildButton(refreshId, '\u{1F504} Refresh', this.handleRefreshAllClick).appendTo($toolbar);
 
     // Stop Tracking button (FR-9.8)
-    this.uiUtil
-      .buildButton(stopTrackId, '⏹ Stop', () => {
-        void (async () => {
-          const tvTicker = this.domManager.getTicker();
-          if (confirm(`Stop tracking ${tvTicker}?`)) {
-            // BUG 1.1: Stop tracking does not verify/remove existing flag state; flagged tickers stay highlighted
-            await this.tickerHandler.stopTracking(tvTicker);
-          }
-        })();
-      })
-      .appendTo($toolbar);
+    this.uiUtil.buildButton(stopTrackId, '\u{23F9} Stop', this.handleStopTrackingClick).appendTo($toolbar);
 
     // Map Alert button (FR-9.9)
-    this.uiUtil
-      .buildButton(mapAlertId, '\u{1F517} Map', () => {
-        const ticker = this.domManager.getTicker();
-        // BUG: Mapping from toolbar does not refresh ticker/alerts to show new mapping state
-        void this.alertTickerHandler.linkInvestingTicker(ticker);
-      })
-      .appendTo($toolbar);
+    this.uiUtil.buildButton(mapAlertId, '\u{1F517} Map', this.handleMapAlertClick).appendTo($toolbar);
 
     $toolbar.prependTo($auditArea);
   }
+
+  /** Refresh All button click handler */
+  private readonly handleRefreshAllClick = (): void => {
+    void this.runFullAudit();
+  };
+
+  /** Stop Tracking button click handler (FR-9.8) */
+  private readonly handleStopTrackingClick = (): void => {
+    void (async () => {
+      const tvTicker = this.domManager.getTicker();
+      if (confirm(`Stop tracking ${tvTicker}?`)) {
+        await this.tickerHandler.stopTracking(tvTicker);
+      }
+    })();
+  };
+
+  /** Map Alert button click handler (FR-9.9) */
+  private readonly handleMapAlertClick = (): void => {
+    const ticker = this.domManager.getTicker();
+    void this.alertTickerHandler.linkInvestingTicker(ticker);
+  };
+
+  // ── Renderer Lifecycle ──
 
   /**
    * Gets or creates a renderer for a section, preserving collapse state across runs

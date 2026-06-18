@@ -378,6 +378,15 @@ export class AuditRenderer {
   }
 
   /**
+   * Remove a ticker result from this section without full recompute.
+   * Used for optimistic removal when a ticker stops being tracked.
+   * @param ticker - Ticker symbol to remove
+   */
+  public removeTicker(ticker: string): void {
+    this.removeResultAndUpdateHeader(ticker);
+  }
+
+  /**
    * Remove a result from the list and update header count
    * Used for fast right-click removal without full refresh
    * @private

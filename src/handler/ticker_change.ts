@@ -1,41 +1,41 @@
 import { IDomManager } from '../manager/dom';
-import { IAlertHandler } from './alert';
-import { IPaintManager } from '../manager/paint';
 import { IRecentManager } from '../manager/recent';
 import { ISyncUtil } from '../util/sync';
+import { IDomainEventConsumer, ISubscriber } from '../manager/event_bus';
+import { DomainEventType } from '../models/domain_event';
 
-export interface ITickerChangeHandler {
+export interface ITickerChangeHandler extends IDomainEventConsumer {
   onTickerChange(): void;
 }
 
 /**
  * Handles ticker change events from the DOM observer.
  *
- * Delegates to sub-handlers. Decoupled consumers (TimeFrame, Display, Kite, etc.)
- * listen to the TICKER_CHANGED domain event published by RecentManager.markRecent().
+ * Delegates to RecentManager which publishes TICKER_CHANGED.
+ * All other consumers (Display, TimeFrame, AlertSummary, etc.)
+ * react to that domain event.
+ *
+ * Also subscribes to FIRST_LOAD to mark the initial ticker as recent
+ * and trigger the first render cascade.
  */
 export class TickerChangeHandler implements ITickerChangeHandler {
   constructor(
     private readonly domManager: IDomManager,
-    private readonly alertHandler: IAlertHandler,
-    private readonly paintManager: IPaintManager,
     private readonly recentManager: IRecentManager,
     private readonly syncUtil: ISyncUtil
   ) {}
 
-  public onTickerChange(): void {
-    this.syncUtil.waitOn('tickerChange', 150, () => {
-      // Refresh alerts for current ticker
-      this.alertHandler.refreshAlerts();
-
-      // Update UI components — paintTickers handles WATCHLIST + SCREENER (if visible) + header
-      void this.paintManager.paintTickers([this.domManager.getTicker()]);
-      void this.recordRecentTicker();
+  /** @inheritdoc */
+  registerEvents(subscriber: ISubscriber): void {
+    subscriber.subscribe(DomainEventType.FIRST_LOAD, (event) => {
+      this.recentManager.markRecent(event.ticker);
     });
   }
 
-  private recordRecentTicker(): void {
-    const tvTicker = this.domManager.getTicker();
-    this.recentManager.markRecent(tvTicker);
+  public onTickerChange(): void {
+    this.syncUtil.waitOn('tickerChange', 150, () => {
+      const tvTicker = this.domManager.getTicker();
+      this.recentManager.markRecent(tvTicker);
+    });
   }
 }

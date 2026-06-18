@@ -76,7 +76,6 @@ export class CommandInputHandler implements ICommandInputHandler {
   private processCommandInput(action: string, value: string) {
     void this.tickerHandler.processCommand(action, value);
     this.clearInputField();
-    this.alertHandler.refreshAlerts();
   }
 
   private determineInputType(value: string): InputProcessor {

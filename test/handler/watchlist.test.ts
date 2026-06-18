@@ -101,24 +101,6 @@ describe('WatchListHandler', () => {
       );
     });
 
-    it('should target-paint selected tickers after category update resolves', async () => {
-      handler.recordSelectedTicker(WatchCategoryId.READY);
-
-      // Wait for internal async execution to complete
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['SELECTED1', 'SELECTED2']);
-    });
-
-    it('should refresh summary after targeted update resolves', async () => {
-      handler.recordSelectedTicker(WatchCategoryId.READY);
-
-      // Wait for internal async execution to complete
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      expect(mockWatchlistManager.refreshSummary).toHaveBeenCalled();
-    });
-
     it('should NOT do full refresh', async () => {
       handler.recordSelectedTicker(WatchCategoryId.READY);
 

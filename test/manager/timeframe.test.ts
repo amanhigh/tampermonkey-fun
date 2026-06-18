@@ -5,15 +5,8 @@ import { IPublisher } from '../../src/manager/event_bus';
 import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/ticker';
 import { Constants } from '../../src/models/constant';
 import { Notifier } from '../../src/util/notify';
-import { Sequence, TickerTimeframe } from '../../src/models/timeframe';
+import { Sequence, TickerTimeframe, TMN_SEQUENCE, SMN_SEQUENCE } from '../../src/models/timeframe';
 import { DomainEventType } from '../../src/models/domain_event';
-
-const DEFAULT_SEQUENCE: Sequence = [
-  TickerTimeframe.TMN,
-  TickerTimeframe.MN,
-  TickerTimeframe.WK,
-  TickerTimeframe.DL,
-];
 
 // Mock jQuery with simplified approach - avoid complex interface typing
 const mockJQuery = jest.fn();
@@ -136,34 +129,34 @@ describe('TimeFrameManager', () => {
       expect(result).toEqual([TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL] as Sequence);
     });
 
-    it('should return SMN, TMN, MN, WK for YR, SMN, TMN, MN, WK backend list', async () => {
+    it('should return SMN, TMN, MN, WK for YR, SMN, TMN, MN, WK backend list (no DL)', async () => {
       mockTickerManager.getTicker.mockResolvedValue(
         createMockTicker({ timeframes: [        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK] })
       );
 
       const result = await timeFrameManager.getSequence();
 
-      // YR is the top of the catalog, sequence becomes YR, SMN, TMN, MN
-      expect(result).toEqual([TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN] as Sequence);
+      // No DL → SMN_SEQUENCE
+      expect(result).toEqual(SMN_SEQUENCE);
     });
 
-    it('should return DEFAULT_SEQUENCE when backend list starts too low', async () => {
+    it('should return TMN_SEQUENCE when backend list contains DL at any position', async () => {
       mockTickerManager.getTicker.mockResolvedValue(
         createMockTicker({ timeframes: [TickerTimeframe.WK, TickerTimeframe.DL] })
       );
 
       const result = await timeFrameManager.getSequence();
 
-      // WK (index 3) + 4 = 7 > 5 canonical frames → cannot produce 4 contiguous → DEFAULT_SEQUENCE
-      expect(result).toEqual(DEFAULT_SEQUENCE);
+      // Contains DL → TMN_SEQUENCE
+      expect(result).toEqual(TMN_SEQUENCE);
     });
 
-    it('should fall back to DEFAULT_SEQUENCE when backend read fails', async () => {
+    it('should fall back to TMN_SEQUENCE when backend read fails', async () => {
       mockTickerManager.getTicker.mockRejectedValue(new Error('Not found'));
 
       const result = await timeFrameManager.getSequence();
 
-      expect(result).toEqual(DEFAULT_SEQUENCE);
+      expect(result).toEqual(TMN_SEQUENCE);
     });
   });
 
@@ -286,7 +279,7 @@ describe('TimeFrameManager', () => {
       expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(2)`);
     });
 
-    it('should use backend Sequence when YR backend list is provided', async () => {
+    it('should use SMN_SEQUENCE when backend list has no DL', async () => {
       mockTickerManager.getTicker.mockResolvedValue(
         createMockTicker({ timeframes: [        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK] })
       );
@@ -295,8 +288,8 @@ describe('TimeFrameManager', () => {
       const result = await timeFrameManager.apply(0);
 
       expect(result).toBe(true);
-      // Position 0 in Sequence ['YR','SMN','TMN','MN'] → YR → toolbar 7
-      expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(7)`);
+      // No DL → SMN_SEQUENCE ['SMN','TMN','MN','WK'] → position 0 → SMN → toolbar 6
+      expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(6)`);
     });
 
     it('should return false when toolbar element not found', async () => {
@@ -477,7 +470,7 @@ describe('TimeFrameManager', () => {
       });
     });
 
-    it('should verify active vs Sequence consistency with YR backend timeframes', async () => {
+    it('should verify active vs Sequence consistency with YR backend timeframes (no DL)', async () => {
       mockTickerManager.getTicker.mockResolvedValue(
         createMockTicker({ timeframes: [        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK] })
       );
@@ -488,13 +481,13 @@ describe('TimeFrameManager', () => {
       const active = await timeFrameManager.getActiveTimeframes();
       expect(active).toEqual([        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK]);
 
-      // Sequence keeps YR as top, becomes YR, SMN, TMN, MN
+      // No DL → SMN_SEQUENCE
       const sequence = await timeFrameManager.getSequence();
-      expect(sequence).toEqual([TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN] as Sequence);
+      expect(sequence).toEqual(SMN_SEQUENCE);
 
-      // Position 0 in Sequence = YR → toolbar 7
+      // Position 0 in SMN_SEQUENCE = SMN → toolbar 6
       await timeFrameManager.apply(0);
-      expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(7)`);
+      expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(6)`);
     });
   });
 });

@@ -6,6 +6,8 @@ import { Constants } from '../../src/models/constant';
 import { ITickerHandler } from '../../src/handler/ticker';
 import { IAlertTickerHandler } from '../../src/handler/alert_ticker';
 import { IDomManager } from '../../src/manager/dom';
+import { DomainEventType } from '../../src/models/domain_event';
+import { ISubscriber } from '../../src/manager/event_bus';
 
 // Mock jQuery globally for DOM operations
 const mockJQuery = {
@@ -58,6 +60,7 @@ describe('AuditHandler', () => {
   let mockTickerHandler: jest.Mocked<ITickerHandler>;
   let mockAlertTickerHandler: jest.Mocked<IAlertTickerHandler>;
   let mockTickerManager: jest.Mocked<IDomManager>;
+  let mockSubscriber: jest.Mocked<ISubscriber>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -75,54 +78,71 @@ describe('AuditHandler', () => {
     mockAlertTickerHandler = { linkInvestingTicker: jest.fn().mockResolvedValue(undefined) } as any;
     mockTickerManager = { getTicker: jest.fn().mockReturnValue('TCS'), getInvestingTicker: jest.fn().mockReturnValue('TCS_INV') } as any;
 
+    mockSubscriber = {
+      subscribe: jest.fn(),
+      subscribeMany: jest.fn(),
+    } as any;
+
     auditHandler = new AuditHandler(mockAuditRegistry, mockUIUtil, mockTickerHandler, mockAlertTickerHandler, mockTickerManager);
   });
 
-  describe('auditAllOnFirstRun', () => {
+  describe('registerEvents', () => {
+    it('subscribes to FIRST_LOAD', () => {
+      auditHandler.registerEvents(mockSubscriber);
+      expect(mockSubscriber.subscribe).toHaveBeenCalledWith(DomainEventType.FIRST_LOAD, expect.any(Function));
+    });
+
+    it('subscribes to ALERTS_CHANGED and ALERT_TICKER_LINKED', () => {
+      auditHandler.registerEvents(mockSubscriber);
+      expect(mockSubscriber.subscribeMany).toHaveBeenCalledWith(
+        [DomainEventType.ALERTS_CHANGED, DomainEventType.ALERT_TICKER_LINKED],
+        expect.any(Function)
+      );
+    });
+
+    it('subscribes to ALERT_TICKER_DELETED', () => {
+      auditHandler.registerEvents(mockSubscriber);
+      expect(mockSubscriber.subscribe).toHaveBeenCalledWith(DomainEventType.ALERT_TICKER_DELETED, expect.any(Function));
+    });
+
+    it('subscribes to TICKER_CATEGORY_CHANGED', () => {
+      auditHandler.registerEvents(mockSubscriber);
+      expect(mockSubscriber.subscribe).toHaveBeenCalledWith(DomainEventType.TICKER_CATEGORY_CHANGED, expect.any(Function));
+    });
+
+    it('subscribes to TICKER_TRACKING_STARTED', () => {
+      auditHandler.registerEvents(mockSubscriber);
+      expect(mockSubscriber.subscribe).toHaveBeenCalledWith(DomainEventType.TICKER_TRACKING_STARTED, expect.any(Function));
+    });
+
+    it('subscribes to TICKER_TRACKING_STOPPED', () => {
+      auditHandler.registerEvents(mockSubscriber);
+      expect(mockSubscriber.subscribe).toHaveBeenCalledWith(DomainEventType.TICKER_TRACKING_STOPPED, expect.any(Function));
+    });
+  });
+
+  describe('FIRST_LOAD triggers full audit', () => {
     beforeEach(() => {
       const alertsSection = makeSection({ id: 'alert-coverage', title: 'Alerts Coverage' });
       mockAuditRegistry.mustGetSection.mockReturnValue(alertsSection);
     });
 
-    it('runs audits on first call', async () => {
-      await auditHandler.auditAllOnFirstRun();
+    it('creates toolbar buttons when triggered by FIRST_LOAD', () => {
+      auditHandler.registerEvents(mockSubscriber);
+
+      // Get the FIRST_LOAD handler and invoke it
+      const firstLoadHandler = mockSubscriber.subscribe.mock.calls.find(
+        (call) => call[0] === DomainEventType.FIRST_LOAD
+      )?.[1] as () => void;
+      expect(firstLoadHandler).toBeDefined();
+      firstLoadHandler();
+
       expect(mockUIUtil.buildButton).toHaveBeenCalledWith(
         Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH, '\u{1F504} Refresh', expect.any(Function)
       );
-    });
-
-    it('does not run audits on second call', async () => {
-      jest.clearAllMocks();
-      await auditHandler.auditAllOnFirstRun();
-      const firstCount = mockUIUtil.buildButton.mock.calls.length;
-      jest.clearAllMocks();
-      await auditHandler.auditAllOnFirstRun();
-      expect(mockUIUtil.buildButton.mock.calls.length).toBe(0);
-      expect(firstCount).toBeGreaterThan(0);
-    });
-  });
-
-  describe('toolbar buttons', () => {
-    beforeEach(() => {
-      mockAuditRegistry.mustGetSection.mockReturnValue(makeSection({ id: 'alert-coverage', title: 'Alerts Coverage' }));
-    });
-
-    it('creates global refresh button', async () => {
-      await auditHandler.auditAll();
-      expect(mockUIUtil.buildButton).toHaveBeenCalledWith(
-        Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH, '\u{1F504} Refresh', expect.any(Function)
-      );
-    });
-
-    it('creates stop tracking button', async () => {
-      await auditHandler.auditAll();
       expect(mockUIUtil.buildButton).toHaveBeenCalledWith(
         Constants.UI.IDS.BUTTONS.AUDIT_STOP_TRACKING, expect.stringContaining('Stop'), expect.any(Function)
       );
-    });
-
-    it('creates map alert button', async () => {
-      await auditHandler.auditAll();
       expect(mockUIUtil.buildButton).toHaveBeenCalledWith(
         Constants.UI.IDS.BUTTONS.AUDIT_MAP_ALERT, expect.any(String), expect.any(Function)
       );

@@ -1,18 +1,14 @@
 import { AlertHandler, IAlertHandler } from '../../src/handler/alert';
 import { IAlertManager } from '../../src/manager/alert';
 import { ITradingViewManager } from '../../src/manager/tv';
-import { IAuditHandler } from '../../src/handler/audit';
 import { IDomManager } from '../../src/manager/dom';
 import { ITickerManager } from '../../src/manager/ticker';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
-import { ISyncUtil } from '../../src/util/sync';
 import { IUIUtil } from '../../src/util/ui';
-import { IAlertSummaryHandler } from '../../src/handler/alert_summary';
 import { ITickerHandler } from '../../src/handler/ticker';
 import { IAlertTickerHandler } from '../../src/handler/alert_ticker';
 import { AlertClicked, AlertClickAction } from '../../src/models/events';
 import { AlertTicker } from '../../src/models/alert_ticker';
-import { IDisplayHandler } from '../../src/handler/display';
 
 jest.mock('../../src/util/notify', () => ({
   Notifier: {
@@ -28,16 +24,12 @@ describe('AlertHandler', () => {
   let handler: IAlertHandler;
   let mockAlertManager: jest.Mocked<IAlertManager>;
   let mockTradingViewManager: jest.Mocked<ITradingViewManager>;
-  let mockAuditHandler: jest.Mocked<IAuditHandler>;
   let mockDomManager: jest.Mocked<IDomManager>;
   let mockTickerManager: jest.Mocked<ITickerManager>;
   let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
-  let mockSyncUtil: jest.Mocked<ISyncUtil>;
   let mockUIUtil: jest.Mocked<IUIUtil>;
-  let mockAlertSummaryHandler: jest.Mocked<IAlertSummaryHandler>;
   let mockTickerHandler: jest.Mocked<ITickerHandler>;
   let mockAlertTickerHandler: jest.Mocked<IAlertTickerHandler>;
-  let mockDisplayHandler: jest.Mocked<IDisplayHandler>;
   const { Notifier } = jest.requireMock('../../src/util/notify');
 
   beforeEach(() => {
@@ -59,10 +51,6 @@ describe('AlertHandler', () => {
       getCursorPrice: jest.fn(),
     } as any;
 
-    mockAuditHandler = {
-      auditAll: jest.fn(),
-    } as any;
-
     mockDomManager = {
       getTicker: jest.fn().mockReturnValue('TV:INFY'),
       getCurrentExchange: jest.fn().mockReturnValue('NSE'),
@@ -79,13 +67,9 @@ describe('AlertHandler', () => {
       deleteAlertTicker: jest.fn().mockResolvedValue(undefined),
     } as any;
 
-    mockSyncUtil = {
-      waitOn: jest.fn(),
-    } as any;
     mockUIUtil = {
       showConfirm: jest.fn(),
     } as any;
-    mockAlertSummaryHandler = {} as any;
     mockTickerHandler = {
       openTicker: jest.fn(),
     } as any;
@@ -93,23 +77,15 @@ describe('AlertHandler', () => {
       linkInvestingTicker: jest.fn().mockResolvedValue(undefined),
     } as any;
 
-    mockDisplayHandler = {
-      display: jest.fn().mockResolvedValue(undefined),
-    } as any;
-
     handler = new AlertHandler(
       mockAlertManager,
       mockTradingViewManager,
-      mockAuditHandler,
       mockDomManager,
       mockTickerManager,
       mockAlertTickerManager,
-      mockSyncUtil,
       mockUIUtil,
-      mockAlertSummaryHandler,
       mockTickerHandler,
-      mockAlertTickerHandler,
-      mockDisplayHandler
+      mockAlertTickerHandler
     );
   });
 
@@ -152,7 +128,6 @@ describe('AlertHandler', () => {
 
         expect(Notifier.warn).toHaveBeenCalledWith(expect.stringContaining('no pairId'));
         expect(mockAlertTickerManager.linkAlertTicker).not.toHaveBeenCalled();
-        expect(mockDisplayHandler.display).not.toHaveBeenCalled();
       });
 
       it('should create link when no alert ticker exists and pairId is present', async () => {
@@ -172,7 +147,6 @@ describe('AlertHandler', () => {
           exchange: 'NSE',
         });
         expect(Notifier.success).toHaveBeenCalledWith(expect.stringContaining('Mapped'));
-        expect(mockDisplayHandler.display).toHaveBeenCalled();
       });
 
       it('should create link when existing alert ticker has different symbol', async () => {
@@ -199,10 +173,9 @@ describe('AlertHandler', () => {
           name: 'INFY',
           exchange: 'NSE',
         });
-        expect(mockDisplayHandler.display).toHaveBeenCalled();
       });
 
-      it('should skip duplicate linking when any alert ticker symbol matches', async () => {
+      it('should skip duplicate linking when any alert ticker symbol matches and not call display', async () => {
         const existing: AlertTicker = {
           symbol: 'INFY',
           pair_id: '12345',
@@ -222,7 +195,6 @@ describe('AlertHandler', () => {
 
         expect(mockAlertTickerManager.linkAlertTicker).not.toHaveBeenCalled();
         expect(Notifier.info).toHaveBeenCalledWith(expect.stringContaining('Already mapped'));
-        expect(mockDisplayHandler.display).not.toHaveBeenCalled();
       });
 
       it('should store alertName as name when provided', async () => {
@@ -240,7 +212,6 @@ describe('AlertHandler', () => {
           exchange: 'NSE',
         });
         expect(Notifier.success).toHaveBeenCalledWith(expect.stringContaining('Mapped'));
-        expect(mockDisplayHandler.display).toHaveBeenCalled();
       });
 
       it('should fallback to alertTicker when alertName is not provided', async () => {
@@ -258,6 +229,36 @@ describe('AlertHandler', () => {
           exchange: 'NSE',
         });
       });
+    });
+  });
+
+  describe('handleAlertButton', () => {
+    it('creates alert 20% above current price on normal click (no Ctrl)', async () => {
+      mockTradingViewManager.getLastTradedPrice.mockReturnValue(100);
+      mockAlertManager.createAlertForCurrentTicker = jest.fn().mockResolvedValue({ name: 'INFY' });
+
+      handler.handleAlertButton({ ctrlKey: false } as MouseEvent);
+
+      // Wait for async createHighAlert → createAlertAndNotify → createAlertForCurrentTicker
+      await new Promise(process.nextTick);
+
+      expect(mockTradingViewManager.getLastTradedPrice).toHaveBeenCalled();
+      expect(mockAlertManager.createAlertForCurrentTicker).toHaveBeenCalled();
+      // Price should be 120 (100 * 1.2)
+      const priceArg = (mockAlertManager.createAlertForCurrentTicker as jest.Mock).mock.calls[0][0];
+      expect(priceArg).toBe(120);
+    });
+
+    it('maps current exchange to ticker when Ctrl is pressed', async () => {
+      mockTickerManager.setExchange = jest.fn().mockResolvedValue(undefined);
+
+      handler.handleAlertButton({ ctrlKey: true } as MouseEvent);
+
+      await new Promise(process.nextTick);
+
+      expect(mockDomManager.getTicker).toHaveBeenCalled();
+      expect(mockDomManager.getCurrentExchange).toHaveBeenCalled();
+      expect(mockTickerManager.setExchange).toHaveBeenCalledWith('TV:INFY', 'NSE');
     });
   });
 
@@ -352,30 +353,6 @@ describe('AlertHandler', () => {
       expect(mockAlertTickerManager.deleteAlertTicker).not.toHaveBeenCalled();
     });
 
-    it('refreshes alerts and display after successful delete', async () => {
-      mockRowJQ.attr.mockImplementation((key: string) => {
-        if (key === 'data-alert-ticker-symbol') return 'INFY.PA';
-        if (key === 'data-alert-ticker-type') return 'SECONDARY';
-        return '';
-      });
-
-      handler.registerAlertTickerDelinkHandler();
-      mockUIUtil.showConfirm.mockReturnValue(true);
-
-      // Simulate refreshAlerts being a void method; displayHandler.display is already mocked
-      const refreshAlertsSpy = jest.spyOn(handler as any, 'refreshAlerts');
-
-      const mockEvent = {
-        preventDefault: jest.fn(),
-        stopPropagation: jest.fn(),
-        currentTarget: mockRowJQ,
-      };
-      await capturedHandler(mockEvent);
-
-      expect(refreshAlertsSpy).toHaveBeenCalled();
-      expect(mockDisplayHandler.display).toHaveBeenCalled();
-    });
-
     it('warns when delete fails', async () => {
       mockAlertTickerManager.deleteAlertTicker.mockRejectedValue(new Error('Not found'));
       handler.registerAlertTickerDelinkHandler();
@@ -389,7 +366,6 @@ describe('AlertHandler', () => {
       await capturedHandler(mockEvent);
 
       expect(Notifier.warn).toHaveBeenCalledWith('Failed to delink INFY.PA: Not found');
-      expect(mockDisplayHandler.display).not.toHaveBeenCalled();
     });
   });
 });

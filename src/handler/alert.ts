@@ -7,17 +7,12 @@ import { ITickerManager } from '../manager/ticker';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { IDomManager } from '../manager/dom';
 import { ITradingViewManager } from '../manager/tv';
-import { isCompositeSymbol } from '../models/ticker';
 import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 import { IUIUtil } from '../util/ui';
-import { ISyncUtil } from '../util/sync';
 import { AlertClicked, AlertClickAction } from '../models/events';
-import { IAlertSummaryHandler } from './alert_summary';
 import { ITickerHandler } from './ticker';
 import { IAlertTickerHandler } from './alert_ticker';
-import { IAuditHandler } from './audit';
-import { IDisplayHandler } from './display';
 
 import { PairInfo } from '../models/alert';
 
@@ -36,24 +31,9 @@ export interface IAlertHandler {
   createAlertAtCursor(): Promise<void>;
 
   /**
-   * Creates alert 20% above current price
-   */
-  createHighAlert(): Promise<void>;
-
-  /**
    * Deletes alerts near cursor price
    */
   deleteAlertAtCursor(): Promise<void>;
-
-  /**
-   * Refreshes local alerts with synchronization
-   */
-  refreshAlerts(): void;
-
-  /**
-   * Forces a refresh of all alerts from server
-   */
-  refreshAllAlerts(): Promise<void>;
 
   /**
    * Handles refresh button operations
@@ -69,12 +49,6 @@ export interface IAlertHandler {
    * @param e Mouse event with modifier info
    */
   handleAlertButton(e: MouseEvent): void;
-
-  /**
-   * Handles the journal button toggle event
-   * @param e Event object
-   */
-  handleJournalButton(e: Event): void;
 
   /**
    * Handles alert context menu event
@@ -111,16 +85,12 @@ export class AlertHandler implements IAlertHandler {
   constructor(
     private readonly alertManager: IAlertManager,
     private readonly tradingViewManager: ITradingViewManager,
-    private readonly auditHandler: IAuditHandler,
     private readonly domManager: IDomManager,
     private readonly tickerManager: ITickerManager,
     private readonly alertTickerManager: IAlertTickerManager,
-    private readonly syncUtil: ISyncUtil,
     private readonly uiUtil: IUIUtil,
-    private readonly alertSummaryHandler: IAlertSummaryHandler,
     private readonly tickerHandler: ITickerHandler,
-    private readonly alertTickerHandler: IAlertTickerHandler,
-    private readonly displayHandler: IDisplayHandler
+    private readonly alertTickerHandler: IAlertTickerHandler
   ) {}
 
   /** @inheritdoc */
@@ -128,11 +98,7 @@ export class AlertHandler implements IAlertHandler {
     const prices = String(input).trim().split(' ');
     for (const p of prices) {
       const price = parseFloat(p);
-      await this.alertManager.createAlertForCurrentTicker(price).then(async (pairInfo) => {
-        await this.auditHandler.auditAll();
-        this.refreshAlerts();
-        this.notifyAlertCreation(price, pairInfo);
-      });
+      await this.createAlertAndNotify(price);
     }
 
     setTimeout(() => {
@@ -155,71 +121,50 @@ export class AlertHandler implements IAlertHandler {
     }
   }
 
-  /** @inheritdoc */
-  public async createAlertAtCursor(): Promise<void> {
-    const price = await this.tradingViewManager.getCursorPrice();
-    await this.alertManager.createAlertForCurrentTicker(price).then(async (pairInfo) => {
-      await this.auditHandler.auditAll();
-      this.refreshAlerts();
-      this.notifyAlertCreation(price, pairInfo);
-    });
+  /**
+   * Creates an alert for the current ticker at the given price and notifies the user.
+   * @private
+   */
+  private async createAlertAndNotify(price: number): Promise<void> {
+    const pairInfo = await this.alertManager.createAlertForCurrentTicker(price);
+    this.notifyAlertCreation(price, pairInfo);
   }
 
   /** @inheritdoc */
-  public async createHighAlert(): Promise<void> {
+  public async createAlertAtCursor(): Promise<void> {
+    const price = await this.tradingViewManager.getCursorPrice();
+    await this.createAlertAndNotify(price);
+  }
+
+  /**
+   * Creates an alert 20% above the current market price.
+   * Called internally by handleAlertButton() when no Ctrl key is pressed.
+   */
+  private async createHighAlert(): Promise<void> {
     const currentPrice = this.tradingViewManager.getLastTradedPrice();
     const targetPrice = (currentPrice * 1.2).toFixed(2);
     const price = parseFloat(targetPrice);
-    await this.alertManager.createAlertForCurrentTicker(price).then(async (pairInfo) => {
-      await this.auditHandler.auditAll();
-      this.refreshAlerts();
-      this.notifyAlertCreation(price, pairInfo);
-    });
+    await this.createAlertAndNotify(price);
   }
 
   /** @inheritdoc */
   public async deleteAlertAtCursor(): Promise<void> {
     const price = await this.tradingViewManager.getCursorPrice();
     await this.alertManager.deleteAlertsByPrice(price);
-    this.refreshAlerts();
     Notifier.red(`❌ Alerts deleted around price: ${price}`);
   }
 
-  /** @inheritdoc */
-  public refreshAlerts(): void {
-    // FIXME: refreshAlerts should also call displayHandler.display() to keep the
-    // display card alert count in sync; several callers compensate manually.
-    this.syncUtil.waitOn('alert-refresh-local', 10, () => {
-      void (async () => {
-        try {
-          const alerts = await this.alertManager.getAlerts();
-          this.alertSummaryHandler.displayAlerts(alerts);
-          void this.auditHandler.auditAll();
-        } catch (error) {
-          // Show NO PAIR for Null Alerts
-          this.alertSummaryHandler.displayAlerts(null);
-
-          const tvTicker = this.domManager.getTicker();
-          // Igoner Error for Composite Symbols as its expected.
-          if (!isCompositeSymbol(tvTicker)) {
-            throw error;
-          }
-        }
-      })();
-    });
-  }
-
-  /** @inheritdoc */
-  public async refreshAllAlerts(): Promise<void> {
+  /**
+   * Forces a full refresh of all alerts from the Investing.com backend.
+   * Called internally by handleRefreshButton().
+   */
+  private async refreshAllAlerts(): Promise<void> {
     const count = await this.alertManager.refreshAlerts();
     if (count > 0) {
       Notifier.success(`Loaded ${count} alerts`);
     } else {
       Notifier.warn('No alerts found');
     }
-
-    this.refreshAlerts();
-    await this.auditHandler.auditAll();
   }
 
   /** @inheritdoc */
@@ -242,17 +187,9 @@ export class AlertHandler implements IAlertHandler {
   }
 
   /** @inheritdoc */
-  public handleJournalButton(): void {
-    this.uiUtil.toggleUI(`#${Constants.UI.IDS.AREAS.JOURNAL}`);
-  }
-
-  /** @inheritdoc */
   public handleAlertContextMenu(e: Event): void {
     e.preventDefault();
-    void this.alertTickerHandler.linkInvestingTicker(this.domManager.getTicker()).then(() => {
-      this.refreshAlerts();
-      void this.displayHandler.display();
-    });
+    void this.alertTickerHandler.linkInvestingTicker(this.domManager.getTicker());
   }
 
   /** @inheritdoc */
@@ -296,8 +233,6 @@ export class AlertHandler implements IAlertHandler {
       exchange,
     });
     Notifier.success(`Mapped ${ticker} to ${event.alertTicker}`);
-    this.refreshAlerts();
-    await this.displayHandler.display();
   }
 
   /**
@@ -317,7 +252,6 @@ export class AlertHandler implements IAlertHandler {
   /** @inheritdoc */
   public async handleResetAlerts(): Promise<void> {
     await this.alertManager.deleteAllAlerts();
-    this.refreshAlerts();
     Notifier.red('❌ 🚀 All alerts deleted');
   }
 
@@ -358,8 +292,6 @@ export class AlertHandler implements IAlertHandler {
     try {
       await this.alertTickerManager.deleteAlertTicker(symbol);
       Notifier.success(`⏹ Delinked ${symbol}`);
-      this.refreshAlerts();
-      await this.displayHandler.display();
     } catch (error) {
       Notifier.warn(`Failed to delink ${symbol}: ${(error as Error).message}`);
     }

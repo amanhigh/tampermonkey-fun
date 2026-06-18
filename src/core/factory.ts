@@ -118,8 +118,7 @@ export class Factory {
             Factory.handler.kite(),
             Factory.handler.alertFeed(),
             Factory.handler.panel(),
-            Factory.manager.tv(),
-            Factory.handler.audit()
+            Factory.manager.tv()
           )
       ),
 
@@ -191,7 +190,8 @@ export class Factory {
             Factory.manager.alertTicker(),
             Factory.manager.dom(),
             Factory.client.investing(),
-            Factory.manager.tv()
+            Factory.manager.tv(),
+            Factory.manager.eventPublisher()
           )
       ),
 
@@ -236,7 +236,10 @@ export class Factory {
       Factory.getInstance('kiteManager', () => new KiteManager(Factory.client.kite(), Factory.repo.kite())),
 
     ticker: (): ITickerManager =>
-      Factory.getInstance('tickerManager', () => new TickerManager(Factory.client.ticker())),
+      Factory.getInstance(
+        'tickerManager',
+        () => new TickerManager(Factory.client.ticker(), Factory.manager.eventPublisher())
+      ),
 
     lifecycle: (): ILifecycleManager =>
       Factory.getInstance(
@@ -245,7 +248,6 @@ export class Factory {
           new LifecycleManager(
             Factory.client.ticker(),
             Factory.manager.category(),
-            Factory.manager.paint(),
             Factory.manager.alertTicker(),
             Factory.manager.eventPublisher()
           )
@@ -387,16 +389,12 @@ export class Factory {
           new AlertHandler(
             Factory.manager.alert(),
             Factory.manager.tv(),
-            Factory.handler.audit(),
             Factory.manager.dom(),
             Factory.manager.ticker(),
             Factory.manager.alertTicker(),
-            Factory.util.sync(),
             Factory.util.ui(),
-            Factory.handler.alertSummary(),
             Factory.handler.ticker(),
-            Factory.handler.alertTicker(),
-            Factory.handler.display()
+            Factory.handler.alertTicker()
           )
       ),
     alertSummary: (): IAlertSummaryHandler =>
@@ -428,11 +426,17 @@ export class Factory {
             Factory.handler.alert(),
             Factory.handler.tickerChange(),
             Factory.manager.paint(),
+            Factory.manager.dom(),
+            Factory.manager.eventPublisher(),
             [
               Factory.handler.alertFeed(),
               Factory.handler.timeFrame(),
               Factory.handler.display(),
               Factory.handler.kite(),
+              Factory.handler.alertSummary(),
+              Factory.handler.audit(),
+              Factory.handler.watchlist(),
+              Factory.handler.tickerChange(),
             ],
             Factory.manager.eventSubscriber()
           )
@@ -488,15 +492,9 @@ export class Factory {
     tickerChange: (): ITickerChangeHandler =>
       Factory.getInstance(
         'tickerChangeHandler',
-        () =>
-          new TickerChangeHandler(
-            Factory.manager.dom(),
-            Factory.handler.alert(),
-            Factory.manager.paint(),
-            Factory.manager.recent(),
-            Factory.util.sync()
-          )
+        () => new TickerChangeHandler(Factory.manager.dom(), Factory.manager.recent(), Factory.util.sync())
       ),
+    // TickerChangeHandler must be registered as domain consumer for FIRST_LOAD
 
     keyConfig: (): KeyConfig =>
       Factory.getInstance(
@@ -529,10 +527,7 @@ export class Factory {
           )
       ),
     flag: (): IFlagHandler =>
-      Factory.getInstance(
-        'flagHandler',
-        () => new FlagHandler(Factory.manager.category(), Factory.manager.dom(), Factory.manager.paint())
-      ),
+      Factory.getInstance('flagHandler', () => new FlagHandler(Factory.manager.category(), Factory.manager.dom())),
     display: (): IDisplayHandler =>
       Factory.getInstance(
         'displayHandler',

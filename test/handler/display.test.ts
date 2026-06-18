@@ -1,4 +1,4 @@
-import { DisplayHandler, IDisplayHandler } from '../../src/handler/display';
+import { DisplayHandler } from '../../src/handler/display';
 import { IDomManager } from '../../src/manager/dom';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { AlertTicker } from '../../src/models/alert_ticker';
@@ -40,7 +40,7 @@ const makeAlertTicker = (overrides: Partial<AlertTicker> = {}): AlertTicker => (
 });
 
 describe('DisplayHandler', () => {
-  let handler: IDisplayHandler;
+  let handler: DisplayHandler;
   let mockDomManager: jest.Mocked<IDomManager>;
   let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
 

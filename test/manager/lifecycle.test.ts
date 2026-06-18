@@ -1,7 +1,6 @@
 import { LifecycleManager, ILifecycleManager, StartTrackingRequest } from '../../src/manager/lifecycle';
 import { ITickerClient } from '../../src/client/ticker';
 import { ICategoryManager } from '../../src/manager/category';
-import { IPaintManager } from '../../src/manager/paint';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { IPublisher } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
@@ -13,7 +12,6 @@ describe('LifecycleManager', () => {
   let manager: ILifecycleManager;
   let mockTickerClient: jest.Mocked<ITickerClient>;
   let mockCategoryManager: jest.Mocked<ICategoryManager>;
-  let mockPaintManager: jest.Mocked<IPaintManager>;
   let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
   let mockPublisher: jest.Mocked<IPublisher>;
 
@@ -47,12 +45,6 @@ describe('LifecycleManager', () => {
       getBatchCategory: jest.fn(),
     } as unknown as jest.Mocked<ICategoryManager>;
 
-    mockPaintManager = {
-      paint: jest.fn(),
-      paintTickers: jest.fn(),
-      summarizeBuckets: jest.fn(),
-    } as unknown as jest.Mocked<IPaintManager>;
-
     mockAlertTickerManager = {
       getAlertTickersForTicker: jest.fn(),
       getPrimaryAlertTicker: jest.fn(),
@@ -69,7 +61,6 @@ describe('LifecycleManager', () => {
     manager = new LifecycleManager(
       mockTickerClient,
       mockCategoryManager,
-      mockPaintManager,
       mockAlertTickerManager,
       mockPublisher
     );
@@ -94,7 +85,6 @@ describe('LifecycleManager', () => {
 
       expect(mockCategoryManager.evictTicker).toHaveBeenCalledWith('RELIANCE');
       expect(mockTickerClient.createTicker).toHaveBeenCalledWith(data);
-      expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['RELIANCE']);
       expect(result).toBe(createdTicker);
     });
 
@@ -147,7 +137,6 @@ describe('LifecycleManager', () => {
 
       // Should delete ticker after publishing deletion events
       expect(mockTickerClient.deleteTicker).toHaveBeenCalledWith('RELIANCE');
-      expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['RELIANCE']);
 
       // Should still publish TICKER_TRACKING_STOPPED for other consumers
       expect(mockPublisher.publish).toHaveBeenCalledWith({

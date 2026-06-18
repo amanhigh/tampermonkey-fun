@@ -7,6 +7,7 @@ import { AlertManager, IAlertManager } from '../../src/manager/alert';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { IDomManager } from '../../src/manager/dom';
 import { ITradingViewManager } from '../../src/manager/tv';
+import { IPublisher } from '../../src/manager/event_bus';
 import { Constants } from '../../src/models/constant';
 
 jest.mock('../../src/util/notify', () => ({
@@ -25,6 +26,7 @@ describe('AlertManager', () => {
   let mockDomManager: jest.Mocked<IDomManager>;
   let mockInvestingClient: jest.Mocked<IInvestingClient>;
   let mockTradingViewManager: jest.Mocked<ITradingViewManager>;
+  let mockPublisher: jest.Mocked<IPublisher>;
 
   const defaultAlertTicker: AlertTicker = {
     symbol: 'HDFC',
@@ -71,12 +73,17 @@ describe('AlertManager', () => {
       getLastTradedPrice: jest.fn(),
     } as any;
 
+    mockPublisher = {
+      publish: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
     alertManager = new AlertManager(
       mockPriceAlertClient,
       mockAlertTickerManager,
       mockDomManager,
       mockInvestingClient,
-      mockTradingViewManager
+      mockTradingViewManager,
+      mockPublisher
     );
   });
 

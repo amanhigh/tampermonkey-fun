@@ -12,7 +12,6 @@ import { JournalType } from '../models/trading';
 import { IGlobalErrorHandler } from '../handler/error';
 import { IPanelHandler } from '../handler/panel';
 import { ITradingViewManager } from '../manager/tv';
-import { IAuditHandler } from '../handler/audit';
 import { Factory } from './factory';
 
 export class Barkat {
@@ -27,8 +26,7 @@ export class Barkat {
     private readonly kiteHandler: IKiteHandler,
     private readonly alertFeedHandler: IAlertFeedHandler,
     private readonly panelHandler: IPanelHandler,
-    private readonly tvManager: ITradingViewManager,
-    private readonly auditHandler: IAuditHandler
+    private readonly tvManager: ITradingViewManager
   ) {}
 
   private isInvestingSite(): boolean {
@@ -133,10 +131,8 @@ export class Barkat {
             e.preventDefault();
             const auditAreaId = `#${Constants.UI.IDS.AREAS.AUDIT}`;
 
-            // Toggle audit area: runs audits on first toggle, shows/hides on subsequent
-            void this.auditHandler.auditAllOnFirstRun().then(() => {
-              this.uiUtil.toggleUI(auditAreaId);
-            });
+            // Toggle audit area visibility (audit data loaded via FIRST_LOAD event)
+            this.uiUtil.toggleUI(auditAreaId);
           })
       )
       .append(this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.SUMMARY));
