@@ -11,6 +11,7 @@ import { IAlertFeedHandler } from '../handler/alertfeed';
 import { JournalType } from '../models/trading';
 import { IGlobalErrorHandler } from '../handler/error';
 import { IPanelHandler } from '../handler/panel';
+import { IDomManager } from '../manager/dom';
 import { ITradingViewManager } from '../manager/tv';
 import { Factory } from './factory';
 
@@ -26,6 +27,7 @@ export class Barkat {
     private readonly kiteHandler: IKiteHandler,
     private readonly alertFeedHandler: IAlertFeedHandler,
     private readonly panelHandler: IPanelHandler,
+    private readonly domManager: IDomManager,
     private readonly tvManager: ITradingViewManager
   ) {}
 
@@ -100,7 +102,7 @@ export class Barkat {
           })
           .on('contextmenu', (e) => {
             e.preventDefault();
-            void this.tickerHandler.stopTracking();
+            void this.tickerHandler.stopTracking(this.domManager.getTicker());
           })
       )
       .append(

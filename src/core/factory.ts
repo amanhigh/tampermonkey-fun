@@ -119,6 +119,7 @@ export class Factory {
             Factory.handler.kite(),
             Factory.handler.alertFeed(),
             Factory.handler.panel(),
+            Factory.manager.dom(),
             Factory.manager.tv()
           )
       ),
