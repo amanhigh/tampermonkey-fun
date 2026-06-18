@@ -75,10 +75,19 @@ export class DisplayHandler implements IDisplayHandler {
   async display(): Promise<void> {
     this.displayExpanded = false;
     const tvTicker = this.domManager.getTicker();
-    const alertTickers = await this.alertTickerManager.getAlertTickersForTicker(tvTicker);
+
+    let alertTickers: AlertTicker[] = [];
+    let isUntracked = false;
+    try {
+      alertTickers = await this.alertTickerManager.getAlertTickersForTicker(tvTicker);
+    } catch {
+      // Backend 404 "Ticker not found" — expected for untracked tickers
+      // Treat as empty alert-ticker list with untracked flag
+      isUntracked = true;
+    }
 
     // Store on DOM element for toggle re-render (avoids handler-level cache)
-    $(`#${Constants.UI.IDS.DISPLAY.CARD}`).data('displayData', { tvTicker, alertTickers });
+    $(`#${Constants.UI.IDS.DISPLAY.CARD}`).data('displayData', { tvTicker, alertTickers, isUntracked });
 
     this.renderDisplay();
   }
@@ -90,12 +99,14 @@ export class DisplayHandler implements IDisplayHandler {
    */
   private renderDisplay(): void {
     const $card = $(`#${Constants.UI.IDS.DISPLAY.CARD}`);
-    const data = $card.data('displayData') as { tvTicker: string; alertTickers: AlertTicker[] } | undefined;
+    const data = $card.data('displayData') as
+      | { tvTicker: string; alertTickers: AlertTicker[]; isUntracked?: boolean }
+      | undefined;
     if (!data) {
       return;
     }
 
-    const { tvTicker, alertTickers } = data;
+    const { tvTicker, alertTickers, isUntracked } = data;
     const primaryTicker = alertTickers.find((t) => t.type === 'PRIMARY') ?? null;
     const isMapped = primaryTicker !== null;
     const displayTicker = primaryTicker?.symbol ?? tvTicker;
@@ -108,9 +119,9 @@ export class DisplayHandler implements IDisplayHandler {
     $card.toggleClass(DISPLAY_CLASS.EXPANDED_STATE, this.displayExpanded);
 
     if (this.displayExpanded) {
-      $card.html(this.buildExpandedHtml(displayTicker, isMapped, alertTickers));
+      $card.html(this.buildExpandedHtml(displayTicker, isMapped, alertTickers, isUntracked));
     } else {
-      $card.html(this.buildCompactHtml(displayTicker, isMapped, alertTickers.length));
+      $card.html(this.buildCompactHtml(displayTicker, isMapped, alertTickers.length, isUntracked));
     }
 
     // Attach click handler (remove previous first to avoid duplicates)
@@ -119,26 +130,33 @@ export class DisplayHandler implements IDisplayHandler {
 
   /**
    * Builds compact mode HTML.
-   * Format: 🔗 INFY · 🔔2
+   * Format: 🔗 INFY · 🔔2    (mapped)
+   *         ⚠️ Untracked · BHEL  (untracked)
+   *         ⚠️ BHEL · 🔔0       (unmapped but not untracked)
    */
-  private buildCompactHtml(displayTicker: string, isMapped: boolean, alertCount: number): string {
+  private buildCompactHtml(displayTicker: string, isMapped: boolean, alertCount: number, isUntracked = false): string {
     const statusEmoji = isMapped ? EMOJI.LINKED : EMOJI.UNMAPPED;
-    const tickerHtml = `<span class="${DISPLAY_CLASS.TICKER_CHIP}">${displayTicker}</span>`;
+    const label = isUntracked ? `Untracked · ${displayTicker}` : displayTicker;
     const countHtml = `<span class="${DISPLAY_CLASS.ALERT_COUNT}">${EMOJI.ALERT}${alertCount}</span>`;
 
-    return `${statusEmoji} ${tickerHtml} · ${countHtml}`;
+    return `${statusEmoji} ${label} · ${countHtml}`;
   }
 
   /**
    * Builds expanded mode HTML.
    * Compact header + linked ticker rows.
    */
-  private buildExpandedHtml(displayTicker: string, isMapped: boolean, alertTickers: AlertTicker[]): string {
+  private buildExpandedHtml(
+    displayTicker: string,
+    isMapped: boolean,
+    alertTickers: AlertTicker[],
+    isUntracked = false
+  ): string {
     // Compact header at top
-    const headerHtml = this.buildCompactHtml(displayTicker, isMapped, alertTickers.length);
+    const headerHtml = this.buildCompactHtml(displayTicker, isMapped, alertTickers.length, isUntracked);
 
     // Alert ticker rows
-    const rowsHtml = this.buildAlertTickerRows(alertTickers);
+    const rowsHtml = this.buildAlertTickerRows(alertTickers, isUntracked);
 
     return `${headerHtml}<div class="${DISPLAY_CLASS.EXPANDED}">${rowsHtml}</div>`;
   }
@@ -146,9 +164,13 @@ export class DisplayHandler implements IDisplayHandler {
   /**
    * Builds HTML for linked alert ticker rows.
    * Primary gets ⭐, secondaries get 🔹.
+   * When untracked, shows a special empty-state message.
    */
-  private buildAlertTickerRows(alertTickers: AlertTicker[]): string {
+  private buildAlertTickerRows(alertTickers: AlertTicker[], isUntracked = false): string {
     if (alertTickers.length === 0) {
+      if (isUntracked) {
+        return `<div class="${DISPLAY_CLASS.EMPTY_ROW}">${EMOJI.UNMAPPED} Untracked ticker — no backend record</div>`;
+      }
       return `<div class="${DISPLAY_CLASS.EMPTY_ROW}">${EMOJI.UNMAPPED} No linked alert tickers</div>`;
     }
 

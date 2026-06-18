@@ -75,7 +75,7 @@ describe('DisplayManager', () => {
       expect(mockRecentManager.isRecent).not.toHaveBeenCalled();
     });
 
-    it('should return RECENT/gold when watch category exists but ticker is absent from watchlist silo and is recent', async () => {
+    it('should return UNMAPPED/purple when watch category exists but ticker is absent from watchlist silo and is recent', async () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: READY_CATEGORY,
         flag: undefined,
@@ -92,9 +92,10 @@ describe('DisplayManager', () => {
 
       const result = await displayManager.resolve('TV:ABSENT');
 
-      expect(result).toEqual({ state: DisplayState.RECENT, color: 'gold' });
+      // Absent from loaded silo → untracked beats recent → UNMAPPED/purple
+      expect(result).toEqual({ state: DisplayState.UNMAPPED, color: 'purple' });
       expect(mockCategoryManager.getTickerCategory).toHaveBeenCalledWith('TV:ABSENT');
-      expect(mockRecentManager.isRecent).toHaveBeenCalled();
+      expect(mockRecentManager.isRecent).not.toHaveBeenCalled();
     });
 
     it('should return UNMAPPED/purple when watch category exists but ticker is absent from watchlist silo and not recent', async () => {

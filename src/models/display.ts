@@ -3,7 +3,7 @@
  * Resolved by DisplayManager for both header name and alert feed rows.
  *
  * Priority order (surface-independent):
- *   1 UNMAPPED — no TV ticker mapping (null ticker / unmapped)
+ *   1 UNMAPPED — no TV ticker mapping (null ticker / unmapped / untracked)
  *   2 WATCH_CATEGORY — has watch category AND is in the shared watchlist silo
  *   3 RECENT — recently viewed ticker (any non-null ticker)
  *   4 DEFAULT — everything else (white)

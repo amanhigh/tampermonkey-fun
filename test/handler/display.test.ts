@@ -149,6 +149,18 @@ describe('DisplayHandler', () => {
       const html = mockDisplayEl.html.mock.calls[0][0];
       expect(html).toContain('BANKNIFTY');
     });
+
+    it('should render Untracked label when backend returns ticker-not-found 404', async () => {
+      mockDomManager.getTicker.mockReturnValue('BHEL');
+      mockAlertTickerManager.getAlertTickersForTicker.mockRejectedValue(new Error('404 Not Found: Ticker not found'));
+
+      await handler.display();
+
+      const html = mockDisplayEl.html.mock.calls[0][0];
+      expect(html).toContain('⚠️');
+      expect(html).toContain('Untracked · BHEL');
+      expect(html).toContain('🔔0');
+    });
   });
 
   describe('expanded display toggle', () => {
@@ -190,6 +202,23 @@ describe('DisplayHandler', () => {
       const expandedHtml = htmlCalls[htmlCalls.length - 1][0];
 
       expect(expandedHtml).toContain('No linked alert tickers');
+    });
+
+    it('should render untracked expanded empty state when 404', async () => {
+      mockDomManager.getTicker.mockReturnValue('BHEL');
+      mockAlertTickerManager.getAlertTickersForTicker.mockRejectedValue(new Error('404 Not Found: Ticker not found'));
+
+      await handler.display();
+
+      const clickHandler = mockDisplayEl.on.mock.calls[0][1];
+      await clickHandler();
+
+      const htmlCalls = mockDisplayEl.html.mock.calls;
+      const expandedHtml = htmlCalls[htmlCalls.length - 1][0];
+
+      expect(expandedHtml).toContain('⚠️');
+      expect(expandedHtml).toContain('Untracked · BHEL');
+      expect(expandedHtml).toContain('Untracked ticker — no backend record');
     });
 
     it('should toggle back to compact on second click', async () => {
