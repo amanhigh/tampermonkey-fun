@@ -66,7 +66,6 @@ describe('WatchListHandler', () => {
       evictTicker: jest.fn(),
       recordWatchCategory: jest.fn().mockResolvedValue(undefined),
       recordFlagCategory: jest.fn(),
-      clearReadyState: jest.fn().mockResolvedValue(undefined),
       toggleReadyState: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<ICategoryManager>;
 

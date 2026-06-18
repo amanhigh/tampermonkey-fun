@@ -64,7 +64,7 @@ describe('TradingViewWatchlistManager', () => {
     } as unknown as jest.Mocked<IPaintManager>;
 
     mockCategoryManager = {
-      clearReadyState: jest.fn().mockResolvedValue(undefined),
+      toggleReadyState: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<ICategoryManager>;
 
     mockUIUtil = {
@@ -106,19 +106,19 @@ describe('TradingViewWatchlistManager', () => {
     it('should not clear READY state on first refresh (baseline)', async () => {
       // First call = baseline — no removal detection
       await watchlistManager.refresh();
-      expect(mockCategoryManager.clearReadyState).not.toHaveBeenCalled();
+      expect(mockCategoryManager.toggleReadyState).not.toHaveBeenCalled();
     });
 
     it('should detect removed tickers and clear READY state on subsequent refresh', async () => {
       // First call — establish baseline: tickers A, B, C
       mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B', 'C']));
       await watchlistManager.refresh();
-      expect(mockCategoryManager.clearReadyState).not.toHaveBeenCalled();
+      expect(mockCategoryManager.toggleReadyState).not.toHaveBeenCalled();
 
       // Second call — B and C removed
       mockDomManager.getTickers.mockReturnValue(new Set(['A']));
       await watchlistManager.refresh();
-      expect(mockCategoryManager.clearReadyState).toHaveBeenCalledWith(['B', 'C']);
+      expect(mockCategoryManager.toggleReadyState).toHaveBeenCalledWith(['B', 'C']);
     });
   });
 
@@ -275,7 +275,7 @@ describe('TradingViewWatchlistManager', () => {
 
       await watchlistManager.refreshTickers(['B']);
 
-      expect(mockCategoryManager.clearReadyState).toHaveBeenCalledWith(['B']);
+      expect(mockCategoryManager.toggleReadyState).toHaveBeenCalledWith(['B']);
     });
 
     it('should save full current watchlist silo on targeted refresh', async () => {

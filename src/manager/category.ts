@@ -60,20 +60,11 @@ export interface ICategoryManager {
    * @param ticker Ticker symbol to evict
    */
   evictTicker(ticker: string): void;
-
-  /**
-   * Check a list of tickers and clear READY watch category for any that have it.
-   * Updates backend state to WATCHED and publishes TICKER_CATEGORY_CHANGED
-   * for all tickers whose category actually changed.
-   * @param tickers Ticker symbols to check and potentially clear
-   */
-  clearReadyState(tickers: string[]): Promise<void>;
-
   /**
    * Toggle READY state for the given tickers.
    * - If a ticker is currently READY, clear it to WATCHED.
    * - If a ticker is NOT currently READY, mark it as READY.
-   * Publishes TICKER_CATEGORY_CHANGED for all affected tickers.
+   * Publishes TICKER_CATEGORY_CHANGED after all updates.
    * @param tickers Ticker symbols to toggle
    */
   toggleReadyState(tickers: string[]): Promise<void>;
@@ -173,21 +164,6 @@ export class CategoryManager implements ICategoryManager {
   /** @inheritdoc */
   evictTicker(ticker: string): void {
     this.categoryCache.delete(ticker);
-  }
-
-  /** @inheritdoc */
-  async clearReadyState(tickers: string[]): Promise<void> {
-    // Filter to tickers that are currently READY, then toggle them
-    const readyTickers: string[] = [];
-    for (const ticker of tickers) {
-      const cat = await this.getTickerCategory(ticker);
-      if (cat.watch?.id === WatchCategoryId.READY) {
-        readyTickers.push(ticker);
-      }
-    }
-    if (readyTickers.length > 0) {
-      await this.toggleReadyState(readyTickers);
-    }
   }
 
   /** @inheritdoc */

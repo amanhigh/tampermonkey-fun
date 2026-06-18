@@ -32,7 +32,6 @@ describe('DisplayManager', () => {
       recordFlagCategory: jest.fn(),
       getBatchCategory: jest.fn(),
       evictTicker: jest.fn(),
-      clearReadyState: jest.fn(),
     } as unknown as jest.Mocked<ICategoryManager>;
 
     mockRecentManager = {

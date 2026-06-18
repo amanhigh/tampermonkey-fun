@@ -94,7 +94,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
       const addedTickers = [...currentTickers].filter((t) => !this.prevWatchlistTickers!.has(t));
       changedTickers = [...removedTickers, ...addedTickers];
       if (removedTickers.length > 0) {
-        await this.categoryManager.clearReadyState(removedTickers);
+        await this.categoryManager.toggleReadyState(removedTickers);
       }
     }
     this.prevWatchlistTickers = currentTickers;
