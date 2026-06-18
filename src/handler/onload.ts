@@ -6,7 +6,9 @@ import { ITickerChangeHandler } from './ticker_change';
 import { IHotkeyHandler } from './hotkey';
 import { IAlertHandler } from './alert';
 import { IPaintManager } from '../manager/paint';
-import { IDomainEventConsumer, ISubscriber } from '../manager/event_bus';
+import { IDomManager } from '../manager/dom';
+import { IDomainEventConsumer, ISubscriber, IPublisher } from '../manager/event_bus';
+import { DomainEventType } from '../models/domain_event';
 
 /**
  * Interface for application initialization handling
@@ -14,18 +16,19 @@ import { IDomainEventConsumer, ISubscriber } from '../manager/event_bus';
 export interface IOnLoadHandler {
   /**
    * Initializes application by setting up required observers and handlers
-   * Currently handles:
-   * - Watchlist observer for DOM changes
-   * - Screener observer for widget recreation
-   * - Ticker change observer
-   * - Hotkey handlers
-   * - Alert click listeners
    */
   init(): void;
 }
 
 /**
- * Manages application initialization and observers
+ * Manages application initialization and observers.
+ *
+ * Initialization is serial:
+ * 1. Register all domain event consumers (so FIRST_LOAD is handled)
+ * 2. Set up static listeners (keydown, alert click, delink)
+ * 3. Set up ticker observer
+ * 4. Inside ticker callback, set up watchlist observer
+ * 5. Inside watchlist callback, publish FIRST_LOAD and set up screener observer
  */
 export class OnLoadHandler implements IOnLoadHandler {
   // eslint-disable-next-line max-params
@@ -37,29 +40,53 @@ export class OnLoadHandler implements IOnLoadHandler {
     private readonly alertHandler: IAlertHandler,
     private readonly tickerChangeHandler: ITickerChangeHandler,
     private readonly paintManager: IPaintManager,
+    private readonly domManager: IDomManager,
+    private readonly publisher: IPublisher,
     private readonly domainEventConsumers: IDomainEventConsumer[],
     private readonly subscriber: ISubscriber
   ) {}
 
   /** @inheritdoc */
   public init(): void {
-    // Register all domain event consumers
+    // 1. Register all domain event consumers BEFORE publishing FIRST_LOAD
     for (const consumer of this.domainEventConsumers) {
       consumer.registerEvents(this.subscriber);
     }
 
-    this.setupTickerObserver();
-    this.setupWatchlistObserver();
+    // 2. Set up static listeners (no DOM dependency)
     this.setupKeydownEventListener();
     this.setupAlertClickListener();
     this.alertHandler.registerAlertTickerDelinkHandler();
+
+    // 3. Start serial DOM observer setup
+    this.setupTickerObserver(() => {
+      this.setupWatchlistObserver(() => {
+        // 5. Both DOM nodes confirmed — publish FIRST_LOAD and finish setup
+        this.publishFirstLoad();
+        this.setupScreenerObserver();
+      });
+    });
   }
 
   /**
-   * Sets up ticker change observation using header element
-   * @private
+   * Publishes FIRST_LOAD after both ticker and watchlist DOM are ready.
+   * Subscribers are already registered at this point.
    */
-  private setupTickerObserver(): void {
+  private publishFirstLoad(): void {
+    const ticker = this.domManager.getTicker();
+    void this.publisher.publish({
+      type: DomainEventType.FIRST_LOAD,
+      ticker,
+    });
+  }
+
+  /**
+   * Sets up ticker change observation using header element.
+   * Calls onReady once the ticker DOM node is confirmed available
+   * and the attribute observer is registered.
+   * @param onReady Callback after ticker observer is established
+   */
+  private setupTickerObserver(onReady: () => void): void {
     this.waitUtil.waitJEE(
       Constants.DOM.HEADER.MAIN,
       ($element) => {
@@ -71,8 +98,8 @@ export class OnLoadHandler implements IOnLoadHandler {
           this.tickerChangeHandler.onTickerChange();
         });
 
-        // Fire now to load Display
-        this.tickerChangeHandler.onTickerChange();
+        // Proceed to next step in serial chain
+        onReady();
       },
       10
     );
@@ -80,7 +107,6 @@ export class OnLoadHandler implements IOnLoadHandler {
 
   /**
    * Sets up alert click event listener
-   * @private
    */
   private setupAlertClickListener(): void {
     GM_addValueChangeListener(
@@ -101,10 +127,12 @@ export class OnLoadHandler implements IOnLoadHandler {
   }
 
   /**
-   * Sets up observers for watchlist DOM changes
-   * @private
+   * Sets up observers for watchlist DOM changes.
+   * Calls onReady once the watchlist DOM node is confirmed available
+   * and the node observer is registered.
+   * @param onReady Callback after watchlist observer is established
    */
-  private setupWatchlistObserver(): void {
+  private setupWatchlistObserver(onReady: () => void): void {
     this.waitUtil.waitJEE(
       `${Constants.DOM.WATCHLIST.CONTAINER} > div`,
       (element) => {
@@ -117,11 +145,8 @@ export class OnLoadHandler implements IOnLoadHandler {
           this.watchListHandler.onWatchListChange();
         });
 
-        // Full watchlist refresh (default filter is applied on initialization)
-        this.watchListHandler.onWatchListChange();
-
-        // Set up screener observer
-        this.setupScreenerObserver();
+        // Proceed to next step in serial chain
+        onReady();
       },
       10
     );
@@ -129,7 +154,6 @@ export class OnLoadHandler implements IOnLoadHandler {
 
   /**
    * Sets up observer for screener DOM changes and handles repainting on widget recreation
-   * @private
    */
   private setupScreenerObserver(): void {
     // Use document.body as observer target (proven to work in console testing)

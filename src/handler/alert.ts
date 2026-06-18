@@ -31,11 +31,6 @@ export interface IAlertHandler {
   createAlertAtCursor(): Promise<void>;
 
   /**
-   * Creates alert 20% above current price
-   */
-  createHighAlert(): Promise<void>;
-
-  /**
    * Deletes alerts near cursor price
    */
   deleteAlertAtCursor(): Promise<void>;
@@ -54,12 +49,6 @@ export interface IAlertHandler {
    * @param e Mouse event with modifier info
    */
   handleAlertButton(e: MouseEvent): void;
-
-  /**
-   * Handles the journal button toggle event
-   * @param e Event object
-   */
-  handleJournalButton(e: Event): void;
 
   /**
    * Handles alert context menu event
@@ -147,8 +136,11 @@ export class AlertHandler implements IAlertHandler {
     await this.createAlertAndNotify(price);
   }
 
-  /** @inheritdoc */
-  public async createHighAlert(): Promise<void> {
+  /**
+   * Creates an alert 20% above the current market price.
+   * Called internally by handleAlertButton() when no Ctrl key is pressed.
+   */
+  private async createHighAlert(): Promise<void> {
     const currentPrice = this.tradingViewManager.getLastTradedPrice();
     const targetPrice = (currentPrice * 1.2).toFixed(2);
     const price = parseFloat(targetPrice);
@@ -192,11 +184,6 @@ export class AlertHandler implements IAlertHandler {
     } else {
       void this.createHighAlert();
     }
-  }
-
-  /** @inheritdoc */
-  public handleJournalButton(): void {
-    this.uiUtil.toggleUI(`#${Constants.UI.IDS.AREAS.JOURNAL}`);
   }
 
   /** @inheritdoc */

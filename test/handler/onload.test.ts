@@ -8,6 +8,7 @@ import { ITickerChangeHandler } from '../../src/handler/ticker_change';
 import { IPaintManager } from '../../src/manager/paint';
 import { IDomManager } from '../../src/manager/dom';
 import { IDomainEventConsumer, ISubscriber, IPublisher } from '../../src/manager/event_bus';
+import { DomainEventType } from '../../src/models/domain_event';
 import { Constants } from '../../src/models/constant';
 
 // Mock document and jQuery
@@ -46,10 +47,9 @@ describe('OnLoadHandler', () => {
   beforeEach(() => {
     // Reset mocks
     jest.clearAllMocks();
-    // Mock all dependencies
+    // Mock all dependencies — waitJEE calls callback immediately
     mockWaitUtil = {
       waitJEE: jest.fn((_selector, callback) => {
-        // Simulate that the element is found and callback is called
         const mockElement = {
           length: 1,
           get: jest.fn(() => document.body),
@@ -129,20 +129,46 @@ describe('OnLoadHandler', () => {
   });
 
   describe('init', () => {
-    it('should initialize all required handlers', () => {
+    it('should initialize all required handlers in serial order', () => {
       onLoadHandler.init();
-      expect(mockWaitUtil.waitJEE).toHaveBeenCalled();
+
+      // Static listeners set up
       expect(mockDocument.addEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
-      expect(mockObserveUtil.nodeObserver).toHaveBeenCalledWith(expect.any(Object), expect.any(Function));
       expect(mockGM_addValueChangeListener).toHaveBeenCalled();
       expect(mockAlertHandler.registerAlertTickerDelinkHandler).toHaveBeenCalled();
+
+      // Ticker observer setup (first wait)
+      expect(mockWaitUtil.waitJEE).toHaveBeenCalledWith(Constants.DOM.HEADER.MAIN, expect.any(Function), 10);
+      expect(mockObserveUtil.attributeObserver).toHaveBeenCalled();
+
+      // Watchlist observer setup (second wait, serial after ticker)
+      expect(mockWaitUtil.waitJEE).toHaveBeenCalledWith(
+        `${Constants.DOM.WATCHLIST.CONTAINER} > div`,
+        expect.any(Function),
+        10
+      );
+      expect(mockObserveUtil.nodeObserver).toHaveBeenCalled();
+
+      // Screener observer set up (after watchlist)
+      expect(mockObserveUtil.nodeObserver).toHaveBeenCalledWith(document.body, expect.any(Function));
     });
 
-    it('should register all domain event consumers on init', () => {
+    it('should register all domain event consumers before FIRST_LOAD publish', () => {
       onLoadHandler.init();
       for (const consumer of mockDomainEventConsumers) {
         expect(consumer.registerEvents).toHaveBeenCalledWith(mockSubscriber);
       }
+    });
+
+    it('should publish FIRST_LOAD after ticker and watchlist observer setup', () => {
+      onLoadHandler.init();
+
+      // FIRST_LOAD published after both observers are set up
+      expect(mockPublisher.publish).toHaveBeenCalledTimes(1);
+      expect(mockPublisher.publish).toHaveBeenCalledWith({
+        type: DomainEventType.FIRST_LOAD,
+        ticker: 'TEST',
+      });
     });
   });
 

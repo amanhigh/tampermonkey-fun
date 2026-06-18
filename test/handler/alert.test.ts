@@ -232,6 +232,36 @@ describe('AlertHandler', () => {
     });
   });
 
+  describe('handleAlertButton', () => {
+    it('creates alert 20% above current price on normal click (no Ctrl)', async () => {
+      mockTradingViewManager.getLastTradedPrice.mockReturnValue(100);
+      mockAlertManager.createAlertForCurrentTicker = jest.fn().mockResolvedValue({ name: 'INFY' });
+
+      handler.handleAlertButton({ ctrlKey: false } as MouseEvent);
+
+      // Wait for async createHighAlert → createAlertAndNotify → createAlertForCurrentTicker
+      await new Promise(process.nextTick);
+
+      expect(mockTradingViewManager.getLastTradedPrice).toHaveBeenCalled();
+      expect(mockAlertManager.createAlertForCurrentTicker).toHaveBeenCalled();
+      // Price should be 120 (100 * 1.2)
+      const priceArg = (mockAlertManager.createAlertForCurrentTicker as jest.Mock).mock.calls[0][0];
+      expect(priceArg).toBe(120);
+    });
+
+    it('maps current exchange to ticker when Ctrl is pressed', async () => {
+      mockTickerManager.setExchange = jest.fn().mockResolvedValue(undefined);
+
+      handler.handleAlertButton({ ctrlKey: true } as MouseEvent);
+
+      await new Promise(process.nextTick);
+
+      expect(mockDomManager.getTicker).toHaveBeenCalled();
+      expect(mockDomManager.getCurrentExchange).toHaveBeenCalled();
+      expect(mockTickerManager.setExchange).toHaveBeenCalledWith('TV:INFY', 'NSE');
+    });
+  });
+
   describe('alert ticker delink', () => {
     let capturedHandler: Function;
     let mockRowJQ: { attr: jest.Mock };
