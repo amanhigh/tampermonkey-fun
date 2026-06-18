@@ -52,6 +52,7 @@ import { IKiteManager, KiteManager } from '../manager/kite';
 import { IStyleManager, StyleManager } from '../manager/style';
 import { ICategoryManager, CategoryManager } from '../manager/category';
 import { IRecentManager, RecentManager } from '../manager/recent';
+import { IDisplayManager, DisplayManager } from '../manager/display';
 import { IWatchListHandler, WatchListHandler } from '../handler/watchlist';
 import { IOnLoadHandler, OnLoadHandler } from '../handler/onload';
 import { IFlagHandler, FlagHandler } from '../handler/flag';
@@ -203,6 +204,7 @@ export class Factory {
         () =>
           new TradingViewWatchlistManager(
             Factory.manager.paint(),
+            Factory.manager.category(),
             Factory.util.ui(),
             Factory.manager.dom(),
             Factory.manager.eventPublisher()
@@ -223,7 +225,13 @@ export class Factory {
     paint: (): IPaintManager =>
       Factory.getInstance(
         'paintManager',
-        () => new PaintManager(Factory.manager.dom(), Factory.manager.category(), Factory.manager.recent())
+        () =>
+          new PaintManager(
+            Factory.manager.dom(),
+            Factory.manager.category(),
+            Factory.manager.display(),
+            Factory.manager.recent()
+          )
       ),
 
     dom: (): IDomManager =>
@@ -283,10 +291,15 @@ export class Factory {
         'journalManager',
         () => new JournalManager(Factory.client.journal(), Factory.client.os(), Factory.manager.timeFrame())
       ),
+    display: (): IDisplayManager =>
+      Factory.getInstance(
+        'displayManager',
+        () => new DisplayManager(Factory.manager.category(), Factory.manager.dom(), Factory.manager.recent())
+      ),
     alertFeed: (): IAlertFeedManager =>
       Factory.getInstance(
         'alertFeedManager',
-        () => new AlertFeedManager(Factory.manager.category(), Factory.manager.recent())
+        () => new AlertFeedManager(Factory.manager.display())
       ),
   };
 

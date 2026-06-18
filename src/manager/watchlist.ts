@@ -81,10 +81,13 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   async refresh(): Promise<void> {
     this.resetWatchList();
 
-    // Detect tickers removed from DOM watchlist (skip on first baseline call)
+    // Detect tickers added or removed from DOM watchlist (skip on first baseline call)
     const currentTickers = this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL);
+    let changedTickers: string[] = [];
     if (this.prevWatchlistTickers !== null) {
       const removedTickers = [...this.prevWatchlistTickers].filter((t) => !currentTickers.has(t));
+      const addedTickers = [...currentTickers].filter((t) => !this.prevWatchlistTickers!.has(t));
+      changedTickers = [...removedTickers, ...addedTickers];
       if (removedTickers.length > 0) {
         await this.categoryManager.clearReadyState(removedTickers);
       }
@@ -97,11 +100,13 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     // Reuse summary + filter refresh
     await this.refreshSummary();
 
-    // Notify subscribers that watchlist has been refreshed
-    void this.publisher.publish({
-      type: DomainEventType.WATCHLIST_CHANGED,
-      ticker: this.domManager.getTicker(),
-    });
+    // Notify subscribers of ticker set changes only when changes exist
+    if (changedTickers.length > 0) {
+      void this.publisher.publish({
+        type: DomainEventType.WATCHLIST_CHANGED,
+        tickers: changedTickers,
+      });
+    }
   }
 
   /** @inheritdoc */

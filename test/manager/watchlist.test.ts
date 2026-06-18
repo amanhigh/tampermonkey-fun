@@ -1,5 +1,6 @@
 import { TradingViewWatchlistManager, ITradingViewWatchlistManager } from '../../src/manager/watchlist';
 import { IPaintManager } from '../../src/manager/paint';
+import { ICategoryManager } from '../../src/manager/category';
 import { IUIUtil } from '../../src/util/ui';
 import { IDomManager } from '../../src/manager/dom';
 import { IPublisher } from '../../src/manager/event_bus';
@@ -26,6 +27,7 @@ const mockJQuery = jest.fn(() => ({
 describe('TradingViewWatchlistManager', () => {
   let watchlistManager: ITradingViewWatchlistManager;
   let mockPaintManager: jest.Mocked<IPaintManager>;
+  let mockCategoryManager: jest.Mocked<ICategoryManager>;
   let mockUIUtil: jest.Mocked<IUIUtil>;
   let mockDomManager: jest.Mocked<IDomManager>;
   let mockPublisher: jest.Mocked<IPublisher>;
@@ -52,8 +54,12 @@ describe('TradingViewWatchlistManager', () => {
     mockPaintManager = {
       paint: jest.fn().mockResolvedValue(undefined),
       paintTickers: jest.fn().mockResolvedValue(undefined),
-      summarizeBuckets: jest.fn(),
+      summarizeBuckets: jest.fn().mockResolvedValue({ buckets: new Map(), uncategorizedCount: 0 }),
     } as unknown as jest.Mocked<IPaintManager>;
+
+    mockCategoryManager = {
+      clearReadyState: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<ICategoryManager>;
 
     mockUIUtil = {
       buildLabel: jest.fn().mockReturnValue(mockJQueryChain),
@@ -61,6 +67,7 @@ describe('TradingViewWatchlistManager', () => {
 
     mockDomManager = {
       getTicker: jest.fn().mockReturnValue('CURRENT_TICKER'),
+      getTickers: jest.fn().mockReturnValue(new Set()),
     } as unknown as jest.Mocked<IDomManager>;
 
     mockPublisher = {
@@ -72,6 +79,7 @@ describe('TradingViewWatchlistManager', () => {
 
     watchlistManager = new TradingViewWatchlistManager(
       mockPaintManager,
+      mockCategoryManager,
       mockUIUtil,
       mockDomManager,
       mockPublisher
@@ -87,6 +95,24 @@ describe('TradingViewWatchlistManager', () => {
       // Construction triggers hideAllItems() via filterWatchList for the default filter
       expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.LINE);
       expect(mockJQueryChain.hide).toHaveBeenCalled();
+    });
+
+    it('should not clear READY state on first refresh (baseline)', async () => {
+      // First call = baseline — no removal detection
+      await watchlistManager.refresh();
+      expect(mockCategoryManager.clearReadyState).not.toHaveBeenCalled();
+    });
+
+    it('should detect removed tickers and clear READY state on subsequent refresh', async () => {
+      // First call — establish baseline: tickers A, B, C
+      mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B', 'C']));
+      await watchlistManager.refresh();
+      expect(mockCategoryManager.clearReadyState).not.toHaveBeenCalled();
+
+      // Second call — B and C removed
+      mockDomManager.getTickers.mockReturnValue(new Set(['A']));
+      await watchlistManager.refresh();
+      expect(mockCategoryManager.clearReadyState).toHaveBeenCalledWith(['B', 'C']);
     });
   });
 
@@ -147,13 +173,19 @@ describe('TradingViewWatchlistManager', () => {
       );
     });
 
-    it('should publish WATCHLIST_CHANGED with current ticker after refresh', async () => {
+    it('should publish WATCHLIST_CHANGED with changed tickers when tickers are added', async () => {
+      // First call establishes baseline with empty set
+      mockDomManager.getTickers.mockReturnValue(new Set());
+      await watchlistManager.refresh();
+      expect(mockPublisher.publish).not.toHaveBeenCalled();
+
+      // Second call with added ticker
+      mockDomManager.getTickers.mockReturnValue(new Set(['AAPL']));
       await watchlistManager.refresh();
 
-      expect(mockDomManager.getTicker).toHaveBeenCalled();
       expect(mockPublisher.publish).toHaveBeenCalledWith({
         type: DomainEventType.WATCHLIST_CHANGED,
-        ticker: 'CURRENT_TICKER',
+        tickers: ['AAPL'],
       });
     });
   });

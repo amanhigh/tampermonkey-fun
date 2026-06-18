@@ -87,14 +87,21 @@ export class AlertFeedHandler implements IAlertFeedHandler {
       await this.alertFeedManager.createAlertFeedEvent(event.alertTicker);
     });
 
-    // TICKER_CHANGED, TICKER_TRACKING_STARTED, WATCHLIST_CHANGED
-    // all carry a single ticker string and rebind all linked alert tickers
+    // TICKER_CHANGED, TICKER_TRACKING_STARTED carry a single ticker string
+    // and rebind all linked alert tickers for that specific ticker
     subscriber.subscribeMany(
-      [DomainEventType.TICKER_CHANGED, DomainEventType.TICKER_TRACKING_STARTED, DomainEventType.WATCHLIST_CHANGED],
+      [DomainEventType.TICKER_CHANGED, DomainEventType.TICKER_TRACKING_STARTED],
       async (event) => {
         await this.createAlertFeedEventsForTicker(event.ticker);
       }
     );
+
+    // WATCHLIST_CHANGED carries the changed ticker list, so repaint only those tickers
+    subscriber.subscribe(DomainEventType.WATCHLIST_CHANGED, async (event) => {
+      for (const ticker of event.tickers) {
+        await this.createAlertFeedEventsForTicker(ticker);
+      }
+    });
 
     // TICKER_CATEGORY_CHANGED — repaint all linked alert tickers for affected tickers
     subscriber.subscribe(DomainEventType.TICKER_CATEGORY_CHANGED, async (event) => {

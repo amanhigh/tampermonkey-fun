@@ -144,7 +144,7 @@ describe('AlertFeedHandler', () => {
       );
     });
 
-    it('should use subscribeMany for TickerPayload events (TICKER_CHANGED, TICKER_TRACKING_STARTED, WATCHLIST_CHANGED)', () => {
+    it('should use subscribeMany for TickerPayload events (TICKER_CHANGED, TICKER_TRACKING_STARTED)', () => {
       const mockConsumer: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn(),
         subscribeMany: jest.fn(),
@@ -156,7 +156,6 @@ describe('AlertFeedHandler', () => {
         [
           DomainEventType.TICKER_CHANGED,
           DomainEventType.TICKER_TRACKING_STARTED,
-          DomainEventType.WATCHLIST_CHANGED,
         ],
         expect.any(Function)
       );
@@ -329,7 +328,7 @@ describe('AlertFeedHandler', () => {
       expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TICKER_B');
     });
 
-    it('should include WATCHLIST_CHANGED in the subscribeMany TickerPayload group', () => {
+    it('should subscribe to WATCHLIST_CHANGED separately', () => {
       const mockConsumer: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn(),
         subscribeMany: jest.fn(),
@@ -337,45 +336,30 @@ describe('AlertFeedHandler', () => {
 
       handler.registerEvents(mockConsumer);
 
-      const calls = mockConsumer.subscribeMany.mock.calls;
-      const tickerPayloadGroup = calls.find(([types]) =>
-        (types as string[]).includes(DomainEventType.WATCHLIST_CHANGED)
+      expect(mockConsumer.subscribe).toHaveBeenCalledWith(
+        DomainEventType.WATCHLIST_CHANGED,
+        expect.any(Function)
       );
-      expect(tickerPayloadGroup).toBeDefined();
-      expect(tickerPayloadGroup![0]).toContain(DomainEventType.TICKER_CHANGED);
-      expect(tickerPayloadGroup![0]).toContain(DomainEventType.TICKER_TRACKING_STARTED);
     });
 
-    it('should resolve alert tickers for WATCHLIST_CHANGED and create feed events', async () => {
-      const alertTickers: AlertTicker[] = [
-        {
-          symbol: 'INFY',
-          pair_id: '12345',
-          name: 'Infosys Ltd',
-          exchange: 'NSE',
-          type: 'PRIMARY',
-          ticker: 'TV:INFY',
-          created_at: '',
-          updated_at: '',
-        },
-      ];
-      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue(alertTickers);
+    it('should resolve alert tickers for each changed ticker on WATCHLIST_CHANGED', async () => {
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
 
       let watchlistCallback: Function | undefined;
       const mockConsumer: jest.Mocked<ISubscriber> = {
-        subscribe: jest.fn(),
-        subscribeMany: jest.fn((types, cb) => {
-          if ((types as string[]).includes(DomainEventType.WATCHLIST_CHANGED)) {
+        subscribe: jest.fn((type, cb) => {
+          if (type === DomainEventType.WATCHLIST_CHANGED) {
             watchlistCallback = cb;
           }
         }),
+        subscribeMany: jest.fn(),
       };
 
       handler.registerEvents(mockConsumer);
-      await watchlistCallback!({ type: DomainEventType.WATCHLIST_CHANGED, ticker: 'TV:INFY' });
+      await watchlistCallback!({ type: DomainEventType.WATCHLIST_CHANGED, tickers: ['TV:INFY', 'TV:TCS'] });
 
       expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TV:INFY');
-      expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith('INFY', 'TV:INFY');
+      expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TV:TCS');
     });
   });
 

@@ -66,7 +66,7 @@ export interface TickerTrackingStoppedEvent
 export interface TickerCategoryChangedEvent
   extends DomainEventBase<DomainEventType.TICKER_CATEGORY_CHANGED>, TickersPayload {}
 
-export interface WatchlistChangedEvent extends DomainEventBase<DomainEventType.WATCHLIST_CHANGED>, TickerPayload {}
+export interface WatchlistChangedEvent extends DomainEventBase<DomainEventType.WATCHLIST_CHANGED>, TickersPayload {}
 
 export interface TickerTimeframesChangedEvent
   extends DomainEventBase<DomainEventType.TICKER_TIMEFRAMES_CHANGED>, TickerPayload {}

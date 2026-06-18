@@ -2,6 +2,7 @@ import { TickerArea, TickerVisibility } from '../../src/models/dom';
 import { PaintManager, IPaintManager } from '../../src/manager/paint';
 import { ICategoryManager } from '../../src/manager/category';
 import { IDomManager } from '../../src/manager/dom';
+import { IDisplayManager } from '../../src/manager/display';
 import { IRecentManager } from '../../src/manager/recent';
 import { Constants } from '../../src/models/constant';
 import { TickerCategory } from '../../src/models/category';
@@ -30,6 +31,7 @@ describe('PaintManager', () => {
   let paintManager: IPaintManager;
   let mockDomManager: jest.Mocked<IDomManager>;
   let mockCategoryManager: jest.Mocked<ICategoryManager>;
+  let mockDisplayManager: jest.Mocked<IDisplayManager>;
   let mockRecentManager: jest.Mocked<IRecentManager>;
 
   beforeEach(() => {
@@ -63,12 +65,20 @@ describe('PaintManager', () => {
       },
     );
 
+    mockDisplayManager = {
+      resolve: jest.fn(),
+      resolveColor: jest.fn().mockImplementation(
+        (watchCat: any) => watchCat?.color ?? Constants.UI.COLORS.DEFAULT
+      ),
+      resolveHeaderColor: jest.fn().mockResolvedValue(Constants.UI.COLORS.DEFAULT),
+    } as unknown as jest.Mocked<IDisplayManager>;
+
     mockRecentManager = {
       markRecent: jest.fn(),
       isRecent: jest.fn().mockResolvedValue(false),
     } as unknown as jest.Mocked<IRecentManager>;
 
-    paintManager = new PaintManager(mockDomManager, mockCategoryManager, mockRecentManager);
+    paintManager = new PaintManager(mockDomManager, mockCategoryManager, mockDisplayManager, mockRecentManager);
     jest.clearAllMocks();
   });
 
@@ -128,6 +138,19 @@ describe('PaintManager', () => {
 
       // Header reads the current ticker
       expect(mockDomManager.getTicker).toHaveBeenCalled();
+    });
+
+    it('should delegate header color to DisplayManager', async () => {
+      mockDomManager.getTicker.mockReturnValue('HEADER_TICKER');
+      mockCategoryManager.getTickerCategory.mockResolvedValue({
+        watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null },
+        flag: undefined,
+        isFno: false,
+      });
+
+      await paintManager.paint();
+
+      expect(mockDisplayManager.resolveHeaderColor).toHaveBeenCalledWith('HEADER_TICKER', expect.objectContaining({ color: 'red' }));
     });
 
     it('should paint symbol, flag, and FNO for each ticker', async () => {

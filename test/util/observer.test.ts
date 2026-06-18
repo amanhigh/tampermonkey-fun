@@ -144,6 +144,7 @@ describe('ObserveUtil', () => {
       expect(mockMutationObserverConstructor).toHaveBeenCalledWith(expect.any(Function));
       expect(mockMutationObserver.observe).toHaveBeenCalledWith(mockTarget, {
         childList: true,
+        subtree: true,
       });
       expect(result).toBe(mockMutationObserver);
     });
