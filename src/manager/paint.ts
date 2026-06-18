@@ -1,4 +1,3 @@
-
 import { TickerArea, TickerVisibility } from '../models/dom';
 import { ICategoryManager } from './category';
 import { IDomManager } from './dom';

@@ -73,7 +73,7 @@ export class DisplayManager implements IDisplayManager {
       return new Set();
     }
 
-    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    const parsed = (typeof raw === 'string' ? JSON.parse(raw) : raw) as { tickers?: string[] };
     return new Set(parsed.tickers ?? []);
   }
 }
