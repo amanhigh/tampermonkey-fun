@@ -121,6 +121,7 @@ export class AlertFeedHandler implements IAlertFeedHandler {
   private async createAlertFeedEventsForTicker(ticker: string): Promise<void> {
     const alertTickers = await this.alertTickerManager.getAlertTickersForTicker(ticker);
     if (alertTickers.length === 0) {
+      console.warn(`No Alert Ticker: ${ticker} — skipping feed events`);
       Notifier.warn(`No alert tickers found for ${ticker} — skipping feed events`);
       return;
     }
