@@ -2,7 +2,7 @@ import { DisplayManager, IDisplayManager } from '../../src/manager/display';
 import { ICategoryManager } from '../../src/manager/category';
 import { IDomManager } from '../../src/manager/dom';
 import { IRecentManager } from '../../src/manager/recent';
-import { DisplayState, DisplaySurface, DISPLAY_STATE_COLORS } from '../../src/models/display';
+import { DisplayState, DisplaySurface } from '../../src/models/display';
 import { TickerArea, TickerVisibility } from '../../src/models/dom';
 import { Constants } from '../../src/models/constant';
 import { WatchCategory, WatchCategoryId } from '../../src/models/watch';
@@ -48,13 +48,13 @@ describe('DisplayManager', () => {
   describe('resolve', () => {
     // ── Priority 1: UNMAPPED ──
 
-    it('should return UNMAPPED/red for null ticker', async () => {
+    it('should return UNMAPPED/firebrick for null ticker', async () => {
       const result = await displayManager.resolve({
         ticker: null,
         surface: DisplaySurface.ALERT_FEED_ROW,
       });
 
-      expect(result).toEqual({ state: DisplayState.UNMAPPED, color: 'red' });
+      expect(result).toEqual({ state: DisplayState.UNMAPPED, color: 'firebrick' });
       expect(mockCategoryManager.getTickerCategory).not.toHaveBeenCalled();
     });
 
@@ -128,7 +128,7 @@ describe('DisplayManager', () => {
 
     // ── Priority 3: RECENT (alert feed only) ──
 
-    it('should return RECENT/lime for alert feed when ticker is recent', async () => {
+    it('should return RECENT/gold for alert feed when ticker is recent', async () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: undefined,
         flag: undefined,
@@ -141,7 +141,7 @@ describe('DisplayManager', () => {
         surface: DisplaySurface.ALERT_FEED_ROW,
       });
 
-      expect(result).toEqual({ state: DisplayState.RECENT, color: 'lime' });
+      expect(result).toEqual({ state: DisplayState.RECENT, color: 'gold' });
     });
 
     it('should return DEFAULT (not RECENT) for HEADER_NAME when ticker is recent', async () => {
@@ -180,13 +180,4 @@ describe('DisplayManager', () => {
     });
   });
 
-  // ── DISPLAY_STATE_COLORS constants ──
-
-  describe('DISPLAY_STATE_COLORS', () => {
-    it('should define colors for UNMAPPED, DEFAULT, and RECENT', () => {
-      expect(DISPLAY_STATE_COLORS[DisplayState.UNMAPPED]).toBe('red');
-      expect(DISPLAY_STATE_COLORS[DisplayState.DEFAULT]).toBe('white');
-      expect(DISPLAY_STATE_COLORS[DisplayState.RECENT]).toBe('lime');
-    });
-  });
 });

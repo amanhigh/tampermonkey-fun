@@ -49,13 +49,3 @@ export interface DisplayRequest {
   ticker: string | null;
   surface: DisplaySurface;
 }
-
-/**
- * Default color per display state.
- * WATCH_CATEGORY is excluded because its color comes from the actual watch category.
- */
-export const DISPLAY_STATE_COLORS: { [K in DisplayState]?: string } = {
-  [DisplayState.UNMAPPED]: 'red',
-  [DisplayState.DEFAULT]: 'white',
-  [DisplayState.RECENT]: 'lime',
-};

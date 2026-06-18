@@ -759,7 +759,7 @@ describe('AlertFeedHandler', () => {
         makeAlertTicker({ symbol: 'NSEI', name: 'Nifty 50', ticker: 'NIFTY' }),
       ];
       mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
-      mockDisplayManager.resolve.mockResolvedValue({ state: DisplayState.UNMAPPED, color: 'red' });
+      mockDisplayManager.resolve.mockResolvedValue({ state: DisplayState.UNMAPPED, color: 'firebrick' });
 
       buildPaintMock([{ title: 'Nifty', href: '/indices/nifty', dataType: 'quotes' }]);
 
@@ -786,7 +786,7 @@ describe('AlertFeedHandler', () => {
 
     it('should not call InvestingManager.getInstrument during repaint and delegate unmapped to manager', async () => {
       mockAlertTickerManager.getAlertTickers.mockResolvedValue([]);
-      mockDisplayManager.resolve.mockResolvedValue({ state: DisplayState.UNMAPPED, color: 'red' });
+      mockDisplayManager.resolve.mockResolvedValue({ state: DisplayState.UNMAPPED, color: 'firebrick' });
 
       buildPaintMock([{ title: 'Unknown (ZZZZZ)', href: '/unknown', dataType: 'quotes' }]);
 

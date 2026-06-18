@@ -12,7 +12,7 @@ import { IRecentManager } from './recent';
  * Priority order:
  *   1 ticker=null                            → UNMAPPED / red
  *   2 watch category + in DOM watchlist      → WATCH_CATEGORY / category color
- *   3 alert feed + recent                    → RECENT / lime
+ *   3 alert feed + recent                    → RECENT / gold
  *   4 everything else                        → DEFAULT / white
  */
 export interface IDisplayManager {
@@ -36,7 +36,7 @@ export class DisplayManager implements IDisplayManager {
 
     // Priority 1: Unmapped
     if (ticker === null) {
-      return { state: DisplayState.UNMAPPED, color: 'red' };
+      return { state: DisplayState.UNMAPPED, color: 'firebrick' };
     }
 
     // Fetch watch category
@@ -60,7 +60,7 @@ export class DisplayManager implements IDisplayManager {
     if (surface === DisplaySurface.ALERT_FEED_ROW) {
       const isRecent = await this.recentManager.isRecent(ticker, Constants.RECENT_CUTOFF_MS);
       if (isRecent) {
-        return { state: DisplayState.RECENT, color: 'lime' };
+        return { state: DisplayState.RECENT, color: 'gold' };
       }
     }
 
