@@ -3,7 +3,7 @@ import { Constants } from '../models/constant';
 import { ITickerManager } from './ticker';
 import { IJournalManager } from './journal';
 import { Notifier } from '../util/notify';
-import { isCompositeSymbol, TickerUpdateRequest } from '../models/ticker';
+import { isCompositeSymbol, TickerState, TickerUpdateRequest } from '../models/ticker';
 import { WatchCategory, WatchCategoryId } from '../models/watch';
 import { FlagCategory, FlagCategoryId } from '../models/flag';
 import { TickerCategory } from '../models/category';
@@ -60,6 +60,14 @@ export interface ICategoryManager {
    * @param ticker Ticker symbol to evict
    */
   evictTicker(ticker: string): void;
+
+  /**
+   * Check a list of tickers and clear READY watch category for any that have it.
+   * Updates backend state to WATCHED and publishes TICKER_CATEGORY_CHANGED
+   * for all tickers whose category actually changed.
+   * @param tickers Ticker symbols to check and potentially clear
+   */
+  clearReadyState(tickers: string[]): Promise<void>;
 }
 
 // ── Implementation ──
@@ -156,6 +164,24 @@ export class CategoryManager implements ICategoryManager {
   /** @inheritdoc */
   evictTicker(ticker: string): void {
     this.categoryCache.delete(ticker);
+  }
+
+  /** @inheritdoc */
+  async clearReadyState(tickers: string[]): Promise<void> {
+    const changedTickers: string[] = [];
+    for (const ticker of tickers) {
+      const cat = await this.getTickerCategory(ticker);
+      if (cat.watch?.id === WatchCategoryId.READY) {
+        await this.syncBackend(ticker, { state: TickerState.WATCHED });
+        changedTickers.push(ticker);
+      }
+    }
+    if (changedTickers.length > 0) {
+      await this.publisher.publish({
+        type: DomainEventType.TICKER_CATEGORY_CHANGED,
+        tickers: changedTickers,
+      });
+    }
   }
 
   // ── Cache fetch method ──

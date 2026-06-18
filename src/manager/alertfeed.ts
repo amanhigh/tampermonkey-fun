@@ -1,6 +1,8 @@
 import { AlertFeedEvent, FeedInfo, FeedState } from '../models/alertfeed';
 import { Constants } from '../models/constant';
+import { TickerArea, TickerVisibility } from '../models/dom';
 import { ICategoryManager } from './category';
+import { IDomManager } from './dom';
 import { IRecentManager } from './recent';
 
 /**
@@ -42,7 +44,8 @@ export interface IAlertFeedManager {
 export class AlertFeedManager implements IAlertFeedManager {
   constructor(
     private readonly categoryManager: ICategoryManager,
-    private readonly recentManager: IRecentManager
+    private readonly recentManager: IRecentManager,
+    private readonly domManager: IDomManager
   ) {}
 
   /** @inheritdoc */
@@ -54,7 +57,12 @@ export class AlertFeedManager implements IAlertFeedManager {
     // Check if ticker belongs to any watch category (backend-on-demand)
     const { watch: category } = await this.categoryManager.getTickerCategory(ticker);
     if (category) {
-      return { state: FeedState.WATCHED, color: 'yellow' };
+      // Only show WATCHED (yellow) when ticker is still present in the DOM watchlist
+      const watchlistTickers = this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL);
+      if (watchlistTickers.has(ticker)) {
+        return { state: FeedState.WATCHED, color: 'yellow' };
+      }
+      // Ticker has watch category but is no longer in DOM watchlist — fall through to recent/mapped
     }
 
     if (await this.recentManager.isRecent(ticker, Constants.RECENT_CUTOFF_MS)) {

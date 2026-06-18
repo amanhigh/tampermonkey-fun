@@ -1,6 +1,7 @@
 import { Constants } from '../models/constant';
 import { TickerArea, TickerVisibility } from '../models/dom';
 import { IPaintManager } from './paint';
+import { ICategoryManager } from './category';
 import { IUIUtil } from '../util/ui';
 import { IPublisher } from './event_bus';
 import { IDomManager } from './dom';
@@ -52,8 +53,17 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
    */
   private filterChain: WatchlistFilter[] = [];
 
+  /**
+   * Snapshot of the watchlist ticker set from the previous refresh cycle.
+   * Used to detect tickers removed from the DOM watchlist.
+   * null on first call (skip removal detection for baseline).
+   * @private
+   */
+  private prevWatchlistTickers: Set<string> | null = null;
+
   constructor(
     private readonly paintManager: IPaintManager,
+    private readonly categoryManager: ICategoryManager,
     private readonly uiUtil: IUIUtil,
     private readonly domManager: IDomManager,
     private readonly publisher: IPublisher
@@ -70,6 +80,16 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   /** @inheritdoc */
   async refresh(): Promise<void> {
     this.resetWatchList();
+
+    // Detect tickers removed from DOM watchlist (skip on first baseline call)
+    const currentTickers = this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL);
+    if (this.prevWatchlistTickers !== null) {
+      const removedTickers = [...this.prevWatchlistTickers].filter((t) => !currentTickers.has(t));
+      if (removedTickers.length > 0) {
+        await this.categoryManager.clearReadyState(removedTickers);
+      }
+    }
+    this.prevWatchlistTickers = currentTickers;
 
     // Delegate all ticker painting (symbols, flags, FNO) to PaintManager
     await this.paintManager.paint();
