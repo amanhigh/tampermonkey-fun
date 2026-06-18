@@ -225,7 +225,13 @@ export class Factory {
     paint: (): IPaintManager =>
       Factory.getInstance(
         'paintManager',
-        () => new PaintManager(Factory.manager.dom(), Factory.manager.category(), Factory.manager.display())
+        () =>
+          new PaintManager(
+            Factory.manager.dom(),
+            Factory.manager.category(),
+            Factory.manager.recent(),
+            Factory.manager.display()
+          )
       ),
 
     dom: (): IDomManager =>

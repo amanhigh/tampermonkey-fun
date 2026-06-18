@@ -3,6 +3,7 @@ import { PaintManager, IPaintManager } from '../../src/manager/paint';
 import { ICategoryManager } from '../../src/manager/category';
 import { IDomManager } from '../../src/manager/dom';
 import { IDisplayManager } from '../../src/manager/display';
+import { IRecentManager } from '../../src/manager/recent';
 import { Constants } from '../../src/models/constant';
 import { TickerCategory } from '../../src/models/category';
 import { WatchCategoryId } from '../../src/models/watch';
@@ -31,6 +32,7 @@ describe('PaintManager', () => {
   let mockDomManager: jest.Mocked<IDomManager>;
   let mockCategoryManager: jest.Mocked<ICategoryManager>;
   let mockDisplayManager: jest.Mocked<IDisplayManager>;
+  let mockRecentManager: jest.Mocked<IRecentManager>;
 
   beforeEach(() => {
     mockDomManager = {
@@ -67,7 +69,12 @@ describe('PaintManager', () => {
       resolve: jest.fn().mockResolvedValue({ state: 'DEFAULT', color: Constants.UI.COLORS.DEFAULT }),
     } as unknown as jest.Mocked<IDisplayManager>;
 
-    paintManager = new PaintManager(mockDomManager, mockCategoryManager, mockDisplayManager);
+    mockRecentManager = {
+      markRecent: jest.fn(),
+      isRecent: jest.fn().mockResolvedValue(false),
+    } as unknown as jest.Mocked<IRecentManager>;
+
+    paintManager = new PaintManager(mockDomManager, mockCategoryManager, mockRecentManager, mockDisplayManager);
     jest.clearAllMocks();
   });
 
