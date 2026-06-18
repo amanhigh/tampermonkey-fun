@@ -239,6 +239,7 @@ describe('TradingViewWatchlistManager', () => {
       // Establish baseline with A, B, C
       mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B', 'C']));
       await watchlistManager.refresh();
+      jest.clearAllMocks();
 
       // Now simulate one added ticker (D)
       mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B', 'C', 'D']));
@@ -254,6 +255,7 @@ describe('TradingViewWatchlistManager', () => {
       // Establish baseline with A, B, C
       mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B', 'C']));
       await watchlistManager.refresh();
+      jest.clearAllMocks();
 
       // Now simulate one removed ticker (B)
       mockDomManager.getTickers.mockReturnValue(new Set(['A', 'C']));
@@ -281,6 +283,7 @@ describe('TradingViewWatchlistManager', () => {
     it('should save full current watchlist silo on targeted refresh', async () => {
       mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B']));
       await watchlistManager.refresh();
+      jest.clearAllMocks();
 
       mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B', 'C']));
 

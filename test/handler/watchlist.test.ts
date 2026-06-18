@@ -17,6 +17,15 @@ const mockJQueryElement: any = {
 const mockJQuery = jest.fn().mockReturnValue(mockJQueryElement);
 (global as any).$ = mockJQuery;
 
+// Polyfill minimal DOM globals needed for extractChangedTickers (Node doesn't have these)
+class ElementStub {}
+const globalAny = globalThis as Record<string, unknown>;
+globalAny.Element = ElementStub;
+globalAny.document = {
+  createElement: () => new ElementStub(),
+  createTextNode: () => ({}),
+} as unknown as Document;
+
 /** Create a fake MutationRecord with the given added/removed nodes. */
 function mockMutation(nodes: Node[], removed: Node[]): MutationRecord {
   // MutationRecord.addedNodes/removedNodes are NodeList — cast from array

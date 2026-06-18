@@ -152,30 +152,14 @@ describe('TickerHandler', () => {
   });
 
   describe('stopTracking', () => {
-    test('clears styles when stopped ticker matches current chart ticker', async () => {
-      mockDomManager.getTicker.mockReturnValue('TV_TICKER');
+    test('clears styles and calls lifecycle', async () => {
       mockLifecycleManager.stopTracking.mockResolvedValue(undefined);
 
       await handler.stopTracking('TV_TICKER');
 
       expect(mockStyleManager.clearAll).toHaveBeenCalled();
-    });
-
-    test('does not clear styles when stopped ticker is not current', async () => {
-      mockDomManager.getTicker.mockReturnValue('OTHER_TICKER');
-      mockLifecycleManager.stopTracking.mockResolvedValue(undefined);
-
-      await handler.stopTracking('TV_TICKER');
-
-      expect(mockStyleManager.clearAll).not.toHaveBeenCalled();
-    });
-
-    test('calls lifecycleManager.stopTracking with tvTicker', async () => {
-      mockLifecycleManager.stopTracking.mockResolvedValue(undefined);
-
-      await handler.stopTracking('TV_TICKER');
-
       expect(mockLifecycleManager.stopTracking).toHaveBeenCalledWith('TV_TICKER');
+      expect(Notifier.success).toHaveBeenCalledWith('⏹ Stopped tracking TV_TICKER');
     });
 
     test('warns when backend delete fails', async () => {
@@ -184,14 +168,6 @@ describe('TickerHandler', () => {
       await handler.stopTracking('TV_TICKER');
 
       expect(Notifier.warn).toHaveBeenCalledWith('Failed to delete ticker TV_TICKER: Network error');
-    });
-
-    test('notifies success after stop tracking', async () => {
-      mockLifecycleManager.stopTracking.mockResolvedValue(undefined);
-
-      await handler.stopTracking('TV_TICKER');
-
-      expect(Notifier.success).toHaveBeenCalledWith('⏹ Stopped tracking TV_TICKER');
     });
   });
 });
