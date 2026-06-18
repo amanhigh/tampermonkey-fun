@@ -170,6 +170,21 @@ describe('OnLoadHandler', () => {
         ticker: 'TEST',
       });
     });
+
+    it('should forward watchlist MutationRecord[] to WatchListHandler', () => {
+      onLoadHandler.init();
+
+      // Capture the second argument (callback) from the nodeObserver call
+      const nodeObserverCalls = mockObserveUtil.nodeObserver.mock.calls;
+      expect(nodeObserverCalls.length).toBeGreaterThanOrEqual(1);
+      const nodeCallback = nodeObserverCalls[0][1] as (mutations: MutationRecord[]) => void;
+
+      // Simulate watchlist DOM mutation
+      const mockMutations = [{ type: 'childList', addedNodes: [], removedNodes: [] }] as unknown as MutationRecord[];
+      nodeCallback(mockMutations);
+
+      expect(mockWatchListHandler.onWatchListChange).toHaveBeenCalledWith(mockMutations);
+    });
   });
 
   describe('constants integration', () => {

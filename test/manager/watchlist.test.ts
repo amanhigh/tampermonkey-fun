@@ -212,4 +212,132 @@ describe('TradingViewWatchlistManager', () => {
       });
     });
   });
+
+  describe('refreshTickers', () => {
+    beforeEach(() => {
+      // Establish baseline via refresh() first
+      mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B', 'C']));
+    });
+
+    it('should fall back to full refresh when baseline is not established', async () => {
+      // Instantiate new manager without baseline (prevWatchlistTickers is null)
+      const freshManager = new TradingViewWatchlistManager(
+        mockPaintManager,
+        mockCategoryManager,
+        mockUIUtil,
+        mockDomManager,
+        mockPublisher
+      );
+
+      await freshManager.refreshTickers(['A']);
+
+      // Falls back to full refresh via paint()
+      expect(mockPaintManager.paint).toHaveBeenCalled();
+    });
+
+    it('should use paintTickers for one confirmed added ticker', async () => {
+      // Establish baseline with A, B, C
+      mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B', 'C']));
+      await watchlistManager.refresh();
+
+      // Now simulate one added ticker (D)
+      mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B', 'C', 'D']));
+
+      await watchlistManager.refreshTickers(['D']);
+
+      // Should use targeted paintTickers, not full paint
+      expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['D']);
+      expect(mockPaintManager.paint).not.toHaveBeenCalled();
+    });
+
+    it('should use paintTickers for one confirmed removed ticker', async () => {
+      // Establish baseline with A, B, C
+      mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B', 'C']));
+      await watchlistManager.refresh();
+
+      // Now simulate one removed ticker (B)
+      mockDomManager.getTickers.mockReturnValue(new Set(['A', 'C']));
+
+      await watchlistManager.refreshTickers(['B']);
+
+      // Should use targeted paintTickers
+      expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['B']);
+      expect(mockPaintManager.paint).not.toHaveBeenCalled();
+    });
+
+    it('should clear READY state for removed ticker', async () => {
+      // Establish baseline
+      mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B']));
+      await watchlistManager.refresh();
+
+      // Remove B
+      mockDomManager.getTickers.mockReturnValue(new Set(['A']));
+
+      await watchlistManager.refreshTickers(['B']);
+
+      expect(mockCategoryManager.clearReadyState).toHaveBeenCalledWith(['B']);
+    });
+
+    it('should save full current watchlist silo on targeted refresh', async () => {
+      mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B']));
+      await watchlistManager.refresh();
+
+      mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B', 'C']));
+
+      await watchlistManager.refreshTickers(['C']);
+
+      expect((global as any).GM.setValue).toHaveBeenCalledWith(
+        Constants.STORAGE.SILOS.WATCHLIST,
+        expect.any(String)
+      );
+      const storedArg = (global as any).GM.setValue.mock.calls[0][1];
+      const parsed = JSON.parse(storedArg);
+      expect(parsed.tickers).toEqual(expect.arrayContaining(['A', 'B', 'C']));
+    });
+
+    it('should refresh summary and publish WATCHLIST_CHANGED', async () => {
+      mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B']));
+      await watchlistManager.refresh();
+
+      mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B', 'C']));
+
+      await watchlistManager.refreshTickers(['C']);
+
+      // Summary refresh — happens inside refreshSummary
+      expect(mockPaintManager.summarizeBuckets).toHaveBeenCalled();
+      // Event published
+      expect(mockPublisher.publish).toHaveBeenCalledWith({
+        type: DomainEventType.WATCHLIST_CHANGED,
+        tickers: ['C'],
+      });
+    });
+
+    it('should fall back to full refresh when extracted tickers do not match actual DOM diff', async () => {
+      mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B']));
+      await watchlistManager.refresh();
+
+      // Handler extracted "X" but actual DOM diff is "C"
+      mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B', 'C']));
+
+      await watchlistManager.refreshTickers(['X']);
+
+      // Falls back to full paint
+      expect(mockPaintManager.paint).toHaveBeenCalled();
+      expect(mockPaintManager.paintTickers).not.toHaveBeenCalled();
+    });
+
+    it('should fall back to full refresh when actual DOM diff has multiple tickers', async () => {
+      mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B']));
+      await watchlistManager.refresh();
+
+      // Two added tickers
+      mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B', 'C', 'D']));
+
+      await watchlistManager.refreshTickers(['C']);
+
+      // Diff size is 2, not 1 → full refresh
+      expect(mockPaintManager.paint).toHaveBeenCalled();
+      expect(mockPaintManager.paintTickers).not.toHaveBeenCalled();
+    });
+  });
 });

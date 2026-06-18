@@ -148,11 +148,10 @@ describe('ObserveUtil', () => {
       expect(result).toBe(mockMutationObserver);
     });
 
-    it('should call callback only for childList mutations with added nodes', () => {
+    it('should call callback with MutationRecord[] for childList mutations with added nodes', () => {
       observeUtil.nodeObserver(mockTarget, mockCallback);
 
       if (mockMutationCallback) {
-        // Simulate childList mutation with added nodes
         const mockMutations = [
           {
             type: 'childList',
@@ -162,15 +161,15 @@ describe('ObserveUtil', () => {
         ];
 
         mockMutationCallback(mockMutations);
-        expect(mockCallback).toHaveBeenCalled();
+        // Callback receives the array of actionable mutations
+        expect(mockCallback).toHaveBeenCalledWith(mockMutations);
       }
     });
 
-    it('should call callback only for childList mutations with removed nodes', () => {
+    it('should call callback with MutationRecord[] for childList mutations with removed nodes', () => {
       observeUtil.nodeObserver(mockTarget, mockCallback);
 
       if (mockMutationCallback) {
-        // Simulate childList mutation with removed nodes
         const mockMutations = [
           {
             type: 'childList',
@@ -180,7 +179,7 @@ describe('ObserveUtil', () => {
         ];
 
         mockMutationCallback(mockMutations);
-        expect(mockCallback).toHaveBeenCalled();
+        expect(mockCallback).toHaveBeenCalledWith(mockMutations);
       }
     });
 
@@ -188,7 +187,6 @@ describe('ObserveUtil', () => {
       observeUtil.nodeObserver(mockTarget, mockCallback);
 
       if (mockMutationCallback) {
-        // Simulate childList mutation without node changes
         const mockMutations = [
           {
             type: 'childList',
@@ -206,11 +204,31 @@ describe('ObserveUtil', () => {
       observeUtil.nodeObserver(mockTarget, mockCallback);
 
       if (mockMutationCallback) {
-        // Simulate non-childList mutation
         const mockMutations = [{ type: 'attributes', target: mockTarget }];
 
         mockMutationCallback(mockMutations);
+        // No actionable childList mutations, so callback is not called
         expect(mockCallback).not.toHaveBeenCalled();
+      }
+    });
+
+    it('should call callback once with all actionable mutations (not per-mutation)', () => {
+      observeUtil.nodeObserver(mockTarget, mockCallback);
+
+      if (mockMutationCallback) {
+        const mockMutations = [
+          { type: 'childList', addedNodes: [{}], removedNodes: [] },
+          { type: 'childList', addedNodes: [], removedNodes: [{}] },
+          { type: 'attributes', target: mockTarget },
+        ];
+
+        mockMutationCallback(mockMutations);
+        // Called once with the filtered array (non-childList mutation excluded)
+        expect(mockCallback).toHaveBeenCalledTimes(1);
+        expect(mockCallback).toHaveBeenCalledWith([
+          { type: 'childList', addedNodes: [{}], removedNodes: [] },
+          { type: 'childList', addedNodes: [], removedNodes: [{}] },
+        ]);
       }
     });
 
@@ -252,21 +270,6 @@ describe('ObserveUtil', () => {
         mockMutationCallback(mockMutations);
         // Should handle null textContent gracefully
         expect(mockCallback).toHaveBeenCalled();
-      }
-    });
-
-    it('should handle multiple mutations in single callback', () => {
-      observeUtil.nodeObserver(mockTarget, mockCallback);
-
-      if (mockMutationCallback) {
-        const mockMutations = [
-          { type: 'childList', addedNodes: [{}], removedNodes: [] },
-          { type: 'childList', addedNodes: [], removedNodes: [{}] },
-          { type: 'attributes', target: mockTarget }, // Should be ignored
-        ];
-
-        mockMutationCallback(mockMutations);
-        expect(mockCallback).toHaveBeenCalledTimes(2);
       }
     });
 

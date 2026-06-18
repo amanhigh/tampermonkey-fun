@@ -11,12 +11,14 @@ export interface IObserveUtil {
   attributeObserver(target: Element, callback: () => void): MutationObserver;
 
   /**
-   * Observes node changes on target
+   * Observes node changes on target.
+   * Passes actionable childList mutation records to the callback
+   * so callers can inspect added/removed nodes for targeted updates.
    * @param target - Target element to observe
-   * @param callback - Callback for changes
+   * @param callback - Callback receiving actionable MutationRecord[]
    * @returns MutationObserver instance or undefined if setup fails
    */
-  nodeObserver(target: Element, callback: () => void): MutationObserver;
+  nodeObserver(target: Element, callback: (mutations: MutationRecord[]) => void): MutationObserver;
 }
 
 /**
@@ -64,18 +66,19 @@ export class ObserveUtil implements IObserveUtil {
   }
 
   /** @inheritdoc */
-  public nodeObserver(target: Element, callback: () => void): MutationObserver {
+  public nodeObserver(target: Element, callback: (mutations: MutationRecord[]) => void): MutationObserver {
     if (!target || !(target instanceof Element)) {
       throw new Error('Invalid target element provided to nodeObserver');
     }
 
     try {
       const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.type === 'childList' && (mutation.addedNodes.length || mutation.removedNodes.length)) {
-            callback();
-          }
-        });
+        const actionable = mutations.filter(
+          (m) => m.type === 'childList' && (m.addedNodes.length > 0 || m.removedNodes.length > 0)
+        );
+        if (actionable.length > 0) {
+          callback(actionable);
+        }
       });
 
       observer.observe(target, {
