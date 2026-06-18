@@ -50,7 +50,7 @@ export class AlertFeedManager implements IAlertFeedManager {
     // Special values to Paint all tickers during Reset
     const event = new AlertFeedEvent(Constants.MISC.RESET_FEED, {
       state: DisplayState.UNMAPPED,
-      color: 'red',
+      color: 'firebrick',
     });
     await GM.setValue(Constants.STORAGE.EVENTS.ALERT_FEED_UPDATE, event.stringify());
   }
