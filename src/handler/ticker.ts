@@ -4,7 +4,7 @@ import { ITickerManager } from '../manager/ticker';
 import { ILifecycleManager } from '../manager/lifecycle';
 import { IStyleManager } from '../manager/style';
 import { IAlertTickerHandler } from './alert_ticker';
-import { TickerTimeframe, DEFAULT_SEQUENCE, NON_NSE_DEFAULT_TIMEFRAMES } from '../models/timeframe';
+import { TickerTimeframe, TMN_SEQUENCE, SMN_SEQUENCE } from '../models/timeframe';
 import { TickerType, TickerState, TickerTrend } from '../models/ticker';
 
 /**
@@ -124,15 +124,15 @@ export class TickerHandler implements ITickerHandler {
   /**
    * Returns the default persisted timeframe list based on exchange.
    *
-   * - NSE → TMN, MN, WK, DL
-   * - All other exchanges → YR, SMN, TMN, MN, WK
+   * - NSE → TMN_SEQUENCE (TMN, MN, WK, DL)
+   * - Other exchanges → SMN_SEQUENCE (SMN, TMN, MN, WK)
    *
    * Used when starting tracking for a new ticker.
    */
   private getDefaultTimeframesForExchange(exchange: string): TickerTimeframe[] {
     if (exchange.toUpperCase() === 'NSE') {
-      return [...DEFAULT_SEQUENCE];
+      return [...TMN_SEQUENCE];
     }
-    return [...NON_NSE_DEFAULT_TIMEFRAMES];
+    return [...SMN_SEQUENCE];
   }
 }

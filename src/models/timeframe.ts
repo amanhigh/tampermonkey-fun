@@ -36,24 +36,20 @@ export type Timeframe = Readonly<{
 export type Sequence = readonly [TickerTimeframe, TickerTimeframe, TickerTimeframe, TickerTimeframe];
 
 /**
- * Default Sequence (4-tuple) for timeframe hotkeys and screenshot flows.
+ * TMN-prefixed Sequence (4-tuple) for timeframe hotkeys and screenshot flows.
  * Represents TMN → MN → WK → DL in catalog order.
- * Used as fallback when no active timeframes are configured, and as the
- * default timeframe list for NSE tickers when starting tracking.
+ * Used when the ticker's allowed timeframes include DL, and as the default
+ * fallback when no active timeframes are configured or on backend read failure.
+ * Also used as the default timeframe list for NSE tickers when starting tracking.
  */
-export const DEFAULT_SEQUENCE: Sequence = [
-  TickerTimeframe.TMN,
-  TickerTimeframe.MN,
-  TickerTimeframe.WK,
-  TickerTimeframe.DL,
-];
+export const TMN_SEQUENCE: Sequence = [TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL];
 
 /**
- * Default timeframe list for non-NSE tickers (YR, SMN, TMN, MN, WK).
- * Used when starting tracking for a new ticker on other exchanges.
+ * SMN-prefixed Sequence (4-tuple) for timeframe hotkeys and screenshot flows.
+ * Represents SMN → TMN → MN → WK in catalog order.
+ * Used when the ticker's allowed timeframes do not include DL.
  */
-export const NON_NSE_DEFAULT_TIMEFRAMES: readonly TickerTimeframe[] = [
-  TickerTimeframe.YR,
+export const SMN_SEQUENCE: Sequence = [
   TickerTimeframe.SMN,
   TickerTimeframe.TMN,
   TickerTimeframe.MN,

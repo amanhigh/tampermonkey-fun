@@ -1,4 +1,4 @@
-import { Timeframe, TickerTimeframe, Sequence, DEFAULT_SEQUENCE } from '../models/timeframe';
+import { Timeframe, TickerTimeframe, Sequence, TMN_SEQUENCE, SMN_SEQUENCE } from '../models/timeframe';
 import { Constants } from '../models/constant';
 import { DomainEventType } from '../models/domain_event';
 import { Notifier } from '../util/notify';
@@ -37,7 +37,7 @@ function toSupportedTimeframes(codes: TickerTimeframe[]): Timeframe[] {
 
 export interface ITimeFrameManager {
   /** Returns the active backend timeframe codes for the current ticker,
-   * sorted by catalog order. Falls back to DEFAULT_SEQUENCE when backend
+   * sorted by catalog order. Falls back to TMN_SEQUENCE when backend
    * read fails. */
   getActiveTimeframes(): Promise<readonly TickerTimeframe[]>;
 
@@ -47,7 +47,11 @@ export interface ITimeFrameManager {
   toggleTimeframe(code: TickerTimeframe): Promise<TickerTimeframe[]>;
 
   /** Get the derived Sequence (4-tuple) for the current ticker.
-   * Returns exactly 4 frames from the top, or DEFAULT_SEQUENCE. */
+   * Selects TMN_SEQUENCE or SMN_SEQUENCE based on whether the ticker's
+   * allowed timeframes include DL:
+   *   - Empty/unsupported list → TMN_SEQUENCE (TMN, MN, WK, DL)
+   *   - Contains DL            → TMN_SEQUENCE (TMN, MN, WK, DL)
+   *   - Otherwise              → SMN_SEQUENCE (SMN, TMN, MN, WK) */
   getSequence(): Promise<Sequence>;
 
   /** Apply timeframe to chart at given position in the current ticker's Sequence.
@@ -67,6 +71,11 @@ export interface ITimeFrameManager {
  *
  * Owns the timeframe catalog (codes, labels, ranks, toolbar positions, styles),
  * sequence derivation, and default timeframe policies.
+ *
+ * The Sequence is derived from the ticker's allowed timeframes:
+ *   - Contains DL → TMN_SEQUENCE (TMN, MN, WK, DL)
+ *   - Otherwise  → SMN_SEQUENCE (SMN, TMN, MN, WK)
+ *   - Fallback    → TMN_SEQUENCE (TMN, MN, WK, DL)
  *
  * Hotkeys 1-4 apply timeframes by position in the derived Sequence
  * rather than from a fixed sequence.
@@ -89,7 +98,7 @@ export class TimeFrameManager implements ITimeFrameManager {
       return active.map((tf) => tf.code);
     } catch (error) {
       Notifier.warn(`getActiveTimeframes: ${(error as Error).message}. Falling back to default timeframes.`);
-      return [...DEFAULT_SEQUENCE];
+      return [...TMN_SEQUENCE];
     }
   }
 
@@ -115,15 +124,10 @@ export class TimeFrameManager implements ITimeFrameManager {
   /** @inheritdoc */
   async getSequence(): Promise<Sequence> {
     const codes = await this.getActiveTimeframes();
-    const supported = toSupportedTimeframes(codes as TickerTimeframe[]);
-    if (supported.length === 0) {
-      return DEFAULT_SEQUENCE;
+    if (codes.length === 0 || codes.includes(TickerTimeframe.DL)) {
+      return TMN_SEQUENCE;
     }
-    const startIdx = TIMEFRAMES.findIndex((tf) => tf.code === supported[0].code);
-    if (startIdx < 0 || startIdx + DEFAULT_SEQUENCE.length > TIMEFRAMES.length) {
-      return DEFAULT_SEQUENCE;
-    }
-    return TIMEFRAMES.slice(startIdx, startIdx + DEFAULT_SEQUENCE.length).map((tf) => tf.code) as unknown as Sequence;
+    return SMN_SEQUENCE;
   }
 
   // ── DOM Operations ──

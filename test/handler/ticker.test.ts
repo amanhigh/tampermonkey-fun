@@ -108,7 +108,7 @@ describe('TickerHandler', () => {
       expect(Notifier.success).toHaveBeenCalledWith(expect.stringContaining('Started tracking TV_TICKER'));
     });
 
-    test('starts non-NSE ticker with YR, SMN, TMN, MN, WK default timeframes', async () => {
+    test('starts non-NSE ticker with SMN, TMN, MN, WK default timeframes', async () => {
       mockDomManager.getCurrentExchange.mockReturnValue('NASDAQ');
       mockLifecycleManager.startTracking.mockResolvedValue({ ticker: 'TV_TICKER' } as any);
 
@@ -117,7 +117,7 @@ describe('TickerHandler', () => {
       expect(mockLifecycleManager.startTracking).toHaveBeenCalledWith(
         expect.objectContaining({
           exchange: 'NASDAQ',
-          timeframes: ['YR', 'SMN', 'TMN', 'MN', 'WK'],
+          timeframes: ['SMN', 'TMN', 'MN', 'WK'],
         })
       );
     });
