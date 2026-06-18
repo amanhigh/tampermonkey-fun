@@ -13,7 +13,7 @@ import { IRecentManager } from './recent';
  * both TradingView and Investing pages.
  *
  * Priority order (surface-independent):
- *   1 ticker=null (unmapped)                 → UNMAPPED / firebrick
+ *   1 ticker=null (unmapped)                 → UNMAPPED / purple
  *   2 watch category + in watchlist silo     → WATCH_CATEGORY / category color
  *   3 recent                                 → RECENT / gold
  *   4 everything else                        → DEFAULT / white
@@ -36,7 +36,7 @@ export class DisplayManager implements IDisplayManager {
   async resolve(ticker: string | null): Promise<DisplayInfo> {
     // Priority 1: Unmapped
     if (ticker === null) {
-      return { state: DisplayState.UNMAPPED, color: 'firebrick' };
+      return { state: DisplayState.UNMAPPED, color: 'purple' };
     }
 
     // Fetch watch category and watchlist silo in parallel
