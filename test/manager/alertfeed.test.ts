@@ -1,6 +1,6 @@
 import { AlertFeedManager, IAlertFeedManager } from '../../src/manager/alertfeed';
 import { IDisplayManager } from '../../src/manager/display';
-import { DisplayState, DisplaySurface } from '../../src/models/display';
+import { DisplayState } from '../../src/models/display';
 
 // Mock GM global
 (global as any).GM = {
@@ -34,22 +34,16 @@ describe('AlertFeedManager', () => {
 
       await alertFeedManager.createAlertFeedEvent('INFY', 'TV:INFY');
 
-      expect(mockDisplayManager.resolve).toHaveBeenCalledWith({
-        ticker: 'TV:INFY',
-        surface: DisplaySurface.ALERT_FEED_ROW,
-      });
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith('TV:INFY');
       expect(GM.setValue).toHaveBeenCalled();
     });
 
     it('should pass null ticker when ticker is omitted (unmapped)', async () => {
-      mockDisplayManager.resolve.mockResolvedValue({ state: DisplayState.UNMAPPED, color: 'red' });
+      mockDisplayManager.resolve.mockResolvedValue({ state: DisplayState.UNMAPPED, color: 'firebrick' });
 
       await alertFeedManager.createAlertFeedEvent('UNKNOWN');
 
-      expect(mockDisplayManager.resolve).toHaveBeenCalledWith({
-        ticker: null,
-        surface: DisplaySurface.ALERT_FEED_ROW,
-      });
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(null);
     });
   });
 });

@@ -1,4 +1,4 @@
-import { DisplaySurface } from '../models/display';
+
 import { TickerArea, TickerVisibility } from '../models/dom';
 import { ICategoryManager } from './category';
 import { IDomManager } from './dom';
@@ -184,10 +184,7 @@ export class PaintManager implements IPaintManager {
     const { flag: flagCategory, isFno } = await this.categoryManager.getTickerCategory(ticker);
 
     // Paint name — delegate color decision to shared display manager
-    const displayInfo = await this.displayManager.resolve({
-      ticker,
-      surface: DisplaySurface.HEADER_NAME,
-    });
+    const displayInfo = await this.displayManager.resolve(ticker);
     $name.css('color', displayInfo.color);
 
     // Paint flag and exchange — flag category color

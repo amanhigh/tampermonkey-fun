@@ -148,9 +148,7 @@ describe('PaintManager', () => {
 
       await paintManager.paint();
 
-      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(
-        { ticker: 'HEADER_TICKER', surface: 'HEADER_NAME' }
-      );
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith('HEADER_TICKER');
     });
 
     it('should paint symbol color directly from watch category for watchlist/screener tickers', async () => {

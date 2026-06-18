@@ -1,7 +1,7 @@
 import { DisplayManager, IDisplayManager } from '../../src/manager/display';
 import { ICategoryManager } from '../../src/manager/category';
 import { IRecentManager } from '../../src/manager/recent';
-import { DisplayState, DisplaySurface } from '../../src/models/display';
+import { DisplayState } from '../../src/models/display';
 import { Constants } from '../../src/models/constant';
 import { WatchCategory, WatchCategoryId } from '../../src/models/watch';
 
@@ -46,51 +46,16 @@ describe('DisplayManager', () => {
     // ── Priority 1: UNMAPPED ──
 
     it('should return UNMAPPED/firebrick for null ticker', async () => {
-      const result = await displayManager.resolve({
-        ticker: null,
-        surface: DisplaySurface.ALERT_FEED_ROW,
-      });
+      const result = await displayManager.resolve(null);
 
       expect(result).toEqual({ state: DisplayState.UNMAPPED, color: 'firebrick' });
       expect(mockCategoryManager.getTickerCategory).not.toHaveBeenCalled();
+      expect(mockRecentManager.isRecent).not.toHaveBeenCalled();
     });
 
-    // ── HEADER_NAME ──
+    // ── Priority 2: WATCH_CATEGORY ──
 
-    it('should return WATCH_CATEGORY for HEADER_NAME when watch category exists', async () => {
-      mockCategoryManager.getTickerCategory.mockResolvedValue({
-        watch: READY_CATEGORY,
-        flag: undefined,
-        isFno: false,
-      });
-
-      const result = await displayManager.resolve({
-        ticker: 'TV:RELIANCE',
-        surface: DisplaySurface.HEADER_NAME,
-      });
-
-      expect(result).toEqual({ state: DisplayState.WATCH_CATEGORY, color: 'red' });
-      expect(mockCategoryManager.getTickerCategory).toHaveBeenCalledWith('TV:RELIANCE');
-    });
-
-    it('should return DEFAULT for HEADER_NAME when no watch category exists', async () => {
-      mockCategoryManager.getTickerCategory.mockResolvedValue({
-        watch: undefined,
-        flag: undefined,
-        isFno: false,
-      });
-
-      const result = await displayManager.resolve({
-        ticker: 'TV:PLAIN',
-        surface: DisplaySurface.HEADER_NAME,
-      });
-
-      expect(result).toEqual({ state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT });
-    });
-
-    // ── Priority 2: WATCH_CATEGORY (alert feed) via silo ──
-
-    it('should return WATCH_CATEGORY for ALERT_FEED_ROW when watch category exists and ticker is in watchlist silo', async () => {
+    it('should return WATCH_CATEGORY when watch category exists and ticker is in watchlist silo', async () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: READY_CATEGORY,
         flag: undefined,
@@ -104,21 +69,20 @@ describe('DisplayManager', () => {
       });
       (global as any).GM.getValue.mockResolvedValue(siloData);
 
-      const result = await displayManager.resolve({
-        ticker: 'TV:RELIANCE',
-        surface: DisplaySurface.ALERT_FEED_ROW,
-      });
+      const result = await displayManager.resolve('TV:RELIANCE');
 
       expect(result).toEqual({ state: DisplayState.WATCH_CATEGORY, color: 'red' });
-      expect((global as any).GM.getValue).toHaveBeenCalledWith(Constants.STORAGE.SILOS.WATCHLIST);
+      expect(mockCategoryManager.getTickerCategory).toHaveBeenCalledWith('TV:RELIANCE');
+      expect(mockRecentManager.isRecent).not.toHaveBeenCalled();
     });
 
-    it('should return DEFAULT when watch category exists but ticker is absent from watchlist silo', async () => {
+    it('should return RECENT/gold when watch category exists but ticker is absent from watchlist silo and is recent', async () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: READY_CATEGORY,
         flag: undefined,
         isFno: false,
       });
+      mockRecentManager.isRecent.mockResolvedValue(true);
 
       // Simulate watchlist silo without the ticker
       const siloData = JSON.stringify({
@@ -127,33 +91,78 @@ describe('DisplayManager', () => {
       });
       (global as any).GM.getValue.mockResolvedValue(siloData);
 
-      const result = await displayManager.resolve({
-        ticker: 'TV:ABSENT',
-        surface: DisplaySurface.ALERT_FEED_ROW,
-      });
+      const result = await displayManager.resolve('TV:ABSENT');
 
-      expect(result).toEqual({ state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT });
+      expect(result).toEqual({ state: DisplayState.RECENT, color: 'gold' });
+      expect(mockCategoryManager.getTickerCategory).toHaveBeenCalledWith('TV:ABSENT');
+      expect(mockRecentManager.isRecent).toHaveBeenCalled();
     });
 
-    it('should return DEFAULT when watchlist silo is null (no data yet)', async () => {
+    it('should return DEFAULT/white when watch category exists but ticker is absent from watchlist silo and not recent', async () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: READY_CATEGORY,
         flag: undefined,
         isFno: false,
       });
+      mockRecentManager.isRecent.mockResolvedValue(false);
 
-      // GM.getValue returns null (no silo data)
-      (global as any).GM.getValue.mockResolvedValue(null);
-
-      const result = await displayManager.resolve({
-        ticker: 'TV:ABSENT',
-        surface: DisplaySurface.ALERT_FEED_ROW,
+      // Simulate watchlist silo without the ticker
+      const siloData = JSON.stringify({
+        tickers: ['TV:SOMEOTHER'],
+        updatedAt: new Date().toISOString(),
       });
+      (global as any).GM.getValue.mockResolvedValue(siloData);
+
+      const result = await displayManager.resolve('TV:ABSENT');
 
       expect(result).toEqual({ state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT });
     });
 
-    // ── CMG case: category exists, ticker in silo, also recent → category wins ──
+    it('should return RECENT/gold when silo is null, category exists, and ticker is recent', async () => {
+      mockCategoryManager.getTickerCategory.mockResolvedValue({
+        watch: READY_CATEGORY,
+        flag: undefined,
+        isFno: false,
+      });
+      mockRecentManager.isRecent.mockResolvedValue(true);
+
+      // GM.getValue returns null (no silo data yet)
+      (global as any).GM.getValue.mockResolvedValue(null);
+
+      const result = await displayManager.resolve('TV:ABSENT');
+
+      expect(result).toEqual({ state: DisplayState.RECENT, color: 'gold' });
+    });
+
+    // ── No category + recency ──
+
+    it('should return RECENT/gold when ticker has no watch category but is recent', async () => {
+      mockCategoryManager.getTickerCategory.mockResolvedValue({
+        watch: undefined,
+        flag: undefined,
+        isFno: false,
+      });
+      mockRecentManager.isRecent.mockResolvedValue(true);
+
+      const result = await displayManager.resolve('TV:RECENT');
+
+      expect(result).toEqual({ state: DisplayState.RECENT, color: 'gold' });
+    });
+
+    it('should return DEFAULT/white when ticker has no watch category and is not recent', async () => {
+      mockCategoryManager.getTickerCategory.mockResolvedValue({
+        watch: undefined,
+        flag: undefined,
+        isFno: false,
+      });
+      mockRecentManager.isRecent.mockResolvedValue(false);
+
+      const result = await displayManager.resolve('TV:PLAIN');
+
+      expect(result).toEqual({ state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT });
+    });
+
+    // ── CMG regression: category + in silo + recent → category wins ──
 
     it('should return WATCH_CATEGORY/red for CMG when silo contains CMG even if recent', async () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
@@ -170,66 +179,10 @@ describe('DisplayManager', () => {
       });
       (global as any).GM.getValue.mockResolvedValue(siloData);
 
-      const result = await displayManager.resolve({
-        ticker: 'CMG',
-        surface: DisplaySurface.ALERT_FEED_ROW,
-      });
+      const result = await displayManager.resolve('CMG');
 
       // Category (READY → red) wins over RECENT (gold)
       expect(result).toEqual({ state: DisplayState.WATCH_CATEGORY, color: 'red' });
-    });
-
-    // ── Priority 3: RECENT (alert feed only) ──
-
-    it('should return RECENT/gold for alert feed when ticker is recent', async () => {
-      mockCategoryManager.getTickerCategory.mockResolvedValue({
-        watch: undefined,
-        flag: undefined,
-        isFno: false,
-      });
-      mockRecentManager.isRecent.mockResolvedValue(true);
-
-      const result = await displayManager.resolve({
-        ticker: 'TV:RECENT',
-        surface: DisplaySurface.ALERT_FEED_ROW,
-      });
-
-      expect(result).toEqual({ state: DisplayState.RECENT, color: 'gold' });
-    });
-
-    it('should return DEFAULT (not RECENT) for HEADER_NAME when ticker is recent', async () => {
-      mockCategoryManager.getTickerCategory.mockResolvedValue({
-        watch: undefined,
-        flag: undefined,
-        isFno: false,
-      });
-
-      const result = await displayManager.resolve({
-        ticker: 'TV:RECENT',
-        surface: DisplaySurface.HEADER_NAME,
-      });
-
-      expect(result).toEqual({ state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT });
-      // Header does not check recency
-      expect(mockRecentManager.isRecent).not.toHaveBeenCalled();
-    });
-
-    // ── Priority 4: DEFAULT ──
-
-    it('should return DEFAULT/white for mapped ticker with no category or recency', async () => {
-      mockCategoryManager.getTickerCategory.mockResolvedValue({
-        watch: undefined,
-        flag: undefined,
-        isFno: false,
-      });
-      mockRecentManager.isRecent.mockResolvedValue(false);
-
-      const result = await displayManager.resolve({
-        ticker: 'TV:PLAIN',
-        surface: DisplaySurface.ALERT_FEED_ROW,
-      });
-
-      expect(result).toEqual({ state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT });
     });
   });
 });

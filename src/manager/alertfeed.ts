@@ -1,5 +1,5 @@
 import { AlertFeedEvent } from '../models/alertfeed';
-import { DisplayState, DisplaySurface } from '../models/display';
+import { DisplayState } from '../models/display';
 import { Constants } from '../models/constant';
 import { IDisplayManager } from './display';
 
@@ -10,12 +10,12 @@ import { IDisplayManager } from './display';
  * because the feed event travels through Greasemonkey GM.setValue (cross-context
  * serialisation) and the manager only needs the Investing symbol and TV ticker.
  *
- * A null ticker means the symbol is unmapped — the state will be UNMAPPED (red).
+ * A null ticker means the symbol is unmapped — the state will be UNMAPPED (firebrick).
  */
 export interface IAlertFeedManager {
   /**
    * Create an alert feed event for an Investing symbol.
-   * When ticker is omitted or undefined the feed row is treated as unmapped (red).
+   * When ticker is omitted or undefined the feed row is treated as unmapped (firebrick).
    * @param alertTicker - The Investing.com symbol for the feed row
    * @param ticker - The TV ticker for category/recent lookups; omit for unmapped rows
    * @returns Promise that resolves when event is written to GM storage
@@ -37,10 +37,7 @@ export class AlertFeedManager implements IAlertFeedManager {
 
   /** @inheritdoc */
   public async createAlertFeedEvent(alertTicker: string, ticker?: string): Promise<void> {
-    const feedInfo = await this.displayManager.resolve({
-      ticker: ticker ?? null,
-      surface: DisplaySurface.ALERT_FEED_ROW,
-    });
+    const feedInfo = await this.displayManager.resolve(ticker ?? null);
     const event = new AlertFeedEvent(alertTicker, feedInfo);
     await GM.setValue(Constants.STORAGE.EVENTS.ALERT_FEED_UPDATE, event.stringify());
   }

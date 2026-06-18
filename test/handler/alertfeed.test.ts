@@ -9,7 +9,7 @@ import { IInvestingManager } from '../../src/manager/investing';
 import { AlertTicker } from '../../src/models/alert_ticker';
 import { Instrument } from '../../src/models/investing';
 import { AlertClickAction } from '../../src/models/events';
-import { DisplayState, DisplaySurface } from '../../src/models/display';
+import { DisplayState } from '../../src/models/display';
 import { ISubscriber } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
 
@@ -663,9 +663,7 @@ describe('AlertFeedHandler', () => {
       await handler.paintAlertFeed();
 
       expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledTimes(1);
-      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(
-        expect.objectContaining({ ticker: alertTickers[0].ticker, surface: DisplaySurface.ALERT_FEED_ROW })
-      );
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(alertTickers[0].ticker);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
     });
 
@@ -684,9 +682,7 @@ describe('AlertFeedHandler', () => {
       await handler.paintAlertFeed();
 
       expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledTimes(1);
-      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(
-        expect.objectContaining({ ticker: alertTickers[0].ticker, surface: DisplaySurface.ALERT_FEED_ROW })
-      );
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(alertTickers[0].ticker);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
     });
 
@@ -705,9 +701,7 @@ describe('AlertFeedHandler', () => {
       await handler.paintAlertFeed();
 
       expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledTimes(1);
-      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(
-        expect.objectContaining({ ticker: alertTickers[0].ticker, surface: DisplaySurface.ALERT_FEED_ROW })
-      );
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(alertTickers[0].ticker);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
     });
 
@@ -726,9 +720,7 @@ describe('AlertFeedHandler', () => {
       await handler.paintAlertFeed();
 
       expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledTimes(1);
-      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(
-        expect.objectContaining({ ticker: alertTickers[0].ticker, surface: DisplaySurface.ALERT_FEED_ROW })
-      );
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(alertTickers[0].ticker);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
     });
 
@@ -747,9 +739,7 @@ describe('AlertFeedHandler', () => {
       await handler.paintAlertFeed();
 
       expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledTimes(1);
-      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(
-        expect.objectContaining({ ticker: alertTickers[0].ticker, surface: DisplaySurface.ALERT_FEED_ROW })
-      );
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(alertTickers[0].ticker);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
     });
 
@@ -765,9 +755,7 @@ describe('AlertFeedHandler', () => {
 
       await handler.paintAlertFeed();
 
-      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(
-        expect.objectContaining({ ticker: null, surface: DisplaySurface.ALERT_FEED_ROW })
-      );
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(null);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
       expect(Notifier.warn).toHaveBeenCalledWith(expect.stringContaining('Unmapped'));
     });
@@ -792,9 +780,7 @@ describe('AlertFeedHandler', () => {
 
       await handler.paintAlertFeed();
 
-      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(
-        expect.objectContaining({ ticker: null, surface: DisplaySurface.ALERT_FEED_ROW })
-      );
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(null);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
     });
   });

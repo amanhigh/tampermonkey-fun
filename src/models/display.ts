@@ -1,34 +1,22 @@
 /**
  * Generic display state for a ticker's visual presentation.
- * Resolved by DisplayManager for header name and alert feed.
+ * Resolved by DisplayManager for both header name and alert feed rows.
  *
- * Priority order:
- *   1 UNMAPPED — no TV ticker mapping (alert feed only)
- *   2 WATCH_CATEGORY — has watch category and is in DOM watchlist
- *   3 RECENT — recently viewed (alert feed only)
- *   4 DEFAULT — everything else
+ * Priority order (surface-independent):
+ *   1 UNMAPPED — no TV ticker mapping (null ticker / unmapped)
+ *   2 WATCH_CATEGORY — has watch category AND is in the shared watchlist silo
+ *   3 RECENT — recently viewed ticker (any non-null ticker)
+ *   4 DEFAULT — everything else (white)
  */
 export enum DisplayState {
-  /** Ticker has no TV mapping — only applies to alert feed rows. */
+  /** Ticker has no TV mapping */
   UNMAPPED = 'UNMAPPED',
   /** Mapped ticker with no stronger state — white fallback. */
   DEFAULT = 'DEFAULT',
-  /** Recently viewed ticker — only applies to alert feed rows. */
+  /** Recently viewed ticker. */
   RECENT = 'RECENT',
-  /** Ticker has a watch category and is in the DOM watchlist. */
+  /** Ticker has a watch category and is in the shared watchlist silo. */
   WATCH_CATEGORY = 'WATCH_CATEGORY',
-}
-
-/**
- * The surface context where a ticker's display info is being resolved.
- * Restricted to surfaces that need semantic display state.
- * Watchlist/screener symbols paint directly from watch category.
- */
-export enum DisplaySurface {
-  /** Current ticker header name element. */
-  HEADER_NAME = 'HEADER_NAME',
-  /** Investing.com alert feed row. */
-  ALERT_FEED_ROW = 'ALERT_FEED_ROW',
 }
 
 /**
@@ -39,13 +27,4 @@ export enum DisplaySurface {
 export interface DisplayInfo {
   state: DisplayState;
   color: string;
-}
-
-/**
- * Request payload for DisplayManager.resolve().
- * Only ticker and surface are passed; all lookups are internal.
- */
-export interface DisplayRequest {
-  ticker: string | null;
-  surface: DisplaySurface;
 }

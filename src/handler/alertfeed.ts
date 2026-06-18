@@ -6,7 +6,7 @@ import { AlertClickAction } from '../models/events';
 import { IAlertManager } from '../manager/alert';
 import { IAlertFeedManager } from '../manager/alertfeed';
 import { IDisplayManager } from '../manager/display';
-import { DisplayState, DisplaySurface, DisplayInfo } from '../models/display';
+import { DisplayState, DisplayInfo } from '../models/display';
 import { AlertFeedEvent } from '../models/alertfeed';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { IInvestingManager } from '../manager/investing';
@@ -300,10 +300,7 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     const feedInfos = await Promise.all(
       elements.map(async (e) => {
         const resolved = this.resolvePaintAlertTicker(e.name, e.ticker, allAlertTickers);
-        return this.displayManager.resolve({
-          ticker: resolved?.ticker ?? null,
-          surface: DisplaySurface.ALERT_FEED_ROW,
-        });
+        return this.displayManager.resolve(resolved?.ticker ?? null);
       })
     );
 

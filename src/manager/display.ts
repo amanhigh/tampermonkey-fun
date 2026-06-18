@@ -1,4 +1,4 @@
-import { DisplayState, DisplayInfo, DisplaySurface, DisplayRequest } from '../models/display';
+import { DisplayState, DisplayInfo } from '../models/display';
 import { Constants } from '../models/constant';
 import { ICategoryManager } from './category';
 import { IRecentManager } from './recent';
@@ -10,17 +10,17 @@ import { IRecentManager } from './recent';
  * Watchlist membership is determined from a shared GM silo
  * (Constants.STORAGE.SILOS.WATCHLIST) that the TradingView watchlist
  * manager keeps updated — this makes DisplayManager work correctly on
- * both TradingView and Investing alert-feed pages.
+ * both TradingView and Investing pages.
  *
- * Priority order:
- *   1 ticker=null                            → UNMAPPED / firebrick
+ * Priority order (surface-independent):
+ *   1 ticker=null (unmapped)                 → UNMAPPED / firebrick
  *   2 watch category + in watchlist silo     → WATCH_CATEGORY / category color
- *   3 alert feed + recent                    → RECENT / gold
+ *   3 recent                                 → RECENT / gold
  *   4 everything else                        → DEFAULT / white
  */
 export interface IDisplayManager {
-  /** Resolve display info for a ticker on a given surface. */
-  resolve(request: DisplayRequest): Promise<DisplayInfo>;
+  /** Resolve display info for a ticker using the shared priority rules. */
+  resolve(ticker: string | null): Promise<DisplayInfo>;
 }
 
 /**
@@ -33,38 +33,28 @@ export class DisplayManager implements IDisplayManager {
   ) {}
 
   /** @inheritdoc */
-  async resolve(request: DisplayRequest): Promise<DisplayInfo> {
-    const { ticker, surface } = request;
-
+  async resolve(ticker: string | null): Promise<DisplayInfo> {
     // Priority 1: Unmapped
     if (ticker === null) {
       return { state: DisplayState.UNMAPPED, color: 'firebrick' };
     }
 
-    // Fetch watch category
-    const category = await this.categoryManager.getTickerCategory(ticker);
+    // Fetch watch category and watchlist silo in parallel
+    const [category, watchlistTickers] = await Promise.all([
+      this.categoryManager.getTickerCategory(ticker),
+      this.getWatchlistSilo(),
+    ]);
     const watchCat = category.watch;
 
     // Priority 2: Watch category + in watchlist silo
-    if (watchCat) {
-      if (surface === DisplaySurface.HEADER_NAME) {
-        // Header always uses watch category color when one exists
-        return { state: DisplayState.WATCH_CATEGORY, color: watchCat.color };
-      }
-      // ALERT_FEED_ROW requires watchlist silo membership
-      const watchlistTickers = await this.getWatchlistSilo();
-      const isInWatchlist = watchlistTickers.has(ticker);
-      if (isInWatchlist) {
-        return { state: DisplayState.WATCH_CATEGORY, color: watchCat.color };
-      }
+    if (watchCat && watchlistTickers.has(ticker)) {
+      return { state: DisplayState.WATCH_CATEGORY, color: watchCat.color };
     }
 
-    // Priority 3: Alert feed only and recent
-    if (surface === DisplaySurface.ALERT_FEED_ROW) {
-      const isRecent = await this.recentManager.isRecent(ticker, Constants.RECENT_CUTOFF_MS);
-      if (isRecent) {
-        return { state: DisplayState.RECENT, color: 'gold' };
-      }
+    // Priority 3: Recent
+    const isRecent = await this.recentManager.isRecent(ticker, Constants.RECENT_CUTOFF_MS);
+    if (isRecent) {
+      return { state: DisplayState.RECENT, color: 'gold' };
     }
 
     // Priority 4: Default
