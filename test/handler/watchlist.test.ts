@@ -5,7 +5,6 @@ import { ISyncUtil } from '../../src/util/sync';
 import { ICategoryManager } from '../../src/manager/category';
 import { IDomManager } from '../../src/manager/dom';
 import { WatchCategoryId } from '../../src/models/watch';
-import { TickerArea, TickerVisibility } from '../../src/models/dom';
 import { ISubscriber } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
 
@@ -197,25 +196,18 @@ describe('WatchListHandler', () => {
   });
 
   describe('toggleReadyForSelectedTickers', () => {
-    beforeEach(() => {
-      mockDomManager.getTickers.mockReturnValue(new Set(['SEL_A', 'SEL_B']));
-    });
-
-    it('should toggle selected watchlist tickers through CategoryManager', () => {
-      handler.toggleReadyForSelectedTickers();
-
-      expect(mockCategoryManager.toggleReadyState).toHaveBeenCalledWith(['SEL_A', 'SEL_B']);
-    });
-
-    it('should use screener selected tickers when screener is visible', () => {
-      mockDomManager.isScreenerVisible.mockReturnValue(true);
+    it('should toggle current chart ticker through CategoryManager', () => {
+      mockDomManager.getTicker.mockReturnValue('SYK');
 
       handler.toggleReadyForSelectedTickers();
 
-      expect(mockDomManager.getTickers).toHaveBeenCalledWith(
-        TickerArea.SCREENER,
-        TickerVisibility.SELECTED
-      );
+      expect(mockCategoryManager.toggleReadyState).toHaveBeenCalledWith(['SYK']);
+    });
+
+    it('should use getTicker (current chart ticker) as the source', () => {
+      handler.toggleReadyForSelectedTickers();
+
+      expect(mockDomManager.getTicker).toHaveBeenCalled();
     });
 
     it('should NOT do full refresh', async () => {
