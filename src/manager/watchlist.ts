@@ -40,6 +40,18 @@ export interface ITradingViewWatchlistManager {
    * (e.g. category hotkeys).
    */
   refreshSummary(): Promise<void>;
+
+  /**
+   * Targeted refresh for a specific set of changed tickers.
+   * Saves the silo, detects actual DOM diff, clears READY for removed
+   * tickers, calls paintTickers(), refreshes summary, and publishes
+   * WATCHLIST_CHANGED.
+   *
+   * Falls back to full refresh() if the baseline has not been
+   * established yet or if the actual DOM diff is ambiguous.
+   * @param changedTickers Ticker symbols detected from DOM mutations
+   */
+  refreshTickers(changedTickers: string[]): Promise<void>;
 }
 
 /**
@@ -112,6 +124,64 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
         tickers: changedTickers,
       });
     }
+  }
+
+  /** @inheritdoc */
+  async refreshTickers(changedTickers: string[]): Promise<void> {
+    // Fall back to full refresh if baseline has not been established
+    if (this.prevWatchlistTickers === null) {
+      await this.refresh();
+      return;
+    }
+
+    const currentTickers = this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL);
+    await this.saveWatchlistSilo(currentTickers);
+
+    // Validate the extracted tickers against the actual DOM diff
+    // prevWatchlistTickers is non-null here (early return at line 132)
+    const prevTickers = this.prevWatchlistTickers!;
+    const removedTickers = [...prevTickers].filter((t) => !currentTickers.has(t));
+    const addedTickers = [...currentTickers].filter((t) => !prevTickers.has(t));
+    const actualChanged = [...removedTickers, ...addedTickers];
+
+    // Confident match: exactly one ticker and the extracted set matches the DOM diff
+    const extractedSet = new Set(changedTickers);
+    const actualSet = new Set(actualChanged);
+    const isMatch =
+      actualChanged.length === 1 &&
+      actualChanged.every((t) => extractedSet.has(t)) &&
+      changedTickers.every((t) => actualSet.has(t));
+
+    if (!isMatch) {
+      // Ambiguous or mismatch — fall back to full paint without layout reset
+      this.prevWatchlistTickers = currentTickers;
+      await this.paintManager.paint();
+      await this.refreshSummary();
+      if (actualChanged.length > 0) {
+        void this.publisher.publish({
+          type: DomainEventType.WATCHLIST_CHANGED,
+          tickers: actualChanged,
+        });
+      }
+      return;
+    }
+
+    // Proceed with targeted refresh for a single confirmed change
+    this.prevWatchlistTickers = currentTickers;
+
+    if (removedTickers.length > 0) {
+      await this.categoryManager.toggleReadyState(removedTickers);
+    }
+
+    // paintTickers gracefully handles missing elements (removed rows)
+    await this.paintManager.paintTickers(actualChanged);
+
+    await this.refreshSummary();
+
+    void this.publisher.publish({
+      type: DomainEventType.WATCHLIST_CHANGED,
+      tickers: actualChanged,
+    });
   }
 
   /** @inheritdoc */
