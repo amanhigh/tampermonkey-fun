@@ -1,16 +1,13 @@
 import { DisplayManager, IDisplayManager } from '../../src/manager/display';
 import { ICategoryManager } from '../../src/manager/category';
-import { IDomManager } from '../../src/manager/dom';
 import { IRecentManager } from '../../src/manager/recent';
 import { DisplayState, DisplaySurface } from '../../src/models/display';
-import { TickerArea, TickerVisibility } from '../../src/models/dom';
 import { Constants } from '../../src/models/constant';
 import { WatchCategory, WatchCategoryId } from '../../src/models/watch';
 
 describe('DisplayManager', () => {
   let displayManager: IDisplayManager;
   let mockCategoryManager: jest.Mocked<ICategoryManager>;
-  let mockDomManager: jest.Mocked<IDomManager>;
   let mockRecentManager: jest.Mocked<IRecentManager>;
 
   const READY_CATEGORY: WatchCategory = {
@@ -23,6 +20,12 @@ describe('DisplayManager', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
+    // Mock GM.getValue for watchlist silo reads
+    (global as any).GM = {
+      getValue: jest.fn().mockResolvedValue(null),
+      setValue: jest.fn().mockResolvedValue(undefined),
+    };
+
     mockCategoryManager = {
       getTickerCategory: jest.fn(),
       recordWatchCategory: jest.fn(),
@@ -32,17 +35,11 @@ describe('DisplayManager', () => {
       clearReadyState: jest.fn(),
     } as unknown as jest.Mocked<ICategoryManager>;
 
-    mockDomManager = {
-      getTickers: jest.fn().mockReturnValue(new Set<string>()),
-      getTicker: jest.fn().mockReturnValue('CURRENT'),
-      isScreenerVisible: jest.fn().mockReturnValue(false),
-    } as unknown as jest.Mocked<IDomManager>;
-
     mockRecentManager = {
       isRecent: jest.fn().mockResolvedValue(false),
     } as unknown as jest.Mocked<IRecentManager>;
 
-    displayManager = new DisplayManager(mockCategoryManager, mockDomManager, mockRecentManager);
+    displayManager = new DisplayManager(mockCategoryManager, mockRecentManager);
   });
 
   describe('resolve', () => {
@@ -91,15 +88,21 @@ describe('DisplayManager', () => {
       expect(result).toEqual({ state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT });
     });
 
-    // ── Priority 2: WATCH_CATEGORY (alert feed) ──
+    // ── Priority 2: WATCH_CATEGORY (alert feed) via silo ──
 
-    it('should return WATCH_CATEGORY for ALERT_FEED_ROW when watch category exists and ticker is in watchlist', async () => {
+    it('should return WATCH_CATEGORY for ALERT_FEED_ROW when watch category exists and ticker is in watchlist silo', async () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: READY_CATEGORY,
         flag: undefined,
         isFno: false,
       });
-      mockDomManager.getTickers.mockReturnValue(new Set(['TV:RELIANCE']));
+
+      // Simulate watchlist silo containing the ticker
+      const siloData = JSON.stringify({
+        tickers: ['TV:RELIANCE'],
+        updatedAt: new Date().toISOString(),
+      });
+      (global as any).GM.getValue.mockResolvedValue(siloData);
 
       const result = await displayManager.resolve({
         ticker: 'TV:RELIANCE',
@@ -107,16 +110,22 @@ describe('DisplayManager', () => {
       });
 
       expect(result).toEqual({ state: DisplayState.WATCH_CATEGORY, color: 'red' });
-      expect(mockDomManager.getTickers).toHaveBeenCalledWith(TickerArea.WATCHLIST, TickerVisibility.ALL);
+      expect((global as any).GM.getValue).toHaveBeenCalledWith(Constants.STORAGE.SILOS.WATCHLIST);
     });
 
-    it('should return DEFAULT when watch category exists but ticker is absent from DOM watchlist', async () => {
+    it('should return DEFAULT when watch category exists but ticker is absent from watchlist silo', async () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: READY_CATEGORY,
         flag: undefined,
         isFno: false,
       });
-      mockDomManager.getTickers.mockReturnValue(new Set<string>());
+
+      // Simulate watchlist silo without the ticker
+      const siloData = JSON.stringify({
+        tickers: ['TV:SOMEOTHER'],
+        updatedAt: new Date().toISOString(),
+      });
+      (global as any).GM.getValue.mockResolvedValue(siloData);
 
       const result = await displayManager.resolve({
         ticker: 'TV:ABSENT',
@@ -124,6 +133,50 @@ describe('DisplayManager', () => {
       });
 
       expect(result).toEqual({ state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT });
+    });
+
+    it('should return DEFAULT when watchlist silo is null (no data yet)', async () => {
+      mockCategoryManager.getTickerCategory.mockResolvedValue({
+        watch: READY_CATEGORY,
+        flag: undefined,
+        isFno: false,
+      });
+
+      // GM.getValue returns null (no silo data)
+      (global as any).GM.getValue.mockResolvedValue(null);
+
+      const result = await displayManager.resolve({
+        ticker: 'TV:ABSENT',
+        surface: DisplaySurface.ALERT_FEED_ROW,
+      });
+
+      expect(result).toEqual({ state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT });
+    });
+
+    // ── CMG case: category exists, ticker in silo, also recent → category wins ──
+
+    it('should return WATCH_CATEGORY/red for CMG when silo contains CMG even if recent', async () => {
+      mockCategoryManager.getTickerCategory.mockResolvedValue({
+        watch: READY_CATEGORY,
+        flag: undefined,
+        isFno: false,
+      });
+      mockRecentManager.isRecent.mockResolvedValue(true);
+
+      // CMG is in the watchlist silo
+      const siloData = JSON.stringify({
+        tickers: ['CMG', 'XAGUSD'],
+        updatedAt: new Date().toISOString(),
+      });
+      (global as any).GM.getValue.mockResolvedValue(siloData);
+
+      const result = await displayManager.resolve({
+        ticker: 'CMG',
+        surface: DisplaySurface.ALERT_FEED_ROW,
+      });
+
+      // Category (READY → red) wins over RECENT (gold)
+      expect(result).toEqual({ state: DisplayState.WATCH_CATEGORY, color: 'red' });
     });
 
     // ── Priority 3: RECENT (alert feed only) ──
@@ -179,5 +232,4 @@ describe('DisplayManager', () => {
       expect(result).toEqual({ state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT });
     });
   });
-
 });

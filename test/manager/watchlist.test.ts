@@ -24,6 +24,12 @@ const mockJQuery = jest.fn(() => ({
 }));
 (global as any).$ = mockJQuery;
 
+// Mock GM global for watchlist silo
+(global as any).GM = {
+  setValue: jest.fn().mockResolvedValue(undefined),
+  getValue: jest.fn().mockResolvedValue(null),
+};
+
 describe('TradingViewWatchlistManager', () => {
   let watchlistManager: ITradingViewWatchlistManager;
   let mockPaintManager: jest.Mocked<IPaintManager>;
@@ -171,6 +177,23 @@ describe('TradingViewWatchlistManager', () => {
         expect.stringMatching(/1\||0\|/),
         expect.any(String)
       );
+    });
+
+    it('should save current watchlist tickers to shared GM silo on refresh', async () => {
+      mockDomManager.getTickers.mockReturnValue(new Set(['AAPL', 'GOOGL']));
+      await watchlistManager.refresh();
+
+      const siloKey = Constants.STORAGE.SILOS.WATCHLIST;
+      expect((global as any).GM.setValue).toHaveBeenCalledWith(
+        siloKey,
+        expect.any(String)
+      );
+
+      // Verify the stored payload is valid JSON with tickers
+      const storedArg = (global as any).GM.setValue.mock.calls[0][1];
+      const parsed = JSON.parse(storedArg);
+      expect(parsed.tickers).toEqual(expect.arrayContaining(['AAPL', 'GOOGL']));
+      expect(parsed.updatedAt).toBeDefined();
     });
 
     it('should publish WATCHLIST_CHANGED with changed tickers when tickers are added', async () => {

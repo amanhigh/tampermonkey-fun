@@ -83,6 +83,11 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
 
     // Detect tickers added or removed from DOM watchlist (skip on first baseline call)
     const currentTickers = this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL);
+
+    // Persist current watchlist to shared silo so cross-page consumers (e.g. DisplayManager
+    // on the Investing alert feed page) can read ticker membership without TradingView DOM.
+    await this.saveWatchlistSilo(currentTickers);
+
     let changedTickers: string[] = [];
     if (this.prevWatchlistTickers !== null) {
       const removedTickers = [...this.prevWatchlistTickers].filter((t) => !currentTickers.has(t));
@@ -292,5 +297,20 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
       default:
         throw new Error('You have a strange Mouse!');
     }
+  }
+
+  /**
+   * Persist current watchlist ticker set to shared GM silo so cross-page
+   * consumers (e.g. DisplayManager on the Investing alert feed page) can
+   * read ticker membership without relying on TradingView DOM presence.
+   */
+  private async saveWatchlistSilo(tickers: Set<string>): Promise<void> {
+    await GM.setValue(
+      Constants.STORAGE.SILOS.WATCHLIST,
+      JSON.stringify({
+        tickers: [...tickers],
+        updatedAt: new Date().toISOString(),
+      })
+    );
   }
 }

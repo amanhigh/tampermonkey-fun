@@ -1,17 +1,20 @@
 import { DisplayState, DisplayInfo, DisplaySurface, DisplayRequest } from '../models/display';
 import { Constants } from '../models/constant';
-import { TickerArea, TickerVisibility } from '../models/dom';
 import { ICategoryManager } from './category';
-import { IDomManager } from './dom';
 import { IRecentManager } from './recent';
 
 /**
  * Display-state resolver for header name and alert feed.
  * Watchlist/screener symbol colors are resolved directly by PaintManager.
  *
+ * Watchlist membership is determined from a shared GM silo
+ * (Constants.STORAGE.SILOS.WATCHLIST) that the TradingView watchlist
+ * manager keeps updated — this makes DisplayManager work correctly on
+ * both TradingView and Investing alert-feed pages.
+ *
  * Priority order:
- *   1 ticker=null                            → UNMAPPED / red
- *   2 watch category + in DOM watchlist      → WATCH_CATEGORY / category color
+ *   1 ticker=null                            → UNMAPPED / firebrick
+ *   2 watch category + in watchlist silo     → WATCH_CATEGORY / category color
  *   3 alert feed + recent                    → RECENT / gold
  *   4 everything else                        → DEFAULT / white
  */
@@ -26,7 +29,6 @@ export interface IDisplayManager {
 export class DisplayManager implements IDisplayManager {
   constructor(
     private readonly categoryManager: ICategoryManager,
-    private readonly domManager: IDomManager,
     private readonly recentManager: IRecentManager
   ) {}
 
@@ -43,14 +45,15 @@ export class DisplayManager implements IDisplayManager {
     const category = await this.categoryManager.getTickerCategory(ticker);
     const watchCat = category.watch;
 
-    // Priority 2: Watch category + in DOM watchlist
+    // Priority 2: Watch category + in watchlist silo
     if (watchCat) {
       if (surface === DisplaySurface.HEADER_NAME) {
         // Header always uses watch category color when one exists
         return { state: DisplayState.WATCH_CATEGORY, color: watchCat.color };
       }
-      // ALERT_FEED_ROW requires DOM watchlist membership
-      const isInWatchlist = this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL).has(ticker);
+      // ALERT_FEED_ROW requires watchlist silo membership
+      const watchlistTickers = await this.getWatchlistSilo();
+      const isInWatchlist = watchlistTickers.has(ticker);
       if (isInWatchlist) {
         return { state: DisplayState.WATCH_CATEGORY, color: watchCat.color };
       }
@@ -66,5 +69,21 @@ export class DisplayManager implements IDisplayManager {
 
     // Priority 4: Default
     return { state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT };
+  }
+
+  /**
+   * Read the shared watchlist ticker set from GM storage.
+   * Written by TradingViewWatchlistManager.refresh() on the TradingView page.
+   * Falls back to empty set when no snapshot exists (first run, or no watchlist data yet).
+   */
+  private async getWatchlistSilo(): Promise<Set<string>> {
+    const raw = await GM.getValue(Constants.STORAGE.SILOS.WATCHLIST);
+
+    if (!raw) {
+      return new Set();
+    }
+
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return new Set(parsed.tickers ?? []);
   }
 }
