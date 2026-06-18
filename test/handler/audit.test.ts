@@ -92,17 +92,12 @@ describe('AuditHandler', () => {
       expect(mockSubscriber.subscribe).toHaveBeenCalledWith(DomainEventType.FIRST_LOAD, expect.any(Function));
     });
 
-    it('subscribes to ALERTS_CHANGED and ALERT_TICKER_LINKED', () => {
+    it('subscribes to ALERTS_CHANGED, ALERT_TICKER_LINKED, and ALERT_TICKER_DELETED', () => {
       auditHandler.registerEvents(mockSubscriber);
       expect(mockSubscriber.subscribeMany).toHaveBeenCalledWith(
-        [DomainEventType.ALERTS_CHANGED, DomainEventType.ALERT_TICKER_LINKED],
+        [DomainEventType.ALERTS_CHANGED, DomainEventType.ALERT_TICKER_LINKED, DomainEventType.ALERT_TICKER_DELETED],
         expect.any(Function)
       );
-    });
-
-    it('subscribes to ALERT_TICKER_DELETED', () => {
-      auditHandler.registerEvents(mockSubscriber);
-      expect(mockSubscriber.subscribe).toHaveBeenCalledWith(DomainEventType.ALERT_TICKER_DELETED, expect.any(Function));
     });
 
     it('subscribes to TICKER_CATEGORY_CHANGED', () => {

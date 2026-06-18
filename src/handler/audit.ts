@@ -52,10 +52,9 @@ export class AuditHandler implements IAuditHandler {
   registerEvents(subscriber: ISubscriber): void {
     subscriber.subscribe(DomainEventType.FIRST_LOAD, this.handleFirstLoad);
     subscriber.subscribeMany(
-      [DomainEventType.ALERTS_CHANGED, DomainEventType.ALERT_TICKER_LINKED],
+      [DomainEventType.ALERTS_CHANGED, DomainEventType.ALERT_TICKER_LINKED, DomainEventType.ALERT_TICKER_DELETED],
       this.handleAlertAuditChanged
     );
-    subscriber.subscribe(DomainEventType.ALERT_TICKER_DELETED, this.handleAlertTickerDeleted);
     subscriber.subscribe(DomainEventType.TICKER_CATEGORY_CHANGED, this.handleTickerCategoryChanged);
     subscriber.subscribe(DomainEventType.TICKER_TRACKING_STARTED, this.handleTickerTrackingStarted);
     subscriber.subscribe(DomainEventType.TICKER_TRACKING_STOPPED, this.handleTickerTrackingStopped);
@@ -68,16 +67,8 @@ export class AuditHandler implements IAuditHandler {
     void this.runFullAudit();
   };
 
-  /** ALERTS_CHANGED and ALERT_TICKER_LINKED usually carry a ticker */
+  /** ALERTS_CHANGED, ALERT_TICKER_LINKED, and ALERT_TICKER_DELETED usually carry a ticker */
   private readonly handleAlertAuditChanged = async (event: { ticker?: string }): Promise<void> => {
-    if (!event.ticker) {
-      return;
-    }
-    await this.refreshTickerAudit(event.ticker, [Constants.AUDIT.PLUGINS.ALERT_COVERAGE]);
-  };
-
-  /** ALERT_TICKER_DELETED may not carry ticker (direct delink on current row) */
-  private readonly handleAlertTickerDeleted = async (event: { ticker?: string }): Promise<void> => {
     if (!event.ticker) {
       return;
     }
