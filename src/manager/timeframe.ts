@@ -127,6 +127,7 @@ export class TimeFrameManager implements ITimeFrameManager {
     if (codes.length === 0 || codes.includes(TickerTimeframe.DL)) {
       return TMN_SEQUENCE;
     }
+    // FIXME: YR_SEQUENCE not yet supported — add yearly-aware cycle when needed
     return SMN_SEQUENCE;
   }
 
