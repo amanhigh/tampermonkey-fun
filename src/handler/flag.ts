@@ -1,6 +1,5 @@
 import { ICategoryManager } from '../manager/category';
 import { IDomManager } from '../manager/dom';
-import { IPaintManager } from '../manager/paint';
 import { FlagCategoryId } from '../models/flag';
 
 /**
@@ -20,18 +19,12 @@ export interface IFlagHandler {
 export class FlagHandler implements IFlagHandler {
   constructor(
     private readonly categoryManager: ICategoryManager,
-    private readonly domManager: IDomManager,
-    private readonly paintManager: IPaintManager
+    private readonly domManager: IDomManager
   ) {}
 
   /** @inheritdoc */
   public recordSelectedTicker(categoryId: FlagCategoryId): void {
     const tvTicker = this.domManager.getTicker();
-    void (async () => {
-      await this.categoryManager.recordFlagCategory(categoryId, [tvTicker]);
-
-      // paintTickers handles WATCHLIST + SCREENER (if visible) + header
-      await this.paintManager.paintTickers([tvTicker]);
-    })();
+    void this.categoryManager.recordFlagCategory(categoryId, [tvTicker]);
   }
 }

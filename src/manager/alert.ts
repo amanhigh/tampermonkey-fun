@@ -8,6 +8,8 @@ import { Notifier } from '../util/notify';
 import { IAlertTickerManager } from './alert_ticker';
 import { IDomManager } from './dom';
 import { ITradingViewManager } from './tv';
+import { IPublisher } from './event_bus';
+import { DomainEventType } from '../models/domain_event';
 
 /**
  * Interface for managing alert operations.
@@ -81,7 +83,8 @@ export class AlertManager implements IAlertManager {
     private readonly alertTickerManager: IAlertTickerManager,
     private readonly domManager: IDomManager,
     private readonly investingClient: IInvestingClient,
-    private readonly tradingViewManager: ITradingViewManager
+    private readonly tradingViewManager: ITradingViewManager,
+    private readonly publisher: IPublisher
   ) {}
 
   /** @inheritdoc */
@@ -97,7 +100,9 @@ export class AlertManager implements IAlertManager {
 
   /** @inheritdoc */
   async createAlertForCurrentTicker(price: number): Promise<PairInfo> {
-    return this.createAlert(price);
+    const result = await this.createAlert(price);
+    await this.publishAlertsChanged();
+    return result;
   }
 
   /** @inheritdoc */
@@ -108,7 +113,8 @@ export class AlertManager implements IAlertManager {
       Notifier.warn('No alerts found to delete');
       return;
     }
-    await Promise.all(deletableAlerts.map(async (alert) => this.deleteAlert(alert.id)));
+    await Promise.all(deletableAlerts.map(async (alert) => this.deleteAlertById(alert.id)));
+    await this.publishAlertsChanged();
   }
 
   /** @inheritdoc */
@@ -124,18 +130,14 @@ export class AlertManager implements IAlertManager {
       return;
     }
 
-    await Promise.all(filteredAlerts.map(async (alert) => this.deleteAlert(alert.id)));
+    await Promise.all(filteredAlerts.map(async (alert) => this.deleteAlertById(alert.id)));
+    await this.publishAlertsChanged();
   }
 
   /** @inheritdoc */
   async deleteAlert(alertId: string): Promise<void> {
-    try {
-      await this.investingClient.deleteAlert(new Alert(alertId, '', 0));
-      await this.priceAlertClient.deletePriceAlert(alertId);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Failed to delete alert ${alertId}: ${message}`);
-    }
+    await this.deleteAlertById(alertId);
+    await this.publishAlertsChanged();
   }
 
   /** @inheritdoc */
@@ -143,7 +145,9 @@ export class AlertManager implements IAlertManager {
     const html = await this.investingClient.getAllAlerts();
     const alerts = this.parsePriceAlertsFromHtml(html);
     await this.priceAlertClient.replacePriceAlerts({ alerts });
-    return alerts.length;
+    const count = alerts.length;
+    await this.publishAlertsChanged();
+    return count;
   }
 
   /** @inheritdoc */
@@ -155,6 +159,33 @@ export class AlertManager implements IAlertManager {
   ): Promise<void> {
     const event = new AlertClicked(alertTicker, action, pairId, alertName);
     await GM.setValue(Constants.STORAGE.EVENTS.ALERT_CLICKED, event.stringify());
+  }
+
+  // ── Private Helpers ──
+
+  /**
+   * Internal delete by alert ID without publishing ALERTS_CHANGED.
+   * Used by batch methods to avoid duplicate events.
+   */
+  private async deleteAlertById(alertId: string): Promise<void> {
+    try {
+      await this.investingClient.deleteAlert(new Alert(alertId, '', 0));
+      await this.priceAlertClient.deletePriceAlert(alertId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to delete alert ${alertId}: ${message}`);
+    }
+  }
+
+  /**
+   * Publish ALERTS_CHANGED event for the current ticker.
+   */
+  private async publishAlertsChanged(): Promise<void> {
+    const ticker = this.domManager.getTicker();
+    await this.publisher.publish({
+      type: DomainEventType.ALERTS_CHANGED,
+      ticker,
+    });
   }
 
   /**

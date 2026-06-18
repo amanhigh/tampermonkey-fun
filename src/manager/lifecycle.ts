@@ -1,6 +1,5 @@
 import { ITickerClient } from '../client/ticker';
 import { CreateTickerRequest, Ticker } from '../models/ticker';
-import { IPaintManager } from './paint';
 import { ICategoryManager } from './category';
 import { IAlertTickerManager } from './alert_ticker';
 import { IPublisher } from './event_bus';
@@ -45,7 +44,6 @@ export class LifecycleManager implements ILifecycleManager {
   constructor(
     private readonly tickerClient: ITickerClient,
     private readonly categoryManager: ICategoryManager,
-    private readonly paintManager: IPaintManager,
     private readonly alertTickerManager: IAlertTickerManager,
     private readonly publisher: IPublisher
   ) {}
@@ -54,9 +52,8 @@ export class LifecycleManager implements ILifecycleManager {
   async startTracking(data: StartTrackingRequest): Promise<Ticker> {
     this.categoryManager.evictTicker(data.ticker);
     const ticker = await this.tickerClient.createTicker(data);
-    void this.paintManager.paintTickers([data.ticker]);
 
-    // Publish domain event for alert-feed consumers
+    // Publish domain event so WatchListHandler repaints the ticker
     await this.publisher.publish({
       type: DomainEventType.TICKER_TRACKING_STARTED,
       ticker: data.ticker,
@@ -82,9 +79,8 @@ export class LifecycleManager implements ILifecycleManager {
     }
 
     await this.tickerClient.deleteTicker(ticker);
-    void this.paintManager.paintTickers([ticker]);
 
-    // Keep TICKER_TRACKING_STOPPED for other consumers (alert-feed no longer reacts)
+    // Publish TICKER_TRACKING_STOPPED so WatchListHandler repaints the ticker
     await this.publisher.publish({
       type: DomainEventType.TICKER_TRACKING_STOPPED,
       ticker,

@@ -4,6 +4,9 @@ import { IAlertManager } from '../manager/alert';
 import { ITradingViewManager } from '../manager/tv';
 import { IUIUtil } from '../util/ui';
 import { Notifier } from '../util/notify';
+import { IDomainEventConsumer, ISubscriber } from '../manager/event_bus';
+import { DomainEventType } from '../models/domain_event';
+import { isCompositeSymbol } from '../models/ticker';
 
 // ── Alert tint CSS classes (defined in _alert_bar.less) ──
 
@@ -18,7 +21,7 @@ const ALERT_CLASS = {
 /**
  * Interface for alert summary display operations
  */
-export interface IAlertSummaryHandler {
+export interface IAlertSummaryHandler extends IDomainEventConsumer {
   /**
    * Display alerts in summary area
    * @param alerts Array of alerts to display
@@ -35,6 +38,36 @@ export class AlertSummaryHandler implements IAlertSummaryHandler {
     private readonly tvManager: ITradingViewManager,
     private readonly uiUtil: IUIUtil
   ) {}
+
+  /** @inheritdoc */
+  registerEvents(subscriber: ISubscriber): void {
+    subscriber.subscribeMany(
+      [DomainEventType.TICKER_CHANGED, DomainEventType.ALERTS_CHANGED, DomainEventType.TICKER_METADATA_CHANGED],
+      async (event) => {
+        await this.refreshAlertsForTicker(event.ticker);
+      }
+    );
+  }
+
+  /**
+   * Fetch alerts for the given ticker and update the summary display.
+   * Shows warnings for unmapped tickers silently.
+   */
+  private async refreshAlertsForTicker(ticker: string): Promise<void> {
+    try {
+      const alerts = await this.alertManager.getAlertsForTicker(ticker);
+      this.displayAlerts(alerts);
+    } catch (error) {
+      // Show NO PAIR for null alerts
+      this.displayAlerts(null);
+
+      // Ignore errors for composite symbols as expected
+      if (!isCompositeSymbol(ticker)) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.warn(`AlertSummaryHandler: Failed to load alerts for ${ticker}: ${message}`);
+      }
+    }
+  }
 
   /**
    * Display alerts in summary area

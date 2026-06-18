@@ -1,5 +1,7 @@
 import { ITickerClient } from '../client/ticker';
 import { CreateTickerRequest, TickerQueryParams, Ticker, TickerUpdateRequest } from '../models/ticker';
+import { IPublisher } from './event_bus';
+import { DomainEventType } from '../models/domain_event';
 
 /**
  * Request type for starting to track a new primary ticker.
@@ -60,7 +62,10 @@ export interface ITickerManager {
  * Manages primary TradingView ticker CRUD against the Kohan backend.
  */
 export class TickerManager implements ITickerManager {
-  constructor(private readonly tickerClient: ITickerClient) {}
+  constructor(
+    private readonly tickerClient: ITickerClient,
+    private readonly publisher: IPublisher
+  ) {}
 
   /** @inheritdoc */
   async getTicker(ticker: string): Promise<Ticker> {
@@ -86,6 +91,11 @@ export class TickerManager implements ITickerManager {
 
   /** @inheritdoc */
   async setExchange(ticker: string, exchange: string): Promise<Ticker> {
-    return this.tickerClient.updateTicker(ticker, { exchange });
+    const result = await this.tickerClient.updateTicker(ticker, { exchange });
+    void this.publisher.publish({
+      type: DomainEventType.TICKER_METADATA_CHANGED,
+      ticker,
+    });
+    return result;
   }
 }

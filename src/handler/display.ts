@@ -66,6 +66,9 @@ export class DisplayHandler implements IDisplayHandler {
     subscriber.subscribe(DomainEventType.TICKER_CHANGED, async () => {
       await this.display();
     });
+    subscriber.subscribeMany([DomainEventType.ALERT_TICKER_LINKED, DomainEventType.ALERT_TICKER_DELETED], async () => {
+      await this.display();
+    });
   }
 
   /** @inheritdoc */
