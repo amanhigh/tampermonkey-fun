@@ -6,7 +6,8 @@ import { IHotkeyHandler } from '../../src/handler/hotkey';
 import { IAlertHandler } from '../../src/handler/alert';
 import { ITickerChangeHandler } from '../../src/handler/ticker_change';
 import { IPaintManager } from '../../src/manager/paint';
-import { IDomainEventConsumer, ISubscriber } from '../../src/manager/event_bus';
+import { IDomManager } from '../../src/manager/dom';
+import { IDomainEventConsumer, ISubscriber, IPublisher } from '../../src/manager/event_bus';
 import { Constants } from '../../src/models/constant';
 
 // Mock document and jQuery
@@ -37,6 +38,8 @@ describe('OnLoadHandler', () => {
   let mockAlertHandler: jest.Mocked<IAlertHandler>;
   let mockTickerChangeHandler: jest.Mocked<ITickerChangeHandler>;
   let mockPaintManager: jest.Mocked<IPaintManager>;
+  let mockDomManager: jest.Mocked<IDomManager>;
+  let mockPublisher: jest.Mocked<IPublisher>;
   let mockDomainEventConsumers: jest.Mocked<IDomainEventConsumer>[];
   let mockSubscriber: jest.Mocked<ISubscriber>;
 
@@ -63,6 +66,7 @@ describe('OnLoadHandler', () => {
     mockWatchListHandler = {
       onWatchListChange: jest.fn(),
       recordSelectedTicker: jest.fn(),
+      registerEvents: jest.fn(),
     } as unknown as jest.Mocked<IWatchListHandler>;
 
     mockHotkeyHandler = {
@@ -71,12 +75,12 @@ describe('OnLoadHandler', () => {
 
     mockAlertHandler = {
       handleAlertClick: jest.fn(),
-      refreshAlerts: jest.fn(),
       registerAlertTickerDelinkHandler: jest.fn(),
     } as unknown as jest.Mocked<IAlertHandler>;
 
     mockTickerChangeHandler = {
       onTickerChange: jest.fn(),
+      registerEvents: jest.fn(),
     } as unknown as jest.Mocked<ITickerChangeHandler>;
 
     mockPaintManager = {
@@ -84,6 +88,14 @@ describe('OnLoadHandler', () => {
       paintTickers: jest.fn().mockResolvedValue(undefined),
       summarizeBuckets: jest.fn().mockResolvedValue({ buckets: new Map(), uncategorizedCount: 0 }),
     } as unknown as jest.Mocked<IPaintManager>;
+
+    mockDomManager = {
+      getTicker: jest.fn().mockReturnValue('TEST'),
+    } as unknown as jest.Mocked<IDomManager>;
+
+    mockPublisher = {
+      publish: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<IPublisher>;
 
     mockDomainEventConsumers = [
       { registerEvents: jest.fn() },
@@ -103,6 +115,8 @@ describe('OnLoadHandler', () => {
       mockAlertHandler,
       mockTickerChangeHandler,
       mockPaintManager,
+      mockDomManager,
+      mockPublisher,
       mockDomainEventConsumers,
       mockSubscriber
     );

@@ -46,6 +46,11 @@ export class WatchListHandler implements IWatchListHandler {
 
   /** @inheritdoc */
   registerEvents(subscriber: ISubscriber): void {
+    // On first load, do full watchlist refresh (publishes WATCHLIST_CHANGED)
+    subscriber.subscribe(DomainEventType.FIRST_LOAD, () => {
+      void this.watchlistManager.refresh();
+    });
+
     subscriber.subscribeMany(
       [
         DomainEventType.TICKER_CHANGED,

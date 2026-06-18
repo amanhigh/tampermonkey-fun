@@ -37,13 +37,8 @@ const EMOJI = {
  * and linked alert ticker information. Timeframes are shown in the
  * dedicated timeframe bar below this card.
  */
-export interface IDisplayHandler extends IDomainEventConsumer {
-  /**
-   * Fetches current ticker data and renders the display card.
-   * Always starts in compact mode on fresh data fetch.
-   */
-  display(): Promise<void>;
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface IDisplayHandler extends IDomainEventConsumer {}
 
 /**
  * Handles display area rendering.
@@ -71,7 +66,12 @@ export class DisplayHandler implements IDisplayHandler {
     });
   }
 
-  /** @inheritdoc */
+  /**
+   * Fetches current ticker data and renders the display card.
+   * Always starts in compact mode on fresh data fetch.
+   * Consumers should drive re-renders via TICKER_CHANGED and
+   * ALERT_TICKER_LINKED/ALERT_TICKER_DELETED events.
+   */
   async display(): Promise<void> {
     this.displayExpanded = false;
     const tvTicker = this.domManager.getTicker();

@@ -21,13 +21,8 @@ const ALERT_CLASS = {
 /**
  * Interface for alert summary display operations
  */
-export interface IAlertSummaryHandler extends IDomainEventConsumer {
-  /**
-   * Display alerts in summary area
-   * @param alerts Array of alerts to display
-   */
-  displayAlerts(alerts: Alert[] | null): void;
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface IAlertSummaryHandler extends IDomainEventConsumer {}
 
 /**
  * Handles alert summary display and interactions
@@ -70,7 +65,7 @@ export class AlertSummaryHandler implements IAlertSummaryHandler {
   }
 
   /**
-   * Display alerts in summary area
+   * Display alerts in summary area.
    * @param alerts Array of alerts to display
    */
   public displayAlerts(alerts: Alert[] | null): void {

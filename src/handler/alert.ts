@@ -41,11 +41,6 @@ export interface IAlertHandler {
   deleteAlertAtCursor(): Promise<void>;
 
   /**
-   * Forces a refresh of all alerts from server
-   */
-  refreshAllAlerts(): Promise<void>;
-
-  /**
    * Handles refresh button operations
    * - Forces alert refresh
    * - Handles order set cleanup
@@ -167,8 +162,11 @@ export class AlertHandler implements IAlertHandler {
     Notifier.red(`❌ Alerts deleted around price: ${price}`);
   }
 
-  /** @inheritdoc */
-  public async refreshAllAlerts(): Promise<void> {
+  /**
+   * Forces a full refresh of all alerts from the Investing.com backend.
+   * Called internally by handleRefreshButton().
+   */
+  private async refreshAllAlerts(): Promise<void> {
     const count = await this.alertManager.refreshAlerts();
     if (count > 0) {
       Notifier.success(`Loaded ${count} alerts`);

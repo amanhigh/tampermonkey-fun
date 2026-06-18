@@ -427,6 +427,8 @@ export class Factory {
             Factory.handler.alert(),
             Factory.handler.tickerChange(),
             Factory.manager.paint(),
+            Factory.manager.dom(),
+            Factory.manager.eventPublisher(),
             [
               Factory.handler.alertFeed(),
               Factory.handler.timeFrame(),
@@ -435,6 +437,7 @@ export class Factory {
               Factory.handler.alertSummary(),
               Factory.handler.audit(),
               Factory.handler.watchlist(),
+              Factory.handler.tickerChange(),
             ],
             Factory.manager.eventSubscriber()
           )
@@ -492,6 +495,7 @@ export class Factory {
         'tickerChangeHandler',
         () => new TickerChangeHandler(Factory.manager.dom(), Factory.manager.recent(), Factory.util.sync())
       ),
+    // TickerChangeHandler must be registered as domain consumer for FIRST_LOAD
 
     keyConfig: (): KeyConfig =>
       Factory.getInstance(
