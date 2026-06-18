@@ -46,4 +46,15 @@ describe('AlertFeedManager', () => {
       expect(mockDisplayManager.resolve).toHaveBeenCalledWith(null);
     });
   });
+
+  describe('createResetFeedEvent', () => {
+    it('should resolve DISPLAY state for null ticker and store reset event', async () => {
+      mockDisplayManager.resolve.mockResolvedValue({ state: DisplayState.UNMAPPED, color: 'firebrick' });
+
+      await alertFeedManager.createResetFeedEvent();
+
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(null);
+      expect(GM.setValue).toHaveBeenCalled();
+    });
+  });
 });

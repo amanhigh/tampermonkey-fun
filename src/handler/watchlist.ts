@@ -57,23 +57,19 @@ export class WatchListHandler implements IWatchListHandler {
         DomainEventType.TICKER_TRACKING_STARTED,
         DomainEventType.TICKER_TRACKING_STOPPED,
         DomainEventType.TICKER_METADATA_CHANGED,
+        DomainEventType.TICKER_CATEGORY_CHANGED,
       ],
       async (event) => {
-        await this.paintManager.paintTickers([event.ticker]);
+        const tickers = 'tickers' in event ? event.tickers : [event.ticker];
+        await this.repaintTickers(tickers);
       }
     );
-
-    subscriber.subscribe(DomainEventType.TICKER_CATEGORY_CHANGED, async (event) => {
-      await this.paintManager.paintTickers(event.tickers);
-      await this.watchlistManager.refreshSummary();
-    });
 
     // Timeframe toggle can change watch category (long vs default daily)
     // so evict the stale category cache before repainting.
     subscriber.subscribe(DomainEventType.TICKER_TIMEFRAMES_CHANGED, async (event) => {
       this.categoryManager.evictTicker(event.ticker);
-      await this.paintManager.paintTickers([event.ticker]);
-      await this.watchlistManager.refreshSummary();
+      await this.repaintTickers([event.ticker]);
     });
   }
 
@@ -82,6 +78,15 @@ export class WatchListHandler implements IWatchListHandler {
     this.syncUtil.waitOn('watchListChangeEvent', 20, () => {
       void this.watchlistManager.refresh();
     });
+  }
+
+  /**
+   * Repaint ticker row(s) and refresh the watchlist summary.
+   * Unified entry point so both operations are never accidentally missed.
+   */
+  private async repaintTickers(tickers: string[]): Promise<void> {
+    await this.paintManager.paintTickers(tickers);
+    await this.watchlistManager.refreshSummary();
   }
 
   /** @inheritdoc */

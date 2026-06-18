@@ -1,5 +1,4 @@
 import { AlertFeedEvent } from '../models/alertfeed';
-import { DisplayState } from '../models/display';
 import { Constants } from '../models/constant';
 import { IDisplayManager } from './display';
 
@@ -44,11 +43,8 @@ export class AlertFeedManager implements IAlertFeedManager {
 
   /** @inheritdoc */
   public async createResetFeedEvent(): Promise<void> {
-    // Special values to Paint all tickers during Reset
-    const event = new AlertFeedEvent(Constants.MISC.RESET_FEED, {
-      state: DisplayState.UNMAPPED,
-      color: 'firebrick',
-    });
+    const feedInfo = await this.displayManager.resolve(null);
+    const event = new AlertFeedEvent(Constants.MISC.RESET_FEED, feedInfo);
     await GM.setValue(Constants.STORAGE.EVENTS.ALERT_FEED_UPDATE, event.stringify());
   }
 }

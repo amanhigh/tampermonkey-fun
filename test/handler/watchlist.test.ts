@@ -115,7 +115,7 @@ describe('WatchListHandler', () => {
   });
 
   describe('registerEvents', () => {
-    it('should subscribe to TICKER_TIMEFRAMES_CHANGED', () => {
+    it('should subscribe to TICKER_TIMEFRAMES_CHANGED separately (eviction logic)', () => {
       const mockSubscriber: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn(),
         subscribeMany: jest.fn(),
@@ -125,6 +125,25 @@ describe('WatchListHandler', () => {
 
       expect(mockSubscriber.subscribe).toHaveBeenCalledWith(
         DomainEventType.TICKER_TIMEFRAMES_CHANGED,
+        expect.any(Function)
+      );
+    });
+
+    it('should include TICKER_CATEGORY_CHANGED in subscribeMany (no separate subscribe)', () => {
+      const mockSubscriber: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerEvents(mockSubscriber);
+
+      // TICKER_CATEGORY_CHANGED is in subscribeMany, not a separate subscribe
+      expect(mockSubscriber.subscribeMany).toHaveBeenCalledWith(
+        expect.arrayContaining([DomainEventType.TICKER_CATEGORY_CHANGED]),
+        expect.any(Function)
+      );
+      expect(mockSubscriber.subscribe).not.toHaveBeenCalledWith(
+        DomainEventType.TICKER_CATEGORY_CHANGED,
         expect.any(Function)
       );
     });
