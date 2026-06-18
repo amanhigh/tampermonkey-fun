@@ -66,11 +66,10 @@ describe('PaintManager', () => {
     );
 
     mockDisplayManager = {
-      resolve: jest.fn(),
-      resolveColor: jest.fn().mockImplementation(
-        (watchCat: any) => watchCat?.color ?? Constants.UI.COLORS.DEFAULT
-      ),
-      resolveHeaderColor: jest.fn().mockResolvedValue(Constants.UI.COLORS.DEFAULT),
+      resolve: jest.fn().mockImplementation(async (request: any) => ({
+        state: undefined,
+        color: request.category?.watch?.color ?? Constants.UI.COLORS.DEFAULT,
+      })),
     } as unknown as jest.Mocked<IDisplayManager>;
 
     mockRecentManager = {
@@ -140,7 +139,7 @@ describe('PaintManager', () => {
       expect(mockDomManager.getTicker).toHaveBeenCalled();
     });
 
-    it('should delegate header color to DisplayManager', async () => {
+    it('should delegate header name color to unified DisplayManager.resolve', async () => {
       mockDomManager.getTicker.mockReturnValue('HEADER_TICKER');
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null },
@@ -150,7 +149,9 @@ describe('PaintManager', () => {
 
       await paintManager.paint();
 
-      expect(mockDisplayManager.resolveHeaderColor).toHaveBeenCalledWith('HEADER_TICKER', expect.objectContaining({ color: 'red' }));
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(
+        expect.objectContaining({ ticker: 'HEADER_TICKER', surface: expect.stringContaining('HEADER') })
+      );
     });
 
     it('should paint symbol, flag, and FNO for each ticker', async () => {

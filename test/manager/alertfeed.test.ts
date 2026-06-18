@@ -1,6 +1,6 @@
 import { AlertFeedManager, IAlertFeedManager } from '../../src/manager/alertfeed';
 import { IDisplayManager } from '../../src/manager/display';
-import { FeedState } from '../../src/models/alertfeed';
+import { DisplayState, DisplaySurface } from '../../src/models/display';
 
 // Mock GM global
 (global as any).GM = {
@@ -14,11 +14,8 @@ describe('AlertFeedManager', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Mock DisplayManager
     mockDisplayManager = {
       resolve: jest.fn(),
-      resolveColor: jest.fn(),
-      resolveHeaderColor: jest.fn(),
     } as unknown as jest.Mocked<IDisplayManager>;
 
     alertFeedManager = new AlertFeedManager(mockDisplayManager);
@@ -31,39 +28,28 @@ describe('AlertFeedManager', () => {
     });
   });
 
-  describe('getAlertFeedState', () => {
-    it('should return UNMAPPED state when null is passed (delegates to DisplayManager)', async () => {
-      mockDisplayManager.resolve.mockResolvedValue({ color: 'red', feedState: FeedState.UNMAPPED });
+  describe('createAlertFeedEvent', () => {
+    it('should resolve display info via DisplayManager and store event', async () => {
+      mockDisplayManager.resolve.mockResolvedValue({ state: DisplayState.DEFAULT, color: 'white' });
 
-      const result = await alertFeedManager.getAlertFeedState(null);
+      await alertFeedManager.createAlertFeedEvent('INFY', 'TV:INFY');
 
-      expect(result).toEqual({ state: FeedState.UNMAPPED, color: 'red' });
-      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(null, 'ALERT_FEED');
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith({
+        ticker: 'TV:INFY',
+        surface: DisplaySurface.ALERT_FEED_ROW,
+      });
+      expect(GM.setValue).toHaveBeenCalled();
     });
 
-    it('should delegate to DisplayManager for ticker state', async () => {
-      mockDisplayManager.resolve.mockResolvedValue({ color: 'yellow', feedState: FeedState.WATCHED });
+    it('should pass null ticker when ticker is omitted (unmapped)', async () => {
+      mockDisplayManager.resolve.mockResolvedValue({ state: DisplayState.UNMAPPED, color: 'red' });
 
-      const result = await alertFeedManager.getAlertFeedState('NSE:RELIANCE');
+      await alertFeedManager.createAlertFeedEvent('UNKNOWN');
 
-      expect(result).toEqual({ state: FeedState.WATCHED, color: 'yellow' });
-      expect(mockDisplayManager.resolve).toHaveBeenCalledWith('NSE:RELIANCE', 'ALERT_FEED');
-    });
-
-    it('should return RECENT when DisplayManager resolves RECENT', async () => {
-      mockDisplayManager.resolve.mockResolvedValue({ color: 'lime', feedState: FeedState.RECENT });
-
-      const result = await alertFeedManager.getAlertFeedState('NSE:TCS');
-
-      expect(result).toEqual({ state: FeedState.RECENT, color: 'lime' });
-    });
-
-    it('should return MAPPED when DisplayManager resolves MAPPED', async () => {
-      mockDisplayManager.resolve.mockResolvedValue({ color: 'white', feedState: FeedState.MAPPED });
-
-      const result = await alertFeedManager.getAlertFeedState('NSE:HDFC');
-
-      expect(result).toEqual({ state: FeedState.MAPPED, color: 'white' });
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith({
+        ticker: null,
+        surface: DisplaySurface.ALERT_FEED_ROW,
+      });
     });
   });
 });

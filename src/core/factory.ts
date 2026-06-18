@@ -297,10 +297,7 @@ export class Factory {
         () => new DisplayManager(Factory.manager.category(), Factory.manager.dom(), Factory.manager.recent())
       ),
     alertFeed: (): IAlertFeedManager =>
-      Factory.getInstance(
-        'alertFeedManager',
-        () => new AlertFeedManager(Factory.manager.display())
-      ),
+      Factory.getInstance('alertFeedManager', () => new AlertFeedManager(Factory.manager.display())),
   };
 
   /**
@@ -578,6 +575,7 @@ export class Factory {
           new AlertFeedHandler(
             Factory.util.ui(),
             Factory.util.sync(),
+            Factory.manager.display(),
             Factory.manager.alert(),
             Factory.manager.alertFeed(),
             Factory.manager.alertTicker(),

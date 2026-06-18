@@ -5,7 +5,9 @@ import { Notifier } from '../util/notify';
 import { AlertClickAction } from '../models/events';
 import { IAlertManager } from '../manager/alert';
 import { IAlertFeedManager } from '../manager/alertfeed';
-import { AlertFeedEvent, FeedInfo, FeedState } from '../models/alertfeed';
+import { IDisplayManager } from '../manager/display';
+import { DisplayState, DisplaySurface, DisplayInfo } from '../models/display';
+import { AlertFeedEvent } from '../models/alertfeed';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { IInvestingManager } from '../manager/investing';
 import { AlertTicker } from '../models/alert_ticker';
@@ -33,6 +35,7 @@ export class AlertFeedHandler implements IAlertFeedHandler {
   constructor(
     private readonly uiUtil: IUIUtil,
     private readonly syncUtil: ISyncUtil,
+    private readonly displayManager: IDisplayManager,
     private readonly alertManager: IAlertManager,
     private readonly alertFeedManager: IAlertFeedManager,
     private readonly alertTickerManager: IAlertTickerManager,
@@ -283,17 +286,20 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     // Load all mapped alert tickers once (no per-row search)
     const allAlertTickers = await this.alertTickerManager.getAlertTickers();
 
-    // Resolve each element's state
+    // Resolve each element's state via shared DisplayManager
     const feedInfos = await Promise.all(
       elements.map(async (e) => {
         const resolved = this.resolvePaintAlertTicker(e.name, e.ticker, allAlertTickers);
-        return this.alertFeedManager.getAlertFeedState(resolved?.ticker ?? null);
+        return this.displayManager.resolve({
+          ticker: resolved?.ticker ?? null,
+          surface: DisplaySurface.ALERT_FEED_ROW,
+        });
       })
     );
 
     elements.forEach(({ $el, ticker }, i) => {
       const feedInfo = feedInfos[i];
-      if (feedInfo.state === FeedState.UNMAPPED) {
+      if (feedInfo.state === DisplayState.UNMAPPED) {
         Notifier.warn(`Unmapped: ${ticker}`);
       }
       $el.css('color', feedInfo.color);
@@ -312,7 +318,7 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     $(Constants.DOM.ALERT_FEED.FLOATING_WRAPPER).css('background-color', 'black');
   }
 
-  private updateTicker(investingTicker: string, feedInfo: FeedInfo): void {
+  private updateTicker(investingTicker: string, feedInfo: DisplayInfo): void {
     $(Constants.DOM.ALERT_FEED.ALERT_DATA).each((_, element) => {
       const $element = $(element);
       const { ticker } = this.extractAlertInfo($element);
