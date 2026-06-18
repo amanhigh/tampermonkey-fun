@@ -13,6 +13,7 @@ import { IInvestingManager } from '../manager/investing';
 import { AlertTicker } from '../models/alert_ticker';
 import { ISubscriber, IDomainEventConsumer } from '../manager/event_bus';
 import { DomainEventType } from '../models/domain_event';
+import { isCompositeSymbol } from '../models/ticker';
 
 export interface IAlertFeedHandler extends IDomainEventConsumer {
   /**
@@ -116,13 +117,17 @@ export class AlertFeedHandler implements IAlertFeedHandler {
 
   /**
    * Resolve all alert tickers linked to a TV ticker and create alert feed events for each.
-   * Warns when no alert tickers are found.
+   * Silent skip: composite tickers and unmapped tickers are skipped without logging.
    */
   private async createAlertFeedEventsForTicker(ticker: string): Promise<void> {
+    // Composite TradingView formulas (e.g. SENSEX/USDINR/XAUUSD)
+    // never have Investing alert ticker mappings — skip silently.
+    if (isCompositeSymbol(ticker)) {
+      return;
+    }
+
     const alertTickers = await this.alertTickerManager.getAlertTickersForTicker(ticker);
     if (alertTickers.length === 0) {
-      console.warn(`No Alert Ticker: ${ticker} — skipping feed events`);
-      Notifier.warn(`No alert tickers found for ${ticker} — skipping feed events`);
       return;
     }
     for (const alertTicker of alertTickers) {

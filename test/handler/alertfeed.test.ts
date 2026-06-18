@@ -260,7 +260,8 @@ describe('AlertFeedHandler', () => {
       expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith('INFY.NS', 'TV:INFY');
     });
 
-    it('should warn and skip when no alert tickers found for TICKER_CHANGED', async () => {
+    it('should silently skip when no alert tickers found for TICKER_CHANGED', async () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
 
       let manyCallback: Function | undefined;
@@ -279,7 +280,29 @@ describe('AlertFeedHandler', () => {
       expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TV:INFY');
       expect(mockAlertFeedManager.createAlertFeedEvent).not.toHaveBeenCalled();
       const { Notifier } = jest.requireMock('../../src/util/notify');
-      expect(Notifier.warn).toHaveBeenCalledWith(expect.stringContaining('No alert tickers found'));
+      expect(Notifier.warn).not.toHaveBeenCalled();
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+
+    it('should silently skip composite tickers for TICKER_CHANGED', async () => {
+      let manyCallback: Function | undefined;
+      const mockConsumer: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn((types, cb) => {
+          if (types.includes(DomainEventType.TICKER_CHANGED)) {
+            manyCallback = cb;
+          }
+        }),
+      };
+
+      handler.registerEvents(mockConsumer);
+      await manyCallback!({ type: DomainEventType.TICKER_CHANGED, ticker: 'SENSEX/USDINR/XAUUSD' });
+
+      expect(mockAlertTickerManager.getAlertTickersForTicker).not.toHaveBeenCalled();
+      expect(mockAlertFeedManager.createAlertFeedEvent).not.toHaveBeenCalled();
+      const { Notifier } = jest.requireMock('../../src/util/notify');
+      expect(Notifier.warn).not.toHaveBeenCalled();
     });
 
     it('should resolve all alert tickers for TICKER_TRACKING_STARTED and create events', async () => {
@@ -366,6 +389,31 @@ describe('AlertFeedHandler', () => {
 
       expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TV:INFY');
       expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TV:TCS');
+    });
+
+    it('should silently skip composite tickers from WATCHLIST_CHANGED', async () => {
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
+      let watchlistCallback: Function | undefined;
+      const mockConsumer: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn((type, cb) => {
+          if (type === DomainEventType.WATCHLIST_CHANGED) {
+            watchlistCallback = cb;
+          }
+        }),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerEvents(mockConsumer);
+      await watchlistCallback!({
+        type: DomainEventType.WATCHLIST_CHANGED,
+        tickers: ['SENSEX/USDINR/XAUUSD', 'TV:INFY', 'NIFTY/USDINR'],
+      });
+
+      // Only non-composite tickers should be looked up
+      expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledTimes(1);
+      expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TV:INFY');
+      expect(mockAlertTickerManager.getAlertTickersForTicker).not.toHaveBeenCalledWith('SENSEX/USDINR/XAUUSD');
+      expect(mockAlertTickerManager.getAlertTickersForTicker).not.toHaveBeenCalledWith('NIFTY/USDINR');
     });
   });
 
