@@ -94,7 +94,11 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     // TICKER_CHANGED, TICKER_TRACKING_STARTED carry a single ticker string
     // and rebind all linked alert tickers for that specific ticker
     subscriber.subscribeMany(
-      [DomainEventType.TICKER_CHANGED, DomainEventType.TICKER_TRACKING_STARTED],
+      [
+        DomainEventType.TICKER_CHANGED,
+        DomainEventType.TICKER_TRACKING_STARTED,
+        DomainEventType.TICKER_TIMEFRAMES_CHANGED,
+      ],
       async (event) => {
         await this.createAlertFeedEventsForTicker(event.ticker);
       }

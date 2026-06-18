@@ -67,6 +67,14 @@ export class WatchListHandler implements IWatchListHandler {
       await this.paintManager.paintTickers(event.tickers);
       await this.watchlistManager.refreshSummary();
     });
+
+    // Timeframe toggle can change watch category (long vs default daily)
+    // so evict the stale category cache before repainting.
+    subscriber.subscribe(DomainEventType.TICKER_TIMEFRAMES_CHANGED, async (event) => {
+      this.categoryManager.evictTicker(event.ticker);
+      await this.paintManager.paintTickers([event.ticker]);
+      await this.watchlistManager.refreshSummary();
+    });
   }
 
   /** @inheritdoc */

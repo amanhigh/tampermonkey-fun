@@ -150,7 +150,7 @@ describe('AlertFeedHandler', () => {
       );
     });
 
-    it('should use subscribeMany for TickerPayload events (TICKER_CHANGED, TICKER_TRACKING_STARTED)', () => {
+    it('should use subscribeMany for TickerPayload events (TICKER_CHANGED, TICKER_TRACKING_STARTED, TICKER_TIMEFRAMES_CHANGED)', () => {
       const mockConsumer: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn(),
         subscribeMany: jest.fn(),
@@ -162,6 +162,7 @@ describe('AlertFeedHandler', () => {
         [
           DomainEventType.TICKER_CHANGED,
           DomainEventType.TICKER_TRACKING_STARTED,
+          DomainEventType.TICKER_TIMEFRAMES_CHANGED,
         ],
         expect.any(Function)
       );
@@ -355,6 +356,31 @@ describe('AlertFeedHandler', () => {
 
       expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TICKER_A');
       expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TICKER_B');
+    });
+
+    it('should repaint linked alert feed rows for TICKER_TIMEFRAMES_CHANGED', async () => {
+      const alertTickers: AlertTicker[] = [{
+        symbol: 'INFY', pair_id: '12345', name: 'Infosys Ltd',
+        exchange: 'NSE', type: 'PRIMARY', ticker: 'TV:INFY',
+        created_at: '', updated_at: '',
+      }];
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue(alertTickers);
+
+      let manyCallback: Function | undefined;
+      const mockConsumer: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn((types, cb) => {
+          if (types.includes(DomainEventType.TICKER_TIMEFRAMES_CHANGED)) {
+            manyCallback = cb;
+          }
+        }),
+      };
+
+      handler.registerEvents(mockConsumer);
+      await manyCallback!({ type: DomainEventType.TICKER_TIMEFRAMES_CHANGED, ticker: 'TV:INFY' });
+
+      expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TV:INFY');
+      expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith('INFY', 'TV:INFY');
     });
 
     it('should subscribe to WATCHLIST_CHANGED separately', () => {

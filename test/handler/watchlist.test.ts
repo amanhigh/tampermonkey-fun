@@ -5,6 +5,8 @@ import { ISyncUtil } from '../../src/util/sync';
 import { ICategoryManager } from '../../src/manager/category';
 import { IDomManager } from '../../src/manager/dom';
 import { WatchCategoryId } from '../../src/models/watch';
+import { ISubscriber } from '../../src/manager/event_bus';
+import { DomainEventType } from '../../src/models/domain_event';
 
 describe('WatchListHandler', () => {
   let handler: IWatchListHandler;
@@ -36,8 +38,10 @@ describe('WatchListHandler', () => {
 
     mockCategoryManager = {
       getTickerCategory: jest.fn(),
+      evictTicker: jest.fn(),
       recordWatchCategory: jest.fn().mockResolvedValue(undefined),
       recordFlagCategory: jest.fn(),
+      clearReadyState: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<ICategoryManager>;
 
     mockDomManager = {
@@ -107,6 +111,41 @@ describe('WatchListHandler', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(mockWatchlistManager.refresh).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('registerEvents', () => {
+    it('should subscribe to TICKER_TIMEFRAMES_CHANGED', () => {
+      const mockSubscriber: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerEvents(mockSubscriber);
+
+      expect(mockSubscriber.subscribe).toHaveBeenCalledWith(
+        DomainEventType.TICKER_TIMEFRAMES_CHANGED,
+        expect.any(Function)
+      );
+    });
+
+    it('should evict category cache, repaint ticker, and refresh summary on TICKER_TIMEFRAMES_CHANGED', async () => {
+      let timeframeCallback: Function | undefined;
+      const mockSubscriber: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn((type, cb) => {
+          if (type === DomainEventType.TICKER_TIMEFRAMES_CHANGED) {
+            timeframeCallback = cb;
+          }
+        }),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerEvents(mockSubscriber);
+      await timeframeCallback!({ type: DomainEventType.TICKER_TIMEFRAMES_CHANGED, ticker: 'TV:INFY' });
+
+      expect(mockCategoryManager.evictTicker).toHaveBeenCalledWith('TV:INFY');
+      expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['TV:INFY']);
+      expect(mockWatchlistManager.refreshSummary).toHaveBeenCalled();
     });
   });
 });
