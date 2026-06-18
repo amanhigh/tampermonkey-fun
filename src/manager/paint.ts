@@ -1,6 +1,7 @@
 import { TickerArea, TickerVisibility } from '../models/dom';
 import { ICategoryManager } from './category';
 import { IDomManager } from './dom';
+import { IDisplayManager } from './display';
 import { IRecentManager } from './recent';
 import { Constants } from '../models/constant';
 import { BucketSummary, WatchCategoryId, WatchCategory } from '../models/watch';
@@ -55,7 +56,8 @@ export class PaintManager implements IPaintManager {
   constructor(
     private readonly domManager: IDomManager,
     private readonly categoryManager: ICategoryManager,
-    private readonly recentManager: IRecentManager
+    private readonly recentManager: IRecentManager,
+    private readonly displayManager: IDisplayManager
   ) {}
 
   /** @inheritdoc */
@@ -177,18 +179,12 @@ export class PaintManager implements IPaintManager {
     $flag.css('color', Constants.UI.COLORS.DEFAULT);
     $exchange.css('color', Constants.UI.COLORS.DEFAULT);
 
-    // Fetch categories via unified manager
-    const { watch: watchCategory, flag: flagCategory, isFno } = await this.categoryManager.getTickerCategory(ticker);
+    // Fetch categories via unified manager (flag and FNO still needed here)
+    const { flag: flagCategory, isFno } = await this.categoryManager.getTickerCategory(ticker);
 
-    // Paint name — watch category color, or brown fallback if in watchlist
-    if (watchCategory) {
-      $name.css('color', watchCategory.color);
-    } else {
-      const watchlistTickers = this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL);
-      if (watchlistTickers.has(ticker)) {
-        $name.css('color', Constants.UI.COLORS.HEADER_DEFAULT);
-      }
-    }
+    // Paint name — delegate color decision to shared display manager
+    const displayInfo = await this.displayManager.resolve(ticker);
+    $name.css('color', displayInfo.color);
 
     // Paint flag and exchange — flag category color
     if (flagCategory) {

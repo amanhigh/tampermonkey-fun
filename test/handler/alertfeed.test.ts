@@ -1,6 +1,7 @@
 import { AlertFeedHandler } from '../../src/handler/alertfeed';
 import { IUIUtil } from '../../src/util/ui';
 import { ISyncUtil } from '../../src/util/sync';
+import { IDisplayManager } from '../../src/manager/display';
 import { IAlertManager } from '../../src/manager/alert';
 import { IAlertFeedManager } from '../../src/manager/alertfeed';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
@@ -8,7 +9,7 @@ import { IInvestingManager } from '../../src/manager/investing';
 import { AlertTicker } from '../../src/models/alert_ticker';
 import { Instrument } from '../../src/models/investing';
 import { AlertClickAction } from '../../src/models/events';
-import { FeedState } from '../../src/models/alertfeed';
+import { DisplayState } from '../../src/models/display';
 import { ISubscriber } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
 
@@ -31,6 +32,7 @@ describe('AlertFeedHandler', () => {
   let handler: AlertFeedHandler;
   let mockUIUtil: jest.Mocked<IUIUtil>;
   let mockSyncUtil: jest.Mocked<ISyncUtil>;
+  let mockDisplayManager: jest.Mocked<IDisplayManager>;
   let mockAlertManager: jest.Mocked<IAlertManager>;
   let mockAlertFeedManager: jest.Mocked<IAlertFeedManager>;
   let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
@@ -84,8 +86,11 @@ describe('AlertFeedHandler', () => {
       createAlertClickEvent: jest.fn().mockResolvedValue(undefined),
     } as any;
 
+    mockDisplayManager = {
+      resolve: jest.fn(),
+    } as any;
+
     mockAlertFeedManager = {
-      getAlertFeedState: jest.fn(),
       createAlertFeedEvent: jest.fn(),
       createResetFeedEvent: jest.fn(),
     } as any;
@@ -106,6 +111,7 @@ describe('AlertFeedHandler', () => {
     handler = new AlertFeedHandler(
       mockUIUtil,
       mockSyncUtil,
+      mockDisplayManager,
       mockAlertManager,
       mockAlertFeedManager,
       mockAlertTickerManager,
@@ -144,7 +150,7 @@ describe('AlertFeedHandler', () => {
       );
     });
 
-    it('should use subscribeMany for TickerPayload events (TICKER_CHANGED, TICKER_TRACKING_STARTED, WATCHLIST_CHANGED)', () => {
+    it('should use subscribeMany for TickerPayload events (TICKER_CHANGED, TICKER_TRACKING_STARTED, TICKER_TIMEFRAMES_CHANGED)', () => {
       const mockConsumer: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn(),
         subscribeMany: jest.fn(),
@@ -156,7 +162,7 @@ describe('AlertFeedHandler', () => {
         [
           DomainEventType.TICKER_CHANGED,
           DomainEventType.TICKER_TRACKING_STARTED,
-          DomainEventType.WATCHLIST_CHANGED,
+          DomainEventType.TICKER_TIMEFRAMES_CHANGED,
         ],
         expect.any(Function)
       );
@@ -255,7 +261,8 @@ describe('AlertFeedHandler', () => {
       expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith('INFY.NS', 'TV:INFY');
     });
 
-    it('should warn and skip when no alert tickers found for TICKER_CHANGED', async () => {
+    it('should silently skip when no alert tickers found for TICKER_CHANGED', async () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
 
       let manyCallback: Function | undefined;
@@ -274,7 +281,29 @@ describe('AlertFeedHandler', () => {
       expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TV:INFY');
       expect(mockAlertFeedManager.createAlertFeedEvent).not.toHaveBeenCalled();
       const { Notifier } = jest.requireMock('../../src/util/notify');
-      expect(Notifier.warn).toHaveBeenCalledWith(expect.stringContaining('No alert tickers found'));
+      expect(Notifier.warn).not.toHaveBeenCalled();
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+
+    it('should silently skip composite tickers for TICKER_CHANGED', async () => {
+      let manyCallback: Function | undefined;
+      const mockConsumer: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn((types, cb) => {
+          if (types.includes(DomainEventType.TICKER_CHANGED)) {
+            manyCallback = cb;
+          }
+        }),
+      };
+
+      handler.registerEvents(mockConsumer);
+      await manyCallback!({ type: DomainEventType.TICKER_CHANGED, ticker: 'SENSEX/USDINR/XAUUSD' });
+
+      expect(mockAlertTickerManager.getAlertTickersForTicker).not.toHaveBeenCalled();
+      expect(mockAlertFeedManager.createAlertFeedEvent).not.toHaveBeenCalled();
+      const { Notifier } = jest.requireMock('../../src/util/notify');
+      expect(Notifier.warn).not.toHaveBeenCalled();
     });
 
     it('should resolve all alert tickers for TICKER_TRACKING_STARTED and create events', async () => {
@@ -329,7 +358,32 @@ describe('AlertFeedHandler', () => {
       expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TICKER_B');
     });
 
-    it('should include WATCHLIST_CHANGED in the subscribeMany TickerPayload group', () => {
+    it('should repaint linked alert feed rows for TICKER_TIMEFRAMES_CHANGED', async () => {
+      const alertTickers: AlertTicker[] = [{
+        symbol: 'INFY', pair_id: '12345', name: 'Infosys Ltd',
+        exchange: 'NSE', type: 'PRIMARY', ticker: 'TV:INFY',
+        created_at: '', updated_at: '',
+      }];
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue(alertTickers);
+
+      let manyCallback: Function | undefined;
+      const mockConsumer: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn((types, cb) => {
+          if (types.includes(DomainEventType.TICKER_TIMEFRAMES_CHANGED)) {
+            manyCallback = cb;
+          }
+        }),
+      };
+
+      handler.registerEvents(mockConsumer);
+      await manyCallback!({ type: DomainEventType.TICKER_TIMEFRAMES_CHANGED, ticker: 'TV:INFY' });
+
+      expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TV:INFY');
+      expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith('INFY', 'TV:INFY');
+    });
+
+    it('should subscribe to WATCHLIST_CHANGED separately', () => {
       const mockConsumer: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn(),
         subscribeMany: jest.fn(),
@@ -337,45 +391,55 @@ describe('AlertFeedHandler', () => {
 
       handler.registerEvents(mockConsumer);
 
-      const calls = mockConsumer.subscribeMany.mock.calls;
-      const tickerPayloadGroup = calls.find(([types]) =>
-        (types as string[]).includes(DomainEventType.WATCHLIST_CHANGED)
+      expect(mockConsumer.subscribe).toHaveBeenCalledWith(
+        DomainEventType.WATCHLIST_CHANGED,
+        expect.any(Function)
       );
-      expect(tickerPayloadGroup).toBeDefined();
-      expect(tickerPayloadGroup![0]).toContain(DomainEventType.TICKER_CHANGED);
-      expect(tickerPayloadGroup![0]).toContain(DomainEventType.TICKER_TRACKING_STARTED);
     });
 
-    it('should resolve alert tickers for WATCHLIST_CHANGED and create feed events', async () => {
-      const alertTickers: AlertTicker[] = [
-        {
-          symbol: 'INFY',
-          pair_id: '12345',
-          name: 'Infosys Ltd',
-          exchange: 'NSE',
-          type: 'PRIMARY',
-          ticker: 'TV:INFY',
-          created_at: '',
-          updated_at: '',
-        },
-      ];
-      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue(alertTickers);
+    it('should resolve alert tickers for each changed ticker on WATCHLIST_CHANGED', async () => {
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
 
       let watchlistCallback: Function | undefined;
       const mockConsumer: jest.Mocked<ISubscriber> = {
-        subscribe: jest.fn(),
-        subscribeMany: jest.fn((types, cb) => {
-          if ((types as string[]).includes(DomainEventType.WATCHLIST_CHANGED)) {
+        subscribe: jest.fn((type, cb) => {
+          if (type === DomainEventType.WATCHLIST_CHANGED) {
             watchlistCallback = cb;
           }
         }),
+        subscribeMany: jest.fn(),
       };
 
       handler.registerEvents(mockConsumer);
-      await watchlistCallback!({ type: DomainEventType.WATCHLIST_CHANGED, ticker: 'TV:INFY' });
+      await watchlistCallback!({ type: DomainEventType.WATCHLIST_CHANGED, tickers: ['TV:INFY', 'TV:TCS'] });
 
       expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TV:INFY');
-      expect(mockAlertFeedManager.createAlertFeedEvent).toHaveBeenCalledWith('INFY', 'TV:INFY');
+      expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TV:TCS');
+    });
+
+    it('should silently skip composite tickers from WATCHLIST_CHANGED', async () => {
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
+      let watchlistCallback: Function | undefined;
+      const mockConsumer: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn((type, cb) => {
+          if (type === DomainEventType.WATCHLIST_CHANGED) {
+            watchlistCallback = cb;
+          }
+        }),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerEvents(mockConsumer);
+      await watchlistCallback!({
+        type: DomainEventType.WATCHLIST_CHANGED,
+        tickers: ['SENSEX/USDINR/XAUUSD', 'TV:INFY', 'NIFTY/USDINR'],
+      });
+
+      // Only non-composite tickers should be looked up
+      expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledTimes(1);
+      expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TV:INFY');
+      expect(mockAlertTickerManager.getAlertTickersForTicker).not.toHaveBeenCalledWith('SENSEX/USDINR/XAUUSD');
+      expect(mockAlertTickerManager.getAlertTickersForTicker).not.toHaveBeenCalledWith('NIFTY/USDINR');
     });
   });
 
@@ -589,8 +653,8 @@ describe('AlertFeedHandler', () => {
         makeAlertTicker({ symbol: 'INFY', name: 'Infosys Ltd', ticker: 'TV:INFY' }),
       ];
       mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
-      mockAlertFeedManager.getAlertFeedState.mockResolvedValue({
-        state: FeedState.MAPPED,
+      mockDisplayManager.resolve.mockResolvedValue({
+        state: DisplayState.DEFAULT,
         color: 'white',
       });
 
@@ -599,7 +663,7 @@ describe('AlertFeedHandler', () => {
       await handler.paintAlertFeed();
 
       expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledTimes(1);
-      expect(mockAlertFeedManager.getAlertFeedState).toHaveBeenCalledWith(alertTickers[0].ticker);
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(alertTickers[0].ticker);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
     });
 
@@ -608,8 +672,8 @@ describe('AlertFeedHandler', () => {
         makeAlertTicker({ symbol: 'XAG/USD', name: 'Silver Spot US Dollar', ticker: 'XAGUSD' }),
       ];
       mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
-      mockAlertFeedManager.getAlertFeedState.mockResolvedValue({
-        state: FeedState.MAPPED,
+      mockDisplayManager.resolve.mockResolvedValue({
+        state: DisplayState.DEFAULT,
         color: 'white',
       });
 
@@ -618,7 +682,7 @@ describe('AlertFeedHandler', () => {
       await handler.paintAlertFeed();
 
       expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledTimes(1);
-      expect(mockAlertFeedManager.getAlertFeedState).toHaveBeenCalledWith(alertTickers[0].ticker);
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(alertTickers[0].ticker);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
     });
 
@@ -627,8 +691,8 @@ describe('AlertFeedHandler', () => {
         makeAlertTicker({ symbol: 'Nifty500', name: 'Nifty 500', ticker: 'CNX500' }),
       ];
       mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
-      mockAlertFeedManager.getAlertFeedState.mockResolvedValue({
-        state: FeedState.MAPPED,
+      mockDisplayManager.resolve.mockResolvedValue({
+        state: DisplayState.DEFAULT,
         color: 'white',
       });
 
@@ -637,7 +701,7 @@ describe('AlertFeedHandler', () => {
       await handler.paintAlertFeed();
 
       expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledTimes(1);
-      expect(mockAlertFeedManager.getAlertFeedState).toHaveBeenCalledWith(alertTickers[0].ticker);
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(alertTickers[0].ticker);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
     });
 
@@ -646,8 +710,8 @@ describe('AlertFeedHandler', () => {
         makeAlertTicker({ symbol: 'NQ', name: 'Nasdaq 100 Futures', ticker: 'NQ1!' }),
       ];
       mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
-      mockAlertFeedManager.getAlertFeedState.mockResolvedValue({
-        state: FeedState.MAPPED,
+      mockDisplayManager.resolve.mockResolvedValue({
+        state: DisplayState.DEFAULT,
         color: 'white',
       });
 
@@ -656,7 +720,7 @@ describe('AlertFeedHandler', () => {
       await handler.paintAlertFeed();
 
       expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledTimes(1);
-      expect(mockAlertFeedManager.getAlertFeedState).toHaveBeenCalledWith(alertTickers[0].ticker);
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(alertTickers[0].ticker);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
     });
 
@@ -665,8 +729,8 @@ describe('AlertFeedHandler', () => {
         makeAlertTicker({ symbol: 'CrudeOilWTI', name: 'Crude Oil WTI Futures', ticker: 'USOIL' }),
       ];
       mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
-      mockAlertFeedManager.getAlertFeedState.mockResolvedValue({
-        state: FeedState.MAPPED,
+      mockDisplayManager.resolve.mockResolvedValue({
+        state: DisplayState.DEFAULT,
         color: 'white',
       });
 
@@ -675,7 +739,7 @@ describe('AlertFeedHandler', () => {
       await handler.paintAlertFeed();
 
       expect(mockAlertTickerManager.getAlertTickers).toHaveBeenCalledTimes(1);
-      expect(mockAlertFeedManager.getAlertFeedState).toHaveBeenCalledWith(alertTickers[0].ticker);
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(alertTickers[0].ticker);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
     });
 
@@ -685,13 +749,13 @@ describe('AlertFeedHandler', () => {
         makeAlertTicker({ symbol: 'NSEI', name: 'Nifty 50', ticker: 'NIFTY' }),
       ];
       mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
-      mockAlertFeedManager.getAlertFeedState.mockResolvedValue({ state: FeedState.UNMAPPED, color: 'red' });
+      mockDisplayManager.resolve.mockResolvedValue({ state: DisplayState.UNMAPPED, color: 'firebrick' });
 
       buildPaintMock([{ title: 'Nifty', href: '/indices/nifty', dataType: 'quotes' }]);
 
       await handler.paintAlertFeed();
 
-      expect(mockAlertFeedManager.getAlertFeedState).toHaveBeenCalledWith(null);
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(null);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
       expect(Notifier.warn).toHaveBeenCalledWith(expect.stringContaining('Unmapped'));
     });
@@ -703,20 +767,20 @@ describe('AlertFeedHandler', () => {
 
       await handler.paintAlertFeed();
 
-      expect(mockAlertFeedManager.getAlertFeedState).not.toHaveBeenCalled();
+      expect(mockDisplayManager.resolve).not.toHaveBeenCalled();
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
       expect(Notifier.warn).not.toHaveBeenCalled();
     });
 
     it('should not call InvestingManager.getInstrument during repaint and delegate unmapped to manager', async () => {
       mockAlertTickerManager.getAlertTickers.mockResolvedValue([]);
-      mockAlertFeedManager.getAlertFeedState.mockResolvedValue({ state: FeedState.UNMAPPED, color: 'red' });
+      mockDisplayManager.resolve.mockResolvedValue({ state: DisplayState.UNMAPPED, color: 'firebrick' });
 
       buildPaintMock([{ title: 'Unknown (ZZZZZ)', href: '/unknown', dataType: 'quotes' }]);
 
       await handler.paintAlertFeed();
 
-      expect(mockAlertFeedManager.getAlertFeedState).toHaveBeenCalledWith(null);
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(null);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
     });
   });

@@ -1,6 +1,7 @@
 import { Constants } from '../models/constant';
 import { TickerArea, TickerVisibility } from '../models/dom';
 import { IPaintManager } from './paint';
+import { ICategoryManager } from './category';
 import { IUIUtil } from '../util/ui';
 import { IPublisher } from './event_bus';
 import { IDomManager } from './dom';
@@ -52,8 +53,17 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
    */
   private filterChain: WatchlistFilter[] = [];
 
+  /**
+   * Snapshot of the watchlist ticker set from the previous refresh cycle.
+   * Used to detect tickers removed from the DOM watchlist.
+   * null on first call (skip removal detection for baseline).
+   * @private
+   */
+  private prevWatchlistTickers: Set<string> | null = null;
+
   constructor(
     private readonly paintManager: IPaintManager,
+    private readonly categoryManager: ICategoryManager,
     private readonly uiUtil: IUIUtil,
     private readonly domManager: IDomManager,
     private readonly publisher: IPublisher
@@ -71,17 +81,37 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   async refresh(): Promise<void> {
     this.resetWatchList();
 
+    // Detect tickers added or removed from DOM watchlist (skip on first baseline call)
+    const currentTickers = this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL);
+
+    // Persist current watchlist to shared silo so cross-page consumers (e.g. DisplayManager
+    // on the Investing alert feed page) can read ticker membership without TradingView DOM.
+    await this.saveWatchlistSilo(currentTickers);
+
+    let changedTickers: string[] = [];
+    if (this.prevWatchlistTickers !== null) {
+      const removedTickers = [...this.prevWatchlistTickers].filter((t) => !currentTickers.has(t));
+      const addedTickers = [...currentTickers].filter((t) => !this.prevWatchlistTickers!.has(t));
+      changedTickers = [...removedTickers, ...addedTickers];
+      if (removedTickers.length > 0) {
+        await this.categoryManager.clearReadyState(removedTickers);
+      }
+    }
+    this.prevWatchlistTickers = currentTickers;
+
     // Delegate all ticker painting (symbols, flags, FNO) to PaintManager
     await this.paintManager.paint();
 
     // Reuse summary + filter refresh
     await this.refreshSummary();
 
-    // Notify subscribers that watchlist has been refreshed
-    void this.publisher.publish({
-      type: DomainEventType.WATCHLIST_CHANGED,
-      ticker: this.domManager.getTicker(),
-    });
+    // Notify subscribers of ticker set changes only when changes exist
+    if (changedTickers.length > 0) {
+      void this.publisher.publish({
+        type: DomainEventType.WATCHLIST_CHANGED,
+        tickers: changedTickers,
+      });
+    }
   }
 
   /** @inheritdoc */
@@ -267,5 +297,20 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
       default:
         throw new Error('You have a strange Mouse!');
     }
+  }
+
+  /**
+   * Persist current watchlist ticker set to shared GM silo so cross-page
+   * consumers (e.g. DisplayManager on the Investing alert feed page) can
+   * read ticker membership without relying on TradingView DOM presence.
+   */
+  private async saveWatchlistSilo(tickers: Set<string>): Promise<void> {
+    await GM.setValue(
+      Constants.STORAGE.SILOS.WATCHLIST,
+      JSON.stringify({
+        tickers: [...tickers],
+        updatedAt: new Date().toISOString(),
+      })
+    );
   }
 }

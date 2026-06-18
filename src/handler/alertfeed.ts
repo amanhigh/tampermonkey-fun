@@ -5,12 +5,15 @@ import { Notifier } from '../util/notify';
 import { AlertClickAction } from '../models/events';
 import { IAlertManager } from '../manager/alert';
 import { IAlertFeedManager } from '../manager/alertfeed';
-import { AlertFeedEvent, FeedInfo, FeedState } from '../models/alertfeed';
+import { IDisplayManager } from '../manager/display';
+import { DisplayState, DisplayInfo } from '../models/display';
+import { AlertFeedEvent } from '../models/alertfeed';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { IInvestingManager } from '../manager/investing';
 import { AlertTicker } from '../models/alert_ticker';
 import { ISubscriber, IDomainEventConsumer } from '../manager/event_bus';
 import { DomainEventType } from '../models/domain_event';
+import { isCompositeSymbol } from '../models/ticker';
 
 export interface IAlertFeedHandler extends IDomainEventConsumer {
   /**
@@ -33,6 +36,7 @@ export class AlertFeedHandler implements IAlertFeedHandler {
   constructor(
     private readonly uiUtil: IUIUtil,
     private readonly syncUtil: ISyncUtil,
+    private readonly displayManager: IDisplayManager,
     private readonly alertManager: IAlertManager,
     private readonly alertFeedManager: IAlertFeedManager,
     private readonly alertTickerManager: IAlertTickerManager,
@@ -87,14 +91,25 @@ export class AlertFeedHandler implements IAlertFeedHandler {
       await this.alertFeedManager.createAlertFeedEvent(event.alertTicker);
     });
 
-    // TICKER_CHANGED, TICKER_TRACKING_STARTED, WATCHLIST_CHANGED
-    // all carry a single ticker string and rebind all linked alert tickers
+    // TICKER_CHANGED, TICKER_TRACKING_STARTED carry a single ticker string
+    // and rebind all linked alert tickers for that specific ticker
     subscriber.subscribeMany(
-      [DomainEventType.TICKER_CHANGED, DomainEventType.TICKER_TRACKING_STARTED, DomainEventType.WATCHLIST_CHANGED],
+      [
+        DomainEventType.TICKER_CHANGED,
+        DomainEventType.TICKER_TRACKING_STARTED,
+        DomainEventType.TICKER_TIMEFRAMES_CHANGED,
+      ],
       async (event) => {
         await this.createAlertFeedEventsForTicker(event.ticker);
       }
     );
+
+    // WATCHLIST_CHANGED carries the changed ticker list, so repaint only those tickers
+    subscriber.subscribe(DomainEventType.WATCHLIST_CHANGED, async (event) => {
+      for (const ticker of event.tickers) {
+        await this.createAlertFeedEventsForTicker(ticker);
+      }
+    });
 
     // TICKER_CATEGORY_CHANGED — repaint all linked alert tickers for affected tickers
     subscriber.subscribe(DomainEventType.TICKER_CATEGORY_CHANGED, async (event) => {
@@ -106,12 +121,17 @@ export class AlertFeedHandler implements IAlertFeedHandler {
 
   /**
    * Resolve all alert tickers linked to a TV ticker and create alert feed events for each.
-   * Warns when no alert tickers are found.
+   * Silent skip: composite tickers and unmapped tickers are skipped without logging.
    */
   private async createAlertFeedEventsForTicker(ticker: string): Promise<void> {
+    // Composite TradingView formulas (e.g. SENSEX/USDINR/XAUUSD)
+    // never have Investing alert ticker mappings — skip silently.
+    if (isCompositeSymbol(ticker)) {
+      return;
+    }
+
     const alertTickers = await this.alertTickerManager.getAlertTickersForTicker(ticker);
     if (alertTickers.length === 0) {
-      Notifier.warn(`No alert tickers found for ${ticker} — skipping feed events`);
       return;
     }
     for (const alertTicker of alertTickers) {
@@ -276,17 +296,17 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     // Load all mapped alert tickers once (no per-row search)
     const allAlertTickers = await this.alertTickerManager.getAlertTickers();
 
-    // Resolve each element's state
+    // Resolve each element's state via shared DisplayManager
     const feedInfos = await Promise.all(
       elements.map(async (e) => {
         const resolved = this.resolvePaintAlertTicker(e.name, e.ticker, allAlertTickers);
-        return this.alertFeedManager.getAlertFeedState(resolved?.ticker ?? null);
+        return this.displayManager.resolve(resolved?.ticker ?? null);
       })
     );
 
     elements.forEach(({ $el, ticker }, i) => {
       const feedInfo = feedInfos[i];
-      if (feedInfo.state === FeedState.UNMAPPED) {
+      if (feedInfo.state === DisplayState.UNMAPPED) {
         Notifier.warn(`Unmapped: ${ticker}`);
       }
       $el.css('color', feedInfo.color);
@@ -305,7 +325,7 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     $(Constants.DOM.ALERT_FEED.FLOATING_WRAPPER).css('background-color', 'black');
   }
 
-  private updateTicker(investingTicker: string, feedInfo: FeedInfo): void {
+  private updateTicker(investingTicker: string, feedInfo: DisplayInfo): void {
     $(Constants.DOM.ALERT_FEED.ALERT_DATA).each((_, element) => {
       const $element = $(element);
       const { ticker } = this.extractAlertInfo($element);

@@ -1,39 +1,14 @@
 import { BaseEvent } from './events';
-
-/**
- * Enum representing the different states an alert feed item can have:
- * - UNMAPPED: Default starting state, ticker is not mapped to any information
- * - MAPPED: Ticker is mapped to a TradingView symbol but not in any other state
- * - RECENT: Ticker was recently viewed by the user
- * - WATCHED: Ticker is in the user's watchlist
- *
- * State Transition Diagram:
- *   UNMAPPED -> MAPPED -> RECENT
- *                      -> WATCHED
- */
-export enum FeedState {
-  UNMAPPED = 'UNMAPPED',
-  MAPPED = 'MAPPED',
-  RECENT = 'RECENT',
-  WATCHED = 'WATCHED',
-}
-
-/**
- * Interface holding the feed state and corresponding color for an alert feed item
- */
-export interface FeedInfo {
-  state: FeedState;
-  color: string;
-}
+import { DisplayInfo } from './display';
 
 /**
  * Class representing an alert feed event
  */
 export class AlertFeedEvent extends BaseEvent {
   investingTicker: string;
-  feedInfo: FeedInfo;
+  feedInfo: DisplayInfo;
 
-  constructor(investingTicker: string, feedInfo: FeedInfo) {
+  constructor(investingTicker: string, feedInfo: DisplayInfo) {
     super();
     this.investingTicker = investingTicker;
     this.feedInfo = feedInfo;
@@ -45,7 +20,7 @@ export class AlertFeedEvent extends BaseEvent {
    * @returns The parsed alert feed event
    */
   static fromString(stringifiedEvent: string): AlertFeedEvent {
-    const parsedEvent = JSON.parse(stringifiedEvent) as { investingTicker: string; feedInfo: FeedInfo };
+    const parsedEvent = JSON.parse(stringifiedEvent) as { investingTicker: string; feedInfo: DisplayInfo };
     return new AlertFeedEvent(parsedEvent.investingTicker, parsedEvent.feedInfo);
   }
 }

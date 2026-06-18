@@ -1,10 +1,6 @@
 import { AlertFeedManager, IAlertFeedManager } from '../../src/manager/alertfeed';
-import { ICategoryManager } from '../../src/manager/category';
-import { IRecentManager } from '../../src/manager/recent';
-import { FeedState } from '../../src/models/alertfeed';
-import { Constants } from '../../src/models/constant';
-import { WatchCategoryId } from '../../src/models/watch';
-import { TickerState } from '../../src/models/ticker';
+import { IDisplayManager } from '../../src/manager/display';
+import { DisplayState } from '../../src/models/display';
 
 // Mock GM global
 (global as any).GM = {
@@ -13,26 +9,16 @@ import { TickerState } from '../../src/models/ticker';
 
 describe('AlertFeedManager', () => {
   let alertFeedManager: IAlertFeedManager;
-  let mockCategoryManager: jest.Mocked<ICategoryManager>;
-  let mockRecentManager: jest.Mocked<IRecentManager>;
+  let mockDisplayManager: jest.Mocked<IDisplayManager>;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Mock CategoryManager
-    mockCategoryManager = {
-      getTickerCategory: jest.fn(),
-      recordWatchCategory: jest.fn(),
-      recordFlagCategory: jest.fn(),
-    } as any;
+    mockDisplayManager = {
+      resolve: jest.fn(),
+    } as unknown as jest.Mocked<IDisplayManager>;
 
-    // Mock RecentManager
-    mockRecentManager = {
-      markRecent: jest.fn(),
-      isRecent: jest.fn(),
-    } as any;
-
-    alertFeedManager = new AlertFeedManager(mockCategoryManager, mockRecentManager);
+    alertFeedManager = new AlertFeedManager(mockDisplayManager);
   });
 
   describe('constructor', () => {
@@ -42,63 +28,33 @@ describe('AlertFeedManager', () => {
     });
   });
 
-  describe('getAlertFeedState', () => {
-    it('should return UNMAPPED state when null is passed', async () => {
-      const result = await alertFeedManager.getAlertFeedState(null);
+  describe('createAlertFeedEvent', () => {
+    it('should resolve display info via DisplayManager and store event', async () => {
+      mockDisplayManager.resolve.mockResolvedValue({ state: DisplayState.DEFAULT, color: 'white' });
 
-      expect(result).toEqual({
-        state: FeedState.UNMAPPED,
-        color: 'red',
-      });
-      expect(mockCategoryManager.getTickerCategory).not.toHaveBeenCalled();
-      expect(mockRecentManager.isRecent).not.toHaveBeenCalled();
+      await alertFeedManager.createAlertFeedEvent('INFY', 'TV:INFY');
+
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith('TV:INFY');
+      expect(GM.setValue).toHaveBeenCalled();
     });
 
-    it('should return WATCHED state when ticker has a watch category', async () => {
-      mockCategoryManager.getTickerCategory.mockResolvedValue({
-        watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: { state: TickerState.READY } },
-        flag: undefined,
-        isFno: false,
-      });
+    it('should pass null ticker when ticker is omitted (unmapped)', async () => {
+      mockDisplayManager.resolve.mockResolvedValue({ state: DisplayState.UNMAPPED, color: 'firebrick' });
 
-      const result = await alertFeedManager.getAlertFeedState('NSE:RELIANCE');
+      await alertFeedManager.createAlertFeedEvent('UNKNOWN');
 
-      expect(result).toEqual({
-        state: FeedState.WATCHED,
-        color: 'yellow',
-      });
-
-      expect(mockCategoryManager.getTickerCategory).toHaveBeenCalledWith('NSE:RELIANCE');
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(null);
     });
+  });
 
-    it('should return RECENT state when ticker is recent but not watched', async () => {
-      mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, isFno: false });
-      mockRecentManager.isRecent.mockResolvedValue(true);
+  describe('createResetFeedEvent', () => {
+    it('should resolve DISPLAY state for null ticker and store reset event', async () => {
+      mockDisplayManager.resolve.mockResolvedValue({ state: DisplayState.UNMAPPED, color: 'firebrick' });
 
-      const result = await alertFeedManager.getAlertFeedState('NSE:TCS');
+      await alertFeedManager.createResetFeedEvent();
 
-      expect(result).toEqual({
-        state: FeedState.RECENT,
-        color: 'lime',
-      });
-
-      expect(mockCategoryManager.getTickerCategory).toHaveBeenCalledWith('NSE:TCS');
-      expect(mockRecentManager.isRecent).toHaveBeenCalledWith('NSE:TCS', Constants.RECENT_CUTOFF_MS);
-    });
-
-    it('should return MAPPED state when ticker is mapped but not watched or recent', async () => {
-      mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, isFno: false });
-      mockRecentManager.isRecent.mockResolvedValue(false);
-
-      const result = await alertFeedManager.getAlertFeedState('NSE:HDFC');
-
-      expect(result).toEqual({
-        state: FeedState.MAPPED,
-        color: 'white',
-      });
-
-      expect(mockCategoryManager.getTickerCategory).toHaveBeenCalledWith('NSE:HDFC');
-      expect(mockRecentManager.isRecent).toHaveBeenCalledWith('NSE:HDFC', Constants.RECENT_CUTOFF_MS);
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith(null);
+      expect(GM.setValue).toHaveBeenCalled();
     });
   });
 });
