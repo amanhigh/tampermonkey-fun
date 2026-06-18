@@ -30,6 +30,13 @@ export interface IWatchListHandler extends IDomainEventConsumer {
    * @param categoryId The category identifier to record into.
    */
   recordSelectedTicker(categoryId: WatchCategoryId): void;
+
+  /**
+   * Toggle READY state for the currently selected ticker(s).
+   * If any selected ticker is already READY, clear it to WATCHED.
+   * Otherwise mark it as READY.
+   */
+  toggleReadyForSelectedTickers(): void;
 }
 
 /**
@@ -94,5 +101,12 @@ export class WatchListHandler implements IWatchListHandler {
     const type = this.domManager.isScreenerVisible() ? TickerArea.SCREENER : TickerArea.WATCHLIST;
     const selectedTickers = [...this.domManager.getTickers(type, TickerVisibility.SELECTED)];
     void this.categoryManager.recordWatchCategory(categoryId, selectedTickers);
+  }
+
+  /** @inheritdoc */
+  public toggleReadyForSelectedTickers(): void {
+    const type = this.domManager.isScreenerVisible() ? TickerArea.SCREENER : TickerArea.WATCHLIST;
+    const selectedTickers = [...this.domManager.getTickers(type, TickerVisibility.SELECTED)];
+    void this.categoryManager.toggleReadyState(selectedTickers);
   }
 }

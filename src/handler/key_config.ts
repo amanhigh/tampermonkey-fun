@@ -188,8 +188,8 @@ export class KeyConfig implements IKeyConfig {
       [
         'F2',
         {
-          description: 'Ready',
-          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.READY),
+          description: 'Toggle Ready',
+          action: () => this.watchlistHandler.toggleReadyForSelectedTickers(),
         },
       ],
     ]);

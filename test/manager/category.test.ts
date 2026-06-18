@@ -674,4 +674,62 @@ describe('CategoryManager', () => {
       expect(mockPublisher.publish).not.toHaveBeenCalled();
     });
   });
+
+  // ── toggleReadyState ──
+
+  describe('toggleReadyState', () => {
+    it('should toggle READY ticker to WATCHED and publish event', async () => {
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'READY_A', state: TickerState.READY })
+      );
+
+      await categoryManager.toggleReadyState(['READY_A']);
+
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('READY_A', { state: TickerState.WATCHED });
+      expect(mockPublisher.publish).toHaveBeenCalledWith({
+        type: DomainEventType.TICKER_CATEGORY_CHANGED,
+        tickers: ['READY_A'],
+      });
+    });
+
+    it('should toggle WATCHED ticker to READY and publish event', async () => {
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'WATCHED_A', state: TickerState.WATCHED })
+      );
+
+      await categoryManager.toggleReadyState(['WATCHED_A']);
+
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('WATCHED_A', { state: TickerState.READY });
+      expect(mockPublisher.publish).toHaveBeenCalledWith({
+        type: DomainEventType.TICKER_CATEGORY_CHANGED,
+        tickers: ['WATCHED_A'],
+      });
+    });
+
+    it('should toggle mixed READY/non-READY tickers independently', async () => {
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockImplementation(async (ticker: string) => {
+        if (ticker === 'TICKER_A') return makeTicker({ ticker: 'TICKER_A', state: TickerState.READY });
+        return makeTicker({ ticker: 'TICKER_B', state: TickerState.WATCHED });
+      });
+
+      await categoryManager.toggleReadyState(['TICKER_A', 'TICKER_B']);
+
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TICKER_A', { state: TickerState.WATCHED });
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('TICKER_B', { state: TickerState.READY });
+      expect(mockPublisher.publish).toHaveBeenCalledWith({
+        type: DomainEventType.TICKER_CATEGORY_CHANGED,
+        tickers: ['TICKER_A', 'TICKER_B'],
+      });
+    });
+
+    it('should not update or publish for empty ticker array', async () => {
+      await categoryManager.toggleReadyState([]);
+
+      expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
+      expect(mockPublisher.publish).not.toHaveBeenCalled();
+    });
+  });
 });

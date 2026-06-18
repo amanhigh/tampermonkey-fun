@@ -68,6 +68,15 @@ export interface ICategoryManager {
    * @param tickers Ticker symbols to check and potentially clear
    */
   clearReadyState(tickers: string[]): Promise<void>;
+
+  /**
+   * Toggle READY state for the given tickers.
+   * - If a ticker is currently READY, clear it to WATCHED.
+   * - If a ticker is NOT currently READY, mark it as READY.
+   * Publishes TICKER_CATEGORY_CHANGED for all affected tickers.
+   * @param tickers Ticker symbols to toggle
+   */
+  toggleReadyState(tickers: string[]): Promise<void>;
 }
 
 // ── Implementation ──
@@ -168,20 +177,38 @@ export class CategoryManager implements ICategoryManager {
 
   /** @inheritdoc */
   async clearReadyState(tickers: string[]): Promise<void> {
-    const changedTickers: string[] = [];
+    // Filter to tickers that are currently READY, then toggle them
+    const readyTickers: string[] = [];
+    for (const ticker of tickers) {
+      const cat = await this.getTickerCategory(ticker);
+      if (cat.watch?.id === WatchCategoryId.READY) {
+        readyTickers.push(ticker);
+      }
+    }
+    if (readyTickers.length > 0) {
+      await this.toggleReadyState(readyTickers);
+    }
+  }
+
+  /** @inheritdoc */
+  async toggleReadyState(tickers: string[]): Promise<void> {
+    if (tickers.length === 0) {
+      return;
+    }
+
     for (const ticker of tickers) {
       const cat = await this.getTickerCategory(ticker);
       if (cat.watch?.id === WatchCategoryId.READY) {
         await this.syncBackend(ticker, { state: TickerState.WATCHED });
-        changedTickers.push(ticker);
+      } else {
+        await this.syncBackend(ticker, { state: TickerState.READY });
       }
     }
-    if (changedTickers.length > 0) {
-      await this.publisher.publish({
-        type: DomainEventType.TICKER_CATEGORY_CHANGED,
-        tickers: changedTickers,
-      });
-    }
+
+    await this.publisher.publish({
+      type: DomainEventType.TICKER_CATEGORY_CHANGED,
+      tickers,
+    });
   }
 
   // ── Cache fetch method ──
