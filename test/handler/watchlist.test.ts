@@ -24,6 +24,7 @@ globalAny.Element = ElementStub;
 globalAny.document = {
   createElement: () => new ElementStub(),
   createTextNode: () => ({}),
+  getElementById: () => null,
 } as unknown as Document;
 
 /** Create a fake MutationRecord with the given added/removed nodes. */
@@ -205,10 +206,13 @@ describe('WatchListHandler', () => {
   });
 
   describe('toggleReadyForSelectedTickers', () => {
-    it('should toggle current chart ticker through CategoryManager', () => {
+    it('should toggle current chart ticker through CategoryManager', async () => {
       mockDomManager.getTicker.mockReturnValue('SYK');
 
       handler.toggleReadyForSelectedTickers();
+
+      // toggleReadyState is fire-and-forget, flush microtasks
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(mockCategoryManager.toggleReadyState).toHaveBeenCalledWith(['SYK']);
     });

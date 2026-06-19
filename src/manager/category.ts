@@ -176,8 +176,10 @@ export class CategoryManager implements ICategoryManager {
       const cat = await this.getTickerCategory(ticker);
       if (cat.watch?.id === WatchCategoryId.READY) {
         await this.syncBackend(ticker, { state: TickerState.WATCHED });
+        Notifier.success(`⏹ Cleared ready ${ticker}`);
       } else {
         await this.syncBackend(ticker, { state: TickerState.READY });
+        Notifier.red(`⏺ Marked ready ${ticker}`);
       }
     }
 
