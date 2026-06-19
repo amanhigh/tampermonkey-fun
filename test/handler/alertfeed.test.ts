@@ -808,5 +808,23 @@ describe('AlertFeedHandler', () => {
       expect(mockDisplayManager.resolve).toHaveBeenCalledWith(null);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
     });
+
+    it('should resolve mapped-but-not-in-silo ticker as DEFAULT/white, not as unmapped', async () => {
+      // Backend has GRINDWELL mapped under symbol GRNN
+      const alertTickers = [
+        makeAlertTicker({ symbol: 'GRNN', name: 'Grindwell Norton', ticker: 'GRINDWELL' }),
+      ];
+      mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
+      mockDisplayManager.resolve.mockResolvedValue({ state: DisplayState.DEFAULT, color: 'white' });
+
+      buildPaintMock([{ title: 'Grindwell Norton (GRNN)', href: '/equities/grindwell-norton', dataType: 'quotes' }]);
+
+      await handler.paintAlertFeed();
+
+      // Should resolve with the mapped TV ticker, not null
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith('GRINDWELL');
+      expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
+      expect(Notifier.warn).not.toHaveBeenCalled();
+    });
   });
 });

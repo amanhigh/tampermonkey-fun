@@ -13,12 +13,11 @@ import { IRecentManager } from './recent';
  * manager keeps updated — this makes DisplayManager work correctly on
  * both TradingView and Investing pages.
  *
- * Priority order (surface-independent):
- *   1 ticker=null                                   → UNMAPPED / purple
- *   2 watch category + in watchlist silo            → WATCH_CATEGORY / category color
- *   3 silo populated, ticker not in silo (untracked) → UNMAPPED / purple
- *   4 recent                                        → RECENT / gold
- *   5 fallback                                      → DEFAULT / white
+ * Priority order:
+ *   1 ticker=null (no backend alert ticker mapping)  → UNMAPPED / purple
+ *   2 watch category + in watchlist silo             → WATCH_CATEGORY / category color
+ *   3 recent                                         → RECENT / gold
+ *   4 mapped ticker fallback                         → DEFAULT / white
  */
 export interface IDisplayManager {
   /** Resolve display info for a ticker using the shared priority rules. */
@@ -51,17 +50,12 @@ export class DisplayManager implements IDisplayManager {
       return { state: DisplayState.WATCH_CATEGORY, color: category.watch.color };
     }
 
-    // Priority 3: Silo populated but ticker absent → untracked
-    if (siloTickers.size > 0 && !siloTickers.has(ticker)) {
-      return { state: DisplayState.UNMAPPED, color: Color.PURPLE };
-    }
-
-    // Priority 4: Recent
+    // Priority 3: Recent
     if (await this.recentManager.isRecent(ticker, Constants.RECENT_CUTOFF_MS)) {
       return { state: DisplayState.RECENT, color: 'gold' };
     }
 
-    // Priority 5: Default
+    // Priority 4: Default (mapped ticker fallback)
     return { state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT };
   }
 

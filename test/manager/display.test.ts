@@ -75,7 +75,7 @@ describe('DisplayManager', () => {
       expect(mockRecentManager.isRecent).not.toHaveBeenCalled();
     });
 
-    it('should return UNMAPPED/purple when watch category exists but ticker is absent from watchlist silo and is recent', async () => {
+    it('should return RECENT/gold when watch category exists but ticker is absent from watchlist silo and is recent', async () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: READY_CATEGORY,
         flag: undefined,
@@ -92,13 +92,13 @@ describe('DisplayManager', () => {
 
       const result = await displayManager.resolve('TV:ABSENT');
 
-      // Absent from loaded silo → untracked beats recent → UNMAPPED/purple
-      expect(result).toEqual({ state: DisplayState.UNMAPPED, color: 'purple' });
+      // Absent from loaded silo → category skipped → recent wins → RECENT/gold
+      expect(result).toEqual({ state: DisplayState.RECENT, color: 'gold' });
       expect(mockCategoryManager.getTickerCategory).toHaveBeenCalledWith('TV:ABSENT');
-      expect(mockRecentManager.isRecent).not.toHaveBeenCalled();
+      expect(mockRecentManager.isRecent).toHaveBeenCalledWith('TV:ABSENT', expect.any(Number));
     });
 
-    it('should return UNMAPPED/purple when watch category exists but ticker is absent from watchlist silo and not recent', async () => {
+    it('should return DEFAULT/white when watch category exists but ticker is absent from watchlist silo and not recent', async () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: READY_CATEGORY,
         flag: undefined,
@@ -115,8 +115,8 @@ describe('DisplayManager', () => {
 
       const result = await displayManager.resolve('TV:ABSENT');
 
-      // Absent from watchlist → treated as untracked → UNMAPPED/purple
-      expect(result).toEqual({ state: DisplayState.UNMAPPED, color: 'purple' });
+      // Absent from watchlist → category skipped, not recent → DEFAULT/white
+      expect(result).toEqual({ state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT });
     });
 
     it('should return RECENT/gold when silo is null, category exists, and ticker is recent', async () => {
