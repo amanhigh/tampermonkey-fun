@@ -278,6 +278,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
    * @private
    */
   private applyFilters(): void {
+    this.resetWatchList();
     this.filterChain.forEach((filter) => this.filterWatchList(filter));
   }
 

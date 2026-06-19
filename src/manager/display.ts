@@ -1,5 +1,6 @@
 import { DisplayState, DisplayInfo } from '../models/display';
 import { Constants } from '../models/constant';
+import { Color } from '../models/color';
 import { ICategoryManager } from './category';
 import { IRecentManager } from './recent';
 
@@ -13,10 +14,11 @@ import { IRecentManager } from './recent';
  * both TradingView and Investing pages.
  *
  * Priority order (surface-independent):
- *   1 ticker=null (unmapped)                 → UNMAPPED / purple
- *   2 watch category + in watchlist silo     → WATCH_CATEGORY / category color
- *   3 recent                                 → RECENT / gold
- *   4 everything else                        → DEFAULT / white
+ *   1 ticker=null                                   → UNMAPPED / purple
+ *   2 watch category + in watchlist silo            → WATCH_CATEGORY / category color
+ *   3 silo populated, ticker not in silo (untracked) → UNMAPPED / purple
+ *   4 recent                                        → RECENT / gold
+ *   5 fallback                                      → DEFAULT / white
  */
 export interface IDisplayManager {
   /** Resolve display info for a ticker using the shared priority rules. */
@@ -36,35 +38,37 @@ export class DisplayManager implements IDisplayManager {
   async resolve(ticker: string | null): Promise<DisplayInfo> {
     // Priority 1: Unmapped
     if (ticker === null) {
-      return { state: DisplayState.UNMAPPED, color: 'purple' };
+      return { state: DisplayState.UNMAPPED, color: Color.PURPLE };
     }
 
-    // Fetch watch category and watchlist silo in parallel
-    const [category, watchlistTickers] = await Promise.all([
+    const [category, siloTickers] = await Promise.all([
       this.categoryManager.getTickerCategory(ticker),
       this.getWatchlistSilo(),
     ]);
-    const watchCat = category.watch;
 
-    // Priority 2: Watch category + in watchlist silo
-    if (watchCat && watchlistTickers.has(ticker)) {
-      return { state: DisplayState.WATCH_CATEGORY, color: watchCat.color };
+    // Priority 2: Watch category + in silo
+    if (category.watch && siloTickers.has(ticker)) {
+      return { state: DisplayState.WATCH_CATEGORY, color: category.watch.color };
     }
 
-    // Priority 3: Recent
-    const isRecent = await this.recentManager.isRecent(ticker, Constants.RECENT_CUTOFF_MS);
-    if (isRecent) {
+    // Priority 3: Silo populated but ticker absent → untracked
+    if (siloTickers.size > 0 && !siloTickers.has(ticker)) {
+      return { state: DisplayState.UNMAPPED, color: Color.PURPLE };
+    }
+
+    // Priority 4: Recent
+    if (await this.recentManager.isRecent(ticker, Constants.RECENT_CUTOFF_MS)) {
       return { state: DisplayState.RECENT, color: 'gold' };
     }
 
-    // Priority 4: Default
+    // Priority 5: Default
     return { state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT };
   }
 
   /**
    * Read the shared watchlist ticker set from GM storage.
-   * Written by TradingViewWatchlistManager.refresh() on the TradingView page.
-   * Falls back to empty set when no snapshot exists (first run, or no watchlist data yet).
+   * Returns empty set when silo has not been loaded yet, so callers
+   * can distinguish "no data" (size=0) from "loaded but ticker absent".
    */
   private async getWatchlistSilo(): Promise<Set<string>> {
     const raw = await GM.getValue(Constants.STORAGE.SILOS.WATCHLIST);

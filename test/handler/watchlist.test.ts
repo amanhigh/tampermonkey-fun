@@ -285,7 +285,7 @@ describe('WatchListHandler', () => {
       expect(mockWatchlistManager.refreshSummary).toHaveBeenCalled();
     });
 
-    it('should evict category cache, repaint ticker, and refresh summary on TICKER_CATEGORY_CHANGED', async () => {
+    it('should repaint ticker and refresh summary on TICKER_CATEGORY_CHANGED (no cache eviction by handler)', async () => {
       let categoryChangedCallback: Function | undefined;
       const mockSubscriber: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn(),
@@ -302,7 +302,8 @@ describe('WatchListHandler', () => {
         tickers: ['TV:INFY'],
       });
 
-      expect(mockCategoryManager.evictTicker).toHaveBeenCalledWith('TV:INFY');
+      // Handler no longer evicts cache — CategoryManager handles that internally
+      expect(mockCategoryManager.evictTicker).not.toHaveBeenCalled();
       expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['TV:INFY']);
       expect(mockWatchlistManager.refreshSummary).toHaveBeenCalled();
     });
