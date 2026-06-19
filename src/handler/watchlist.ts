@@ -151,6 +151,6 @@ export class WatchListHandler implements IWatchListHandler {
   /** @inheritdoc */
   public toggleReadyForSelectedTickers(): void {
     const ticker = this.domManager.getTicker();
-    void this.categoryManager.toggleReadyState([ticker]);
+    void this.categoryManager.toggleReadyState(ticker);
   }
 }

@@ -214,7 +214,7 @@ describe('WatchListHandler', () => {
       // toggleReadyState is fire-and-forget, flush microtasks
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(mockCategoryManager.toggleReadyState).toHaveBeenCalledWith(['SYK']);
+      expect(mockCategoryManager.toggleReadyState).toHaveBeenCalledWith('SYK');
     });
 
     it('should use getTicker (current chart ticker) as the source', () => {
@@ -279,6 +279,28 @@ describe('WatchListHandler', () => {
 
       handler.registerEvents(mockSubscriber);
       await timeframeCallback!({ type: DomainEventType.TICKER_TIMEFRAMES_CHANGED, ticker: 'TV:INFY' });
+
+      expect(mockCategoryManager.evictTicker).toHaveBeenCalledWith('TV:INFY');
+      expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['TV:INFY']);
+      expect(mockWatchlistManager.refreshSummary).toHaveBeenCalled();
+    });
+
+    it('should evict category cache, repaint ticker, and refresh summary on TICKER_CATEGORY_CHANGED', async () => {
+      let categoryChangedCallback: Function | undefined;
+      const mockSubscriber: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn((types, cb) => {
+          if (types.includes(DomainEventType.TICKER_CATEGORY_CHANGED)) {
+            categoryChangedCallback = cb;
+          }
+        }),
+      };
+
+      handler.registerEvents(mockSubscriber);
+      await categoryChangedCallback!({
+        type: DomainEventType.TICKER_CATEGORY_CHANGED,
+        tickers: ['TV:INFY'],
+      });
 
       expect(mockCategoryManager.evictTicker).toHaveBeenCalledWith('TV:INFY');
       expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['TV:INFY']);

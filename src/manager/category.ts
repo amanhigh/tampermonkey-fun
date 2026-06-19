@@ -61,13 +61,22 @@ export interface ICategoryManager {
    */
   evictTicker(ticker: string): void;
   /**
-   * Toggle READY state for the given tickers.
-   * - If a ticker is currently READY, clear it to WATCHED.
-   * - If a ticker is NOT currently READY, mark it as READY.
-   * Publishes TICKER_CATEGORY_CHANGED after all updates.
-   * @param tickers Ticker symbols to toggle
+   * Toggle READY state for a single ticker.
+   * - If the ticker is currently READY, clear it to WATCHED.
+   * - If the ticker is NOT currently READY, mark it as READY.
+   * Publishes TICKER_CATEGORY_CHANGED after update.
+   * @param ticker Ticker symbol to toggle
    */
-  toggleReadyState(tickers: string[]): Promise<void>;
+  toggleReadyState(ticker: string): Promise<void>;
+
+  /**
+   * Clear READY state for tickers that are currently READY.
+   * Non-READY tickers are silently skipped.
+   * Publishes TICKER_CATEGORY_CHANGED only for tickers that were
+   * actually cleared.
+   * @param tickers Ticker symbols to clear READY for
+   */
+  clearReadyState(tickers: string[]): Promise<void>;
 }
 
 // ── Implementation ──
@@ -167,26 +176,44 @@ export class CategoryManager implements ICategoryManager {
   }
 
   /** @inheritdoc */
-  async toggleReadyState(tickers: string[]): Promise<void> {
+  async toggleReadyState(ticker: string): Promise<void> {
+    const cat = await this.getTickerCategory(ticker);
+    if (cat.watch?.id === WatchCategoryId.READY) {
+      await this.syncBackend(ticker, { state: TickerState.WATCHED });
+      Notifier.success(`⏹ Cleared ready ${ticker}`);
+    } else {
+      await this.syncBackend(ticker, { state: TickerState.READY });
+      Notifier.red(`⏺ Marked ready ${ticker}`);
+    }
+
+    await this.publisher.publish({
+      type: DomainEventType.TICKER_CATEGORY_CHANGED,
+      tickers: [ticker],
+    });
+  }
+
+  /** @inheritdoc */
+  async clearReadyState(tickers: string[]): Promise<void> {
     if (tickers.length === 0) {
       return;
     }
 
+    const cleared: string[] = [];
     for (const ticker of tickers) {
       const cat = await this.getTickerCategory(ticker);
       if (cat.watch?.id === WatchCategoryId.READY) {
         await this.syncBackend(ticker, { state: TickerState.WATCHED });
         Notifier.success(`⏹ Cleared ready ${ticker}`);
-      } else {
-        await this.syncBackend(ticker, { state: TickerState.READY });
-        Notifier.red(`⏺ Marked ready ${ticker}`);
+        cleared.push(ticker);
       }
     }
 
-    await this.publisher.publish({
-      type: DomainEventType.TICKER_CATEGORY_CHANGED,
-      tickers,
-    });
+    if (cleared.length > 0) {
+      await this.publisher.publish({
+        type: DomainEventType.TICKER_CATEGORY_CHANGED,
+        tickers: cleared,
+      });
+    }
   }
 
   // ── Cache fetch method ──

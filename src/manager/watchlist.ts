@@ -106,7 +106,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
       const addedTickers = [...currentTickers].filter((t) => !this.prevWatchlistTickers!.has(t));
       changedTickers = [...removedTickers, ...addedTickers];
       if (removedTickers.length > 0) {
-        await this.categoryManager.toggleReadyState(removedTickers);
+        await this.categoryManager.clearReadyState(removedTickers);
       }
     }
     this.prevWatchlistTickers = currentTickers;
@@ -170,7 +170,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     this.prevWatchlistTickers = currentTickers;
 
     if (removedTickers.length > 0) {
-      await this.categoryManager.toggleReadyState(removedTickers);
+      await this.categoryManager.clearReadyState(removedTickers);
     }
 
     // paintTickers gracefully handles missing elements (removed rows)
