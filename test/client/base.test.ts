@@ -40,29 +40,23 @@ describe('BaseClient', () => {
   });
 
   describe('ApiError', () => {
-    it('should extend Error and expose status/statusText/responseText', () => {
-      const err = new ApiError(404, 'Not Found', 'Ticker not found');
+    it('should extend Error and expose status and message', () => {
+      const err = new ApiError(404, 'Ticker not found');
 
       expect(err).toBeInstanceOf(Error);
       expect(err.name).toBe('ApiError');
       expect(err.status).toBe(404);
-      expect(err.statusText).toBe('Not Found');
-      expect(err.responseText).toBe('Ticker not found');
-      expect(err.message).toBe('404 Not Found: Ticker not found');
+      expect(err.message).toBe('Ticker not found');
     });
   });
 
   describe('isNotFoundError', () => {
     it('should return true for ApiError with 404 status', () => {
-      expect(ApiError.isNotFoundError(new ApiError(404, 'Not Found', ''))).toBe(true);
+      expect(ApiError.isNotFoundError(new ApiError(404, ''))).toBe(true);
     });
 
     it('should return false for ApiError with non-404 status', () => {
-      expect(ApiError.isNotFoundError(new ApiError(500, 'Server Error', ''))).toBe(false);
-    });
-
-    it('should return true for wrapped Error with 404 in message', () => {
-      expect(ApiError.isNotFoundError(new Error('404 Not Found: Ticker not found'))).toBe(true);
+      expect(ApiError.isNotFoundError(new ApiError(500, ''))).toBe(false);
     });
 
     it('should return false for plain Error with unrelated message', () => {
@@ -74,10 +68,21 @@ describe('BaseClient', () => {
       expect(ApiError.isNotFoundError(undefined)).toBe(false);
     });
 
-    it('should unwrap through apiError property', () => {
-      const apiErr = new ApiError(404, 'Not Found', '');
-      const wrapper = new Error('Failed to get ticker: 404 Not Found: ');
+    it('should return false for plain Error containing 404 but not an ApiError', () => {
+      expect(ApiError.isNotFoundError(new Error('404 Not Found: Ticker not found'))).toBe(false);
+    });
+
+    it('should return false for wrappers using custom apiError property', () => {
+      const apiErr = new ApiError(404, '');
+      const wrapper = new Error('Failed to get ticker');
       (wrapper as any).apiError = apiErr;
+      expect(ApiError.isNotFoundError(wrapper)).toBe(false);
+    });
+
+    it('should unwrap through cause chain via wrapClientError', () => {
+      const { wrapClientError } = require('../../src/client/base');
+      const apiErr = new ApiError(404, 'Not found');
+      const wrapper = wrapClientError(apiErr, 'Failed to get ticker');
       expect(ApiError.isNotFoundError(wrapper)).toBe(true);
     });
   });
@@ -233,7 +238,7 @@ describe('BaseClient', () => {
         options.onload(mockResponse);
       });
 
-      await expect((baseClient as any).makeRequest('/error')).rejects.toThrow('400 Bad Request: Invalid parameters');
+      await expect((baseClient as any).makeRequest('/error')).rejects.toThrow('Invalid parameters');
     });
 
     it('should reject with error for 404 status code', async () => {
@@ -247,7 +252,7 @@ describe('BaseClient', () => {
         options.onload(mockResponse);
       });
 
-      await expect((baseClient as any).makeRequest('/notfound')).rejects.toThrow('404 Not Found: Resource not found');
+      await expect((baseClient as any).makeRequest('/notfound')).rejects.toThrow('Resource not found');
     });
 
     it('should reject with error for 500 status code', async () => {
@@ -261,9 +266,7 @@ describe('BaseClient', () => {
         options.onload(mockResponse);
       });
 
-      await expect((baseClient as any).makeRequest('/server-error')).rejects.toThrow(
-        '500 Internal Server Error: Server error occurred'
-      );
+      await expect((baseClient as any).makeRequest('/server-error')).rejects.toThrow('Server error occurred');
     });
 
     it('should handle network errors via onerror callback', async () => {
@@ -316,7 +319,7 @@ describe('BaseClient', () => {
         options.onload(mockResponse199);
       });
 
-      await expect((baseClient as any).makeRequest('/boundary-199')).rejects.toThrow('199 Information: Info response');
+      await expect((baseClient as any).makeRequest('/boundary-199')).rejects.toThrow('Info response');
 
       jest.clearAllMocks();
 
@@ -331,7 +334,7 @@ describe('BaseClient', () => {
         options.onload(mockResponse400);
       });
 
-      await expect((baseClient as any).makeRequest('/boundary-400')).rejects.toThrow('400 Bad Request: Client error');
+      await expect((baseClient as any).makeRequest('/boundary-400')).rejects.toThrow('Client error');
     });
 
     it('should handle empty error response', async () => {
@@ -345,7 +348,7 @@ describe('BaseClient', () => {
         options.onload(mockResponse);
       });
 
-      await expect((baseClient as any).makeRequest('/empty-error')).rejects.toThrow('404 Not Found: ');
+      await expect((baseClient as any).makeRequest('/empty-error')).rejects.toThrow('Not Found');
     });
 
     it('should handle undefined statusText in network error', async () => {
