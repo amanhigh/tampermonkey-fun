@@ -1,4 +1,4 @@
-import { BaseClient, IBaseClient } from './base';
+import { BaseClient, IBaseClient, wrapClientError } from './base';
 import {
   CreateTickerRequest,
   TickerLastOpenedUpdate,
@@ -87,7 +87,7 @@ export class TickerClient extends BaseClient implements ITickerClient {
       });
       return new Ticker(response.data);
     } catch (error) {
-      throw new Error(`Failed to create ticker: ${(error as Error).message}`);
+      throw wrapClientError(error, 'Failed to create ticker');
     }
   }
 
@@ -97,7 +97,7 @@ export class TickerClient extends BaseClient implements ITickerClient {
       const response = await this.makeRequest<KohanEnvelope<Ticker>>(`/tickers/${encodeURIComponent(ticker)}`);
       return new Ticker(response.data);
     } catch (error) {
-      throw new Error(`Failed to get ticker: ${(error as Error).message}`);
+      throw wrapClientError(error, 'Failed to get ticker');
     }
   }
 
@@ -115,7 +115,7 @@ export class TickerClient extends BaseClient implements ITickerClient {
       });
       return new Ticker(response.data);
     } catch (error) {
-      throw new Error(`Failed to update ticker: ${(error as Error).message}`);
+      throw wrapClientError(error, 'Failed to update ticker');
     }
   }
 
@@ -129,7 +129,7 @@ export class TickerClient extends BaseClient implements ITickerClient {
       });
       return new Ticker(response.data);
     } catch (error) {
-      throw new Error(`Failed to patch ticker last opened: ${(error as Error).message}`);
+      throw wrapClientError(error, 'Failed to patch ticker last opened');
     }
   }
 
@@ -140,7 +140,7 @@ export class TickerClient extends BaseClient implements ITickerClient {
         method: 'DELETE',
       });
     } catch (error) {
-      throw new Error(`Failed to delete ticker: ${(error as Error).message}`);
+      throw wrapClientError(error, 'Failed to delete ticker');
     }
   }
 
@@ -164,7 +164,7 @@ export class TickerClient extends BaseClient implements ITickerClient {
 
       return all;
     } catch (error) {
-      throw new Error(`Failed to list all tickers: ${(error as Error).message}`);
+      throw wrapClientError(error, 'Failed to list all tickers');
     }
   }
 

@@ -140,10 +140,9 @@ export class OnLoadHandler implements IOnLoadHandler {
         if (!targetElement) {
           throw new Error('Unable to setup watchlist observer');
         }
-        // Watch for watchlist DOM changes — pass mutation records
-        // so handler can determine targeted vs full refresh.
-        this.observeUtil.nodeObserver(targetElement, (mutations) => {
-          this.watchListHandler.onWatchListChange(mutations);
+        // Watch for watchlist DOM changes and refresh through snapshot diff
+        this.observeUtil.nodeObserver(targetElement, () => {
+          this.watchListHandler.onWatchListChange();
         });
 
         // Proceed to next step in serial chain

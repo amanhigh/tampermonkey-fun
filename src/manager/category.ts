@@ -128,13 +128,7 @@ export class CategoryManager implements ICategoryManager {
 
     await Promise.all(tickers.map(async (ticker) => this.syncBackend(ticker, update)));
 
-    // Publish event so alert-feed consumers repaint affected tickers
-    if (tickers.length > 0) {
-      await this.publisher.publish({
-        type: DomainEventType.TICKER_CATEGORY_CHANGED,
-        tickers,
-      });
-    }
+    await this.publishCategoryChanged(tickers);
   }
 
   /** @inheritdoc */
@@ -143,13 +137,7 @@ export class CategoryManager implements ICategoryManager {
 
     await Promise.all(tickers.map(async (ticker) => this.syncBackend(ticker, cat.update)));
 
-    // Publish event so alert-feed consumers repaint affected tickers
-    if (tickers.length > 0) {
-      await this.publisher.publish({
-        type: DomainEventType.TICKER_CATEGORY_CHANGED,
-        tickers,
-      });
-    }
+    await this.publishCategoryChanged(tickers);
   }
 
   /** @inheritdoc */
@@ -186,10 +174,7 @@ export class CategoryManager implements ICategoryManager {
       Notifier.red(`⏺ Marked ready ${ticker}`);
     }
 
-    await this.publisher.publish({
-      type: DomainEventType.TICKER_CATEGORY_CHANGED,
-      tickers: [ticker],
-    });
+    await this.publishCategoryChanged([ticker]);
   }
 
   /** @inheritdoc */
@@ -208,12 +193,23 @@ export class CategoryManager implements ICategoryManager {
       }
     }
 
-    if (cleared.length > 0) {
-      await this.publisher.publish({
-        type: DomainEventType.TICKER_CATEGORY_CHANGED,
-        tickers: cleared,
-      });
+    await this.publishCategoryChanged(cleared);
+  }
+
+  // ── Publish helper ──
+
+  /**
+   * Publish TICKER_CATEGORY_CHANGED for the given tickers.
+   * No-ops when the ticker array is empty.
+   */
+  private async publishCategoryChanged(tickers: string[]): Promise<void> {
+    if (tickers.length === 0) {
+      return;
     }
+    await this.publisher.publish({
+      type: DomainEventType.TICKER_CATEGORY_CHANGED,
+      tickers,
+    });
   }
 
   // ── Cache fetch method ──

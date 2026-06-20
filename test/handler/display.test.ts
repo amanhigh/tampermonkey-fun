@@ -161,6 +161,13 @@ describe('DisplayHandler', () => {
       expect(html).toContain('Untracked · BHEL');
       expect(html).toContain('🔔0');
     });
+
+    it('should rethrow non-404 errors instead of marking untracked', async () => {
+      mockDomManager.getTicker.mockReturnValue('BHEL');
+      mockAlertTickerManager.getAlertTickersForTicker.mockRejectedValue(new Error('500 Internal Server Error'));
+
+      await expect(handler.display()).rejects.toThrow('500 Internal Server Error');
+    });
   });
 
   describe('expanded display toggle', () => {

@@ -5,6 +5,7 @@ import { Notifier } from '../util/notify';
 import { ITickerManager } from './ticker';
 import { IDomManager } from './dom';
 import { IPublisher } from './event_bus';
+import { isApiNotFoundError } from '../models/api_error';
 
 // ── Catalog & Lookups ──
 // Ordered catalog of all timeframe metadata with pre-built lookup maps.
@@ -98,7 +99,7 @@ export class TimeFrameManager implements ITimeFrameManager {
       return active.map((tf) => tf.code);
     } catch (error) {
       // Untracked ticker (404) — silently fall back to defaults, no warning
-      if ((error as Error).message.includes('Ticker not found')) {
+      if (isApiNotFoundError(error)) {
         return [...TMN_SEQUENCE];
       }
       Notifier.warn(`getActiveTimeframes: ${(error as Error).message}. Falling back to default timeframes.`);
@@ -120,7 +121,7 @@ export class TimeFrameManager implements ITimeFrameManager {
     try {
       await this.tickerManager.updateTicker(tvTicker, { timeframes: sorted });
     } catch (error) {
-      if ((error as Error).message.includes('Ticker not found')) {
+      if (isApiNotFoundError(error)) {
         return sorted;
       }
       throw error;

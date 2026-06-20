@@ -148,7 +148,7 @@ describe('ObserveUtil', () => {
       expect(result).toBe(mockMutationObserver);
     });
 
-    it('should call callback with MutationRecord[] for childList mutations with added nodes', () => {
+    it('should call callback for childList mutations with added nodes', () => {
       observeUtil.nodeObserver(mockTarget, mockCallback);
 
       if (mockMutationCallback) {
@@ -161,12 +161,11 @@ describe('ObserveUtil', () => {
         ];
 
         mockMutationCallback(mockMutations);
-        // Callback receives the array of actionable mutations
-        expect(mockCallback).toHaveBeenCalledWith(mockMutations);
+        expect(mockCallback).toHaveBeenCalled();
       }
     });
 
-    it('should call callback with MutationRecord[] for childList mutations with removed nodes', () => {
+    it('should call callback for childList mutations with removed nodes', () => {
       observeUtil.nodeObserver(mockTarget, mockCallback);
 
       if (mockMutationCallback) {
@@ -179,7 +178,7 @@ describe('ObserveUtil', () => {
         ];
 
         mockMutationCallback(mockMutations);
-        expect(mockCallback).toHaveBeenCalledWith(mockMutations);
+        expect(mockCallback).toHaveBeenCalled();
       }
     });
 
@@ -212,7 +211,7 @@ describe('ObserveUtil', () => {
       }
     });
 
-    it('should call callback once with all actionable mutations (not per-mutation)', () => {
+    it('should call callback once for multiple actionable mutations', () => {
       observeUtil.nodeObserver(mockTarget, mockCallback);
 
       if (mockMutationCallback) {
@@ -223,12 +222,8 @@ describe('ObserveUtil', () => {
         ];
 
         mockMutationCallback(mockMutations);
-        // Called once with the filtered array (non-childList mutation excluded)
+        // Called once (non-childList mutation filtered out)
         expect(mockCallback).toHaveBeenCalledTimes(1);
-        expect(mockCallback).toHaveBeenCalledWith([
-          { type: 'childList', addedNodes: [{}], removedNodes: [] },
-          { type: 'childList', addedNodes: [], removedNodes: [{}] },
-        ]);
       }
     });
 

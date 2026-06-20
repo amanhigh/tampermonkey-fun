@@ -8,35 +8,6 @@ import { WatchCategoryId } from '../../src/models/watch';
 import { ISubscriber } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
 
-// Mock jQuery for extractChangedTickers (uses $(node).find / $(node).is)
-const mockJQueryElement: any = {
-  find: jest.fn().mockReturnValue({ each: jest.fn() }),
-  is: jest.fn().mockReturnValue(false),
-  length: 0,
-};
-const mockJQuery = jest.fn().mockReturnValue(mockJQueryElement);
-(global as any).$ = mockJQuery;
-
-// Polyfill minimal DOM globals needed for extractChangedTickers (Node doesn't have these)
-class ElementStub {}
-const globalAny = globalThis as Record<string, unknown>;
-globalAny.Element = ElementStub;
-globalAny.document = {
-  createElement: () => new ElementStub(),
-  createTextNode: () => ({}),
-  getElementById: () => null,
-} as unknown as Document;
-
-/** Create a fake MutationRecord with the given added/removed nodes. */
-function mockMutation(nodes: Node[], removed: Node[]): MutationRecord {
-  // MutationRecord.addedNodes/removedNodes are NodeList — cast from array
-  return {
-    type: 'childList',
-    addedNodes: nodes as unknown as NodeList,
-    removedNodes: removed as unknown as NodeList,
-  } as unknown as MutationRecord;
-}
-
 describe('WatchListHandler', () => {
   let handler: IWatchListHandler;
   let mockWatchlistManager: jest.Mocked<ITradingViewWatchlistManager>;
@@ -47,15 +18,11 @@ describe('WatchListHandler', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    // Reset jQuery mock for each test
-    mockJQueryElement.find = jest.fn().mockReturnValue({ each: jest.fn() });
-    mockJQueryElement.is = jest.fn().mockReturnValue(false);
-    mockJQuery.mockReturnValue(mockJQueryElement);
 
     mockWatchlistManager = {
       refresh: jest.fn().mockResolvedValue(undefined),
       refreshSummary: jest.fn().mockResolvedValue(undefined),
-      refreshTickers: jest.fn().mockResolvedValue(undefined),
+      refreshChangedTickers: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<ITradingViewWatchlistManager>;
 
     mockPaintManager = {
@@ -99,11 +66,11 @@ describe('WatchListHandler', () => {
   });
 
   describe('onWatchListChange', () => {
-    it('should delegate to refresh for full refresh when no mutations are supplied', () => {
+    it('should delegate debounced change to refreshChangedTickers', () => {
       handler.onWatchListChange();
 
-      expect(mockWatchlistManager.refresh).toHaveBeenCalled();
-      expect(mockWatchlistManager.refreshTickers).not.toHaveBeenCalled();
+      expect(mockWatchlistManager.refreshChangedTickers).toHaveBeenCalled();
+      expect(mockWatchlistManager.refresh).not.toHaveBeenCalled();
     });
 
     it('should no longer call paint directly', () => {
@@ -123,62 +90,6 @@ describe('WatchListHandler', () => {
 
       // Alert feed updates are now handled via WATCHLIST_CHANGED event
       expect(mockDomManager.getTicker).not.toHaveBeenCalled();
-    });
-
-    it('should error when extractChangedTickers returns empty tickers', () => {
-      // jQuery.find.each returns no tickers (never calls the each callback)
-      mockJQueryElement.find.mockReturnValue({ each: jest.fn((cb) => cb(0, { textContent: '' })) });
-
-      handler.onWatchListChange([mockMutation([document.createElement('div')], [])]);
-
-      expect(mockWatchlistManager.refresh).toHaveBeenCalled();
-      expect(mockWatchlistManager.refreshTickers).not.toHaveBeenCalled();
-    });
-
-    it('should route to targeted refreshTickers when exactly one ticker is added', () => {
-      // Simulate a single added ticker row with "AMGN" in the symbol text
-      const eachMock = jest.fn((cb: (i: number, el: Element) => void) => {
-        cb(0, { textContent: 'AMGN' } as Element);
-      });
-      mockJQueryElement.find.mockReturnValue({ each: eachMock });
-
-      handler.onWatchListChange([mockMutation([document.createElement('div')], [])]);
-
-      expect(mockWatchlistManager.refreshTickers).toHaveBeenCalledWith(['AMGN']);
-      expect(mockWatchlistManager.refresh).not.toHaveBeenCalled();
-    });
-
-    it('should route to targeted refreshTickers when exactly one ticker is removed', () => {
-      const eachMock = jest.fn((cb: (i: number, el: Element) => void) => {
-        cb(0, { textContent: 'GOOGL' } as Element);
-      });
-      mockJQueryElement.find.mockReturnValue({ each: eachMock });
-
-      handler.onWatchListChange([mockMutation([], [document.createElement('div')])]);
-
-      expect(mockWatchlistManager.refreshTickers).toHaveBeenCalledWith(['GOOGL']);
-      expect(mockWatchlistManager.refresh).not.toHaveBeenCalled();
-    });
-
-    it('should fall back to full refresh for multiple extracted tickers', () => {
-      // Simulate both an add and remove in the same batch
-      const eachMock = jest.fn((cb: (i: number, el: Element) => void) => {
-        cb(0, { textContent: 'AMGN' } as Element);
-      });
-      mockJQueryElement.find.mockReturnValue({ each: eachMock });
-      // Two mutation records both yield "AMGN" (de-duplicated to 1), but...
-      // Actually two separate mutations with same ticker still yields 1 unique ticker.
-      // Let's simulate two different tickers instead.
-      const eachMock2 = jest.fn((cb: (i: number, el: Element) => void) => {
-        cb(0, { textContent: 'AMGN' } as Element);
-        cb(1, { textContent: 'GOOGL' } as Element);
-      });
-      mockJQueryElement.find.mockReturnValue({ each: eachMock2 });
-
-      handler.onWatchListChange([mockMutation([document.createElement('div')], [])]);
-
-      expect(mockWatchlistManager.refresh).toHaveBeenCalled();
-      expect(mockWatchlistManager.refreshTickers).not.toHaveBeenCalled();
     });
   });
 

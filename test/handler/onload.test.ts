@@ -172,19 +172,18 @@ describe('OnLoadHandler', () => {
       });
     });
 
-    it('should forward watchlist MutationRecord[] to WatchListHandler', () => {
+    it('should call watchListHandler.onWatchListChange on watchlist DOM mutation', () => {
       onLoadHandler.init();
 
-      // Capture the second argument (callback) from the nodeObserver call
+      // Capture callback registered with nodeObserver
       const nodeObserverCalls = mockObserveUtil.nodeObserver.mock.calls;
       expect(nodeObserverCalls.length).toBeGreaterThanOrEqual(1);
-      const nodeCallback = nodeObserverCalls[0][1] as (mutations: MutationRecord[]) => void;
+      const nodeCallback = nodeObserverCalls[0][1] as () => void;
 
-      // Simulate watchlist DOM mutation
-      const mockMutations = [{ type: 'childList', addedNodes: [], removedNodes: [] }] as unknown as MutationRecord[];
-      nodeCallback(mockMutations);
+      // Simulate watchlist DOM mutation via callback
+      nodeCallback();
 
-      expect(mockWatchListHandler.onWatchListChange).toHaveBeenCalledWith(mockMutations);
+      expect(mockWatchListHandler.onWatchListChange).toHaveBeenCalled();
     });
   });
 

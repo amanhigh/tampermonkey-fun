@@ -4,6 +4,7 @@ import { Constants } from '../models/constant';
 import { AlertTicker } from '../models/alert_ticker';
 import { IDomainEventConsumer, ISubscriber } from '../manager/event_bus';
 import { DomainEventType } from '../models/domain_event';
+import { isApiNotFoundError } from '../models/api_error';
 
 // ── CSS class names (defined in _display.less) ──
 
@@ -80,10 +81,14 @@ export class DisplayHandler implements IDisplayHandler {
     let isUntracked = false;
     try {
       alertTickers = await this.alertTickerManager.getAlertTickersForTicker(tvTicker);
-    } catch {
+    } catch (error) {
       // Backend 404 "Ticker not found" — expected for untracked tickers
       // Treat as empty alert-ticker list with untracked flag
-      isUntracked = true;
+      if (isApiNotFoundError(error)) {
+        isUntracked = true;
+      } else {
+        throw error;
+      }
     }
 
     // Store on DOM element for toggle re-render (avoids handler-level cache)

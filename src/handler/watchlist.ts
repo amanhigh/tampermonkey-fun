@@ -11,19 +11,17 @@ import { WatchCategoryId } from '../models/watch';
 import { IDomManager } from '../manager/dom';
 import { IDomainEventConsumer, ISubscriber } from '../manager/event_bus';
 import { DomainEventType } from '../models/domain_event';
-import { Constants } from '../models/constant';
 
 /**
  * Handles watchlist-related events and UI updates
  */
 export interface IWatchListHandler extends IDomainEventConsumer {
   /**
-   * Handles watchlist change events.
-   * When MutationRecord[] is provided, attempts a targeted refresh
-   * for single-row DOM changes, falling back to full refresh otherwise.
-   * @param mutations - Optional mutation records from the DOM observer
+   * Handles watchlist change events triggered by DOM observation.
+   * Delegates to the watchlist manager which computes the actual diff
+   * from its previous snapshot for targeted vs full refresh.
    */
-  onWatchListChange(mutations?: MutationRecord[]): void;
+  onWatchListChange(): void;
 
   /**
    * Records the selected ticker for a given watch category.
@@ -81,55 +79,10 @@ export class WatchListHandler implements IWatchListHandler {
   }
 
   /** @inheritdoc */
-  public onWatchListChange(mutations?: MutationRecord[]): void {
-    // Attempt targeted refresh when we have exactly one confident ticker change
-    if (mutations && mutations.length > 0) {
-      const tickers = this.extractChangedTickers(mutations);
-      if (tickers.length === 1) {
-        void this.watchlistManager.refreshTickers(tickers);
-        return;
-      }
-    }
-    // Fall back to full refresh for no mutations, ambiguous, or bulk changes
+  public onWatchListChange(): void {
     this.syncUtil.waitOn('watchListChangeEvent', 20, () => {
-      void this.watchlistManager.refresh();
+      void this.watchlistManager.refreshChangedTickers();
     });
-  }
-
-  /**
-   * Extract unique ticker symbols from a batch of mutation records
-   * by looking for elements matching the watchlist symbol selector
-   * in both added and removed nodes.
-   */
-  private extractChangedTickers(mutations: MutationRecord[]): string[] {
-    const tickers = new Set<string>();
-
-    for (const mutation of mutations) {
-      const nodes = [...mutation.addedNodes, ...mutation.removedNodes];
-      for (const node of nodes) {
-        if (!(node instanceof Element)) {
-          continue;
-        }
-        // Search for symbol elements within the added/removed subtree
-        $(node)
-          .find(Constants.DOM.WATCHLIST.SYMBOL)
-          .each((_: number, el: Element) => {
-            const text = (el.textContent || '').trim();
-            if (text.length > 0) {
-              tickers.add(text);
-            }
-          });
-        // If the node itself is a symbol element
-        if ($(node).is(Constants.DOM.WATCHLIST.SYMBOL)) {
-          const text = (node.textContent || '').trim();
-          if (text.length > 0) {
-            tickers.add(text);
-          }
-        }
-      }
-    }
-
-    return [...tickers];
   }
 
   /**
