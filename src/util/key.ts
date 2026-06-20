@@ -1,5 +1,11 @@
 import { ISyncUtil } from './sync';
 
+/** SyncUtil debounce IDs (local — not GM storage events). */
+const DOM_EVENTS = {
+  FAST_DOUBLE_KEY: 'fastDoubleKeyInput',
+  DOUBLE_KEY: 'doubleKeyInput',
+} as const;
+
 export interface IDoubleKeyState {
   init: boolean;
   begin: boolean;
@@ -115,11 +121,11 @@ export class KeyUtil implements IKeyUtil {
       this._doubleKeyState.init = true;
       this._doubleKeyState.begin = this._doubleKeyState.end = false;
       // W1: Enter Begin (Too Fast Keys Filtered)
-      this._syncUtil.waitOn('fastDoubleKeyInput', 50, () => {
+      this._syncUtil.waitOn(DOM_EVENTS.FAST_DOUBLE_KEY, 50, () => {
         this._doubleKeyState.begin = true;
       });
       // W4: Reached End Reset Process
-      this._syncUtil.waitOn('doubleKeyInput', 200, () => {
+      this._syncUtil.waitOn(DOM_EVENTS.DOUBLE_KEY, 200, () => {
         this._doubleKeyState.end = true;
         this._doubleKeyState.init = false;
       });

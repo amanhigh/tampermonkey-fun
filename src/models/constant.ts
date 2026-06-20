@@ -242,8 +242,6 @@ Support:
   DOM_EVENTS: {
     WATCHLIST_CHANGE: 'watchListChangeEvent',
     TICKER_CHANGE: 'tickerChange',
-    FAST_DOUBLE_KEY: 'fastDoubleKeyInput',
-    DOUBLE_KEY: 'doubleKeyInput',
   },
 
   MISC: {
