@@ -3,6 +3,7 @@ import { IRecentManager } from '../manager/recent';
 import { ISyncUtil } from '../util/sync';
 import { IDomainEventConsumer, ISubscriber } from '../manager/event_bus';
 import { DomainEventType } from '../models/domain_event';
+import { Constants } from '../models/constant';
 
 export interface ITickerChangeHandler extends IDomainEventConsumer {
   onTickerChange(): void;
@@ -33,7 +34,7 @@ export class TickerChangeHandler implements ITickerChangeHandler {
   }
 
   public onTickerChange(): void {
-    this.syncUtil.waitOn('tickerChange', 150, () => {
+    this.syncUtil.waitOn(Constants.DOM_EVENTS.TICKER_CHANGE, 150, () => {
       const tvTicker = this.domManager.getTicker();
       this.recentManager.markRecent(tvTicker);
     });

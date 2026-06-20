@@ -5,6 +5,7 @@ import { Notifier } from '../util/notify';
 import { ITickerManager } from './ticker';
 import { IDomManager } from './dom';
 import { IPublisher } from './event_bus';
+import { ApiError } from '../models/api_error';
 
 // ── Catalog & Lookups ──
 // Ordered catalog of all timeframe metadata with pre-built lookup maps.
@@ -97,6 +98,10 @@ export class TimeFrameManager implements ITimeFrameManager {
       const active = toSupportedTimeframes(record.timeframes as TickerTimeframe[]);
       return active.map((tf) => tf.code);
     } catch (error) {
+      // Untracked ticker (404) — silently fall back to defaults, no warning
+      if (ApiError.isNotFoundError(error)) {
+        return [...TMN_SEQUENCE];
+      }
       Notifier.warn(`getActiveTimeframes: ${(error as Error).message}. Falling back to default timeframes.`);
       return [...TMN_SEQUENCE];
     }
@@ -105,13 +110,22 @@ export class TimeFrameManager implements ITimeFrameManager {
   /** @inheritdoc */
   async toggleTimeframe(code: TickerTimeframe): Promise<TickerTimeframe[]> {
     const tvTicker = this.domManager.getTicker();
-    const record = await this.tickerManager.getTicker(tvTicker);
-    const current = record.timeframes as TickerTimeframe[];
+
+    // Get current timeframes via shared method (handles untracked/404 silently)
+    const current = [...(await this.getActiveTimeframes())];
     const isActive = current.includes(code);
     const updated = isActive ? current.filter((c) => c !== code) : [...current, code];
-    const active = toSupportedTimeframes(updated);
-    const sorted = active.map((tf) => tf.code);
-    await this.tickerManager.updateTicker(tvTicker, { timeframes: sorted });
+    const sorted = toSupportedTimeframes(updated).map((tf) => tf.code);
+
+    // Persist to backend; silently skip update for untracked tickers
+    try {
+      await this.tickerManager.updateTicker(tvTicker, { timeframes: sorted });
+    } catch (error) {
+      if (ApiError.isNotFoundError(error)) {
+        return sorted;
+      }
+      throw error;
+    }
 
     void this.publisher.publish({
       type: DomainEventType.TICKER_TIMEFRAMES_CHANGED,

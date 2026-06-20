@@ -238,6 +238,12 @@ Support:
     },
   },
 
+  // SyncUtil debounce coordination IDs (not GM storage events)
+  DOM_EVENTS: {
+    WATCHLIST_CHANGE: 'watchListChangeEvent',
+    TICKER_CHANGE: 'tickerChange',
+  },
+
   MISC: {
     RESET_FEED: 'Reset',
   },
@@ -245,7 +251,7 @@ Support:
   // External service endpoints
   KOHAN: {
     PORTS: KOHAN_PORTS,
-    BASE_URL: `http://localhost:${KOHAN_PORTS.DEV}/v1/api`,
+    BASE_URL: `http://localhost:${KOHAN_PORTS.PROD}/v1/api`,
     PAGE_LIMIT: 100,
   },
 

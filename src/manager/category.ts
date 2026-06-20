@@ -60,12 +60,21 @@ export interface ICategoryManager {
    * @param ticker Ticker symbol to evict
    */
   evictTicker(ticker: string): void;
+  /**
+   * Toggle READY state for a single ticker.
+   * - If the ticker is currently READY, clear it to WATCHED.
+   * - If the ticker is NOT currently READY, mark it as READY.
+   * Publishes TICKER_CATEGORY_CHANGED after update.
+   * @param ticker Ticker symbol to toggle
+   */
+  toggleReadyState(ticker: string): Promise<void>;
 
   /**
-   * Check a list of tickers and clear READY watch category for any that have it.
-   * Updates backend state to WATCHED and publishes TICKER_CATEGORY_CHANGED
-   * for all tickers whose category actually changed.
-   * @param tickers Ticker symbols to check and potentially clear
+   * Clear READY state for tickers that are currently READY.
+   * Non-READY tickers are silently skipped.
+   * Publishes TICKER_CATEGORY_CHANGED only for tickers that were
+   * actually cleared.
+   * @param tickers Ticker symbols to clear READY for
    */
   clearReadyState(tickers: string[]): Promise<void>;
 }
@@ -119,13 +128,7 @@ export class CategoryManager implements ICategoryManager {
 
     await Promise.all(tickers.map(async (ticker) => this.syncBackend(ticker, update)));
 
-    // Publish event so alert-feed consumers repaint affected tickers
-    if (tickers.length > 0) {
-      await this.publisher.publish({
-        type: DomainEventType.TICKER_CATEGORY_CHANGED,
-        tickers,
-      });
-    }
+    await this.publishCategoryChanged(tickers);
   }
 
   /** @inheritdoc */
@@ -134,13 +137,7 @@ export class CategoryManager implements ICategoryManager {
 
     await Promise.all(tickers.map(async (ticker) => this.syncBackend(ticker, cat.update)));
 
-    // Publish event so alert-feed consumers repaint affected tickers
-    if (tickers.length > 0) {
-      await this.publisher.publish({
-        type: DomainEventType.TICKER_CATEGORY_CHANGED,
-        tickers,
-      });
-    }
+    await this.publishCategoryChanged(tickers);
   }
 
   /** @inheritdoc */
@@ -167,21 +164,52 @@ export class CategoryManager implements ICategoryManager {
   }
 
   /** @inheritdoc */
+  async toggleReadyState(ticker: string): Promise<void> {
+    const cat = await this.getTickerCategory(ticker);
+    if (cat.watch?.id === WatchCategoryId.READY) {
+      await this.syncBackend(ticker, { state: TickerState.WATCHED });
+      Notifier.success(`⏹ Cleared ready ${ticker}`);
+    } else {
+      await this.syncBackend(ticker, { state: TickerState.READY });
+      Notifier.red(`⏺ Marked ready ${ticker}`);
+    }
+
+    await this.publishCategoryChanged([ticker]);
+  }
+
+  /** @inheritdoc */
   async clearReadyState(tickers: string[]): Promise<void> {
-    const changedTickers: string[] = [];
+    if (tickers.length === 0) {
+      return;
+    }
+
+    const cleared: string[] = [];
     for (const ticker of tickers) {
       const cat = await this.getTickerCategory(ticker);
       if (cat.watch?.id === WatchCategoryId.READY) {
         await this.syncBackend(ticker, { state: TickerState.WATCHED });
-        changedTickers.push(ticker);
+        Notifier.success(`⏹ Cleared ready ${ticker}`);
+        cleared.push(ticker);
       }
     }
-    if (changedTickers.length > 0) {
-      await this.publisher.publish({
-        type: DomainEventType.TICKER_CATEGORY_CHANGED,
-        tickers: changedTickers,
-      });
+
+    await this.publishCategoryChanged(cleared);
+  }
+
+  // ── Publish helper ──
+
+  /**
+   * Publish TICKER_CATEGORY_CHANGED for the given tickers.
+   * No-ops when the ticker array is empty.
+   */
+  private async publishCategoryChanged(tickers: string[]): Promise<void> {
+    if (tickers.length === 0) {
+      return;
     }
+    await this.publisher.publish({
+      type: DomainEventType.TICKER_CATEGORY_CHANGED,
+      tickers,
+    });
   }
 
   // ── Cache fetch method ──

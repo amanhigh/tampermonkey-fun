@@ -27,6 +27,7 @@ import { ITimeFrameManager, TimeFrameManager } from '../manager/timeframe';
 import { IJournalManager, JournalManager } from '../manager/journal';
 import { IAlertManager, AlertManager } from '../manager/alert';
 import { ITradingViewWatchlistManager, TradingViewWatchlistManager } from '../manager/watchlist';
+import { IFilterManager, FilterManager } from '../manager/filter';
 
 import { IPaintManager, PaintManager } from '../manager/paint';
 import { IDomManager, DomManager } from '../manager/dom';
@@ -119,6 +120,7 @@ export class Factory {
             Factory.handler.kite(),
             Factory.handler.alertFeed(),
             Factory.handler.panel(),
+            Factory.manager.dom(),
             Factory.manager.tv()
           )
       ),
@@ -205,11 +207,13 @@ export class Factory {
           new TradingViewWatchlistManager(
             Factory.manager.paint(),
             Factory.manager.category(),
-            Factory.util.ui(),
+            Factory.manager.filter(),
             Factory.manager.dom(),
             Factory.manager.eventPublisher()
           )
       ),
+
+    filter: (): IFilterManager => Factory.getInstance('filterManager', () => new FilterManager(Factory.util.ui())),
 
     category: (): ICategoryManager =>
       Factory.getInstance(
@@ -530,7 +534,6 @@ export class Factory {
         () =>
           new WatchListHandler(
             Factory.manager.watchlist(),
-            Factory.manager.paint(),
             Factory.util.sync(),
             Factory.manager.category(),
             Factory.manager.dom()

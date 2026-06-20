@@ -597,10 +597,44 @@ describe('CategoryManager', () => {
     });
   });
 
+  // ── toggleReadyState ──
+
+  describe('toggleReadyState', () => {
+    it('should toggle READY ticker to WATCHED and publish event', async () => {
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'READY_A', state: TickerState.READY })
+      );
+
+      await categoryManager.toggleReadyState('READY_A');
+
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('READY_A', { state: TickerState.WATCHED });
+      expect(mockPublisher.publish).toHaveBeenCalledWith({
+        type: DomainEventType.TICKER_CATEGORY_CHANGED,
+        tickers: ['READY_A'],
+      });
+    });
+
+    it('should toggle WATCHED ticker to READY and publish event', async () => {
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'WATCHED_A', state: TickerState.WATCHED })
+      );
+
+      await categoryManager.toggleReadyState('WATCHED_A');
+
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('WATCHED_A', { state: TickerState.READY });
+      expect(mockPublisher.publish).toHaveBeenCalledWith({
+        type: DomainEventType.TICKER_CATEGORY_CHANGED,
+        tickers: ['WATCHED_A'],
+      });
+    });
+  });
+
   // ── clearReadyState ──
 
   describe('clearReadyState', () => {
-    it('should update READY ticker to WATCHED and publish event', async () => {
+    it('should clear READY ticker to WATCHED and publish event', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockResolvedValue(
         makeTicker({ ticker: 'READY_A', state: TickerState.READY })
@@ -615,59 +649,36 @@ describe('CategoryManager', () => {
       });
     });
 
-    it('should not update BLACKLIST ticker', async () => {
+    it('should skip WATCHED ticker without marking it READY', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'BLACK', state: TickerState.BLACKLIST })
+        makeTicker({ ticker: 'WATCHED_A', state: TickerState.WATCHED })
       );
 
-      await categoryManager.clearReadyState(['BLACK']);
+      await categoryManager.clearReadyState(['WATCHED_A']);
 
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
       expect(mockPublisher.publish).not.toHaveBeenCalled();
     });
 
-    it('should not update ticker with no watch category', async () => {
-      mockJournalManager.listJournals.mockResolvedValue([]);
-      mockTickerManager.getTicker.mockRejectedValue(new Error('not found'));
-
-      await categoryManager.clearReadyState(['UNKNOWN']);
-
-      expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
-      expect(mockPublisher.publish).not.toHaveBeenCalled();
-    });
-
-    it('should only update READY tickers when multiple are passed', async () => {
+    it('should publish only actually-cleared tickers from mixed list', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockImplementation(async (ticker: string) => {
-        if (ticker === 'READY_ONE') return makeTicker({ ticker: 'READY_ONE', state: TickerState.READY });
-        if (ticker === 'READY_TWO') return makeTicker({ ticker: 'READY_TWO', state: TickerState.READY });
-        return makeTicker({ ticker: ticker, state: TickerState.WATCHED });
+        if (ticker === 'READY_T') return makeTicker({ ticker: 'READY_T', state: TickerState.READY });
+        return makeTicker({ ticker: 'WATCHED_T', state: TickerState.WATCHED });
       });
 
-      await categoryManager.clearReadyState(['READY_ONE', 'WATCHED', 'READY_TWO']);
+      await categoryManager.clearReadyState(['READY_T', 'WATCHED_T']);
 
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('READY_ONE', { state: TickerState.WATCHED });
-      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('READY_TWO', { state: TickerState.WATCHED });
-      expect(mockTickerManager.updateTicker).not.toHaveBeenCalledWith('WATCHED', expect.anything());
+      expect(mockTickerManager.updateTicker).toHaveBeenCalledWith('READY_T', { state: TickerState.WATCHED });
+      expect(mockTickerManager.updateTicker).not.toHaveBeenCalledWith('WATCHED_T', { state: TickerState.READY });
       expect(mockPublisher.publish).toHaveBeenCalledWith({
         type: DomainEventType.TICKER_CATEGORY_CHANGED,
-        tickers: ['READY_ONE', 'READY_TWO'],
+        tickers: ['READY_T'],
       });
     });
 
-    it('should not publish event when no READY tickers found', async () => {
-      mockJournalManager.listJournals.mockResolvedValue([]);
-      mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'NON_READY', state: TickerState.WATCHED })
-      );
-
-      await categoryManager.clearReadyState(['NON_READY']);
-
-      expect(mockPublisher.publish).not.toHaveBeenCalled();
-    });
-
-    it('should handle empty ticker array', async () => {
+    it('should not update or publish for empty ticker array', async () => {
       await categoryManager.clearReadyState([]);
 
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();

@@ -164,6 +164,9 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     const identity = await this.resolveAlertIdentity(ticker, name, href);
     if (identity) {
       void this.alertManager.createAlertClickEvent(identity.alertTicker, action, identity.pairId, identity.alertName);
+    } else if (action === AlertClickAction.OPEN) {
+      // Fallback for untracked/unmapped rows: open using extracted ticker directly
+      void this.alertManager.createAlertClickEvent(ticker, action, undefined, name);
     } else {
       Notifier.warn(`Cannot resolve alert identity for ${name}`);
     }

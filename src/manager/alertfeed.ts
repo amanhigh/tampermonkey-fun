@@ -9,12 +9,12 @@ import { IDisplayManager } from './display';
  * because the feed event travels through Greasemonkey GM.setValue (cross-context
  * serialisation) and the manager only needs the Investing symbol and TV ticker.
  *
- * A null ticker means the symbol is unmapped — the state will be UNMAPPED (firebrick).
+ * A null ticker means the symbol is unmapped — the state will be UNMAPPED (purple).
  */
 export interface IAlertFeedManager {
   /**
    * Create an alert feed event for an Investing symbol.
-   * When ticker is omitted or undefined the feed row is treated as unmapped (firebrick).
+   * When ticker is omitted or undefined the feed row is treated as unmapped (purple).
    * @param alertTicker - The Investing.com symbol for the feed row
    * @param ticker - The TV ticker for category/recent lookups; omit for unmapped rows
    * @returns Promise that resolves when event is written to GM storage

@@ -140,7 +140,7 @@ export class OnLoadHandler implements IOnLoadHandler {
         if (!targetElement) {
           throw new Error('Unable to setup watchlist observer');
         }
-        // Watch for watchlist DOM changes
+        // Watch for watchlist DOM changes and refresh through snapshot diff
         this.observeUtil.nodeObserver(targetElement, () => {
           this.watchListHandler.onWatchListChange();
         });

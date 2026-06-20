@@ -1,3 +1,7 @@
+import { ApiError } from '../models/api_error';
+
+export { wrapClientError } from '../models/api_error';
+
 export interface IBaseClient {
   getBaseUrl(): string;
 }
@@ -44,7 +48,9 @@ export class BaseClient implements IBaseClient {
               reject(new Error(`Failed to parse response: ${(error as Error).message}`));
             }
           } else {
-            reject(new Error(`${response.status} ${response.statusText}: ${response.responseText}`));
+            reject(
+              new ApiError(response.status, response.responseText || response.statusText || 'HTTP request failed')
+            );
           }
         },
         onerror: (error: GM.Response<T>) => reject(new Error(`Network error: ${error.statusText}`)),

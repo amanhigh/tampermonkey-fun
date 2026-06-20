@@ -2,18 +2,18 @@
  * Generic display state for a ticker's visual presentation.
  * Resolved by DisplayManager for both header name and alert feed rows.
  *
- * Priority order (surface-independent):
- *   1 UNMAPPED — no TV ticker mapping (null ticker / unmapped)
+ * Priority order:
+ *   1 UNMAPPED — no backend alert ticker mapping (null ticker)
  *   2 WATCH_CATEGORY — has watch category AND is in the shared watchlist silo
- *   3 RECENT — recently viewed ticker (any non-null ticker)
- *   4 DEFAULT — everything else (white)
+ *   3 RECENT — recently opened ticker (gold)
+ *   4 DEFAULT — mapped ticker fallback (white)
  */
 export enum DisplayState {
-  /** Ticker has no TV mapping */
+  /** No backend alert ticker mapping — purple. */
   UNMAPPED = 'UNMAPPED',
   /** Mapped ticker with no stronger state — white fallback. */
   DEFAULT = 'DEFAULT',
-  /** Recently viewed ticker. */
+  /** Recently opened ticker. */
   RECENT = 'RECENT',
   /** Ticker has a watch category and is in the shared watchlist silo. */
   WATCH_CATEGORY = 'WATCH_CATEGORY',

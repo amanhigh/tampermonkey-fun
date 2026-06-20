@@ -19,10 +19,10 @@ export interface ITickerHandler {
   openTicker(ticker: string): Promise<void>;
 
   /**
-   * Stops tracking a TV ticker — deletes the primary ticker (MySQL cascade removes alert tickers).
-   * @param tvTicker The TradingView ticker to stop tracking
+   * Stops tracking the specified TV ticker — deletes the primary ticker (MySQL cascade removes alert tickers).
+   * @param ticker Ticker symbol to stop tracking
    */
-  stopTracking(tvTicker: string): Promise<void>;
+  stopTracking(ticker: string): Promise<void>;
 
   /**
    * Starts tracking the current ticker by creating a backend record
@@ -67,18 +67,16 @@ export class TickerHandler implements ITickerHandler {
   }
 
   /** @inheritdoc */
-  public async stopTracking(tvTicker: string): Promise<void> {
-    if (this.domManager.getTicker() === tvTicker) {
-      this.styleManager.clearAll();
-    }
+  public async stopTracking(ticker: string): Promise<void> {
+    this.styleManager.clearAll();
 
     try {
-      await this.lifecycleManager.stopTracking(tvTicker);
+      await this.lifecycleManager.stopTracking(ticker);
     } catch (error) {
-      Notifier.warn(`Failed to delete ticker ${tvTicker}: ${(error as Error).message}`);
+      Notifier.warn(`Failed to delete ticker ${ticker}: ${(error as Error).message}`);
     }
 
-    Notifier.success(`⏹ Stopped tracking ${tvTicker}`);
+    Notifier.success(`⏹ Stopped tracking ${ticker}`);
   }
 
   /** @inheritdoc */

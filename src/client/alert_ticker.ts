@@ -1,4 +1,4 @@
-import { BaseClient, IBaseClient } from './base';
+import { BaseClient, IBaseClient, wrapClientError } from './base';
 import {
   AlertTickerListResponse,
   AlertTickerQueryParams,
@@ -69,7 +69,7 @@ export class AlertTickerClient extends BaseClient implements IAlertTickerClient 
       );
       return response.data;
     } catch (error) {
-      throw new Error(`Failed to create Alert ticker: ${(error as Error).message}`);
+      throw wrapClientError(error, 'Failed to create Alert ticker');
     }
   }
 
@@ -81,7 +81,7 @@ export class AlertTickerClient extends BaseClient implements IAlertTickerClient 
       );
       return response.data;
     } catch (error) {
-      throw new Error(`Failed to get Alert ticker: ${(error as Error).message}`);
+      throw wrapClientError(error, 'Failed to get Alert ticker');
     }
   }
 
@@ -92,7 +92,7 @@ export class AlertTickerClient extends BaseClient implements IAlertTickerClient 
         method: 'DELETE',
       });
     } catch (error) {
-      throw new Error(`Failed to delete Alert ticker: ${(error as Error).message}`);
+      throw wrapClientError(error, 'Failed to delete Alert ticker');
     }
   }
 
@@ -117,7 +117,7 @@ export class AlertTickerClient extends BaseClient implements IAlertTickerClient 
 
       return all;
     } catch (error) {
-      throw new Error(`Failed to list all Alert tickers: ${(error as Error).message}`);
+      throw wrapClientError(error, 'Failed to list all Alert tickers');
     }
   }
 

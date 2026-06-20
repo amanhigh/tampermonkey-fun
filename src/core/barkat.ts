@@ -11,6 +11,7 @@ import { IAlertFeedHandler } from '../handler/alertfeed';
 import { JournalType } from '../models/trading';
 import { IGlobalErrorHandler } from '../handler/error';
 import { IPanelHandler } from '../handler/panel';
+import { IDomManager } from '../manager/dom';
 import { ITradingViewManager } from '../manager/tv';
 import { Factory } from './factory';
 
@@ -26,6 +27,7 @@ export class Barkat {
     private readonly kiteHandler: IKiteHandler,
     private readonly alertFeedHandler: IAlertFeedHandler,
     private readonly panelHandler: IPanelHandler,
+    private readonly domManager: IDomManager,
     private readonly tvManager: ITradingViewManager
   ) {}
 
@@ -95,15 +97,12 @@ export class Barkat {
       )
       .append(
         this.uiUtil
-          // FIXME: S button left-click temporarily disabled. The toggle
-          // between MWD/YR timeframe types was removed in timeframe→type
-          // migration. Re-enable as a timeframe type toggle once the UI
-          // for type switching is designed.
-          // Right-click starts tracking with exchange-based default timeframes.
-          .buildButton(Constants.UI.IDS.BUTTONS.SEQUENCE, 'S')
+          .buildButton(Constants.UI.IDS.BUTTONS.SEQUENCE, 'S', () => {
+            void this.tickerHandler.startTracking();
+          })
           .on('contextmenu', (e) => {
             e.preventDefault();
-            void this.tickerHandler.startTracking();
+            void this.tickerHandler.stopTracking(this.domManager.getTicker());
           })
       )
       .append(

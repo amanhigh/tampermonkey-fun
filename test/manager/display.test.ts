@@ -32,7 +32,6 @@ describe('DisplayManager', () => {
       recordFlagCategory: jest.fn(),
       getBatchCategory: jest.fn(),
       evictTicker: jest.fn(),
-      clearReadyState: jest.fn(),
     } as unknown as jest.Mocked<ICategoryManager>;
 
     mockRecentManager = {
@@ -45,10 +44,10 @@ describe('DisplayManager', () => {
   describe('resolve', () => {
     // ── Priority 1: UNMAPPED ──
 
-    it('should return UNMAPPED/firebrick for null ticker', async () => {
+    it('should return UNMAPPED/purple for null ticker', async () => {
       const result = await displayManager.resolve(null);
 
-      expect(result).toEqual({ state: DisplayState.UNMAPPED, color: 'firebrick' });
+      expect(result).toEqual({ state: DisplayState.UNMAPPED, color: 'purple' });
       expect(mockCategoryManager.getTickerCategory).not.toHaveBeenCalled();
       expect(mockRecentManager.isRecent).not.toHaveBeenCalled();
     });
@@ -93,9 +92,10 @@ describe('DisplayManager', () => {
 
       const result = await displayManager.resolve('TV:ABSENT');
 
+      // Absent from loaded silo → category skipped → recent wins → RECENT/gold
       expect(result).toEqual({ state: DisplayState.RECENT, color: 'gold' });
       expect(mockCategoryManager.getTickerCategory).toHaveBeenCalledWith('TV:ABSENT');
-      expect(mockRecentManager.isRecent).toHaveBeenCalled();
+      expect(mockRecentManager.isRecent).toHaveBeenCalledWith('TV:ABSENT', expect.any(Number));
     });
 
     it('should return DEFAULT/white when watch category exists but ticker is absent from watchlist silo and not recent', async () => {
@@ -115,6 +115,7 @@ describe('DisplayManager', () => {
 
       const result = await displayManager.resolve('TV:ABSENT');
 
+      // Absent from watchlist → category skipped, not recent → DEFAULT/white
       expect(result).toEqual({ state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT });
     });
 
@@ -149,13 +150,20 @@ describe('DisplayManager', () => {
       expect(result).toEqual({ state: DisplayState.RECENT, color: 'gold' });
     });
 
-    it('should return DEFAULT/white when ticker has no watch category and is not recent', async () => {
+    it('should return DEFAULT/white when tracked ticker has no watch category and is not recent', async () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: undefined,
         flag: undefined,
         isFno: false,
       });
       mockRecentManager.isRecent.mockResolvedValue(false);
+
+      // TV:PLAIN is tracked (in watchlist) but has no watch category
+      const siloData = JSON.stringify({
+        tickers: ['TV:PLAIN'],
+        updatedAt: new Date().toISOString(),
+      });
+      (global as any).GM.getValue.mockResolvedValue(siloData);
 
       const result = await displayManager.resolve('TV:PLAIN');
 

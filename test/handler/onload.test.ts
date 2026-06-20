@@ -65,8 +65,9 @@ describe('OnLoadHandler', () => {
 
     mockWatchListHandler = {
       onWatchListChange: jest.fn(),
-      recordSelectedTicker: jest.fn(),
+      markCategorySelectedTickers: jest.fn(),
       registerEvents: jest.fn(),
+      toggleReadyCurrentTicker: jest.fn(),
     } as unknown as jest.Mocked<IWatchListHandler>;
 
     mockHotkeyHandler = {
@@ -169,6 +170,20 @@ describe('OnLoadHandler', () => {
         type: DomainEventType.FIRST_LOAD,
         ticker: 'TEST',
       });
+    });
+
+    it('should call watchListHandler.onWatchListChange on watchlist DOM mutation', () => {
+      onLoadHandler.init();
+
+      // Capture callback registered with nodeObserver
+      const nodeObserverCalls = mockObserveUtil.nodeObserver.mock.calls;
+      expect(nodeObserverCalls.length).toBeGreaterThanOrEqual(1);
+      const nodeCallback = nodeObserverCalls[0][1] as () => void;
+
+      // Simulate watchlist DOM mutation via callback
+      nodeCallback();
+
+      expect(mockWatchListHandler.onWatchListChange).toHaveBeenCalled();
     });
   });
 

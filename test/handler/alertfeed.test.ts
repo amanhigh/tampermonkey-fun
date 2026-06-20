@@ -514,7 +514,7 @@ describe('AlertFeedHandler', () => {
       );
     });
 
-    it('should warn and skip event when both resolution paths fail', async () => {
+    it('should emit fallback OPEN event when no identity can be resolved', async () => {
       mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(null);
       mockInvestingManager.getInstrument.mockResolvedValue(null);
 
@@ -528,6 +528,31 @@ describe('AlertFeedHandler', () => {
 
       await (handler as any).handleAlertClick({ ctrlKey: false, preventDefault: jest.fn() });
 
+      // OPEN fallback emits event with extracted ticker directly
+      expect(mockAlertManager.createAlertClickEvent).toHaveBeenCalledWith(
+        'ZZZZZ',
+        AlertClickAction.OPEN,
+        undefined,
+        'Unknown (ZZZZZ)'
+      );
+      expect(Notifier.warn).not.toHaveBeenCalled();
+    });
+
+    it('should warn and skip event when MAP action and no identity can be resolved', async () => {
+      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(null);
+      mockInvestingManager.getInstrument.mockResolvedValue(null);
+
+      const $mock = (global as any).$;
+      $mock.mockImplementation(() => ({
+        text: jest.fn().mockReturnValue('Unknown (ZZZZZ)'),
+        closest: jest.fn().mockReturnValue({
+          attr: jest.fn().mockReturnValue('/unknown'),
+        }),
+      }));
+
+      await (handler as any).handleAlertClick({ ctrlKey: true, preventDefault: jest.fn() });
+
+      // MAP action still requires trusted identity
       expect(mockAlertManager.createAlertClickEvent).not.toHaveBeenCalled();
       expect(Notifier.warn).toHaveBeenCalledWith(expect.stringContaining('Cannot resolve alert identity'));
     });
@@ -782,6 +807,24 @@ describe('AlertFeedHandler', () => {
 
       expect(mockDisplayManager.resolve).toHaveBeenCalledWith(null);
       expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
+    });
+
+    it('should resolve mapped-but-not-in-silo ticker as DEFAULT/white, not as unmapped', async () => {
+      // Backend has GRINDWELL mapped under symbol GRNN
+      const alertTickers = [
+        makeAlertTicker({ symbol: 'GRNN', name: 'Grindwell Norton', ticker: 'GRINDWELL' }),
+      ];
+      mockAlertTickerManager.getAlertTickers.mockResolvedValue(alertTickers);
+      mockDisplayManager.resolve.mockResolvedValue({ state: DisplayState.DEFAULT, color: 'white' });
+
+      buildPaintMock([{ title: 'Grindwell Norton (GRNN)', href: '/equities/grindwell-norton', dataType: 'quotes' }]);
+
+      await handler.paintAlertFeed();
+
+      // Should resolve with the mapped TV ticker, not null
+      expect(mockDisplayManager.resolve).toHaveBeenCalledWith('GRINDWELL');
+      expect(mockInvestingManager.getInstrument).not.toHaveBeenCalled();
+      expect(Notifier.warn).not.toHaveBeenCalled();
     });
   });
 });

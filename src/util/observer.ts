@@ -11,7 +11,10 @@ export interface IObserveUtil {
   attributeObserver(target: Element, callback: () => void): MutationObserver;
 
   /**
-   * Observes node changes on target
+   * Observes childList mutations on target and fires callback once
+   * when any actionable (node added or removed) mutations occur.
+   * Mutation records are not forwarded to the callback — callers that
+   * need node-level detail should use a dedicated observer.
    * @param target - Target element to observe
    * @param callback - Callback for changes
    * @returns MutationObserver instance or undefined if setup fails
@@ -71,11 +74,12 @@ export class ObserveUtil implements IObserveUtil {
 
     try {
       const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.type === 'childList' && (mutation.addedNodes.length || mutation.removedNodes.length)) {
-            callback();
-          }
-        });
+        const hasActionable = mutations.some(
+          (m) => m.type === 'childList' && (m.addedNodes.length > 0 || m.removedNodes.length > 0)
+        );
+        if (hasActionable) {
+          callback();
+        }
       });
 
       observer.observe(target, {
