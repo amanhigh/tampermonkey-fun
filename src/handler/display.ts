@@ -94,6 +94,7 @@ export class DisplayHandler implements IDisplayHandler {
     // Store on DOM element for toggle re-render (avoids handler-level cache)
     $(`#${Constants.UI.IDS.DISPLAY.CARD}`).data('displayData', { tvTicker, alertTickers, isUntracked });
 
+    // FIXME: Show last visited day in display area (e.g. "7d")
     this.renderDisplay();
   }
 
