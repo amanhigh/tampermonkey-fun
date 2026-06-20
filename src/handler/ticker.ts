@@ -76,6 +76,8 @@ export class TickerHandler implements ITickerHandler {
       Notifier.warn(`Failed to delete ticker ${ticker}: ${(error as Error).message}`);
     }
 
+    // BUG: Post-stop display/alerts not refreshed — display.ts and alerts area
+    //       don't subscribe to TICKER_TRACKING_STOPPED, card stays stale.
     Notifier.success(`⏹ Stopped tracking ${ticker}`);
   }
 
