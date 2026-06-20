@@ -10,6 +10,7 @@ import { WatchCategoryId } from '../models/watch';
 import { IDomManager } from '../manager/dom';
 import { IDomainEventConsumer, ISubscriber } from '../manager/event_bus';
 import { DomainEventType } from '../models/domain_event';
+import { Constants } from '../models/constant';
 
 /**
  * Handles watchlist-related events and UI updates
@@ -78,7 +79,7 @@ export class WatchListHandler implements IWatchListHandler {
 
   /** @inheritdoc */
   public onWatchListChange(): void {
-    this.syncUtil.waitOn('watchListChangeEvent', 20, () => {
+    this.syncUtil.waitOn(Constants.DOM_EVENTS.WATCHLIST_CHANGE, 20, () => {
       void this.watchlistManager.refreshChangedTickers();
     });
   }

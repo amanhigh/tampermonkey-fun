@@ -238,6 +238,14 @@ Support:
     },
   },
 
+  // SyncUtil debounce coordination IDs (not GM storage events)
+  DOM_EVENTS: {
+    WATCHLIST_CHANGE: 'watchListChangeEvent',
+    TICKER_CHANGE: 'tickerChange',
+    FAST_DOUBLE_KEY: 'fastDoubleKeyInput',
+    DOUBLE_KEY: 'doubleKeyInput',
+  },
+
   MISC: {
     RESET_FEED: 'Reset',
   },
