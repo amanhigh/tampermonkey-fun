@@ -531,7 +531,6 @@ export class Factory {
         () =>
           new WatchListHandler(
             Factory.manager.watchlist(),
-            Factory.manager.paint(),
             Factory.util.sync(),
             Factory.manager.category(),
             Factory.manager.dom()

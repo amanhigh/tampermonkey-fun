@@ -337,4 +337,20 @@ describe('TradingViewWatchlistManager', () => {
       expect(mockPublisher.publish).not.toHaveBeenCalled();
     });
   });
+
+  describe('refreshTickers', () => {
+    it('should call paintTickers and refresh summary for non-empty ticker list', async () => {
+      await watchlistManager.refreshTickers(['AAPL', 'GOOG']);
+
+      expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['AAPL', 'GOOG']);
+      expect(mockPaintManager.summarizeBuckets).toHaveBeenCalled();
+    });
+
+    it('should skip painting for empty ticker list', async () => {
+      await watchlistManager.refreshTickers([]);
+
+      expect(mockPaintManager.paintTickers).not.toHaveBeenCalled();
+      expect(mockPaintManager.summarizeBuckets).not.toHaveBeenCalled();
+    });
+  });
 });

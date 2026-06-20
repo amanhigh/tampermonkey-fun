@@ -48,7 +48,9 @@ export class BaseClient implements IBaseClient {
               reject(new Error(`Failed to parse response: ${(error as Error).message}`));
             }
           } else {
-            reject(new ApiError(response.status, response.responseText || response.statusText || 'HTTP request failed'));
+            reject(
+              new ApiError(response.status, response.responseText || response.statusText || 'HTTP request failed')
+            );
           }
         },
         onerror: (error: GM.Response<T>) => reject(new Error(`Network error: ${error.statusText}`)),

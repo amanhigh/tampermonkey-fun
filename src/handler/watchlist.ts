@@ -4,7 +4,6 @@
 
 import { ICategoryManager } from '../manager/category';
 import { ITradingViewWatchlistManager } from '../manager/watchlist';
-import { IPaintManager } from '../manager/paint';
 import { ISyncUtil } from '../util/sync';
 import { TickerArea, TickerVisibility } from '../models/dom';
 import { WatchCategoryId } from '../models/watch';
@@ -43,7 +42,6 @@ export interface IWatchListHandler extends IDomainEventConsumer {
 export class WatchListHandler implements IWatchListHandler {
   constructor(
     private readonly watchlistManager: ITradingViewWatchlistManager,
-    private readonly paintManager: IPaintManager,
     private readonly syncUtil: ISyncUtil,
     private readonly categoryManager: ICategoryManager,
     private readonly domManager: IDomManager
@@ -87,11 +85,10 @@ export class WatchListHandler implements IWatchListHandler {
 
   /**
    * Repaint ticker row(s) and refresh the watchlist summary.
-   * Unified entry point so both operations are never accidentally missed.
+   * Delegates entirely to the watchlist manager which couples both operations.
    */
   private async repaintTickers(tickers: string[]): Promise<void> {
-    await this.paintManager.paintTickers(tickers);
-    await this.watchlistManager.refreshSummary();
+    await this.watchlistManager.refreshTickers(tickers);
   }
 
   /** @inheritdoc */

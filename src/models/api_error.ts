@@ -42,6 +42,6 @@ export function wrapClientError(error: unknown, prefix: string): Error {
   const original = error instanceof Error ? error : new Error(String(error));
   const err = new Error(`${prefix}: ${original.message}`);
   // Preserve original error in cause chain for type-safe unwinding
-  (err as { cause: unknown }).cause = original;
+  (err as any).cause = original;
   return err;
 }

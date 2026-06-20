@@ -35,11 +35,12 @@ export interface ITradingViewWatchlistManager {
   refresh(): Promise<void>;
 
   /**
-   * Refreshes summary labels and reapplies active filters without
-   * repainting ticker decals. Use after targeted ticker repaints
-   * (e.g. category hotkeys).
+   * Targeted refresh for specific tickers that need repainting (category change,
+   * timeframe change, metadata change, etc). Always repaints tickers AND
+   * refreshes summary/filters together.
+   * @param tickers - Ticker symbols to repaint
    */
-  refreshSummary(): Promise<void>;
+  refreshTickers(tickers: string[]): Promise<void>;
 
   /**
    * Targeted refresh driven by observed DOM change.
@@ -174,7 +175,21 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   }
 
   /** @inheritdoc */
-  async refreshSummary(): Promise<void> {
+  async refreshTickers(tickers: string[]): Promise<void> {
+    if (tickers.length === 0) {
+      return;
+    }
+
+    await this.paintManager.paintTickers(tickers);
+    await this.refreshSummary();
+  }
+
+  /**
+   * Recompute bucket counts and refresh summary labels + filters.
+   * Internal — callers should use refreshTickers() or rely on refresh()
+   * / refreshChangedTickers() to call this automatically.
+   */
+  private async refreshSummary(): Promise<void> {
     // Recompute bucket counts without repainting DOM
     const result = await this.paintManager.summarizeBuckets();
 
