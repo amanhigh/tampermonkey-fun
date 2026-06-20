@@ -213,8 +213,7 @@ export class Factory {
           )
       ),
 
-    filter: (): IFilterManager =>
-      Factory.getInstance('filterManager', () => new FilterManager(Factory.util.ui())),
+    filter: (): IFilterManager => Factory.getInstance('filterManager', () => new FilterManager(Factory.util.ui())),
 
     category: (): ICategoryManager =>
       Factory.getInstance(

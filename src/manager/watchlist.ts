@@ -60,91 +60,28 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     private readonly publisher: IPublisher
   ) {}
 
+  // ── Public refresh API ──
+
   /** @inheritdoc */
   async refresh(): Promise<void> {
     this.filterManager.resetWatchList();
 
-    // Detect tickers added or removed from DOM watchlist (skip on first baseline call)
-    const currentTickers = this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL);
-
-    // Persist current watchlist to shared silo so cross-page consumers (e.g. DisplayManager
-    // on the Investing alert feed page) can read ticker membership without TradingView DOM.
+    const currentTickers = this.getCurrentWatchlistTickers();
     await this.saveWatchlistSilo(currentTickers);
 
     let changedTickers: string[] = [];
     if (this.prevWatchlistTickers !== null) {
-      const removedTickers = [...this.prevWatchlistTickers].filter((t) => !currentTickers.has(t));
-      const addedTickers = [...currentTickers].filter((t) => !this.prevWatchlistTickers!.has(t));
-      changedTickers = [...removedTickers, ...addedTickers];
-      if (removedTickers.length > 0) {
-        await this.categoryManager.clearReadyState(removedTickers);
-      }
+      const diff = this.diffWatchlistTickers(this.prevWatchlistTickers, currentTickers);
+      changedTickers = diff.changedTickers;
+      await this.clearRemovedReadyState(diff.removedTickers);
     }
-    this.prevWatchlistTickers = currentTickers;
+    this.updateSnapshot(currentTickers);
 
     // Delegate all ticker painting (symbols, flags, FNO) to PaintManager
     await this.paintManager.paint();
 
-    // Reuse summary + filter refresh
     await this.refreshSummary();
-
-    // Notify subscribers of ticker set changes only when changes exist
-    if (changedTickers.length > 0) {
-      void this.publisher.publish({
-        type: DomainEventType.WATCHLIST_CHANGED,
-        tickers: changedTickers,
-      });
-    }
-  }
-
-  /** @inheritdoc */
-  async refreshChangedTickers(): Promise<void> {
-    // Fall back to full refresh if baseline has not been established
-    if (this.prevWatchlistTickers === null) {
-      await this.refresh();
-      return;
-    }
-
-    const currentTickers = this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL);
-    await this.saveWatchlistSilo(currentTickers);
-
-    const prevTickers = this.prevWatchlistTickers!;
-    const removedTickers = [...prevTickers].filter((t) => !currentTickers.has(t));
-    const addedTickers = [...currentTickers].filter((t) => !prevTickers.has(t));
-    const changedTickers = [...removedTickers, ...addedTickers];
-
-    if (changedTickers.length === 0) {
-      // No membership change — just update snapshot
-      this.prevWatchlistTickers = currentTickers;
-      return;
-    }
-
-    this.prevWatchlistTickers = currentTickers;
-
-    if (changedTickers.length === 1) {
-      // Targeted refresh for a single confirmed change
-      if (removedTickers.length > 0) {
-        await this.categoryManager.clearReadyState(removedTickers);
-      }
-
-      await this.paintManager.paintTickers(changedTickers);
-      await this.refreshSummary();
-
-      void this.publisher.publish({
-        type: DomainEventType.WATCHLIST_CHANGED,
-        tickers: changedTickers,
-      });
-      return;
-    }
-
-    // Multiple changes — fall back to full refresh
-    await this.paintManager.paint();
-    await this.refreshSummary();
-
-    void this.publisher.publish({
-      type: DomainEventType.WATCHLIST_CHANGED,
-      tickers: changedTickers,
-    });
+    this.publishWatchlistChanged(changedTickers);
   }
 
   /** @inheritdoc */
@@ -156,6 +93,74 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     await this.paintManager.paintTickers(tickers);
     await this.refreshSummary();
   }
+
+  /** @inheritdoc */
+  async refreshChangedTickers(): Promise<void> {
+    // Fall back to full refresh if baseline has not been established
+    if (this.prevWatchlistTickers === null) {
+      await this.refresh();
+      return;
+    }
+
+    const currentTickers = this.getCurrentWatchlistTickers();
+    await this.saveWatchlistSilo(currentTickers);
+
+    const diff = this.diffWatchlistTickers(this.prevWatchlistTickers, currentTickers);
+
+    if (diff.changedTickers.length === 0) {
+      // No membership change — just update snapshot
+      this.updateSnapshot(currentTickers);
+      return;
+    }
+
+    this.updateSnapshot(currentTickers);
+
+    if (diff.changedTickers.length === 1) {
+      // Targeted refresh for a single confirmed change
+      await this.clearRemovedReadyState(diff.removedTickers);
+      await this.paintManager.paintTickers(diff.changedTickers);
+      await this.refreshSummary();
+      this.publishWatchlistChanged(diff.changedTickers);
+      return;
+    }
+
+    // Multiple changes — fall back to full refresh
+    await this.paintManager.paint();
+    await this.refreshSummary();
+    this.publishWatchlistChanged(diff.changedTickers);
+  }
+
+  // ── Snapshot and diff helpers ──
+
+  /**
+   * Retrieve the current watchlist ticker set from the DOM.
+   */
+  private getCurrentWatchlistTickers(): Set<string> {
+    return this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL);
+  }
+
+  /**
+   * Compute removed, added, and changed tickers between two snapshots.
+   * @returns Object with removedTickers, addedTickers, and changedTickers arrays.
+   */
+  private diffWatchlistTickers(
+    previous: Set<string>,
+    current: Set<string>
+  ): { removedTickers: string[]; addedTickers: string[]; changedTickers: string[] } {
+    const removedTickers = [...previous].filter((t) => !current.has(t));
+    const addedTickers = [...current].filter((t) => !previous.has(t));
+    const changedTickers = [...removedTickers, ...addedTickers];
+    return { removedTickers, addedTickers, changedTickers };
+  }
+
+  /**
+   * Update the persisted snapshot to the current ticker set.
+   */
+  private updateSnapshot(currentTickers: Set<string>): void {
+    this.prevWatchlistTickers = currentTickers;
+  }
+
+  // ── Refresh helpers ──
 
   /**
    * Recompute bucket counts and refresh summary labels + filters.
@@ -169,6 +174,33 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     // Delegate UI rendering (labels + filters) to FilterManager
     this.filterManager.refreshSummary(result);
   }
+
+  /**
+   * Clear READY state for tickers that have been removed from the watchlist.
+   * No-ops when the removed list is empty.
+   */
+  private async clearRemovedReadyState(removedTickers: string[]): Promise<void> {
+    if (removedTickers.length > 0) {
+      await this.categoryManager.clearReadyState(removedTickers);
+    }
+  }
+
+  // ── Event helpers ──
+
+  /**
+   * Publish WATCHLIST_CHANGED event for the given changed tickers.
+   * No-ops when the list is empty.
+   */
+  private publishWatchlistChanged(changedTickers: string[]): void {
+    if (changedTickers.length > 0) {
+      void this.publisher.publish({
+        type: DomainEventType.WATCHLIST_CHANGED,
+        tickers: changedTickers,
+      });
+    }
+  }
+
+  // ── Persistence ──
 
   /**
    * Persist current watchlist ticker set to shared GM silo so cross-page
