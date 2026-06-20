@@ -250,6 +250,27 @@ describe('ObserveUtil', () => {
         observeUtil.nodeObserver(mockTarget, mockCallback);
       }).toThrow('Failed to create node observer: Error: Observer creation failed');
     });
+
+    it('should accept custom options and pass them to observe', () => {
+      const customOptions: MutationObserverInit = {
+        childList: true,
+        subtree: true,
+      };
+      observeUtil.nodeObserver(mockTarget, mockCallback, customOptions);
+
+      expect(mockMutationObserver.observe).toHaveBeenCalledWith(mockTarget, {
+        childList: true,
+        subtree: true,
+      });
+    });
+
+    it('should default to childList:true when no options provided', () => {
+      observeUtil.nodeObserver(mockTarget, mockCallback);
+
+      expect(mockMutationObserver.observe).toHaveBeenCalledWith(mockTarget, {
+        childList: true,
+      });
+    });
   });
 
   describe('edge cases', () => {

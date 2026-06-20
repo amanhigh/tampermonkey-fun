@@ -29,8 +29,12 @@ export interface IOnLoadHandler {
  * 3. Set up ticker observer
  * 4. Inside ticker callback, set up watchlist observer
  * 5. Inside watchlist callback, publish FIRST_LOAD and set up screener observer
+ * 6. Set up header-title replacement observer for interval/click repaint
  */
 export class OnLoadHandler implements IOnLoadHandler {
+  /** Debounce timer for header title replacement observer */
+  private headerRepaintTimer: ReturnType<typeof setTimeout> | null = null;
+
   // eslint-disable-next-line max-params
   constructor(
     private readonly waitUtil: IWaitUtil,
@@ -64,6 +68,7 @@ export class OnLoadHandler implements IOnLoadHandler {
         // 5. Both DOM nodes confirmed — publish FIRST_LOAD and finish setup
         this.publishFirstLoad();
         this.setupScreenerObserver();
+        this.setupHeaderTitleObserver();
       });
     });
   }
@@ -147,6 +152,46 @@ export class OnLoadHandler implements IOnLoadHandler {
 
         // Proceed to next step in serial chain
         onReady();
+      },
+      10
+    );
+  }
+
+  /**
+   * Sets up observer for header title replacement.
+   *
+   * When TradingView switches chart interval (via hotkey or mouse click) it
+   * replaces the header title DOM node, which removes our inline color style.
+   * This observer detects that replacement and re-paints the header with the
+   * correct category color after a short debounce delay.
+   *
+   * Observes the direct parent of the header title element with
+   * `childList + subtree` so that any replacement of the title node is
+   * caught regardless of depth.
+   */
+  private setupHeaderTitleObserver(): void {
+    this.waitUtil.waitJEE(
+      Constants.DOM.BASIC.NAME,
+      ($name) => {
+        const nameNode = $name.get(0);
+        if (!nameNode) {
+          return;
+        }
+        // Observe the title's stable parent (the title wrapper itself is replaced)
+        const target = nameNode.parentElement ?? nameNode;
+
+        this.observeUtil.nodeObserver(
+          target,
+          () => {
+            if (this.headerRepaintTimer) {
+              clearTimeout(this.headerRepaintTimer);
+            }
+            this.headerRepaintTimer = setTimeout(() => {
+              void this.paintManager.paintHeader();
+            }, 150);
+          },
+          { childList: true, subtree: true }
+        );
       },
       10
     );
