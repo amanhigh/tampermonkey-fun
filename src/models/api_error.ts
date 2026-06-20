@@ -67,5 +67,3 @@ export function wrapClientError(error: unknown, prefix: string): Error {
   }
   return err;
 }
-
-

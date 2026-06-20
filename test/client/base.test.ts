@@ -1,5 +1,5 @@
 import { BaseClient, IBaseClient } from '../../src/client/base';
-import { ApiError, isApiNotFoundError } from '../../src/models/api_error';
+import { ApiError } from '../../src/models/api_error';
 
 // Mock GM.xmlHttpRequest
 const mockXmlHttpRequest = jest.fn();
@@ -52,33 +52,33 @@ describe('BaseClient', () => {
     });
   });
 
-  describe('isApiNotFoundError', () => {
+  describe('isNotFoundError', () => {
     it('should return true for ApiError with 404 status', () => {
-      expect(isApiNotFoundError(new ApiError(404, 'Not Found', ''))).toBe(true);
+      expect(ApiError.isNotFoundError(new ApiError(404, 'Not Found', ''))).toBe(true);
     });
 
     it('should return false for ApiError with non-404 status', () => {
-      expect(isApiNotFoundError(new ApiError(500, 'Server Error', ''))).toBe(false);
+      expect(ApiError.isNotFoundError(new ApiError(500, 'Server Error', ''))).toBe(false);
     });
 
     it('should return true for wrapped Error with 404 in message', () => {
-      expect(isApiNotFoundError(new Error('404 Not Found: Ticker not found'))).toBe(true);
+      expect(ApiError.isNotFoundError(new Error('404 Not Found: Ticker not found'))).toBe(true);
     });
 
     it('should return false for plain Error with unrelated message', () => {
-      expect(isApiNotFoundError(new Error('Network error'))).toBe(false);
+      expect(ApiError.isNotFoundError(new Error('Network error'))).toBe(false);
     });
 
     it('should return false for null/undefined', () => {
-      expect(isApiNotFoundError(null)).toBe(false);
-      expect(isApiNotFoundError(undefined)).toBe(false);
+      expect(ApiError.isNotFoundError(null)).toBe(false);
+      expect(ApiError.isNotFoundError(undefined)).toBe(false);
     });
 
     it('should unwrap through apiError property', () => {
       const apiErr = new ApiError(404, 'Not Found', '');
       const wrapper = new Error('Failed to get ticker: 404 Not Found: ');
       (wrapper as any).apiError = apiErr;
-      expect(isApiNotFoundError(wrapper)).toBe(true);
+      expect(ApiError.isNotFoundError(wrapper)).toBe(true);
     });
   });
 

@@ -1,6 +1,6 @@
 import { ApiError } from '../models/api_error';
 
-export { isApiNotFoundError, wrapClientError } from '../models/api_error';
+export { wrapClientError } from '../models/api_error';
 
 export interface IBaseClient {
   getBaseUrl(): string;

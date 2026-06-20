@@ -4,7 +4,7 @@ import { Constants } from '../models/constant';
 import { AlertTicker } from '../models/alert_ticker';
 import { IDomainEventConsumer, ISubscriber } from '../manager/event_bus';
 import { DomainEventType } from '../models/domain_event';
-import { isApiNotFoundError } from '../models/api_error';
+import { ApiError } from '../models/api_error';
 
 // ── CSS class names (defined in _display.less) ──
 
@@ -84,7 +84,7 @@ export class DisplayHandler implements IDisplayHandler {
     } catch (error) {
       // Backend 404 "Ticker not found" — expected for untracked tickers
       // Treat as empty alert-ticker list with untracked flag
-      if (isApiNotFoundError(error)) {
+      if (ApiError.isNotFoundError(error)) {
         isUntracked = true;
       } else {
         throw error;
