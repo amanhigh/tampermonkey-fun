@@ -65,7 +65,7 @@ export class WatchListHandler implements IWatchListHandler {
       ],
       async (event) => {
         const tickers = 'tickers' in event ? event.tickers : [event.ticker];
-        await this.repaintTickers(tickers);
+        await this.watchlistManager.refreshTickers(tickers);
       }
     );
 
@@ -73,7 +73,7 @@ export class WatchListHandler implements IWatchListHandler {
     // so evict the stale category cache before repainting.
     subscriber.subscribe(DomainEventType.TICKER_TIMEFRAMES_CHANGED, async (event) => {
       this.categoryManager.evictTicker(event.ticker);
-      await this.repaintTickers([event.ticker]);
+      await this.watchlistManager.refreshTickers([event.ticker]);
     });
   }
 
@@ -82,14 +82,6 @@ export class WatchListHandler implements IWatchListHandler {
     this.syncUtil.waitOn(Constants.DOM_EVENTS.WATCHLIST_CHANGE, 20, () => {
       void this.watchlistManager.refreshChangedTickers();
     });
-  }
-
-  /**
-   * Repaint ticker row(s) and refresh the watchlist summary.
-   * Delegates entirely to the watchlist manager which couples both operations.
-   */
-  private async repaintTickers(tickers: string[]): Promise<void> {
-    await this.watchlistManager.refreshTickers(tickers);
   }
 
   /** @inheritdoc */
