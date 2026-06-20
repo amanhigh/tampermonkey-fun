@@ -104,7 +104,7 @@ describe('CategoryManager', () => {
       expect(result.flag).toBeUndefined();
     });
 
-    it('should return undefined watch when only SET journal exists', async () => {
+    it('should return SET_JOURNAL watch when only SET journal exists', async () => {
       mockJournalManager.listJournals.mockImplementation(async (params: any) => {
         if (params.status === 'SET') return [{ ticker: 'SET_1' }] as any;
         return [];
@@ -112,7 +112,8 @@ describe('CategoryManager', () => {
 
       const result = await categoryManager.getTickerCategory('SET_1');
 
-      expect(result.watch).toBeUndefined();
+      expect(result.watch?.id).toBe(WatchCategoryId.SET_JOURNAL);
+      expect(result.watch?.color).toBe('orange');
     });
 
     it('should return RUNNING watch when RUNNING journal exists', async () => {
@@ -130,11 +131,13 @@ describe('CategoryManager', () => {
     it('should return RUNNING when both SET and RUNNING exist', async () => {
       mockJournalManager.listJournals.mockImplementation(async (params: any) => {
         if (params.status === 'RUNNING') return [{ ticker: 'DUAL' }] as any;
+        if (params.status === 'SET') return [{ ticker: 'DUAL' }] as any;
         return [];
       });
 
       const result = await categoryManager.getTickerCategory('DUAL');
 
+      // RUNNING should win over SET
       expect(result.watch?.id).toBe(WatchCategoryId.RUNNING);
     });
 
@@ -200,15 +203,20 @@ describe('CategoryManager', () => {
       expect(mockJournalManager.listJournals).not.toHaveBeenCalled();
     });
 
-    it('should query journals with ticker filter (RUNNING only)', async () => {
+    it('should query journals with ticker filter RUNNING first then SET fallback', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockRejectedValue(new Error('not found'));
 
       await categoryManager.getTickerCategory('SOME_TICKER');
 
-      expect(mockJournalManager.listJournals).toHaveBeenCalledTimes(1);
-      expect(mockJournalManager.listJournals).toHaveBeenCalledWith(
+      // First query: RUNNING
+      expect(mockJournalManager.listJournals).toHaveBeenCalledTimes(2);
+      expect(mockJournalManager.listJournals).toHaveBeenNthCalledWith(1,
         expect.objectContaining({ ticker: 'SOME_TICKER', status: 'RUNNING' })
+      );
+      // Second query: SET fallback
+      expect(mockJournalManager.listJournals).toHaveBeenNthCalledWith(2,
+        expect.objectContaining({ ticker: 'SOME_TICKER', status: 'SET' })
       );
     });
 
@@ -254,7 +262,7 @@ describe('CategoryManager', () => {
       expect(second.watch).toBeUndefined();
       expect(second.flag).toBeUndefined();
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
-      expect(mockJournalManager.listJournals).toHaveBeenCalledTimes(1);
+      expect(mockJournalManager.listJournals).toHaveBeenCalledTimes(2);
     });
 
     // ── Flag-specific category resolution ──
