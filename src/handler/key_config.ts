@@ -189,7 +189,7 @@ export class KeyConfig implements IKeyConfig {
         'F2',
         {
           description: 'Toggle Ready',
-          action: () => this.watchlistHandler.toggleReadyForSelectedTickers(),
+          action: () => this.watchlistHandler.toggleReadyCurrentTicker(),
         },
       ],
     ]);
@@ -220,21 +220,21 @@ export class KeyConfig implements IKeyConfig {
         'F9',
         {
           description: 'INDEX',
-          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.INDEX),
+          action: () => this.watchlistHandler.markCategorySelectedTickers(WatchCategoryId.INDEX),
         },
       ],
       [
         'F10',
         {
           description: 'COMPOSITE',
-          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.COMPOSITE),
+          action: () => this.watchlistHandler.markCategorySelectedTickers(WatchCategoryId.COMPOSITE),
         },
       ],
       [
         'F11',
         {
           description: 'BLACKLISTED',
-          action: () => this.watchlistHandler.recordSelectedTicker(WatchCategoryId.BLACKLISTED),
+          action: () => this.watchlistHandler.markCategorySelectedTickers(WatchCategoryId.BLACKLISTED),
         },
       ],
       [

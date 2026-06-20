@@ -72,13 +72,13 @@ describe('WatchListHandler', () => {
     });
   });
 
-  describe('recordSelectedTicker', () => {
+  describe('markCategorySelectedTickers', () => {
     beforeEach(() => {
       mockDomManager.getTickers.mockReturnValue(new Set(['SELECTED1', 'SELECTED2']));
     });
 
-    it('should record selected tickers in watch category', () => {
-      handler.recordSelectedTicker(WatchCategoryId.READY);
+    it('should mark selected tickers with a watch category', () => {
+      handler.markCategorySelectedTickers(WatchCategoryId.READY);
 
       expect(mockCategoryManager.recordWatchCategory).toHaveBeenCalledWith(
         WatchCategoryId.READY,
@@ -87,7 +87,7 @@ describe('WatchListHandler', () => {
     });
 
     it('should NOT do full refresh', async () => {
-      handler.recordSelectedTicker(WatchCategoryId.READY);
+      handler.markCategorySelectedTickers(WatchCategoryId.READY);
 
       await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -95,11 +95,11 @@ describe('WatchListHandler', () => {
     });
   });
 
-  describe('toggleReadyForSelectedTickers', () => {
+  describe('toggleReadyCurrentTicker', () => {
     it('should toggle current chart ticker through CategoryManager', async () => {
       mockDomManager.getTicker.mockReturnValue('SYK');
 
-      handler.toggleReadyForSelectedTickers();
+      handler.toggleReadyCurrentTicker();
 
       // toggleReadyState is fire-and-forget, flush microtasks
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -108,13 +108,13 @@ describe('WatchListHandler', () => {
     });
 
     it('should use getTicker (current chart ticker) as the source', () => {
-      handler.toggleReadyForSelectedTickers();
+      handler.toggleReadyCurrentTicker();
 
       expect(mockDomManager.getTicker).toHaveBeenCalled();
     });
 
     it('should NOT do full refresh', async () => {
-      handler.toggleReadyForSelectedTickers();
+      handler.toggleReadyCurrentTicker();
 
       await new Promise((resolve) => setTimeout(resolve, 0));
 

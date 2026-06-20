@@ -16,8 +16,8 @@ describe('KeyConfig', () => {
     mockWatchlistHandler = {
       registerEvents: jest.fn(),
       onWatchListChange: jest.fn(),
-      recordSelectedTicker: jest.fn(),
-      toggleReadyForSelectedTickers: jest.fn(),
+      markCategorySelectedTickers: jest.fn(),
+      toggleReadyCurrentTicker: jest.fn(),
     } as unknown as jest.Mocked<IWatchListHandler>;
 
     const mockTimeFrameManager = {} as unknown as jest.Mocked<ITimeFrameManager>;
@@ -41,14 +41,14 @@ describe('KeyConfig', () => {
       const result = keyConfig.executeOrderAction('F2');
 
       expect(result).toBe(true);
-      expect(mockWatchlistHandler.toggleReadyForSelectedTickers).toHaveBeenCalledTimes(1);
+      expect(mockWatchlistHandler.toggleReadyCurrentTicker).toHaveBeenCalledTimes(1);
     });
 
     it('should return false for unmapped order key', () => {
       const result = keyConfig.executeOrderAction('F3');
 
       expect(result).toBe(false);
-      expect(mockWatchlistHandler.toggleReadyForSelectedTickers).not.toHaveBeenCalled();
+      expect(mockWatchlistHandler.toggleReadyCurrentTicker).not.toHaveBeenCalled();
     });
   });
 });
