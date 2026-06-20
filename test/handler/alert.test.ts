@@ -7,6 +7,7 @@ import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { IUIUtil } from '../../src/util/ui';
 import { ITickerHandler } from '../../src/handler/ticker';
 import { IAlertTickerHandler } from '../../src/handler/alert_ticker';
+import { ApiError, wrapClientError } from '../../src/models/api_error';
 import { AlertClicked, AlertClickAction } from '../../src/models/events';
 import { AlertTicker } from '../../src/models/alert_ticker';
 
@@ -228,6 +229,21 @@ describe('AlertHandler', () => {
           name: 'SSEC',
           exchange: 'NSE',
         });
+      });
+
+      it('should warn and skip mapping when parent TV ticker is not tracked', async () => {
+        const apiErr = new ApiError(404, 'Ticker not found');
+        const wrapped = wrapClientError(apiErr, 'Failed to list all Alert tickers');
+        mockAlertTickerManager.getAlertTickersForTicker.mockRejectedValue(wrapped);
+
+        const event = new AlertClicked('INFY', AlertClickAction.MAP, '12345');
+        handler.handleAlertClick(event);
+
+        await new Promise(process.nextTick);
+
+        expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TV:INFY');
+        expect(mockAlertTickerManager.linkAlertTicker).not.toHaveBeenCalled();
+        expect(Notifier.warn).toHaveBeenCalledWith(expect.stringContaining('Start tracking'));
       });
     });
   });

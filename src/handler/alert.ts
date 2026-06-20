@@ -8,8 +8,10 @@ import { IAlertTickerManager } from '../manager/alert_ticker';
 import { IDomManager } from '../manager/dom';
 import { ITradingViewManager } from '../manager/tv';
 import { Constants } from '../models/constant';
+import { ApiError } from '../models/api_error';
 import { Notifier } from '../util/notify';
 import { IUIUtil } from '../util/ui';
+import { AlertTicker } from '../models/alert_ticker';
 import { AlertClicked, AlertClickAction } from '../models/events';
 import { ITickerHandler } from './ticker';
 import { IAlertTickerHandler } from './alert_ticker';
@@ -219,7 +221,16 @@ export class AlertHandler implements IAlertHandler {
     const ticker = this.domManager.getTicker();
     const exchange = this.domManager.getCurrentExchange();
 
-    const alertTickers = await this.alertTickerManager.getAlertTickersForTicker(ticker);
+    let alertTickers: AlertTicker[];
+    try {
+      alertTickers = await this.alertTickerManager.getAlertTickersForTicker(ticker);
+    } catch (error) {
+      if (ApiError.isNotFoundError(error)) {
+        Notifier.warn(`Start tracking ${ticker} before mapping ${event.alertTicker}`);
+        return;
+      }
+      throw error;
+    }
     const alreadyLinked = alertTickers.some((at) => at.symbol === event.alertTicker);
     if (alreadyLinked) {
       Notifier.info(`Already mapped: ${event.alertTicker} → ${ticker}`);
