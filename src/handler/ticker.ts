@@ -1,6 +1,6 @@
 import { Notifier } from '../util/notify';
 import { IDomManager } from '../manager/dom';
-import { ITickerManager } from '../manager/ticker';
+import { ITickerManager, TickerManager } from '../manager/ticker';
 import { ILifecycleManager } from '../manager/lifecycle';
 import { IStyleManager } from '../manager/style';
 import { IAlertTickerHandler } from './alert_ticker';
@@ -84,7 +84,7 @@ export class TickerHandler implements ITickerHandler {
   /** @inheritdoc */
   public async startTracking(): Promise<void> {
     const ticker = this.domManager.getTicker();
-    const exchange = this.domManager.getCurrentExchange();
+    const exchange = TickerManager.canonicalizeExchange(this.domManager.getCurrentExchange());
     const timeframes = this.getDefaultTimeframesForExchange(exchange);
 
     try {
@@ -108,7 +108,7 @@ export class TickerHandler implements ITickerHandler {
     switch (action.toUpperCase()) {
       case 'E': {
         const ticker = this.domManager.getTicker();
-        await this.tickerManager.setExchange(ticker, value);
+        await this.tickerManager.setExchange(ticker, TickerManager.canonicalizeExchange(value));
         Notifier.success(`Mapped ${ticker} to Exchange ${value}`);
         break;
       }
