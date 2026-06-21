@@ -4,6 +4,7 @@ import { IPublisher } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
 import { Ticker } from '../../src/models/ticker';
 import { Constants } from '../../src/models/constant';
+import { ApiError } from '../../src/models/api_error';
 
 describe('RecentManager', () => {
   let recentManager: IRecentManager;
@@ -159,6 +160,29 @@ describe('RecentManager', () => {
     it('should not throw when ticker not in cache', async () => {
       mockClient.getTicker.mockRejectedValue(new Error('Not found'));
       await expect(recentManager.isRecent('MISSING', Constants.RECENT_CUTOFF_MS)).resolves.toBe(false);
+    });
+
+    it('should clear optimistic cache and republish TICKER_CHANGED on patch 404', async () => {
+      const ticker = 'UNTRACKED';
+      mockClient.patchTickerLastOpened.mockRejectedValue(new ApiError(404, 'Ticker not found'));
+
+      recentManager.markRecent(ticker);
+
+      // Optimistic cache — isRecent returns true immediately
+      expect(await recentManager.isRecent(ticker, Constants.RECENT_CUTOFF_MS)).toBe(true);
+
+      // Flush microtask queue so the catch handler runs (cache.delete + republish)
+      await new Promise<void>((resolve) => setImmediate(resolve));
+
+      // Cache cleared — isRecent now falls through to fetchMethod which gets 404 → undefined → false
+      expect(await recentManager.isRecent(ticker, Constants.RECENT_CUTOFF_MS)).toBe(false);
+
+      // TICKER_CHANGED published twice: once from main path and once from catch handler
+      expect(mockProducer.publish).toHaveBeenCalledTimes(2);
+      expect(mockProducer.publish).toHaveBeenCalledWith({
+        type: DomainEventType.TICKER_CHANGED,
+        ticker,
+      });
     });
   });
 });

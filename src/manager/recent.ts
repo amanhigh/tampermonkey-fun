@@ -3,6 +3,7 @@ import { ITickerClient } from '../client/ticker';
 import { Constants } from '../models/constant';
 import { IPublisher } from './event_bus';
 import { DomainEventType } from '../models/domain_event';
+import { ApiError } from '../models/api_error';
 
 /**
  * Interface for managing recent ticker data operations.
@@ -65,8 +66,17 @@ export class RecentManager implements IRecentManager {
       .patchTickerLastOpened(ticker, {
         last_opened_at: new Date(now).toISOString(),
       })
-      .catch(() => {
-        // Silently fail — cache still has the latest timestamp
+      .catch((error: unknown) => {
+        // 404: ticker has no backend record (untracked)
+        // Clear optimistic cache and republish so header/feed re-resolve to purple
+        if (ApiError.isNotFoundError(error)) {
+          this.cache.delete(ticker);
+          void this.publisher.publish({
+            type: DomainEventType.TICKER_CHANGED,
+            ticker,
+          });
+        }
+        // Other errors: keep optimistic cache (already has latest timestamp)
       });
 
     // Publish domain event so consumers (TimeFrame, alert feed, etc.) react
