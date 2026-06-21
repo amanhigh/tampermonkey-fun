@@ -59,6 +59,7 @@ export class DisplayHandler implements IDisplayHandler {
 
   /** @inheritdoc */
   registerEvents(subscriber: ISubscriber): void {
+    // BUG: TICKER_TRACKING_STOPPED not subscribed — display stays stale after stop-tracking.
     subscriber.subscribe(DomainEventType.TICKER_CHANGED, async () => {
       await this.display();
     });
