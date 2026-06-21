@@ -3,6 +3,11 @@ import { CreateTickerRequest, TickerQueryParams, Ticker, TickerUpdateRequest } f
 import { IPublisher } from './event_bus';
 import { DomainEventType } from '../models/domain_event';
 
+/** Exchange aliases that map to canonical backend-accepted values. */
+const EXCHANGE_ALIAS: Record<string, string> = {
+  'NYSE ARCA': 'AMEX',
+};
+
 /**
  * Request type for starting to track a new primary ticker.
  * Alias for the backend create-ticker request.
@@ -97,5 +102,14 @@ export class TickerManager implements ITickerManager {
       ticker,
     });
     return result;
+  }
+
+  /**
+   * Canonicalize a raw exchange string to a backend-accepted value.
+   * E.g. "NYSE Arca" → "AMEX".  Idempotent for already-canonical values.
+   */
+  static canonicalizeExchange(exchange: string): string {
+    const upper = exchange.toUpperCase().trim();
+    return EXCHANGE_ALIAS[upper] ?? exchange;
   }
 }

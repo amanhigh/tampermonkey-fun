@@ -476,7 +476,8 @@ describe('AlertFeedHandler', () => {
         'INFY',
         AlertClickAction.OPEN,
         '12345',
-        'Infosys Ltd'
+        'Infosys Ltd',
+        'NSE'
       );
     });
 
@@ -511,7 +512,8 @@ describe('AlertFeedHandler', () => {
         'INFY',
         AlertClickAction.MAP,
         '8874',
-        'Infosys Ltd'
+        'Infosys Ltd',
+        'NSE'
       );
     });
 
@@ -545,7 +547,8 @@ describe('AlertFeedHandler', () => {
         'VPL',
         AlertClickAction.MAP,
         '38164',
-        'Vanguard FTSE Pacific Index Fund ETF Shares'
+        'Vanguard FTSE Pacific Index Fund ETF Shares',
+        'NYSE'
       );
     });
 
@@ -589,7 +592,8 @@ describe('AlertFeedHandler', () => {
         'VPL',
         AlertClickAction.MAP,
         '38164',
-        'Vanguard FTSE Pacific Index Fund ETF Shares'
+        'Vanguard FTSE Pacific Index Fund ETF Shares',
+        'NYSE'
       );
     });
 
@@ -663,7 +667,8 @@ describe('AlertFeedHandler', () => {
         'TEST',
         AlertClickAction.MAP,
         '999',
-        'Test Name'
+        'Test Name',
+        'NSE'
       );
     });
 
@@ -693,7 +698,8 @@ describe('AlertFeedHandler', () => {
         'NQ',
         AlertClickAction.MAP,
         '8874',
-        'Nasdaq 100 Futures'
+        'Nasdaq 100 Futures',
+        'CME'
       );
     });
   });

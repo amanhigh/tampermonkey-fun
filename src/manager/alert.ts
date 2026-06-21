@@ -63,12 +63,14 @@ export interface IAlertManager {
 
   /**
    * Creates alert click event for ticker operations.
+   * @param alertExchange - Optional exchange from resolved identity (alert_ticker or instrument)
    */
   createAlertClickEvent(
     alertTicker: string,
     action: AlertClickAction,
     pairId?: string,
-    alertName?: string
+    alertName?: string,
+    alertExchange?: string
   ): Promise<void>;
 }
 
@@ -155,9 +157,10 @@ export class AlertManager implements IAlertManager {
     alertTicker: string,
     action: AlertClickAction,
     pairId?: string,
-    alertName?: string
+    alertName?: string,
+    alertExchange?: string
   ): Promise<void> {
-    const event = new AlertClicked(alertTicker, action, pairId, alertName);
+    const event = new AlertClicked(alertTicker, action, pairId, alertName, alertExchange);
     await GM.setValue(Constants.STORAGE.EVENTS.ALERT_CLICKED, event.stringify());
   }
 

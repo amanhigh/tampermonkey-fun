@@ -3,7 +3,7 @@
  */
 
 import { IAlertManager } from '../manager/alert';
-import { ITickerManager } from '../manager/ticker';
+import { ITickerManager, TickerManager } from '../manager/ticker';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { IDomManager } from '../manager/dom';
 import { ITradingViewManager } from '../manager/tv';
@@ -179,7 +179,7 @@ export class AlertHandler implements IAlertHandler {
     if (e.ctrlKey) {
       // Map current exchange to current TV ticker
       const ticker = this.domManager.getTicker();
-      const exchange = this.domManager.getCurrentExchange();
+      const exchange = TickerManager.canonicalizeExchange(this.domManager.getCurrentExchange());
       void this.tickerManager.setExchange(ticker, exchange).then(() => {
         Notifier.success(`Mapped ${ticker} to ${exchange}`);
       });
@@ -219,7 +219,10 @@ export class AlertHandler implements IAlertHandler {
     }
 
     const ticker = this.domManager.getTicker();
-    const exchange = this.domManager.getCurrentExchange();
+
+    // Use event-provided exchange when available (from resolved identity);
+    // fall back to canonicalized TradingView DOM exchange.
+    const exchange = TickerManager.canonicalizeExchange(event.alertExchange ?? this.domManager.getCurrentExchange());
 
     let alertTickers: AlertTicker[];
     try {

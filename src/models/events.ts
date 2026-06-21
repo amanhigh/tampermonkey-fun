@@ -23,6 +23,7 @@ export class AlertClicked extends BaseEvent {
     readonly action: AlertClickAction,
     readonly pairId?: string,
     readonly alertName?: string,
+    readonly alertExchange?: string,
     readonly timestamp: number = Date.now()
   ) {
     super();
@@ -34,8 +35,15 @@ export class AlertClicked extends BaseEvent {
       action: string;
       pairId?: string;
       alertName?: string;
+      alertExchange?: string;
     };
-    return new AlertClicked(parsed.alertTicker, parsed.action as AlertClickAction, parsed.pairId, parsed.alertName);
+    return new AlertClicked(
+      parsed.alertTicker,
+      parsed.action as AlertClickAction,
+      parsed.pairId,
+      parsed.alertName,
+      parsed.alertExchange
+    );
   }
 }
 

@@ -163,7 +163,13 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     // Resolve alert identity; only publish event if trusted identity is found
     const identity = await this.resolveAlertIdentity(ticker, name, href);
     if (identity) {
-      void this.alertManager.createAlertClickEvent(identity.alertTicker, action, identity.pairId, identity.alertName);
+      void this.alertManager.createAlertClickEvent(
+        identity.alertTicker,
+        action,
+        identity.pairId,
+        identity.alertName,
+        identity.alertExchange
+      );
     } else if (action === AlertClickAction.OPEN) {
       // Fallback for untracked/unmapped rows: open using extracted ticker directly
       void this.alertManager.createAlertClickEvent(ticker, action, undefined, name);
@@ -217,11 +223,16 @@ export class AlertFeedHandler implements IAlertFeedHandler {
     ticker: string,
     name: string,
     href?: string
-  ): Promise<{ alertTicker: string; pairId: string; alertName: string } | null> {
+  ): Promise<{ alertTicker: string; pairId: string; alertName: string; alertExchange: string } | null> {
     // Priority 1: existing AlertTicker record
     const alertTicker = await this.alertTickerManager.fetchAlertTicker(ticker);
     if (alertTicker) {
-      return { alertTicker: alertTicker.symbol, pairId: alertTicker.pair_id, alertName: alertTicker.name };
+      return {
+        alertTicker: alertTicker.symbol,
+        pairId: alertTicker.pair_id,
+        alertName: alertTicker.name,
+        alertExchange: alertTicker.exchange,
+      };
     }
 
     // Priority 2: resolve via instrument API — try ticker, clean name, then raw name
@@ -234,6 +245,7 @@ export class AlertFeedHandler implements IAlertFeedHandler {
             alertTicker: instrument.symbol,
             pairId: instrument.id.toString(),
             alertName: instrument.description,
+            alertExchange: instrument.exchange,
           };
         }
       }
