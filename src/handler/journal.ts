@@ -323,6 +323,7 @@ export class JournalHandler implements IJournalHandler {
     try {
       await this.tvManager.setSwiftKeysState(false);
 
+      // FIXME: Build REASONS from journal tag frequency analysis instead of hardcoded list.
       const response = await this.smartPrompt.showModal(
         Constants.TRADING.PROMPT.REASONS,
         Constants.TRADING.PROMPT.OVERRIDES
