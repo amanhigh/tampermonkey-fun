@@ -480,7 +480,7 @@ describe('AlertFeedHandler', () => {
       );
     });
 
-    it('should fallback to instrument API and emit trusted fields with alertName', async () => {
+    it('should fallback to instrument API and resolve by ticker first', async () => {
       mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(null);
       const instrument: Instrument = {
         id: 8874,
@@ -502,8 +502,9 @@ describe('AlertFeedHandler', () => {
       await (handler as any).handleAlertClick({ ctrlKey: true, preventDefault: jest.fn() });
 
       expect(mockAlertTickerManager.fetchAlertTicker).toHaveBeenCalledWith('INFY');
+      // Ticker should be tried before the raw alert title
       expect(mockInvestingManager.getInstrument).toHaveBeenCalledWith(
-        'Infosys (INFY)',
+        'INFY',
         'https://in.investing.com/equities/infosys'
       );
       expect(mockAlertManager.createAlertClickEvent).toHaveBeenCalledWith(
@@ -511,6 +512,84 @@ describe('AlertFeedHandler', () => {
         AlertClickAction.MAP,
         '8874',
         'Infosys Ltd'
+      );
+    });
+
+    it('should resolve MAP identity by ticker first for VPL-style alert labels', async () => {
+      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(null);
+      const instrument: Instrument = {
+        id: 38164,
+        url: '/etfs/vanguard-pacific',
+        description: 'Vanguard FTSE Pacific Index Fund ETF Shares',
+        symbol: 'VPL',
+        exchange: 'NYSE',
+      };
+      mockInvestingManager.getInstrument.mockResolvedValue(instrument);
+
+      const $mock = (global as any).$;
+      $mock.mockImplementation(() => ({
+        text: jest.fn().mockReturnValue('Vanguard FTSE Pacific (VPL)'),
+        closest: jest.fn().mockReturnValue({
+          attr: jest.fn().mockReturnValue('https://in.investing.com/etfs/vanguard-pacific'),
+        }),
+      }));
+
+      await (handler as any).handleAlertClick({ ctrlKey: true, preventDefault: jest.fn() });
+
+      // Should try ticker 'VPL' first, not the raw alert title
+      expect(mockInvestingManager.getInstrument).toHaveBeenCalledWith(
+        'VPL',
+        'https://in.investing.com/etfs/vanguard-pacific'
+      );
+      expect(mockAlertManager.createAlertClickEvent).toHaveBeenCalledWith(
+        'VPL',
+        AlertClickAction.MAP,
+        '38164',
+        'Vanguard FTSE Pacific Index Fund ETF Shares'
+      );
+    });
+
+    it('should fallback to clean alert name when ticker query returns no instrument', async () => {
+      mockAlertTickerManager.fetchAlertTicker.mockResolvedValue(null);
+      const instrument: Instrument = {
+        id: 38164,
+        url: '/etfs/vanguard-pacific',
+        description: 'Vanguard FTSE Pacific Index Fund ETF Shares',
+        symbol: 'VPL',
+        exchange: 'NYSE',
+      };
+      // Ticker query returns null, clean name query succeeds
+      mockInvestingManager.getInstrument
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(instrument);
+
+      const $mock = (global as any).$;
+      $mock.mockImplementation(() => ({
+        text: jest.fn().mockReturnValue('Vanguard FTSE Pacific (VPL)'),
+        closest: jest.fn().mockReturnValue({
+          attr: jest.fn().mockReturnValue('https://in.investing.com/etfs/vanguard-pacific'),
+        }),
+      }));
+
+      await (handler as any).handleAlertClick({ ctrlKey: true, preventDefault: jest.fn() });
+
+      // First try ticker 'VPL' — returns null
+      expect(mockInvestingManager.getInstrument).toHaveBeenNthCalledWith(
+        1,
+        'VPL',
+        'https://in.investing.com/etfs/vanguard-pacific'
+      );
+      // Then try clean name 'Vanguard FTSE Pacific' — succeeds
+      expect(mockInvestingManager.getInstrument).toHaveBeenNthCalledWith(
+        2,
+        'Vanguard FTSE Pacific',
+        'https://in.investing.com/etfs/vanguard-pacific'
+      );
+      expect(mockAlertManager.createAlertClickEvent).toHaveBeenCalledWith(
+        'VPL',
+        AlertClickAction.MAP,
+        '38164',
+        'Vanguard FTSE Pacific Index Fund ETF Shares'
       );
     });
 

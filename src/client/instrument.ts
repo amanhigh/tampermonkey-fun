@@ -25,7 +25,7 @@ export interface IInstrumentClient extends IBaseClient {
 export class InstrumentClient extends BaseClient implements IInstrumentClient {
   private static readonly DEFAULT_LIMIT = 10;
 
-  constructor(baseUrl: string = 'https://api.investing.com/api/search') {
+  constructor(baseUrl: string = 'https://api.investing.com/api/search/') {
     super(baseUrl);
   }
 

@@ -173,12 +173,45 @@ export class AlertFeedHandler implements IAlertFeedHandler {
   }
 
   /**
+   * Strip trailing parenthesised ticker from an alert title.
+   * E.g. "Vanguard FTSE Pacific (VPL)" → "Vanguard FTSE Pacific".
+   * Returns the original name unchanged when no parenthesised ticker is found.
+   */
+  private cleanAlertName(name: string, ticker: string): string {
+    const suffix = `(${ticker})`;
+    const trimmed = name.trim();
+    if (trimmed.endsWith(suffix)) {
+      const before = trimmed.slice(0, trimmed.length - suffix.length).trimEnd();
+      return before || trimmed;
+    }
+    return trimmed;
+  }
+
+  /**
+   * Build a deduplicated ordered list of search queries for identity resolution.
+   * Order: [ticker, cleanName, rawName].
+   * Duplicate values are dropped so the same query is never sent twice.
+   */
+  private buildIdentitySearchQueries(ticker: string, name: string): string[] {
+    const cleanName = this.cleanAlertName(name, ticker);
+    const candidates = [ticker, cleanName, name];
+    const seen = new Set<string>();
+    return candidates.filter((q) => {
+      if (seen.has(q)) {
+        return false;
+      }
+      seen.add(q);
+      return true;
+    });
+  }
+
+  /**
    * Resolve alert identity (backend-safe symbol, pair id, and name) for a given alert.
    * Returns null when no trusted identity can be resolved.
    *
    * Priority:
    *   1. Existing AlertTicker by extracted symbol
-   *   2. InvestingManager.getInstrument() via name+href
+   *   2. InvestingManager.getInstrument() — tried with ticker, clean name, then raw name
    */
   private async resolveAlertIdentity(
     ticker: string,
@@ -191,15 +224,18 @@ export class AlertFeedHandler implements IAlertFeedHandler {
       return { alertTicker: alertTicker.symbol, pairId: alertTicker.pair_id, alertName: alertTicker.name };
     }
 
-    // Priority 2: resolve via instrument API using name and href
+    // Priority 2: resolve via instrument API — try ticker, clean name, then raw name
     if (href) {
-      const instrument = await this.investingManager.getInstrument(name, href);
-      if (instrument) {
-        return {
-          alertTicker: instrument.symbol,
-          pairId: instrument.id.toString(),
-          alertName: instrument.description,
-        };
+      const queries = this.buildIdentitySearchQueries(ticker, name);
+      for (const query of queries) {
+        const instrument = await this.investingManager.getInstrument(query, href);
+        if (instrument) {
+          return {
+            alertTicker: instrument.symbol,
+            pairId: instrument.id.toString(),
+            alertName: instrument.description,
+          };
+        }
       }
     }
 
