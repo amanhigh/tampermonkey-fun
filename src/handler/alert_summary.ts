@@ -1,12 +1,13 @@
 import { Constants } from '../models/constant';
 import { Alert } from '../models/alert';
 import { IAlertManager } from '../manager/alert';
+import { ICategoryManager } from '../manager/category';
 import { ITradingViewManager } from '../manager/tv';
 import { IUIUtil } from '../util/ui';
 import { Notifier } from '../util/notify';
 import { IDomainEventConsumer, ISubscriber } from '../manager/event_bus';
 import { DomainEventType } from '../models/domain_event';
-import { isCompositeSymbol } from '../models/ticker';
+import { WatchCategoryId } from '../models/watch';
 
 // ── Alert tint CSS classes (defined in _alert_bar.less) ──
 
@@ -30,6 +31,7 @@ export interface IAlertSummaryHandler extends IDomainEventConsumer {}
 export class AlertSummaryHandler implements IAlertSummaryHandler {
   constructor(
     private readonly alertManager: IAlertManager,
+    private readonly categoryManager: ICategoryManager,
     private readonly tvManager: ITradingViewManager,
     private readonly uiUtil: IUIUtil
   ) {}
@@ -62,7 +64,8 @@ export class AlertSummaryHandler implements IAlertSummaryHandler {
       this.displayAlerts(null);
 
       // Ignore errors for composite symbols as expected
-      if (!isCompositeSymbol(ticker)) {
+      const category = await this.categoryManager.getTickerCategory(ticker);
+      if (category.watch?.id !== WatchCategoryId.COMPOSITE) {
         const message = error instanceof Error ? error.message : 'Unknown error';
         console.warn(`AlertSummaryHandler: Failed to load alerts for ${ticker}: ${message}`);
       }

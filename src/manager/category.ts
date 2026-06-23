@@ -3,7 +3,7 @@ import { Constants } from '../models/constant';
 import { ITickerManager } from './ticker';
 import { IJournalManager } from './journal';
 import { Notifier } from '../util/notify';
-import { isCompositeSymbol, TickerState, TickerUpdateRequest } from '../models/ticker';
+import { TickerState, TickerUpdateRequest } from '../models/ticker';
 import { WatchCategory, WatchCategoryId } from '../models/watch';
 import { FlagCategory, FlagCategoryId } from '../models/flag';
 import { TickerCategory } from '../models/category';
@@ -216,25 +216,34 @@ export class CategoryManager implements ICategoryManager {
 
   /**
    * Load a ticker's combined categories from backend data.
-   * Fires journal check and ticker fetch in parallel.
+   * Backend COMPOSITE detection short-circuits journal lookup.
    * Returns undefined only when no category and not FNO (avoids caching a complete miss).
    */
   private async loadTickerCategory(ticker: string): Promise<TickerCategory | undefined> {
-    // Fire journal check and ticker fetch in parallel
-    const [journalCategory, tickerRecord] = await Promise.all([
-      this.resolveJournalCategory(ticker),
-      this.tickerManager.getTicker(ticker).catch(() => undefined),
-    ]);
+    const tickerRecord = await this.tickerManager.getTicker(ticker).catch(() => undefined);
 
+    // Backend-derived watch category (may be COMPOSITE for composite tickers)
+    const backendWatch = tickerRecord ? WatchClassifier.findByTicker(tickerRecord) : undefined;
+
+    // Composite tickers short-circuit: skip journal lookup entirely
+    if (backendWatch?.id === WatchCategoryId.COMPOSITE) {
+      return {
+        watch: backendWatch,
+        flag: FlagClassifier.findByTicker(tickerRecord!),
+        isFno: tickerRecord!.is_fno,
+      };
+    }
+
+    // Non-composite: resolve journal-based category (RUNNING takes priority)
     let watch: WatchCategory | undefined;
     let flag: FlagCategory | undefined;
     let isFno = false;
 
-    // Watch: journal-based (RUNNING) takes priority
+    const journalCategory = await this.resolveJournalCategory(ticker);
     if (journalCategory !== undefined) {
       watch = journalCategory;
-    } else if (tickerRecord !== undefined) {
-      watch = WatchClassifier.findByTicker(tickerRecord);
+    } else {
+      watch = backendWatch;
     }
 
     // Flag: derived from ticker record only
@@ -260,14 +269,8 @@ export class CategoryManager implements ICategoryManager {
    *   1 RUNNING journal  → WatchCategoryId.RUNNING  (lime)
    *   2 SET journal      → WatchCategoryId.SET_JOURNAL (orange)
    *   3 None             → undefined (falls through to backend-derived categories)
-   *
-   * Composite symbols are skipped entirely.
    */
   private async resolveJournalCategory(ticker: string): Promise<WatchCategory | undefined> {
-    if (isCompositeSymbol(ticker)) {
-      return undefined;
-    }
-
     const journalManager = this.getJournalManager();
 
     // Priority 1: RUNNING

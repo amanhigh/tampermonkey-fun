@@ -416,7 +416,13 @@ export class Factory {
     alertSummary: (): IAlertSummaryHandler =>
       Factory.getInstance(
         'alertSummaryHandler',
-        () => new AlertSummaryHandler(Factory.manager.alert(), Factory.manager.tv(), Factory.util.ui())
+        () =>
+          new AlertSummaryHandler(
+            Factory.manager.alert(),
+            Factory.manager.category(),
+            Factory.manager.tv(),
+            Factory.util.ui()
+          )
       ),
     audit: (): IAuditHandler =>
       Factory.getInstance('auditHandler', () => {
@@ -580,6 +586,7 @@ export class Factory {
           new AlertFeedHandler(
             Factory.util.ui(),
             Factory.util.sync(),
+            Factory.manager.category(),
             Factory.manager.display(),
             Factory.manager.alert(),
             Factory.manager.alertFeed(),

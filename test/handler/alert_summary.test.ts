@@ -1,11 +1,13 @@
 import { AlertSummaryHandler } from '../../src/handler/alert_summary';
 import { IAlertManager } from '../../src/manager/alert';
+import { ICategoryManager } from '../../src/manager/category';
 import { ITradingViewManager } from '../../src/manager/tv';
 import { IUIUtil } from '../../src/util/ui';
 import { Alert } from '../../src/models/alert';
 import { Notifier } from '../../src/util/notify';
 import { ISubscriber } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
+import { WatchCategoryId } from '../../src/models/watch';
 
 // ── Mock jQuery ──
 let mockContainerEl: any;
@@ -39,6 +41,7 @@ jest.mock('../../src/util/notify', () => ({
 describe('AlertSummaryHandler', () => {
   let handler: AlertSummaryHandler;
   let mockAlertManager: jest.Mocked<IAlertManager>;
+  let mockCategoryManager: jest.Mocked<ICategoryManager>;
   let mockTvManager: jest.Mocked<ITradingViewManager>;
   let mockUiUtil: jest.Mocked<IUIUtil>;
   let mockButton: any;
@@ -73,6 +76,10 @@ describe('AlertSummaryHandler', () => {
       getLastTradedPrice: jest.fn().mockReturnValue(200),
     } as any;
 
+    mockCategoryManager = {
+      getTickerCategory: jest.fn().mockResolvedValue({ watch: undefined, flag: undefined, isFno: false }),
+    } as any;
+
     mockUiUtil = {
       buildButton: jest.fn().mockReturnValue(mockButton),
       buildLabel: jest.fn().mockReturnValue({
@@ -82,7 +89,7 @@ describe('AlertSummaryHandler', () => {
       colorText: jest.fn((text: string) => `<span>${text}</span>`),
     } as any;
 
-    handler = new AlertSummaryHandler(mockAlertManager, mockTvManager, mockUiUtil);
+    handler = new AlertSummaryHandler(mockAlertManager, mockCategoryManager, mockTvManager, mockUiUtil);
   });
 
   // ── States ──
@@ -189,6 +196,52 @@ describe('AlertSummaryHandler', () => {
         expect.arrayContaining([DomainEventType.TICKER_TRACKING_STOPPED]),
         expect.any(Function)
       );
+    });
+
+    it('should suppress warning for composite ticker on alert fetch failure', async () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      mockAlertManager.getAlertsForTicker = jest.fn().mockRejectedValue(new Error('not found'));
+      mockCategoryManager.getTickerCategory.mockResolvedValue({
+        watch: { id: WatchCategoryId.COMPOSITE, color: 'darkkhaki', label: 'Composite', recordUpdate: null },
+        flag: undefined,
+        isFno: false,
+      });
+
+      let manyCallback: Function | undefined;
+      const mockSubscriber: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn((_types, cb) => { manyCallback = cb; }),
+      };
+
+      handler.registerEvents(mockSubscriber);
+      await manyCallback!({ type: DomainEventType.TICKER_CHANGED, ticker: 'SENSEX/USDINR/XAUUSD' });
+
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+
+    it('should warn for non-composite ticker on alert fetch failure', async () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      mockAlertManager.getAlertsForTicker = jest.fn().mockRejectedValue(new Error('not found'));
+      mockCategoryManager.getTickerCategory.mockResolvedValue({
+        watch: undefined,
+        flag: undefined,
+        isFno: false,
+      });
+
+      let manyCallback: Function | undefined;
+      const mockSubscriber: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn((_types, cb) => { manyCallback = cb; }),
+      };
+
+      handler.registerEvents(mockSubscriber);
+      await manyCallback!({ type: DomainEventType.TICKER_CHANGED, ticker: 'TV:INFY' });
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('AlertSummaryHandler: Failed to load alerts for TV:INFY')
+      );
+      warnSpy.mockRestore();
     });
   });
 });

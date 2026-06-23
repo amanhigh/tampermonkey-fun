@@ -30,8 +30,6 @@ export enum TickerTrend {
 
 import { AlertTicker } from './alert_ticker';
 
-import { Constants } from './constant';
-
 // ── Primary Ticker Class ──
 
 /**
@@ -120,11 +118,3 @@ export interface TickerListResponse {
  * @param symbol Symbol to check
  * @returns True if symbol is composite
  */
-export function isCompositeSymbol(symbol: string): boolean {
-  // FIXME: Use Backend Composite Type and Thong Logic.
-  const normalized = symbol.toUpperCase();
-  if (Constants.COMPOSITE.SPECIAL_TICKERS.includes(normalized)) {
-    return true;
-  }
-  return Constants.COMPOSITE.CHARACTERS.some((char) => symbol.includes(char));
-}
