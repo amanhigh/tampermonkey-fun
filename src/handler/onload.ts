@@ -1,4 +1,5 @@
 import { Constants } from '../models/constant';
+import { TickerArea } from '../models/dom';
 import { IObserveUtil } from '../util/observer';
 import { IWaitUtil } from '../util/wait';
 import { IWatchListHandler } from './watchlist';
@@ -139,7 +140,7 @@ export class OnLoadHandler implements IOnLoadHandler {
    */
   private setupWatchlistObserver(onReady: () => void): void {
     this.waitUtil.waitJEE(
-      `${Constants.DOM.WATCHLIST.CONTAINER} > div`,
+      `${TickerArea.WATCHLIST.containerSelector} > div`,
       (element) => {
         const targetElement = element.get(0);
         if (!targetElement) {
@@ -205,11 +206,11 @@ export class OnLoadHandler implements IOnLoadHandler {
     const observeTarget = document.body;
 
     // Track screener state
-    let wasScreenerOpen = $(Constants.DOM.SCREENER.MAIN).length > 0;
+    let wasScreenerOpen = $(TickerArea.SCREENER.mainSelector).length > 0;
     // Direct observer with screener open/close detection
     try {
       this.observeUtil.nodeObserver(observeTarget, () => {
-        const isScreenerOpen = $(Constants.DOM.SCREENER.MAIN).length > 0;
+        const isScreenerOpen = $(TickerArea.SCREENER.mainSelector).length > 0;
 
         // Only act on state changes
         if (isScreenerOpen !== wasScreenerOpen) {

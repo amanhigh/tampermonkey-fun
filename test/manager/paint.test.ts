@@ -123,8 +123,8 @@ describe('PaintManager', () => {
       await paintManager.paint();
 
       // Reset happens via jQuery css calls on the symbol selector
-      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.SYMBOL);
-      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.SCREENER.SYMBOL);
+      expect(mockJQuery).toHaveBeenCalledWith(TickerArea.WATCHLIST.getSymbolSelector(TickerVisibility.ALL));
+      expect(mockJQuery).toHaveBeenCalledWith(TickerArea.SCREENER.getSymbolSelector(TickerVisibility.ALL));
     });
 
     it('should repaint header after full paint', async () => {

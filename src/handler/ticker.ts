@@ -68,17 +68,13 @@ export class TickerHandler implements ITickerHandler {
 
   /** @inheritdoc */
   public async stopTracking(ticker: string): Promise<void> {
-    this.styleManager.clearAll();
-
     try {
       await this.lifecycleManager.stopTracking(ticker);
+      this.styleManager.clearAll();
+      Notifier.success(`⏹ Stopped tracking ${ticker}`);
     } catch (error) {
       Notifier.warn(`Failed to delete ticker ${ticker}: ${(error as Error).message}`);
     }
-
-    // BUG: Post-stop display/alerts not refreshed — display.ts and alerts area
-    //       don't subscribe to TICKER_TRACKING_STOPPED, card stays stale.
-    Notifier.success(`⏹ Stopped tracking ${ticker}`);
   }
 
   /** @inheritdoc */

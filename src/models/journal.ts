@@ -3,14 +3,13 @@ import { PaginationMetadata } from './api';
 
 // ── Journal API Types ──
 
-export type JournalApiType = 'REJECTED' | 'TAKEN';
+export type JournalType = 'REJECTED' | 'TAKEN';
 
-export type JournalApiStatus = 'SET' | 'RUNNING' | 'SUCCESS' | 'FAIL' | 'MISSED' | 'JUST_LOSS' | 'BROKEN';
+export type JournalStatus = 'SET' | 'RUNNING' | 'SUCCESS' | 'FAIL' | 'MISSED' | 'JUST_LOSS' | 'BROKEN';
 
-export type JournalApiSequence = 'MWD' | 'YR' | 'WDH';
+export type JournalSequence = 'MWD' | 'YR' | 'WDH';
 
-// HACK: Unify Types in Frontend with Frontend Models
-export type JournalApiTimeframe = 'DL' | 'WK' | 'MN' | 'TMN' | 'SMN' | 'YR';
+export type JournalTimeframe = 'DL' | 'WK' | 'MN' | 'TMN' | 'SMN' | 'YR';
 
 export type JournalTagType = 'REASON' | 'MANAGEMENT' | 'DIRECTION';
 
@@ -19,8 +18,18 @@ export type JournalResultStatus = 'SUCCESS' | 'FAIL' | 'MISSED';
 
 export type JournalNoteFormat = 'MARKDOWN' | 'PLAINTEXT';
 
+/**
+ * Journal entry action types for UI button actions (SET, RESULT, REJECTED).
+ * Note: the stored backend type uses JournalType above, not this enum.
+ */
+export enum JournalActionType {
+  SET = 'set',
+  RESULT = 'result',
+  REJECTED = 'rejected',
+}
+
 export interface CreateJournalImageRequest {
-  timeframe: JournalApiTimeframe;
+  timeframe: JournalTimeframe;
   file_name: string;
 }
 
@@ -31,16 +40,16 @@ export interface CreateJournalTagRequest {
 }
 
 export interface CreateJournalNoteRequest {
-  status: JournalApiStatus;
+  status: JournalStatus;
   content: string;
   format?: JournalNoteFormat;
 }
 
 export interface CreateJournalRequest {
   ticker: string;
-  sequence: JournalApiSequence;
-  type: JournalApiType;
-  status: JournalApiStatus;
+  sequence: JournalSequence;
+  type: JournalType;
+  status: JournalStatus;
   images: CreateJournalImageRequest[];
   tags?: CreateJournalTagRequest[];
   notes?: CreateJournalNoteRequest[];
@@ -54,9 +63,9 @@ export interface CreateJournalInput {
   /** Captured screenshots to attach to the journal. */
   screenshots: ScreenshotResponse[];
   /** Journal API type to create. */
-  type: JournalApiType;
+  type: JournalType;
   /** Journal API status to assign. */
-  status: JournalApiStatus;
+  status: JournalStatus;
   /** Optional notes to attach on journal creation. */
   notes?: CreateJournalNoteRequest[];
 }
@@ -79,7 +88,7 @@ export interface JournalTagRecord {
 export interface JournalNoteRecord {
   id: string;
   journal_id: string;
-  status: JournalApiStatus;
+  status: JournalStatus;
   content: string;
   format: JournalNoteFormat;
   created_at: string;
@@ -88,8 +97,8 @@ export interface JournalNoteRecord {
 /** Query parameters for listing journals. */
 export interface JournalQueryParams {
   ticker?: string;
-  type?: JournalApiType;
-  status?: JournalApiStatus;
+  type?: JournalType;
+  status?: JournalStatus;
   limit?: number;
   offset?: number;
   'sort-by'?: string;
@@ -117,9 +126,9 @@ export interface UpdateJournalStatusResponse {
 export interface JournalRecord {
   id: string;
   ticker: string;
-  sequence: JournalApiSequence;
-  type: JournalApiType;
-  status: JournalApiStatus;
+  sequence: JournalSequence;
+  type: JournalType;
+  status: JournalStatus;
   created_at: string;
   reviewed_at?: string;
   deleted_at?: string;

@@ -8,7 +8,7 @@ import { IStyleManager } from '../../src/manager/style';
 import { DomManager } from '../../src/manager/dom';
 import { IAlertManager } from '../../src/manager/alert';
 import { AlertClickAction } from '../../src/models/events';
-import { JournalType } from '../../src/models/trading';
+import { JournalActionType } from '../../src/models/journal';
 import { Constants } from '../../src/models/constant';
 import { Notifier } from '../../src/util/notify';
 
@@ -174,7 +174,7 @@ describe('JournalHandler', () => {
       });
       (mockJournalManager.publishJournalOpenEvent as jest.Mock).mockResolvedValue(undefined);
 
-      await journalHandler.handleRecordJournal(JournalType.REJECTED);
+      await journalHandler.handleRecordJournal(JournalActionType.REJECTED);
 
       expect(mockJournalManager.screenshotTicker).toHaveBeenCalledWith('TCS', 'rejected');
       expect(mockJournalManager.createJournal).toHaveBeenCalledWith({
@@ -213,7 +213,7 @@ describe('JournalHandler', () => {
       });
       (mockJournalManager.publishJournalOpenEvent as jest.Mock).mockResolvedValue(undefined);
 
-      await journalHandler.handleRecordJournal(JournalType.SET);
+      await journalHandler.handleRecordJournal(JournalActionType.SET);
 
       // Verify ordering: note -> checklist -> reason -> full screenshots -> createJournal
       expect(mockSmartPrompt.showTextareaModal).toHaveBeenCalledWith(
@@ -248,7 +248,7 @@ describe('JournalHandler', () => {
       mockTickerManager.getTicker.mockReturnValue('TCS');
       mockSmartPrompt.showTextareaModal.mockResolvedValue(null);
 
-      await journalHandler.handleRecordJournal(JournalType.SET);
+      await journalHandler.handleRecordJournal(JournalActionType.SET);
 
       expect(mockOsClient.screenshotRegion).not.toHaveBeenCalled();
       expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
@@ -260,7 +260,7 @@ describe('JournalHandler', () => {
       mockTickerManager.getTicker.mockReturnValue('TCS');
       mockSmartPrompt.showTextareaModal.mockResolvedValue('   ');
 
-      await journalHandler.handleRecordJournal(JournalType.SET);
+      await journalHandler.handleRecordJournal(JournalActionType.SET);
 
       expect(mockOsClient.screenshotRegion).not.toHaveBeenCalled();
       expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
@@ -273,7 +273,7 @@ describe('JournalHandler', () => {
       mockSmartPrompt.showTextareaModal.mockResolvedValue(Constants.TRADING.PROMPT.TRADE_INFO);
       (mockOsClient.screenshotRegion as jest.Mock).mockRejectedValue(new Error('409 Conflict: screenshot aborted'));
 
-      await journalHandler.handleRecordJournal(JournalType.SET);
+      await journalHandler.handleRecordJournal(JournalActionType.SET);
 
       expect(mockOsClient.screenshotRegion).toHaveBeenCalledWith('TCS', 'set');
       expect(Notifier.warn).toHaveBeenCalledWith('Checklist screenshot was cancelled, aborting journal creation.');
@@ -293,7 +293,7 @@ describe('JournalHandler', () => {
       });
       mockSmartPrompt.showModal.mockResolvedValue({ type: 'cancel', value: null });
 
-      await journalHandler.handleRecordJournal(JournalType.SET);
+      await journalHandler.handleRecordJournal(JournalActionType.SET);
 
       expect(mockOsClient.screenshotRegion).toHaveBeenCalledWith('TCS', 'set');
       expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
@@ -317,7 +317,7 @@ describe('JournalHandler', () => {
         { file_name: 'TCS_20240422_0930_1_tmn_result.png', full_path: '/path/1', timeframe: 'TMN' },
       ]);
 
-      await journalHandler.handleRecordJournal(JournalType.RESULT);
+      await journalHandler.handleRecordJournal(JournalActionType.RESULT);
 
       expect(mockJournalManager.findRunningJournal).toHaveBeenCalledWith('TCS');
       expect(mockSmartPrompt.showModal).toHaveBeenNthCalledWith(1, ['SUCCESS', 'FAIL', 'MISSED']);
@@ -335,7 +335,7 @@ describe('JournalHandler', () => {
       mockTickerManager.getTicker.mockReturnValue('TCS');
       (mockJournalManager.findRunningJournal as jest.Mock).mockResolvedValue(null);
 
-      await journalHandler.handleRecordJournal(JournalType.RESULT);
+      await journalHandler.handleRecordJournal(JournalActionType.RESULT);
 
       expect(Notifier.warn).toHaveBeenCalledWith('No running journal found for TCS. Result cannot be captured.');
       expect(mockSmartPrompt.showModal).not.toHaveBeenCalled();
@@ -351,7 +351,7 @@ describe('JournalHandler', () => {
       });
       mockSmartPrompt.showModal.mockResolvedValue({ type: 'cancel', value: null });
 
-      await journalHandler.handleRecordJournal(JournalType.RESULT);
+      await journalHandler.handleRecordJournal(JournalActionType.RESULT);
 
       expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
       expect(mockJournalManager.updateJournalStatus).not.toHaveBeenCalled();
@@ -366,7 +366,7 @@ describe('JournalHandler', () => {
         .mockResolvedValueOnce({ type: 'reason', value: 'SUCCESS' })
         .mockResolvedValueOnce({ type: 'cancel', value: null });
 
-      await journalHandler.handleRecordJournal(JournalType.RESULT);
+      await journalHandler.handleRecordJournal(JournalActionType.RESULT);
 
       expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
       expect(mockJournalManager.updateJournalStatus).not.toHaveBeenCalled();

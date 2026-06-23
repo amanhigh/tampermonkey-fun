@@ -363,7 +363,7 @@ describe('AlertHandler', () => {
       expect(mockEvent.preventDefault).toHaveBeenCalled();
       expect(mockEvent.stopPropagation).toHaveBeenCalled();
       expect(mockUIUtil.showConfirm).toHaveBeenCalledWith('Delink INFY.PA?');
-      expect(mockAlertTickerManager.deleteAlertTicker).toHaveBeenCalledWith('INFY.PA');
+      expect(mockAlertTickerManager.deleteAlertTicker).toHaveBeenCalledWith('INFY.PA', 'TV:INFY');
       expect(Notifier.success).toHaveBeenCalledWith('⏹ Delinked INFY.PA');
     });
 
@@ -387,7 +387,7 @@ describe('AlertHandler', () => {
       expect(mockUIUtil.showConfirm).toHaveBeenCalledWith(
         expect.stringContaining('PRIMARY')
       );
-      expect(mockAlertTickerManager.deleteAlertTicker).toHaveBeenCalledWith('INFY');
+      expect(mockAlertTickerManager.deleteAlertTicker).toHaveBeenCalledWith('INFY', 'TV:INFY');
     });
 
     it('does not delete when confirm is cancelled', async () => {

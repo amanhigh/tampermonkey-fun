@@ -4,6 +4,8 @@ import { ITradingViewManager } from '../../src/manager/tv';
 import { IUIUtil } from '../../src/util/ui';
 import { Alert } from '../../src/models/alert';
 import { Notifier } from '../../src/util/notify';
+import { ISubscriber } from '../../src/manager/event_bus';
+import { DomainEventType } from '../../src/models/domain_event';
 
 // ── Mock jQuery ──
 let mockContainerEl: any;
@@ -171,6 +173,22 @@ describe('AlertSummaryHandler', () => {
       expect(mockAlertManager.deleteAlert).toHaveBeenCalledWith('alert-1');
       expect(Notifier.red).toHaveBeenCalledWith('❌ Alert deleted: 100');
       expect(mockButton.remove).toHaveBeenCalled();
+    });
+  });
+
+  describe('registerEvents', () => {
+    it('should subscribe to TICKER_TRACKING_STOPPED to refresh alerts for stopped ticker', () => {
+      const mockSubscriber: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerEvents(mockSubscriber);
+
+      expect(mockSubscriber.subscribeMany).toHaveBeenCalledWith(
+        expect.arrayContaining([DomainEventType.TICKER_TRACKING_STOPPED]),
+        expect.any(Function)
+      );
     });
   });
 });

@@ -8,7 +8,7 @@ import { IJournalHandler } from '../handler/journal';
 import { ICommandInputHandler } from '../handler/command';
 import { IKiteHandler } from '../handler/kite';
 import { IAlertFeedHandler } from '../handler/alertfeed';
-import { JournalType } from '../models/trading';
+import { JournalActionType } from '../models/journal';
 import { IGlobalErrorHandler } from '../handler/error';
 import { IPanelHandler } from '../handler/panel';
 import { IDomManager } from '../manager/dom';
@@ -166,17 +166,17 @@ export class Barkat {
       .appendTo(`#${Constants.UI.IDS.AREAS.JOURNAL}`)
       .append(
         this.uiUtil.buildButton('trend', 'RJ', () => {
-          void this.journalHandler.handleRecordJournal(JournalType.REJECTED);
+          void this.journalHandler.handleRecordJournal(JournalActionType.REJECTED);
         })
       )
       .append(
         this.uiUtil.buildButton('trend', 'RS', () => {
-          void this.journalHandler.handleRecordJournal(JournalType.RESULT);
+          void this.journalHandler.handleRecordJournal(JournalActionType.RESULT);
         })
       )
       .append(
         this.uiUtil.buildButton('trend', 'ST', () => {
-          void this.journalHandler.handleRecordJournal(JournalType.SET);
+          void this.journalHandler.handleRecordJournal(JournalActionType.SET);
         })
       );
   }

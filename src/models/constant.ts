@@ -131,22 +131,6 @@ export const Constants = Object.freeze({
         STOP_PRICE: 'input[data-property-id*="StopLevelPrice"]',
       },
     },
-    // HACK: Use Screener and Watchlist only via TickerArea.
-    SCREENER: {
-      SYMBOL: 'a.tickerName-GrtoTeat', // Old name: screenerSymbolSelector
-      MAIN: '[data-qa-id="screener-widget"]', // Old name: screenerSelector
-      LINE: 'tr.row-RdUXZpkv', // Old name: screenerLineSelector
-      ITEM: 'tr.row-RdUXZpkv', // Screener item selector for flag painting
-      SELECTED: '.tv-screener-table__result-row--selected', // Old name: screenerSelectedSelector
-    },
-    WATCHLIST: {
-      SYMBOL: 'span[class*=symbolNameText]', // Old Name: watchListSymbolSelector
-      WIDGET: 'div.widgetbar-widgetbody:first', // Old Name: watchListWidgetSelector
-      CONTAINER: 'div[class^=listContainer]', // Old Name: watchListSelector
-      ITEM: 'div[class*=symbol-]', // Old Name: watchListItemSelector
-      LINE: 'div[class^=listContainer] > div > div', // Old Name: watchListLineSelector
-      SELECTED: 'div[class*=selected]', // Old Name: watchListSelectedSelector
-    },
     FLAGS: {
       SYMBOL: 'div[class^=uiMarker]', // Old Name: symbolFlagSelector
       MARKING: 'div[class^=uiMarker] > svg > path:nth(0)', // Old Name: flagMarkingSelector

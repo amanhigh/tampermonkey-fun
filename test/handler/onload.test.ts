@@ -10,6 +10,7 @@ import { IDomManager } from '../../src/manager/dom';
 import { IDomainEventConsumer, ISubscriber, IPublisher } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
 import { Constants } from '../../src/models/constant';
+import { TickerArea } from '../../src/models/dom';
 
 // Mock document and jQuery
 const mockDocument = {
@@ -145,7 +146,7 @@ describe('OnLoadHandler', () => {
 
       // Watchlist observer setup (second wait, serial after ticker)
       expect(mockWaitUtil.waitJEE).toHaveBeenCalledWith(
-        `${Constants.DOM.WATCHLIST.CONTAINER} > div`,
+        `${TickerArea.WATCHLIST.containerSelector} > div`,
         expect.any(Function),
         10
       );
@@ -222,8 +223,8 @@ describe('OnLoadHandler', () => {
   });
 
   describe('constants integration', () => {
-    it('should use correct DOM selectors from constants', () => {
-      expect(Constants.DOM.SCREENER.MAIN).toBe('[data-qa-id="screener-widget"]');
+    it('should use correct DOM selectors from TickerArea', () => {
+      expect(TickerArea.SCREENER.mainSelector).toBe('[data-qa-id="screener-widget"]');
     });
   });
 });

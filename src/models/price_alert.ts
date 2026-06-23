@@ -17,7 +17,6 @@ export interface PriceAlert {
 }
 
 /** One canonical refreshed Investing.com price-alert row for PUT /v1/api/alerts. */
-// HACK: Better naming for line item ?
 export interface PriceAlertInput {
   pair_id: string;
   alert_id: string;
