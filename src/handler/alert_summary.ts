@@ -37,7 +37,12 @@ export class AlertSummaryHandler implements IAlertSummaryHandler {
   /** @inheritdoc */
   registerEvents(subscriber: ISubscriber): void {
     subscriber.subscribeMany(
-      [DomainEventType.TICKER_CHANGED, DomainEventType.ALERTS_CHANGED, DomainEventType.TICKER_METADATA_CHANGED],
+      [
+        DomainEventType.TICKER_CHANGED,
+        DomainEventType.ALERTS_CHANGED,
+        DomainEventType.TICKER_METADATA_CHANGED,
+        DomainEventType.TICKER_TRACKING_STOPPED,
+      ],
       async (event) => {
         await this.refreshAlertsForTicker(event.ticker);
       }

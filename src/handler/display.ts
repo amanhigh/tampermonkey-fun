@@ -59,20 +59,24 @@ export class DisplayHandler implements IDisplayHandler {
 
   /** @inheritdoc */
   registerEvents(subscriber: ISubscriber): void {
-    // BUG: TICKER_TRACKING_STOPPED not subscribed — display stays stale after stop-tracking.
-    subscriber.subscribe(DomainEventType.TICKER_CHANGED, async () => {
-      await this.display();
-    });
-    subscriber.subscribeMany([DomainEventType.ALERT_TICKER_LINKED, DomainEventType.ALERT_TICKER_DELETED], async () => {
-      await this.display();
-    });
+    subscriber.subscribeMany(
+      [
+        DomainEventType.TICKER_CHANGED,
+        DomainEventType.TICKER_TRACKING_STOPPED,
+        DomainEventType.ALERT_TICKER_LINKED,
+        DomainEventType.ALERT_TICKER_DELETED,
+      ],
+      async () => {
+        await this.display();
+      }
+    );
   }
 
   /**
    * Fetches current ticker data and renders the display card.
    * Always starts in compact mode on fresh data fetch.
-   * Consumers should drive re-renders via TICKER_CHANGED and
-   * ALERT_TICKER_LINKED/ALERT_TICKER_DELETED events.
+   * Consumers drive re-renders via TICKER_CHANGED, TICKER_TRACKING_STOPPED,
+   * ALERT_TICKER_LINKED, and ALERT_TICKER_DELETED events.
    */
   async display(): Promise<void> {
     this.displayExpanded = false;

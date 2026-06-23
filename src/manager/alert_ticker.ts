@@ -51,9 +51,12 @@ export interface IAlertTickerManager {
 
   /**
    * Delete an Alert ticker by its Investing.com symbol.
+   * Publishes ALERT_TICKER_DELETED with the parent ticker so consumers
+   * (display, alert feed) can react with full context.
    * @param alertTicker - Alert ticker symbol to delete
+   * @param parentTicker - Parent TV ticker for the deletion event payload
    */
-  deleteAlertTicker(alertTicker: string): Promise<void>;
+  deleteAlertTicker(alertTicker: string, parentTicker: string): Promise<void>;
 }
 
 /**
@@ -107,13 +110,14 @@ export class AlertTickerManager implements IAlertTickerManager {
   }
 
   /** @inheritdoc */
-  async deleteAlertTicker(alertTicker: string): Promise<void> {
+  async deleteAlertTicker(alertTicker: string, parentTicker: string): Promise<void> {
     await this.alertTickerClient.deleteAlertTicker(alertTicker);
 
-    // Publish deletion event so alert-feed subscribers repaint UNMAPPED
+    // Publish deletion event so alert-feed / display subscribers repaint
     await this.publisher.publish({
       type: DomainEventType.ALERT_TICKER_DELETED,
       alertTicker,
+      ticker: parentTicker,
     });
   }
 }
