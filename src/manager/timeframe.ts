@@ -1,4 +1,4 @@
-import { Timeframe, TickerTimeframe, Sequence, TMN_SEQUENCE, SMN_SEQUENCE } from '../models/timeframe';
+import { Timeframe, TickerTimeframe, Sequence, TMN_SEQUENCE, SMN_SEQUENCE, YR_SEQUENCE } from '../models/timeframe';
 import { Constants } from '../models/constant';
 import { DomainEventType } from '../models/domain_event';
 import { Notifier } from '../util/notify';
@@ -48,11 +48,12 @@ export interface ITimeFrameManager {
   toggleTimeframe(code: TickerTimeframe): Promise<TickerTimeframe[]>;
 
   /** Get the derived Sequence (4-tuple) for the current ticker.
-   * Selects TMN_SEQUENCE or SMN_SEQUENCE based on whether the ticker's
-   * allowed timeframes include DL:
+   * Selects TMN_SEQUENCE, SMN_SEQUENCE, or YR_SEQUENCE based on which
+   * timeframes the ticker's allowed timeframe list includes:
    *   - Empty/unsupported list → TMN_SEQUENCE (TMN, MN, WK, DL)
    *   - Contains DL            → TMN_SEQUENCE (TMN, MN, WK, DL)
-   *   - Otherwise              → SMN_SEQUENCE (SMN, TMN, MN, WK) */
+   *   - Contains WK, no DL     → SMN_SEQUENCE (SMN, TMN, MN, WK)
+   *   - Lacks WK and DL        → YR_SEQUENCE (YR, SMN, TMN, MN) */
   getSequence(): Promise<Sequence>;
 
   /** Apply timeframe to chart at given position in the current ticker's Sequence.
@@ -74,9 +75,10 @@ export interface ITimeFrameManager {
  * sequence derivation, and default timeframe policies.
  *
  * The Sequence is derived from the ticker's allowed timeframes:
- *   - Contains DL → TMN_SEQUENCE (TMN, MN, WK, DL)
- *   - Otherwise  → SMN_SEQUENCE (SMN, TMN, MN, WK)
- *   - Fallback    → TMN_SEQUENCE (TMN, MN, WK, DL)
+ *   - Contains DL     → TMN_SEQUENCE (TMN, MN, WK, DL)
+ *   - Contains WK     → SMN_SEQUENCE (SMN, TMN, MN, WK)
+ *   - Lacks WK and DL → YR_SEQUENCE (YR, SMN, TMN, MN)
+ *   - Fallback        → TMN_SEQUENCE (TMN, MN, WK, DL)
  *
  * Hotkeys 1-4 apply timeframes by position in the derived Sequence
  * rather than from a fixed sequence.
@@ -141,9 +143,10 @@ export class TimeFrameManager implements ITimeFrameManager {
     if (codes.length === 0 || codes.includes(TickerTimeframe.DL)) {
       return TMN_SEQUENCE;
     }
-    // FIXME: When allowed timeframes lack both WK and DL, use a YR-based sequence
-    //        (YR, SMN, TMN, MN) instead of falling through to SMN_SEQUENCE which assumes WK.
-    return SMN_SEQUENCE;
+    if (codes.includes(TickerTimeframe.WK)) {
+      return SMN_SEQUENCE;
+    }
+    return YR_SEQUENCE;
   }
 
   // ── DOM Operations ──
