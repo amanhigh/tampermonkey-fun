@@ -298,7 +298,7 @@ export class Factory {
     display: (): IDisplayManager =>
       Factory.getInstance(
         'displayManager',
-        () => new DisplayManager(Factory.manager.category(), Factory.manager.recent())
+        () => new DisplayManager(Factory.manager.category(), Factory.manager.recent(), Factory.manager.ticker())
       ),
     alertFeed: (): IAlertFeedManager =>
       Factory.getInstance('alertFeedManager', () => new AlertFeedManager(Factory.manager.display())),

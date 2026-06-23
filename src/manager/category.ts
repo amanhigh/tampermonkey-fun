@@ -254,8 +254,14 @@ export class CategoryManager implements ICategoryManager {
   // ── Classification helpers ──
 
   /**
-   * Check if a ticker has a RUNNING journal.
-   * Composite symbols are skipped.
+   * Resolves journal-based watch category for a ticker.
+   *
+   * Priority:
+   *   1 RUNNING journal  → WatchCategoryId.RUNNING  (lime)
+   *   2 SET journal      → WatchCategoryId.SET_JOURNAL (orange)
+   *   3 None             → undefined (falls through to backend-derived categories)
+   *
+   * Composite symbols are skipped entirely.
    */
   private async resolveJournalCategory(ticker: string): Promise<WatchCategory | undefined> {
     if (isCompositeSymbol(ticker)) {
@@ -263,10 +269,17 @@ export class CategoryManager implements ICategoryManager {
     }
 
     const journalManager = this.getJournalManager();
-    const runningJournals = await journalManager.listJournals({ ticker, status: 'RUNNING' });
 
+    // Priority 1: RUNNING
+    const runningJournals = await journalManager.listJournals({ ticker, status: 'RUNNING' });
     if (runningJournals.length > 0) {
       return WatchClassifier.findById(WatchCategoryId.RUNNING);
+    }
+
+    // Priority 2: SET
+    const setJournals = await journalManager.listJournals({ ticker, status: 'SET' });
+    if (setJournals.length > 0) {
+      return WatchClassifier.findById(WatchCategoryId.SET_JOURNAL);
     }
 
     return undefined;

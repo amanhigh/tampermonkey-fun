@@ -2,6 +2,7 @@ import { DisplayHandler } from '../../src/handler/display';
 import { IDomManager } from '../../src/manager/dom';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { AlertTicker } from '../../src/models/alert_ticker';
+import { ApiError, wrapClientError } from '../../src/models/api_error';
 
 // ── Mock jQuery ──
 let mockDisplayEl: any;
@@ -152,7 +153,9 @@ describe('DisplayHandler', () => {
 
     it('should render Untracked label when backend returns ticker-not-found 404', async () => {
       mockDomManager.getTicker.mockReturnValue('BHEL');
-      mockAlertTickerManager.getAlertTickersForTicker.mockRejectedValue(new Error('404 Not Found: Ticker not found'));
+      const apiError = new ApiError(404, 'Ticker not found');
+      const wrapped = wrapClientError(apiError, 'Failed to list all Alert tickers');
+      mockAlertTickerManager.getAlertTickersForTicker.mockRejectedValue(wrapped);
 
       await handler.display();
 
@@ -213,7 +216,9 @@ describe('DisplayHandler', () => {
 
     it('should render untracked expanded empty state when 404', async () => {
       mockDomManager.getTicker.mockReturnValue('BHEL');
-      mockAlertTickerManager.getAlertTickersForTicker.mockRejectedValue(new Error('404 Not Found: Ticker not found'));
+      const apiError = new ApiError(404, 'Ticker not found');
+      const wrapped = wrapClientError(apiError, 'Failed to list all Alert tickers');
+      mockAlertTickerManager.getAlertTickersForTicker.mockRejectedValue(wrapped);
 
       await handler.display();
 

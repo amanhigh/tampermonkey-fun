@@ -1,8 +1,10 @@
 import { DisplayState, DisplayInfo } from '../models/display';
 import { Constants } from '../models/constant';
 import { Color } from '../models/color';
+import { ApiError } from '../models/api_error';
 import { ICategoryManager } from './category';
 import { IRecentManager } from './recent';
+import { ITickerManager } from './ticker';
 
 /**
  * Display-state resolver for header name and alert feed.
@@ -15,9 +17,10 @@ import { IRecentManager } from './recent';
  *
  * Priority order:
  *   1 ticker=null (no backend alert ticker mapping)  → UNMAPPED / purple
- *   2 watch category + in watchlist silo             → WATCH_CATEGORY / category color
- *   3 recent                                         → RECENT / gold
- *   4 mapped ticker fallback                         → DEFAULT / white
+ *   2 backend no primary record (untracked)           → UNMAPPED / purple
+ *   3 watch category + in watchlist silo             → WATCH_CATEGORY / category color
+ *   4 recent                                         → RECENT / gold
+ *   5 mapped ticker fallback                         → DEFAULT / white
  */
 export interface IDisplayManager {
   /** Resolve display info for a ticker using the shared priority rules. */
@@ -30,14 +33,26 @@ export interface IDisplayManager {
 export class DisplayManager implements IDisplayManager {
   constructor(
     private readonly categoryManager: ICategoryManager,
-    private readonly recentManager: IRecentManager
+    private readonly recentManager: IRecentManager,
+    private readonly tickerManager: ITickerManager
   ) {}
 
   /** @inheritdoc */
   async resolve(ticker: string | null): Promise<DisplayInfo> {
-    // Priority 1: Unmapped
+    // Priority 1: Unmapped (null = no alert ticker mapping)
     if (ticker === null) {
       return { state: DisplayState.UNMAPPED, color: Color.PURPLE };
+    }
+
+    // Priority 2: Backend existence check — no primary record = untracked → purple
+    try {
+      await this.tickerManager.getTicker(ticker);
+    } catch (error: unknown) {
+      if (ApiError.isNotFoundError(error)) {
+        return { state: DisplayState.UNMAPPED, color: Color.PURPLE };
+      }
+      // Non-404 errors propagate
+      throw error;
     }
 
     const [category, siloTickers] = await Promise.all([
@@ -45,17 +60,17 @@ export class DisplayManager implements IDisplayManager {
       this.getWatchlistSilo(),
     ]);
 
-    // Priority 2: Watch category + in silo
+    // Priority 3: Watch category + in silo
     if (category.watch && siloTickers.has(ticker)) {
       return { state: DisplayState.WATCH_CATEGORY, color: category.watch.color };
     }
 
-    // Priority 3: Recent
+    // Priority 4: Recent
     if (await this.recentManager.isRecent(ticker, Constants.RECENT_CUTOFF_MS)) {
       return { state: DisplayState.RECENT, color: 'gold' };
     }
 
-    // Priority 4: Default (mapped ticker fallback)
+    // Priority 5: Default (mapped ticker fallback)
     return { state: DisplayState.DEFAULT, color: Constants.UI.COLORS.DEFAULT };
   }
 

@@ -87,6 +87,7 @@ describe('OnLoadHandler', () => {
     mockPaintManager = {
       paint: jest.fn().mockResolvedValue(undefined),
       paintTickers: jest.fn().mockResolvedValue(undefined),
+      paintHeader: jest.fn().mockResolvedValue(undefined),
       summarizeBuckets: jest.fn().mockResolvedValue({ buckets: new Map(), uncategorizedCount: 0 }),
     } as unknown as jest.Mocked<IPaintManager>;
 
@@ -184,6 +185,39 @@ describe('OnLoadHandler', () => {
       nodeCallback();
 
       expect(mockWatchListHandler.onWatchListChange).toHaveBeenCalled();
+    });
+
+    it('should set up header title DOM observer with subtree', () => {
+      onLoadHandler.init();
+
+      // The header-title observer is the 3rd nodeObserver call
+      // (index 2: after watchlist and screener)
+      const nodeObserverCalls = mockObserveUtil.nodeObserver.mock.calls;
+
+      // Verify the call has subtree option
+      const headerTitleCall = nodeObserverCalls[2];
+      expect(headerTitleCall[0]).toBe(document.body);
+      expect(headerTitleCall[2]).toEqual({ childList: true, subtree: true });
+    });
+
+    it('should debounce paintHeader on header title DOM mutation', () => {
+      jest.useFakeTimers();
+      onLoadHandler.init();
+
+      // The header-title observer is the 3rd nodeObserver call
+      const nodeObserverCalls = mockObserveUtil.nodeObserver.mock.calls;
+      const headerTitleCallback = nodeObserverCalls[2][1] as () => void;
+
+      // Simulate header title replacement mutation
+      headerTitleCallback();
+      // paintHeader should NOT be called immediately (debounced)
+      expect(mockPaintManager.paintHeader).not.toHaveBeenCalled();
+
+      // Advance timer past debounce (150ms)
+      jest.advanceTimersByTime(160);
+      expect(mockPaintManager.paintHeader).toHaveBeenCalledTimes(1);
+
+      jest.useRealTimers();
     });
   });
 

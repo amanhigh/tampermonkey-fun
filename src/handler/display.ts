@@ -59,6 +59,7 @@ export class DisplayHandler implements IDisplayHandler {
 
   /** @inheritdoc */
   registerEvents(subscriber: ISubscriber): void {
+    // BUG: TICKER_TRACKING_STOPPED not subscribed — display stays stale after stop-tracking.
     subscriber.subscribe(DomainEventType.TICKER_CHANGED, async () => {
       await this.display();
     });
@@ -94,6 +95,7 @@ export class DisplayHandler implements IDisplayHandler {
     // Store on DOM element for toggle re-render (avoids handler-level cache)
     $(`#${Constants.UI.IDS.DISPLAY.CARD}`).data('displayData', { tvTicker, alertTickers, isUntracked });
 
+    // FIXME: Show last visited day in display area (e.g. "7d")
     this.renderDisplay();
   }
 

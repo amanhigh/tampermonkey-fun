@@ -3,13 +3,15 @@
  */
 
 import { IAlertManager } from '../manager/alert';
-import { ITickerManager } from '../manager/ticker';
+import { ITickerManager, TickerManager } from '../manager/ticker';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { IDomManager } from '../manager/dom';
 import { ITradingViewManager } from '../manager/tv';
 import { Constants } from '../models/constant';
+import { ApiError } from '../models/api_error';
 import { Notifier } from '../util/notify';
 import { IUIUtil } from '../util/ui';
+import { AlertTicker } from '../models/alert_ticker';
 import { AlertClicked, AlertClickAction } from '../models/events';
 import { ITickerHandler } from './ticker';
 import { IAlertTickerHandler } from './alert_ticker';
@@ -177,7 +179,7 @@ export class AlertHandler implements IAlertHandler {
     if (e.ctrlKey) {
       // Map current exchange to current TV ticker
       const ticker = this.domManager.getTicker();
-      const exchange = this.domManager.getCurrentExchange();
+      const exchange = TickerManager.canonicalizeExchange(this.domManager.getCurrentExchange());
       void this.tickerManager.setExchange(ticker, exchange).then(() => {
         Notifier.success(`Mapped ${ticker} to ${exchange}`);
       });
@@ -217,9 +219,24 @@ export class AlertHandler implements IAlertHandler {
     }
 
     const ticker = this.domManager.getTicker();
-    const exchange = this.domManager.getCurrentExchange();
 
-    const alertTickers = await this.alertTickerManager.getAlertTickersForTicker(ticker);
+    // Use event-provided exchange when available and non-blank (from resolved identity);
+    // fall back to canonicalized TradingView DOM exchange.
+    // Investing.com instrument search returns blank exchange for currency pairs like USD/CNY,
+    // so we treat blank the same as missing to avoid backend validation rejection.
+    const rawExchange = event.alertExchange?.trim() || this.domManager.getCurrentExchange();
+    const exchange = TickerManager.canonicalizeExchange(rawExchange);
+
+    let alertTickers: AlertTicker[];
+    try {
+      alertTickers = await this.alertTickerManager.getAlertTickersForTicker(ticker);
+    } catch (error) {
+      if (ApiError.isNotFoundError(error)) {
+        Notifier.warn(`Start tracking ${ticker} before mapping ${event.alertTicker}`);
+        return;
+      }
+      throw error;
+    }
     const alreadyLinked = alertTickers.some((at) => at.symbol === event.alertTicker);
     if (alreadyLinked) {
       Notifier.info(`Already mapped: ${event.alertTicker} → ${ticker}`);

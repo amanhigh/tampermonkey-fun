@@ -76,7 +76,7 @@ describe('Factory Client Providers', () => {
   it('should provide singleton JournalClient', () => {
     const journal = Factory.client.journal();
     expect(journal).toBeDefined();
-    expect(journal.getBaseUrl()).toBe('http://localhost:9091/v1/api');
+    expect(journal.getBaseUrl()).toBe('http://localhost:9010/v1/api');
 
     // Verify singleton behavior
     const journalAgain = Factory.client.journal();
@@ -86,7 +86,7 @@ describe('Factory Client Providers', () => {
   it('should provide singleton OsClient', () => {
     const os = Factory.client.os();
     expect(os).toBeDefined();
-    expect(os.getBaseUrl()).toBe('http://localhost:9091/v1/api');
+    expect(os.getBaseUrl()).toBe('http://localhost:9010/v1/api');
 
     // Verify singleton behavior
     const osAgain = Factory.client.os();
@@ -96,7 +96,7 @@ describe('Factory Client Providers', () => {
   it('should provide singleton TickerClient', () => {
     const ticker = Factory.client.ticker();
     expect(ticker).toBeDefined();
-    expect(ticker.getBaseUrl()).toBe('http://localhost:9091/v1/api');
+    expect(ticker.getBaseUrl()).toBe('http://localhost:9010/v1/api');
 
     // Verify singleton behavior
     const tickerAgain = Factory.client.ticker();
@@ -106,7 +106,7 @@ describe('Factory Client Providers', () => {
   it('should provide singleton PriceAlertClient', () => {
     const priceAlert = Factory.client.priceAlert();
     expect(priceAlert).toBeDefined();
-    expect(priceAlert.getBaseUrl()).toBe('http://localhost:9091/v1/api');
+    expect(priceAlert.getBaseUrl()).toBe('http://localhost:9010/v1/api');
 
     // Verify singleton behavior
     const priceAlertAgain = Factory.client.priceAlert();
@@ -116,7 +116,7 @@ describe('Factory Client Providers', () => {
   it('should provide singleton AuditClient', () => {
     const audit = Factory.client.audit();
     expect(audit).toBeDefined();
-    expect(audit.getBaseUrl()).toBe('http://localhost:9091/v1/api');
+    expect(audit.getBaseUrl()).toBe('http://localhost:9010/v1/api');
 
     // Verify singleton behavior
     const auditAgain = Factory.client.audit();

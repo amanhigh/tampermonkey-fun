@@ -42,7 +42,7 @@ describe('InstrumentClient', () => {
   describe('constructor', () => {
     it('should create instance with public search base URL', () => {
       const client = new InstrumentClient();
-      expect(client.getBaseUrl()).toBe('https://api.investing.com/api/search');
+      expect(client.getBaseUrl()).toBe('https://api.investing.com/api/search/');
     });
 
     it('should create instance with custom base URL', () => {

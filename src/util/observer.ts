@@ -17,9 +17,10 @@ export interface IObserveUtil {
    * need node-level detail should use a dedicated observer.
    * @param target - Target element to observe
    * @param callback - Callback for changes
+   * @param options - Optional MutationObserverInit overrides (default { childList: true })
    * @returns MutationObserver instance or undefined if setup fails
    */
-  nodeObserver(target: Element, callback: () => void): MutationObserver;
+  nodeObserver(target: Element, callback: () => void, options?: MutationObserverInit): MutationObserver;
 }
 
 /**
@@ -67,7 +68,7 @@ export class ObserveUtil implements IObserveUtil {
   }
 
   /** @inheritdoc */
-  public nodeObserver(target: Element, callback: () => void): MutationObserver {
+  public nodeObserver(target: Element, callback: () => void, options?: MutationObserverInit): MutationObserver {
     if (!target || !(target instanceof Element)) {
       throw new Error('Invalid target element provided to nodeObserver');
     }
@@ -82,9 +83,7 @@ export class ObserveUtil implements IObserveUtil {
         }
       });
 
-      observer.observe(target, {
-        childList: true,
-      });
+      observer.observe(target, options ?? { childList: true });
 
       return observer;
     } catch (error) {

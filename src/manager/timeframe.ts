@@ -141,7 +141,8 @@ export class TimeFrameManager implements ITimeFrameManager {
     if (codes.length === 0 || codes.includes(TickerTimeframe.DL)) {
       return TMN_SEQUENCE;
     }
-    // FIXME: YR_SEQUENCE not yet supported — add yearly-aware cycle when needed
+    // FIXME: When allowed timeframes lack both WK and DL, use a YR-based sequence
+    //        (YR, SMN, TMN, MN) instead of falling through to SMN_SEQUENCE which assumes WK.
     return SMN_SEQUENCE;
   }
 

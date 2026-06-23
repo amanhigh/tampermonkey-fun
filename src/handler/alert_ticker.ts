@@ -4,6 +4,7 @@ import { IInvestingClient } from '../client/investing';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { IDomManager } from '../manager/dom';
 import { Notifier } from '../util/notify';
+import { TickerManager } from '../manager/ticker';
 
 /**
  * Interface for managing investing.com pair linking operations
@@ -59,7 +60,7 @@ export class AlertTickerHandler implements IAlertTickerHandler {
           symbol: selectedPair.symbol,
           pair_id: selectedPair.pairId,
           name: selectedPair.name,
-          exchange: selectedPair.exchange,
+          exchange: TickerManager.canonicalizeExchange(selectedPair.exchange),
         });
       } else {
         Notifier.warn(`Invalid selection for ${searchQuery} on ${exchange}, cant map Pair.`);

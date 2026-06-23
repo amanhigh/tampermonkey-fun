@@ -28,6 +28,13 @@ export interface IPaintManager {
   paintTickers(tickers: string[]): Promise<void>;
 
   /**
+   * Repaint only the current ticker's header (name, flag, exchange, FNO).
+   * Uses DisplayManager.resolve() to pick the correct color.
+   * Called by internal paint paths and by the header-replacement DOM observer.
+   */
+  paintHeader(): Promise<void>;
+
+  /**
    * Classifies all tickers in the WATCHLIST and returns bucket counts
    * WITHOUT resetting or painting DOM. Use when summary labels need
    * refreshing after targeted ticker repaints.
@@ -165,11 +172,10 @@ export class PaintManager implements IPaintManager {
     }
   }
 
-  /**
-   * Paint the current ticker header (name, flag, exchange, FNO).
-   */
-  private async paintHeader(): Promise<void> {
+  /** @inheritdoc */
+  public async paintHeader(): Promise<void> {
     const ticker = this.domManager.getTicker();
+
     const $name = $(Constants.DOM.BASIC.NAME);
     const $flag = $(Constants.DOM.FLAGS.MARKING);
     const $exchange = $(Constants.DOM.BASIC.EXCHANGE);
