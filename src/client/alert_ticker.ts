@@ -1,4 +1,5 @@
-import { BaseClient, IBaseClient, wrapClientError } from './base';
+import { wrapClientError } from './base';
+import { KohanClient, IKohanClient } from './kohan';
 import {
   AlertTickerListResponse,
   AlertTickerQueryParams,
@@ -12,7 +13,7 @@ import { Constants } from '../models/constant';
  * AlertTickerClient handles Alert ticker (Investing.com identity) CRUD and listing
  * operations against the Kohan backend. Covers Section 2.2.2 from the PRD.
  */
-export interface IAlertTickerClient extends IBaseClient {
+export interface IAlertTickerClient extends IKohanClient {
   /**
    * Create an Alert ticker under a primary ticker.
    * @param ticker - Parent primary ticker identity
@@ -46,7 +47,7 @@ export interface IAlertTickerClient extends IBaseClient {
 /**
  * AlertTickerClient handles Alert ticker CRUD and listing against the Kohan backend.
  */
-export class AlertTickerClient extends BaseClient implements IAlertTickerClient {
+export class AlertTickerClient extends KohanClient implements IAlertTickerClient {
   /**
    * Creates an instance of AlertTickerClient.
    * @param baseUrl - Base URL for Kohan API (defaults to Constants.KOHAN.BASE_URL)
@@ -97,57 +98,18 @@ export class AlertTickerClient extends BaseClient implements IAlertTickerClient 
 
   /** @inheritdoc */
   async listAlertTickers(params: AlertTickerQueryParams): Promise<AlertTicker[]> {
-    const limit = Constants.KOHAN.PAGE_LIMIT;
-    let offset = 0;
-    let total = 0;
-    const all: AlertTicker[] = [];
-
-    try {
-      do {
-        const query = this.buildAlertTickerQuery({ ...params, limit, offset });
-        const response = await this.makeRequest<KohanEnvelope<AlertTickerListResponse>>(
-          `/alert-tickers?${query.toString()}`
-        );
-        const data = response.data;
-        all.push(...data.alert_tickers);
-        total = data.metadata.total;
-        offset += limit;
-      } while (offset < total);
-
-      return all;
-    } catch (error) {
-      throw wrapClientError(error, 'Failed to list all Alert tickers');
-    }
-  }
-
-  /**
-   * Append non-undefined values from a key/value list to a URLSearchParams instance.
-   */
-  private static setQueryParams(
-    query: URLSearchParams,
-    entries: Array<[string, string | number | boolean | undefined]>
-  ): void {
-    for (const [key, value] of entries) {
-      if (value !== undefined) {
-        query.set(key, String(value));
-      }
-    }
-  }
-
-  /**
-   * Build URLSearchParams for Alert ticker query.
-   */
-  private buildAlertTickerQuery(params: AlertTickerQueryParams): URLSearchParams {
-    const query = new URLSearchParams();
-    AlertTickerClient.setQueryParams(query, [
-      ['symbol', params.symbol],
-      ['ticker', params.ticker],
-      ['pair-id', params['pair-id']],
-      ['exchange', params.exchange],
-      ['type', params.type],
-      ['offset', params.offset],
-      ['limit', params.limit],
-    ]);
-    return query;
+    return this.listAllPages<AlertTickerListResponse, AlertTicker>(
+      '/alert-tickers',
+      [
+        ['symbol', params.symbol],
+        ['ticker', params.ticker],
+        ['pair-id', params['pair-id']],
+        ['exchange', params.exchange],
+        ['type', params.type],
+      ],
+      Constants.KOHAN.PAGE_LIMIT,
+      (data) => data.alert_tickers,
+      'Failed to list all Alert tickers'
+    );
   }
 }

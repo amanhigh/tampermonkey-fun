@@ -1,4 +1,4 @@
-import { BaseClient, IBaseClient } from './base';
+import { KohanClient, IKohanClient } from './kohan';
 import {
   CreateJournalImageRequest,
   CreateJournalRequest,
@@ -16,7 +16,7 @@ import { Constants } from '../models/constant';
  * JournalClient handles journal CRUD and sub-resource operations
  * against the local Kohan API.
  */
-export interface IJournalClient extends IBaseClient {
+export interface IJournalClient extends IKohanClient {
   /**
    * List journals matching query parameters.
    * @param params Query parameters for filtering journals
@@ -59,7 +59,7 @@ export interface IJournalClient extends IBaseClient {
 /**
  * JournalClient handles journal CRUD and sub-resource operations against the Kohan backend.
  */
-export class JournalClient extends BaseClient implements IJournalClient {
+export class JournalClient extends KohanClient implements IJournalClient {
   /**
    * Creates an instance of JournalClient.
    * @param baseUrl - Base URL for Kohan API
@@ -85,30 +85,16 @@ export class JournalClient extends BaseClient implements IJournalClient {
   /** @inheritdoc */
   async listJournals(params: JournalQueryParams): Promise<JournalListResponse> {
     try {
-      const query = new URLSearchParams();
-      if (params.ticker) {
-        query.set('ticker', params.ticker);
-      }
-      if (params.type) {
-        query.set('type', params.type);
-      }
-      if (params.status) {
-        query.set('status', params.status);
-      }
-      if (params.limit) {
-        query.set('limit', String(params.limit));
-      }
-      if (params.offset !== undefined) {
-        query.set('offset', String(params.offset));
-      }
-      if (params['sort-by']) {
-        query.set('sort-by', params['sort-by']);
-      }
-      if (params['sort-order']) {
-        query.set('sort-order', params['sort-order']);
-      }
-
-      const response = await this.makeRequest<KohanEnvelope<JournalListResponse>>(`/journals?${query.toString()}`);
+      const query = this.buildQuery([
+        ['ticker', params.ticker],
+        ['type', params.type],
+        ['status', params.status],
+        ['limit', params.limit],
+        ['offset', params.offset],
+        ['sort-by', params['sort-by']],
+        ['sort-order', params['sort-order']],
+      ]);
+      const response = await this.makeRequest<KohanEnvelope<JournalListResponse>>(this.appendQuery('/journals', query));
       return response.data;
     } catch (error) {
       throw new Error(`Failed to list journals: ${(error as Error).message}`);

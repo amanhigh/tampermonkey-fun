@@ -1,4 +1,5 @@
-import { BaseClient, IBaseClient, wrapClientError } from './base';
+import { wrapClientError } from './base';
+import { KohanClient, IKohanClient } from './kohan';
 import {
   CreateTickerRequest,
   TickerLastOpenedUpdate,
@@ -14,7 +15,7 @@ import { Constants } from '../models/constant';
  * TickerClient handles Barkat ticker CRUD and listing operations against the Kohan backend.
  * Covers primary ticker (Section 2.2.1) and Alert ticker (Section 2.2.2) APIs.
  */
-export interface ITickerClient extends IBaseClient {
+export interface ITickerClient extends IKohanClient {
   // ── Primary Ticker APIs (2.2.1) ──
 
   /**
@@ -66,7 +67,7 @@ export interface ITickerClient extends IBaseClient {
 /**
  * TickerClient handles Barkat ticker CRUD and listing operations against the Kohan backend.
  */
-export class TickerClient extends BaseClient implements ITickerClient {
+export class TickerClient extends KohanClient implements ITickerClient {
   /**
    * Creates an instance of TickerClient.
    * @param baseUrl - Base URL for Kohan API (defaults to Constants.KOHAN.BASE_URL)
@@ -146,26 +147,23 @@ export class TickerClient extends BaseClient implements ITickerClient {
 
   /** @inheritdoc */
   async listTickers(params: TickerQueryParams): Promise<Ticker[]> {
-    const limit = Constants.KOHAN.PAGE_LIMIT;
-    let offset = 0;
-    let total = 0;
-    const all: Ticker[] = [];
-    // HACK: Generic pagination helper in BaseClient instead of copy/paste in each method that needs it ?
-
-    try {
-      do {
-        const query = this.buildTickerQuery({ ...params, limit, offset });
-        const response = await this.makeRequest<KohanEnvelope<TickerListResponse>>(`/tickers?${query.toString()}`);
-        const data = response.data;
-        all.push(...data.tickers.map((t) => new Ticker(t)));
-        total = data.metadata.total;
-        offset += limit;
-      } while (offset < total);
-
-      return all;
-    } catch (error) {
-      throw wrapClientError(error, 'Failed to list all tickers');
-    }
+    return this.listAllPages<TickerListResponse, Ticker>(
+      '/tickers',
+      [
+        ['search', params.search],
+        ['exchange', params.exchange],
+        ['type', params.type],
+        ['state', params.state],
+        ['trend', params.trend],
+        ['is-fno', params['is-fno']],
+        ['opened-after', params['opened-after']],
+        ['sort-by', params['sort-by']],
+        ['sort-order', params['sort-order']],
+      ],
+      Constants.KOHAN.PAGE_LIMIT,
+      (data) => data.tickers.map((t) => new Ticker(t)),
+      'Failed to list all tickers'
+    );
   }
 
   /**
@@ -183,43 +181,5 @@ export class TickerClient extends BaseClient implements ITickerClient {
       trend: partial.trend ?? record.trend,
       is_fno: partial.is_fno ?? record.is_fno,
     };
-  }
-
-  // ── Private Helpers ──
-
-  /**
-   * Append non-undefined values from a key/value list to a URLSearchParams instance.
-   */
-  private static setQueryParams(
-    query: URLSearchParams,
-    entries: Array<[string, string | number | boolean | undefined]>
-  ): void {
-    for (const [key, value] of entries) {
-      if (value !== undefined) {
-        query.set(key, String(value));
-      }
-    }
-  }
-
-  /**
-   * Build URLSearchParams for primary ticker query.
-   */
-  private buildTickerQuery(params: TickerQueryParams): URLSearchParams {
-    // HACK: Reuse move to Base Client ?
-    const query = new URLSearchParams();
-    TickerClient.setQueryParams(query, [
-      ['search', params.search],
-      ['exchange', params.exchange],
-      ['type', params.type],
-      ['state', params.state],
-      ['trend', params.trend],
-      ['is-fno', params['is-fno']],
-      ['opened-after', params['opened-after']],
-      ['sort-by', params['sort-by']],
-      ['sort-order', params['sort-order']],
-      ['offset', params.offset],
-      ['limit', params.limit],
-    ]);
-    return query;
   }
 }

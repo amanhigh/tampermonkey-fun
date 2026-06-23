@@ -1,4 +1,4 @@
-import { BaseClient, IBaseClient } from './base';
+import { KohanClient, IKohanClient } from './kohan';
 import { KohanEnvelope } from '../models/api';
 import { Constants } from '../models/constant';
 import { AuditCatalog, AuditExecutionResult } from '../models/audit_catalogue';
@@ -7,7 +7,7 @@ import { AuditCatalog, AuditExecutionResult } from '../models/audit_catalogue';
  * AuditClient handles audit catalogue listing and execution against the Kohan backend.
  * Covers PRD Section 2.2 Audit APIs.
  */
-export interface IAuditClient extends IBaseClient {
+export interface IAuditClient extends IKohanClient {
   /**
    * Get the catalogue of active audit checks available to the operator.
    * @returns Promise resolving to the audit catalogue with ordered audit items
@@ -28,7 +28,7 @@ export interface IAuditClient extends IBaseClient {
 /**
  * AuditClient handles audit catalogue and execution APIs against the Kohan backend.
  */
-export class AuditClient extends BaseClient implements IAuditClient {
+export class AuditClient extends KohanClient implements IAuditClient {
   /**
    * Creates an instance of AuditClient.
    * @param baseUrl - Base URL for Kohan API (defaults to Constants.KOHAN.BASE_URL)
@@ -50,28 +50,16 @@ export class AuditClient extends BaseClient implements IAuditClient {
   /** @inheritdoc */
   async executeAudit(auditId: string, offset?: number, limit?: number): Promise<AuditExecutionResult> {
     try {
-      const query = this.buildAuditQuery(offset, limit);
-      const queryString = query ? `?${query.toString()}` : '';
+      const query = this.buildQuery([
+        ['offset', offset],
+        ['limit', limit],
+      ]);
       const response = await this.makeRequest<KohanEnvelope<AuditExecutionResult>>(
-        `/audits/${encodeURIComponent(auditId)}/results${queryString}`
+        this.appendQuery(`/audits/${encodeURIComponent(auditId)}/results`, query)
       );
       return response.data;
     } catch (error) {
       throw new Error(`Failed to execute audit ${auditId}: ${(error as Error).message}`);
     }
-  }
-
-  /**
-   * Build URLSearchParams for audit result query. Returns empty string if no params.
-   */
-  private buildAuditQuery(offset?: number, limit?: number): string {
-    const params = new URLSearchParams();
-    if (offset !== undefined) {
-      params.set('offset', String(offset));
-    }
-    if (limit !== undefined) {
-      params.set('limit', String(limit));
-    }
-    return params.toString();
   }
 }
