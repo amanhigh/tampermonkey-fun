@@ -307,8 +307,8 @@ export class AlertHandler implements IAlertHandler {
     }
 
     try {
-      const tvTicker = this.domManager.getTicker();
-      await this.alertTickerManager.deleteAlertTicker(symbol, tvTicker);
+      const ticker = this.domManager.getTicker();
+      await this.alertTickerManager.deleteAlertTicker(symbol, ticker);
       Notifier.success(`⏹ Delinked ${symbol}`);
     } catch (error) {
       Notifier.warn(`Failed to delink ${symbol}: ${(error as Error).message}`);

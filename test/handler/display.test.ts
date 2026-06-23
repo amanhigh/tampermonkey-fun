@@ -3,6 +3,8 @@ import { IDomManager } from '../../src/manager/dom';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { AlertTicker } from '../../src/models/alert_ticker';
 import { ApiError, wrapClientError } from '../../src/models/api_error';
+import { ISubscriber } from '../../src/manager/event_bus';
+import { DomainEventType } from '../../src/models/domain_event';
 
 // ── Mock jQuery ──
 let mockDisplayEl: any;
@@ -273,6 +275,22 @@ describe('DisplayHandler', () => {
       expect(expandedHtml).toContain('data-alert-ticker-type="PRIMARY"');
       expect(expandedHtml).toContain('data-alert-ticker-symbol="INFY.PA"');
       expect(expandedHtml).toContain('data-alert-ticker-type="SECONDARY"');
+    });
+  });
+
+  describe('registerEvents', () => {
+    it('should subscribe to TICKER_TRACKING_STOPPED to refresh display', () => {
+      const mockSubscriber: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerEvents(mockSubscriber);
+
+      expect(mockSubscriber.subscribeMany).toHaveBeenCalledWith(
+        expect.arrayContaining([DomainEventType.TICKER_TRACKING_STOPPED]),
+        expect.any(Function)
+      );
     });
   });
 });
