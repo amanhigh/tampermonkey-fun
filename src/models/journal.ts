@@ -18,6 +18,16 @@ export type JournalResultStatus = 'SUCCESS' | 'FAIL' | 'MISSED';
 
 export type JournalNoteFormat = 'MARKDOWN' | 'PLAINTEXT';
 
+/**
+ * Journal entry action types for UI button actions (SET, RESULT, REJECTED).
+ * Note: the stored backend type uses JournalType above, not this enum.
+ */
+export enum JournalActionType {
+  SET = 'set',
+  RESULT = 'result',
+  REJECTED = 'rejected',
+}
+
 export interface CreateJournalImageRequest {
   timeframe: JournalTimeframe;
   file_name: string;

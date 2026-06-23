@@ -8,7 +8,7 @@ import { IJournalHandler } from '../handler/journal';
 import { ICommandInputHandler } from '../handler/command';
 import { IKiteHandler } from '../handler/kite';
 import { IAlertFeedHandler } from '../handler/alertfeed';
-import { JournalActionType } from '../models/trading';
+import { JournalActionType } from '../models/journal';
 import { IGlobalErrorHandler } from '../handler/error';
 import { IPanelHandler } from '../handler/panel';
 import { IDomManager } from '../manager/dom';

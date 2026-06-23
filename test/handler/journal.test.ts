@@ -8,7 +8,7 @@ import { IStyleManager } from '../../src/manager/style';
 import { DomManager } from '../../src/manager/dom';
 import { IAlertManager } from '../../src/manager/alert';
 import { AlertClickAction } from '../../src/models/events';
-import { JournalActionType } from '../../src/models/trading';
+import { JournalActionType } from '../../src/models/journal';
 import { Constants } from '../../src/models/constant';
 import { Notifier } from '../../src/util/notify';
 

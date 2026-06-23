@@ -7,7 +7,7 @@ import { IJournalManager } from '../manager/journal';
 import { ISmartPrompt } from '../util/smart';
 import { IUIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
-import { JournalType } from '../models/trading';
+import { JournalActionType } from '../models/journal';
 import { DomManager } from '../manager/dom';
 import { Notifier } from '../util/notify';
 import { ITradingViewManager } from '../manager/tv';
@@ -32,7 +32,7 @@ export interface IJournalHandler {
    * Shows reason prompt modal and creates journal entry
    * @param type Journal entry type (REJECTED, RESULT, SET)
    */
-  handleRecordJournal(type: JournalType): Promise<void>;
+  handleRecordJournal(type: JournalActionType): Promise<void>;
 
   /**
    * Handles journal reason prompt operation
@@ -79,14 +79,14 @@ export class JournalHandler implements IJournalHandler {
   }
 
   /** @inheritdoc */
-  public async handleRecordJournal(type: JournalType): Promise<void> {
-    if (type === JournalType.SET) {
+  public async handleRecordJournal(type: JournalActionType): Promise<void> {
+    if (type === JournalActionType.SET) {
       const ticker = this.domManager.getTicker();
       await this.handleSetupJournal(ticker, type);
       return;
     }
 
-    if (type === JournalType.RESULT) {
+    if (type === JournalActionType.RESULT) {
       const ticker = this.domManager.getTicker();
       await this.handleResultJournal(ticker);
       return;
@@ -98,20 +98,20 @@ export class JournalHandler implements IJournalHandler {
       return;
     }
 
-    if (type === JournalType.REJECTED && reason === '') {
+    if (type === JournalActionType.REJECTED && reason === '') {
       Notifier.warn('Rejected entries require a reason. Please provide a reason or cancel.');
       return;
     }
 
     const ticker = this.domManager.getTicker();
 
-    if (type === JournalType.REJECTED) {
+    if (type === JournalActionType.REJECTED) {
       await this.handleRejectedJournal(ticker, reason, type);
       return;
     }
   }
 
-  private async handleRejectedJournal(ticker: string, reason: string, type: JournalType): Promise<void> {
+  private async handleRejectedJournal(ticker: string, reason: string, type: JournalActionType): Promise<void> {
     const screenshots = await this.takeJournalScreenshots(ticker, type);
     const journal = await this.journalManager
       .createJournal({ ticker, reason, screenshots, type: 'REJECTED', status: 'FAIL' })
@@ -122,7 +122,7 @@ export class JournalHandler implements IJournalHandler {
     await this.publishJournalOpenEvent(journal.id);
   }
 
-  private async handleSetupJournal(ticker: string, type: JournalType): Promise<void> {
+  private async handleSetupJournal(ticker: string, type: JournalActionType): Promise<void> {
     // Step 1: Collect mandatory setup note
     const note = await this.showSetupNoteModal();
 
@@ -174,7 +174,7 @@ export class JournalHandler implements IJournalHandler {
 
   private async takeJournalScreenshots(
     ticker: string,
-    type: JournalType
+    type: JournalActionType
   ): Promise<Awaited<ReturnType<IJournalManager['screenshotTicker']>>> {
     return this.journalManager.screenshotTicker(ticker, type).catch((error) => {
       throw new Error(`Failed to take screenshot journal entry: ${error}`);
@@ -233,7 +233,7 @@ export class JournalHandler implements IJournalHandler {
     }
 
     // Step 4: Take result screenshots
-    const screenshots = await this.takeJournalScreenshots(ticker, JournalType.RESULT);
+    const screenshots = await this.takeJournalScreenshots(ticker, JournalActionType.RESULT);
 
     // Step 5: Add images, tags, and update status
     await this.journalManager.addJournalImages(runningJournal.id, screenshots);
