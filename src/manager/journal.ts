@@ -7,8 +7,8 @@ import {
   CreateJournalImageRequest,
   CreateJournalRequest,
   CreateJournalTagRequest,
-  JournalApiSequence,
-  JournalApiTimeframe,
+  JournalSequence,
+  JournalTimeframe,
   JournalQueryParams,
   JournalRecord,
   JournalResultStatus,
@@ -103,14 +103,14 @@ export class JournalManager implements IJournalManager {
   public async createJournal(input: CreateJournalInput): Promise<JournalRecord> {
     const screenshotCodes = input.screenshots
       .map((s) => s.timeframe)
-      .filter((t): t is JournalApiTimeframe => t !== undefined);
+      .filter((t): t is JournalTimeframe => t !== undefined);
     const request: CreateJournalRequest = {
       ticker: input.ticker.toUpperCase(),
       sequence: this.getLegacyJournalSequenceFromTimeframes(screenshotCodes),
       type: input.type,
       status: input.status,
       images: input.screenshots.map((screenshot) => ({
-        timeframe: screenshot.timeframe as JournalApiTimeframe,
+        timeframe: screenshot.timeframe as JournalTimeframe,
         file_name: screenshot.file_name,
       })),
       tags: this.toReasonTagRequest(input.reason),
@@ -148,7 +148,7 @@ export class JournalManager implements IJournalManager {
   public async addJournalImages(journalId: string, screenshots: ScreenshotResponse[]): Promise<void> {
     for (const screenshot of screenshots) {
       const image: CreateJournalImageRequest = {
-        timeframe: screenshot.timeframe as JournalApiTimeframe,
+        timeframe: screenshot.timeframe as JournalTimeframe,
         file_name: screenshot.file_name,
       };
       await this.journalClient.addJournalImage(journalId, image);
@@ -231,7 +231,7 @@ export class JournalManager implements IJournalManager {
         window: 'TradingView',
         notify: false,
       });
-      screenshot.timeframe = code as JournalApiTimeframe;
+      screenshot.timeframe = code as JournalTimeframe;
       screenshots.push(screenshot);
     }
 
@@ -274,8 +274,8 @@ export class JournalManager implements IJournalManager {
    *
    * FIXME: Replace this heuristic with user-prompted selection or backend-provided type.
    */
-  private getLegacyJournalSequenceFromTimeframes(timeframes: readonly JournalApiTimeframe[]): JournalApiSequence {
-    if (timeframes.includes('DL' as JournalApiTimeframe)) {
+  private getLegacyJournalSequenceFromTimeframes(timeframes: readonly JournalTimeframe[]): JournalSequence {
+    if (timeframes.includes('DL' as JournalTimeframe)) {
       return 'MWD';
     }
     return 'YR';

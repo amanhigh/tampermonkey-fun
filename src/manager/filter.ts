@@ -59,15 +59,15 @@ export class FilterManager implements IFilterManager {
   /** @inheritdoc */
   resetWatchList(): void {
     // Increase Widget Height to prevent Line Filtering
-    $(Constants.DOM.WATCHLIST.WIDGET).css('height', '20000px');
+    $(TickerArea.WATCHLIST.mainSelector).css('height', '20000px');
 
     // Show All Items
-    $(Constants.DOM.WATCHLIST.LINE).show();
-    $(Constants.DOM.SCREENER.LINE).show();
+    $(TickerArea.WATCHLIST.line).show();
+    $(TickerArea.SCREENER.line).show();
 
     // Disable List Transformation
-    $(Constants.DOM.WATCHLIST.LINE).css('position', '');
-    $(Constants.DOM.WATCHLIST.CONTAINER).css('overflow', '');
+    $(TickerArea.WATCHLIST.line).css('position', '');
+    $(TickerArea.WATCHLIST.containerSelector).css('overflow', '');
   }
 
   /** @inheritdoc */
@@ -145,8 +145,8 @@ export class FilterManager implements IFilterManager {
    * Helper method to hide all watchlist and screener items
    */
   private hideAllItems(): void {
-    $(Constants.DOM.WATCHLIST.LINE).hide();
-    $(Constants.DOM.SCREENER.LINE).hide();
+    $(TickerArea.WATCHLIST.line).hide();
+    $(TickerArea.SCREENER.line).hide();
   }
 
   /**
@@ -159,13 +159,13 @@ export class FilterManager implements IFilterManager {
     const screenerSymbolSelector = `${TickerArea.SCREENER.getSymbolSelector(TickerVisibility.ALL)}[style*='color: ${color}']`;
 
     if (shift) {
-      $(Constants.DOM.WATCHLIST.LINE).not(`:has(${symbolSelector})`).hide();
-      $(Constants.DOM.SCREENER.LINE).not(`:has(${screenerSymbolSelector})`).hide();
+      $(TickerArea.WATCHLIST.line).not(`:has(${symbolSelector})`).hide();
+      $(TickerArea.SCREENER.line).not(`:has(${screenerSymbolSelector})`).hide();
     } else {
-      $(Constants.DOM.WATCHLIST.LINE + `:hidden`)
+      $(TickerArea.WATCHLIST.line + `:hidden`)
         .has(symbolSelector)
         .show();
-      $(Constants.DOM.SCREENER.LINE + `:hidden`)
+      $(TickerArea.SCREENER.line + `:hidden`)
         .has(screenerSymbolSelector)
         .show();
     }
@@ -177,16 +177,16 @@ export class FilterManager implements IFilterManager {
    * @param shift - If true, hide matching elements instead of showing them
    */
   private filterByFlag(color: string, shift: boolean): void {
-    const flagSelector = `${Constants.DOM.FLAGS.SYMBOL}[style*='color: ${color}']`;
+    const flagSelector = `${TickerArea.WATCHLIST.getFlagSelector()}[style*='color: ${color}']`;
 
     if (shift) {
-      $(Constants.DOM.WATCHLIST.LINE).has(flagSelector).hide();
-      $(Constants.DOM.SCREENER.LINE).has(flagSelector).hide();
+      $(TickerArea.WATCHLIST.line).has(flagSelector).hide();
+      $(TickerArea.SCREENER.line).has(flagSelector).hide();
     } else {
-      $(Constants.DOM.WATCHLIST.LINE + `:hidden`)
+      $(TickerArea.WATCHLIST.line + `:hidden`)
         .has(flagSelector)
         .show();
-      $(Constants.DOM.SCREENER.LINE + `:hidden`)
+      $(TickerArea.SCREENER.line + `:hidden`)
         .has(flagSelector)
         .show();
     }

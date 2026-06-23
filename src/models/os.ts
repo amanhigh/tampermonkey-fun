@@ -1,4 +1,4 @@
-import { JournalApiTimeframe } from './journal';
+import { JournalTimeframe } from './journal';
 
 // ── OS / Screenshot Types ──
 
@@ -17,5 +17,5 @@ export interface ScreenshotRequest {
 export interface ScreenshotResponse {
   file_name: string;
   full_path: string;
-  timeframe?: JournalApiTimeframe;
+  timeframe?: JournalTimeframe;
 }

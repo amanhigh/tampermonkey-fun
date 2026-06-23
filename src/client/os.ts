@@ -1,5 +1,5 @@
 import { BaseClient, IBaseClient } from './base';
-import { JournalApiTimeframe } from '../models/journal';
+import { JournalTimeframe } from '../models/journal';
 import { KohanEnvelope } from '../models/api';
 import { ScreenshotRequest, ScreenshotResponse } from '../models/os';
 import { Constants } from '../models/constant';
@@ -73,7 +73,7 @@ export class OsClient extends BaseClient implements IOsClient {
   /** @inheritdoc */
   async screenshotRegion(ticker: string, type: string): Promise<ScreenshotResponse> {
     const screenshotType = type.toLowerCase();
-    const timeframe = 'DL' as JournalApiTimeframe;
+    const timeframe = 'DL' as JournalTimeframe;
     const now = new Date();
     const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
     const time = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;

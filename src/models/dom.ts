@@ -1,5 +1,3 @@
-import { Constants } from './constant';
-
 /**
  * Ticker visibility filter for DOM queries.
  * Controls which subset of tickers to return from the queried panel.
@@ -26,6 +24,15 @@ export interface TickerArea {
   /** Stable identifier used for cache keys and equality checks. */
   readonly id: TickerAreaId;
 
+  /** Row-level CSS selector for all ticker lines in this area. */
+  readonly line: string;
+
+  /** Widget/panel presence CSS selector to detect if the area is open. */
+  readonly mainSelector: string;
+
+  /** Container CSS selector for the outermost list element (CSS sizing/manipulation). */
+  readonly containerSelector: string;
+
   /**
    * Returns the CSS selector for ticker symbol elements in this area.
    *
@@ -49,9 +56,21 @@ export interface TickerArea {
 
 // ── Factory ──
 
-function createTickerArea(id: TickerAreaId, symbol: string, selected: string, item: string, flag: string): TickerArea {
+function createTickerArea(
+  id: TickerAreaId,
+  symbol: string,
+  selected: string,
+  item: string,
+  flag: string,
+  line: string,
+  mainSelector: string,
+  containerSelector: string
+): TickerArea {
   return {
     id,
+    line,
+    mainSelector,
+    containerSelector,
     getSymbolSelector(visibility: TickerVisibility): string {
       switch (visibility) {
         case TickerVisibility.SELECTED:
@@ -80,18 +99,24 @@ export const TickerArea: Readonly<{
   /** Main watchlist panel (always present). */
   WATCHLIST: createTickerArea(
     'WATCHLIST',
-    Constants.DOM.WATCHLIST.SYMBOL,
-    Constants.DOM.WATCHLIST.SELECTED,
-    Constants.DOM.WATCHLIST.ITEM,
-    Constants.DOM.FLAGS.SYMBOL
+    'span[class*=symbolNameText]',
+    'div[class*=selected]',
+    'div[class*=symbol-]',
+    'div[class^=uiMarker]',
+    'div[class^=listContainer] > div > div',
+    'div.widgetbar-widgetbody:first',
+    'div[class^=listContainer]'
   ),
 
   /** Screener panel (may be hidden/closed). */
   SCREENER: createTickerArea(
     'SCREENER',
-    Constants.DOM.SCREENER.SYMBOL,
-    Constants.DOM.SCREENER.SELECTED,
-    Constants.DOM.SCREENER.ITEM,
-    Constants.DOM.FLAGS.SYMBOL
+    'a.tickerName-GrtoTeat',
+    '.tv-screener-table__result-row--selected',
+    'tr.row-RdUXZpkv',
+    'div[class^=uiMarker]',
+    'tr.row-RdUXZpkv',
+    '[data-qa-id="screener-widget"]',
+    '[data-qa-id="screener-widget"]'
   ),
 };

@@ -1,6 +1,6 @@
 import { FilterManager, IFilterManager } from '../../src/manager/filter';
 import { IUIUtil } from '../../src/util/ui';
-import { Constants } from '../../src/models/constant';
+import { TickerArea } from '../../src/models/dom';
 import { ALL_WATCH_CATEGORIES, BucketSummary, WatchCategoryId } from '../../src/models/watch';
 
 // Mock jQuery globally for DOM manipulation
@@ -53,7 +53,7 @@ describe('FilterManager', () => {
   describe('Constructor', () => {
     it('should apply default white filter on construction', () => {
       // Construction should have triggered filter calls via addFilter → applyFilters
-      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.LINE);
+      expect(mockJQuery).toHaveBeenCalledWith(TickerArea.WATCHLIST.line);
       expect(mockJQueryChain.hide).toHaveBeenCalled();
     });
   });
@@ -74,8 +74,8 @@ describe('FilterManager', () => {
 
       filterManager.resetWatchList();
 
-      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.WATCHLIST.LINE);
-      expect(mockJQuery).toHaveBeenCalledWith(Constants.DOM.SCREENER.LINE);
+      expect(mockJQuery).toHaveBeenCalledWith(TickerArea.WATCHLIST.line);
+      expect(mockJQuery).toHaveBeenCalledWith(TickerArea.SCREENER.line);
       expect(mockJQueryChain.show).toHaveBeenCalled();
     });
   });

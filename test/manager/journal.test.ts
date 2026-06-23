@@ -5,8 +5,8 @@ import { IOsClient } from '../../src/client/os';
 import {
   CreateJournalInput,
   JournalRecord,
-  JournalApiTimeframe,
-  JournalApiSequence,
+  JournalTimeframe,
+  JournalSequence,
   JournalResultStatus,
 } from '../../src/models/journal';
 import { Sequence, TickerTimeframe } from '../../src/models/timeframe';
@@ -35,7 +35,7 @@ describe('JournalManager', () => {
   const createMockJournalRecord = (overrides: Partial<JournalRecord> = {}): JournalRecord => ({
     id: 'ext-1',
     ticker: 'AAPL',
-    sequence: 'MWD' as JournalApiSequence,
+    sequence: 'MWD' as JournalSequence,
     type: 'TAKEN',
     status: 'RUNNING',
     created_at: '2024-01-01T00:00:00Z',
@@ -43,10 +43,10 @@ describe('JournalManager', () => {
   });
 
   const createDefaultScreenshots = (): ScreenshotResponse[] => [
-    { file_name: 'ss1.png', full_path: '/ss1.png', timeframe: 'TMN' as JournalApiTimeframe },
-    { file_name: 'ss2.png', full_path: '/ss2.png', timeframe: 'MN' as JournalApiTimeframe },
-    { file_name: 'ss3.png', full_path: '/ss3.png', timeframe: 'WK' as JournalApiTimeframe },
-    { file_name: 'ss4.png', full_path: '/ss4.png', timeframe: 'DL' as JournalApiTimeframe },
+    { file_name: 'ss1.png', full_path: '/ss1.png', timeframe: 'TMN' as JournalTimeframe },
+    { file_name: 'ss2.png', full_path: '/ss2.png', timeframe: 'MN' as JournalTimeframe },
+    { file_name: 'ss3.png', full_path: '/ss3.png', timeframe: 'WK' as JournalTimeframe },
+    { file_name: 'ss4.png', full_path: '/ss4.png', timeframe: 'DL' as JournalTimeframe },
   ];
 
   beforeEach(() => {
@@ -119,10 +119,10 @@ describe('JournalManager', () => {
 
     it('should create journal with legacy sequence YR when screenshots do not contain DL', async () => {
       const screenshots: ScreenshotResponse[] = [
-        { file_name: 'ss1.png', full_path: '/ss1.png', timeframe: 'SMN' as JournalApiTimeframe },
-        { file_name: 'ss2.png', full_path: '/ss2.png', timeframe: 'TMN' as JournalApiTimeframe },
-        { file_name: 'ss3.png', full_path: '/ss3.png', timeframe: 'MN' as JournalApiTimeframe },
-        { file_name: 'ss4.png', full_path: '/ss4.png', timeframe: 'WK' as JournalApiTimeframe },
+        { file_name: 'ss1.png', full_path: '/ss1.png', timeframe: 'SMN' as JournalTimeframe },
+        { file_name: 'ss2.png', full_path: '/ss2.png', timeframe: 'TMN' as JournalTimeframe },
+        { file_name: 'ss3.png', full_path: '/ss3.png', timeframe: 'MN' as JournalTimeframe },
+        { file_name: 'ss4.png', full_path: '/ss4.png', timeframe: 'WK' as JournalTimeframe },
       ];
 
       const input: CreateJournalInput = {
@@ -156,10 +156,10 @@ describe('JournalManager', () => {
       expect(mockJournalClient.createJournal).toHaveBeenCalledWith(
         expect.objectContaining({
           images: [
-            { timeframe: 'TMN' as JournalApiTimeframe, file_name: 'ss1.png' },
-            { timeframe: 'MN' as JournalApiTimeframe, file_name: 'ss2.png' },
-            { timeframe: 'WK' as JournalApiTimeframe, file_name: 'ss3.png' },
-            { timeframe: 'DL' as JournalApiTimeframe, file_name: 'ss4.png' },
+            { timeframe: 'TMN' as JournalTimeframe, file_name: 'ss1.png' },
+            { timeframe: 'MN' as JournalTimeframe, file_name: 'ss2.png' },
+            { timeframe: 'WK' as JournalTimeframe, file_name: 'ss3.png' },
+            { timeframe: 'DL' as JournalTimeframe, file_name: 'ss4.png' },
           ],
         })
       );
@@ -276,7 +276,7 @@ describe('JournalManager', () => {
     it('should abort when screenshot fails', async () => {
       mockOsClient.screenshot = jest
         .fn()
-        .mockResolvedValueOnce({ file_name: 'ok.png', full_path: '/ok.png', timeframe: 'TMN' as JournalApiTimeframe })
+        .mockResolvedValueOnce({ file_name: 'ok.png', full_path: '/ok.png', timeframe: 'TMN' as JournalTimeframe })
         .mockRejectedValue(new Error('Screenshot failed'));
 
       mockTimeFrameManager.getSequence.mockResolvedValue(
@@ -355,8 +355,8 @@ describe('JournalManager', () => {
   describe('addJournalImages', () => {
     it('should add each screenshot as an image to the journal', async () => {
       const screenshots: ScreenshotResponse[] = [
-        { file_name: 'ss1.png', full_path: '/ss1.png', timeframe: 'TMN' as JournalApiTimeframe },
-        { file_name: 'ss2.png', full_path: '/ss2.png', timeframe: 'MN' as JournalApiTimeframe },
+        { file_name: 'ss1.png', full_path: '/ss1.png', timeframe: 'TMN' as JournalTimeframe },
+        { file_name: 'ss2.png', full_path: '/ss2.png', timeframe: 'MN' as JournalTimeframe },
       ];
 
       await journalManager.addJournalImages('ext-1', screenshots);

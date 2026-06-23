@@ -131,7 +131,7 @@ export class DomManager implements IDomManager {
 
   /** @inheritdoc */
   isScreenerVisible(): boolean {
-    const $widget = $(Constants.DOM.SCREENER.MAIN);
+    const $widget = $(TickerArea.SCREENER.mainSelector);
     return $widget.length > 0 && $widget.is(':visible');
   }
 

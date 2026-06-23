@@ -172,7 +172,7 @@ describe('DomManager', () => {
       ((global as any).$ as jest.Mock).mockReturnValue(mockEl);
 
       expect(tickerManager.isScreenerVisible()).toBe(true);
-      expect((global as any).$).toHaveBeenCalledWith(Constants.DOM.SCREENER.MAIN);
+      expect((global as any).$).toHaveBeenCalledWith(TickerArea.SCREENER.mainSelector);
     });
 
     it('should return false when screener element length is 0', () => {
