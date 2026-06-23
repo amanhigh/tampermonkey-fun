@@ -220,9 +220,12 @@ export class AlertHandler implements IAlertHandler {
 
     const ticker = this.domManager.getTicker();
 
-    // Use event-provided exchange when available (from resolved identity);
+    // Use event-provided exchange when available and non-blank (from resolved identity);
     // fall back to canonicalized TradingView DOM exchange.
-    const exchange = TickerManager.canonicalizeExchange(event.alertExchange ?? this.domManager.getCurrentExchange());
+    // Investing.com instrument search returns blank exchange for currency pairs like USD/CNY,
+    // so we treat blank the same as missing to avoid backend validation rejection.
+    const rawExchange = event.alertExchange?.trim() || this.domManager.getCurrentExchange();
+    const exchange = TickerManager.canonicalizeExchange(rawExchange);
 
     let alertTickers: AlertTicker[];
     try {

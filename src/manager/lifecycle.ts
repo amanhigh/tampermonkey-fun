@@ -76,10 +76,13 @@ export class LifecycleManager implements ILifecycleManager {
         ticker,
         alertTicker: at.symbol,
       });
-      // BUG: alert ticker should be explicitly deleted here via alertTickerClient
-      //       before tickerClient.deleteTicker(), not relying on MySQL cascade.
-      //       Currently the cascade deletes alert records but misses cleaning up
-      //       the alert feed on the TradingView page (no DOM cleanup event fires).
+    // BUG: alert ticker should be explicitly deleted here via alertTickerClient
+    //       before tickerClient.deleteTicker(), not relying on MySQL cascade.
+    //       Currently the cascade deletes alert records but misses cleaning up
+    //       the alert feed on the TradingView page (no DOM cleanup event fires).
+    // FIXME: Remote Investing.com price alerts are not deleted during stop tracking.
+    //        Must call investingClient.deleteAlert() / priceAlertClient for each
+    //        linked alert ticker before the cascade removes backend records.
     }
 
     await this.tickerClient.deleteTicker(ticker);

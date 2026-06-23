@@ -245,6 +245,41 @@ describe('AlertHandler', () => {
         expect(mockAlertTickerManager.linkAlertTicker).not.toHaveBeenCalled();
         expect(Notifier.warn).toHaveBeenCalledWith(expect.stringContaining('Start tracking'));
       });
+
+      it('should fallback to DOM exchange when event alertExchange is blank', async () => {
+        mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
+
+        // alertExchange is blank "" (as returned by Investing API for currency pairs)
+        const event = new AlertClicked('USDCNY', AlertClickAction.MAP, '2111', 'US Dollar Chinese Yuan', '');
+        handler.handleAlertClick(event);
+
+        await new Promise(process.nextTick);
+
+        expect(mockAlertTickerManager.linkAlertTicker).toHaveBeenCalledWith(expect.any(String), {
+          symbol: 'USDCNY',
+          pair_id: '2111',
+          name: 'US Dollar Chinese Yuan',
+          exchange: 'NSE', // Falls back to DOM (mock getCurrentExchange returns 'NSE')
+        });
+        expect(Notifier.success).toHaveBeenCalledWith(expect.stringContaining('Mapped'));
+      });
+
+      it('should prefer non-empty event alertExchange over DOM exchange', async () => {
+        mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
+
+        const event = new AlertClicked('USDCNY', AlertClickAction.MAP, '2111', 'US Dollar Chinese Yuan', 'FX_IDC');
+        handler.handleAlertClick(event);
+
+        await new Promise(process.nextTick);
+
+        expect(mockAlertTickerManager.linkAlertTicker).toHaveBeenCalledWith(expect.any(String), {
+          symbol: 'USDCNY',
+          pair_id: '2111',
+          name: 'US Dollar Chinese Yuan',
+          exchange: 'FX_IDC', // Event exchange used directly
+        });
+        expect(Notifier.success).toHaveBeenCalledWith(expect.stringContaining('Mapped'));
+      });
     });
   });
 
