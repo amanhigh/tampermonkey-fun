@@ -3,7 +3,6 @@ import { AuditSectionRegistry } from '../../src/util/audit_registry';
 import { IUIUtil } from '../../src/util/ui';
 import { AlertState } from '../../src/models/alert';
 import { Constants } from '../../src/models/constant';
-import { ITickerHandler } from '../../src/handler/ticker';
 import { IAlertTickerHandler } from '../../src/handler/alert_ticker';
 import { IDomManager } from '../../src/manager/dom';
 import { DomainEventType } from '../../src/models/domain_event';
@@ -57,7 +56,6 @@ describe('AuditHandler', () => {
   let auditHandler: AuditHandler;
   let mockAuditRegistry: jest.Mocked<AuditSectionRegistry>;
   let mockUIUtil: jest.Mocked<IUIUtil>;
-  let mockTickerHandler: jest.Mocked<ITickerHandler>;
   let mockAlertTickerHandler: jest.Mocked<IAlertTickerHandler>;
   let mockTickerManager: jest.Mocked<IDomManager>;
   let mockSubscriber: jest.Mocked<ISubscriber>;
@@ -74,7 +72,6 @@ describe('AuditHandler', () => {
 
     mockUIUtil = { buildLabel: jest.fn().mockReturnValue(mockJQuery), buildButton: jest.fn().mockReturnValue(mockJQuery) } as any;
 
-    mockTickerHandler = { openTicker: jest.fn(), stopTracking: jest.fn(), processCommand: jest.fn() } as any;
     mockAlertTickerHandler = { linkInvestingTicker: jest.fn().mockResolvedValue(undefined) } as any;
     mockTickerManager = { getTicker: jest.fn().mockReturnValue('TCS'), getInvestingTicker: jest.fn().mockReturnValue('TCS_INV') } as any;
 
@@ -83,7 +80,7 @@ describe('AuditHandler', () => {
       subscribeMany: jest.fn(),
     } as any;
 
-    auditHandler = new AuditHandler(mockAuditRegistry, mockUIUtil, mockTickerHandler, mockAlertTickerHandler, mockTickerManager);
+    auditHandler = new AuditHandler(mockAuditRegistry, mockUIUtil, mockAlertTickerHandler, mockTickerManager);
   });
 
   describe('registerEvents', () => {
@@ -136,10 +133,7 @@ describe('AuditHandler', () => {
         Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH, '\u{1F504} Refresh', expect.any(Function)
       );
       expect(mockUIUtil.buildButton).toHaveBeenCalledWith(
-        Constants.UI.IDS.BUTTONS.AUDIT_STOP_TRACKING, expect.stringContaining('Stop'), expect.any(Function)
-      );
-      expect(mockUIUtil.buildButton).toHaveBeenCalledWith(
-        Constants.UI.IDS.BUTTONS.AUDIT_MAP_ALERT, expect.any(String), expect.any(Function)
+        Constants.UI.IDS.BUTTONS.AUDIT_MAP_ALERT, '\u{1F517} Map', expect.any(Function)
       );
     });
   });

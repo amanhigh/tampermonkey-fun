@@ -87,6 +87,8 @@ export class Barkat {
     $area.appendTo('body');
 
     // TODO: Move UI Build Logic to Handlers
+    // FIXME: Explore Alpine.js for declarative area visibility/event binding to
+    //        reduce jQuery chain boilerplate and improve Area lifecycle control.
     this.uiUtil
       .buildWrapper(Constants.UI.IDS.AREAS.TOP, Constants.UI.POSITIONS.WRAPPER_WIDTH)
       .appendTo($area)

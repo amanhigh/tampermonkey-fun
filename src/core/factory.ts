@@ -376,7 +376,6 @@ export class Factory {
 
     // ===== REGISTRY =====
     // Build registry by registering all sections
-    // FIXME: Catalogue-based registration — fetch available audits from backend
     // GET /v1/api/audits instead of hardcoding each section here.
     registry: () =>
       Factory.getInstance('auditRegistry', () => {
@@ -431,7 +430,6 @@ export class Factory {
         return new AuditHandler(
           Factory.audit.registry(),
           Factory.util.ui(),
-          Factory.handler.ticker(),
           Factory.handler.alertTicker(),
           Factory.manager.dom()
         );
