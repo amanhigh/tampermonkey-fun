@@ -1,4 +1,4 @@
-import { BaseClient, IBaseClient } from './base';
+import { KohanClient, IKohanClient } from './kohan';
 import { KohanEnvelope } from '../models/api';
 import { Constants } from '../models/constant';
 import {
@@ -15,7 +15,7 @@ import {
  * PriceAlertClient handles price alert replacement, pending creation, deletion,
  * and listing against the Kohan backend. Covers Section 2.2.3 from the PRD.
  */
-export interface IPriceAlertClient extends IBaseClient {
+export interface IPriceAlertClient extends IKohanClient {
   /**
    * Replace backend price alerts for all pair IDs included in the request.
    * @param data - Complete refreshed alert rows for included pair IDs
@@ -49,7 +49,7 @@ export interface IPriceAlertClient extends IBaseClient {
 /**
  * PriceAlertClient handles price alert APIs against the Kohan backend.
  */
-export class PriceAlertClient extends BaseClient implements IPriceAlertClient {
+export class PriceAlertClient extends KohanClient implements IPriceAlertClient {
   private static readonly pageLimit = 10;
   private static readonly replaceBatchLimit = 100;
 
@@ -113,25 +113,17 @@ export class PriceAlertClient extends BaseClient implements IPriceAlertClient {
 
   /** @inheritdoc */
   async listPriceAlerts(params: PriceAlertQueryParams): Promise<PriceAlert[]> {
-    const limit = PriceAlertClient.pageLimit;
-    let offset = 0;
-    let total = 0;
-    const all: PriceAlert[] = [];
-
-    try {
-      do {
-        const query = this.buildPriceAlertQuery({ ...params, limit, offset });
-        const response = await this.makeRequest<KohanEnvelope<PriceAlertListResponse>>(`/alerts?${query.toString()}`);
-        const data = response.data;
-        all.push(...data.alerts);
-        total = data.metadata.total;
-        offset += limit;
-      } while (offset < total);
-
-      return all;
-    } catch (error) {
-      throw new Error(`Failed to list all price alerts: ${(error as Error).message}`);
-    }
+    return this.listAllPages<PriceAlertListResponse, PriceAlert>(
+      '/alerts',
+      [
+        ['ticker', params.ticker],
+        ['sort-by', params['sort-by']],
+        ['sort-order', params['sort-order']],
+      ],
+      PriceAlertClient.pageLimit,
+      (data) => data.alerts,
+      'Failed to list all price alerts'
+    );
   }
 
   /**
@@ -180,31 +172,5 @@ export class PriceAlertClient extends BaseClient implements IPriceAlertClient {
     }
 
     return batches;
-  }
-
-  /**
-   * Append non-undefined values from a key/value list to a URLSearchParams instance.
-   */
-  private static setQueryParams(query: URLSearchParams, entries: Array<[string, string | number | undefined]>): void {
-    for (const [key, value] of entries) {
-      if (value !== undefined) {
-        query.set(key, String(value));
-      }
-    }
-  }
-
-  /**
-   * Build URLSearchParams for Price alert query.
-   */
-  private buildPriceAlertQuery(params: PriceAlertQueryParams): URLSearchParams {
-    const query = new URLSearchParams();
-    PriceAlertClient.setQueryParams(query, [
-      ['ticker', params.ticker],
-      ['sort-by', params['sort-by']],
-      ['sort-order', params['sort-order']],
-      ['offset', params.offset],
-      ['limit', params.limit],
-    ]);
-    return query;
   }
 }

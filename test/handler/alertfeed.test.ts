@@ -4,12 +4,14 @@ import { ISyncUtil } from '../../src/util/sync';
 import { IDisplayManager } from '../../src/manager/display';
 import { IAlertManager } from '../../src/manager/alert';
 import { IAlertFeedManager } from '../../src/manager/alertfeed';
+import { ICategoryManager } from '../../src/manager/category';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { IInvestingManager } from '../../src/manager/investing';
 import { AlertTicker } from '../../src/models/alert_ticker';
 import { Instrument } from '../../src/models/investing';
 import { AlertClickAction } from '../../src/models/events';
 import { DisplayState } from '../../src/models/display';
+import { WatchCategoryId } from '../../src/models/watch';
 import { ISubscriber } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
 
@@ -37,6 +39,7 @@ describe('AlertFeedHandler', () => {
   let mockAlertFeedManager: jest.Mocked<IAlertFeedManager>;
   let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
   let mockInvestingManager: jest.Mocked<IInvestingManager>;
+  let mockCategoryManager: jest.Mocked<ICategoryManager>;
 
   const makeAlertTicker = (overrides: Partial<AlertTicker> = {}): AlertTicker => ({
     symbol: 'INFY',
@@ -108,9 +111,15 @@ describe('AlertFeedHandler', () => {
       getInstrument: jest.fn(),
     } as any;
 
+    mockCategoryManager = {
+      getTickerCategory: jest.fn().mockResolvedValue({ watch: undefined, flag: undefined, isFno: false }),
+      evictTicker: jest.fn(),
+    } as any;
+
     handler = new AlertFeedHandler(
       mockUIUtil,
       mockSyncUtil,
+      mockCategoryManager,
       mockDisplayManager,
       mockAlertManager,
       mockAlertFeedManager,
@@ -287,6 +296,11 @@ describe('AlertFeedHandler', () => {
     });
 
     it('should silently skip composite tickers for TICKER_CHANGED', async () => {
+      mockCategoryManager.getTickerCategory.mockResolvedValue({
+        watch: { id: WatchCategoryId.COMPOSITE, color: 'darkkhaki', label: 'Composite', recordUpdate: null },
+        flag: undefined,
+        isFno: false,
+      });
       let manyCallback: Function | undefined;
       const mockConsumer: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn(),
@@ -418,6 +432,17 @@ describe('AlertFeedHandler', () => {
     });
 
     it('should silently skip composite tickers from WATCHLIST_CHANGED', async () => {
+      mockCategoryManager.getTickerCategory.mockImplementation(async (ticker: string) => {
+        // SENSEX/USDINR/XAUUSD and NIFTY/USDINR are composite
+        if (ticker === 'SENSEX/USDINR/XAUUSD' || ticker === 'NIFTY/USDINR') {
+          return {
+            watch: { id: WatchCategoryId.COMPOSITE, color: 'darkkhaki', label: 'Composite', recordUpdate: null },
+            flag: undefined,
+            isFno: false,
+          };
+        }
+        return { watch: undefined, flag: undefined, isFno: false };
+      });
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
       let watchlistCallback: Function | undefined;
       const mockConsumer: jest.Mocked<ISubscriber> = {

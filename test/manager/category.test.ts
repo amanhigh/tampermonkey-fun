@@ -186,6 +186,19 @@ describe('CategoryManager', () => {
       expect(result.watch?.id).toBe(WatchCategoryId.COMPOSITE);
     });
 
+    it('should NOT treat slash FX ticker as composite when backend type is FX', async () => {
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'USD/CNY', type: TickerType.FX })
+      );
+
+      const result = await categoryManager.getTickerCategory('USD/CNY');
+
+      // Should NOT get COMPOSITE watch — backend says FX
+      expect(result.watch?.id).not.toBe(WatchCategoryId.COMPOSITE);
+      expect(result.watch?.id).toBe(WatchCategoryId.INDEX);
+    });
+
     it('should NOT return DEFAULT_DAILY watch (UI-only fallback)', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
 
@@ -196,11 +209,21 @@ describe('CategoryManager', () => {
 
     it('should skip journal lookup for composite ticker', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'COMP_B', type: TickerType.COMPOSITE }));
+
+      await categoryManager.getTickerCategory('COMP_B');
+
+      expect(mockJournalManager.listJournals).not.toHaveBeenCalled();
+    });
+
+    it('should NOT skip journal lookup for slash ticker when backend not found', async () => {
+      mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockRejectedValue(new Error('not found'));
 
       await categoryManager.getTickerCategory('BANKNIFTY/NIFTY');
 
-      expect(mockJournalManager.listJournals).not.toHaveBeenCalled();
+      // Backend 404 means no COMPOSITE type — journal lookup should fire
+      expect(mockJournalManager.listJournals).toHaveBeenCalled();
     });
 
     it('should query journals with ticker filter RUNNING first then SET fallback', async () => {

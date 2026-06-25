@@ -5,15 +5,16 @@ import { Notifier } from '../util/notify';
 import { AlertClickAction } from '../models/events';
 import { IAlertManager } from '../manager/alert';
 import { IAlertFeedManager } from '../manager/alertfeed';
+import { ICategoryManager } from '../manager/category';
 import { IDisplayManager } from '../manager/display';
 import { DisplayState, DisplayInfo } from '../models/display';
 import { AlertFeedEvent } from '../models/alertfeed';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { IInvestingManager } from '../manager/investing';
 import { AlertTicker } from '../models/alert_ticker';
+import { WatchCategoryId } from '../models/watch';
 import { ISubscriber, IDomainEventConsumer } from '../manager/event_bus';
 import { DomainEventType } from '../models/domain_event';
-import { isCompositeSymbol } from '../models/ticker';
 
 export interface IAlertFeedHandler extends IDomainEventConsumer {
   /**
@@ -36,6 +37,7 @@ export class AlertFeedHandler implements IAlertFeedHandler {
   constructor(
     private readonly uiUtil: IUIUtil,
     private readonly syncUtil: ISyncUtil,
+    private readonly categoryManager: ICategoryManager,
     private readonly displayManager: IDisplayManager,
     private readonly alertManager: IAlertManager,
     private readonly alertFeedManager: IAlertFeedManager,
@@ -126,7 +128,8 @@ export class AlertFeedHandler implements IAlertFeedHandler {
   private async createAlertFeedEventsForTicker(ticker: string): Promise<void> {
     // Composite TradingView formulas (e.g. SENSEX/USDINR/XAUUSD)
     // never have Investing alert ticker mappings — skip silently.
-    if (isCompositeSymbol(ticker)) {
+    const category = await this.categoryManager.getTickerCategory(ticker);
+    if (category.watch?.id === WatchCategoryId.COMPOSITE) {
       return;
     }
 

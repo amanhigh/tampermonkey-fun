@@ -258,12 +258,6 @@ Support:
       NSE: 'NSE', // Old Name: NSE_EXCHANGE
     },
   },
-  COMPOSITE: {
-    /** Characters that indicate a composite symbol */
-    CHARACTERS: ['/', '*', '-'],
-    /** Tickers always treated as composite despite lacking separator characters */
-    SPECIAL_TICKERS: ['GOLDSILVER', 'BTC.D'],
-  },
   FLAGS: {
     /** Substrings that identify a composite ticker as gold-index related */
     GOLD_INDEX_TOKENS: ['XAUUSD', 'GOLDSILVER'],
