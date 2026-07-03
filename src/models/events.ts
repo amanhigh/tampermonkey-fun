@@ -60,3 +60,26 @@ export class JournalOpenEvent extends BaseEvent {
     return new JournalOpenEvent(parsed.journalId);
   }
 }
+
+/**
+ * Serializable event for cross-site ticker change synchronization.
+ * Published via GM.setValue on TradingView, consumed on localhost dashboard.
+ */
+export class DashboardTickerChangedEvent extends BaseEvent {
+  constructor(
+    readonly ticker: string,
+    readonly timestamp: number = Date.now()
+  ) {
+    super();
+  }
+
+  /**
+   * Deserialize a DashboardTickerChangedEvent from a JSON string.
+   * @param data - JSON string to parse
+   * @returns Deserialized event
+   */
+  public static fromString(data: string): DashboardTickerChangedEvent {
+    const parsed = JSON.parse(data) as { ticker: string; timestamp?: number };
+    return new DashboardTickerChangedEvent(parsed.ticker, parsed.timestamp);
+  }
+}

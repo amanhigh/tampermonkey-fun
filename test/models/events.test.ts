@@ -1,4 +1,4 @@
-import { AlertClicked, AlertClickAction } from '../../src/models/events';
+import { AlertClicked, AlertClickAction, DashboardTickerChangedEvent } from '../../src/models/events';
 
 describe('AlertClicked', () => {
   describe('constructor', () => {
@@ -70,6 +70,35 @@ describe('AlertClicked', () => {
       expect(event.action).toBe(AlertClickAction.OPEN);
       expect(event.pairId).toBeUndefined();
       expect(event.alertName).toBeUndefined();
+    });
+  });
+});
+
+describe('DashboardTickerChangedEvent', () => {
+  describe('constructor', () => {
+    it('should create event with ticker and timestamp', () => {
+      const event = new DashboardTickerChangedEvent('LIN');
+      expect(event.ticker).toBe('LIN');
+      expect(event.timestamp).toBeDefined();
+      expect(typeof event.timestamp).toBe('number');
+    });
+  });
+
+  describe('stringify', () => {
+    it('should serialize ticker', () => {
+      const event = new DashboardTickerChangedEvent('TCS');
+      const json = JSON.parse(event.stringify());
+      expect(json.ticker).toBe('TCS');
+      expect(json.timestamp).toBeDefined();
+    });
+  });
+
+  describe('fromString', () => {
+    it('should deserialize ticker', () => {
+      const json = JSON.stringify({ ticker: 'RELIANCE' });
+      const event = DashboardTickerChangedEvent.fromString(json);
+      expect(event.ticker).toBe('RELIANCE');
+      expect(event.timestamp).toBeDefined();
     });
   });
 });

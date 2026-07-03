@@ -8,8 +8,9 @@ import { IJournalHandler } from '../handler/journal';
 import { ICommandInputHandler } from '../handler/command';
 import { IKiteHandler } from '../handler/kite';
 import { IAlertFeedHandler } from '../handler/alertfeed';
-import { JournalActionType } from '../models/journal';
 import { IGlobalErrorHandler } from '../handler/error';
+import { IDashboardSyncHandler } from '../handler/dashboard_sync';
+import { JournalActionType } from '../models/journal';
 import { IPanelHandler } from '../handler/panel';
 import { IDomManager } from '../manager/dom';
 import { ITradingViewManager } from '../manager/tv';
@@ -26,6 +27,7 @@ export class Barkat {
     private readonly commandHandler: ICommandInputHandler,
     private readonly kiteHandler: IKiteHandler,
     private readonly alertFeedHandler: IAlertFeedHandler,
+    private readonly dashboardSyncHandler: IDashboardSyncHandler,
     private readonly panelHandler: IPanelHandler,
     private readonly domManager: IDomManager,
     private readonly tvManager: ITradingViewManager
@@ -47,6 +49,10 @@ export class Barkat {
     return window.location.host.includes('localhost');
   }
 
+  private isDashyHost(): boolean {
+    return window.location.port === '8050';
+  }
+
   private setupInvestingUI(): void {
     this.alertFeedHandler.initialize();
     console.info('Investing UI setup');
@@ -57,17 +63,26 @@ export class Barkat {
     console.info('Kite UI setup');
   }
 
-  private setupLocalhost(): void {
+  private setupJournalHost(): void {
     console.info('Barkat localhost detected');
     this.journalHandler.registerJournalReviewHandler();
     this.journalHandler.registerOpenJournalHandler();
+  }
+
+  private setupDashyHost(): void {
+    console.info('Barkat dashy host detected');
+    this.dashboardSyncHandler.registerDashyListner();
   }
 
   initialize(): void {
     console.info('Initializing Barkat');
     this.errorHandler.registerGlobalErrorHandlers();
     if (this.isLocalhostSite()) {
-      this.setupLocalhost();
+      if (this.isDashyHost()) {
+        this.setupDashyHost();
+      } else {
+        this.setupJournalHost();
+      }
     } else if (this.isInvestingSite()) {
       this.setupInvestingUI();
     } else if (this.isTradingViewSite()) {
