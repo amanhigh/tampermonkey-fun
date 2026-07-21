@@ -46,6 +46,7 @@ import { HotkeyHandler, IHotkeyHandler } from '../handler/hotkey';
 import { KeyConfig } from '../handler/key_config';
 import { IModifierKeyConfig, ModifierKeyConfig } from '../handler/modifier_config';
 
+import { IDashboardSyncHandler, DashboardSyncHandler } from '../handler/dashboard_sync';
 import { IDisplayHandler, DisplayHandler } from '../handler/display';
 import { ITimeFrameHandler, TimeFrameHandler } from '../handler/timeframe';
 import { IKiteHandler, KiteHandler } from '../handler/kite';
@@ -53,6 +54,7 @@ import { IKiteManager, KiteManager } from '../manager/kite';
 import { IStyleManager, StyleManager } from '../manager/style';
 import { ICategoryManager, CategoryManager } from '../manager/category';
 import { IRecentManager, RecentManager } from '../manager/recent';
+import { IDashboardSyncManager, DashboardSyncManager } from '../manager/dashboard_sync';
 import { IDisplayManager, DisplayManager } from '../manager/display';
 import { IWatchListHandler, WatchListHandler } from '../handler/watchlist';
 import { IOnLoadHandler, OnLoadHandler } from '../handler/onload';
@@ -119,6 +121,7 @@ export class Factory {
             Factory.handler.command(),
             Factory.handler.kite(),
             Factory.handler.alertFeed(),
+            Factory.handler.dashboardSync(),
             Factory.handler.panel(),
             Factory.manager.dom(),
             Factory.manager.tv()
@@ -292,6 +295,9 @@ export class Factory {
     eventPublisher: (): IPublisher => Factory.manager.eventBus(),
     eventSubscriber: (): ISubscriber => Factory.manager.eventBus(),
 
+    dashboardSync: (): IDashboardSyncManager =>
+      Factory.getInstance('dashboardSyncManager', () => new DashboardSyncManager()),
+
     journal: (): IJournalManager =>
       Factory.getInstance(
         'journalManager',
@@ -376,7 +382,6 @@ export class Factory {
 
     // ===== REGISTRY =====
     // Build registry by registering all sections
-    // FIXME: Catalogue-based registration — fetch available audits from backend
     // GET /v1/api/audits instead of hardcoding each section here.
     registry: () =>
       Factory.getInstance('auditRegistry', () => {
@@ -431,7 +436,6 @@ export class Factory {
         return new AuditHandler(
           Factory.audit.registry(),
           Factory.util.ui(),
-          Factory.handler.ticker(),
           Factory.handler.alertTicker(),
           Factory.manager.dom()
         );
@@ -459,6 +463,7 @@ export class Factory {
               Factory.handler.audit(),
               Factory.handler.watchlist(),
               Factory.handler.tickerChange(),
+              Factory.handler.dashboardSync(),
             ],
             Factory.manager.eventSubscriber()
           )
@@ -517,6 +522,9 @@ export class Factory {
         () => new TickerChangeHandler(Factory.manager.dom(), Factory.manager.recent(), Factory.util.sync())
       ),
     // TickerChangeHandler must be registered as domain consumer for FIRST_LOAD
+
+    dashboardSync: (): IDashboardSyncHandler =>
+      Factory.getInstance('dashboardSyncHandler', () => new DashboardSyncHandler(Factory.manager.dashboardSync())),
 
     keyConfig: (): KeyConfig =>
       Factory.getInstance(

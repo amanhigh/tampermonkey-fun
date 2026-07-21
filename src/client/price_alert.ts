@@ -1,4 +1,5 @@
 import { KohanClient, IKohanClient } from './kohan';
+import { wrapClientError } from './base';
 import { KohanEnvelope } from '../models/api';
 import { Constants } from '../models/constant';
 import {
@@ -79,7 +80,7 @@ export class PriceAlertClient extends KohanClient implements IPriceAlertClient {
       }
       return { pairs_replaced: totalReplaced, alerts_created: totalCreated };
     } catch (error) {
-      throw new Error(`Failed to replace price alerts: ${(error as Error).message}`);
+      throw wrapClientError(error, 'Failed to replace price alerts');
     }
   }
 
@@ -96,7 +97,7 @@ export class PriceAlertClient extends KohanClient implements IPriceAlertClient {
       );
       return response.data;
     } catch (error) {
-      throw new Error(`Failed to create pending price alert: ${(error as Error).message}`);
+      throw wrapClientError(error, 'Failed to create pending price alert');
     }
   }
 
@@ -107,7 +108,7 @@ export class PriceAlertClient extends KohanClient implements IPriceAlertClient {
         method: 'DELETE',
       });
     } catch (error) {
-      throw new Error(`Failed to delete price alert: ${(error as Error).message}`);
+      throw wrapClientError(error, 'Failed to delete price alert');
     }
   }
 
@@ -127,8 +128,22 @@ export class PriceAlertClient extends KohanClient implements IPriceAlertClient {
   }
 
   /**
+   * Group alerts by pair_id so that alerts for the same pair_id are never split across requests.
+   */
+  private static groupAlertsByPairID(alerts: PriceAlertInput[]): Map<string, PriceAlertInput[]> {
+    const byPairID = new Map<string, PriceAlertInput[]>();
+    for (const alert of alerts) {
+      const group = byPairID.get(alert.pair_id) ?? [];
+      group.push(alert);
+      byPairID.set(alert.pair_id, group);
+    }
+    return byPairID;
+  }
+
+  /**
    * Group alerts by pair_id and pack into batches of at most `replaceBatchLimit`.
    * Alerts for the same pair_id are never split across requests.
+   * Sorted pair IDs provide deterministic request ordering.
    * @throws if a single pair_id exceeds `replaceBatchLimit`
    */
   private static buildReplaceBatches(alerts: PriceAlertInput[]): PriceAlertInput[][] {
@@ -136,17 +151,7 @@ export class PriceAlertClient extends KohanClient implements IPriceAlertClient {
       return [[]];
     }
 
-    // HACK: Further Simplify Batching Logic.
-    const byPairID = new Map<string, PriceAlertInput[]>();
-    for (const alert of alerts) {
-      const group = byPairID.get(alert.pair_id);
-      if (group) {
-        group.push(alert);
-      } else {
-        byPairID.set(alert.pair_id, [alert]);
-      }
-    }
-
+    const byPairID = PriceAlertClient.groupAlertsByPairID(alerts);
     const pairIDs = Array.from(byPairID.keys()).sort();
     const batches: PriceAlertInput[][] = [];
     let current: PriceAlertInput[] = [];

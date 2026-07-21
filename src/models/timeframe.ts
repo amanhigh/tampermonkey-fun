@@ -55,3 +55,10 @@ export const SMN_SEQUENCE: Sequence = [
   TickerTimeframe.MN,
   TickerTimeframe.WK,
 ];
+
+/**
+ * YR-prefixed Sequence (4-tuple) for timeframe hotkeys and screenshot flows.
+ * Represents YR → SMN → TMN → MN in catalog order.
+ * Used when the ticker's allowed timeframes do not include WK or DL.
+ */
+export const YR_SEQUENCE: Sequence = [TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN];

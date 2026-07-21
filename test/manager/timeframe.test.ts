@@ -5,7 +5,7 @@ import { IPublisher } from '../../src/manager/event_bus';
 import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/ticker';
 import { Constants } from '../../src/models/constant';
 import { Notifier } from '../../src/util/notify';
-import { Sequence, TickerTimeframe, TMN_SEQUENCE, SMN_SEQUENCE } from '../../src/models/timeframe';
+import { Sequence, TickerTimeframe, TMN_SEQUENCE, SMN_SEQUENCE, YR_SEQUENCE } from '../../src/models/timeframe';
 import { DomainEventType } from '../../src/models/domain_event';
 
 // Mock jQuery with simplified approach - avoid complex interface typing
@@ -138,6 +138,17 @@ describe('TimeFrameManager', () => {
 
       // No DL → SMN_SEQUENCE
       expect(result).toEqual(SMN_SEQUENCE);
+    });
+
+    it('should return YR_SEQUENCE when backend list lacks both WK and DL', async () => {
+      mockTickerManager.getTicker.mockResolvedValue(
+        createMockTicker({ timeframes: [TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN] })
+      );
+
+      const result = await timeFrameManager.getSequence();
+
+      // No WK, no DL → YR_SEQUENCE
+      expect(result).toEqual(YR_SEQUENCE);
     });
 
     it('should return TMN_SEQUENCE when backend list contains DL at any position', async () => {
@@ -292,6 +303,19 @@ describe('TimeFrameManager', () => {
       expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(6)`);
     });
 
+    it('should use YR_SEQUENCE when backend list has no WK and no DL', async () => {
+      mockTickerManager.getTicker.mockResolvedValue(
+        createMockTicker({ timeframes: [TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN] })
+      );
+      mockJQuery.mockReturnValue({ length: 1, click: jest.fn() });
+
+      const result = await timeFrameManager.apply(0);
+
+      expect(result).toBe(true);
+      // No WK, no DL → YR_SEQUENCE ['YR','SMN','TMN','MN'] → position 0 → YR → toolbar 7
+      expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(7)`);
+    });
+
     it('should return false when toolbar element not found', async () => {
       mockJQuery.mockReturnValue({ length: 0 });
 
@@ -390,6 +414,7 @@ describe('TimeFrameManager', () => {
         { index: 4, expected: TickerTimeframe.MN },
         { index: 5, expected: TickerTimeframe.TMN },
         { index: 6, expected: TickerTimeframe.SMN },
+        { index: 7, expected: TickerTimeframe.YR },
       ];
 
       validMappings.forEach(({ index, expected }) => {
@@ -456,6 +481,7 @@ describe('TimeFrameManager', () => {
         [TickerTimeframe.MN]: { toolbar: 4, style: 'VH' },
         [TickerTimeframe.TMN]: { toolbar: 5, style: 'T' },
         [TickerTimeframe.SMN]: { toolbar: 6, style: 'I' },
+        [TickerTimeframe.YR]: { toolbar: 7, style: 'H' },
       };
 
       Object.entries(expectedConfigs).forEach(([code, expected]) => {

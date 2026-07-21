@@ -2,7 +2,6 @@ import { Constants, AuditId } from '../models/constant';
 import { AuditSectionRegistry } from '../util/audit_registry';
 import { IUIUtil } from '../util/ui';
 import { AuditRenderer } from '../util/audit_renderer';
-import { ITickerHandler } from './ticker';
 import { IAlertTickerHandler } from './alert_ticker';
 import { IDomManager } from '../manager/dom';
 import { ISubscriber, IDomainEventConsumer } from '../manager/event_bus';
@@ -41,7 +40,6 @@ export class AuditHandler implements IAuditHandler {
   constructor(
     private readonly auditRegistry: AuditSectionRegistry,
     private readonly uiUtil: IUIUtil,
-    private readonly tickerHandler: ITickerHandler,
     private readonly alertTickerHandler: IAlertTickerHandler,
     private readonly domManager: IDomManager
   ) {}
@@ -157,12 +155,11 @@ export class AuditHandler implements IAuditHandler {
 
   /**
    * Renders toolbar buttons at the top of audit area:
-   * Refresh All, Stop Tracking, and Map Alert in a flex row
+   * Refresh All and Map Alert in a flex row
    */
   private renderToolbarButtons(): void {
     const $auditArea = $(`#${Constants.UI.IDS.AREAS.AUDIT}`);
     const refreshId = Constants.UI.IDS.BUTTONS.AUDIT_GLOBAL_REFRESH;
-    const stopTrackId = Constants.UI.IDS.BUTTONS.AUDIT_STOP_TRACKING;
     const mapAlertId = Constants.UI.IDS.BUTTONS.AUDIT_MAP_ALERT;
 
     // Remove old toolbar if exists (in case of re-render)
@@ -173,9 +170,6 @@ export class AuditHandler implements IAuditHandler {
     // Refresh All button
     this.uiUtil.buildButton(refreshId, '\u{1F504} Refresh', this.handleRefreshAllClick).appendTo($toolbar);
 
-    // Stop Tracking button (FR-9.8)
-    this.uiUtil.buildButton(stopTrackId, '\u{23F9} Stop', this.handleStopTrackingClick).appendTo($toolbar);
-
     // Map Alert button (FR-9.9)
     this.uiUtil.buildButton(mapAlertId, '\u{1F517} Map', this.handleMapAlertClick).appendTo($toolbar);
 
@@ -185,16 +179,6 @@ export class AuditHandler implements IAuditHandler {
   /** Refresh All button click handler */
   private readonly handleRefreshAllClick = (): void => {
     void this.runFullAudit();
-  };
-
-  /** Stop Tracking button click handler (FR-9.8) */
-  private readonly handleStopTrackingClick = (): void => {
-    void (async () => {
-      const tvTicker = this.domManager.getTicker();
-      if (confirm(`Stop tracking ${tvTicker}?`)) {
-        await this.tickerHandler.stopTracking(tvTicker);
-      }
-    })();
   };
 
   /** Map Alert button click handler (FR-9.9) */
