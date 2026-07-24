@@ -265,6 +265,7 @@ export class Factory {
             Factory.manager.category(),
             Factory.manager.alertTicker(),
             Factory.manager.eventPublisher(),
+            Factory.manager.alert(),
             Factory.client.priceAlert(),
             Factory.client.investing()
           )

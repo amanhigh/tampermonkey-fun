@@ -5,6 +5,7 @@ import { CreateTickerRequest, Ticker } from '../models/ticker';
 import { Alert } from '../models/alert';
 import { ICategoryManager } from './category';
 import { IAlertTickerManager } from './alert_ticker';
+import { IAlertManager } from './alert';
 import { IPublisher } from './event_bus';
 import { DomainEventType } from '../models/domain_event';
 
@@ -47,7 +48,7 @@ export interface ILifecycleManager {
  *
  * Stop-tracking cleanup order:
  * 1. Fetch linked alert tickers
- * 2. Fetch backend price alerts for the ticker
+ * 2. Fetch backend price alerts via AlertManager
  * 3. Validate no pending alerts exist — abort if any alert_id is blank
  * 4. Delete each remote Investing.com price alert (fail-fast)
  * 5. Delete each backend price-alert record (fail-fast)
@@ -61,6 +62,7 @@ export class LifecycleManager implements ILifecycleManager {
     private readonly categoryManager: ICategoryManager,
     private readonly alertTickerManager: IAlertTickerManager,
     private readonly publisher: IPublisher,
+    private readonly alertManager: IAlertManager,
     private readonly priceAlertClient: IPriceAlertClient,
     private readonly investingClient: IInvestingClient
   ) {}
@@ -86,8 +88,8 @@ export class LifecycleManager implements ILifecycleManager {
     // 1. Capture linked alert tickers before cascade delete
     const alertTickers = await this.alertTickerManager.getAlertTickersForTicker(ticker);
 
-    // 2. Fetch backend price alerts for this ticker
-    const priceAlerts = await this.priceAlertClient.listPriceAlerts({ ticker });
+    // 2. Fetch all backend price alerts for this ticker
+    const priceAlerts = await this.alertManager.getAllAlerts(ticker);
 
     // 3. Validate no pending alerts exist (alerts without alert_id)
     const pendingAlerts = priceAlerts.filter((a) => !a.alert_id);

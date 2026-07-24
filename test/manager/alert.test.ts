@@ -93,6 +93,55 @@ describe('AlertManager', () => {
     );
   });
 
+  describe('getAllAlerts', () => {
+    it('should aggregate all pages of PriceAlert records for a ticker', async () => {
+      mockPriceAlertClient.listPriceAlerts
+        .mockResolvedValueOnce(
+          pageResponse(
+            Array.from({ length: 10 }, (_, i) => ({ alert_id: `a${i}`, pair_id: '123', trigger_price: i + 1, created_at: '' })),
+            15, 0
+          )
+        )
+        .mockResolvedValueOnce(
+          pageResponse(
+            Array.from({ length: 5 }, (_, i) => ({ alert_id: `a${10 + i}`, pair_id: '123', trigger_price: 10 + i + 1, created_at: '' })),
+            15, 10
+          )
+        );
+
+      const result = await alertManager.getAllAlerts('TV:HDFC');
+
+      expect(result).toHaveLength(15);
+      expect(result[0]).toEqual({ alert_id: 'a0', pair_id: '123', trigger_price: 1, created_at: '' });
+      expect(result[14]).toEqual({ alert_id: 'a14', pair_id: '123', trigger_price: 15, created_at: '' });
+      expect(mockPriceAlertClient.listPriceAlerts).toHaveBeenCalledTimes(2);
+      expect(mockPriceAlertClient.listPriceAlerts).toHaveBeenNthCalledWith(1, {
+        ticker: 'TV:HDFC',
+        'sort-by': 'trigger_price',
+        'sort-order': 'asc',
+        offset: 0,
+        limit: Constants.KOHAN.PRICE_ALERT_PAGE_LIMIT,
+      });
+      expect(mockPriceAlertClient.listPriceAlerts).toHaveBeenNthCalledWith(2, {
+        ticker: 'TV:HDFC',
+        'sort-by': 'trigger_price',
+        'sort-order': 'asc',
+        offset: 10,
+        limit: Constants.KOHAN.PRICE_ALERT_PAGE_LIMIT,
+      });
+    });
+
+    it('should return empty array when no alerts exist', async () => {
+      mockPriceAlertClient.listPriceAlerts.mockResolvedValue(
+        pageResponse([], 0, 0)
+      );
+
+      const result = await alertManager.getAllAlerts('TV:HDFC');
+
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('getAlerts', () => {
     it('should list backend alerts for current TV ticker', async () => {
       mockDomManager.getTicker.mockReturnValue('TV:HDFC');

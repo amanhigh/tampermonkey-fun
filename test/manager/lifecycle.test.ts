@@ -5,13 +5,13 @@ import { PriceAlert } from '../../src/models/price_alert';
 import { IInvestingClient } from '../../src/client/investing';
 import { ICategoryManager } from '../../src/manager/category';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
+import { IAlertManager } from '../../src/manager/alert';
 import { IPublisher } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
 import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/ticker';
 import { TickerTimeframe } from '../../src/models/timeframe';
 import { AlertTicker } from '../../src/models/alert_ticker';
 import { Alert } from '../../src/models/alert';
-import { Constants } from '../../src/models/constant';
 
 describe('LifecycleManager', () => {
   let manager: ILifecycleManager;
@@ -19,16 +19,9 @@ describe('LifecycleManager', () => {
   let mockCategoryManager: jest.Mocked<ICategoryManager>;
   let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
   let mockPublisher: jest.Mocked<IPublisher>;
+  let mockAlertManager: jest.Mocked<IAlertManager>;
   let mockPriceAlertClient: jest.Mocked<IPriceAlertClient>;
   let mockInvestingClient: jest.Mocked<IInvestingClient>;
-
-  /** Helper: build a page response for listPriceAlerts. */
-  const pageResponse = (alerts: PriceAlert[], total: number, offset: number) => ({
-    alerts,
-    metadata: { total, offset, limit: Constants.KOHAN.PRICE_ALERT_PAGE_LIMIT },
-  });
-
-  const PAGE_LIMIT = Constants.KOHAN.PRICE_ALERT_PAGE_LIMIT;
 
   const makeAlertTicker = (overrides: Partial<AlertTicker> = {}): AlertTicker => ({
     symbol: 'INFY',
@@ -81,6 +74,18 @@ describe('LifecycleManager', () => {
       publish: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<IPublisher>;
 
+    mockAlertManager = {
+      getAllAlerts: jest.fn(),
+      getAlerts: jest.fn(),
+      getAlertsForTicker: jest.fn(),
+      createAlertForCurrentTicker: jest.fn(),
+      deleteAllAlerts: jest.fn(),
+      deleteAlertsByPrice: jest.fn(),
+      deleteAlert: jest.fn(),
+      refreshAlerts: jest.fn(),
+      createAlertClickEvent: jest.fn(),
+    } as unknown as jest.Mocked<IAlertManager>;
+
     mockPriceAlertClient = {
       listPriceAlerts: jest.fn().mockResolvedValue([]),
       deletePriceAlert: jest.fn().mockResolvedValue(undefined),
@@ -100,6 +105,7 @@ describe('LifecycleManager', () => {
       mockCategoryManager,
       mockAlertTickerManager,
       mockPublisher,
+      mockAlertManager,
       mockPriceAlertClient,
       mockInvestingClient
     );
@@ -160,7 +166,7 @@ describe('LifecycleManager', () => {
       ];
 
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue(linked);
-      mockPriceAlertClient.listPriceAlerts.mockResolvedValue(pageResponse(alerts, 2, 0));
+      mockAlertManager.getAllAlerts.mockResolvedValue(alerts);
       mockTickerClient.deleteTicker.mockResolvedValue(undefined);
 
       await manager.stopTracking('RELIANCE');
@@ -171,12 +177,8 @@ describe('LifecycleManager', () => {
       // 2. Fetch linked alert tickers
       expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('RELIANCE');
 
-      // 3. Fetch backend price alerts with manager-supplied offset/limit
-      expect(mockPriceAlertClient.listPriceAlerts).toHaveBeenCalledWith({
-        ticker: 'RELIANCE',
-        offset: 0,
-        limit: PAGE_LIMIT,
-      });
+      // 3. Fetch backend price alerts via AlertManager
+      expect(mockAlertManager.getAllAlerts).toHaveBeenCalledWith('RELIANCE');
 
       // 4. Delete remote Investing.com alerts (fail-fast)
       expect(mockInvestingClient.deleteAlert).toHaveBeenCalledTimes(2);
@@ -202,54 +204,15 @@ describe('LifecycleManager', () => {
       });
     });
 
-    it('should aggregate alerts across multiple pages during cleanup', async () => {
-      const linked = [makeAlertTicker({ symbol: 'INFY', ticker: 'RELIANCE' })];
-      const page1Alerts: PriceAlert[] = Array.from({ length: PAGE_LIMIT }, (_, i) =>
-        makePriceAlert({ alert_id: `alert-${i}`, pair_id: 'pair1' })
-      );
-      const page2Alerts: PriceAlert[] = Array.from({ length: 3 }, (_, i) =>
-        makePriceAlert({ alert_id: `alert-${PAGE_LIMIT + i}`, pair_id: 'pair2' })
-      );
-
-      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue(linked);
-      mockPriceAlertClient.listPriceAlerts
-        .mockResolvedValueOnce(pageResponse(page1Alerts, PAGE_LIMIT + 3, 0))
-        .mockResolvedValueOnce(pageResponse(page2Alerts, PAGE_LIMIT + 3, PAGE_LIMIT));
-      mockTickerClient.deleteTicker.mockResolvedValue(undefined);
-
-      await manager.stopTracking('RELIANCE');
-
-      // Both pages fetched with correct offsets
-      expect(mockPriceAlertClient.listPriceAlerts).toHaveBeenCalledTimes(2);
-      expect(mockPriceAlertClient.listPriceAlerts).toHaveBeenNthCalledWith(1, {
-        ticker: 'RELIANCE',
-        offset: 0,
-        limit: PAGE_LIMIT,
-      });
-      expect(mockPriceAlertClient.listPriceAlerts).toHaveBeenNthCalledWith(2, {
-        ticker: 'RELIANCE',
-        offset: PAGE_LIMIT,
-        limit: PAGE_LIMIT,
-      });
-
-      // All alerts across both pages deleted
-      expect(mockInvestingClient.deleteAlert).toHaveBeenCalledTimes(PAGE_LIMIT + 3);
-      expect(mockPriceAlertClient.deletePriceAlert).toHaveBeenCalledTimes(PAGE_LIMIT + 3);
-    });
-
     it('should handle stop tracking when no linked alert tickers exist', async () => {
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
-      mockPriceAlertClient.listPriceAlerts.mockResolvedValue(pageResponse([], 0, 0));
+      mockAlertManager.getAllAlerts.mockResolvedValue([]);
       mockTickerClient.deleteTicker.mockResolvedValue(undefined);
 
       await manager.stopTracking('RELIANCE');
 
-      // Manager still passes offset/limit even when no results expected
-      expect(mockPriceAlertClient.listPriceAlerts).toHaveBeenCalledWith({
-        ticker: 'RELIANCE',
-        offset: 0,
-        limit: PAGE_LIMIT,
-      });
+      // AlertManager is still called for fetching
+      expect(mockAlertManager.getAllAlerts).toHaveBeenCalledWith('RELIANCE');
 
       // No price alerts to delete
       expect(mockInvestingClient.deleteAlert).not.toHaveBeenCalled();
@@ -273,15 +236,11 @@ describe('LifecycleManager', () => {
       ];
 
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
-      mockPriceAlertClient.listPriceAlerts.mockResolvedValue(pageResponse(alerts, 2, 0));
+      mockAlertManager.getAllAlerts.mockResolvedValue(alerts);
 
       await expect(manager.stopTracking('RELIANCE')).rejects.toThrow('pending');
 
-      expect(mockPriceAlertClient.listPriceAlerts).toHaveBeenCalledWith({
-        ticker: 'RELIANCE',
-        offset: 0,
-        limit: PAGE_LIMIT,
-      });
+      expect(mockAlertManager.getAllAlerts).toHaveBeenCalledWith('RELIANCE');
 
       // No cleanup should happen
       expect(mockInvestingClient.deleteAlert).not.toHaveBeenCalled();
@@ -297,16 +256,12 @@ describe('LifecycleManager', () => {
       const alerts: PriceAlert[] = [makePriceAlert({ alert_id: 'alert-1' })];
 
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
-      mockPriceAlertClient.listPriceAlerts.mockResolvedValue(pageResponse(alerts, 1, 0));
+      mockAlertManager.getAllAlerts.mockResolvedValue(alerts);
       mockInvestingClient.deleteAlert.mockRejectedValue(new Error('Network error'));
 
       await expect(manager.stopTracking('RELIANCE')).rejects.toThrow('Network error');
 
-      expect(mockPriceAlertClient.listPriceAlerts).toHaveBeenCalledWith({
-        ticker: 'RELIANCE',
-        offset: 0,
-        limit: PAGE_LIMIT,
-      });
+      expect(mockAlertManager.getAllAlerts).toHaveBeenCalledWith('RELIANCE');
 
       // Should NOT delete ticker after failure
       expect(mockTickerClient.deleteTicker).not.toHaveBeenCalled();
@@ -324,7 +279,7 @@ describe('LifecycleManager', () => {
       ];
 
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
-      mockPriceAlertClient.listPriceAlerts.mockResolvedValue(pageResponse(priceAlerts, 2, 0));
+      mockAlertManager.getAllAlerts.mockResolvedValue(priceAlerts);
       // First remote delete succeeds, second backend delete fails
       mockPriceAlertClient.deletePriceAlert
         .mockResolvedValueOnce(undefined)
@@ -332,12 +287,7 @@ describe('LifecycleManager', () => {
 
       await expect(manager.stopTracking('RELIANCE')).rejects.toThrow('Backend 500');
 
-      // Manager supplies offset/limit to listPriceAlerts
-      expect(mockPriceAlertClient.listPriceAlerts).toHaveBeenCalledWith({
-        ticker: 'RELIANCE',
-        offset: 0,
-        limit: PAGE_LIMIT,
-      });
+      expect(mockAlertManager.getAllAlerts).toHaveBeenCalledWith('RELIANCE');
 
       // Should NOT delete ticker after failure
       expect(mockTickerClient.deleteTicker).not.toHaveBeenCalled();

@@ -238,6 +238,8 @@ Support:
     PORTS: KOHAN_PORTS,
     BASE_URL: `http://localhost:${KOHAN_PORTS.PROD}/v1/api`,
     PAGE_LIMIT: 100,
+    /** Backend-enforced price-alert page size (10). */
+    PRICE_ALERT_PAGE_LIMIT: 10,
   },
 
   /** Cache configuration for manager lookups */

@@ -17,6 +17,14 @@ import { BaseManager } from './base';
  */
 export interface IAlertManager {
   /**
+   * Fetch all backend PriceAlert records for a TradingView ticker.
+   * Handles pagination internally, returning the complete aggregated result.
+   * @param ticker - TradingView ticker symbol (e.g. "TV:HDFC")
+   * @returns Promise resolving to all PriceAlert records sorted by trigger_price ascending
+   */
+  getAllAlerts(ticker: string): Promise<PriceAlert[]>;
+
+  /**
    * Get all alerts for current TradingView ticker.
    * @returns Promise resolving to array of alerts sorted by price
    */
@@ -90,6 +98,22 @@ export class AlertManager extends BaseManager implements IAlertManager {
     private readonly publisher: IPublisher
   ) {
     super();
+  }
+
+  /** @inheritdoc */
+  async getAllAlerts(ticker: string): Promise<PriceAlert[]> {
+    return this.listAllPages<PriceAlertListResponse, PriceAlert>(
+      async (offset, limit) =>
+        this.priceAlertClient.listPriceAlerts({
+          ticker,
+          'sort-by': 'trigger_price',
+          'sort-order': 'asc',
+          offset,
+          limit,
+        }),
+      (page) => page.alerts,
+      Constants.KOHAN.PRICE_ALERT_PAGE_LIMIT
+    );
   }
 
   /** @inheritdoc */
@@ -225,18 +249,7 @@ export class AlertManager extends BaseManager implements IAlertManager {
    * List backend price alerts for a TV ticker and adapt them to UI Alert model.
    */
   private async listAlertsByTvTicker(tvTicker: string): Promise<Alert[]> {
-    const allAlerts = await this.listAllPages<PriceAlertListResponse, PriceAlert>(
-      async (offset, limit) =>
-        this.priceAlertClient.listPriceAlerts({
-          ticker: tvTicker,
-          'sort-by': 'trigger_price',
-          'sort-order': 'asc',
-          offset,
-          limit,
-        }),
-      (page) => page.alerts,
-      Constants.KOHAN.PRICE_ALERT_PAGE_LIMIT
-    );
+    const allAlerts = await this.getAllAlerts(tvTicker);
     return allAlerts.map((alert) => this.toAlert(alert));
   }
 
