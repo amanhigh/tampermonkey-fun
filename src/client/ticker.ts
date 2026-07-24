@@ -56,12 +56,13 @@ export interface ITickerClient extends IKohanClient {
   deleteTicker(ticker: string): Promise<void>;
 
   /**
-   * List ALL tickers matching filters, auto-paginating through all pages.
-   * Backend enforces limit=100 max per page; this method handles the loop.
-   * @param params - Query parameters (offset/limit are overridden)
-   * @returns Promise resolving with all matching ticker records
+   * Fetch exactly one page of tickers matching filters.
+   * Caller provides offset and limit to control pagination;
+   * higher layers are responsible for iterating pages.
+   * @param params - Query parameters including caller-provided offset/limit
+   * @returns Promise resolving with one page of ticker records and metadata
    */
-  listTickers(params: TickerQueryParams): Promise<Ticker[]>;
+  listTickers(params: TickerQueryParams): Promise<TickerListResponse>;
 }
 
 /**
@@ -146,10 +147,9 @@ export class TickerClient extends KohanClient implements ITickerClient {
   }
 
   /** @inheritdoc */
-  async listTickers(params: TickerQueryParams): Promise<Ticker[]> {
-    return this.listAllPages<TickerListResponse, Ticker>(
-      '/tickers',
-      [
+  async listTickers(params: TickerQueryParams): Promise<TickerListResponse> {
+    try {
+      const entries: Array<[string, string | number | boolean | undefined]> = [
         ['search', params.search],
         ['exchange', params.exchange],
         ['type', params.type],
@@ -159,11 +159,18 @@ export class TickerClient extends KohanClient implements ITickerClient {
         ['opened-after', params['opened-after']],
         ['sort-by', params['sort-by']],
         ['sort-order', params['sort-order']],
-      ],
-      Constants.KOHAN.PAGE_LIMIT,
-      (data) => data.tickers.map((t) => new Ticker(t)),
-      'Failed to list all tickers'
-    );
+        ['offset', params.offset],
+        ['limit', params.limit],
+      ];
+      const query = this.buildQuery(entries);
+      const response = await this.makeRequest<KohanEnvelope<TickerListResponse>>(this.appendQuery('/tickers', query));
+      return {
+        tickers: response.data.tickers.map((t) => new Ticker(t)),
+        metadata: response.data.metadata,
+      };
+    } catch (error) {
+      throw wrapClientError(error, 'Failed to list tickers');
+    }
   }
 
   /**

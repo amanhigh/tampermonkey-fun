@@ -3,13 +3,14 @@ import { IPriceAlertClient } from '../client/price_alert';
 import { Alert, PairInfo } from '../models/alert';
 import { Constants } from '../models/constant';
 import { AlertClicked, AlertClickAction } from '../models/events';
-import { PriceAlert, PriceAlertInput } from '../models/price_alert';
+import { PriceAlert, PriceAlertInput, PriceAlertListResponse } from '../models/price_alert';
 import { Notifier } from '../util/notify';
 import { IAlertTickerManager } from './alert_ticker';
 import { IDomManager } from './dom';
 import { ITradingViewManager } from './tv';
 import { IPublisher } from './event_bus';
 import { DomainEventType } from '../models/domain_event';
+import { BaseManager } from './base';
 
 /**
  * Interface for managing alert operations.
@@ -77,7 +78,7 @@ export interface IAlertManager {
 /**
  * Manages alert operations using Investing.com for live actions and Kohan Price Alert APIs for storage.
  */
-export class AlertManager implements IAlertManager {
+export class AlertManager extends BaseManager implements IAlertManager {
   private static readonly ALERT_PRICE_TOLERANCE = 0.03;
 
   constructor(
@@ -87,7 +88,9 @@ export class AlertManager implements IAlertManager {
     private readonly investingClient: IInvestingClient,
     private readonly tradingViewManager: ITradingViewManager,
     private readonly publisher: IPublisher
-  ) {}
+  ) {
+    super();
+  }
 
   /** @inheritdoc */
   async getAlerts(): Promise<Alert[]> {
@@ -222,12 +225,19 @@ export class AlertManager implements IAlertManager {
    * List backend price alerts for a TV ticker and adapt them to UI Alert model.
    */
   private async listAlertsByTvTicker(tvTicker: string): Promise<Alert[]> {
-    const priceAlerts = await this.priceAlertClient.listPriceAlerts({
-      ticker: tvTicker,
-      'sort-by': 'trigger_price',
-      'sort-order': 'asc',
-    });
-    return priceAlerts.map((alert) => this.toAlert(alert));
+    const allAlerts = await this.listAllPages<PriceAlertListResponse, PriceAlert>(
+      async (offset, limit) =>
+        this.priceAlertClient.listPriceAlerts({
+          ticker: tvTicker,
+          'sort-by': 'trigger_price',
+          'sort-order': 'asc',
+          offset,
+          limit,
+        }),
+      (page) => page.alerts,
+      Constants.KOHAN.PRICE_ALERT_PAGE_LIMIT
+    );
+    return allAlerts.map((alert) => this.toAlert(alert));
   }
 
   /**

@@ -40,8 +40,11 @@ describe('AlertTickerManager', () => {
   });
 
   describe('getPrimaryAlertTicker', () => {
-    it('should query listAlertTickers with ticker and type PRIMARY', async () => {
-      mockAlertTickerClient.listAlertTickers.mockResolvedValue([makeAlertTicker({ type: 'PRIMARY' })]);
+    it('should make a single-page request with ticker, type PRIMARY, offset 0, limit 1', async () => {
+      mockAlertTickerClient.listAlertTickers.mockResolvedValue({
+        alert_tickers: [makeAlertTicker({ type: 'PRIMARY' })],
+        metadata: { total: 1, offset: 0, limit: 1 },
+      });
 
       const result = await manager.getPrimaryAlertTicker('TV:INFY');
 
@@ -50,11 +53,16 @@ describe('AlertTickerManager', () => {
       expect(mockAlertTickerClient.listAlertTickers).toHaveBeenCalledWith({
         ticker: 'TV:INFY',
         type: 'PRIMARY',
+        offset: 0,
+        limit: 1,
       });
     });
 
     it('should return null when no PRIMARY exists', async () => {
-      mockAlertTickerClient.listAlertTickers.mockResolvedValue([]);
+      mockAlertTickerClient.listAlertTickers.mockResolvedValue({
+        alert_tickers: [],
+        metadata: { total: 0, offset: 0, limit: 1 },
+      });
 
       const result = await manager.getPrimaryAlertTicker('TV:INFY');
 
@@ -64,7 +72,10 @@ describe('AlertTickerManager', () => {
 
   describe('linkAlertTicker', () => {
     it('should create PRIMARY when no existing primary exists', async () => {
-      mockAlertTickerClient.listAlertTickers.mockResolvedValue([]);
+      mockAlertTickerClient.listAlertTickers.mockResolvedValue({
+        alert_tickers: [],
+        metadata: { total: 0, offset: 0, limit: 1 },
+      });
       mockAlertTickerClient.createAlertTicker.mockImplementation((_ticker, data) =>
         Promise.resolve(makeAlertTicker({ ...data } as any))
       );
@@ -79,6 +90,8 @@ describe('AlertTickerManager', () => {
       expect(mockAlertTickerClient.listAlertTickers).toHaveBeenCalledWith({
         ticker: 'TV:INFY',
         type: 'PRIMARY',
+        offset: 0,
+        limit: 1,
       });
       expect(mockAlertTickerClient.createAlertTicker).toHaveBeenCalledWith('TV:INFY', {
         symbol: 'INFY',
@@ -91,9 +104,10 @@ describe('AlertTickerManager', () => {
     });
 
     it('should create SECONDARY when primary already exists', async () => {
-      mockAlertTickerClient.listAlertTickers.mockResolvedValue([
-        makeAlertTicker({ type: 'PRIMARY', ticker: 'TV:INFY' }),
-      ]);
+      mockAlertTickerClient.listAlertTickers.mockResolvedValue({
+        alert_tickers: [makeAlertTicker({ type: 'PRIMARY', ticker: 'TV:INFY' })],
+        metadata: { total: 1, offset: 0, limit: 1 },
+      });
       mockAlertTickerClient.createAlertTicker.mockImplementation((_ticker, data) =>
         Promise.resolve(makeAlertTicker({ ...data } as any))
       );
@@ -116,7 +130,10 @@ describe('AlertTickerManager', () => {
     });
 
     it('should publish ALERT_TICKER_LINKED after successful create', async () => {
-      mockAlertTickerClient.listAlertTickers.mockResolvedValue([]);
+      mockAlertTickerClient.listAlertTickers.mockResolvedValue({
+        alert_tickers: [],
+        metadata: { total: 0, offset: 0, limit: 1 },
+      });
       const expectedTicker = makeAlertTicker({
         symbol: 'INFY',
         pair_id: 'pair1',
@@ -143,15 +160,97 @@ describe('AlertTickerManager', () => {
   });
 
   describe('getAlertTickers', () => {
-    it('should list all alert tickers with no filters', async () => {
-      const tickers = [makeAlertTicker()];
-      mockAlertTickerClient.listAlertTickers.mockResolvedValue(tickers);
+    it('should aggregate multiple pages into a single array', async () => {
+      mockAlertTickerClient.listAlertTickers
+        .mockResolvedValueOnce({
+          alert_tickers: [
+            makeAlertTicker({ symbol: 'A' }),
+            makeAlertTicker({ symbol: 'B' }),
+            makeAlertTicker({ symbol: 'C' }),
+          ],
+          metadata: { total: 5, offset: 0, limit: 3 },
+        })
+        .mockResolvedValueOnce({
+          alert_tickers: [
+            makeAlertTicker({ symbol: 'D' }),
+            makeAlertTicker({ symbol: 'E' }),
+          ],
+          metadata: { total: 5, offset: 3, limit: 3 },
+        });
 
       const result = await manager.getAlertTickers();
 
-      expect(mockAlertTickerClient.listAlertTickers).toHaveBeenCalledWith({});
-      expect(result).toEqual(tickers);
+      expect(result).toHaveLength(5);
+      expect(result.map((t) => t.symbol)).toEqual(['A', 'B', 'C', 'D', 'E']);
+      expect(mockAlertTickerClient.listAlertTickers).toHaveBeenCalledTimes(2);
+      expect(mockAlertTickerClient.listAlertTickers).toHaveBeenNthCalledWith(1, { offset: 0, limit: 100 });
+      expect(mockAlertTickerClient.listAlertTickers).toHaveBeenNthCalledWith(2, { offset: 100, limit: 100 });
     });
+
+    it('should return empty array when total is 0', async () => {
+      mockAlertTickerClient.listAlertTickers.mockResolvedValue({
+        alert_tickers: [],
+        metadata: { total: 0, offset: 0, limit: 100 },
+      });
+
+      const result = await manager.getAlertTickers();
+
+      expect(result).toEqual([]);
+      expect(mockAlertTickerClient.listAlertTickers).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return single page when all items fit', async () => {
+      mockAlertTickerClient.listAlertTickers.mockResolvedValue({
+        alert_tickers: [makeAlertTicker({ symbol: 'X' }), makeAlertTicker({ symbol: 'Y' })],
+        metadata: { total: 2, offset: 0, limit: 100 },
+      });
+
+      const result = await manager.getAlertTickers();
+
+      expect(result).toHaveLength(2);
+      expect(result.map((t) => t.symbol)).toEqual(['X', 'Y']);
+      expect(mockAlertTickerClient.listAlertTickers).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('getAlertTickersForTicker', () => {
+    it('should aggregate multiple pages filtered by ticker', async () => {
+      mockAlertTickerClient.listAlertTickers
+        .mockResolvedValueOnce({
+          alert_tickers: [
+            makeAlertTicker({ symbol: 'A', ticker: 'TV:INFY' }),
+            makeAlertTicker({ symbol: 'B', ticker: 'TV:INFY' }),
+          ],
+          metadata: { total: 3, offset: 0, limit: 2 },
+        })
+        .mockResolvedValueOnce({
+          alert_tickers: [
+            makeAlertTicker({ symbol: 'C', ticker: 'TV:INFY' }),
+          ],
+          metadata: { total: 3, offset: 2, limit: 2 },
+        });
+
+      const result = await manager.getAlertTickersForTicker('TV:INFY');
+
+      expect(result).toHaveLength(3);
+      expect(result.map((t) => t.symbol)).toEqual(['A', 'B', 'C']);
+      expect(mockAlertTickerClient.listAlertTickers).toHaveBeenCalledTimes(2);
+      expect(mockAlertTickerClient.listAlertTickers).toHaveBeenNthCalledWith(1, { ticker: 'TV:INFY', offset: 0, limit: 100 });
+      expect(mockAlertTickerClient.listAlertTickers).toHaveBeenNthCalledWith(2, { ticker: 'TV:INFY', offset: 100, limit: 100 });
+    });
+
+    it('should return empty array when no tickers match', async () => {
+      mockAlertTickerClient.listAlertTickers.mockResolvedValue({
+        alert_tickers: [],
+        metadata: { total: 0, offset: 0, limit: 100 },
+      });
+
+      const result = await manager.getAlertTickersForTicker('TV:INFY');
+
+      expect(result).toEqual([]);
+      expect(mockAlertTickerClient.listAlertTickers).toHaveBeenCalledWith({ ticker: 'TV:INFY', offset: 0, limit: 100 });
+    });
+
   });
 
   describe('deleteAlertTicker', () => {

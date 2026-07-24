@@ -11,9 +11,9 @@ describe('StaleReviewPlugin (backend adapter)', () => {
   ): AuditExecutionResult => ({
     audit_id: 'stale-review',
     generated_at: '2026-06-07T10:00:00Z',
-    counts: { STALE_TICKER: 1 },
+    counts: {},
     findings: [],
-    metadata: { total: 1, offset: 0, limit: 10 },
+    metadata: { total: 0, offset: 0, limit: 10 },
     ...overrides,
   });
 
@@ -55,6 +55,7 @@ describe('StaleReviewPlugin (backend adapter)', () => {
     it('maps STALE_TICKER backend finding to AuditResult', async () => {
       mockAuditClient.executeAudit.mockResolvedValue(
         makeExecutionResult({
+          metadata: { total: 1, offset: 0, limit: 10 },
           findings: [
             { code: 'STALE_TICKER', target: 'MCX', severity: 'MEDIUM', data: { last_opened_at: '2025-11-19T00:00:00Z' } },
           ],
@@ -77,6 +78,7 @@ describe('StaleReviewPlugin (backend adapter)', () => {
 
       mockAuditClient.executeAudit.mockResolvedValue(
         makeExecutionResult({
+          metadata: { total: 1, offset: 0, limit: 10 },
           findings: [
             { code: 'STALE_TICKER', target: 'TCS', severity: 'MEDIUM', data: { last_opened_at: '2025-11-19T00:00:00Z' } },
           ],
@@ -97,6 +99,7 @@ describe('StaleReviewPlugin (backend adapter)', () => {
     it('omits daysSinceOpen when last_opened_at is missing', async () => {
       mockAuditClient.executeAudit.mockResolvedValue(
         makeExecutionResult({
+          metadata: { total: 1, offset: 0, limit: 10 },
           findings: [
             { code: 'STALE_TICKER', target: 'TCS', severity: 'MEDIUM', data: {} },
           ],
@@ -115,6 +118,35 @@ describe('StaleReviewPlugin (backend adapter)', () => {
       const results = await plugin.run();
 
       expect(results).toEqual([]);
+    });
+
+    it('aggregates findings across multiple pages', async () => {
+      mockAuditClient.executeAudit
+        .mockResolvedValueOnce(
+          makeExecutionResult({
+            metadata: { total: 2, offset: 0, limit: 10 },
+            findings: [
+              { code: 'STALE_TICKER', target: 'MCX', severity: 'MEDIUM', data: { last_opened_at: '2025-11-19T00:00:00Z' } },
+            ],
+          })
+        )
+        .mockResolvedValueOnce(
+          makeExecutionResult({
+            metadata: { total: 2, offset: 10, limit: 10 },
+            findings: [
+              { code: 'STALE_TICKER', target: 'TCS', severity: 'MEDIUM', data: { last_opened_at: '2025-10-01T00:00:00Z' } },
+            ],
+          })
+        );
+
+      const results = await plugin.run();
+
+      expect(results).toHaveLength(2);
+      expect(results[0].target).toBe('MCX');
+      expect(results[1].target).toBe('TCS');
+      expect(mockAuditClient.executeAudit).toHaveBeenCalledTimes(2);
+      expect(mockAuditClient.executeAudit).toHaveBeenNthCalledWith(1, 'stale-review', 0, 10);
+      expect(mockAuditClient.executeAudit).toHaveBeenNthCalledWith(2, 'stale-review', 10, 10);
     });
 
     it('surfaces backend client execution errors', async () => {

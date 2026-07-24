@@ -99,63 +99,105 @@ describe('AlertTickerClient', () => {
     });
   });
 
-  // ── listAlertTickers (auto-paginating) ──
+  // ── listAlertTickers (single-page) ──
 
   describe('listAlertTickers', () => {
-    it('should return all alert tickers from single page when total <= 100', async () => {
+    it('should return AlertTickerListResponse with alert_tickers and metadata', async () => {
+      const pageResponse = {
+        alert_tickers: [
+          { symbol: 'MCIX', pair_id: '941982', name: 'MCX', exchange: 'NSE', type: 'SECONDARY', ticker: 'MCX' },
+        ],
+        metadata: { total: 1, offset: 0, limit: 100 },
+      };
       mockMakeRequest.mockResolvedValue({
         status: 'success',
-        data: {
-          alert_tickers: [
-            { symbol: 'MCIX', pair_id: '941982', name: 'MCX', exchange: 'NSE', type: 'SECONDARY', ticker: 'MCX' },
-          ],
-          metadata: { total: 1, offset: 0, limit: 100 },
-        },
+        data: pageResponse,
       });
 
       const result = await alertTickerClient.listAlertTickers({ symbol: 'MCIX' });
 
-      expect(result).toHaveLength(1);
+      expect(result).toEqual(pageResponse);
+      expect(result.alert_tickers).toHaveLength(1);
       expect(mockMakeRequest).toHaveBeenCalledTimes(1);
-      expect(mockMakeRequest).toHaveBeenCalledWith('/alert-tickers?symbol=MCIX&offset=0&limit=100');
+      expect(mockMakeRequest).toHaveBeenCalledWith('/alert-tickers?symbol=MCIX');
     });
 
-    it('should paginate alert tickers across multiple pages', async () => {
-      mockMakeRequest
-        .mockResolvedValueOnce({
-          status: 'success',
-          data: {
-            alert_tickers: Array.from({ length: 100 }, (_, i) => ({
-              symbol: `S${i}`, pair_id: `${i}`, name: `Name${i}`, exchange: 'NSE', type: 'SECONDARY',
-            })),
-            metadata: { total: 150, offset: 0, limit: 100 },
-          },
-        })
-        .mockResolvedValueOnce({
-          status: 'success',
-          data: {
-            alert_tickers: Array.from({ length: 50 }, (_, i) => ({
-              symbol: `S${100 + i}`, pair_id: `${100 + i}`, name: `Name${100 + i}`, exchange: 'NSE', type: 'SECONDARY',
-            })),
-            metadata: { total: 150, offset: 100, limit: 100 },
-          },
-        });
-
-      const result = await alertTickerClient.listAlertTickers({});
-
-      expect(result).toHaveLength(150);
-      expect(mockMakeRequest).toHaveBeenCalledTimes(2);
-    });
-
-    it('should return empty array when total is 0', async () => {
+    it('should forward explicit offset and limit from params', async () => {
+      const pageResponse = {
+        alert_tickers: [
+          { symbol: 'S50', pair_id: '50', name: 'Name50', exchange: 'NSE', type: 'SECONDARY', ticker: 'MCX' },
+        ],
+        metadata: { total: 150, offset: 50, limit: 10 },
+      };
       mockMakeRequest.mockResolvedValue({
         status: 'success',
-        data: { alert_tickers: [], metadata: { total: 0, offset: 0, limit: 100 } },
+        data: pageResponse,
+      });
+
+      const result = await alertTickerClient.listAlertTickers({ offset: 50, limit: 10 });
+
+      expect(result).toEqual(pageResponse);
+      expect(mockMakeRequest).toHaveBeenCalledWith('/alert-tickers?offset=50&limit=10');
+    });
+
+    it('should forward all filter parameters in a single request', async () => {
+      const pageResponse = {
+        alert_tickers: [
+          { symbol: 'MCIX', pair_id: '941982', name: 'MCX', exchange: 'NSE', type: 'PRIMARY', ticker: 'MCX' },
+        ],
+        metadata: { total: 1, offset: 0, limit: 100 },
+      };
+      mockMakeRequest.mockResolvedValue({
+        status: 'success',
+        data: pageResponse,
+      });
+
+      await alertTickerClient.listAlertTickers({
+        symbol: 'MCIX',
+        ticker: 'MCX',
+        'pair-id': '941982',
+        exchange: 'NSE',
+        type: 'PRIMARY',
+      });
+
+      expect(mockMakeRequest).toHaveBeenCalledWith(
+        '/alert-tickers?symbol=MCIX&ticker=MCX&pair-id=941982&exchange=NSE&type=PRIMARY'
+      );
+    });
+
+    it('should return empty alert_tickers when total is 0', async () => {
+      const pageResponse = {
+        alert_tickers: [],
+        metadata: { total: 0, offset: 0, limit: 100 },
+      };
+      mockMakeRequest.mockResolvedValue({
+        status: 'success',
+        data: pageResponse,
       });
 
       const result = await alertTickerClient.listAlertTickers({});
 
-      expect(result).toEqual([]);
+      expect(result).toEqual(pageResponse);
+      expect(result.alert_tickers).toEqual([]);
+      expect(mockMakeRequest).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not auto-paginate across multiple pages', async () => {
+      const pageResponse = {
+        alert_tickers: Array.from({ length: 100 }, (_, i) => ({
+          symbol: `S${i}`, pair_id: `${i}`, name: `Name${i}`, exchange: 'NSE', type: 'SECONDARY',
+        })),
+        metadata: { total: 150, offset: 0, limit: 100 },
+      };
+      mockMakeRequest.mockResolvedValue({
+        status: 'success',
+        data: pageResponse,
+      });
+
+      const result = await alertTickerClient.listAlertTickers({});
+
+      expect(result.alert_tickers).toHaveLength(100);
+      expect(result.metadata.total).toBe(150);
       expect(mockMakeRequest).toHaveBeenCalledTimes(1);
     });
   });
@@ -186,7 +228,7 @@ describe('AlertTickerClient', () => {
     it('should wrap listAlertTickers errors', async () => {
       mockMakeRequest.mockRejectedValue(new Error('500 Internal Server Error'));
 
-      await expect(alertTickerClient.listAlertTickers({})).rejects.toThrow('Failed to list all Alert tickers: 500 Internal Server Error');
+      await expect(alertTickerClient.listAlertTickers({})).rejects.toThrow('Failed to list Alert tickers: 500 Internal Server Error');
     });
   });
 });

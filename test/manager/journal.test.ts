@@ -386,6 +386,98 @@ describe('JournalManager', () => {
     });
   });
 
+  describe('listJournals', () => {
+    it('should aggregate multi-page results in order using default page limit', async () => {
+      const page1 = {
+        journals: [
+          createMockJournalRecord({ id: 'ext-1', ticker: 'AAPL' }),
+          createMockJournalRecord({ id: 'ext-2', ticker: 'AAPL' }),
+        ],
+        metadata: { total: 5, offset: 0, limit: 100 },
+      };
+      const page2 = {
+        journals: [
+          createMockJournalRecord({ id: 'ext-3', ticker: 'AAPL' }),
+          createMockJournalRecord({ id: 'ext-4', ticker: 'AAPL' }),
+        ],
+        metadata: { total: 5, offset: 100, limit: 100 },
+      };
+      const page3 = {
+        journals: [createMockJournalRecord({ id: 'ext-5', ticker: 'AAPL' })],
+        metadata: { total: 5, offset: 200, limit: 100 },
+      };
+
+      mockJournalClient.listJournals
+        .mockResolvedValueOnce(page1)
+        .mockResolvedValueOnce(page2)
+        .mockResolvedValueOnce(page3);
+
+      const result = await journalManager.listJournals({ ticker: 'AAPL' });
+
+      expect(result).toHaveLength(5);
+      expect(result.map((j) => j.id)).toEqual(['ext-1', 'ext-2', 'ext-3', 'ext-4', 'ext-5']);
+      expect(mockJournalClient.listJournals).toHaveBeenCalledTimes(3);
+      expect(mockJournalClient.listJournals).toHaveBeenNthCalledWith(1, {
+        ticker: 'AAPL',
+        offset: 0,
+        limit: 100,
+      });
+      expect(mockJournalClient.listJournals).toHaveBeenNthCalledWith(2, {
+        ticker: 'AAPL',
+        offset: 100,
+        limit: 100,
+      });
+      expect(mockJournalClient.listJournals).toHaveBeenNthCalledWith(3, {
+        ticker: 'AAPL',
+        offset: 200,
+        limit: 100,
+      });
+    });
+
+    it('should pass query filters through to each page request', async () => {
+      mockJournalClient.listJournals.mockResolvedValue({
+        journals: [createMockJournalRecord()],
+        metadata: { total: 1, offset: 0, limit: 100 },
+      });
+
+      await journalManager.listJournals({
+        ticker: 'TSLA',
+        type: 'TAKEN',
+        status: 'RUNNING',
+        'sort-by': 'created_at',
+        'sort-order': 'desc',
+      });
+
+      expect(mockJournalClient.listJournals).toHaveBeenCalledWith({
+        ticker: 'TSLA',
+        type: 'TAKEN',
+        status: 'RUNNING',
+        'sort-by': 'created_at',
+        'sort-order': 'desc',
+        offset: 0,
+        limit: 100,
+      });
+    });
+
+    it('should return empty array when total is 0', async () => {
+      mockJournalClient.listJournals.mockResolvedValue({
+        journals: [],
+        metadata: { total: 0, offset: 0, limit: 100 },
+      });
+
+      const result = await journalManager.listJournals({ ticker: 'EMPTY' });
+
+      expect(result).toEqual([]);
+      expect(mockJournalClient.listJournals).toHaveBeenCalledTimes(1);
+    });
+
+    it('should propagate client errors', async () => {
+      mockJournalClient.listJournals.mockRejectedValue(new Error('API down'));
+
+      await expect(journalManager.listJournals({ ticker: 'AAPL' })).rejects.toThrow('API down');
+    });
+  });
+
   describe('updateJournalStatus', () => {
     it('should patch journal status with SUCCESS', async () => {
       await journalManager.updateJournalStatus('ext-1', 'SUCCESS' as JournalResultStatus);
