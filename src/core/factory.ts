@@ -242,10 +242,7 @@ export class Factory {
       ),
 
     dom: (): IDomManager =>
-      Factory.getInstance(
-        'domManager',
-        () => new DomManager(Factory.util.wait(), Factory.manager.ticker(), Factory.manager.alertTicker())
-      ),
+      Factory.getInstance('domManager', () => new DomManager(Factory.util.wait(), Factory.manager.ticker())),
 
     kite: (): IKiteManager =>
       Factory.getInstance('kiteManager', () => new KiteManager(Factory.client.kite(), Factory.repo.kite())),

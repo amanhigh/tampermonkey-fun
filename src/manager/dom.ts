@@ -2,8 +2,6 @@ import { Constants } from '../models/constant';
 import { TickerArea, TickerVisibility } from '../models/dom';
 import { IWaitUtil } from '../util/wait';
 import { ITickerManager } from './ticker';
-import { IAlertTickerManager } from './alert_ticker';
-
 /**
  * Interface for managing ticker operations
  */
@@ -25,12 +23,6 @@ export interface IDomManager {
    * @returns Current exchange
    */
   getCurrentExchange(): string;
-
-  /**
-   * Maps current TradingView ticker to Investing ticker
-   * @returns Promise resolving to mapped Investing ticker, rejects if no mapping
-   */
-  getInvestingTicker(): Promise<string>;
 
   /**
    * Opens specified ticker in TradingView.
@@ -71,8 +63,7 @@ export interface IDomManager {
 export class DomManager implements IDomManager {
   constructor(
     private readonly waitUtil: IWaitUtil,
-    private readonly tickerManager: ITickerManager,
-    private readonly alertTickerManager: IAlertTickerManager
+    private readonly tickerManager: ITickerManager
   ) {}
 
   /** @inheritdoc */
@@ -96,17 +87,6 @@ export class DomManager implements IDomManager {
   /** @inheritdoc */
   getName(): string {
     return $(Constants.DOM.BASIC.NAME)[0].innerHTML;
-  }
-
-  /** @inheritdoc */
-  async getInvestingTicker(): Promise<string> {
-    // HACK: Remove out of this as its not pure DOM
-    const tvTicker = this.getTicker();
-    const alertTicker = await this.alertTickerManager.getPrimaryAlertTicker(tvTicker);
-    if (!alertTicker) {
-      throw new Error(`Investing ticker not found for ${tvTicker}`);
-    }
-    return alertTicker.symbol;
   }
 
   /** @inheritdoc */

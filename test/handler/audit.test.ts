@@ -73,7 +73,7 @@ describe('AuditHandler', () => {
     mockUIUtil = { buildLabel: jest.fn().mockReturnValue(mockJQuery), buildButton: jest.fn().mockReturnValue(mockJQuery) } as any;
 
     mockAlertTickerHandler = { linkInvestingTicker: jest.fn().mockResolvedValue(undefined) } as any;
-    mockTickerManager = { getTicker: jest.fn().mockReturnValue('TCS'), getInvestingTicker: jest.fn().mockReturnValue('TCS_INV') } as any;
+    mockTickerManager = { getTicker: jest.fn().mockReturnValue('TCS') } as any;
 
     mockSubscriber = {
       subscribe: jest.fn(),
