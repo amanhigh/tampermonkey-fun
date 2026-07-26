@@ -1,32 +1,11 @@
 import { DisplayHandler } from '../../src/handler/display';
 import { IDomManager } from '../../src/manager/dom';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
+import { IAlertBar } from '../../src/handler/alert_bar';
 import { AlertTicker } from '../../src/models/alert_ticker';
 import { ApiError, wrapClientError } from '../../src/models/api_error';
 import { ISubscriber } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
-
-// ── Mock jQuery ──
-let mockDisplayEl: any;
-
-const mockJQuery = jest.fn((selector: string) => {
-  if (selector === '#aman-display') {
-    return mockDisplayEl;
-  }
-  return {
-    val: jest.fn(),
-    css: jest.fn(),
-    html: jest.fn(),
-    off: jest.fn(),
-    on: jest.fn(),
-    addClass: jest.fn(),
-    removeClass: jest.fn(),
-    text: jest.fn(),
-    data: jest.fn(),
-    toggleClass: jest.fn(),
-  };
-});
-(global as any).$ = mockJQuery;
 
 // ── Helpers ──
 
@@ -42,29 +21,15 @@ const makeAlertTicker = (overrides: Partial<AlertTicker> = {}): AlertTicker => (
   ...overrides,
 });
 
+// ── Tests ──
+
 describe('DisplayHandler', () => {
   let handler: DisplayHandler;
   let mockDomManager: jest.Mocked<IDomManager>;
   let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
+  let mockAlertBar: jest.Mocked<IAlertBar>;
 
   beforeEach(() => {
-    const dataStore: Record<string, any> = {};
-    mockDisplayEl = {
-      html: jest.fn(),
-      off: jest.fn().mockReturnThis(),
-      on: jest.fn().mockReturnThis(),
-      addClass: jest.fn().mockReturnThis(),
-      removeClass: jest.fn().mockReturnThis(),
-      data: jest.fn((key: string, value?: any) => {
-        if (value !== undefined) {
-          dataStore[key] = value;
-          return mockDisplayEl;
-        }
-        return dataStore[key];
-      }),
-      toggleClass: jest.fn(),
-    };
-
     mockDomManager = {
       getTicker: jest.fn(),
       getCurrentExchange: jest.fn(),
@@ -80,80 +45,54 @@ describe('DisplayHandler', () => {
       getAlertTickersForTicker: jest.fn(),
     } as any;
 
-    handler = new DisplayHandler(mockDomManager, mockAlertTickerManager);
+    mockAlertBar = {
+      render: jest.fn(),
+    };
+
+    handler = new DisplayHandler(mockDomManager, mockAlertTickerManager, mockAlertBar);
   });
 
   describe('display', () => {
-    it('should render compact mapped display with primary ticker and alert count', async () => {
+    it('should fetch alert tickers and delegate rendering to alertBar', async () => {
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
-      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
-        makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', ticker: 'TVTICKER' }),
-      ]);
+      const tickers = [makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', ticker: 'TVTICKER' })];
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue(tickers);
 
       await handler.display();
 
       expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TVTICKER');
-
-      const html = mockDisplayEl.html.mock.calls[0][0];
-      expect(html).toContain('🔗');
-      expect(html).toContain('INFY');
-      expect(html).toContain('🔔1');
+      expect(mockAlertBar.render).toHaveBeenCalledWith({
+        tvTicker: 'TVTICKER',
+        alertTickers: tickers,
+        isUntracked: false,
+      });
     });
 
-    it('should render unmapped compact display with warning emoji and zero alert count', async () => {
+    it('should pass empty alertTickers for unmapped ticker', async () => {
       mockDomManager.getTicker.mockReturnValue('TVTICKER');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
 
       await handler.display();
 
-      const html = mockDisplayEl.html.mock.calls[0][0];
-      expect(html).toContain('⚠️');
-      expect(html).toContain('TVTICKER');
-      expect(html).toContain('🔔0');
+      expect(mockAlertBar.render).toHaveBeenCalledWith({
+        tvTicker: 'TVTICKER',
+        alertTickers: [],
+        isUntracked: false,
+      });
     });
 
-    it('should set mapped css class when ticker is mapped', async () => {
-      mockDomManager.getTicker.mockReturnValue('TVTICKER');
-      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
-        makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', ticker: 'TVTICKER' }),
-      ]);
-
-      await handler.display();
-
-      expect(mockDisplayEl.removeClass).toHaveBeenCalledWith('aman-display-mapped aman-display-unmapped');
-      expect(mockDisplayEl.addClass).toHaveBeenCalledWith('aman-display-mapped');
-    });
-
-    it('should set unmapped css class when ticker is unmapped', async () => {
-      mockDomManager.getTicker.mockReturnValue('TVTICKER');
-      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
-
-      await handler.display();
-
-      expect(mockDisplayEl.addClass).toHaveBeenCalledWith('aman-display-unmapped');
-    });
-
-    it('should attach click handler to display element', async () => {
-      mockDomManager.getTicker.mockReturnValue('TVTICKER');
-      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
-
-      await handler.display();
-
-      expect(mockDisplayEl.off).toHaveBeenCalledWith('click');
-      expect(mockDisplayEl.on).toHaveBeenCalledWith('click', expect.any(Function));
-    });
-
-    it('should render the current ticker as display ticker when unmapped', async () => {
+    it('should pass the current ticker from domManager', async () => {
       mockDomManager.getTicker.mockReturnValue('BANKNIFTY');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
 
       await handler.display();
 
-      const html = mockDisplayEl.html.mock.calls[0][0];
-      expect(html).toContain('BANKNIFTY');
+      expect(mockAlertBar.render).toHaveBeenCalledWith(
+        expect.objectContaining({ tvTicker: 'BANKNIFTY' })
+      );
     });
 
-    it('should render Untracked label when backend returns ticker-not-found 404', async () => {
+    it('should set isUntracked when backend returns ticker-not-found 404', async () => {
       mockDomManager.getTicker.mockReturnValue('BHEL');
       const apiError = new ApiError(404, 'Ticker not found');
       const wrapped = wrapClientError(apiError, 'Failed to list all Alert tickers');
@@ -161,136 +100,69 @@ describe('DisplayHandler', () => {
 
       await handler.display();
 
-      const html = mockDisplayEl.html.mock.calls[0][0];
-      expect(html).toContain('⚠️');
-      expect(html).toContain('Untracked · BHEL');
-      expect(html).toContain('🔔0');
+      expect(mockAlertBar.render).toHaveBeenCalledWith({
+        tvTicker: 'BHEL',
+        alertTickers: [],
+        isUntracked: true,
+      });
     });
 
     it('should rethrow non-404 errors instead of marking untracked', async () => {
       mockDomManager.getTicker.mockReturnValue('BHEL');
-      mockAlertTickerManager.getAlertTickersForTicker.mockRejectedValue(new Error('500 Internal Server Error'));
+      mockAlertTickerManager.getAlertTickersForTicker.mockRejectedValue(
+        new Error('500 Internal Server Error')
+      );
 
       await expect(handler.display()).rejects.toThrow('500 Internal Server Error');
     });
-  });
 
-  describe('expanded display toggle', () => {
-    it('should render expanded rows with primary and secondary tickers on click', async () => {
-      mockDomManager.getTicker.mockReturnValue('TVTICKER');
-      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
-        makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', name: 'Infosys Ltd', exchange: 'NSE', ticker: 'TVTICKER' }),
-        makeAlertTicker({ type: 'SECONDARY', symbol: 'INFY.PA', name: 'Infosys CDR', exchange: 'XPAR', ticker: 'TVTICKER' }),
-      ]);
-
-      await handler.display();
-
-      const clickHandler = mockDisplayEl.on.mock.calls[0][1];
-      await clickHandler();
-
-      const htmlCalls = mockDisplayEl.html.mock.calls;
-      const expandedHtml = htmlCalls[htmlCalls.length - 1][0];
-
-      expect(expandedHtml).toContain('🔗');
-      expect(expandedHtml).toContain('INFY');
-      expect(expandedHtml).toContain('🔔2');
-      expect(expandedHtml).toContain('⭐');
-      expect(expandedHtml).toContain('Infosys Ltd');
-      expect(expandedHtml).toContain('🔹');
-      expect(expandedHtml).toContain('INFY.PA');
-      expect(expandedHtml).toContain('Infosys CDR');
-    });
-
-    it('should render unmapped expanded empty state on click', async () => {
-      mockDomManager.getTicker.mockReturnValue('TVTICKER');
-      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
-
-      await handler.display();
-
-      const clickHandler = mockDisplayEl.on.mock.calls[0][1];
-      await clickHandler();
-
-      const htmlCalls = mockDisplayEl.html.mock.calls;
-      const expandedHtml = htmlCalls[htmlCalls.length - 1][0];
-
-      expect(expandedHtml).toContain('No linked alert tickers');
-    });
-
-    it('should render untracked expanded empty state when 404', async () => {
+    it('should not call alertBar.render when a non-404 error is thrown', async () => {
       mockDomManager.getTicker.mockReturnValue('BHEL');
-      const apiError = new ApiError(404, 'Ticker not found');
-      const wrapped = wrapClientError(apiError, 'Failed to list all Alert tickers');
-      mockAlertTickerManager.getAlertTickersForTicker.mockRejectedValue(wrapped);
+      mockAlertTickerManager.getAlertTickersForTicker.mockRejectedValue(
+        new Error('Network failure')
+      );
 
-      await handler.display();
+      await expect(handler.display()).rejects.toThrow();
 
-      const clickHandler = mockDisplayEl.on.mock.calls[0][1];
-      await clickHandler();
-
-      const htmlCalls = mockDisplayEl.html.mock.calls;
-      const expandedHtml = htmlCalls[htmlCalls.length - 1][0];
-
-      expect(expandedHtml).toContain('⚠️');
-      expect(expandedHtml).toContain('Untracked · BHEL');
-      expect(expandedHtml).toContain('Untracked ticker — no backend record');
-    });
-
-    it('should toggle back to compact on second click', async () => {
-      mockDomManager.getTicker.mockReturnValue('TVTICKER');
-      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
-        makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', ticker: 'TVTICKER' }),
-      ]);
-
-      await handler.display();
-
-      const clickHandler = mockDisplayEl.on.mock.calls[0][1];
-      await clickHandler(); // expand
-
-      const secondClickHandler = mockDisplayEl.on.mock.calls[1][1];
-      await secondClickHandler(); // collapse
-
-      const htmlCalls = mockDisplayEl.html.mock.calls;
-      const finalHtml = htmlCalls[htmlCalls.length - 1][0];
-
-      expect(finalHtml).not.toContain('aman-display-expanded');
-    });
-
-    it('should render alert ticker rows with data-symbol and data-type attributes', async () => {
-      mockDomManager.getTicker.mockReturnValue('TVTICKER');
-      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
-        makeAlertTicker({ type: 'PRIMARY', symbol: 'INFY', name: 'Infosys Ltd', exchange: 'NSE', ticker: 'TVTICKER' }),
-        makeAlertTicker({ type: 'SECONDARY', symbol: 'INFY.PA', name: 'Infosys CDR', exchange: 'XPAR', ticker: 'TVTICKER' }),
-      ]);
-
-      await handler.display();
-
-      const clickHandler = mockDisplayEl.on.mock.calls[0][1];
-      await clickHandler();
-
-      const htmlCalls = mockDisplayEl.html.mock.calls;
-      const expandedHtml = htmlCalls[htmlCalls.length - 1][0];
-
-      expect(expandedHtml).toContain('aman-display-alert-ticker-row');
-      expect(expandedHtml).toContain('data-alert-ticker-symbol="INFY"');
-      expect(expandedHtml).toContain('data-alert-ticker-type="PRIMARY"');
-      expect(expandedHtml).toContain('data-alert-ticker-symbol="INFY.PA"');
-      expect(expandedHtml).toContain('data-alert-ticker-type="SECONDARY"');
+      expect(mockAlertBar.render).not.toHaveBeenCalled();
     });
   });
 
   describe('registerEvents', () => {
-    it('should subscribe to TICKER_TRACKING_STOPPED to refresh display', () => {
-      const mockSubscriber: jest.Mocked<ISubscriber> = {
+    let mockSubscriber: jest.Mocked<ISubscriber>;
+
+    beforeEach(() => {
+      mockSubscriber = {
         subscribe: jest.fn(),
         subscribeMany: jest.fn(),
       };
+    });
 
+    it('should subscribe to all four domain events', () => {
       handler.registerEvents(mockSubscriber);
 
       expect(mockSubscriber.subscribeMany).toHaveBeenCalledWith(
-        expect.arrayContaining([DomainEventType.TICKER_TRACKING_STOPPED]),
+        [
+          DomainEventType.TICKER_CHANGED,
+          DomainEventType.TICKER_TRACKING_STOPPED,
+          DomainEventType.ALERT_TICKER_LINKED,
+          DomainEventType.ALERT_TICKER_DELETED,
+        ],
         expect.any(Function)
       );
+    });
+
+    it('should call display when any subscribed event fires', async () => {
+      mockDomManager.getTicker.mockReturnValue('TVTICKER');
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
+
+      handler.registerEvents(mockSubscriber);
+
+      const callback = mockSubscriber.subscribeMany.mock.calls[0][1] as () => Promise<void>;
+      await callback();
+
+      expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('TVTICKER');
+      expect(mockAlertBar.render).toHaveBeenCalled();
     });
   });
 });

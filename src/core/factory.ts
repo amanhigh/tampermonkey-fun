@@ -47,6 +47,7 @@ import { KeyConfig } from '../handler/key_config';
 import { IModifierKeyConfig, ModifierKeyConfig } from '../handler/modifier_config';
 
 import { IDashboardSyncHandler, DashboardSyncHandler } from '../handler/dashboard_sync';
+import { IAlertBar, AlertBar } from '../handler/alert_bar';
 import { IDisplayHandler, DisplayHandler } from '../handler/display';
 import { ITimeFrameHandler, TimeFrameHandler } from '../handler/timeframe';
 import { IKiteHandler, KiteHandler } from '../handler/kite';
@@ -550,10 +551,11 @@ export class Factory {
       ),
     flag: (): IFlagHandler =>
       Factory.getInstance('flagHandler', () => new FlagHandler(Factory.manager.category(), Factory.manager.dom())),
+    alertBar: (): IAlertBar => Factory.getInstance('alertBar', () => new AlertBar(Factory.handler.alert())),
     display: (): IDisplayHandler =>
       Factory.getInstance(
         'displayHandler',
-        () => new DisplayHandler(Factory.manager.dom(), Factory.manager.alertTicker())
+        () => new DisplayHandler(Factory.manager.dom(), Factory.manager.alertTicker(), Factory.handler.alertBar())
       ),
     timeFrame: (): ITimeFrameHandler =>
       Factory.getInstance('timeFrameHandler', () => new TimeFrameHandler(Factory.manager.timeFrame())),
