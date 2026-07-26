@@ -46,7 +46,7 @@ export interface IDisplayHandler extends IDomainEventConsumer {}
  * Manages the compact/expanded display card that shows ticker status
  * and linked alert ticker information.
  */
-// FIXME: Extract BaseBar with shared expand/collapse logic that DisplayHandler,
+// FIXME: #A Extract BaseBar with shared expand/collapse logic that DisplayHandler,
 //        AlertSummaryHandler, and future bars can compose or extend.
 export class DisplayHandler implements IDisplayHandler {
   // Expanded state (minimal UI state, not a data cache)
@@ -99,7 +99,7 @@ export class DisplayHandler implements IDisplayHandler {
     // Store on DOM element for toggle re-render (avoids handler-level cache)
     $(`#${Constants.UI.IDS.DISPLAY.CARD}`).data('displayData', { tvTicker, alertTickers, isUntracked });
 
-    // FIXME: Show last visited day in display area (e.g. "7d")
+    // FIXME: #C Show last visited day in display area (e.g. "7d")
     this.renderDisplay();
   }
 

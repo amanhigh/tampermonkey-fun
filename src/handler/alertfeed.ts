@@ -335,7 +335,7 @@ export class AlertFeedHandler implements IAlertFeedHandler {
         return; // Skip non-quote rows (ec, etc.)
       }
       const { name, ticker } = this.extractAlertInfo($element);
-      // HACK: Skip Crude Oil WTI — symbol "CL" collides with Colgate-Palmolive (CL:NYSE).
+      // TODO: Skip Crude Oil WTI — symbol "CL" collides with Colgate-Palmolive (CL:NYSE).
       // Proper fix: resolve alert identity by pair_id instead of bare symbol.
       // See: https://api.investing.com/api/search → pair_id 8849 (Crude Oil) vs 7938 (Colgate).
       if (name.toLowerCase().includes('crude oil')) {
