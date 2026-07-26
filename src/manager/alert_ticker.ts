@@ -95,8 +95,13 @@ export class AlertTickerManager extends BaseManager implements IAlertTickerManag
 
   /** @inheritdoc */
   async getPrimaryAlertTicker(ticker: string): Promise<AlertTicker | null> {
-    const tickers = await this.alertTickerClient.listAlertTickers({ ticker, type: 'PRIMARY' });
-    return tickers[0] ?? null;
+    const { alert_tickers } = await this.alertTickerClient.listAlertTickers({
+      ticker,
+      type: 'PRIMARY',
+      offset: 0,
+      limit: 1,
+    });
+    return alert_tickers[0] ?? null;
   }
 
   /** @inheritdoc */
