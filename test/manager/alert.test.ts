@@ -19,6 +19,12 @@ jest.mock('../../src/util/notify', () => ({
   },
 }));
 
+/** Helper: build a page response for listPriceAlerts. */
+const pageResponse = (alerts: Array<{ alert_id?: string; pair_id: string; trigger_price: number; created_at: string }>, total: number, offset: number) => ({
+  alerts,
+  metadata: { total, offset, limit: Constants.KOHAN.PRICE_ALERT_PAGE_LIMIT },
+});
+
 describe('AlertManager', () => {
   let alertManager: IAlertManager;
   let mockPriceAlertClient: jest.Mocked<IPriceAlertClient>;
@@ -87,13 +93,64 @@ describe('AlertManager', () => {
     );
   });
 
+  describe('getAllAlerts', () => {
+    it('should aggregate all pages of PriceAlert records for a ticker', async () => {
+      mockPriceAlertClient.listPriceAlerts
+        .mockResolvedValueOnce(
+          pageResponse(
+            Array.from({ length: 10 }, (_, i) => ({ alert_id: `a${i}`, pair_id: '123', trigger_price: i + 1, created_at: '' })),
+            15, 0
+          )
+        )
+        .mockResolvedValueOnce(
+          pageResponse(
+            Array.from({ length: 5 }, (_, i) => ({ alert_id: `a${10 + i}`, pair_id: '123', trigger_price: 10 + i + 1, created_at: '' })),
+            15, 10
+          )
+        );
+
+      const result = await alertManager.getAllAlerts('TV:HDFC');
+
+      expect(result).toHaveLength(15);
+      expect(result[0]).toEqual({ alert_id: 'a0', pair_id: '123', trigger_price: 1, created_at: '' });
+      expect(result[14]).toEqual({ alert_id: 'a14', pair_id: '123', trigger_price: 15, created_at: '' });
+      expect(mockPriceAlertClient.listPriceAlerts).toHaveBeenCalledTimes(2);
+      expect(mockPriceAlertClient.listPriceAlerts).toHaveBeenNthCalledWith(1, {
+        ticker: 'TV:HDFC',
+        'sort-by': 'trigger_price',
+        'sort-order': 'asc',
+        offset: 0,
+        limit: Constants.KOHAN.PRICE_ALERT_PAGE_LIMIT,
+      });
+      expect(mockPriceAlertClient.listPriceAlerts).toHaveBeenNthCalledWith(2, {
+        ticker: 'TV:HDFC',
+        'sort-by': 'trigger_price',
+        'sort-order': 'asc',
+        offset: 10,
+        limit: Constants.KOHAN.PRICE_ALERT_PAGE_LIMIT,
+      });
+    });
+
+    it('should return empty array when no alerts exist', async () => {
+      mockPriceAlertClient.listPriceAlerts.mockResolvedValue(
+        pageResponse([], 0, 0)
+      );
+
+      const result = await alertManager.getAllAlerts('TV:HDFC');
+
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('getAlerts', () => {
     it('should list backend alerts for current TV ticker', async () => {
       mockDomManager.getTicker.mockReturnValue('TV:HDFC');
-      mockPriceAlertClient.listPriceAlerts.mockResolvedValue([
-        { alert_id: '1', pair_id: '123', trigger_price: 100, created_at: '' },
-        { alert_id: '2', pair_id: '123', trigger_price: 200, created_at: '' },
-      ]);
+      mockPriceAlertClient.listPriceAlerts.mockResolvedValue(
+        pageResponse([
+          { alert_id: '1', pair_id: '123', trigger_price: 100, created_at: '' },
+          { alert_id: '2', pair_id: '123', trigger_price: 200, created_at: '' },
+        ], 2, 0)
+      );
 
       const result = await alertManager.getAlerts();
 
@@ -101,16 +158,56 @@ describe('AlertManager', () => {
         ticker: 'TV:HDFC',
         'sort-by': 'trigger_price',
         'sort-order': 'asc',
+        offset: 0,
+        limit: Constants.KOHAN.PRICE_ALERT_PAGE_LIMIT,
       });
       expect(result).toEqual([new Alert('1', '123', 100), new Alert('2', '123', 200)]);
+    });
+
+    it('should aggregate alerts across multiple pages', async () => {
+      mockDomManager.getTicker.mockReturnValue('TV:HDFC');
+      mockPriceAlertClient.listPriceAlerts
+        .mockResolvedValueOnce(
+          pageResponse(
+            Array.from({ length: 10 }, (_, i) => ({ alert_id: `${i}`, pair_id: '123', trigger_price: i + 1, created_at: '' })),
+            15, 0
+          )
+        )
+        .mockResolvedValueOnce(
+          pageResponse(
+            Array.from({ length: 5 }, (_, i) => ({ alert_id: `${10 + i}`, pair_id: '123', trigger_price: 10 + i + 1, created_at: '' })),
+            15, 10
+          )
+        );
+
+      const result = await alertManager.getAlerts();
+
+      expect(result).toHaveLength(15);
+      expect(mockPriceAlertClient.listPriceAlerts).toHaveBeenCalledTimes(2);
+      expect(mockPriceAlertClient.listPriceAlerts).toHaveBeenNthCalledWith(1, {
+        ticker: 'TV:HDFC',
+        'sort-by': 'trigger_price',
+        'sort-order': 'asc',
+        offset: 0,
+        limit: Constants.KOHAN.PRICE_ALERT_PAGE_LIMIT,
+      });
+      expect(mockPriceAlertClient.listPriceAlerts).toHaveBeenNthCalledWith(2, {
+        ticker: 'TV:HDFC',
+        'sort-by': 'trigger_price',
+        'sort-order': 'asc',
+        offset: 10,
+        limit: Constants.KOHAN.PRICE_ALERT_PAGE_LIMIT,
+      });
     });
   });
 
   describe('getAlertsForTicker', () => {
     it('should list backend alerts for the provided TV ticker', async () => {
-      mockPriceAlertClient.listPriceAlerts.mockResolvedValue([
-        { alert_id: '1', pair_id: '123', trigger_price: 100, created_at: '' },
-      ]);
+      mockPriceAlertClient.listPriceAlerts.mockResolvedValue(
+        pageResponse([
+          { alert_id: '1', pair_id: '123', trigger_price: 100, created_at: '' },
+        ], 1, 0)
+      );
 
       const result = await alertManager.getAlertsForTicker('TV:HDFC');
 
@@ -118,6 +215,8 @@ describe('AlertManager', () => {
         ticker: 'TV:HDFC',
         'sort-by': 'trigger_price',
         'sort-order': 'asc',
+        offset: 0,
+        limit: Constants.KOHAN.PRICE_ALERT_PAGE_LIMIT,
       });
       expect(result).toEqual([new Alert('1', '123', 100)]);
     });
@@ -174,10 +273,12 @@ describe('AlertManager', () => {
   describe('deleteAllAlerts', () => {
     it('should delete all resolved alerts for current ticker', async () => {
       mockDomManager.getTicker.mockReturnValue('TV:HDFC');
-      mockPriceAlertClient.listPriceAlerts.mockResolvedValue([
-        { alert_id: '1', pair_id: '123', trigger_price: 100, created_at: '' },
-        { alert_id: '2', pair_id: '123', trigger_price: 200, created_at: '' },
-      ]);
+      mockPriceAlertClient.listPriceAlerts.mockResolvedValue(
+        pageResponse([
+          { alert_id: '1', pair_id: '123', trigger_price: 100, created_at: '' },
+          { alert_id: '2', pair_id: '123', trigger_price: 200, created_at: '' },
+        ], 2, 0)
+      );
       mockInvestingClient.deleteAlert.mockResolvedValue(undefined);
       mockPriceAlertClient.deletePriceAlert.mockResolvedValue(undefined);
 

@@ -36,12 +36,12 @@ export interface IAlertTickerClient extends IKohanClient {
   deleteAlertTicker(symbol: string): Promise<void>;
 
   /**
-   * List ALL alert tickers matching filters, auto-paginating through all pages.
-   * Backend enforces limit=100 max per page; this method handles the loop.
-   * @param params - Query parameters (offset/limit are overridden)
-   * @returns Promise resolving with all matching alert ticker records
+   * Fetch exactly one page of alert tickers matching filters.
+   * Does NOT auto-paginate; the caller is responsible for page iteration.
+   * @param params - Query parameters (offset/limit are forwarded as-is)
+   * @returns Promise resolving with the single-page response including metadata
    */
-  listAlertTickers(params: AlertTickerQueryParams): Promise<AlertTicker[]>;
+  listAlertTickers(params: AlertTickerQueryParams): Promise<AlertTickerListResponse>;
 }
 
 /**
@@ -97,19 +97,23 @@ export class AlertTickerClient extends KohanClient implements IAlertTickerClient
   }
 
   /** @inheritdoc */
-  async listAlertTickers(params: AlertTickerQueryParams): Promise<AlertTicker[]> {
-    return this.listAllPages<AlertTickerListResponse, AlertTicker>(
-      '/alert-tickers',
-      [
+  async listAlertTickers(params: AlertTickerQueryParams): Promise<AlertTickerListResponse> {
+    try {
+      const query = this.buildQuery([
         ['symbol', params.symbol],
         ['ticker', params.ticker],
         ['pair-id', params['pair-id']],
         ['exchange', params.exchange],
         ['type', params.type],
-      ],
-      Constants.KOHAN.PAGE_LIMIT,
-      (data) => data.alert_tickers,
-      'Failed to list all Alert tickers'
-    );
+        ['offset', params.offset],
+        ['limit', params.limit],
+      ]);
+      const response = await this.makeRequest<KohanEnvelope<AlertTickerListResponse>>(
+        this.appendQuery('/alert-tickers', query)
+      );
+      return response.data;
+    } catch (error) {
+      throw wrapClientError(error, 'Failed to list Alert tickers');
+    }
   }
 }

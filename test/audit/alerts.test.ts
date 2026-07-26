@@ -11,9 +11,9 @@ describe('AlertsPlugin (backend adapter)', () => {
   ): AuditExecutionResult => ({
     audit_id: 'alert-coverage',
     generated_at: '2026-06-07T10:00:00Z',
-    counts: { NO_ALERT_TICKER: 1, NO_ALERTS: 1, SINGLE_ALERT: 1 },
+    counts: {},
     findings: [],
-    metadata: { total: 3, offset: 0, limit: 10 },
+    metadata: { total: 0, offset: 0, limit: 10 },
     ...overrides,
   });
 
@@ -55,6 +55,7 @@ describe('AlertsPlugin (backend adapter)', () => {
     it('maps NO_ALERT_TICKER backend finding to AuditResult', async () => {
       mockAuditClient.executeAudit.mockResolvedValue(
         makeExecutionResult({
+          metadata: { total: 1, offset: 0, limit: 10 },
           findings: [
             { code: 'NO_ALERT_TICKER', target: 'MCX', severity: 'HIGH', data: { alert_ticker_count: '0', price_alert_count: '0' } },
           ],
@@ -75,6 +76,7 @@ describe('AlertsPlugin (backend adapter)', () => {
     it('maps NO_ALERTS and SINGLE_ALERT findings to AuditResult', async () => {
       mockAuditClient.executeAudit.mockResolvedValue(
         makeExecutionResult({
+          metadata: { total: 2, offset: 0, limit: 10 },
           findings: [
             { code: 'NO_ALERTS', target: 'INFY', severity: 'MEDIUM', data: { alert_ticker_count: '1', price_alert_count: '0' } },
             { code: 'SINGLE_ALERT', target: 'TCS', severity: 'HIGH', data: { alert_ticker_count: '1', price_alert_count: '1' } },
@@ -96,6 +98,7 @@ describe('AlertsPlugin (backend adapter)', () => {
     it('preserves finding data metadata', async () => {
       mockAuditClient.executeAudit.mockResolvedValue(
         makeExecutionResult({
+          metadata: { total: 1, offset: 0, limit: 10 },
           findings: [
             { code: 'NO_ALERT_TICKER', target: 'MCX', severity: 'HIGH', data: { alert_ticker_count: '0', price_alert_count: '0' } },
           ],
@@ -105,6 +108,37 @@ describe('AlertsPlugin (backend adapter)', () => {
       const [result] = await plugin.run();
 
       expect(result.data).toEqual({ alert_ticker_count: '0', price_alert_count: '0' });
+    });
+
+    it('aggregates findings across multiple pages', async () => {
+      mockAuditClient.executeAudit
+        .mockResolvedValueOnce(
+          makeExecutionResult({
+            metadata: { total: 3, offset: 0, limit: 10 },
+            findings: [
+              { code: 'NO_ALERT_TICKER', target: 'MCX', severity: 'HIGH', data: { alert_ticker_count: '0', price_alert_count: '0' } },
+            ],
+          })
+        )
+        .mockResolvedValueOnce(
+          makeExecutionResult({
+            metadata: { total: 3, offset: 10, limit: 10 },
+            findings: [
+              { code: 'NO_ALERTS', target: 'INFY', severity: 'MEDIUM', data: { alert_ticker_count: '1', price_alert_count: '0' } },
+              { code: 'SINGLE_ALERT', target: 'TCS', severity: 'HIGH', data: { alert_ticker_count: '1', price_alert_count: '1' } },
+            ],
+          })
+        );
+
+      const results = await plugin.run();
+
+      expect(results).toHaveLength(3);
+      expect(results[0].code).toBe('NO_ALERT_TICKER');
+      expect(results[1].code).toBe('NO_ALERTS');
+      expect(results[2].code).toBe('SINGLE_ALERT');
+      expect(mockAuditClient.executeAudit).toHaveBeenCalledTimes(2);
+      expect(mockAuditClient.executeAudit).toHaveBeenNthCalledWith(1, 'alert-coverage', 0, 10);
+      expect(mockAuditClient.executeAudit).toHaveBeenNthCalledWith(2, 'alert-coverage', 10, 10);
     });
 
     it('surfaces backend client execution errors', async () => {

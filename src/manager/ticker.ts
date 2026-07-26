@@ -1,7 +1,14 @@
 import { ITickerClient } from '../client/ticker';
-import { CreateTickerRequest, TickerQueryParams, Ticker, TickerUpdateRequest } from '../models/ticker';
+import {
+  CreateTickerRequest,
+  TickerQueryParams,
+  TickerListResponse,
+  Ticker,
+  TickerUpdateRequest,
+} from '../models/ticker';
 import { IPublisher } from './event_bus';
 import { DomainEventType } from '../models/domain_event';
+import { BaseManager } from './base';
 
 /** Exchange aliases that map to canonical backend-accepted values. */
 const EXCHANGE_ALIAS: Record<string, string> = {
@@ -66,11 +73,13 @@ export interface ITickerManager {
 /**
  * Manages primary TradingView ticker CRUD against the Kohan backend.
  */
-export class TickerManager implements ITickerManager {
+export class TickerManager extends BaseManager implements ITickerManager {
   constructor(
     private readonly tickerClient: ITickerClient,
     private readonly publisher: IPublisher
-  ) {}
+  ) {
+    super();
+  }
 
   /** @inheritdoc */
   async getTicker(ticker: string): Promise<Ticker> {
@@ -91,7 +100,10 @@ export class TickerManager implements ITickerManager {
 
   /** @inheritdoc */
   async listTickers(params: TickerQueryParams): Promise<Ticker[]> {
-    return this.tickerClient.listTickers(params);
+    return this.listAllPages<TickerListResponse, Ticker>(
+      async (offset, limit) => this.tickerClient.listTickers({ ...params, offset, limit }),
+      (page) => page.tickers
+    );
   }
 
   /** @inheritdoc */

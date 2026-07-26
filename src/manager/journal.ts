@@ -1,4 +1,5 @@
 import { ITimeFrameManager } from './timeframe';
+import { BaseManager } from './base';
 import { Notifier } from '../util/notify';
 import { IJournalClient } from '../client/journal';
 import { IOsClient } from '../client/os';
@@ -7,6 +8,7 @@ import {
   CreateJournalImageRequest,
   CreateJournalRequest,
   CreateJournalTagRequest,
+  JournalListResponse,
   JournalSequence,
   JournalTimeframe,
   JournalQueryParams,
@@ -92,12 +94,14 @@ export interface IJournalManager {
  * using a private helper (currently: contains DL → MWD, else YR).
  * FIXME: Replace with user-prompted or backend-provided type selection.
  */
-export class JournalManager implements IJournalManager {
+export class JournalManager extends BaseManager implements IJournalManager {
   constructor(
     private readonly journalClient: IJournalClient,
     private readonly osClient: IOsClient,
     private readonly timeframeManager: ITimeFrameManager
-  ) {}
+  ) {
+    super();
+  }
 
   /** @inheritdoc */
   public async createJournal(input: CreateJournalInput): Promise<JournalRecord> {
@@ -179,24 +183,10 @@ export class JournalManager implements IJournalManager {
 
   /** @inheritdoc */
   public async listJournals(params: JournalQueryParams): Promise<JournalRecord[]> {
-    // FIXME: Extract auto-pagination (do/while offset<total) into a shared BaseManager helper
-    const limit = Constants.KOHAN.PAGE_LIMIT;
-    let offset = 0;
-    let total = 0;
-    const all: JournalRecord[] = [];
-
-    try {
-      do {
-        const response = await this.journalClient.listJournals({ ...params, limit, offset });
-        all.push(...response.journals);
-        total = response.metadata.total;
-        offset += limit;
-      } while (offset < total);
-
-      return all;
-    } catch (error) {
-      throw new Error(`Failed to list journals: ${(error as Error).message}`);
-    }
+    return this.listAllPages<JournalListResponse, JournalRecord>(
+      async (offset, limit) => this.journalClient.listJournals({ ...params, offset, limit }),
+      (page) => page.journals
+    );
   }
 
   /** @inheritdoc */

@@ -1,5 +1,5 @@
 import { AuditResult } from '../models/audit';
-import { AuditFinding } from '../models/audit_catalogue';
+import { AuditFinding, AuditExecutionResult } from '../models/audit_catalogue';
 import { IAuditClient } from '../client/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
 import { Constants } from '../models/constant';
@@ -46,11 +46,16 @@ export abstract class BackendAuditPlugin extends BaseAuditPlugin {
 
   /**
    * Delegates to the backend `auditClient.executeAudit()` and maps findings
-   * via `toAuditResult()`. Batch-only — no targeted mode supported.
+   * via `toAuditResult()`. Aggregates every paginated result using
+   * {@link BaseManager.listAllPages}. Batch-only — no targeted mode supported.
    */
   async run(): Promise<AuditResult[]> {
-    const execution = await this.auditClient.executeAudit(this.id, 0, this.limit);
-    return execution.findings.map((f) => this.toAuditResult(f));
+    const findings = await this.listAllPages<AuditExecutionResult, AuditFinding>(
+      async (offset, limit) => this.auditClient.executeAudit(this.id, offset, limit),
+      (page) => page.findings,
+      this.limit
+    );
+    return findings.map((f) => this.toAuditResult(f));
   }
 
   /**

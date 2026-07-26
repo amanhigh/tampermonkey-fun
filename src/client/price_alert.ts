@@ -39,19 +39,18 @@ export interface IPriceAlertClient extends IKohanClient {
   deletePriceAlert(alertId: string): Promise<void>;
 
   /**
-   * List ALL price alerts matching filters, auto-paginating through all pages.
-   * Backend enforces limit=10 max per page; this method handles the loop.
-   * @param params - Query parameters (offset/limit are overridden)
-   * @returns Promise resolving with all matching price alert records
+   * Fetch one page of price alerts matching the supplied query params.
+   * Caller is responsible for pagination via offset/limit.
+   * @param params - Query parameters forwarded as-is (ticker, sort-by, sort-order, offset, limit)
+   * @returns Promise resolving with the page envelope (alerts + metadata)
    */
-  listPriceAlerts(params: PriceAlertQueryParams): Promise<PriceAlert[]>;
+  listPriceAlerts(params: PriceAlertQueryParams): Promise<PriceAlertListResponse>;
 }
 
 /**
  * PriceAlertClient handles price alert APIs against the Kohan backend.
  */
 export class PriceAlertClient extends KohanClient implements IPriceAlertClient {
-  private static readonly pageLimit = 10;
   private static readonly replaceBatchLimit = 100;
 
   /**
@@ -113,18 +112,23 @@ export class PriceAlertClient extends KohanClient implements IPriceAlertClient {
   }
 
   /** @inheritdoc */
-  async listPriceAlerts(params: PriceAlertQueryParams): Promise<PriceAlert[]> {
-    return this.listAllPages<PriceAlertListResponse, PriceAlert>(
-      '/alerts',
-      [
+  async listPriceAlerts(params: PriceAlertQueryParams): Promise<PriceAlertListResponse> {
+    try {
+      const entries: Array<[string, string | number | boolean | undefined]> = [
         ['ticker', params.ticker],
         ['sort-by', params['sort-by']],
         ['sort-order', params['sort-order']],
-      ],
-      PriceAlertClient.pageLimit,
-      (data) => data.alerts,
-      'Failed to list all price alerts'
-    );
+        ['offset', params.offset],
+        ['limit', params.limit],
+      ];
+      const query = this.buildQuery(entries);
+      const response = await this.makeRequest<KohanEnvelope<PriceAlertListResponse>>(
+        this.appendQuery('/alerts', query)
+      );
+      return response.data;
+    } catch (error) {
+      throw wrapClientError(error, 'Failed to list price alerts');
+    }
   }
 
   /**

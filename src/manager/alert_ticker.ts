@@ -1,7 +1,14 @@
 import { IAlertTickerClient } from '../client/alert_ticker';
-import { AlertTicker, AlertTickerType, CreateAlertTickerRequest } from '../models/alert_ticker';
+import {
+  AlertTicker,
+  AlertTickerListResponse,
+  AlertTickerQueryParams,
+  AlertTickerType,
+  CreateAlertTickerRequest,
+} from '../models/alert_ticker';
 import { IPublisher } from './event_bus';
 import { DomainEventType } from '../models/domain_event';
+import { BaseManager } from './base';
 
 /**
  * Interface for managing Alert Ticker (Investing.com identity) operations.
@@ -62,11 +69,13 @@ export interface IAlertTickerManager {
 /**
  * Manages Alert Ticker (Investing.com identity) operations against the Kohan backend.
  */
-export class AlertTickerManager implements IAlertTickerManager {
+export class AlertTickerManager extends BaseManager implements IAlertTickerManager {
   constructor(
     private readonly alertTickerClient: IAlertTickerClient,
     private readonly publisher: IPublisher
-  ) {}
+  ) {
+    super();
+  }
 
   /** @inheritdoc */
   async linkAlertTicker(ticker: string, data: Omit<CreateAlertTickerRequest, 'type'>): Promise<AlertTicker> {
@@ -86,8 +95,13 @@ export class AlertTickerManager implements IAlertTickerManager {
 
   /** @inheritdoc */
   async getPrimaryAlertTicker(ticker: string): Promise<AlertTicker | null> {
-    const tickers = await this.alertTickerClient.listAlertTickers({ ticker, type: 'PRIMARY' });
-    return tickers[0] ?? null;
+    const { alert_tickers } = await this.alertTickerClient.listAlertTickers({
+      ticker,
+      type: 'PRIMARY',
+      offset: 0,
+      limit: 1,
+    });
+    return alert_tickers[0] ?? null;
   }
 
   /** @inheritdoc */
@@ -99,14 +113,25 @@ export class AlertTickerManager implements IAlertTickerManager {
     }
   }
 
+  /**
+   * Fetch all Alert tickers matching the given query params, auto-paginating.
+   * @param params - Query filters forwarded to the client (offset/limit are injected)
+   */
+  private async listAllAlertTickers(params: AlertTickerQueryParams): Promise<AlertTicker[]> {
+    return this.listAllPages<AlertTickerListResponse, AlertTicker>(
+      async (offset, limit) => this.alertTickerClient.listAlertTickers({ ...params, offset, limit }),
+      (page) => page.alert_tickers
+    );
+  }
+
   /** @inheritdoc */
   async getAlertTickers(): Promise<AlertTicker[]> {
-    return this.alertTickerClient.listAlertTickers({});
+    return this.listAllAlertTickers({});
   }
 
   /** @inheritdoc */
   async getAlertTickersForTicker(ticker: string): Promise<AlertTicker[]> {
-    return this.alertTickerClient.listAlertTickers({ ticker });
+    return this.listAllAlertTickers({ ticker });
   }
 
   /** @inheritdoc */

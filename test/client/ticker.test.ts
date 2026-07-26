@@ -273,10 +273,10 @@ describe('TickerClient', () => {
     });
   });
 
-  // ── listTickers (auto-paginating) ──
+  // ── listTickers (single page) ──
 
   describe('listTickers', () => {
-    it('should return all records from a single page when total <= 100', async () => {
+    it('should fetch one page and return TickerListResponse with metadata', async () => {
       const page = Array.from({ length: 3 }, (_, i) => ({
         ticker: `T${i}`, exchange: '', timeframes: ['MN'] as any, type: TickerType.EQUITY as any,
         state: TickerState.WATCHED as any, trend: TickerTrend.UPTREND as any, last_opened_at: '', is_fno: false,
@@ -284,54 +284,67 @@ describe('TickerClient', () => {
       }));
       mockMakeRequest.mockResolvedValue({
         status: 'success',
-        data: { tickers: page, metadata: { total: 3, offset: 0, limit: 100 } },
+        data: { tickers: page, metadata: { total: 250, offset: 0, limit: 100 } },
       });
 
       const result = await tickerClient.listTickers({ 'is-fno': false });
 
-      expect(result).toHaveLength(3);
+      expect(result.tickers).toHaveLength(3);
+      expect(result.metadata).toEqual({ total: 250, offset: 0, limit: 100 });
       expect(mockMakeRequest).toHaveBeenCalledTimes(1);
-      expect(mockMakeRequest).toHaveBeenCalledWith('/tickers?is-fno=false&offset=0&limit=100');
+      expect(mockMakeRequest).toHaveBeenCalledWith('/tickers?is-fno=false');
     });
 
-    it('should paginate through multiple pages for total > 100', async () => {
-      const makePage = (start: number) => ({
+    it('should forward caller-provided offset and limit', async () => {
+      mockMakeRequest.mockResolvedValue({
+        status: 'success',
+        data: { tickers: [], metadata: { total: 250, offset: 100, limit: 50 } },
+      });
+
+      await tickerClient.listTickers({ offset: 100, limit: 50 });
+
+      expect(mockMakeRequest).toHaveBeenCalledWith('/tickers?offset=100&limit=50');
+    });
+
+    it('should forward all supported filters', async () => {
+      mockMakeRequest.mockResolvedValue({
+        status: 'success',
+        data: { tickers: [], metadata: { total: 0, offset: 0, limit: 100 } },
+      });
+
+      await tickerClient.listTickers({
+        search: 'RELIANCE',
+        exchange: 'NSE',
+        type: TickerType.EQUITY,
+        state: TickerState.WATCHED,
+        trend: TickerTrend.UPTREND,
+        'is-fno': true,
+        'opened-after': '2026-01-01',
+        'sort-by': 'ticker',
+        'sort-order': 'asc',
+      });
+
+      expect(mockMakeRequest).toHaveBeenCalledWith(
+        '/tickers?search=RELIANCE&exchange=NSE&type=EQUITY&state=WATCHED&trend=UPTREND&is-fno=true&opened-after=2026-01-01&sort-by=ticker&sort-order=asc'
+      );
+    });
+
+    it('should map tickers through Ticker constructor', async () => {
+      mockMakeRequest.mockResolvedValue({
         status: 'success',
         data: {
-          tickers: Array.from({ length: 100 }, (_, i) => ({
-            ticker: `T${start + i}`, exchange: '', timeframes: ['MN'] as any,
-            type: TickerType.EQUITY as any, state: TickerState.WATCHED as any, trend: TickerTrend.UPTREND as any,
-            last_opened_at: '', is_fno: false, created_at: '', updated_at: '',
-          })),
-          metadata: { total: 250, offset: start, limit: 100 },
+          tickers: [{ ticker: 'MCX', exchange: 'NSE', timeframes: ['MN'], type: 'EQUITY', state: 'WATCHED', trend: 'UPTREND', last_opened_at: '', is_fno: false, created_at: '', updated_at: '' }],
+          metadata: { total: 1, offset: 0, limit: 100 },
         },
       });
 
-      mockMakeRequest
-        .mockResolvedValueOnce(makePage(0))
-        .mockResolvedValueOnce(makePage(100))
-        .mockResolvedValueOnce({
-          status: 'success',
-          data: {
-            tickers: Array.from({ length: 50 }, (_, i) => ({
-              ticker: `T${200 + i}`, exchange: '', timeframes: ['MN'] as any,
-              type: TickerType.EQUITY as any, state: TickerState.WATCHED as any, trend: TickerTrend.UPTREND as any,
-              last_opened_at: '', is_fno: false, created_at: '', updated_at: '',
-            })),
-            metadata: { total: 250, offset: 200, limit: 100 },
-          },
-        });
-
       const result = await tickerClient.listTickers({});
 
-      expect(result).toHaveLength(250);
-      expect(mockMakeRequest).toHaveBeenCalledTimes(3);
-      expect(mockMakeRequest).toHaveBeenNthCalledWith(1, '/tickers?offset=0&limit=100');
-      expect(mockMakeRequest).toHaveBeenNthCalledWith(2, '/tickers?offset=100&limit=100');
-      expect(mockMakeRequest).toHaveBeenNthCalledWith(3, '/tickers?offset=200&limit=100');
+      expect(result.tickers[0].qualifiedName).toBe('NSE:MCX');
+      expect(result.tickers[0].ticker).toBe('MCX');
     });
 
-    it('should return empty array when total is 0', async () => {
+    it('should return empty tickers when page has no results', async () => {
       mockMakeRequest.mockResolvedValue({
         status: 'success',
         data: { tickers: [], metadata: { total: 0, offset: 0, limit: 100 } },
@@ -339,30 +352,26 @@ describe('TickerClient', () => {
 
       const result = await tickerClient.listTickers({});
 
-      expect(result).toEqual([]);
+      expect(result.tickers).toEqual([]);
+      expect(result.metadata.total).toBe(0);
       expect(mockMakeRequest).toHaveBeenCalledTimes(1);
     });
 
-    it('should preserve filters on every page', async () => {
+    it('should throw contextual error on request failure', async () => {
+      mockMakeRequest.mockRejectedValue(new Error('500 Server Error'));
+
+      await expect(tickerClient.listTickers({})).rejects.toThrow('Failed to list tickers: 500 Server Error');
+    });
+
+    it('should omit undefined filter params from query', async () => {
       mockMakeRequest.mockResolvedValue({
         status: 'success',
         data: { tickers: [], metadata: { total: 0, offset: 0, limit: 100 } },
       });
 
-      await tickerClient.listTickers({ 'is-fno': true, exchange: 'NSE' });
+      await tickerClient.listTickers({ exchange: 'NSE' });
 
-      expect(mockMakeRequest).toHaveBeenCalledWith('/tickers?exchange=NSE&is-fno=true&offset=0&limit=100');
-    });
-
-    it('should throw contextual error on page failure', async () => {
-      mockMakeRequest
-        .mockResolvedValueOnce({
-          status: 'success',
-          data: { tickers: [{ ticker: 'A', exchange: '', timeframes: ['MN'] as any, type: TickerType.EQUITY as any, state: TickerState.WATCHED as any, trend: TickerTrend.UPTREND as any, last_opened_at: '', is_fno: false, created_at: '', updated_at: '' }], metadata: { total: 150, offset: 0, limit: 100 } },
-        })
-        .mockRejectedValue(new Error('500 Server Error'));
-
-      await expect(tickerClient.listTickers({})).rejects.toThrow('Failed to list all tickers: 500 Server Error');
+      expect(mockMakeRequest).toHaveBeenCalledWith('/tickers?exchange=NSE');
     });
   });
 
@@ -420,7 +429,7 @@ describe('TickerClient', () => {
     it('should wrap listTickers errors', async () => {
       mockMakeRequest.mockRejectedValue(new Error('500 Internal Server Error'));
 
-      await expect(tickerClient.listTickers({})).rejects.toThrow('Failed to list all tickers: 500 Internal Server Error');
+      await expect(tickerClient.listTickers({})).rejects.toThrow('Failed to list tickers: 500 Internal Server Error');
     });
   });
 });

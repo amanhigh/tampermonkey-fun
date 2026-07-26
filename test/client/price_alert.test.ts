@@ -208,7 +208,7 @@ describe('PriceAlertClient', () => {
   });
 
   describe('listPriceAlerts', () => {
-    it('should return all price alerts from single page when total <= 10', async () => {
+    it('should return single page response with metadata', async () => {
       mockMakeRequest.mockResolvedValue({
         status: 'success',
         data: {
@@ -217,46 +217,69 @@ describe('PriceAlertClient', () => {
         },
       });
 
-      const result = await priceAlertClient.listPriceAlerts({ ticker: 'EURUSD', 'sort-by': 'trigger_price', 'sort-order': 'asc' });
+      const result = await priceAlertClient.listPriceAlerts({ ticker: 'EURUSD', 'sort-by': 'trigger_price', 'sort-order': 'asc', offset: 0, limit: 10 });
 
-      expect(result).toHaveLength(1);
+      expect(result.alerts).toHaveLength(1);
+      expect(result.metadata).toEqual({ total: 1, offset: 0, limit: 10 });
       expect(mockMakeRequest).toHaveBeenCalledTimes(1);
       expect(mockMakeRequest).toHaveBeenCalledWith('/alerts?ticker=EURUSD&sort-by=trigger_price&sort-order=asc&offset=0&limit=10');
     });
 
-    it('should paginate price alerts across multiple pages', async () => {
-      mockMakeRequest
-        .mockResolvedValueOnce({
-          status: 'success',
-          data: {
-            alerts: Array.from({ length: 10 }, (_, i) => ({
-              alert_id: `${i}`,
-              trigger_price: i + 1,
-              pair_id: '1',
-              created_at: '2026-05-05T10:32:00Z',
-            })),
-            metadata: { total: 15, offset: 0, limit: 10 },
-          },
-        })
-        .mockResolvedValueOnce({
-          status: 'success',
-          data: {
-            alerts: Array.from({ length: 5 }, (_, i) => ({
-              alert_id: `${10 + i}`,
-              trigger_price: 10 + i + 1,
-              pair_id: '1',
-              created_at: '2026-05-05T10:32:00Z',
-            })),
-            metadata: { total: 15, offset: 10, limit: 10 },
-          },
-        });
+    it('should forward offset and limit params as supplied by caller', async () => {
+      mockMakeRequest.mockResolvedValue({
+        status: 'success',
+        data: {
+          alerts: [{ alert_id: '11', trigger_price: 99, pair_id: '2', created_at: '2026-05-05T10:32:00Z' }],
+          metadata: { total: 15, offset: 10, limit: 10 },
+        },
+      });
 
-      const result = await priceAlertClient.listPriceAlerts({});
+      const result = await priceAlertClient.listPriceAlerts({ ticker: 'INFY', offset: 10, limit: 10 });
 
-      expect(result).toHaveLength(15);
-      expect(mockMakeRequest).toHaveBeenCalledTimes(2);
-      expect(mockMakeRequest).toHaveBeenNthCalledWith(1, '/alerts?offset=0&limit=10');
-      expect(mockMakeRequest).toHaveBeenNthCalledWith(2, '/alerts?offset=10&limit=10');
+      expect(result.alerts).toHaveLength(1);
+      expect(result.metadata.total).toBe(15);
+      expect(mockMakeRequest).toHaveBeenCalledWith('/alerts?ticker=INFY&offset=10&limit=10');
+    });
+
+    it('should omit undefined params from query string', async () => {
+      mockMakeRequest.mockResolvedValue({
+        status: 'success',
+        data: {
+          alerts: [],
+          metadata: { total: 0, offset: 0, limit: 10 },
+        },
+      });
+
+      await priceAlertClient.listPriceAlerts({});
+
+      expect(mockMakeRequest).toHaveBeenCalledWith('/alerts');
+    });
+
+    it('should return alerts array and metadata for caller to paginate', async () => {
+      mockMakeRequest.mockResolvedValue({
+        status: 'success',
+        data: {
+          alerts: Array.from({ length: 5 }, (_, i) => ({
+            alert_id: `${i}`,
+            trigger_price: i + 1,
+            pair_id: '1',
+            created_at: '2026-05-05T10:32:00Z',
+          })),
+          metadata: { total: 25, offset: 0, limit: 10 },
+        },
+      });
+
+      const result = await priceAlertClient.listPriceAlerts({ ticker: 'RELIANCE', offset: 0, limit: 10 });
+
+      expect(result.alerts).toHaveLength(5);
+      expect(result.metadata).toEqual({ total: 25, offset: 0, limit: 10 });
+      expect(mockMakeRequest).toHaveBeenCalledTimes(1);
+    });
+
+    it('should wrap list price alerts errors', async () => {
+      mockMakeRequest.mockRejectedValue(new Error('400 Bad Request'));
+
+      await expect(priceAlertClient.listPriceAlerts({})).rejects.toThrow('Failed to list price alerts: 400 Bad Request');
     });
   });
 
@@ -279,12 +302,6 @@ describe('PriceAlertClient', () => {
       mockMakeRequest.mockRejectedValue(new Error('404 Not Found'));
 
       await expect(priceAlertClient.deletePriceAlert('UNKNOWN')).rejects.toThrow('Failed to delete price alert: 404 Not Found');
-    });
-
-    it('should wrap list price alerts errors', async () => {
-      mockMakeRequest.mockRejectedValue(new Error('400 Bad Request'));
-
-      await expect(priceAlertClient.listPriceAlerts({})).rejects.toThrow('Failed to list all price alerts: 400 Bad Request');
     });
   });
 });
