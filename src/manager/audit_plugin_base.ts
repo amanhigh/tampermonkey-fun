@@ -1,7 +1,11 @@
 import { IAudit } from '../models/audit';
+import { BaseManager } from './base';
 
 /**
  * Base class for audit plugins.
+ *
+ * Extends {@link BaseManager} to inherit reusable pagination helpers
+ * (e.g., `listAllPages`) for backend-adapter plugins that paginate API results.
  *
  * ## Plugin Contract
  *
@@ -40,7 +44,7 @@ import { IAudit } from '../models/audit';
  * ```
  */
 // FIXME: Consolidate into BackendAuditPlugin once all plugins migrate to backend adapter pattern
-export abstract class BaseAuditPlugin implements IAudit {
+export abstract class BaseAuditPlugin extends BaseManager implements IAudit {
   abstract readonly id: string;
   abstract readonly title: string;
 
