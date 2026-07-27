@@ -60,6 +60,15 @@ export interface ICategoryManager {
    * @param ticker Ticker symbol to evict
    */
   evictTicker(ticker: string): void;
+
+  /**
+   * Evicts cached categories for the affected tickers and publishes
+   * TICKER_CATEGORY_CHANGED so subscribed handlers can refresh.
+   * No-ops when tickers is empty.
+   * @param tickers Tickers whose derived category may have changed
+   */
+  publishCategoryChanged(tickers: string[]): Promise<void>;
+
   /**
    * Toggle READY state for a single ticker.
    * - If the ticker is currently READY, clear it to WATCHED.
@@ -198,14 +207,16 @@ export class CategoryManager implements ICategoryManager {
 
   // ── Publish helper ──
 
-  /**
-   * Publish TICKER_CATEGORY_CHANGED for the given tickers.
-   * No-ops when the ticker array is empty.
-   */
-  private async publishCategoryChanged(tickers: string[]): Promise<void> {
+  /** @inheritdoc */
+  async publishCategoryChanged(tickers: string[]): Promise<void> {
     if (tickers.length === 0) {
       return;
     }
+
+    for (const ticker of tickers) {
+      this.evictTicker(ticker);
+    }
+
     await this.publisher.publish({
       type: DomainEventType.TICKER_CATEGORY_CHANGED,
       tickers,
