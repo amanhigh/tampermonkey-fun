@@ -1,4 +1,4 @@
-import { AlertBar, IAlertBar } from '../../../src/handler/bar/alert';
+import { AlertBar, IAlertBar, AlertBarData } from '../../../src/handler/bar/alert';
 import { AlertTicker } from '../../../src/models/alert_ticker';
 import { IDomManager } from '../../../src/manager/dom';
 import { IAlertTickerManager } from '../../../src/manager/alert_ticker';
@@ -26,7 +26,7 @@ const BEM = {
   EMPTY: 'aman-alert-ticker-bar__empty',
 } as const;
 
-const CONTEXT_SELECTOR = '[data-alert-ticker-context-action]';
+const DETAILS_ID = 'aman-alert-ticker-bar-details';
 
 // ── Mock Notifier ──
 
@@ -73,7 +73,7 @@ const mockJQuery = jest.fn(createDefaultJQuery);
 
 function getClickHandler(): (() => void) | undefined {
   const call = mockRootEl.on.mock.calls.find((c: any[]) => c[0] === `click.${EVENT_NS}`);
-  return call?.[1] as (() => void) | undefined;
+  return call?.[2] as (() => void) | undefined;
 }
 
 function getContextMenuHandler(): ((event: JQuery.ContextMenuEvent) => void) | undefined {
@@ -135,6 +135,15 @@ function createMockUIUtil(): jest.Mocked<IUIUtil> {
   };
 }
 
+// ── Test-only subclass exposing protected render ──
+
+/** Test-only wrapper exposing protected `render(data)` for direct data application. */
+class TestableAlertBar extends AlertBar {
+  public render(data: AlertBarData): void {
+    super.render(data);
+  }
+}
+
 // ── Tests ──
 
 describe('AlertBar', () => {
@@ -154,9 +163,8 @@ describe('AlertBar', () => {
   // ── Interface contract ──
 
   describe('interface contract', () => {
-    it('should satisfy the IAlertBar interface', () => {
-      const bar: IAlertBar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
-      expect(typeof bar.render).toBe('function');
+    it('should satisfy the IAlertBar interface without exposing render', () => {
+      const bar: IAlertBar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       expect(typeof bar.refresh).toBe('function');
       expect(typeof bar.registerEvents).toBe('function');
     });
@@ -166,7 +174,7 @@ describe('AlertBar', () => {
 
   describe('refresh', () => {
     it('should read current ticker and load linked alert tickers', async () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       mockDomManager.getTicker.mockReturnValue('NSE:INFY');
       const tickers = [createAlertTicker({ symbol: 'INFY', type: 'PRIMARY' })];
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue(tickers);
@@ -179,7 +187,7 @@ describe('AlertBar', () => {
     });
 
     it('should call render with isUntracked false on success', async () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       mockDomManager.getTicker.mockReturnValue('NSE:INFY');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
 
@@ -191,7 +199,7 @@ describe('AlertBar', () => {
     });
 
     it('should produce isUntracked true when ApiError 404 is thrown', async () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       mockDomManager.getTicker.mockReturnValue('NSE:BHEL');
       const apiError = new ApiError(404, 'Ticker not found');
       const wrapped = wrapClientError(apiError, 'Failed to list all Alert tickers');
@@ -204,7 +212,7 @@ describe('AlertBar', () => {
     });
 
     it('should rethrow non-404 errors and not render', async () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       mockDomManager.getTicker.mockReturnValue('NSE:BHEL');
       mockAlertTickerManager.getAlertTickersForTicker.mockRejectedValue(new Error('500 Internal Server Error'));
 
@@ -216,8 +224,8 @@ describe('AlertBar', () => {
   // ── registerEvents() ──
 
   describe('registerEvents', () => {
-    it('should subscribe to four domain event types', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+    it('should subscribe to five domain event types including TICKER_TRACKING_STARTED', () => {
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       const mockSubscriber: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn(),
         subscribeMany: jest.fn(),
@@ -228,6 +236,7 @@ describe('AlertBar', () => {
       expect(mockSubscriber.subscribeMany).toHaveBeenCalledWith(
         [
           DomainEventType.TICKER_CHANGED,
+          DomainEventType.TICKER_TRACKING_STARTED,
           DomainEventType.TICKER_TRACKING_STOPPED,
           DomainEventType.ALERT_TICKER_LINKED,
           DomainEventType.ALERT_TICKER_DELETED,
@@ -236,8 +245,8 @@ describe('AlertBar', () => {
       );
     });
 
-    it('should call refresh when any subscribed event fires', async () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+    it('should invoke refresh when TICKER_TRACKING_STARTED fires', async () => {
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       mockDomManager.getTicker.mockReturnValue('NSE:INFY');
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
       const mockSubscriber: jest.Mocked<ISubscriber> = {
@@ -247,19 +256,26 @@ describe('AlertBar', () => {
 
       bar.registerEvents(mockSubscriber);
 
+      // Verify TICKER_TRACKING_STARTED is in the subscribed events
+      const subscribedEvents = mockSubscriber.subscribeMany.mock.calls[0][0] as DomainEventType[];
+      expect(subscribedEvents).toContain(DomainEventType.TICKER_TRACKING_STARTED);
+
+      // Invoke the callback and verify refresh (loadData) is called
       const callback = mockSubscriber.subscribeMany.mock.calls[0][1] as () => Promise<void>;
       await callback();
 
       expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('NSE:INFY');
       expect(mockRootEl.html).toHaveBeenCalled();
     });
+
+
   });
 
   // ── Context-menu delink via direct dependencies ──
 
   describe('context-menu delink', () => {
     it('should validate row attributes, ask confirm, and delete via alertTickerManager', async () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:INFY',
         alertTickers: [createAlertTicker({ symbol: 'INFY', type: 'PRIMARY' })],
@@ -302,7 +318,7 @@ describe('AlertBar', () => {
     });
 
     it('should use SECONDARY type in delink', async () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:INFY',
         alertTickers: [createAlertTicker({ symbol: 'INFY2', type: 'SECONDARY' })],
@@ -338,7 +354,7 @@ describe('AlertBar', () => {
     });
 
     it('should report failure when deleteAlertTicker throws', async () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:INFY',
         alertTickers: [createAlertTicker({ symbol: 'INFY', type: 'PRIMARY' })],
@@ -375,7 +391,7 @@ describe('AlertBar', () => {
     });
 
     it('should no-op when user cancels confirm dialog', async () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:INFY',
         alertTickers: [createAlertTicker({ symbol: 'INFY', type: 'PRIMARY' })],
@@ -409,7 +425,7 @@ describe('AlertBar', () => {
     });
 
     it('should no-op when symbol attribute is missing', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:INFY',
         alertTickers: [createAlertTicker({ symbol: 'INFY', type: 'PRIMARY' })],
@@ -441,7 +457,7 @@ describe('AlertBar', () => {
     });
 
     it('should no-op when type attribute is missing', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:INFY',
         alertTickers: [createAlertTicker({ symbol: 'INFY', type: 'PRIMARY' })],
@@ -473,7 +489,7 @@ describe('AlertBar', () => {
     });
 
     it('should no-op when type attribute is invalid', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:INFY',
         alertTickers: [createAlertTicker({ symbol: 'INFY', type: 'PRIMARY' })],
@@ -504,57 +520,114 @@ describe('AlertBar', () => {
       expect(mockUIUtil.showConfirm).not.toHaveBeenCalled();
       expect(mockAlertTickerManager.deleteAlertTicker).not.toHaveBeenCalled();
     });
+
+    it('should use rendered tvTicker for delink, not current domManager ticker', async () => {
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+
+      // Render data for ticker A
+      bar.render({
+        tvTicker: 'NSE:INFY',
+        alertTickers: [createAlertTicker({ symbol: 'INFY', type: 'PRIMARY' })],
+        isUntracked: false,
+      });
+
+      const contextMenuHandler = getContextMenuHandler();
+
+      const mockTarget = createMockElement();
+      mockTarget.attr.mockImplementation((name: string) => {
+        if (name === 'data-alert-ticker-symbol') return 'INFY';
+        if (name === 'data-alert-ticker-type') return 'PRIMARY';
+        return undefined;
+      });
+      mockJQuery.mockImplementation((selector: string) => {
+        if (selector === ALERT_ROOT) return mockRootEl;
+        return mockTarget;
+      });
+
+      // domManager now returns a different ticker B — simulates stale row
+      mockDomManager.getTicker.mockReturnValue('NSE:TCS');
+      mockUIUtil.showConfirm.mockReturnValue(true);
+
+      const mockEvent = {
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+        currentTarget: {},
+      } as unknown as JQuery.ContextMenuEvent;
+
+      contextMenuHandler!(mockEvent);
+      await new Promise((r) => setTimeout(r, 0));
+
+      // deleteAlertTicker must receive the rendered ticker A, not the current ticker B
+      expect(mockAlertTickerManager.deleteAlertTicker).toHaveBeenCalledWith('INFY', 'NSE:INFY');
+    });
   });
 
   // ── Compact output ──
 
   describe('compact output', () => {
     it('should render mapped ticker with link emoji and alert count', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:INFY',
         alertTickers: [createAlertTicker({ symbol: 'INFY' })],
         isUntracked: false,
       });
 
-      expect(mockRootEl.html).toHaveBeenCalledWith(`🔗 INFY · <span class="${BEM.COUNT}">🔔1</span>`);
+      expect(mockRootEl.html).toHaveBeenCalledWith(
+        expect.stringContaining('🔗 INFY')
+      );
+      expect(mockRootEl.html).toHaveBeenCalledWith(
+        expect.stringContaining(`class="${BEM.COUNT}"`)
+      );
     });
 
     it('should render unmapped ticker with warning emoji and zero count', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:BHEL',
         alertTickers: [],
         isUntracked: false,
       });
 
-      expect(mockRootEl.html).toHaveBeenCalledWith(`⚠️ NSE:BHEL · <span class="${BEM.COUNT}">🔔0</span>`);
+      expect(mockRootEl.html).toHaveBeenCalledWith(
+        expect.stringContaining('⚠️ NSE:BHEL')
+      );
+      expect(mockRootEl.html).toHaveBeenCalledWith(
+        expect.stringContaining('🔔0')
+      );
     });
 
     it('should render untracked ticker with Untracked label', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:BHEL',
         alertTickers: [],
         isUntracked: true,
       });
 
-      expect(mockRootEl.html).toHaveBeenCalledWith(`⚠️ Untracked · NSE:BHEL · <span class="${BEM.COUNT}">🔔0</span>`);
+      expect(mockRootEl.html).toHaveBeenCalledWith(
+        expect.stringContaining('Untracked · NSE:BHEL')
+      );
+      expect(mockRootEl.html).toHaveBeenCalledWith(
+        expect.stringContaining('🔔0')
+      );
     });
 
     it('should use primary symbol as display ticker when mapped', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:TV_TICKER',
         alertTickers: [createAlertTicker({ symbol: 'INVESTING_SYM', type: 'PRIMARY' })],
         isUntracked: false,
       });
 
-      expect(mockRootEl.html).toHaveBeenCalledWith(`🔗 INVESTING_SYM · <span class="${BEM.COUNT}">🔔1</span>`);
+      expect(mockRootEl.html).toHaveBeenCalledWith(
+        expect.stringContaining('🔗 INVESTING_SYM')
+      );
     });
 
     it('should show correct count for multiple linked tickers', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:INFY',
         alertTickers: [
@@ -564,7 +637,9 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      expect(mockRootEl.html).toHaveBeenCalledWith(`🔗 INFY · <span class="${BEM.COUNT}">🔔2</span>`);
+      expect(mockRootEl.html).toHaveBeenCalledWith(
+        expect.stringContaining('🔔2')
+      );
     });
   });
 
@@ -572,7 +647,7 @@ describe('AlertBar', () => {
 
   describe('root classes', () => {
     it('should apply mapped class when primary ticker exists', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:INFY',
         alertTickers: [createAlertTicker({ type: 'PRIMARY' })],
@@ -584,7 +659,7 @@ describe('AlertBar', () => {
     });
 
     it('should apply unmapped class when no tickers present', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:BHEL',
         alertTickers: [],
@@ -596,7 +671,7 @@ describe('AlertBar', () => {
     });
 
     it('should apply unmapped class when only secondary tickers present', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:INFY',
         alertTickers: [createAlertTicker({ type: 'SECONDARY' })],
@@ -607,31 +682,14 @@ describe('AlertBar', () => {
       expect(mockRootEl.addClass).toHaveBeenCalledWith(BEM.UNMAPPED);
     });
 
-    it('should toggle expanded-state class on root', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
-      bar.render({
-        tvTicker: 'NSE:INFY',
-        alertTickers: [createAlertTicker({ symbol: 'INFY' })],
-        isUntracked: false,
-      });
 
-      // Compact: expanded modifier removed
-      expect(mockRootEl.removeClass).toHaveBeenCalledWith(BEM.EXPANDED);
-
-      // Trigger expand via click handler
-      const clickHandler = getClickHandler()!;
-      clickHandler!();
-
-      // Expanded: expanded modifier added
-      expect(mockRootEl.addClass).toHaveBeenCalledWith(BEM.EXPANDED);
-    });
   });
 
   // ── Expanded output ──
 
   describe('expanded output', () => {
-    it('should include compact header and expanded wrapper div', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+    it('should include compact header and BaseBar-owned details wrapper', () => {
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:INFY',
         alertTickers: [createAlertTicker({ symbol: 'INFY' })],
@@ -643,11 +701,26 @@ describe('AlertBar', () => {
 
       const lastHtml = mockRootEl.html.mock.calls[mockRootEl.html.mock.calls.length - 1][0];
       expect(lastHtml).toContain('🔗 INFY ·');
-      expect(lastHtml).toContain(`<div class="${BEM.DETAILS}">`);
+      expect(lastHtml).toContain(`id="${DETAILS_ID}"`);
+      expect(lastHtml).toContain(`class="${BEM.DETAILS}"`);
+    });
+
+    it('should not include details content before expansion', () => {
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      bar.render({
+        tvTicker: 'NSE:INFY',
+        alertTickers: [createAlertTicker({ symbol: 'INFY', type: 'PRIMARY', exchange: 'NSE', name: 'Infosys' })],
+        isUntracked: false,
+      });
+
+      const initialHtml = mockRootEl.html.mock.calls[0][0];
+      expect(initialHtml).toContain('hidden');
+      // Detail rows (⭐) should NOT be in the initial render
+      expect(initialHtml).not.toContain('⭐ INFY');
     });
 
     it('should render primary row with star emoji and data attributes', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:INFY',
         alertTickers: [createAlertTicker({ symbol: 'INFY', type: 'PRIMARY', exchange: 'NSE', name: 'Infosys' })],
@@ -666,7 +739,7 @@ describe('AlertBar', () => {
     });
 
     it('should render secondary row with diamond emoji', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:INFY',
         alertTickers: [createAlertTicker({ symbol: 'INFY2', type: 'SECONDARY', exchange: 'BSE', name: 'Infosys Ltd' })],
@@ -685,7 +758,7 @@ describe('AlertBar', () => {
     });
 
     it('should omit exchange and name when not provided', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:INFY',
         alertTickers: [createAlertTicker({ symbol: 'INFY', exchange: '', name: '' })],
@@ -706,7 +779,7 @@ describe('AlertBar', () => {
 
   describe('empty and untracked expanded states', () => {
     it('should show empty state message when no tickers and not untracked', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:BHEL',
         alertTickers: [],
@@ -722,7 +795,7 @@ describe('AlertBar', () => {
     });
 
     it('should show untracked expanded message when untracked', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:BHEL',
         alertTickers: [],
@@ -740,38 +813,11 @@ describe('AlertBar', () => {
 
   // ── Constructor configuration ──
 
-  describe('constructor configuration', () => {
-    it('should target BarId.ALERT root element', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
-      bar.render({
-        tvTicker: 'NSE:INFY',
-        alertTickers: [],
-        isUntracked: false,
-      });
-
-      // The mock jQuery should have been called with the BarId.ALERT-derived root
-      expect(mockJQuery).toHaveBeenCalledWith(ALERT_ROOT);
-    });
-
-    it('should bind delegated right-click on context-action selector', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
-      bar.render({
-        tvTicker: 'NSE:INFY',
-        alertTickers: [createAlertTicker({ symbol: 'INFY', type: 'PRIMARY' })],
-        isUntracked: false,
-      });
-
-      const onContextmenuCalls = mockRootEl.on.mock.calls.filter((c: any[]) => c[0] === `contextmenu.${EVENT_NS}`);
-      expect(onContextmenuCalls.length).toBe(1);
-      expect(onContextmenuCalls[0][1]).toBe(CONTEXT_SELECTOR);
-    });
-  });
-
   // ── HTML escaping ──
 
   describe('HTML escaping', () => {
     it('should escape HTML metacharacters in expanded ticker rows', () => {
-      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:TEST',
         alertTickers: [

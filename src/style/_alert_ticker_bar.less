@@ -33,7 +33,6 @@
     border: @display-border;
     border-left: 3px solid rgba(255, 255, 255, 0.15);
     border-radius: @display-radius;
-    cursor: pointer;
     user-select: none;
     transition: background 0.2s ease, border-color 0.2s ease;
     line-height: 1.5;
@@ -65,6 +64,29 @@
         overflow: visible;
         text-overflow: clip;
         height: auto;
+    }
+}
+
+// ============================================
+// Element: __toggle (disclosure button)
+// ============================================
+.aman-alert-ticker-bar__toggle {
+    display: block;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    outline: none;
+
+    &:focus-visible {
+        outline: 2px solid @color-secondary;
+        outline-offset: -2px;
+        border-radius: 2px;
     }
 }
 

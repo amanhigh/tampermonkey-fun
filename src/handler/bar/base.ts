@@ -9,8 +9,6 @@ import { BarId } from '../../models/bar';
  * Extends {@link IDomainEventConsumer} so bars can register event subscriptions
  * that trigger automatic refresh.
  *
- * @template TData The data type rendered by the bar.
- *
  * ## BEM Contract
  *
  * Block class is the {@link BarId} value itself (e.g. `aman-alert-ticker-bar`).
@@ -32,10 +30,12 @@ import { BarId } from '../../models/bar';
  *
  * ## Lifecycle Ordering
  *
- * 1. **`render(data)`** — stores data, resets expanded, calls `paint()` (full bind).
+ * 1. **`render(data)`** — (protected) stores data, resets expanded, calls `paint()` (full bind),
+ *    and invalidates any in-flight `refresh()`.
  * 2. **`paint(bindHandlers)`** — queries root `#<barId>`, early-returns if `$root.length === 0`,
- *    renders compact/expanded HTML, ensures block class, syncs expanded modifier,
- *    optionally binds click + contextmenu (only on full paint), calls `onPaint()` last.
+ *    renders a disclosure shell (`<button>` toggle + `<div>` details container),
+ *    ensures block class, syncs expanded modifier and `aria-expanded`/`hidden`,
+ *    optionally binds delegated click + contextmenu (only on full paint), calls `onPaint()` last.
  * 3. **`toggle()`** — flips expanded, calls `paint(false)` (no handler rebinding).
  * 4. **`onLeftClick()`** — default calls `toggle()`; override replaces unless `super` called.
  * 5. **`onRightClick(event, data)`** — protected hook for context-menu actions.
@@ -43,10 +43,7 @@ import { BarId } from '../../models/bar';
  * 7. **`refresh()`** — latest-request-wins: increments revision, awaits `loadData()`,
  *    calls `render()` only if revision is current.
  */
-export interface IBaseBar<TData> extends IDomainEventConsumer {
-  /** Render the bar with fresh data. Resets expanded state and paints compact. */
-  render(data: TData): void;
-
+export interface IBaseBar extends IDomainEventConsumer {
   /** Fetch fresh data via `loadData()` and re-render (latest-request-wins). */
   refresh(): Promise<void>;
 }
@@ -61,8 +58,10 @@ export interface IBaseBar<TData> extends IDomainEventConsumer {
  *
  * ## Handler Binding
  *
- * - Left-click: `$root.off('click.{ns}').on('click.{ns}', () => this.onLeftClick())`.
- *   The binding calls **only** `onLeftClick()`; the default implementation toggles.
+ * - Left-click: delegated to the generated `.{block}__toggle` button via
+ *   `$root.off('click.{ns}', sel).on('click.{ns}', sel, handler)`.
+ *   Calls only `this.onLeftClick()`; the default implementation toggles.
+ *   Native `<button>` semantics provide Enter/Space activation.
  * - Context-menu: `$root.off('contextmenu.{ns}', sel).on('contextmenu.{ns}', sel, handler)`.
  *   Always binds to the generated `[data-{ns}-context-action]` selector.
  *   Calls `preventDefault` + `stopPropagation`, then `onRightClick(event, data)`.
@@ -70,7 +69,7 @@ export interface IBaseBar<TData> extends IDomainEventConsumer {
  * - Handler deduplication: `off()` is called before `on()` when `bindHandlers` is true.
  *   Toggle calls `paint(false)` which does not rebind handlers.
  */
-export abstract class BaseBar<TData> implements IBaseBar<TData> {
+export abstract class BaseBar<TData> implements IBaseBar {
   /** The BarId value used as the block class and root selector basis. */
   private readonly barId: BarId;
 
@@ -172,10 +171,18 @@ export abstract class BaseBar<TData> implements IBaseBar<TData> {
     return `data-${this.namespace}-${name}`;
   }
 
-  // ── Public API ──
+  // ── Protected data application ──
 
-  /** @inheritdoc */
-  public render(data: TData): void {
+  /**
+   * Apply fresh data to the bar, reset expanded state, and perform a full paint.
+   * Also invalidates any in-flight `refresh()` so a stale `loadData()` result
+   * cannot overwrite this explicitly applied data.
+   *
+   * @param data The data to render.
+   */
+  protected render(data: TData): void {
+    // Invalidate any pending refresh so it cannot overwrite newer data
+    ++this.loadRevision;
     this.currentData = data;
     this.expanded = false;
     this.paint(true);
@@ -223,11 +230,15 @@ export abstract class BaseBar<TData> implements IBaseBar<TData> {
   protected abstract renderCompact(data: TData): string;
 
   /**
-   * Render expanded HTML for the given data.
+   * Render expanded detail content for the given data.
+   * Called only when the bar is expanded. BaseBar composes the details
+   * container; subclasses return only the inner content (rows, empty
+   * state, etc.).
+   *
    * @param data The current data.
-   * @returns HTML string for expanded mode.
+   * @returns HTML string for expanded detail content.
    */
-  protected abstract renderExpanded(data: TData): string;
+  protected abstract renderDetails(data: TData): string;
 
   // ── Protected hooks ──
 
@@ -282,8 +293,19 @@ export abstract class BaseBar<TData> implements IBaseBar<TData> {
       return;
     }
 
-    // Render compact/expanded HTML
-    const html = this.expanded ? this.renderExpanded(data) : this.renderCompact(data);
+    // Render disclosure shell: toggle button + details container
+    const detailsId = this.bemChildId('details');
+    const toggleClass = this.bemElement('toggle');
+    const detailsClass = this.bemElement('details');
+    const expandedAttr = this.expanded ? 'true' : 'false';
+    const hiddenAttr = this.expanded ? '' : ' hidden';
+    const compactHtml = this.renderCompact(data);
+    const detailsContent = this.expanded ? this.renderDetails(data) : '';
+
+    const html = [
+      `<button type="button" class="${toggleClass}" aria-expanded="${expandedAttr}" aria-controls="${detailsId}">${compactHtml}</button>`,
+      `<div id="${detailsId}" class="${detailsClass}"${hiddenAttr}>${detailsContent}</div>`,
+    ].join('');
     $root.html(html);
 
     // Ensure the generated block class is present
@@ -324,14 +346,16 @@ export abstract class BaseBar<TData> implements IBaseBar<TData> {
   }
 
   /**
-   * Bind the root left-click handler with namespace deduplication.
+   * Bind the delegated left-click handler to the disclosure toggle button
+   * with namespace deduplication.
    * Calls only `this.onLeftClick()` — the default implementation toggles,
    * but an override can replace or extend via `super`.
    *
    * @param $root Root jQuery element.
    */
   private bindClick($root: JQuery): void {
-    $root.off(`click.${this.eventNs}`).on(`click.${this.eventNs}`, () => {
+    const toggleSelector = `.${this.bemElement('toggle')}`;
+    $root.off(`click.${this.eventNs}`, toggleSelector).on(`click.${this.eventNs}`, toggleSelector, () => {
       this.onLeftClick();
     });
   }

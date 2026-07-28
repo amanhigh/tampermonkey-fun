@@ -36,11 +36,11 @@ export interface AlertBarData {
  * Renders the compact/expanded display card showing ticker status
  * and linked alert ticker information.
  *
- * Extends {@link IBaseBar} which provides `render`, `refresh`,
+ * Extends {@link IBaseBar} which provides `refresh`
  * and `registerEvents` from the BaseBar lifecycle.
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface IAlertBar extends IBaseBar<AlertBarData> {}
+export interface IAlertBar extends IBaseBar {}
 
 /**
  * Reference BaseBar implementation for the alert bar display card.
@@ -66,6 +66,7 @@ export class AlertBar extends BaseBar<AlertBarData> implements IAlertBar {
   protected get refreshEvents(): readonly DomainEventType[] {
     return [
       DomainEventType.TICKER_CHANGED,
+      DomainEventType.TICKER_TRACKING_STARTED,
       DomainEventType.TICKER_TRACKING_STOPPED,
       DomainEventType.ALERT_TICKER_LINKED,
       DomainEventType.ALERT_TICKER_DELETED,
@@ -89,7 +90,7 @@ export class AlertBar extends BaseBar<AlertBarData> implements IAlertBar {
   // ── Context-menu delink ──
 
   /** @inheritdoc */
-  protected onRightClick(event: JQuery.ContextMenuEvent, _data: AlertBarData): void | Promise<void> {
+  protected onRightClick(event: JQuery.ContextMenuEvent, data: AlertBarData): void | Promise<void> {
     const $target = $(event.currentTarget as HTMLElement);
     const symbol = $target.attr(this.bemDataAttr('symbol'));
     const type = $target.attr(this.bemDataAttr('type')) as AlertTickerType | undefined;
@@ -107,9 +108,7 @@ export class AlertBar extends BaseBar<AlertBarData> implements IAlertBar {
       return;
     }
 
-    const ticker = this.domManager.getTicker();
-
-    return this.performDelink(symbol, ticker);
+    return this.performDelink(symbol, data.tvTicker);
   }
 
   // ── Rendering ──
@@ -129,11 +128,8 @@ export class AlertBar extends BaseBar<AlertBarData> implements IAlertBar {
   }
 
   /** @inheritdoc */
-  protected renderExpanded(data: AlertBarData): string {
-    const headerHtml = this.renderCompact(data);
-    const rowsHtml = this.buildAlertTickerRows(data);
-
-    return `${headerHtml}<div class="${this.bemElement('details')}">${rowsHtml}</div>`;
+  protected renderDetails(data: AlertBarData): string {
+    return this.buildAlertTickerRows(data);
   }
 
   /** @inheritdoc */

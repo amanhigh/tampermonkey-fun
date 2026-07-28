@@ -7,13 +7,16 @@
  *  - Constructor accepts a single `BarId`; no options bag
  *  - Root selector, block class, expanded modifier, and event namespace derived from `BarId`
  *  - BEM element / modifier / element-modifier / child-id / data-attribute generation
+ *  - Disclosure shell: `<button>` toggle with `aria-expanded`/`aria-controls` + hidden `<div>` details
  *  - Context-menu always bound to generated `[data-alert-ticker-context-action]` selector
- *  - `IBaseBar` exposes `render`, `refresh`, `registerEvents`
+ *  - Left-click delegated to generated `.__toggle` selector, not the entire root
+ *  - `IBaseBar` exposes `refresh`, `registerEvents` (no `render` — that is protected)
  *  - Subclass-declared `refreshEvents` wired by `registerEvents`
  *  - Refresh via protected `loadData()` with stale-completion protection
  *  - Missing-root no-op
  *  - Default left-click toggles; override replaces toggle; super retains toggle
  *  - `onPaint` called after both click and contextmenu handlers are bound
+ *  - Protected `render(data)` invalidates in-flight refresh
  */
 
 import { BaseBar, IBaseBar } from '../../../src/handler/bar/base';
@@ -42,6 +45,8 @@ const ALERT_ROOT = `#${BarId.ALERT}`;
 const EVENT_NS = 'bar-alert-ticker';
 const EXPANDED_MOD = 'aman-alert-ticker-bar--expanded';
 const CONTEXT_SELECTOR = '[data-alert-ticker-context-action]';
+const TOGGLE_SELECTOR = '.aman-alert-ticker-bar__toggle';
+const DETAILS_ID = 'aman-alert-ticker-bar-details';
 
 function createDefaultJQuery(selector: string): any {
   if (selector === ALERT_ROOT) return mockRootEl;
@@ -68,12 +73,17 @@ class TestBarBase extends BaseBar<TestData> {
     super(barId);
   }
 
+  /** Public wrapper for protected `render(data)` — test-only access path. */
+  public render(data: TestData): void {
+    super.render(data);
+  }
+
   protected renderCompact(data: TestData): string {
     return `compact:${data.label}:${data.count}`;
   }
 
-  protected renderExpanded(data: TestData): string {
-    return `expanded:${data.label}:${data.count}`;
+  protected renderDetails(data: TestData): string {
+    return `details:${data.label}:${data.count}`;
   }
 
   protected async loadData(): Promise<TestData> {
@@ -96,8 +106,8 @@ class TestBarOverrideLeftClick extends TestBarBase {
     return `compact:${data.label}`;
   }
 
-  protected renderExpanded(data: TestData): string {
-    return `expanded:${data.label}`;
+  protected renderDetails(data: TestData): string {
+    return `details:${data.label}`;
   }
 
   protected onLeftClick(): void {
@@ -113,8 +123,8 @@ class TestBarSuperLeftClick extends TestBarBase {
     return `compact:${data.label}`;
   }
 
-  protected renderExpanded(data: TestData): string {
-    return `expanded:${data.label}`;
+  protected renderDetails(data: TestData): string {
+    return `details:${data.label}`;
   }
 
   protected onLeftClick(): void {
@@ -213,7 +223,7 @@ class TestBarWithEvents extends TestBarBase {
 
 function getClickHandler(): (() => void) | undefined {
   const call = mockRootEl.on.mock.calls.find((c: any[]) => c[0] === `click.${EVENT_NS}`);
-  return call?.[1] as (() => void) | undefined;
+  return call?.[2] as (() => void) | undefined;
 }
 
 function getContextMenuHandler(): ((event: JQuery.ContextMenuEvent) => void) | undefined {
@@ -251,18 +261,13 @@ describe('BaseBar', () => {
   });
 
   describe('IBaseBar interface', () => {
-    it('should expose render', () => {
-      const bar: IBaseBar<TestData> = new TestBar(BarId.ALERT);
-      expect(typeof bar.render).toBe('function');
-    });
-
     it('should expose refresh', () => {
-      const bar: IBaseBar<TestData> = new TestBar(BarId.ALERT);
+      const bar: IBaseBar = new TestBar(BarId.ALERT);
       expect(typeof bar.refresh).toBe('function');
     });
 
     it('should expose registerEvents', () => {
-      const bar: IBaseBar<TestData> = new TestBar(BarId.ALERT);
+      const bar: IBaseBar = new TestBar(BarId.ALERT);
       expect(typeof bar.registerEvents).toBe('function');
     });
   });
@@ -319,7 +324,9 @@ describe('BaseBar', () => {
       const bar = new TestBar(BarId.ALERT);
       bar.render({ label: 'Alpha', count: 1 });
 
-      expect(mockRootEl.html).toHaveBeenCalledWith('compact:Alpha:1');
+      expect(mockRootEl.html).toHaveBeenCalledWith(
+        expect.stringContaining('compact:Alpha:1')
+      );
     });
 
     it('should store the latest data for re-render on toggle', () => {
@@ -329,7 +336,9 @@ describe('BaseBar', () => {
       const clickHandler = getClickHandler()!;
       clickHandler();
 
-      expect(mockRootEl.html).toHaveBeenLastCalledWith('expanded:First:10');
+      expect(mockRootEl.html).toHaveBeenLastCalledWith(
+        expect.stringContaining('details:First:10')
+      );
     });
 
     it('should start in compact mode', () => {
@@ -337,36 +346,48 @@ describe('BaseBar', () => {
       bar.render({ label: 'X', count: 5 });
 
       expect(mockRootEl.html).toHaveBeenCalledTimes(1);
-      expect(mockRootEl.html).toHaveBeenCalledWith('compact:X:5');
+      expect(mockRootEl.html).toHaveBeenCalledWith(
+        expect.stringContaining('compact:X:5')
+      );
     });
   });
 
   describe('expanded state lifecycle', () => {
-    it('should toggle between compact and expanded on root click', () => {
+    it('should toggle between compact and expanded via disclosure toggle', () => {
       const bar = new TestBar(BarId.ALERT);
       bar.render({ label: 'Toggle', count: 3 });
 
       const clickHandler = getClickHandler()!;
 
       clickHandler();
-      expect(mockRootEl.html).toHaveBeenLastCalledWith('expanded:Toggle:3');
+      expect(mockRootEl.html).toHaveBeenLastCalledWith(
+        expect.stringContaining('details:Toggle:3')
+      );
 
       clickHandler();
-      expect(mockRootEl.html).toHaveBeenLastCalledWith('compact:Toggle:3');
+      expect(mockRootEl.html).toHaveBeenLastCalledWith(
+        expect.stringContaining('compact:Toggle:3')
+      );
     });
 
-    it('should call subclass renderCompact and renderExpanded methods', () => {
+    it('should call subclass renderCompact and renderDetails methods', () => {
       const bar = new TestBar(BarId.ALERT);
       bar.render({ label: 'Lifecycle', count: 7 });
       const clickHandler = getClickHandler()!;
 
-      expect(mockRootEl.html).toHaveBeenCalledWith('compact:Lifecycle:7');
+      expect(mockRootEl.html).toHaveBeenCalledWith(
+        expect.stringContaining('compact:Lifecycle:7')
+      );
 
       clickHandler();
-      expect(mockRootEl.html).toHaveBeenLastCalledWith('expanded:Lifecycle:7');
+      expect(mockRootEl.html).toHaveBeenLastCalledWith(
+        expect.stringContaining('details:Lifecycle:7')
+      );
 
       clickHandler();
-      expect(mockRootEl.html).toHaveBeenLastCalledWith('compact:Lifecycle:7');
+      expect(mockRootEl.html).toHaveBeenLastCalledWith(
+        expect.stringContaining('compact:Lifecycle:7')
+      );
     });
 
     it('should apply generated expanded modifier when expanded and remove when compact', () => {
@@ -385,6 +406,62 @@ describe('BaseBar', () => {
     });
   });
 
+  describe('disclosure shell', () => {
+    it('should render initial aria-expanded="false" with hidden details', () => {
+      const bar = new TestBar(BarId.ALERT);
+      bar.render({ label: 'Shell', count: 1 });
+
+      const html = mockRootEl.html.mock.calls[0][0] as string;
+      expect(html).toContain('aria-expanded="false"');
+      expect(html).toContain(`aria-controls="${DETAILS_ID}"`);
+      expect(html).toContain('aman-alert-ticker-bar__toggle');
+      expect(html).toContain(`id="${DETAILS_ID}"`);
+      expect(html).toContain('hidden');
+    });
+
+    it('should delegate click to .aman-alert-ticker-bar__toggle selector', () => {
+      const bar = new TestBar(BarId.ALERT);
+      bar.render({ label: 'Delegate', count: 1 });
+
+      const onCalls = mockRootEl.on.mock.calls.filter(
+        (c: any[]) => c[0] === `click.${EVENT_NS}`
+      );
+      expect(onCalls.length).toBe(1);
+      expect(onCalls[0][1]).toBe(TOGGLE_SELECTOR);
+      expect(typeof onCalls[0][2]).toBe('function');
+    });
+
+    it('should expand with aria-expanded="true" and visible details after toggle', () => {
+      const bar = new TestBar(BarId.ALERT);
+      bar.render({ label: 'Expand', count: 1 });
+
+      const clickHandler = getClickHandler()!;
+      clickHandler();
+
+      const html = mockRootEl.html.mock.calls[mockRootEl.html.mock.calls.length - 1][0] as string;
+      expect(html).toContain('aria-expanded="true"');
+      expect(html).toContain('details:Expand:1');
+      expect(html).not.toContain('hidden');
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(EXPANDED_MOD);
+    });
+
+    it('should not include details content in initial render but show after expansion', () => {
+      const bar = new TestBar(BarId.ALERT);
+      bar.render({ label: 'Content', count: 1 });
+
+      const initialHtml = mockRootEl.html.mock.calls[0][0] as string;
+      expect(initialHtml).toContain('hidden');
+      expect(initialHtml).not.toContain('details:Content:1');
+
+      const clickHandler = getClickHandler()!;
+      clickHandler();
+
+      const expandedHtml = mockRootEl.html.mock.calls[mockRootEl.html.mock.calls.length - 1][0] as string;
+      expect(expandedHtml).toContain('details:Content:1');
+      expect(expandedHtml).not.toContain('hidden');
+    });
+  });
+
   describe('refresh', () => {
     it('should call loadData and render the result', async () => {
       const bar = new TestBarWithLoadData(BarId.ALERT);
@@ -395,7 +472,9 @@ describe('BaseBar', () => {
       bar.loadDeferred[0]({ label: 'loaded', count: 42 });
       await promise;
 
-      expect(mockRootEl.html).toHaveBeenCalledWith('compact:loaded:42');
+      expect(mockRootEl.html).toHaveBeenCalledWith(
+        expect.stringContaining('compact:loaded:42')
+      );
     });
 
     it('should ignore stale loadData result and render newest', async () => {
@@ -406,19 +485,47 @@ describe('BaseBar', () => {
 
       bar.loadDeferred[1]({ label: 'new', count: 2 });
       await second;
-      expect(mockRootEl.html).toHaveBeenLastCalledWith('compact:new:2');
+      expect(mockRootEl.html).toHaveBeenLastCalledWith(
+        expect.stringContaining('compact:new:2')
+      );
 
       bar.loadDeferred[0]({ label: 'old', count: 1 });
       await first;
 
-      expect(mockRootEl.html).toHaveBeenLastCalledWith('compact:new:2');
+      expect(mockRootEl.html).toHaveBeenLastCalledWith(
+        expect.stringContaining('compact:new:2')
+      );
+    });
+
+    it('should discard pending refresh when render applies newer data first', async () => {
+      const bar = new TestBarWithLoadData(BarId.ALERT);
+
+      // Start a refresh that remains pending
+      const promise = bar.refresh();
+      expect(bar.loadCount).toBe(1);
+
+      // While refresh is pending, apply newer data via test-only render
+      bar.render({ label: 'newer', count: 99 });
+      expect(mockRootEl.html).toHaveBeenLastCalledWith(
+        expect.stringContaining('compact:newer:99')
+      );
+
+      // Resolve the stale loadData — its result must be discarded
+      bar.loadDeferred[0]({ label: 'old', count: 1 });
+      await promise;
+
+      expect(mockRootEl.html).toHaveBeenLastCalledWith(
+        expect.stringContaining('compact:newer:99')
+      );
     });
 
     it('should resolve default data from base loadData', async () => {
       const bar = new TestBar(BarId.ALERT);
       await bar.refresh();
 
-      expect(mockRootEl.html).toHaveBeenCalledWith('compact:default:0');
+      expect(mockRootEl.html).toHaveBeenCalledWith(
+        expect.stringContaining('compact:default:0')
+      );
     });
   });
 
@@ -548,11 +655,15 @@ describe('BaseBar', () => {
 
       clickHandler();
       expect(bar.leftClickCount).toBe(1);
-      expect(mockRootEl.html).toHaveBeenLastCalledWith('expanded:Super');
+      expect(mockRootEl.html).toHaveBeenLastCalledWith(
+        expect.stringContaining('details:Super')
+      );
 
       clickHandler();
       expect(bar.leftClickCount).toBe(2);
-      expect(mockRootEl.html).toHaveBeenLastCalledWith('compact:Super');
+      expect(mockRootEl.html).toHaveBeenLastCalledWith(
+        expect.stringContaining('compact:Super')
+      );
     });
   });
 
@@ -653,7 +764,9 @@ describe('BaseBar', () => {
 
       const clickHandler = getClickHandler()!;
       clickHandler();
-      expect(mockRootEl.html).toHaveBeenLastCalledWith('expanded:Rerender:10');
+      expect(mockRootEl.html).toHaveBeenLastCalledWith(
+        expect.stringContaining('details:Rerender:10')
+      );
     });
   });
 
@@ -687,7 +800,9 @@ describe('BaseBar', () => {
       const clickHandler = getClickHandler()!;
       clickHandler();
 
-      expect(mockRootEl.html).toHaveBeenLastCalledWith('expanded:New:99');
+      expect(mockRootEl.html).toHaveBeenLastCalledWith(
+        expect.stringContaining('details:New:99')
+      );
     });
 
     it('should reset expanded state on each render call', () => {
@@ -696,13 +811,19 @@ describe('BaseBar', () => {
 
       const clickHandler = getClickHandler()!;
       clickHandler();
-      expect(mockRootEl.html).toHaveBeenLastCalledWith('expanded:A:1');
+      expect(mockRootEl.html).toHaveBeenLastCalledWith(
+        expect.stringContaining('details:A:1')
+      );
 
       bar.render({ label: 'B', count: 2 });
-      expect(mockRootEl.html).toHaveBeenLastCalledWith('compact:B:2');
+      expect(mockRootEl.html).toHaveBeenLastCalledWith(
+        expect.stringContaining('compact:B:2')
+      );
 
       clickHandler();
-      expect(mockRootEl.html).toHaveBeenLastCalledWith('expanded:B:2');
+      expect(mockRootEl.html).toHaveBeenLastCalledWith(
+        expect.stringContaining('details:B:2')
+      );
     });
   });
 });
