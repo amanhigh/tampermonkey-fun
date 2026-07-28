@@ -1,4 +1,4 @@
-import { BaseBar, IBaseBar } from '../../src/handler/base_bar';
+import { BaseBar, IBaseBar } from '../../../src/handler/bar/base';
 
 // ── Mock jQuery ──
 
