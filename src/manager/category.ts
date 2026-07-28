@@ -114,7 +114,7 @@ export class CategoryManager implements ICategoryManager {
 
   constructor(
     private readonly tickerManager: ITickerManager,
-    private readonly getJournalManager: () => IJournalManager,
+    private readonly journalManager: IJournalManager,
     private readonly publisher: IPublisher
   ) {}
 
@@ -282,7 +282,7 @@ export class CategoryManager implements ICategoryManager {
    *   3 None             → undefined (falls through to backend-derived categories)
    */
   private async resolveJournalCategory(ticker: string): Promise<WatchCategory | undefined> {
-    const journalManager = this.getJournalManager();
+    const journalManager = this.journalManager;
 
     // Priority 1: RUNNING
     const runningJournals = await journalManager.listJournals({ ticker, status: 'RUNNING' });

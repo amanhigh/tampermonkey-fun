@@ -221,12 +221,7 @@ export class Factory {
     category: (): ICategoryManager =>
       Factory.getInstance(
         'categoryManager',
-        () =>
-          new CategoryManager(
-            Factory.manager.ticker(),
-            () => Factory.manager.journal(),
-            Factory.manager.eventPublisher()
-          )
+        () => new CategoryManager(Factory.manager.ticker(), Factory.manager.journal(), Factory.manager.eventPublisher())
       ),
 
     paint: (): IPaintManager =>
@@ -574,7 +569,8 @@ export class Factory {
             Factory.util.ui(),
             Factory.manager.tv(),
             Factory.manager.style(),
-            Factory.manager.alert()
+            Factory.manager.alert(),
+            Factory.manager.category()
           )
       ),
     imdb: (): IImdbHandler =>
