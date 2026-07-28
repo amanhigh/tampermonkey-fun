@@ -6,6 +6,27 @@ import { IUIUtil } from '../../../src/util/ui';
 import { ISubscriber } from '../../../src/manager/event_bus';
 import { DomainEventType } from '../../../src/models/domain_event';
 import { ApiError, wrapClientError } from '../../../src/models/api_error';
+import { BarId } from '../../../src/models/bar';
+
+// ── Constants ──
+
+const ALERT_ROOT = `#${BarId.ALERT}`; // #aman-alert-ticker-bar
+const EVENT_NS = 'bar-alert-ticker';
+
+/** BEM class names expected from the finalized BaseBar/AlertBar contract. */
+const BEM = {
+  MAPPED: 'aman-alert-ticker-bar--mapped',
+  UNMAPPED: 'aman-alert-ticker-bar--unmapped',
+  EXPANDED: 'aman-alert-ticker-bar--expanded',
+  DETAILS: 'aman-alert-ticker-bar__details',
+  COUNT: 'aman-alert-ticker-bar__count',
+  ROW: 'aman-alert-ticker-bar__row',
+  ROW_PRIMARY: 'aman-alert-ticker-bar__row--primary',
+  ROW_SECONDARY: 'aman-alert-ticker-bar__row--secondary',
+  EMPTY: 'aman-alert-ticker-bar__empty',
+} as const;
+
+const CONTEXT_SELECTOR = '[data-alert-ticker-context-action]';
 
 // ── Mock Notifier ──
 
@@ -40,16 +61,25 @@ function createMockElement(): any {
   };
 }
 
-const defaultJQueryImpl = (selector: string) => {
-  if (selector === '#aman-display') {
-    return mockRootEl;
-  }
+function createDefaultJQuery(selector: string): any {
+  if (selector === ALERT_ROOT) return mockRootEl;
   return createMockElement();
-};
-const mockJQuery = jest.fn(defaultJQueryImpl);
+}
+
+const mockJQuery = jest.fn(createDefaultJQuery);
 (global as any).$ = mockJQuery;
 
 // ── Helpers ──
+
+function getClickHandler(): (() => void) | undefined {
+  const call = mockRootEl.on.mock.calls.find((c: any[]) => c[0] === `click.${EVENT_NS}`);
+  return call?.[1] as (() => void) | undefined;
+}
+
+function getContextMenuHandler(): ((event: JQuery.ContextMenuEvent) => void) | undefined {
+  const call = mockRootEl.on.mock.calls.find((c: any[]) => c[0] === `contextmenu.${EVENT_NS}`);
+  return call?.[2] as ((event: JQuery.ContextMenuEvent) => void) | undefined;
+}
 
 function createAlertTicker(overrides: Partial<AlertTicker>): AlertTicker {
   return {
@@ -101,6 +131,7 @@ function createMockUIUtil(): jest.Mocked<IUIUtil> {
     buildRadio: jest.fn().mockReturnValue(createMockElement()),
     colorText: jest.fn().mockImplementation((text) => text),
     showConfirm: jest.fn().mockReturnValue(true),
+    buildBar: jest.fn().mockReturnValue(createMockElement()),
   };
 }
 
@@ -117,8 +148,10 @@ describe('AlertBar', () => {
     mockDomManager = createMockDomManager();
     mockAlertTickerManager = createMockAlertTickerManager();
     mockUIUtil = createMockUIUtil();
-    mockJQuery.mockImplementation(defaultJQueryImpl);
+    mockJQuery.mockImplementation(createDefaultJQuery);
   });
+
+  // ── Interface contract ──
 
   describe('interface contract', () => {
     it('should satisfy the IAlertBar interface', () => {
@@ -142,9 +175,7 @@ describe('AlertBar', () => {
 
       expect(mockDomManager.getTicker).toHaveBeenCalled();
       expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('NSE:INFY');
-      expect(mockRootEl.html).toHaveBeenCalledWith(
-        expect.stringContaining('🔗 INFY')
-      );
+      expect(mockRootEl.html).toHaveBeenCalledWith(expect.stringContaining('🔗 INFY'));
     });
 
     it('should call render with isUntracked false on success', async () => {
@@ -155,12 +186,8 @@ describe('AlertBar', () => {
       await bar.refresh();
 
       // Verify the bar rendered the unmapped state (no tickers, not untracked)
-      expect(mockRootEl.html).toHaveBeenCalledWith(
-        expect.stringContaining('⚠️ NSE:INFY')
-      );
-      expect(mockRootEl.html).not.toHaveBeenCalledWith(
-        expect.stringContaining('Untracked')
-      );
+      expect(mockRootEl.html).toHaveBeenCalledWith(expect.stringContaining('⚠️ NSE:INFY'));
+      expect(mockRootEl.html).not.toHaveBeenCalledWith(expect.stringContaining('Untracked'));
     });
 
     it('should produce isUntracked true when ApiError 404 is thrown', async () => {
@@ -172,20 +199,14 @@ describe('AlertBar', () => {
 
       await bar.refresh();
 
-      expect(mockRootEl.html).toHaveBeenCalledWith(
-        expect.stringContaining('Untracked')
-      );
-      expect(mockRootEl.html).toHaveBeenCalledWith(
-        expect.stringContaining('NSE:BHEL')
-      );
+      expect(mockRootEl.html).toHaveBeenCalledWith(expect.stringContaining('Untracked'));
+      expect(mockRootEl.html).toHaveBeenCalledWith(expect.stringContaining('NSE:BHEL'));
     });
 
     it('should rethrow non-404 errors and not render', async () => {
       const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       mockDomManager.getTicker.mockReturnValue('NSE:BHEL');
-      mockAlertTickerManager.getAlertTickersForTicker.mockRejectedValue(
-        new Error('500 Internal Server Error')
-      );
+      mockAlertTickerManager.getAlertTickersForTicker.mockRejectedValue(new Error('500 Internal Server Error'));
 
       await expect(bar.refresh()).rejects.toThrow('500 Internal Server Error');
       expect(mockRootEl.html).not.toHaveBeenCalled();
@@ -245,9 +266,7 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      const contextMenuHandler = mockRootEl.on.mock.calls.find(
-        (c: any[]) => c[0] === 'contextmenu.basebar'
-      )?.[2] as ((event: JQuery.ContextMenuEvent) => void) | undefined;
+      const contextMenuHandler = getContextMenuHandler();
       expect(contextMenuHandler).toBeDefined();
 
       // Mock currentTarget with valid attr values
@@ -258,7 +277,7 @@ describe('AlertBar', () => {
         return undefined;
       });
       mockJQuery.mockImplementation((selector: string) => {
-        if (selector === '#aman-display') return mockRootEl;
+        if (selector === ALERT_ROOT) return mockRootEl;
         return mockTarget;
       });
 
@@ -276,12 +295,8 @@ describe('AlertBar', () => {
       // Allow async to flush
       await new Promise((r) => setTimeout(r, 0));
 
-      expect(mockUIUtil.showConfirm).toHaveBeenCalledWith(
-        expect.stringContaining('Delink'),
-      );
-      expect(mockUIUtil.showConfirm).toHaveBeenCalledWith(
-        expect.stringContaining('INFY'),
-      );
+      expect(mockUIUtil.showConfirm).toHaveBeenCalledWith(expect.stringContaining('Delink'));
+      expect(mockUIUtil.showConfirm).toHaveBeenCalledWith(expect.stringContaining('INFY'));
       expect(mockAlertTickerManager.deleteAlertTicker).toHaveBeenCalledWith('INFY', 'NSE:INFY');
       expect(Notifier.success).toHaveBeenCalledWith(expect.stringContaining('INFY'));
     });
@@ -294,9 +309,7 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      const contextMenuHandler = mockRootEl.on.mock.calls.find(
-        (c: any[]) => c[0] === 'contextmenu.basebar'
-      )?.[2] as ((event: JQuery.ContextMenuEvent) => void) | undefined;
+      const contextMenuHandler = getContextMenuHandler();
 
       const mockTarget = createMockElement();
       mockTarget.attr.mockImplementation((name: string) => {
@@ -305,7 +318,7 @@ describe('AlertBar', () => {
         return undefined;
       });
       mockJQuery.mockImplementation((selector: string) => {
-        if (selector === '#aman-display') return mockRootEl;
+        if (selector === ALERT_ROOT) return mockRootEl;
         return mockTarget;
       });
 
@@ -332,9 +345,7 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      const contextMenuHandler = mockRootEl.on.mock.calls.find(
-        (c: any[]) => c[0] === 'contextmenu.basebar'
-      )?.[2] as ((event: JQuery.ContextMenuEvent) => void) | undefined;
+      const contextMenuHandler = getContextMenuHandler();
 
       const mockTarget = createMockElement();
       mockTarget.attr.mockImplementation((name: string) => {
@@ -343,7 +354,7 @@ describe('AlertBar', () => {
         return undefined;
       });
       mockJQuery.mockImplementation((selector: string) => {
-        if (selector === '#aman-display') return mockRootEl;
+        if (selector === ALERT_ROOT) return mockRootEl;
         return mockTarget;
       });
 
@@ -371,9 +382,7 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      const contextMenuHandler = mockRootEl.on.mock.calls.find(
-        (c: any[]) => c[0] === 'contextmenu.basebar'
-      )?.[2] as ((event: JQuery.ContextMenuEvent) => void) | undefined;
+      const contextMenuHandler = getContextMenuHandler();
 
       const mockTarget = createMockElement();
       mockTarget.attr.mockImplementation((name: string) => {
@@ -382,7 +391,7 @@ describe('AlertBar', () => {
         return undefined;
       });
       mockJQuery.mockImplementation((selector: string) => {
-        if (selector === '#aman-display') return mockRootEl;
+        if (selector === ALERT_ROOT) return mockRootEl;
         return mockTarget;
       });
 
@@ -407,9 +416,7 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      const contextMenuHandler = mockRootEl.on.mock.calls.find(
-        (c: any[]) => c[0] === 'contextmenu.basebar'
-      )?.[2] as ((event: JQuery.ContextMenuEvent) => void) | undefined;
+      const contextMenuHandler = getContextMenuHandler();
 
       const mockTarget = createMockElement();
       mockTarget.attr.mockImplementation((name: string) => {
@@ -417,7 +424,7 @@ describe('AlertBar', () => {
         return undefined;
       });
       mockJQuery.mockImplementation((selector: string) => {
-        if (selector === '#aman-display') return mockRootEl;
+        if (selector === ALERT_ROOT) return mockRootEl;
         return mockTarget;
       });
 
@@ -441,9 +448,7 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      const contextMenuHandler = mockRootEl.on.mock.calls.find(
-        (c: any[]) => c[0] === 'contextmenu.basebar'
-      )?.[2] as ((event: JQuery.ContextMenuEvent) => void) | undefined;
+      const contextMenuHandler = getContextMenuHandler();
 
       const mockTarget = createMockElement();
       mockTarget.attr.mockImplementation((name: string) => {
@@ -451,7 +456,7 @@ describe('AlertBar', () => {
         return undefined;
       });
       mockJQuery.mockImplementation((selector: string) => {
-        if (selector === '#aman-display') return mockRootEl;
+        if (selector === ALERT_ROOT) return mockRootEl;
         return mockTarget;
       });
 
@@ -475,9 +480,7 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      const contextMenuHandler = mockRootEl.on.mock.calls.find(
-        (c: any[]) => c[0] === 'contextmenu.basebar'
-      )?.[2] as ((event: JQuery.ContextMenuEvent) => void) | undefined;
+      const contextMenuHandler = getContextMenuHandler();
 
       const mockTarget = createMockElement();
       mockTarget.attr.mockImplementation((name: string) => {
@@ -486,7 +489,7 @@ describe('AlertBar', () => {
         return undefined;
       });
       mockJQuery.mockImplementation((selector: string) => {
-        if (selector === '#aman-display') return mockRootEl;
+        if (selector === ALERT_ROOT) return mockRootEl;
         return mockTarget;
       });
 
@@ -503,7 +506,7 @@ describe('AlertBar', () => {
     });
   });
 
-  // ── Compact output (preserved from existing) ──
+  // ── Compact output ──
 
   describe('compact output', () => {
     it('should render mapped ticker with link emoji and alert count', () => {
@@ -514,9 +517,7 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      expect(mockRootEl.html).toHaveBeenCalledWith(
-        '🔗 INFY · <span class="aman-display-alert-count">🔔1</span>'
-      );
+      expect(mockRootEl.html).toHaveBeenCalledWith(`🔗 INFY · <span class="${BEM.COUNT}">🔔1</span>`);
     });
 
     it('should render unmapped ticker with warning emoji and zero count', () => {
@@ -527,9 +528,7 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      expect(mockRootEl.html).toHaveBeenCalledWith(
-        '⚠️ NSE:BHEL · <span class="aman-display-alert-count">🔔0</span>'
-      );
+      expect(mockRootEl.html).toHaveBeenCalledWith(`⚠️ NSE:BHEL · <span class="${BEM.COUNT}">🔔0</span>`);
     });
 
     it('should render untracked ticker with Untracked label', () => {
@@ -540,9 +539,7 @@ describe('AlertBar', () => {
         isUntracked: true,
       });
 
-      expect(mockRootEl.html).toHaveBeenCalledWith(
-        '⚠️ Untracked · NSE:BHEL · <span class="aman-display-alert-count">🔔0</span>'
-      );
+      expect(mockRootEl.html).toHaveBeenCalledWith(`⚠️ Untracked · NSE:BHEL · <span class="${BEM.COUNT}">🔔0</span>`);
     });
 
     it('should use primary symbol as display ticker when mapped', () => {
@@ -553,9 +550,7 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      expect(mockRootEl.html).toHaveBeenCalledWith(
-        '🔗 INVESTING_SYM · <span class="aman-display-alert-count">🔔1</span>'
-      );
+      expect(mockRootEl.html).toHaveBeenCalledWith(`🔗 INVESTING_SYM · <span class="${BEM.COUNT}">🔔1</span>`);
     });
 
     it('should show correct count for multiple linked tickers', () => {
@@ -569,13 +564,11 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      expect(mockRootEl.html).toHaveBeenCalledWith(
-        '🔗 INFY · <span class="aman-display-alert-count">🔔2</span>'
-      );
+      expect(mockRootEl.html).toHaveBeenCalledWith(`🔗 INFY · <span class="${BEM.COUNT}">🔔2</span>`);
     });
   });
 
-  // ── Root classes (preserved from existing) ──
+  // ── Root classes ──
 
   describe('root classes', () => {
     it('should apply mapped class when primary ticker exists', () => {
@@ -586,8 +579,8 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      expect(mockRootEl.removeClass).toHaveBeenCalledWith('aman-display-mapped aman-display-unmapped');
-      expect(mockRootEl.addClass).toHaveBeenCalledWith('aman-display-mapped');
+      expect(mockRootEl.removeClass).toHaveBeenCalledWith(`${BEM.MAPPED} ${BEM.UNMAPPED}`);
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(BEM.MAPPED);
     });
 
     it('should apply unmapped class when no tickers present', () => {
@@ -598,8 +591,8 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      expect(mockRootEl.removeClass).toHaveBeenCalledWith('aman-display-mapped aman-display-unmapped');
-      expect(mockRootEl.addClass).toHaveBeenCalledWith('aman-display-unmapped');
+      expect(mockRootEl.removeClass).toHaveBeenCalledWith(`${BEM.MAPPED} ${BEM.UNMAPPED}`);
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(BEM.UNMAPPED);
     });
 
     it('should apply unmapped class when only secondary tickers present', () => {
@@ -610,8 +603,8 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      expect(mockRootEl.removeClass).toHaveBeenCalledWith('aman-display-mapped aman-display-unmapped');
-      expect(mockRootEl.addClass).toHaveBeenCalledWith('aman-display-unmapped');
+      expect(mockRootEl.removeClass).toHaveBeenCalledWith(`${BEM.MAPPED} ${BEM.UNMAPPED}`);
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(BEM.UNMAPPED);
     });
 
     it('should toggle expanded-state class on root', () => {
@@ -622,19 +615,19 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      // Compact: class removed
-      expect(mockRootEl.removeClass).toHaveBeenCalledWith('aman-display-expanded-state');
+      // Compact: expanded modifier removed
+      expect(mockRootEl.removeClass).toHaveBeenCalledWith(BEM.EXPANDED);
 
       // Trigger expand via click handler
-      const clickHandler = mockRootEl.on.mock.calls.find((c: any[]) => c[0] === 'click.basebar')?.[1];
+      const clickHandler = getClickHandler()!;
       clickHandler!();
 
-      // Expanded: class added
-      expect(mockRootEl.addClass).toHaveBeenCalledWith('aman-display-expanded-state');
+      // Expanded: expanded modifier added
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(BEM.EXPANDED);
     });
   });
 
-  // ── Expanded output (preserved from existing) ──
+  // ── Expanded output ──
 
   describe('expanded output', () => {
     it('should include compact header and expanded wrapper div', () => {
@@ -645,12 +638,12 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      const clickHandler = mockRootEl.on.mock.calls.find((c: any[]) => c[0] === 'click.basebar')?.[1];
+      const clickHandler = getClickHandler()!;
       clickHandler!();
 
       const lastHtml = mockRootEl.html.mock.calls[mockRootEl.html.mock.calls.length - 1][0];
       expect(lastHtml).toContain('🔗 INFY ·');
-      expect(lastHtml).toContain('<div class="aman-display-expanded">');
+      expect(lastHtml).toContain(`<div class="${BEM.DETAILS}">`);
     });
 
     it('should render primary row with star emoji and data attributes', () => {
@@ -661,13 +654,14 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      const clickHandler = mockRootEl.on.mock.calls.find((c: any[]) => c[0] === 'click.basebar')?.[1];
+      const clickHandler = getClickHandler()!;
       clickHandler!();
 
       const lastHtml = mockRootEl.html.mock.calls[mockRootEl.html.mock.calls.length - 1][0];
-      expect(lastHtml).toContain('aman-display-primary');
+      expect(lastHtml).toContain(`${BEM.ROW} ${BEM.ROW_PRIMARY}`);
       expect(lastHtml).toContain('data-alert-ticker-symbol="INFY"');
       expect(lastHtml).toContain('data-alert-ticker-type="PRIMARY"');
+      expect(lastHtml).toContain('data-alert-ticker-context-action');
       expect(lastHtml).toContain('⭐ INFY · NSE · Infosys');
     });
 
@@ -679,13 +673,14 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      const clickHandler = mockRootEl.on.mock.calls.find((c: any[]) => c[0] === 'click.basebar')?.[1];
+      const clickHandler = getClickHandler()!;
       clickHandler!();
 
       const lastHtml = mockRootEl.html.mock.calls[mockRootEl.html.mock.calls.length - 1][0];
-      expect(lastHtml).toContain('aman-display-secondary');
+      expect(lastHtml).toContain(`${BEM.ROW} ${BEM.ROW_SECONDARY}`);
       expect(lastHtml).toContain('data-alert-ticker-symbol="INFY2"');
       expect(lastHtml).toContain('data-alert-ticker-type="SECONDARY"');
+      expect(lastHtml).toContain('data-alert-ticker-context-action');
       expect(lastHtml).toContain('🔹 INFY2 · BSE · Infosys Ltd');
     });
 
@@ -697,7 +692,7 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      const clickHandler = mockRootEl.on.mock.calls.find((c: any[]) => c[0] === 'click.basebar')?.[1];
+      const clickHandler = getClickHandler()!;
       clickHandler!();
 
       const lastHtml = mockRootEl.html.mock.calls[mockRootEl.html.mock.calls.length - 1][0];
@@ -707,7 +702,7 @@ describe('AlertBar', () => {
     });
   });
 
-  // ── Empty and untracked expanded states (preserved from existing) ──
+  // ── Empty and untracked expanded states ──
 
   describe('empty and untracked expanded states', () => {
     it('should show empty state message when no tickers and not untracked', () => {
@@ -718,11 +713,11 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      const clickHandler = mockRootEl.on.mock.calls.find((c: any[]) => c[0] === 'click.basebar')?.[1];
+      const clickHandler = getClickHandler()!;
       clickHandler!();
 
       const lastHtml = mockRootEl.html.mock.calls[mockRootEl.html.mock.calls.length - 1][0];
-      expect(lastHtml).toContain('aman-display-empty');
+      expect(lastHtml).toContain(BEM.EMPTY);
       expect(lastHtml).toContain('No linked alert tickers');
     });
 
@@ -734,19 +729,19 @@ describe('AlertBar', () => {
         isUntracked: true,
       });
 
-      const clickHandler = mockRootEl.on.mock.calls.find((c: any[]) => c[0] === 'click.basebar')?.[1];
+      const clickHandler = getClickHandler()!;
       clickHandler!();
 
       const lastHtml = mockRootEl.html.mock.calls[mockRootEl.html.mock.calls.length - 1][0];
-      expect(lastHtml).toContain('aman-display-empty');
+      expect(lastHtml).toContain(BEM.EMPTY);
       expect(lastHtml).toContain('Untracked ticker — no backend record');
     });
   });
 
-  // ── Constructor configuration (preserved from existing) ──
+  // ── Constructor configuration ──
 
   describe('constructor configuration', () => {
-    it('should target #aman-display root element', () => {
+    it('should target BarId.ALERT root element', () => {
       const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:INFY',
@@ -754,11 +749,11 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      // The mock jQuery should have been called with #aman-display
-      expect(mockJQuery).toHaveBeenCalledWith('#aman-display');
+      // The mock jQuery should have been called with the BarId.ALERT-derived root
+      expect(mockJQuery).toHaveBeenCalledWith(ALERT_ROOT);
     });
 
-    it('should bind delegated right-click on alert ticker row selector', () => {
+    it('should bind delegated right-click on context-action selector', () => {
       const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:INFY',
@@ -766,11 +761,43 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      const onContextmenuCalls = mockRootEl.on.mock.calls.filter(
-        (c: any[]) => c[0] === 'contextmenu.basebar'
-      );
+      const onContextmenuCalls = mockRootEl.on.mock.calls.filter((c: any[]) => c[0] === `contextmenu.${EVENT_NS}`);
       expect(onContextmenuCalls.length).toBe(1);
-      expect(onContextmenuCalls[0][1]).toBe('.aman-display-alert-ticker-row');
+      expect(onContextmenuCalls[0][1]).toBe(CONTEXT_SELECTOR);
+    });
+  });
+
+  // ── HTML escaping ──
+
+  describe('HTML escaping', () => {
+    it('should escape HTML metacharacters in expanded ticker rows', () => {
+      const bar = new AlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      bar.render({
+        tvTicker: 'NSE:TEST',
+        alertTickers: [
+          createAlertTicker({
+            symbol: '<script>alert("xss")</script>',
+            type: 'PRIMARY',
+            exchange: 'NSE&BSE',
+            name: 'Test <img onerror="xss">',
+          }),
+        ],
+        isUntracked: false,
+      });
+
+      const clickHandler = getClickHandler()!;
+      clickHandler!();
+
+      const lastHtml = mockRootEl.html.mock.calls[mockRootEl.html.mock.calls.length - 1][0];
+
+      // Raw tags must not appear in rendered HTML
+      expect(lastHtml).not.toContain('<script>');
+      expect(lastHtml).not.toContain('<img');
+
+      // Escaped forms must be present
+      expect(lastHtml).toContain('&lt;script&gt;');
+      expect(lastHtml).toContain('NSE&amp;BSE');
+      expect(lastHtml).toContain('&lt;img onerror=&quot;xss&quot;&gt;');
     });
   });
 });

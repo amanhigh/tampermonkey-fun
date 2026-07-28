@@ -70,13 +70,6 @@ export const Constants = Object.freeze({
         ORDERS: 'aman-orders', // Old Name: ordersId
         JOURNAL: 'aman-journal', // Old Name: journalId
       },
-      DISPLAY: {
-        CARD: 'aman-display', // Old Name: displayId (was INPUTS.DISPLAY)
-        CARD_CLASS: 'aman-display-card',
-        ALERT_TICKER_ROW: 'aman-display-alert-ticker-row',
-        ATTR_ALERT_TICKER_SYMBOL: 'data-alert-ticker-symbol',
-        ATTR_ALERT_TICKER_TYPE: 'data-alert-ticker-type',
-      },
       TIMEFRAME_BAR: {
         CONTAINER: 'aman-tf-bar',
         CHIP_CLASS: 'aman-tf-chip',

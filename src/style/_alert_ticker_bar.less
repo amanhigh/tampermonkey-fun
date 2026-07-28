@@ -1,5 +1,9 @@
-// ── Display Card Styles ──
-// Replaces the legacy display input with a colorful clickable card.
+// ── Alert Ticker Bar Styles ──
+// BEM naming:
+//   block:   .aman-alert-ticker-bar
+//   element: __
+//   state:   --
+//   `data-alert-ticker-context-action` is behaviour-only and intentionally absent.
 
 @display-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 @display-bg: rgba(20, 20, 28, 0.92);
@@ -14,15 +18,12 @@
 @color-unmapped: #a855f7;
 @color-primary: #ffd700;
 @color-secondary: #58a6ff;
-@color-mwd: #a855f7;
-@color-yr: #3b82f6;
 @alert-count-active: #34d058;
-@alert-count-empty: rgba(255, 255, 255, 0.3);
 
 // ============================================
-// Display Card Container
+// Block: .aman-alert-ticker-bar
 // ============================================
-.aman-display-card {
+.aman-alert-ticker-bar {
     display: block;
     background: @display-bg;
     font-family: @display-font;
@@ -47,18 +48,18 @@
         background: rgba(30, 30, 38, 0.95);
     }
 
-    // Mapped state
-    &.aman-display-mapped {
+    // --mapped state
+    &--mapped {
         border-left-color: @color-mapped;
     }
 
-    // Unmapped state
-    &.aman-display-unmapped {
+    // --unmapped state
+    &--unmapped {
         border-left-color: @color-unmapped;
     }
 
-    // Expanded state — wider and wraps
-    &.aman-display-expanded-state {
+    // --expanded state — wider and wraps
+    &--expanded {
         width: 245px;
         white-space: normal;
         overflow: visible;
@@ -68,16 +69,9 @@
 }
 
 // ============================================
-// Compact Mode (inline elements)
+// Element: __details
 // ============================================
-.aman-display-compact {
-    display: inline;
-}
-
-// ============================================
-// Expanded Mode (block below compact header)
-// ============================================
-.aman-display-expanded {
+.aman-alert-ticker-bar__details {
     margin-top: 6px;
     padding-top: 6px;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
@@ -87,49 +81,38 @@
 }
 
 // ============================================
-// Ticker Chip
+// Element: __count
 // ============================================
-.aman-display-ticker {
-    font-weight: 600;
-}
-
-// ============================================
-// Alert Count Badge
-// ============================================
-.aman-display-alert-count {
+.aman-alert-ticker-bar__count {
     display: inline-block;
     padding: 0 4px;
     font-weight: 600;
     font-size: 11px;
     color: @alert-count-active;
-
-    // When count is "0" we want muted; handled by inline style from JS
 }
 
 // ============================================
-// Primary Row (⭐)
+// Element: __row
 // ============================================
-.aman-display-primary {
-    color: @color-primary;
-    font-weight: 600;
+.aman-alert-ticker-bar__row {
     padding: 2px 4px;
     font-size: 11px;
+
+    &--primary {
+        color: @color-primary;
+        font-weight: 600;
+    }
+
+    &--secondary {
+        color: @color-secondary;
+        font-weight: 500;
+    }
 }
 
 // ============================================
-// Secondary Row (🔹)
+// Element: __empty
 // ============================================
-.aman-display-secondary {
-    color: @color-secondary;
-    font-weight: 500;
-    padding: 2px 4px;
-    font-size: 11px;
-}
-
-// ============================================
-// Empty State Row
-// ============================================
-.aman-display-empty {
+.aman-alert-ticker-bar__empty {
     color: rgba(255, 255, 255, 0.4);
     font-style: italic;
     font-size: 11px;

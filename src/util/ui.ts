@@ -1,3 +1,5 @@
+import { BarId } from '../models/bar';
+
 /**
  * Interface for UI building operations
  */
@@ -76,6 +78,13 @@ export interface IUIUtil {
    * @returns True if user confirmed, false otherwise
    */
   showConfirm(title: string, message?: string): boolean;
+
+  /**
+   * Creates a bar root element owned by the given BarId.
+   * Sets the element's ID and BEM block class; does not apply inline width.
+   * @param barId - The BarId enum value identifying this bar
+   */
+  buildBar(barId: BarId): JQuery;
 }
 
 export class UIUtil implements IUIUtil {
@@ -160,5 +169,10 @@ export class UIUtil implements IUIUtil {
   public showConfirm(title: string, message?: string): boolean {
     const fullMessage = message ? `${title}\n\n${message}` : title;
     return confirm(fullMessage);
+  }
+
+  /** @inheritdoc */
+  public buildBar(barId: BarId): JQuery {
+    return $('<div>').attr({ id: barId }).addClass(barId);
   }
 }
