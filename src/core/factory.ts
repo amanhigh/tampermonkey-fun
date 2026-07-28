@@ -569,7 +569,8 @@ export class Factory {
             Factory.manager.tv(),
             Factory.manager.style(),
             Factory.manager.alert(),
-            Factory.manager.category()
+            Factory.manager.category(),
+            Factory.manager.timeFrame()
           )
       ),
     imdb: (): IImdbHandler =>

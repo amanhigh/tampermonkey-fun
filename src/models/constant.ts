@@ -188,6 +188,8 @@ export const Constants = Object.freeze({
       ], // Old name: reasons
       OVERRIDES: ['egf', 'int', 'lc', 'loc', 'doji', 'big', 'pn', 'tc', 'cfl', 'acm', 'adv'], // Old name: overrides
       OVERRIDE_GROUP_ID: 'reason-override',
+      SEQUENCE_GROUP_ID: 'journal-sequence',
+      SEQUENCE_CHOICES: ['MWD', 'YR'],
       TRADE_INFO: `Trends
 HTF - Up
 MTF - Up

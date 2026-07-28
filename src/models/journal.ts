@@ -7,7 +7,7 @@ export type JournalType = 'REJECTED' | 'TAKEN';
 
 export type JournalStatus = 'SET' | 'RUNNING' | 'SUCCESS' | 'FAIL' | 'MISSED' | 'JUST_LOSS' | 'BROKEN';
 
-export type JournalSequence = 'MWD' | 'YR' | 'WDH';
+export type JournalSequence = 'MWD' | 'YR';
 
 export type JournalTimeframe = 'DL' | 'WK' | 'MN' | 'TMN' | 'SMN' | 'YR';
 
@@ -66,6 +66,8 @@ export interface CreateJournalInput {
   type: JournalType;
   /** Journal API status to assign. */
   status: JournalStatus;
+  /** Journal sequence selected by the user. */
+  sequence: JournalSequence;
   /** Optional notes to attach on journal creation. */
   notes?: CreateJournalNoteRequest[];
 }
