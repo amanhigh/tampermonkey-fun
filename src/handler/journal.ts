@@ -7,16 +7,18 @@ import { IJournalManager } from '../manager/journal';
 import { ISmartPrompt, SmartChoiceGroup, SmartPromptResponseType } from '../util/smart';
 import { IUIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
-import { JournalActionType } from '../models/journal';
+import { JournalActionType, JournalSequence } from '../models/journal';
 import { DomManager } from '../manager/dom';
 import { Notifier } from '../util/notify';
 import { ITradingViewManager } from '../manager/tv';
 import { IStyleManager } from '../manager/style';
 import { IAlertManager } from '../manager/alert';
 import { ICategoryManager } from '../manager/category';
+import { ITimeFrameManager } from '../manager/timeframe';
 import { AlertClickAction, JournalOpenEvent } from '../models/events';
 import { CreateJournalNoteRequest, JournalResultStatus } from '../models/journal';
 import { ScreenshotResponse } from '../models/os';
+import { TickerTimeframe } from '../models/timeframe';
 
 /**
  * Interface for managing journal entry operations at UI/Event level
@@ -72,7 +74,8 @@ export class JournalHandler implements IJournalHandler {
     private readonly tvManager: ITradingViewManager,
     private readonly styleManager: IStyleManager,
     private readonly alertManager: IAlertManager,
-    private readonly categoryManager: ICategoryManager
+    private readonly categoryManager: ICategoryManager,
+    private readonly timeframeManager: ITimeFrameManager
   ) {}
 
   /** @inheritdoc */
@@ -94,7 +97,7 @@ export class JournalHandler implements IJournalHandler {
       return;
     }
 
-    const reason = await this.showReasonModal();
+    const { reason, sequence } = await this.showReasonModal(true);
 
     if (reason === null) {
       return;
@@ -108,15 +111,23 @@ export class JournalHandler implements IJournalHandler {
     const ticker = this.domManager.getTicker();
 
     if (type === JournalActionType.REJECTED) {
-      await this.handleRejectedJournal(ticker, reason, type);
+      if (sequence === null) {
+        return;
+      }
+      await this.handleRejectedJournal(ticker, reason, sequence, type);
       return;
     }
   }
 
-  private async handleRejectedJournal(ticker: string, reason: string, type: JournalActionType): Promise<void> {
+  private async handleRejectedJournal(
+    ticker: string,
+    reason: string,
+    sequence: JournalSequence,
+    type: JournalActionType
+  ): Promise<void> {
     const screenshots = await this.takeJournalScreenshots(ticker, type);
     const journal = await this.journalManager
-      .createJournal({ ticker, reason, screenshots, type: 'REJECTED', status: 'FAIL' })
+      .createJournal({ ticker, reason, screenshots, type: 'REJECTED', status: 'FAIL', sequence })
       .catch((error) => {
         throw new Error(`Failed to record journal entry: ${error}`);
       });
@@ -150,10 +161,14 @@ export class JournalHandler implements IJournalHandler {
       throw new Error(`Failed to capture checklist screenshot: ${(error as Error).message}`);
     }
 
-    // Step 3: Show reason prompt after checklist screenshot
-    const reason = await this.showReasonModal();
+    // Step 3: Show reason prompt with sequence selection after checklist screenshot
+    const { reason, sequence } = await this.showReasonModal(true);
 
     if (reason === null) {
+      return;
+    }
+
+    if (sequence === null) {
       return;
     }
 
@@ -161,7 +176,7 @@ export class JournalHandler implements IJournalHandler {
     const timeframeScreenshots = await this.takeJournalScreenshots(ticker, type);
 
     // Step 5: Create journal
-    await this.createTakenJournal(ticker, reason, [checklistScreenshot, ...timeframeScreenshots], note);
+    await this.createTakenJournal(ticker, reason, [checklistScreenshot, ...timeframeScreenshots], note, sequence);
   }
 
   private createSetupNotes(note: string): CreateJournalNoteRequest[] {
@@ -187,7 +202,8 @@ export class JournalHandler implements IJournalHandler {
     ticker: string,
     reason: string,
     screenshots: ScreenshotResponse[],
-    note: string
+    note: string,
+    sequence: JournalSequence
   ): Promise<void> {
     const journal = await this.journalManager
       .createJournal({
@@ -196,6 +212,7 @@ export class JournalHandler implements IJournalHandler {
         screenshots,
         type: 'TAKEN',
         status: 'SET',
+        sequence,
         notes: this.createSetupNotes(note),
       })
       .catch((error) => {
@@ -229,7 +246,7 @@ export class JournalHandler implements IJournalHandler {
     }
 
     // Step 3: Ask for reason
-    const reason = await this.showReasonModal();
+    const { reason } = await this.showReasonModal();
 
     if (reason === null) {
       return;
@@ -258,7 +275,7 @@ export class JournalHandler implements IJournalHandler {
 
   /** @inheritdoc */
   public async handleJournalReasonPrompt(): Promise<void> {
-    const reason = await this.showReasonModal();
+    const { reason } = await this.showReasonModal();
 
     if (!reason) {
       return;
@@ -316,38 +333,63 @@ export class JournalHandler implements IJournalHandler {
   }
 
   /**
-   * Shows reason selection modal with Swift keys disabled
-   * Disables Swift keys while modal is open to prevent keyboard interference
-   * Re-enables them after modal closes
+   * Shows reason selection modal with Swift keys disabled.
+   * Disables Swift keys while modal is open to prevent keyboard interference.
+   * Re-enables them after modal closes.
+   *
+   * When {@link includeSequence} is true, also shows a Timeframe sequence group
+   * and returns both the reason and selected sequence.
+   *
+   * @param includeSequence - When true, shows Timeframe group and returns `{ reason, sequence }`.
+   *                          When false (default), returns `{ reason, sequence: null }`.
+   * @returns `{ reason, sequence }` where `reason` is `null` if cancelled.
+   *          `sequence` is `null` when `includeSequence` is false.
    * @private
-   * @returns Selected reason or null if cancelled/no selection
    */
-  private async showReasonModal(): Promise<string | null> {
+  private async showReasonModal(
+    includeSequence = false
+  ): Promise<{ reason: string | null; sequence: JournalSequence | null }> {
     try {
       await this.tvManager.setSwiftKeysState(false);
+      const groups: SmartChoiceGroup[] = [
+        {
+          id: Constants.TRADING.PROMPT.OVERRIDE_GROUP_ID,
+          label: 'Override',
+          choices: Constants.TRADING.PROMPT.OVERRIDES,
+        },
+      ];
 
-      const overrideGroup: SmartChoiceGroup = {
-        id: Constants.TRADING.PROMPT.OVERRIDE_GROUP_ID,
-        label: 'Override',
-        choices: Constants.TRADING.PROMPT.OVERRIDES,
-      };
+      let defaultSequence: JournalSequence = 'YR';
+      if (includeSequence) {
+        const sequence = await this.timeframeManager.getSequence();
+        defaultSequence = sequence.includes(TickerTimeframe.DL) ? 'MWD' : 'YR';
+        groups.push({
+          id: Constants.TRADING.PROMPT.SEQUENCE_GROUP_ID,
+          label: 'Timeframe',
+          choices: Constants.TRADING.PROMPT.SEQUENCE_CHOICES,
+          defaultChoice: defaultSequence,
+        });
+      }
 
       // TODO: Build REASONS from journal tag frequency analysis instead of hardcoded list.
-      const response = await this.smartPrompt.showModal(Constants.TRADING.PROMPT.REASONS, [overrideGroup]);
-
-      // Handle cancel - user explicitly cancelled
+      const response = await this.smartPrompt.showModal(Constants.TRADING.PROMPT.REASONS, groups);
       if (response.type === SmartPromptResponseType.CANCEL) {
-        return null;
+        return { reason: null, sequence: includeSequence ? defaultSequence : null };
       }
 
-      // Handle none - user chose no reason (valid for SET/RESULT, not for REJECTED)
-      if (response.type === SmartPromptResponseType.NONE) {
-        return ''; // Empty string for no reason
-      }
-
-      // Handle selected - user provided a valid reason
       const override = response.answers[Constants.TRADING.PROMPT.OVERRIDE_GROUP_ID];
-      return override ? `${response.primarySelection}-${override}` : response.primarySelection;
+      const reason =
+        response.type === SmartPromptResponseType.NONE
+          ? ''
+          : override
+            ? `${response.primarySelection}-${override}`
+            : response.primarySelection;
+      if (includeSequence) {
+        const selectedSequence =
+          (response.answers[Constants.TRADING.PROMPT.SEQUENCE_GROUP_ID] as JournalSequence) ?? defaultSequence;
+        return { reason, sequence: selectedSequence };
+      }
+      return { reason, sequence: null };
     } catch (error) {
       throw new Error(`Failed to show reason modal: ${error}`);
     } finally {
