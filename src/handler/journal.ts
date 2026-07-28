@@ -13,6 +13,7 @@ import { Notifier } from '../util/notify';
 import { ITradingViewManager } from '../manager/tv';
 import { IStyleManager } from '../manager/style';
 import { IAlertManager } from '../manager/alert';
+import { ICategoryManager } from '../manager/category';
 import { AlertClickAction, JournalOpenEvent } from '../models/events';
 import { CreateJournalNoteRequest, JournalResultStatus } from '../models/journal';
 import { ScreenshotResponse } from '../models/os';
@@ -70,7 +71,8 @@ export class JournalHandler implements IJournalHandler {
     private readonly uiUtil: IUIUtil,
     private readonly tvManager: ITradingViewManager,
     private readonly styleManager: IStyleManager,
-    private readonly alertManager: IAlertManager
+    private readonly alertManager: IAlertManager,
+    private readonly categoryManager: ICategoryManager
   ) {}
 
   /** @inheritdoc */
@@ -200,6 +202,7 @@ export class JournalHandler implements IJournalHandler {
         throw new Error(`Failed to record journal entry: ${error}`);
       });
 
+    await this.categoryManager.publishCategoryChanged([ticker]);
     await this.publishJournalOpenEvent(journal.id);
   }
 
@@ -243,7 +246,7 @@ export class JournalHandler implements IJournalHandler {
     }
 
     await this.journalManager.updateJournalStatus(runningJournal.id, status);
-
+    await this.categoryManager.publishCategoryChanged([ticker]);
     await this.publishJournalOpenEvent(runningJournal.id);
   }
 

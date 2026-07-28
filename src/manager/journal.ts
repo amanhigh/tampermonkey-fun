@@ -176,9 +176,6 @@ export class JournalManager extends BaseManager implements IJournalManager {
   /** @inheritdoc */
   public async updateJournalStatus(journalId: string, status: JournalResultStatus): Promise<void> {
     await this.journalClient.updateJournalStatus(journalId, { status });
-    // BUG: Ticker category not evicted / no domain event published.
-    // After status flips RUNNING -> SUCCESS/FAIL/MISSED, the watch category cache
-    // still returns RUNNING (lime green) until TTL expiry or navigation.
   }
 
   /** @inheritdoc */

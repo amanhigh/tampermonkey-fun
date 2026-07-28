@@ -7,6 +7,7 @@ import { ITradingViewManager } from '../../src/manager/tv';
 import { IStyleManager } from '../../src/manager/style';
 import { DomManager } from '../../src/manager/dom';
 import { IAlertManager } from '../../src/manager/alert';
+import { ICategoryManager } from '../../src/manager/category';
 import { AlertClickAction } from '../../src/models/events';
 import { JournalActionType } from '../../src/models/journal';
 import { Constants } from '../../src/models/constant';
@@ -34,6 +35,7 @@ describe('JournalHandler', () => {
   let mockTradingViewManager: jest.Mocked<ITradingViewManager>;
   let mockStyleManager: jest.Mocked<IStyleManager>;
   let mockAlertManager: jest.Mocked<IAlertManager>;
+  let mockCategoryManager: jest.Mocked<ICategoryManager>;
   let mockDocument: { querySelector: jest.Mock; querySelectorAll: jest.Mock };
   let mockReviewLink: { addEventListener: jest.Mock };
   let mockJournalOpenListener: (
@@ -89,6 +91,17 @@ describe('JournalHandler', () => {
       createAlertClickEvent: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<IAlertManager>;
 
+    mockCategoryManager = {
+      getTickerCategory: jest.fn(),
+      evictTicker: jest.fn(),
+      publishCategoryChanged: jest.fn().mockResolvedValue(undefined),
+      recordWatchCategory: jest.fn().mockResolvedValue(undefined),
+      recordFlagCategory: jest.fn().mockResolvedValue(undefined),
+      getBatchCategory: jest.fn().mockResolvedValue(new Map()),
+      toggleReadyState: jest.fn().mockResolvedValue(undefined),
+      clearReadyState: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<ICategoryManager>;
+
     mockDocument = {
       querySelector: jest.fn(),
       querySelectorAll: jest.fn(),
@@ -120,7 +133,8 @@ describe('JournalHandler', () => {
       mockUiUtil,
       mockTradingViewManager,
       mockStyleManager,
-      mockAlertManager
+      mockAlertManager,
+      mockCategoryManager
     );
   });
 
@@ -241,6 +255,7 @@ describe('JournalHandler', () => {
           },
         ],
       });
+      expect(mockCategoryManager.publishCategoryChanged).toHaveBeenCalledWith(['TCS']);
       expect(mockJournalManager.publishJournalOpenEvent).toHaveBeenCalledWith('jrn_2');
     });
 
@@ -328,6 +343,7 @@ describe('JournalHandler', () => {
       ]);
       expect(mockJournalManager.addReasonTags).toHaveBeenCalledWith('jrn_running', 'oe');
       expect(mockJournalManager.updateJournalStatus).toHaveBeenCalledWith('jrn_running', 'SUCCESS');
+      expect(mockCategoryManager.publishCategoryChanged).toHaveBeenCalledWith(['TCS']);
       expect(mockJournalManager.publishJournalOpenEvent).toHaveBeenCalledWith('jrn_running');
     });
 
@@ -370,6 +386,26 @@ describe('JournalHandler', () => {
 
       expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
       expect(mockJournalManager.updateJournalStatus).not.toHaveBeenCalled();
+    });
+
+    it('should NOT publish category change when updateJournalStatus fails', async () => {
+      mockTickerManager.getTicker.mockReturnValue('TCS');
+      (mockJournalManager.findRunningJournal as jest.Mock).mockResolvedValue({
+        id: 'jrn_running', ticker: 'TCS', type: 'TAKEN', status: 'RUNNING',
+      });
+      mockSmartPrompt.showModal
+        .mockResolvedValueOnce({ type: 'reason', value: 'SUCCESS' })
+        .mockResolvedValueOnce({ type: 'reason', value: 'oe' });
+      (mockJournalManager.screenshotTicker as jest.Mock).mockResolvedValue([
+        { file_name: 'TCS_fail.png', full_path: '/path/fail', timeframe: 'TMN' },
+      ]);
+      (mockJournalManager.updateJournalStatus as jest.Mock).mockRejectedValue(new Error('Backend error'));
+
+      await expect(journalHandler.handleRecordJournal(JournalActionType.RESULT)).rejects.toThrow('Backend error');
+
+      expect(mockJournalManager.updateJournalStatus).toHaveBeenCalledWith('jrn_running', 'SUCCESS');
+      expect(mockCategoryManager.publishCategoryChanged).not.toHaveBeenCalled();
+      expect(mockJournalManager.publishJournalOpenEvent).not.toHaveBeenCalled();
     });
   });
 
