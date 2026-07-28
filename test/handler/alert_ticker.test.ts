@@ -73,8 +73,9 @@ describe('AlertTickerHandler', () => {
     test('passes selected pair to linkAlertTicker without type', async () => {
       mockInvestingClient.fetchSymbolData.mockResolvedValue(mockPairs);
       mockSmartPrompt.showModal.mockResolvedValue({
-        type: 'reason',
-        value: 'Infosys Ltd (SYMBOL: INFY, Exchange: NSE)',
+        type: 'selected',
+        primarySelection: 'Infosys Ltd (SYMBOL: INFY, Exchange: NSE)',
+        answers: {},
       });
 
       await handler.linkInvestingTicker('INFY');
@@ -98,7 +99,7 @@ describe('AlertTickerHandler', () => {
 
     test('returns without mutation on none', async () => {
       mockInvestingClient.fetchSymbolData.mockResolvedValue(mockPairs);
-      mockSmartPrompt.showModal.mockResolvedValue({ type: 'none', value: 'none' });
+      mockSmartPrompt.showModal.mockResolvedValue({ type: 'none', value: 'none', answers: {} });
 
       await handler.linkInvestingTicker('INFY');
 
@@ -108,8 +109,9 @@ describe('AlertTickerHandler', () => {
     test('warns on invalid selection', async () => {
       mockInvestingClient.fetchSymbolData.mockResolvedValue(mockPairs);
       mockSmartPrompt.showModal.mockResolvedValue({
-        type: 'reason',
-        value: 'NonExistent (SYMBOL: XXX, Exchange: YYY)',
+        type: 'selected',
+        primarySelection: 'NonExistent (SYMBOL: XXX, Exchange: YYY)',
+        answers: {},
       });
 
       await handler.linkInvestingTicker('INFY');

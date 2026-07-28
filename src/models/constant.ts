@@ -187,6 +187,7 @@ export const Constants = Object.freeze({
         'WOW', // Waiting WoW
       ], // Old name: reasons
       OVERRIDES: ['egf', 'int', 'lc', 'loc', 'doji', 'big', 'pn', 'tc', 'cfl', 'acm', 'adv'], // Old name: overrides
+      OVERRIDE_GROUP_ID: 'reason-override',
       TRADE_INFO: `Trends
 HTF - Up
 MTF - Up

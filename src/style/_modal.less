@@ -1,17 +1,19 @@
-// Modal Variables
-@modal-width: 320px;
-@modal-bg: rgba(18, 18, 24, 0.95);
-@modal-text: #e0e0e0;
-@modal-radius: 10px;
-@modal-padding: 20px;
-@modal-border: 1px solid rgba(255, 255, 255, 0.1);
+// ── Modal Variables ──────────────────────────────────
+@modal-width: 340px;
+@modal-bg: rgba(18, 18, 24, 0.96);
+@modal-text: #e4e4e7;
+@modal-text-dim: rgba(255, 255, 255, 0.45);
+@modal-radius: 12px;
+@modal-padding: 16px;
+@modal-border: 1px solid rgba(255, 255, 255, 0.08);
 @modal-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+@modal-accent: rgba(130, 160, 255, 0.85);
+@modal-focus-ring: 0 0 0 2px rgba(130, 160, 255, 0.4);
 
-// Modal Container
+// ── Modal Container ─────────────────────────────────
 .aman-modal {
   display: none;
   width: @modal-width;
-  height: auto;
   position: fixed;
   top: 50%;
   left: 50%;
@@ -22,12 +24,14 @@
   text-align: center;
   border-radius: @modal-radius;
   border: @modal-border;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
   font-family: @modal-font;
   z-index: 10000;
+  overflow-y: auto;
+  max-height: 80vh;
 
-  // Modal Content Container
+  // ── Content Container ───────────────────────────
   &-content {
     display: flex;
     justify-content: center;
@@ -36,39 +40,50 @@
     margin: 8px 0;
   }
 
+  // ── Title ───────────────────────────────────────
   &-title {
     margin: 0 0 10px;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
+    color: @modal-text;
   }
 
-  // Modal Button
+  // ── Buttons ─────────────────────────────────────
   &-button {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.07);
     color: @modal-text;
     font-family: @modal-font;
     font-size: 13px;
     font-weight: 500;
     margin: 3px;
-    padding: 8px 14px;
-    border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     cursor: pointer;
     outline: none;
-    transition: background 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease,
+      box-shadow 0.15s ease,
+      transform 0.1s ease;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.18);
-      border-color: rgba(255, 255, 255, 0.25);
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(255, 255, 255, 0.2);
     }
 
     &:active {
-      transform: scale(0.95);
-      background: rgba(255, 255, 255, 0.08);
+      transform: scale(0.96);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    &:focus-visible {
+      box-shadow: @modal-focus-ring;
+      border-color: @modal-accent;
     }
   }
 
-  // Modal Text Input
+  // ── Text Input ──────────────────────────────────
   &-input {
     background: rgba(20, 20, 28, 0.9);
     color: @modal-text;
@@ -76,55 +91,98 @@
     font-size: 13px;
     margin: 6px 0;
     padding: 8px 12px;
-    border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     outline: none;
-    width: calc(100% - 24px);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    width: calc(100% - 26px);
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
 
     &:focus {
-      border-color: rgba(255, 255, 255, 0.3);
-      box-shadow: 0 0 4px rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.25);
+      box-shadow: @modal-focus-ring;
     }
 
     &::placeholder {
-      color: rgba(255, 255, 255, 0.3);
+      color: @modal-text-dim;
     }
   }
 
+  // ── Textarea ────────────────────────────────────
   &-textarea {
-    min-height: 220px;
+    min-height: 200px;
     resize: vertical;
     line-height: 1.5;
     white-space: pre-wrap;
   }
 
-  // Modal Radio Label
+  // ── Choice Group ────────────────────────────────
+  &-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 12px;
+    margin: 8px 0 4px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  // ── Group Label ─────────────────────────────────
+  &-group-label {
+    width: 100%;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: @modal-text-dim;
+    margin-bottom: 2px;
+  }
+
+  // ── Radio Label ─────────────────────────────────
   &-radio-label {
     display: inline-flex;
     align-items: center;
     color: @modal-text;
-    margin-right: 10px;
     font-size: 13px;
     cursor: pointer;
+    padding: 2px 0;
 
     input[type='radio'] {
       appearance: none;
       width: 14px;
       height: 14px;
-      border: 2px solid rgba(255, 255, 255, 0.4);
+      border: 2px solid rgba(255, 255, 255, 0.35);
       border-radius: 50%;
       background: transparent;
       cursor: pointer;
       margin-right: 6px;
       vertical-align: middle;
       position: relative;
-      transition: border-color 0.2s ease, background 0.2s ease;
+      transition:
+        border-color 0.15s ease,
+        background 0.15s ease;
 
       &:checked {
-        background: @modal-text;
-        border-color: @modal-text;
+        background: @modal-accent;
+        border-color: @modal-accent;
+      }
+
+      &:focus-visible {
+        box-shadow: @modal-focus-ring;
       }
     }
+  }
+
+  // ── Actions Container ───────────────────────────
+  &-actions {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
   }
 }

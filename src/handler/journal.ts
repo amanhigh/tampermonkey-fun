@@ -4,7 +4,7 @@
 
 import { IOsClient } from '../client/os';
 import { IJournalManager } from '../manager/journal';
-import { ISmartPrompt } from '../util/smart';
+import { ISmartPrompt, SmartChoiceGroup } from '../util/smart';
 import { IUIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
 import { JournalActionType } from '../models/journal';
@@ -326,11 +326,14 @@ export class JournalHandler implements IJournalHandler {
     try {
       await this.tvManager.setSwiftKeysState(false);
 
+      const overrideGroup: SmartChoiceGroup = {
+        id: Constants.TRADING.PROMPT.OVERRIDE_GROUP_ID,
+        label: 'Override',
+        choices: Constants.TRADING.PROMPT.OVERRIDES,
+      };
+
       // TODO: Build REASONS from journal tag frequency analysis instead of hardcoded list.
-      const response = await this.smartPrompt.showModal(
-        Constants.TRADING.PROMPT.REASONS,
-        Constants.TRADING.PROMPT.OVERRIDES
-      );
+      const response = await this.smartPrompt.showModal(Constants.TRADING.PROMPT.REASONS, [overrideGroup]);
 
       // Handle cancel - user explicitly cancelled
       if (response.type === 'cancel') {
@@ -342,8 +345,9 @@ export class JournalHandler implements IJournalHandler {
         return ''; // Empty string for no reason
       }
 
-      // Handle reason - user provided a valid reason
-      return response.value;
+      // Handle selected - user provided a valid reason
+      const override = response.answers[Constants.TRADING.PROMPT.OVERRIDE_GROUP_ID];
+      return override ? `${response.primarySelection}-${override}` : response.primarySelection;
     } catch (error) {
       throw new Error(`Failed to show reason modal: ${error}`);
     } finally {
@@ -381,7 +385,7 @@ export class JournalHandler implements IJournalHandler {
         return null;
       }
 
-      return response.value as JournalResultStatus;
+      return response.primarySelection as JournalResultStatus;
     } catch (error) {
       throw new Error(`Failed to show result status modal: ${error}`);
     } finally {
