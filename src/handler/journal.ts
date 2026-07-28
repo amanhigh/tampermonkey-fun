@@ -4,7 +4,7 @@
 
 import { IOsClient } from '../client/os';
 import { IJournalManager } from '../manager/journal';
-import { ISmartPrompt, SmartChoiceGroup } from '../util/smart';
+import { ISmartPrompt, SmartChoiceGroup, SmartPromptResponseType } from '../util/smart';
 import { IUIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
 import { JournalActionType } from '../models/journal';
@@ -336,12 +336,12 @@ export class JournalHandler implements IJournalHandler {
       const response = await this.smartPrompt.showModal(Constants.TRADING.PROMPT.REASONS, [overrideGroup]);
 
       // Handle cancel - user explicitly cancelled
-      if (response.type === 'cancel') {
+      if (response.type === SmartPromptResponseType.CANCEL) {
         return null;
       }
 
       // Handle none - user chose no reason (valid for SET/RESULT, not for REJECTED)
-      if (response.type === 'none') {
+      if (response.type === SmartPromptResponseType.NONE) {
         return ''; // Empty string for no reason
       }
 
@@ -377,11 +377,11 @@ export class JournalHandler implements IJournalHandler {
 
       const response = await this.smartPrompt.showModal(['SUCCESS', 'FAIL', 'MISSED']);
 
-      if (response.type === 'cancel') {
+      if (response.type === SmartPromptResponseType.CANCEL) {
         return null;
       }
 
-      if (response.type === 'none') {
+      if (response.type === SmartPromptResponseType.NONE) {
         return null;
       }
 

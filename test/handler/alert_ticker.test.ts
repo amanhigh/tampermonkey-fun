@@ -1,7 +1,7 @@
 import { AlertTickerHandler } from '../../src/handler/alert_ticker';
 import { IInvestingClient } from '../../src/client/investing';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
-import { ISmartPrompt } from '../../src/util/smart';
+import { ISmartPrompt, SmartPromptResponseType } from '../../src/util/smart';
 import { IDomManager } from '../../src/manager/dom';
 import { PairInfo } from '../../src/models/alert';
 
@@ -59,7 +59,7 @@ describe('AlertTickerHandler', () => {
   describe('linkInvestingTicker', () => {
     test('searches Investing symbols and shows top 10 options', async () => {
       mockInvestingClient.fetchSymbolData.mockResolvedValue(mockPairs);
-      mockSmartPrompt.showModal.mockResolvedValue({ type: 'cancel', value: null });
+      mockSmartPrompt.showModal.mockResolvedValue({ type: SmartPromptResponseType.CANCEL, value: null });
 
       await handler.linkInvestingTicker('INFY');
 
@@ -73,7 +73,7 @@ describe('AlertTickerHandler', () => {
     test('passes selected pair to linkAlertTicker without type', async () => {
       mockInvestingClient.fetchSymbolData.mockResolvedValue(mockPairs);
       mockSmartPrompt.showModal.mockResolvedValue({
-        type: 'selected',
+        type: SmartPromptResponseType.SELECTED,
         primarySelection: 'Infosys Ltd (SYMBOL: INFY, Exchange: NSE)',
         answers: {},
       });
@@ -90,7 +90,7 @@ describe('AlertTickerHandler', () => {
 
     test('returns without mutation on cancel', async () => {
       mockInvestingClient.fetchSymbolData.mockResolvedValue(mockPairs);
-      mockSmartPrompt.showModal.mockResolvedValue({ type: 'cancel', value: null });
+      mockSmartPrompt.showModal.mockResolvedValue({ type: SmartPromptResponseType.CANCEL, value: null });
 
       await handler.linkInvestingTicker('INFY');
 
@@ -99,7 +99,7 @@ describe('AlertTickerHandler', () => {
 
     test('returns without mutation on none', async () => {
       mockInvestingClient.fetchSymbolData.mockResolvedValue(mockPairs);
-      mockSmartPrompt.showModal.mockResolvedValue({ type: 'none', value: 'none', answers: {} });
+      mockSmartPrompt.showModal.mockResolvedValue({ type: SmartPromptResponseType.NONE, value: 'none', answers: {} });
 
       await handler.linkInvestingTicker('INFY');
 
@@ -109,7 +109,7 @@ describe('AlertTickerHandler', () => {
     test('warns on invalid selection', async () => {
       mockInvestingClient.fetchSymbolData.mockResolvedValue(mockPairs);
       mockSmartPrompt.showModal.mockResolvedValue({
-        type: 'selected',
+        type: SmartPromptResponseType.SELECTED,
         primarySelection: 'NonExistent (SYMBOL: XXX, Exchange: YYY)',
         answers: {},
       });

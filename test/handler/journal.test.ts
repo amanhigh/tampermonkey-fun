@@ -1,7 +1,7 @@
 import { JournalHandler } from '../../src/handler/journal';
 import { IOsClient } from '../../src/client/os';
 import { IJournalManager } from '../../src/manager/journal';
-import { ISmartPrompt, SmartChoiceGroup } from '../../src/util/smart';
+import { ISmartPrompt, SmartChoiceGroup, SmartPromptResponseType } from '../../src/util/smart';
 import { IUIUtil } from '../../src/util/ui';
 import { ITradingViewManager } from '../../src/manager/tv';
 import { IStyleManager } from '../../src/manager/style';
@@ -175,7 +175,7 @@ describe('JournalHandler', () => {
     it('should combine primary selection with override into reason-override format', async () => {
       mockTickerManager.getTicker.mockReturnValue('TCS');
       mockSmartPrompt.showModal.mockResolvedValue({
-        type: 'selected',
+        type: SmartPromptResponseType.SELECTED,
         primarySelection: 'oe',
         answers: { [Constants.TRADING.PROMPT.OVERRIDE_GROUP_ID]: 'egf' },
       });
@@ -202,7 +202,7 @@ describe('JournalHandler', () => {
     it('should use primary selection alone when no override selected', async () => {
       mockTickerManager.getTicker.mockReturnValue('TCS');
       mockSmartPrompt.showModal.mockResolvedValue({
-        type: 'selected',
+        type: SmartPromptResponseType.SELECTED,
         primarySelection: 'oe',
         answers: { [Constants.TRADING.PROMPT.OVERRIDE_GROUP_ID]: null },
       });
@@ -228,7 +228,7 @@ describe('JournalHandler', () => {
 
     it('should route REJECTED journal to screenshot ticker flow', async () => {
       mockTickerManager.getTicker.mockReturnValue('TCS');
-      mockSmartPrompt.showModal.mockResolvedValue({ type: 'selected', primarySelection: 'oe', answers: {} });
+      mockSmartPrompt.showModal.mockResolvedValue({ type: SmartPromptResponseType.SELECTED, primarySelection: 'oe', answers: {} });
       (mockJournalManager.screenshotTicker as jest.Mock).mockResolvedValue([
         { file_name: 'TCS.tmn.rejected_20240422_0930.png', full_path: '/home/aman/Downloads/TCS.tmn.rejected_20240422_0930.png' },
       ]);
@@ -266,7 +266,7 @@ describe('JournalHandler', () => {
         timeframe: 'TMN',
       });
       // Step 3: reason prompt
-      mockSmartPrompt.showModal.mockResolvedValue({ type: 'selected', primarySelection: 'oe', answers: {} });
+      mockSmartPrompt.showModal.mockResolvedValue({ type: SmartPromptResponseType.SELECTED, primarySelection: 'oe', answers: {} });
       // Step 4: full screenshots
       (mockJournalManager.screenshotTicker as jest.Mock).mockResolvedValue([
         { file_name: 'TCS_20240422_0930_1_tmn_set.png', full_path: '/home/aman/Downloads/TCS_20240422_0930_1_tmn_set.png' },
@@ -360,7 +360,7 @@ describe('JournalHandler', () => {
         full_path: '/home/aman/Downloads/TCS_20240422_0930_checklist_set.png',
         timeframe: 'TMN',
       });
-      mockSmartPrompt.showModal.mockResolvedValue({ type: 'cancel', value: null });
+      mockSmartPrompt.showModal.mockResolvedValue({ type: SmartPromptResponseType.CANCEL, value: null });
 
       await journalHandler.handleRecordJournal(JournalActionType.SET);
 
@@ -380,8 +380,8 @@ describe('JournalHandler', () => {
       });
       // Status -> reason prompts
       mockSmartPrompt.showModal
-        .mockResolvedValueOnce({ type: 'selected', primarySelection: 'SUCCESS', answers: {} })
-        .mockResolvedValueOnce({ type: 'selected', primarySelection: 'oe', answers: {} });
+        .mockResolvedValueOnce({ type: SmartPromptResponseType.SELECTED, primarySelection: 'SUCCESS', answers: {} })
+        .mockResolvedValueOnce({ type: SmartPromptResponseType.SELECTED, primarySelection: 'oe', answers: {} });
       (mockJournalManager.screenshotTicker as jest.Mock).mockResolvedValue([
         { file_name: 'TCS_20240422_0930_1_tmn_result.png', full_path: '/path/1', timeframe: 'TMN' },
       ]);
@@ -424,7 +424,7 @@ describe('JournalHandler', () => {
       (mockJournalManager.findRunningJournal as jest.Mock).mockResolvedValue({
         id: 'jrn_running', ticker: 'TCS', type: 'TAKEN', status: 'RUNNING',
       });
-      mockSmartPrompt.showModal.mockResolvedValue({ type: 'cancel', value: null });
+      mockSmartPrompt.showModal.mockResolvedValue({ type: SmartPromptResponseType.CANCEL, value: null });
 
       await journalHandler.handleRecordJournal(JournalActionType.RESULT);
 
@@ -438,8 +438,8 @@ describe('JournalHandler', () => {
         id: 'jrn_running', ticker: 'TCS', type: 'TAKEN', status: 'RUNNING',
       });
       mockSmartPrompt.showModal
-        .mockResolvedValueOnce({ type: 'selected', primarySelection: 'SUCCESS', answers: {} })
-        .mockResolvedValueOnce({ type: 'cancel', value: null });
+        .mockResolvedValueOnce({ type: SmartPromptResponseType.SELECTED, primarySelection: 'SUCCESS', answers: {} })
+        .mockResolvedValueOnce({ type: SmartPromptResponseType.CANCEL, value: null });
 
       await journalHandler.handleRecordJournal(JournalActionType.RESULT);
 
@@ -453,8 +453,8 @@ describe('JournalHandler', () => {
         id: 'jrn_running', ticker: 'TCS', type: 'TAKEN', status: 'RUNNING',
       });
       mockSmartPrompt.showModal
-        .mockResolvedValueOnce({ type: 'selected', primarySelection: 'SUCCESS', answers: {} })
-        .mockResolvedValueOnce({ type: 'selected', primarySelection: 'oe', answers: {} });
+        .mockResolvedValueOnce({ type: SmartPromptResponseType.SELECTED, primarySelection: 'SUCCESS', answers: {} })
+        .mockResolvedValueOnce({ type: SmartPromptResponseType.SELECTED, primarySelection: 'oe', answers: {} });
       (mockJournalManager.screenshotTicker as jest.Mock).mockResolvedValue([
         { file_name: 'TCS_fail.png', full_path: '/path/fail', timeframe: 'TMN' },
       ]);

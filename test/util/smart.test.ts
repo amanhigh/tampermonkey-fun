@@ -1,4 +1,4 @@
-import { SmartPrompt, SmartChoiceGroup } from '../../src/util/smart';
+import { SmartPrompt, SmartChoiceGroup, SmartPromptResponseType } from '../../src/util/smart';
 
 // ==========================================
 // Mock Infrastructure
@@ -146,7 +146,7 @@ describe('SmartPrompt', () => {
         cancelBtn.onclick();
 
         const result = await promise;
-        expect(result).toEqual({ type: 'cancel', value: null });
+        expect(result).toEqual({ type: SmartPromptResponseType.CANCEL, value: null });
       });
 
       it('returns { type: "none", value: "none", answers } when Escape pressed', async () => {
@@ -160,7 +160,7 @@ describe('SmartPrompt', () => {
         escapeHandler({ key: 'Escape' });
 
         const result = await promise;
-        expect(result).toEqual({ type: 'none', value: 'none', answers: {} });
+        expect(result).toEqual({ type: SmartPromptResponseType.NONE, value: 'none', answers: {} });
       });
 
       it('returns { type: "none", value: "none", answers } when None clicked', async () => {
@@ -171,7 +171,7 @@ describe('SmartPrompt', () => {
         noneBtn.onclick();
 
         const result = await promise;
-        expect(result).toEqual({ type: 'none', value: 'none', answers: {} });
+        expect(result).toEqual({ type: SmartPromptResponseType.NONE, value: 'none', answers: {} });
       });
 
       it('returns { type: "selected", primarySelection, answers } when primary button clicked', async () => {
@@ -182,7 +182,7 @@ describe('SmartPrompt', () => {
         buyBtn.onclick();
 
         const result = await promise;
-        expect(result).toEqual({ type: 'selected', primarySelection: 'Buy', answers: {} });
+        expect(result).toEqual({ type: SmartPromptResponseType.SELECTED, primarySelection: 'Buy', answers: {} });
       });
 
       it('returns { type: "selected", primarySelection, answers } when custom text entered', async () => {
@@ -196,7 +196,7 @@ describe('SmartPrompt', () => {
 
         const result = await promise;
         expect(result).toEqual({
-          type: 'selected',
+          type: SmartPromptResponseType.SELECTED,
           primarySelection: 'My custom reason',
           answers: {},
         });
@@ -212,7 +212,7 @@ describe('SmartPrompt', () => {
         textBox.onkeydown({ key: 'Enter' });
 
         const result = await promise;
-        expect(result).toEqual({ type: 'none', value: 'none', answers: {} });
+        expect(result).toEqual({ type: SmartPromptResponseType.NONE, value: 'none', answers: {} });
       });
     });
 
@@ -238,7 +238,7 @@ describe('SmartPrompt', () => {
 
         const result = await promise;
         expect(result).toEqual({
-          type: 'selected',
+          type: SmartPromptResponseType.SELECTED,
           primarySelection: 'Submit',
           answers: { priority: 'High' },
         });
@@ -256,7 +256,7 @@ describe('SmartPrompt', () => {
 
         const result = await promise;
         expect(result).toEqual({
-          type: 'selected',
+          type: SmartPromptResponseType.SELECTED,
           primarySelection: 'Submit',
           answers: { size: null },
         });
@@ -278,7 +278,7 @@ describe('SmartPrompt', () => {
 
         const result = await promise;
         expect(result).toEqual({
-          type: 'selected',
+          type: SmartPromptResponseType.SELECTED,
           primarySelection: 'Go',
           answers: { color: 'Blue', size: 'L' },
         });
@@ -318,7 +318,7 @@ describe('SmartPrompt', () => {
 
         const result = await promise;
         expect(result).toEqual({
-          type: 'none',
+          type: SmartPromptResponseType.NONE,
           value: 'none',
           answers: { tier: 'A' },
         });
@@ -338,7 +338,7 @@ describe('SmartPrompt', () => {
 
         const result = await promise;
         expect(result).toMatchObject({
-          type: 'selected',
+          type: SmartPromptResponseType.SELECTED,
           primarySelection: 'Deploy',
           answers: { env: 'Prod' },
         });

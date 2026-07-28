@@ -1,4 +1,4 @@
-import { ISmartPrompt } from '../util/smart';
+import { ISmartPrompt, SmartPromptResponseType } from '../util/smart';
 import { ITickerHandler } from './ticker';
 import { IDomManager } from '../manager/dom';
 
@@ -22,18 +22,18 @@ export class PanelHandler implements IPanelHandler {
     const response = await this.smartPrompt.showModal(actions);
 
     // Handle cancel - user explicitly cancelled
-    if (response.type === 'cancel') {
+    if (response.type === SmartPromptResponseType.CANCEL) {
       return;
     }
 
     // Handle none - not applicable for panel actions, treat as cancel
-    if (response.type === 'none') {
+    if (response.type === SmartPromptResponseType.NONE) {
       return;
     }
 
-    // Handle reason - should be a PanelAction
-    if (response.type === 'reason') {
-      const action = response.value as PanelAction;
+    // Handle selected - should be a PanelAction
+    if (response.type === SmartPromptResponseType.SELECTED) {
+      const action = response.primarySelection as PanelAction;
       await this.handlePanelAction(action);
     }
   }

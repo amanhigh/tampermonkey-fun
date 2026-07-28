@@ -18,6 +18,16 @@ export interface SmartChoiceGroup {
   defaultChoice?: string;
 }
 
+/** Discriminant for SmartPromptResponse variants. */
+export enum SmartPromptResponseType {
+  /** User pressed Cancel or Escape (no selection made) */
+  CANCEL = 'cancel',
+  /** User pressed None or submitted empty text (no primary chosen) */
+  NONE = 'none',
+  /** User clicked a primary button or submitted custom text */
+  SELECTED = 'selected',
+}
+
 /**
  * Response from SmartPrompt.showModal()
  *
@@ -26,9 +36,13 @@ export interface SmartChoiceGroup {
  * - `selected` — user clicked a primary button or submitted custom text
  */
 export type SmartPromptResponse =
-  | { type: 'cancel'; value: null }
-  | { type: 'none'; value: 'none'; answers: Readonly<Record<string, string | null>> }
-  | { type: 'selected'; primarySelection: string; answers: Readonly<Record<string, string | null>> };
+  | { type: SmartPromptResponseType.CANCEL; value: null }
+  | { type: SmartPromptResponseType.NONE; value: 'none'; answers: Readonly<Record<string, string | null>> }
+  | {
+      type: SmartPromptResponseType.SELECTED;
+      primarySelection: string;
+      answers: Readonly<Record<string, string | null>>;
+    };
 
 /**
  * Interface for smart prompt utility operations
@@ -39,9 +53,9 @@ export interface ISmartPrompt {
    * @param primaryChoices - Array of primary choice button labels
    * @param groups - Choice groups, each rendering as an independent set of radio buttons
    * @returns Promise that resolves with SmartPromptResponse:
-   * - { type: 'cancel', value: null } if user cancelled
-   * - { type: 'none', value: 'none', answers } if user chose none (None button or Escape key)
-   * - { type: 'selected', primarySelection: string, answers } if user selected a primary choice or entered text
+   * - { type: SmartPromptResponseType.CANCEL, value: null } if user cancelled
+   * - { type: SmartPromptResponseType.NONE, value: 'none', answers } if user chose none (None button or Escape key)
+   * - { type: SmartPromptResponseType.SELECTED, primarySelection: string, answers } if user selected a primary choice or entered text
    */
   showModal(primaryChoices: string[], groups?: SmartChoiceGroup[]): Promise<SmartPromptResponse>;
 
@@ -99,7 +113,7 @@ export class SmartPrompt implements ISmartPrompt {
 
     button.onclick = () => {
       const answers = this.getGroupAnswers();
-      callback({ type: 'selected', primarySelection: text, answers });
+      callback({ type: SmartPromptResponseType.SELECTED, primarySelection: text, answers });
       this.destroyModal();
     };
     return button;
@@ -112,7 +126,7 @@ export class SmartPrompt implements ISmartPrompt {
     button.className = SmartPrompt.CLASSES.MODAL_BUTTON;
 
     button.onclick = () => {
-      callback({ type: 'cancel', value: null });
+      callback({ type: SmartPromptResponseType.CANCEL, value: null });
       this.destroyModal();
     };
     return button;
@@ -126,7 +140,7 @@ export class SmartPrompt implements ISmartPrompt {
 
     button.onclick = () => {
       const answers = this.getGroupAnswers();
-      callback({ type: 'none', value: 'none', answers });
+      callback({ type: SmartPromptResponseType.NONE, value: 'none', answers });
       this.destroyModal();
     };
     return button;
@@ -144,10 +158,10 @@ export class SmartPrompt implements ISmartPrompt {
         const value = textBox.value.trim();
         if (value === '') {
           const answers = this.getGroupAnswers();
-          callback({ type: 'none', value: 'none', answers });
+          callback({ type: SmartPromptResponseType.NONE, value: 'none', answers });
         } else {
           const answers = this.getGroupAnswers();
-          callback({ type: 'selected', primarySelection: value, answers });
+          callback({ type: SmartPromptResponseType.SELECTED, primarySelection: value, answers });
         }
         this.destroyModal();
       }
@@ -246,7 +260,7 @@ export class SmartPrompt implements ISmartPrompt {
       const keydownHandler = (event: KeyboardEvent) => {
         if (event.key === 'Escape') {
           const answers = this.getGroupAnswers();
-          resolve({ type: 'none', value: 'none', answers });
+          resolve({ type: SmartPromptResponseType.NONE, value: 'none', answers });
           this.destroyModal();
         }
       };
