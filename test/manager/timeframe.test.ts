@@ -466,24 +466,30 @@ describe('TimeFrameManager', () => {
     });
   });
 
-  // ── Apply with explicit Sequence override ──
+  // ── Apply direct Timeframe ──
 
-  describe('apply with explicit sequence', () => {
-    it('should use supplied YR_SEQUENCE and click toolbar 7 even when AUTO would derive TMN_SEQUENCE', async () => {
-      // Backend has DL → AUTO would derive TMN_SEQUENCE (position 0 = TMN → toolbar 5)
-      mockTickerManager.getTicker.mockResolvedValue(
-        createMockTicker({ timeframes: [TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL] })
-      );
+  describe('applyTimeframe', () => {
+    it.each([
+      [TickerTimeframe.YR, 7],
+      [TickerTimeframe.TMN, 5],
+      [TickerTimeframe.DL, 2],
+    ])('should apply %s using toolbar %s', async (code, toolbar) => {
       const mockClick = jest.fn();
       mockJQuery.mockReturnValue({ length: 1, click: mockClick });
 
-      // Explicit YR_SEQUENCE overrides AUTO derivation
-      const result = await timeFrameManager.apply(0, YR_SEQUENCE);
+      const result = await timeFrameManager.applyTimeframe(code);
 
       expect(result).toBe(true);
-      // YR_SEQUENCE[0] = YR → toolbar 7 (NOT toolbar 5 which AUTO would produce)
-      expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(7)`);
+      expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(${toolbar})`);
       expect(mockClick).toHaveBeenCalled();
+    });
+
+    it('should return false when toolbar element not found', async () => {
+      mockJQuery.mockReturnValue({ length: 0 });
+
+      const result = await timeFrameManager.applyTimeframe(TickerTimeframe.YR);
+
+      expect(result).toBe(false);
     });
   });
 

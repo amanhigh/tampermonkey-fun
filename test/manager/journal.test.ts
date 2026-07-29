@@ -77,6 +77,7 @@ describe('JournalManager', () => {
         return Promise.resolve(TMN_SEQUENCE);
       }),
       apply: jest.fn().mockResolvedValue(true),
+      applyTimeframe: jest.fn().mockReturnValue(true),
       getCurrentConfig: jest.fn().mockReturnValue({ code: TickerTimeframe.TMN, label: '3M', rank: 2, toolbar: 5, style: 'T' }),
     } as jest.Mocked<ITimeFrameManager>;
 
@@ -248,11 +249,11 @@ describe('JournalManager', () => {
 
       expect(mockTimeFrameManager.getSequence).toHaveBeenCalledWith(TickerTimeframe.TMN);
       expect(screenshots).toHaveLength(4);
-      expect(mockTimeFrameManager.apply).toHaveBeenCalledTimes(4);
-      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(1, 0, TMN_SEQUENCE);
-      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(2, 1, TMN_SEQUENCE);
-      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(3, 2, TMN_SEQUENCE);
-      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(4, 3, TMN_SEQUENCE);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenCalledTimes(4);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(1, TickerTimeframe.TMN);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(2, TickerTimeframe.MN);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(3, TickerTimeframe.WK);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(4, TickerTimeframe.DL);
       expect(screenshots[0].file_name).toContain('_1_tmn_set.png');
       expect(screenshots[1].file_name).toContain('_2_mn_set.png');
       expect(screenshots[2].file_name).toContain('_3_wk_set.png');
@@ -264,11 +265,11 @@ describe('JournalManager', () => {
 
       expect(mockTimeFrameManager.getSequence).toHaveBeenCalledWith(TickerTimeframe.SMN);
       expect(screenshots).toHaveLength(4);
-      expect(mockTimeFrameManager.apply).toHaveBeenCalledTimes(4);
-      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(1, 0, SMN_SEQUENCE);
-      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(2, 1, SMN_SEQUENCE);
-      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(3, 2, SMN_SEQUENCE);
-      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(4, 3, SMN_SEQUENCE);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenCalledTimes(4);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(1, TickerTimeframe.SMN);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(2, TickerTimeframe.TMN);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(3, TickerTimeframe.MN);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(4, TickerTimeframe.WK);
       expect(screenshots[0].file_name).toContain('_1_smn_set.png');
       expect(screenshots[1].file_name).toContain('_2_tmn_set.png');
       expect(screenshots[2].file_name).toContain('_3_mn_set.png');
@@ -280,11 +281,11 @@ describe('JournalManager', () => {
 
       expect(mockTimeFrameManager.getSequence).toHaveBeenCalledWith(TickerTimeframe.YR);
       expect(screenshots).toHaveLength(4);
-      expect(mockTimeFrameManager.apply).toHaveBeenCalledTimes(4);
-      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(1, 0, YR_SEQUENCE);
-      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(2, 1, YR_SEQUENCE);
-      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(3, 2, YR_SEQUENCE);
-      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(4, 3, YR_SEQUENCE);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenCalledTimes(4);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(1, TickerTimeframe.YR);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(2, TickerTimeframe.SMN);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(3, TickerTimeframe.TMN);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(4, TickerTimeframe.MN);
       expect(screenshots[0].file_name).toContain('_1_yr_set.png');
       expect(screenshots[0].timeframe).toBe('YR');
       expect(screenshots[1].file_name).toContain('_2_smn_set.png');
@@ -302,26 +303,26 @@ describe('JournalManager', () => {
         .mockRejectedValue(new Error('Screenshot failed'));
 
       await expect(journalManager.screenshotTicker('AAPL', 'error', TickerTimeframe.TMN)).rejects.toThrow('Screenshot failed');
-      expect(mockTimeFrameManager.apply).toHaveBeenCalledTimes(2);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenCalledTimes(2);
     });
 
     it('should skip screenshot when apply returns false and warn user', async () => {
-      mockTimeFrameManager.apply
-        .mockResolvedValueOnce(true)   // TMN
-        .mockResolvedValueOnce(false)  // MN (deactivated)
-        .mockResolvedValueOnce(true)   // WK
-        .mockResolvedValueOnce(true);  // DL
+      mockTimeFrameManager.applyTimeframe
+        .mockReturnValueOnce(true)   // TMN
+        .mockReturnValueOnce(false)  // MN (deactivated)
+        .mockReturnValueOnce(true)   // WK
+        .mockReturnValueOnce(true);  // DL
 
       const screenshots = await journalManager.screenshotTicker('AAPL', 'set', TickerTimeframe.TMN);
 
       expect(screenshots).toHaveLength(3);
       expect(mockOsClient.screenshot).toHaveBeenCalledTimes(3);
       expect(mockTimeFrameManager.getSequence).toHaveBeenCalledWith(TickerTimeframe.TMN);
-      expect(mockTimeFrameManager.apply).toHaveBeenCalledTimes(4);
-      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(1, 0, TMN_SEQUENCE);
-      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(2, 1, TMN_SEQUENCE);
-      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(3, 2, TMN_SEQUENCE);
-      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(4, 3, TMN_SEQUENCE);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenCalledTimes(4);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(1, TickerTimeframe.TMN);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(2, TickerTimeframe.MN);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(3, TickerTimeframe.WK);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(4, TickerTimeframe.DL);
       expect(Notifier.warn).toHaveBeenCalledWith(
         expect.stringContaining('MN')
       );

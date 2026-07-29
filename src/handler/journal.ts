@@ -7,7 +7,7 @@ import { IJournalManager } from '../manager/journal';
 import { ISmartPrompt, SmartChoiceGroup, SmartPromptResponseType } from '../util/smart';
 import { IUIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
-import { JournalActionType, JournalSequence } from '../models/journal';
+import { JournalActionType } from '../models/journal';
 import { DomManager } from '../manager/dom';
 import { Notifier } from '../util/notify';
 import { ITradingViewManager } from '../manager/tv';
@@ -97,7 +97,7 @@ export class JournalHandler implements IJournalHandler {
       return;
     }
 
-    const { reason, sequence } = await this.showReasonModal(true);
+    const { reason, timeframe } = await this.showReasonModal(true);
 
     if (reason === null) {
       return;
@@ -111,10 +111,7 @@ export class JournalHandler implements IJournalHandler {
     const ticker = this.domManager.getTicker();
 
     if (type === JournalActionType.REJECTED) {
-      if (sequence === null) {
-        return;
-      }
-      await this.handleRejectedJournal(ticker, reason, sequence, type);
+      await this.handleRejectedJournal(ticker, reason, timeframe, type);
       return;
     }
   }
@@ -122,12 +119,12 @@ export class JournalHandler implements IJournalHandler {
   private async handleRejectedJournal(
     ticker: string,
     reason: string,
-    sequence: JournalSequence,
+    timeframe: TickerTimeframe,
     type: JournalActionType
   ): Promise<void> {
-    const screenshots = await this.takeJournalScreenshots(ticker, type);
+    const screenshots = await this.takeJournalScreenshots(ticker, type, timeframe);
     const journal = await this.journalManager
-      .createJournal({ ticker, reason, screenshots, type: 'REJECTED', status: 'FAIL', sequence })
+      .createJournal({ ticker, reason, screenshots, type: 'REJECTED', status: 'FAIL', timeframe })
       .catch((error) => {
         throw new Error(`Failed to record journal entry: ${error}`);
       });
@@ -161,22 +158,18 @@ export class JournalHandler implements IJournalHandler {
       throw new Error(`Failed to capture checklist screenshot: ${(error as Error).message}`);
     }
 
-    // Step 3: Show reason prompt with sequence selection after checklist screenshot
-    const { reason, sequence } = await this.showReasonModal(true);
+    // Step 3: Show reason prompt with timeframe selection after checklist screenshot
+    const { reason, timeframe } = await this.showReasonModal(true);
 
     if (reason === null) {
       return;
     }
 
-    if (sequence === null) {
-      return;
-    }
-
     // Step 4: Take normal timeframe screenshots
-    const timeframeScreenshots = await this.takeJournalScreenshots(ticker, type);
+    const timeframeScreenshots = await this.takeJournalScreenshots(ticker, type, timeframe);
 
     // Step 5: Create journal
-    await this.createTakenJournal(ticker, reason, [checklistScreenshot, ...timeframeScreenshots], note, sequence);
+    await this.createTakenJournal(ticker, reason, [checklistScreenshot, ...timeframeScreenshots], note, timeframe);
   }
 
   private createSetupNotes(note: string): CreateJournalNoteRequest[] {
@@ -191,9 +184,10 @@ export class JournalHandler implements IJournalHandler {
 
   private async takeJournalScreenshots(
     ticker: string,
-    type: JournalActionType
+    type: JournalActionType,
+    timeframe: TickerTimeframe
   ): Promise<Awaited<ReturnType<IJournalManager['screenshotTicker']>>> {
-    return this.journalManager.screenshotTicker(ticker, type).catch((error) => {
+    return this.journalManager.screenshotTicker(ticker, type, timeframe).catch((error) => {
       throw new Error(`Failed to take screenshot journal entry: ${error}`);
     });
   }
