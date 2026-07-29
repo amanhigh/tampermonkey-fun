@@ -1,26 +1,31 @@
 /**
  * WatchlistBar contract tests (TDD red phase).
  *
- * Protects the planned compact WatchlistBar / IWatchlistBar public contract.
+ * Protects the planned expandable WatchlistBar / IWatchlistBar public contract.
  *
  * Contract points under test:
  *  - IWatchlistBar exposes `refresh`, `registerEvents` (IBaseBar-compatible)
- *  - Compact-only mode: no disclosure shell, no aria/hidden/toggle markup
+ *  - WatchlistBar is expandable via BaseBar (disclosure shell, toggle, details)
+ *  - `refreshEvents` subscribes exactly to: FIRST_LOAD, WATCHLIST_CHANGED,
+ *    TICKER_CHANGED, TICKER_TRACKING_STARTED, TICKER_TRACKING_STOPPED,
+ *    TICKER_METADATA_CHANGED, TICKER_CATEGORY_CHANGED, TICKER_TIMEFRAMES_CHANGED
  *  - Loads BucketSummary from IPaintManager.summarizeBuckets()
- *  - Renders all ALL_WATCH_CATEGORIES in canonical order as colored chips
+   *  - Compact toggle content renders eight non-Blacklisted count-only span chips
+ *  - Blacklisted is absent from collapsed compact content
+ *  - Expanded details render only Blacklisted with label, dimgrey color, and count
  *  - Each chip uses the configured category color, category label in accessible
  *    metadata, and the count; uncategorizedCount is included in DEFAULT_DAILY count
  *  - Status rules: SET_JOURNAL=0 => ERROR; SET_JOURNAL>0, RUNNING=0 => WARN; both>0 => OK
- *  - Left-click delegates color-filter to IFilterManager preserving ctrl/shift
- *  - Middle-click delegates reset to IFilterManager
- *  - Contextmenu/right-click prevents default and delegates flag-filter preserving shift
- *  - No automatic domain event subscriptions (WatchListHandler explicitly refreshes)
+ *  - Chip mousedown/contextmenu preserve current filter actions/modifiers and call stopPropagation
+ *  - Outer toggle/chevron behavior covered without requiring nested buttons
  *
  * Assumptions:
- *  - WatchlistBar will extend BaseBar<WatchlistData> (compact-only, renderDetails=null)
+ *  - WatchlistBar extends BaseBar<BucketSummary> (expandable, renderDetails returns string)
  *  - BarId.WATCHLIST will be 'aman-watchlist-bar'
- *  - IFilterManager will expose applyColorFilter, applyFlagFilter, resetWatchList
+ *  - IFilterManager will expose applyColorFilter, applyFlagFilter, resetFilters
  *  - The BEM namespace derives from BarId.WATCHLIST as 'watchlist' (aman-watchlist-bar)
+   *  - Non-Blacklisted categories rendered as count-only <span> chips inside toggle button
+ *  - Blacklisted rendered only in expanded details
  */
 
 import { WatchlistBar, IWatchlistBar } from '../../../src/handler/bar/watchlist';
@@ -28,6 +33,7 @@ import { IPaintManager } from '../../../src/manager/paint';
 import { IFilterManager } from '../../../src/manager/filter';
 import { BucketSummary, ALL_WATCH_CATEGORIES, WatchCategoryId } from '../../../src/models/watch';
 import { BAR_CLASS, BarStatus } from '../../../src/models/bar';
+import { DomainEventType } from '../../../src/models/domain_event';
 
 // ── Constants ──
 
@@ -36,13 +42,36 @@ import { BAR_CLASS, BarStatus } from '../../../src/models/bar';
  * Follows the `#aman-watchlist-bar` BarId pattern.
  */
 const ROOT = '#aman-watchlist-bar';
-const CHIP_SELECTOR = '.aman-watchlist-bar__chip';
+const CHIP_SELECTOR = 'span[data-color]';
 
 /** BEM class names expected from the finalized WatchlistBar contract. */
 const BEM = {
   ROOT: 'aman-watchlist-bar',
-  CHIP: 'aman-watchlist-bar__chip',
+  TOGGLE: 'aman-watchlist-bar__toggle',
+  DETAILS: 'aman-watchlist-bar__details',
 } as const;
+
+/** Categories expected in compact toggle content (all except BLACKLISTED). */
+const COMPACT_CATEGORIES = ALL_WATCH_CATEGORIES.filter(
+  (cat) => cat.id !== WatchCategoryId.BLACKLISTED
+);
+
+/** Blacklisted category definition. */
+const BLACKLISTED = ALL_WATCH_CATEGORIES.find(
+  (cat) => cat.id === WatchCategoryId.BLACKLISTED
+)!;
+
+/** All 8 events that refreshEvents must subscribe to. */
+const EXPECTED_REFRESH_EVENTS = [
+  DomainEventType.FIRST_LOAD,
+  DomainEventType.WATCHLIST_CHANGED,
+  DomainEventType.TICKER_CHANGED,
+  DomainEventType.TICKER_TRACKING_STARTED,
+  DomainEventType.TICKER_TRACKING_STOPPED,
+  DomainEventType.TICKER_METADATA_CHANGED,
+  DomainEventType.TICKER_CATEGORY_CHANGED,
+  DomainEventType.TICKER_TIMEFRAMES_CHANGED,
+];
 
 // ── Mock jQuery ──
 
@@ -97,8 +126,18 @@ function getContextMenuHandler(): ((event: any) => void) | undefined {
   return call?.[2] as ((event: any) => void) | undefined;
 }
 
+function invokeToggleHandler(): void {
+  const call = mockRootEl.on.mock.calls.find(
+    (c: any[]) => c[0] === 'click.bar-watchlist' && c[1] === `.${BEM.TOGGLE}`
+  );
+  expect(call).toBeDefined();
+  const handler = call?.[2] as (() => void) | undefined;
+  expect(handler).toBeDefined();
+  handler!();
+}
+
 /**
- * Simulates a click on a category chip by invoking the delegated handler.
+ * Simulates a chip mousedown by invoking the delegated handler.
  * @param chipColor - The data-color attribute value on the chip.
  */
 function simulateChipClick(
@@ -116,7 +155,6 @@ function simulateChipClick(
     return createMockElement();
   });
 
-  // Use mousedown for color filter (matching FilterManager pattern)
   const mouseDownHandler = getChipMouseDownHandler();
   expect(mouseDownHandler).toBeDefined();
 
@@ -177,13 +215,11 @@ function createMockPaintManager(): jest.Mocked<IPaintManager> {
 function createMockFilterManager(): jest.Mocked<IFilterManager> {
   return {
     resetWatchList: jest.fn(),
-    refreshSummary: jest.fn(),
-    // New methods expected from the planned IFilterManager extension:
     applyColorFilter: jest.fn(),
     applyFlagFilter: jest.fn(),
     resetFilters: jest.fn(),
     reapplyFilters: jest.fn(),
-  } as any;
+  };
 }
 
 function createBucketSummary(
@@ -236,36 +272,48 @@ describe('WatchlistBar', () => {
 
       expect(mockPaintManager.summarizeBuckets).toHaveBeenCalledTimes(1);
     });
+  });
 
-    it('should render all ALL_WATCH_CATEGORIES in canonical order', async () => {
+  // ── Refresh event subscriptions ──
+
+  describe('registerEvents', () => {
+    it('should subscribe to exactly 8 refresh events via registerEvents', () => {
       const bar = new WatchlistBar(mockPaintManager, mockFilterManager);
-      mockPaintManager.summarizeBuckets.mockResolvedValue(
-        createBucketSummary({ uncategorizedCount: 3 })
+      const mockSubscriber = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn(),
+      };
+
+      bar.registerEvents(mockSubscriber);
+
+      expect(mockSubscriber.subscribeMany).toHaveBeenCalledWith(
+        expect.arrayContaining(EXPECTED_REFRESH_EVENTS),
+        expect.any(Function)
       );
 
-      await bar.refresh();
+      // Verify exactly 8 events are passed
+      const eventsArg = mockSubscriber.subscribeMany.mock.calls[0][0];
+      expect(eventsArg).toHaveLength(EXPECTED_REFRESH_EVENTS.length);
+    });
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+    it('should not subscribe to any rendering-specific events', () => {
+      const bar = new WatchlistBar(mockPaintManager, mockFilterManager);
+      const mockSubscriber = {
+        subscribe: jest.fn(),
+        subscribeMany: jest.fn(),
+      };
 
-      // Verify all categories appear in canonical order
-      const expectedLabels = ALL_WATCH_CATEGORIES.map((cat) => cat.label);
-      for (const label of expectedLabels) {
-        expect(html).toContain(label);
-      }
+      bar.registerEvents(mockSubscriber);
 
-      // Verify canonical ordering by position
-      for (let i = 0; i < expectedLabels.length - 1; i++) {
-        const earlier = html.indexOf(expectedLabels[i]);
-        const later = html.indexOf(expectedLabels[i + 1]);
-        expect(earlier).toBeLessThan(later);
-      }
+      // Only one subscribeMany call for the 8 refresh events
+      expect(mockSubscriber.subscribeMany).toHaveBeenCalledTimes(1);
     });
   });
 
-  // ── Chip rendering ──
+  // ── Expandable mode via BaseBar ──
 
-  describe('chip rendering', () => {
-    it('should render each category with its configured color', async () => {
+  describe('expandable mode', () => {
+    it('should render a disclosure toggle button in the root', async () => {
       const bar = new WatchlistBar(mockPaintManager, mockFilterManager);
       mockPaintManager.summarizeBuckets.mockResolvedValue(
         createBucketSummary({ uncategorizedCount: 0 })
@@ -274,13 +322,40 @@ describe('WatchlistBar', () => {
       await bar.refresh();
 
       const html = mockRootEl.html.mock.calls[0][0] as string;
-
-      for (const cat of ALL_WATCH_CATEGORIES) {
-        expect(html).toContain(cat.color);
-      }
+      expect(html).toContain(BEM.TOGGLE);
+      expect(html).toContain('aria-expanded');
+      expect(html).toContain('aria-controls');
     });
 
-    it('should render each category with its label in accessible metadata', async () => {
+    it('should render a details container in the root', async () => {
+      const bar = new WatchlistBar(mockPaintManager, mockFilterManager);
+      mockPaintManager.summarizeBuckets.mockResolvedValue(
+        createBucketSummary({ uncategorizedCount: 0 })
+      );
+
+      await bar.refresh();
+
+      const html = mockRootEl.html.mock.calls[0][0] as string;
+      expect(html).toContain(BEM.DETAILS);
+    });
+
+    it('should default to collapsed (aria-expanded=false)', async () => {
+      const bar = new WatchlistBar(mockPaintManager, mockFilterManager);
+      mockPaintManager.summarizeBuckets.mockResolvedValue(
+        createBucketSummary({ uncategorizedCount: 0 })
+      );
+
+      await bar.refresh();
+
+      const html = mockRootEl.html.mock.calls[0][0] as string;
+      expect(html).toContain('aria-expanded="false"');
+    });
+  });
+
+  // ── Compact toggle content ──
+
+  describe('compact toggle content', () => {
+    it('should render eight non-Blacklisted categories as span chips', async () => {
       const bar = new WatchlistBar(mockPaintManager, mockFilterManager);
       mockPaintManager.summarizeBuckets.mockResolvedValue(
         createBucketSummary({ uncategorizedCount: 0 })
@@ -290,23 +365,48 @@ describe('WatchlistBar', () => {
 
       const html = mockRootEl.html.mock.calls[0][0] as string;
 
-      for (const cat of ALL_WATCH_CATEGORIES) {
+      for (const cat of COMPACT_CATEGORIES) {
+        expect(html).toContain(cat.label);
+        expect(html).toContain(`data-color="${cat.color}"`);
+      }
+
+      const toggleHtml = html.match(/<button[^>]*>([\s\S]*?)<\/button>/)![1];
+      expect(toggleHtml).toContain(`class="${BEM.ROOT}__row"`);
+      expect(toggleHtml).toContain(`class="${BEM.ROOT}__chevron"`);
+      expect(toggleHtml).not.toContain('>Ready</span>');
+    });
+
+    it('should not render Blacklisted in compact toggle content', async () => {
+      const bar = new WatchlistBar(mockPaintManager, mockFilterManager);
+      mockPaintManager.summarizeBuckets.mockResolvedValue(
+        createBucketSummary({ uncategorizedCount: 0 })
+      );
+
+      await bar.refresh();
+
+      const html = mockRootEl.html.mock.calls[0][0] as string;
+
+      // Extract only the toggle button portion (between <button...> and </button>)
+      const toggleMatch = html.match(/<button[^>]*>([\s\S]*?)<\/button>/);
+      expect(toggleMatch).not.toBeNull();
+      const toggleHtml = toggleMatch![1];
+
+      expect(toggleHtml).not.toContain(BLACKLISTED.label);
+    });
+
+    it('should render each chip with its label in accessible metadata', async () => {
+      const bar = new WatchlistBar(mockPaintManager, mockFilterManager);
+      mockPaintManager.summarizeBuckets.mockResolvedValue(
+        createBucketSummary({ uncategorizedCount: 0 })
+      );
+
+      await bar.refresh();
+
+      const html = mockRootEl.html.mock.calls[0][0] as string;
+
+      for (const cat of COMPACT_CATEGORIES) {
         expect(html).toContain(cat.label);
       }
-    });
-
-    it('should render each category chip with the BEM chip class', async () => {
-      const bar = new WatchlistBar(mockPaintManager, mockFilterManager);
-      mockPaintManager.summarizeBuckets.mockResolvedValue(
-        createBucketSummary({ uncategorizedCount: 0 })
-      );
-
-      await bar.refresh();
-
-      const html = mockRootEl.html.mock.calls[0][0] as string;
-
-      // At least one chip class present (each category renders a chip)
-      expect(html).toContain(BEM.CHIP);
     });
 
     it('should include category count in each chip', async () => {
@@ -345,10 +445,10 @@ describe('WatchlistBar', () => {
     });
   });
 
-  // ── Compact-only rendering ──
+  // ── Expanded details ──
 
-  describe('compact-only mode', () => {
-    it('should render without disclosure/toggle/aria-expanded/aria-controls/hidden', async () => {
+  describe('expanded details', () => {
+    it('should render only Blacklisted category in expanded details', async () => {
       const bar = new WatchlistBar(mockPaintManager, mockFilterManager);
       mockPaintManager.summarizeBuckets.mockResolvedValue(
         createBucketSummary({ uncategorizedCount: 0 })
@@ -356,15 +456,62 @@ describe('WatchlistBar', () => {
 
       await bar.refresh();
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+      invokeToggleHandler();
 
-      expect(html).toContain(BEM.CHIP);
-      expect(html).not.toContain('aria-expanded');
-      expect(html).not.toContain('aria-controls');
-      expect(html).not.toContain('hidden');
-      expect(html).not.toContain('toggle');
-      expect(html).not.toContain('__toggle');
-      expect(html).not.toContain('__details');
+      const html = mockRootEl.html.mock.calls[mockRootEl.html.mock.calls.length - 1][0] as string;
+
+      // Extract the details container content
+      const detailsMatch = html.match(
+        new RegExp(`<div[^>]*class="${BEM.DETAILS}"[^>]*>([\\s\\S]*?)</div>`)
+      );
+      expect(detailsMatch).not.toBeNull();
+      const detailsHtml = detailsMatch![1];
+
+      expect(detailsHtml).toContain(BLACKLISTED.label);
+      expect(detailsHtml).toContain(BLACKLISTED.color);
+    });
+
+    it('should show Blacklisted count in expanded details', async () => {
+      const bar = new WatchlistBar(mockPaintManager, mockFilterManager);
+      const buckets = new Map<WatchCategoryId, number>();
+      buckets.set(WatchCategoryId.BLACKLISTED, 7);
+      mockPaintManager.summarizeBuckets.mockResolvedValue(
+        createBucketSummary({ buckets, uncategorizedCount: 0 })
+      );
+
+      await bar.refresh();
+
+      invokeToggleHandler();
+
+      const html = mockRootEl.html.mock.calls[mockRootEl.html.mock.calls.length - 1][0] as string;
+      const detailsMatch = html.match(
+        new RegExp(`<div[^>]*class="${BEM.DETAILS}"[^>]*>([\\s\\S]*?)</div>`)
+      );
+      expect(detailsMatch).not.toBeNull();
+      const detailsHtml = detailsMatch![1];
+
+      expect(detailsHtml).toContain('7');
+      expect(detailsHtml).toContain(`${BLACKLISTED.label}:`);
+    });
+
+    it('should use dimgrey color for Blacklisted in details', async () => {
+      const bar = new WatchlistBar(mockPaintManager, mockFilterManager);
+      mockPaintManager.summarizeBuckets.mockResolvedValue(
+        createBucketSummary({ uncategorizedCount: 0 })
+      );
+
+      await bar.refresh();
+
+      invokeToggleHandler();
+
+      const html = mockRootEl.html.mock.calls[mockRootEl.html.mock.calls.length - 1][0] as string;
+      const detailsMatch = html.match(
+        new RegExp(`<div[^>]*class="${BEM.DETAILS}"[^>]*>([\\s\\S]*?)</div>`)
+      );
+      expect(detailsMatch).not.toBeNull();
+      const detailsHtml = detailsMatch![1];
+
+      expect(detailsHtml).toContain('dimgrey');
     });
   });
 
@@ -450,7 +597,6 @@ describe('WatchlistBar', () => {
 
       await bar.refresh();
 
-      // Click the first category chip (SET_JOURNAL, color=orange)
       simulateChipClick('orange');
 
       expect(mockFilterManager.applyColorFilter).toHaveBeenCalledWith(
@@ -494,7 +640,7 @@ describe('WatchlistBar', () => {
       );
     });
 
-    it('should delegate middle-click to reset on IFilterManager', async () => {
+    it('should delegate middle-click to resetFilters on IFilterManager', async () => {
       const bar = new WatchlistBar(mockPaintManager, mockFilterManager);
       mockPaintManager.summarizeBuckets.mockResolvedValue(
         createBucketSummary({ uncategorizedCount: 0 })
@@ -505,6 +651,36 @@ describe('WatchlistBar', () => {
       simulateChipMiddleClick('orange');
 
       expect(mockFilterManager.resetFilters).toHaveBeenCalled();
+    });
+
+    it('should call stopPropagation on chip mousedown', async () => {
+      const bar = new WatchlistBar(mockPaintManager, mockFilterManager);
+      mockPaintManager.summarizeBuckets.mockResolvedValue(
+        createBucketSummary({ uncategorizedCount: 0 })
+      );
+
+      await bar.refresh();
+
+      const fakeDomEl = { nodeType: 1, tagName: 'SPAN' };
+      const mockWrappedEl = createMockElement();
+      mockWrappedEl.data.mockReturnValue('orange');
+
+      mockJQuery.mockImplementation((selector: any) => {
+        if (selector === ROOT) return mockRootEl;
+        if (selector === fakeDomEl) return mockWrappedEl;
+        return createMockElement();
+      });
+
+      const mouseDownHandler = getChipMouseDownHandler()!;
+      const mouseEvent = {
+        which: 1,
+        target: fakeDomEl,
+        originalEvent: { ctrlKey: false, shiftKey: false },
+        stopPropagation: jest.fn(),
+      };
+      mouseDownHandler(mouseEvent);
+
+      expect(mouseEvent.stopPropagation).toHaveBeenCalled();
     });
   });
 
@@ -536,24 +712,35 @@ describe('WatchlistBar', () => {
 
       expect(mockFilterManager.applyFlagFilter).toHaveBeenCalledWith('orange', true);
     });
-  });
 
-  // ── Event subscriptions ──
-
-  describe('registerEvents', () => {
-    it('should subscribe to no automatic domain events', () => {
+    it('should call stopPropagation on contextmenu', async () => {
       const bar = new WatchlistBar(mockPaintManager, mockFilterManager);
-      const mockSubscriber = {
-        subscribe: jest.fn(),
-        subscribeMany: jest.fn(),
+      mockPaintManager.summarizeBuckets.mockResolvedValue(
+        createBucketSummary({ uncategorizedCount: 0 })
+      );
+
+      await bar.refresh();
+
+      const fakeDomEl = { nodeType: 1, tagName: 'SPAN' };
+      const mockWrappedEl = createMockElement();
+      mockWrappedEl.data.mockReturnValue('orange');
+
+      mockJQuery.mockImplementation((selector: any) => {
+        if (selector === ROOT) return mockRootEl;
+        if (selector === fakeDomEl) return mockWrappedEl;
+        return createMockElement();
+      });
+
+      const contextMenuHandler = getContextMenuHandler()!;
+      const event = {
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+        target: fakeDomEl,
+        originalEvent: { shiftKey: false },
       };
+      contextMenuHandler(event);
 
-      bar.registerEvents(mockSubscriber);
-
-      // WatchListHandler explicitly refreshes the bar after watchlist painting;
-      // the bar itself should not auto-subscribe to any domain events.
-      expect(mockSubscriber.subscribeMany).not.toHaveBeenCalled();
-      expect(mockSubscriber.subscribe).not.toHaveBeenCalled();
+      expect(event.stopPropagation).toHaveBeenCalled();
     });
   });
 });

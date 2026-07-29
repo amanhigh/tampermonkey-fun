@@ -10,13 +10,13 @@ import { DomainEventType } from '../models/domain_event';
  * Interface for managing TradingView watchlist operations.
  * Ticker retrieval and painting are delegated to DomManager and PaintManager.
  * This interface only handles watchlist persistence, painting, diffing,
- * and WATCHLIST_CHANGED publication. Summary/label refresh is handled
- * by the caller (WatchListHandler) via WatchlistBar.
+ * and WATCHLIST_CHANGED publication. Summary/label refresh is owned by
+ * WatchlistBar's direct domain-event subscriptions.
  */
 export interface ITradingViewWatchlistManager {
   /**
    * Refreshes watchlist UI: layout reset, ticker paint, and diff publication.
-   * Does NOT refresh summary labels — caller must refresh the bar separately.
+   * Summary refresh is handled by WatchlistBar's direct domain-event subscriptions.
    */
   refresh(): Promise<void>;
 
@@ -24,9 +24,8 @@ export interface ITradingViewWatchlistManager {
    * Targeted refresh for specific tickers that need repainting (category change,
    * timeframe change, metadata change, etc). Always repaints tickers.
    * @param tickers - Ticker symbols to repaint
-   * @returns true after painting a non-empty list, false for an empty list.
    */
-  refreshTickers(tickers: string[]): Promise<boolean>;
+  refreshTickers(tickers: string[]): Promise<void>;
 
   /**
    * Targeted refresh driven by observed DOM change.
@@ -34,16 +33,15 @@ export interface ITradingViewWatchlistManager {
    * vs current DOM. For a single ticker change, performs a targeted
    * refresh (paintTickers). For zero or multiple changes, falls back
    * to full refresh().
-   * @returns true after baseline/full/single/multiple membership refreshes;
-   *          false when the snapshot shows no membership changes.
    */
-  refreshChangedTickers(): Promise<boolean>;
+  refreshChangedTickers(): Promise<void>;
 }
 
 /**
  * Manages TradingView watchlist refresh orchestration, ticker diffing,
  * DOM silo persistence, and WATCHLIST_CHANGED event publishing.
- * Summary/label refresh is delegated to the caller (WatchListHandler).
+ * Summary/label refresh is owned by WatchlistBar's direct domain-event
+ * subscriptions.
  */
 export class TradingViewWatchlistManager implements ITradingViewWatchlistManager {
   /**
@@ -83,21 +81,20 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   }
 
   /** @inheritdoc */
-  async refreshTickers(tickers: string[]): Promise<boolean> {
+  async refreshTickers(tickers: string[]): Promise<void> {
     if (tickers.length === 0) {
-      return false;
+      return;
     }
 
     await this.paintManager.paintTickers(tickers);
-    return true;
   }
 
   /** @inheritdoc */
-  async refreshChangedTickers(): Promise<boolean> {
+  async refreshChangedTickers(): Promise<void> {
     // Fall back to full refresh if baseline has not been established
     if (this.prevWatchlistTickers === null) {
       await this.refresh();
-      return true;
+      return;
     }
 
     const currentTickers = this.getCurrentWatchlistTickers();
@@ -108,7 +105,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     if (diff.changedTickers.length === 0) {
       // No membership change — just update snapshot
       this.updateSnapshot(currentTickers);
-      return false;
+      return;
     }
 
     this.updateSnapshot(currentTickers);
@@ -118,13 +115,12 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
       await this.clearRemovedReadyState(diff.removedTickers);
       await this.paintManager.paintTickers(diff.changedTickers);
       this.publishWatchlistChanged(diff.changedTickers);
-      return true;
+      return;
     }
 
     // Multiple changes — fall back to full refresh
     await this.paintManager.paint();
     this.publishWatchlistChanged(diff.changedTickers);
-    return true;
   }
 
   // ── Snapshot and diff helpers ──

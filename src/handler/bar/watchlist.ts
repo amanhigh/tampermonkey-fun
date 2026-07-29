@@ -12,8 +12,7 @@ import { DomainEventType } from '../../models/domain_event';
  * Left-click applies a color filter, middle-click resets filters,
  * and right-click/contextmenu applies a flag filter.
  *
- * The bar does not auto-subscribe to domain events; the parent
- * WatchListHandler explicitly calls {@link refresh} after painting.
+ * WatchlistBar subscribes directly to its domain refresh events.
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface IWatchlistBar extends IBaseBar {}
@@ -21,12 +20,12 @@ export interface IWatchlistBar extends IBaseBar {}
 /**
  * Compact watchlist bar displaying category filter chips.
  *
- * Each chip shows the category label and count. Left-click delegates
+ * Each chip shows the category count, with the category label in metadata. Left-click delegates
  * color filtering to {@link IFilterManager.applyColorFilter}, middle-click
  * delegates reset to {@link IFilterManager.resetFilters}, and contextmenu
  * delegates flag filtering to {@link IFilterManager.applyFlagFilter}.
  *
- * Compact-only mode — no disclosure shell, toggle, or expanded details.
+ * The compact row is rendered inside BaseBar's disclosure toggle; details contain Blacklisted.
  *
  * @see {@link IWatchlistBar} for the public contract.
  */
@@ -45,9 +44,18 @@ export class WatchlistBar extends BaseBar<BucketSummary> implements IWatchlistBa
     super(BarId.WATCHLIST);
   }
 
-  /** WatchListHandler explicitly refreshes the bar after watchlist painting. */
+  /** The bar owns direct domain-event refresh subscriptions. */
   protected get refreshEvents(): readonly DomainEventType[] {
-    return [];
+    return [
+      DomainEventType.FIRST_LOAD,
+      DomainEventType.WATCHLIST_CHANGED,
+      DomainEventType.TICKER_CHANGED,
+      DomainEventType.TICKER_TRACKING_STARTED,
+      DomainEventType.TICKER_TRACKING_STOPPED,
+      DomainEventType.TICKER_METADATA_CHANGED,
+      DomainEventType.TICKER_CATEGORY_CHANGED,
+      DomainEventType.TICKER_TIMEFRAMES_CHANGED,
+    ];
   }
 
   /** @inheritdoc */
@@ -56,27 +64,35 @@ export class WatchlistBar extends BaseBar<BucketSummary> implements IWatchlistBa
   }
 
   /**
-   * Render compact chips for all watch categories in canonical order.
-   * Each chip is a `<button>` with BEM class, data-color, title, aria-label, and count.
+   * Render compact chips for all non-blacklisted watch categories in canonical order.
+   * Each chip is a lightweight span with data-color, title, aria-label, and count.
    * DEFAULT_DAILY display count includes uncategorizedCount.
    */
   protected renderCompact(data: BucketSummary): string {
-    const chips: string[] = [];
+    const chips = ALL_WATCH_CATEGORIES.filter((category) => category.id !== WatchCategoryId.BLACKLISTED)
+      .map((category) => {
+        const count = data.buckets.get(category.id) ?? 0;
+        const displayCount = category.id === WatchCategoryId.DEFAULT_DAILY ? count + data.uncategorizedCount : count;
+        return this.renderCategoryChip(category.label, category.color, displayCount);
+      })
+      .join('');
 
-    for (const cat of ALL_WATCH_CATEGORIES) {
-      const count = data.buckets.get(cat.id) ?? 0;
-      const displayCount = cat.id === WatchCategoryId.DEFAULT_DAILY ? count + data.uncategorizedCount : count;
+    return `<span class="${this.bemElement('row')}">${chips}<span class="${this.bemElement(
+      'chevron'
+    )}" aria-hidden="true">›</span></span>`;
+  }
 
-      chips.push(
-        `<button type="button" class="${this.bemElement('chip')}" ` +
-          `data-color="${cat.color}" ` +
-          `title="${cat.label}: ${displayCount}" ` +
-          `aria-label="${cat.label}: ${displayCount}">` +
-          `${displayCount}</button>`
-      );
+  /** Render the sole expanded detail row for the blacklisted category. */
+  protected renderDetails(data: BucketSummary): string {
+    const category = ALL_WATCH_CATEGORIES.find((item) => item.id === WatchCategoryId.BLACKLISTED);
+    if (!category) {
+      return '';
     }
 
-    return chips.join('');
+    const count = data.buckets.get(category.id) ?? 0;
+    return `<div class="${this.bemElement('details-row')}"><span class="${this.bemElement(
+      'details-label'
+    )}">${category.label}: </span>${this.renderCategoryChip(category.label, category.color, count)}</div>`;
   }
 
   /**
@@ -99,6 +115,22 @@ export class WatchlistBar extends BaseBar<BucketSummary> implements IWatchlistBa
     return BarStatus.OK;
   }
 
+  /** Ignore clicks originating from a filter chip; other clicks toggle details. */
+  protected onLeftClick(event?: JQuery.ClickEvent): void {
+    const target = event?.target as
+      | {
+          closest?: (selector: string) => unknown;
+          matches?: (selector: string) => boolean;
+        }
+      | undefined;
+
+    if (target?.closest?.('span[data-color]') || target?.matches?.('span[data-color]')) {
+      return;
+    }
+
+    super.onLeftClick(event);
+  }
+
   /**
    * Bind delegated mousedown and contextmenu handlers on the chip selector,
    * then reapply filters so the active filter chain survives summary repaint.
@@ -108,11 +140,13 @@ export class WatchlistBar extends BaseBar<BucketSummary> implements IWatchlistBa
    * Contextmenu → {@link IFilterManager.applyFlagFilter} with preventDefault/stopPropagation.
    */
   protected onPaint($root: JQuery, _data: BucketSummary): void {
-    const chipSelector = `.${this.bemElement('chip')}`;
+    const chipSelector = 'span[data-color]';
 
     $root
       .off(`mousedown.${this.chipEventNs}`, chipSelector)
       .on(`mousedown.${this.chipEventNs}`, chipSelector, (event: JQuery.MouseDownEvent) => {
+        event.stopPropagation();
+
         const color = $(event.target).data('color') as string | undefined;
         if (!color) {
           return;
@@ -150,5 +184,10 @@ export class WatchlistBar extends BaseBar<BucketSummary> implements IWatchlistBa
       });
 
     this.filterManager.reapplyFilters();
+  }
+
+  /** Render a category label/count chip shared by compact and detail output. */
+  private renderCategoryChip(label: string, color: string, count: number): string {
+    return `<span class="${this.bemElement('chip')}" data-color="${color}" title="${label}: ${count}" aria-label="${label}: ${count}">${count}</span>`;
   }
 }

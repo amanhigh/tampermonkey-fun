@@ -545,8 +545,7 @@ export class Factory {
             Factory.manager.watchlist(),
             Factory.util.sync(),
             Factory.manager.category(),
-            Factory.manager.dom(),
-            Factory.handler.watchlistBar()
+            Factory.manager.dom()
           )
       ),
     flag: (): IFlagHandler =>

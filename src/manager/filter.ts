@@ -1,11 +1,8 @@
 import { Constants } from '../models/constant';
 import { TickerArea, TickerVisibility } from '../models/dom';
-import { IUIUtil } from '../util/ui';
-import { ALL_WATCH_CATEGORIES, BucketSummary } from '../models/watch';
 
 /** Mouse button codes for filtering */
 const LEFT_CLICK = 1;
-const MIDDLE_CLICK = 2;
 const RIGHT_CLICK = 3;
 
 /**
@@ -19,9 +16,9 @@ interface WatchlistFilter {
 }
 
 /**
- * Interface for managing watchlist summary label rendering and filter-chain
- * UI behavior. All DOM reset, label drawing, and color/flag filter application
- * are scoped here. Pure UI — no ticker state, persistence, or domain events.
+ * Interface for managing watchlist filter-chain UI behavior.
+ * All DOM reset and color/flag filter application are scoped here.
+ * Pure UI — no ticker state, persistence, or domain events.
  */
 export interface IFilterManager {
   /**
@@ -31,22 +28,45 @@ export interface IFilterManager {
   resetWatchList(): void;
 
   /**
-   * Re-render summary labels and re-apply active filters.
-   * @param result - Bucket summary counts from PaintManager.
+   * Apply a color-based filter to the watchlist.
+   * Without modifiers the chain is replaced; with ctrl/shift it is appended.
+   * @param color - CSS color string to match against ticker symbols.
+   * @param shift - When true the matching set is inverted (hide instead of show).
+   * @param ctrl  - When true the filter is appended to the existing chain.
    */
-  refreshSummary(result: BucketSummary): void;
+  applyColorFilter(color: string, shift: boolean, ctrl: boolean): void;
+
+  /**
+   * Apply a flag-based filter to the watchlist.
+   * Without modifiers the chain is replaced; with shift it is appended and
+   * hides matching items.
+   * @param color - CSS color string to match against ticker flags.
+   * @param shift - When true the matching set is hidden.
+   */
+  applyFlagFilter(color: string, shift: boolean): void;
+
+  /**
+   * Reset the filter chain and restore full watchlist visibility.
+   */
+  resetFilters(): void;
+
+  /**
+   * Re-apply the current filter chain without modifying it.
+   * Useful after a summary repaint.
+   */
+  reapplyFilters(): void;
 }
 
 /**
- * Manages watchlist summary label rendering and filter-chain UI behavior.
- * All DOM reset, label drawing, and color/flag filter application live here.
+ * Manages watchlist filter-chain UI behavior.
+ * All DOM reset and color/flag filter application live here.
  * Pure UI — no ticker state, persistence, or domain events.
  */
 export class FilterManager implements IFilterManager {
   /** Filter chain for watchlist operations */
   private filterChain: WatchlistFilter[] = [];
 
-  constructor(private readonly uiUtil: IUIUtil) {
+  constructor() {
     // Initialise default white filter
     this.addFilter({
       color: Constants.UI.COLORS.DEFAULT,
@@ -71,52 +91,24 @@ export class FilterManager implements IFilterManager {
   }
 
   /** @inheritdoc */
-  refreshSummary(result: BucketSummary): void {
-    this.displaySetSummary(result);
+  applyColorFilter(color: string, shift: boolean, ctrl: boolean): void {
+    this.addFilter({ color, index: LEFT_CLICK, ctrl, shift });
+  }
+
+  /** @inheritdoc */
+  applyFlagFilter(color: string, shift: boolean): void {
+    this.addFilter({ color, index: RIGHT_CLICK, ctrl: false, shift });
+  }
+
+  /** @inheritdoc */
+  resetFilters(): void {
+    this.resetWatchList();
+    this.filterChain = [];
+  }
+
+  /** @inheritdoc */
+  reapplyFilters(): void {
     this.applyFilters();
-  }
-
-  /**
-   * Build a WatchlistFilter from a jQuery mouse-down event.
-   */
-  private createFilterFromMouseEvent(e: JQuery.MouseDownEvent): WatchlistFilter {
-    return {
-      color: $(e.target).data('color') as string,
-      index: e.which,
-      ctrl: e.originalEvent?.ctrlKey || false,
-      shift: e.originalEvent?.shiftKey || false,
-    };
-  }
-
-  /**
-   * Display the ticker set summary in the UI.
-   * @param result - Bucket summary counts from paint
-   */
-  private displaySetSummary(result: BucketSummary): void {
-    const $watchSummary = $(`#${Constants.UI.IDS.AREAS.SUMMARY}`);
-    $watchSummary.empty();
-
-    const uncategorizedCount = result.uncategorizedCount;
-
-    for (const cat of ALL_WATCH_CATEGORIES) {
-      const count = result.buckets.get(cat.id) ?? 0;
-      const displayCount = cat.id === 'DEFAULT_DAILY' ? count + uncategorizedCount : count;
-      const color = cat.color;
-
-      const $label = this.uiUtil
-        .buildLabel(displayCount.toString() + '|', color)
-        .data('color', color)
-        .appendTo($watchSummary);
-
-      $label
-        .mousedown((e: JQuery.MouseDownEvent) => {
-          this.addFilter(this.createFilterFromMouseEvent(e));
-        })
-        .contextmenu((e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        });
-    }
   }
 
   /**
@@ -193,14 +185,6 @@ export class FilterManager implements IFilterManager {
   }
 
   /**
-   * Handles filter reset (middle-click)
-   */
-  private handleResetFilter(): void {
-    this.resetWatchList();
-    this.filterChain = [];
-  }
-
-  /**
    * Filters the watchlist symbols based on the provided filter parameters
    */
   private filterWatchList(filter: WatchlistFilter): void {
@@ -212,9 +196,6 @@ export class FilterManager implements IFilterManager {
     switch (filter.index) {
       case LEFT_CLICK:
         this.filterByColor(filter.color, filter.shift);
-        break;
-      case MIDDLE_CLICK:
-        this.handleResetFilter();
         break;
       case RIGHT_CLICK:
         this.filterByFlag(filter.color, filter.shift);

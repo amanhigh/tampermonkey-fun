@@ -131,11 +131,10 @@ describe('TradingViewWatchlistManager', () => {
         mockPublisher
       );
 
-      const result = await freshManager.refreshChangedTickers();
+      await freshManager.refreshChangedTickers();
 
       // Falls back to full refresh via paint()
       expect(mockPaintManager.paint).toHaveBeenCalled();
-      expect(result).toBe(true);
     });
 
     it('should use paintTickers for one added ticker from snapshot diff', async () => {
@@ -146,11 +145,10 @@ describe('TradingViewWatchlistManager', () => {
       // Now simulate one added ticker (D)
       mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B', 'C', 'D']));
 
-      const result = await watchlistManager.refreshChangedTickers();
+      await watchlistManager.refreshChangedTickers();
 
       expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['D']);
       expect(mockPaintManager.paint).not.toHaveBeenCalled();
-      expect(result).toBe(true);
     });
 
     it('should use paintTickers for one removed ticker from snapshot diff', async () => {
@@ -161,11 +159,10 @@ describe('TradingViewWatchlistManager', () => {
       // Now simulate one removed ticker (B)
       mockDomManager.getTickers.mockReturnValue(new Set(['A', 'C']));
 
-      const result = await watchlistManager.refreshChangedTickers();
+      await watchlistManager.refreshChangedTickers();
 
       expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['B']);
       expect(mockPaintManager.paint).not.toHaveBeenCalled();
-      expect(result).toBe(true);
     });
 
     it('should clear READY state for removed ticker', async () => {
@@ -219,14 +216,13 @@ describe('TradingViewWatchlistManager', () => {
       // Two added tickers — diff size is 2
       mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B', 'C', 'D']));
 
-      const result = await watchlistManager.refreshChangedTickers();
+      await watchlistManager.refreshChangedTickers();
 
       expect(mockPaintManager.paint).toHaveBeenCalled();
       expect(mockPaintManager.paintTickers).not.toHaveBeenCalled();
-      expect(result).toBe(true);
     });
 
-    it('should return false when there are no changes', async () => {
+    it('should not publish when there are no changes', async () => {
       mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B']));
       await watchlistManager.refresh();
       jest.clearAllMocks();
@@ -234,28 +230,25 @@ describe('TradingViewWatchlistManager', () => {
       // Same set — no diff
       mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B']));
 
-      const result = await watchlistManager.refreshChangedTickers();
+      await watchlistManager.refreshChangedTickers();
 
       expect(mockPaintManager.paint).not.toHaveBeenCalled();
       expect(mockPaintManager.paintTickers).not.toHaveBeenCalled();
       expect(mockPublisher.publish).not.toHaveBeenCalled();
-      expect(result).toBe(false);
     });
   });
 
   describe('refreshTickers', () => {
-    it('should call paintTickers and return true for non-empty ticker list', async () => {
-      const result = await watchlistManager.refreshTickers(['AAPL', 'GOOG']);
+    it('should call paintTickers for non-empty ticker list', async () => {
+      await watchlistManager.refreshTickers(['AAPL', 'GOOG']);
 
       expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['AAPL', 'GOOG']);
-      expect(result).toBe(true);
     });
 
-    it('should skip painting and return false for empty ticker list', async () => {
-      const result = await watchlistManager.refreshTickers([]);
+    it('should skip painting for empty ticker list', async () => {
+      await watchlistManager.refreshTickers([]);
 
       expect(mockPaintManager.paintTickers).not.toHaveBeenCalled();
-      expect(result).toBe(false);
     });
   });
 });

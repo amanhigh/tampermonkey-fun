@@ -7,17 +7,67 @@
 .aman-watchlist-bar {
     display: block;
 
+    .aman-watchlist-bar__toggle {
+        display: flex;
+        width: 100%;
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        font: inherit;
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
+
+        &:focus-visible {
+            outline: 1px solid rgba(255, 255, 255, 0.6);
+            outline-offset: 1px;
+        }
+    }
+
+    .aman-watchlist-bar__row {
+        display: flex;
+        flex: 1 1 auto;
+        flex-wrap: nowrap;
+        align-items: center;
+        min-width: 0;
+        gap: 2px;
+        overflow: hidden;
+    }
+
+    .aman-watchlist-bar__chevron {
+        flex: 0 0 auto;
+        padding: 0 2px;
+        font-size: 12px;
+        line-height: 1.2;
+    }
+
+    .aman-watchlist-bar__details-row {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+    }
+
+    .aman-watchlist-bar__details-label {
+        color: dimgrey;
+        font-size: 10px;
+        line-height: 1.2;
+    }
+
     // ============================================
     // Watchlist Chip
     // ============================================
     .aman-watchlist-bar__chip {
         display: inline-block;
-        padding: 0 5px;
-        margin: 1px 2px;
+        flex: 0 0 auto;
+        margin: 0;
+        padding: 1px 3px;
         border-radius: 3px;
         font-weight: 600;
         font-size: 10px;
-        line-height: 1.4;
+        line-height: 1.2;
+        white-space: nowrap;
         cursor: pointer;
         outline: none;
         transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;

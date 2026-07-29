@@ -3,7 +3,6 @@ import { ITradingViewWatchlistManager } from '../../src/manager/watchlist';
 import { ISyncUtil } from '../../src/util/sync';
 import { ICategoryManager } from '../../src/manager/category';
 import { IDomManager } from '../../src/manager/dom';
-import { IWatchlistBar } from '../../src/handler/bar/watchlist';
 import { WatchCategoryId } from '../../src/models/watch';
 import { ISubscriber } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
@@ -14,15 +13,14 @@ describe('WatchListHandler', () => {
   let mockSyncUtil: jest.Mocked<ISyncUtil>;
   let mockCategoryManager: jest.Mocked<ICategoryManager>;
   let mockDomManager: jest.Mocked<IDomManager>;
-  let mockWatchlistBar: jest.Mocked<IWatchlistBar>;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
     mockWatchlistManager = {
       refresh: jest.fn().mockResolvedValue(undefined),
-      refreshTickers: jest.fn().mockResolvedValue(true),
-      refreshChangedTickers: jest.fn().mockResolvedValue(true),
+      refreshTickers: jest.fn().mockResolvedValue(undefined),
+      refreshChangedTickers: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<ITradingViewWatchlistManager>;
 
     mockSyncUtil = {
@@ -49,17 +47,12 @@ describe('WatchListHandler', () => {
       navigateTickers: jest.fn(),
     } as unknown as jest.Mocked<IDomManager>;
 
-    mockWatchlistBar = {
-      refresh: jest.fn().mockResolvedValue(undefined),
-      registerEvents: jest.fn(),
-    } as unknown as jest.Mocked<IWatchlistBar>;
-
+    // WatchListHandler uses a four-argument constructor (no bar dependency)
     handler = new WatchListHandler(
       mockWatchlistManager,
       mockSyncUtil,
       mockCategoryManager,
-      mockDomManager,
-      mockWatchlistBar
+      mockDomManager
     );
   });
 
@@ -76,26 +69,6 @@ describe('WatchListHandler', () => {
 
       // Alert feed updates are now handled via WATCHLIST_CHANGED event
       expect(mockDomManager.getTicker).not.toHaveBeenCalled();
-    });
-
-    it('should refresh bar when refreshChangedTickers returns true', async () => {
-      mockWatchlistManager.refreshChangedTickers.mockResolvedValue(true);
-
-      handler.onWatchListChange();
-
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      expect(mockWatchlistBar.refresh).toHaveBeenCalled();
-    });
-
-    it('should skip bar refresh when refreshChangedTickers returns false', async () => {
-      mockWatchlistManager.refreshChangedTickers.mockResolvedValue(false);
-
-      handler.onWatchListChange();
-
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      expect(mockWatchlistBar.refresh).not.toHaveBeenCalled();
     });
   });
 
@@ -150,7 +123,7 @@ describe('WatchListHandler', () => {
   });
 
   describe('registerEvents', () => {
-    it('should subscribe to FIRST_LOAD and refresh manager then bar', async () => {
+    it('should subscribe to FIRST_LOAD and refresh manager', async () => {
       let firstLoadCallback: Function | undefined;
       const mockSubscriber: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn((type, cb) => {
@@ -164,10 +137,7 @@ describe('WatchListHandler', () => {
       handler.registerEvents(mockSubscriber);
       await firstLoadCallback!({ type: DomainEventType.FIRST_LOAD });
 
-      // Manager should be called first
       expect(mockWatchlistManager.refresh).toHaveBeenCalled();
-      // Bar should be called after manager
-      expect(mockWatchlistBar.refresh).toHaveBeenCalled();
     });
 
     it('should subscribe to TICKER_TIMEFRAMES_CHANGED separately (eviction logic)', () => {
@@ -221,42 +191,6 @@ describe('WatchListHandler', () => {
       expect(mockWatchlistManager.refreshTickers).toHaveBeenCalledWith(['TV:INFY']);
     });
 
-    it('should refresh bar on TICKER_TIMEFRAMES_CHANGED when refreshTickers returns true', async () => {
-      mockWatchlistManager.refreshTickers.mockResolvedValue(true);
-      let timeframeCallback: Function | undefined;
-      const mockSubscriber: jest.Mocked<ISubscriber> = {
-        subscribe: jest.fn((type, cb) => {
-          if (type === DomainEventType.TICKER_TIMEFRAMES_CHANGED) {
-            timeframeCallback = cb;
-          }
-        }),
-        subscribeMany: jest.fn(),
-      };
-
-      handler.registerEvents(mockSubscriber);
-      await timeframeCallback!({ type: DomainEventType.TICKER_TIMEFRAMES_CHANGED, ticker: 'TV:INFY' });
-
-      expect(mockWatchlistBar.refresh).toHaveBeenCalled();
-    });
-
-    it('should skip bar refresh on TICKER_TIMEFRAMES_CHANGED when refreshTickers returns false', async () => {
-      mockWatchlistManager.refreshTickers.mockResolvedValue(false);
-      let timeframeCallback: Function | undefined;
-      const mockSubscriber: jest.Mocked<ISubscriber> = {
-        subscribe: jest.fn((type, cb) => {
-          if (type === DomainEventType.TICKER_TIMEFRAMES_CHANGED) {
-            timeframeCallback = cb;
-          }
-        }),
-        subscribeMany: jest.fn(),
-      };
-
-      handler.registerEvents(mockSubscriber);
-      await timeframeCallback!({ type: DomainEventType.TICKER_TIMEFRAMES_CHANGED, ticker: 'TV:INFY' });
-
-      expect(mockWatchlistBar.refresh).not.toHaveBeenCalled();
-    });
-
     it('should refresh ticker on TICKER_CATEGORY_CHANGED (no cache eviction by handler)', async () => {
       let categoryChangedCallback: Function | undefined;
       const mockSubscriber: jest.Mocked<ISubscriber> = {
@@ -279,46 +213,5 @@ describe('WatchListHandler', () => {
       expect(mockWatchlistManager.refreshTickers).toHaveBeenCalledWith(['TV:INFY']);
     });
 
-    it('should refresh bar on TICKER_CATEGORY_CHANGED when refreshTickers returns true', async () => {
-      mockWatchlistManager.refreshTickers.mockResolvedValue(true);
-      let categoryChangedCallback: Function | undefined;
-      const mockSubscriber: jest.Mocked<ISubscriber> = {
-        subscribe: jest.fn(),
-        subscribeMany: jest.fn((types, cb) => {
-          if (types.includes(DomainEventType.TICKER_CATEGORY_CHANGED)) {
-            categoryChangedCallback = cb;
-          }
-        }),
-      };
-
-      handler.registerEvents(mockSubscriber);
-      await categoryChangedCallback!({
-        type: DomainEventType.TICKER_CATEGORY_CHANGED,
-        tickers: ['TV:INFY'],
-      });
-
-      expect(mockWatchlistBar.refresh).toHaveBeenCalled();
-    });
-
-    it('should skip bar refresh on TICKER_CATEGORY_CHANGED when refreshTickers returns false', async () => {
-      mockWatchlistManager.refreshTickers.mockResolvedValue(false);
-      let categoryChangedCallback: Function | undefined;
-      const mockSubscriber: jest.Mocked<ISubscriber> = {
-        subscribe: jest.fn(),
-        subscribeMany: jest.fn((types, cb) => {
-          if (types.includes(DomainEventType.TICKER_CATEGORY_CHANGED)) {
-            categoryChangedCallback = cb;
-          }
-        }),
-      };
-
-      handler.registerEvents(mockSubscriber);
-      await categoryChangedCallback!({
-        type: DomainEventType.TICKER_CATEGORY_CHANGED,
-        tickers: ['TV:INFY'],
-      });
-
-      expect(mockWatchlistBar.refresh).not.toHaveBeenCalled();
-    });
   });
 });

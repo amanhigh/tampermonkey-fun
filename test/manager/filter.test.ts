@@ -9,84 +9,70 @@ const mockJQuery = jest.fn(() => ({
   hide: jest.fn().mockReturnThis(),
   has: jest.fn().mockReturnThis(),
   not: jest.fn().mockReturnThis(),
-  empty: jest.fn().mockReturnThis(),
-  appendTo: jest.fn().mockReturnThis(),
-  data: jest.fn().mockReturnThis(),
-  mousedown: jest.fn().mockReturnThis(),
-  contextmenu: jest.fn().mockReturnThis(),
 }));
 (global as any).$ = mockJQuery;
 
 describe('FilterManager', () => {
   let filterManager: IFilterManager;
 
-  const mockJQueryChain = {
+  const mockChain = {
     toArray: jest.fn().mockReturnValue([]),
     css: jest.fn().mockReturnThis(),
     show: jest.fn().mockReturnThis(),
     hide: jest.fn().mockReturnThis(),
     has: jest.fn().mockReturnThis(),
     not: jest.fn().mockReturnThis(),
-    empty: jest.fn().mockReturnThis(),
-    appendTo: jest.fn().mockReturnThis(),
-    data: jest.fn().mockReturnThis(),
-    mousedown: jest.fn().mockReturnThis(),
-    contextmenu: jest.fn().mockReturnThis(),
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
-
-    // Reset jQuery mock return value
-    mockJQuery.mockReturnValue(mockJQueryChain);
-
+    mockJQuery.mockReturnValue(mockChain);
     filterManager = new FilterManager();
   });
 
   describe('Constructor', () => {
     it('should apply default white filter on construction', () => {
-      // Construction should have triggered filter calls via addFilter → applyFilters
       expect(mockJQuery).toHaveBeenCalledWith(TickerArea.WATCHLIST.line);
-      expect(mockJQueryChain.hide).toHaveBeenCalled();
+      expect(mockChain.hide).toHaveBeenCalled();
     });
   });
 
   describe('resetWatchList', () => {
     it('should set widget height for expansion', () => {
       jest.clearAllMocks();
-      mockJQuery.mockReturnValue(mockJQueryChain);
+      mockJQuery.mockReturnValue(mockChain);
 
       filterManager.resetWatchList();
 
-      expect(mockJQueryChain.css).toHaveBeenCalledWith('height', '20000px');
+      expect(mockChain.css).toHaveBeenCalledWith('height', '20000px');
     });
 
     it('should show all watchlist and screener lines', () => {
       jest.clearAllMocks();
-      mockJQuery.mockReturnValue(mockJQueryChain);
+      mockJQuery.mockReturnValue(mockChain);
 
       filterManager.resetWatchList();
 
       expect(mockJQuery).toHaveBeenCalledWith(TickerArea.WATCHLIST.line);
       expect(mockJQuery).toHaveBeenCalledWith(TickerArea.SCREENER.line);
-      expect(mockJQueryChain.show).toHaveBeenCalled();
+      expect(mockChain.show).toHaveBeenCalled();
     });
   });
 
   describe('applyColorFilter', () => {
     it('should replace filter chain when no modifiers', () => {
       jest.clearAllMocks();
-      mockJQuery.mockReturnValue(mockJQueryChain);
+      mockJQuery.mockReturnValue(mockChain);
 
       filterManager.applyColorFilter('red', false, false);
 
       // applyFilters calls resetWatchList + hideAllItems + filterByColor
-      expect(mockJQueryChain.hide).toHaveBeenCalled();
+      expect(mockChain.hide).toHaveBeenCalled();
     });
 
     it('should append to chain when ctrl is pressed', () => {
       jest.clearAllMocks();
-      mockJQuery.mockReturnValue(mockJQueryChain);
+      mockJQuery.mockReturnValue(mockChain);
 
       filterManager.applyColorFilter('red', false, true);
 
@@ -96,7 +82,7 @@ describe('FilterManager', () => {
 
     it('should append to chain when shift is pressed', () => {
       jest.clearAllMocks();
-      mockJQuery.mockReturnValue(mockJQueryChain);
+      mockJQuery.mockReturnValue(mockChain);
 
       filterManager.applyColorFilter('red', true, false);
 
@@ -107,7 +93,7 @@ describe('FilterManager', () => {
   describe('applyFlagFilter', () => {
     it('should apply flag filter with color', () => {
       jest.clearAllMocks();
-      mockJQuery.mockReturnValue(mockJQueryChain);
+      mockJQuery.mockReturnValue(mockChain);
 
       filterManager.applyFlagFilter('orange', false);
 
@@ -116,7 +102,7 @@ describe('FilterManager', () => {
 
     it('should apply flag filter with shift modifier', () => {
       jest.clearAllMocks();
-      mockJQuery.mockReturnValue(mockJQueryChain);
+      mockJQuery.mockReturnValue(mockChain);
 
       filterManager.applyFlagFilter('orange', true);
 
@@ -127,20 +113,20 @@ describe('FilterManager', () => {
   describe('resetFilters', () => {
     it('should clear filter chain and reset visibility', () => {
       jest.clearAllMocks();
-      mockJQuery.mockReturnValue(mockJQueryChain);
+      mockJQuery.mockReturnValue(mockChain);
 
       filterManager.resetFilters();
 
       // resetWatchList shows all items
-      expect(mockJQueryChain.show).toHaveBeenCalled();
-      expect(mockJQueryChain.css).toHaveBeenCalledWith('height', '20000px');
+      expect(mockChain.show).toHaveBeenCalled();
+      expect(mockChain.css).toHaveBeenCalledWith('height', '20000px');
     });
 
     it('should allow new filter after reset', () => {
       filterManager.resetFilters();
 
       jest.clearAllMocks();
-      mockJQuery.mockReturnValue(mockJQueryChain);
+      mockJQuery.mockReturnValue(mockChain);
 
       filterManager.applyColorFilter('red', false, false);
 
@@ -154,7 +140,7 @@ describe('FilterManager', () => {
       filterManager.applyColorFilter('red', false, false);
 
       jest.clearAllMocks();
-      mockJQuery.mockReturnValue(mockJQueryChain);
+      mockJQuery.mockReturnValue(mockChain);
 
       filterManager.reapplyFilters();
 
@@ -166,12 +152,12 @@ describe('FilterManager', () => {
       filterManager.resetFilters();
 
       jest.clearAllMocks();
-      mockJQuery.mockReturnValue(mockJQueryChain);
+      mockJQuery.mockReturnValue(mockChain);
 
       filterManager.reapplyFilters();
 
       // resetWatchList still called (shows all), no filterByColor/Flag
-      expect(mockJQueryChain.show).toHaveBeenCalled();
+      expect(mockChain.show).toHaveBeenCalled();
     });
   });
 });
