@@ -1,9 +1,9 @@
 set quiet := true
 
 # ── Shared tool binaries ──
-eslint := "npx eslint"
-tsc := "npx tsc"
-prettier := "npx prettier"
+eslint := "npm exec --no -- eslint"
+tsc := "npm exec --no -- tsc"
+prettier := "npm exec --no -- prettier"
 npm := "npm"
 root := `git rev-parse --show-toplevel`
 
