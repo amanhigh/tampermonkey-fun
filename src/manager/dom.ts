@@ -94,7 +94,7 @@ export class DomManager implements IDomManager {
     let exchangeTicker = ticker;
     try {
       const record = await this.tickerManager.getTicker(ticker);
-      // TODO: compare record.exchange with this.getCurrentExchange() and warn on mismatch
+      // FIXME: compare record.exchange with this.getCurrentExchange() and warn on mismatch
       exchangeTicker = record.qualifiedName;
     } catch {
       // Fall back to raw ticker
