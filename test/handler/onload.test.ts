@@ -77,7 +77,6 @@ describe('OnLoadHandler', () => {
 
     mockAlertHandler = {
       handleAlertClick: jest.fn(),
-      registerAlertTickerDelinkHandler: jest.fn(),
     } as unknown as jest.Mocked<IAlertHandler>;
 
     mockTickerChangeHandler = {
@@ -138,7 +137,6 @@ describe('OnLoadHandler', () => {
       // Static listeners set up
       expect(mockDocument.addEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
       expect(mockGM_addValueChangeListener).toHaveBeenCalled();
-      expect(mockAlertHandler.registerAlertTickerDelinkHandler).toHaveBeenCalled();
 
       // Ticker observer setup (first wait)
       expect(mockWaitUtil.waitJEE).toHaveBeenCalledWith(Constants.DOM.HEADER.MAIN, expect.any(Function), 10);

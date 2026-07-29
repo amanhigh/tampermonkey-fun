@@ -59,7 +59,6 @@ describe('TimeFrameManager', () => {
       getTicker: jest.fn().mockReturnValue('AAPL'),
       getCurrentExchange: jest.fn(),
       getName: jest.fn(),
-      getInvestingTicker: jest.fn(),
       openTicker: jest.fn(),
       getTickers: jest.fn(),
       isScreenerVisible: jest.fn(),

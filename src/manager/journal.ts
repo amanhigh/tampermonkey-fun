@@ -9,7 +9,6 @@ import {
   CreateJournalRequest,
   CreateJournalTagRequest,
   JournalListResponse,
-  JournalSequence,
   JournalTimeframe,
   JournalQueryParams,
   JournalRecord,
@@ -89,10 +88,6 @@ export interface IJournalManager {
 
 /**
  * Manages trading journal entries and operations.
- *
- * The legacy API `sequence` field is derived from the screenshot timeframe codes
- * using a private helper (currently: contains DL → MWD, else YR).
- * FIXME: Replace with user-prompted or backend-provided type selection.
  */
 export class JournalManager extends BaseManager implements IJournalManager {
   constructor(
@@ -105,12 +100,9 @@ export class JournalManager extends BaseManager implements IJournalManager {
 
   /** @inheritdoc */
   public async createJournal(input: CreateJournalInput): Promise<JournalRecord> {
-    const screenshotCodes = input.screenshots
-      .map((s) => s.timeframe)
-      .filter((t): t is JournalTimeframe => t !== undefined);
     const request: CreateJournalRequest = {
       ticker: input.ticker.toUpperCase(),
-      sequence: this.getLegacyJournalSequenceFromTimeframes(screenshotCodes),
+      sequence: input.sequence,
       type: input.type,
       status: input.status,
       images: input.screenshots.map((screenshot) => ({
@@ -176,9 +168,6 @@ export class JournalManager extends BaseManager implements IJournalManager {
   /** @inheritdoc */
   public async updateJournalStatus(journalId: string, status: JournalResultStatus): Promise<void> {
     await this.journalClient.updateJournalStatus(journalId, { status });
-    // BUG: Ticker category not evicted / no domain event published.
-    // After status flips RUNNING -> SUCCESS/FAIL/MISSED, the watch category cache
-    // still returns RUNNING (lime green) until TTL expiry or navigation.
   }
 
   /** @inheritdoc */
@@ -255,19 +244,5 @@ export class JournalManager extends BaseManager implements IJournalManager {
     };
 
     return [tagRequest];
-  }
-
-  /**
-   * Derives the legacy journal API sequence from a list of screenshot timeframe codes.
-   *
-   * Rule: if the list contains 'DL', return 'MWD'; otherwise return 'YR'.
-   *
-   * FIXME: Replace this heuristic with user-prompted selection or backend-provided type.
-   */
-  private getLegacyJournalSequenceFromTimeframes(timeframes: readonly JournalTimeframe[]): JournalSequence {
-    if (timeframes.includes('DL' as JournalTimeframe)) {
-      return 'MWD';
-    }
-    return 'YR';
   }
 }

@@ -43,7 +43,7 @@ import { BaseManager } from './base';
  * }
  * ```
  */
-// FIXME: Consolidate into BackendAuditPlugin once all plugins migrate to backend adapter pattern
+// TODO: Consolidate into BackendAuditPlugin once all plugins migrate to backend adapter pattern
 export abstract class BaseAuditPlugin extends BaseManager implements IAudit {
   abstract readonly id: string;
   abstract readonly title: string;

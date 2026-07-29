@@ -1,10 +1,9 @@
-import { AlertHandler, IAlertHandler } from '../../src/handler/alert';
+import { AlertHandler } from '../../src/handler/alert';
 import { IAlertManager } from '../../src/manager/alert';
 import { ITradingViewManager } from '../../src/manager/tv';
 import { IDomManager } from '../../src/manager/dom';
 import { ITickerManager } from '../../src/manager/ticker';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
-import { IUIUtil } from '../../src/util/ui';
 import { ITickerHandler } from '../../src/handler/ticker';
 import { IAlertTickerHandler } from '../../src/handler/alert_ticker';
 import { ApiError, wrapClientError } from '../../src/models/api_error';
@@ -22,13 +21,12 @@ jest.mock('../../src/util/notify', () => ({
 }));
 
 describe('AlertHandler', () => {
-  let handler: IAlertHandler;
+  let handler: AlertHandler;
   let mockAlertManager: jest.Mocked<IAlertManager>;
   let mockTradingViewManager: jest.Mocked<ITradingViewManager>;
   let mockDomManager: jest.Mocked<IDomManager>;
   let mockTickerManager: jest.Mocked<ITickerManager>;
   let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
-  let mockUIUtil: jest.Mocked<IUIUtil>;
   let mockTickerHandler: jest.Mocked<ITickerHandler>;
   let mockAlertTickerHandler: jest.Mocked<IAlertTickerHandler>;
   const { Notifier } = jest.requireMock('../../src/util/notify');
@@ -68,9 +66,6 @@ describe('AlertHandler', () => {
       deleteAlertTicker: jest.fn().mockResolvedValue(undefined),
     } as any;
 
-    mockUIUtil = {
-      showConfirm: jest.fn(),
-    } as any;
     mockTickerHandler = {
       openTicker: jest.fn(),
     } as any;
@@ -84,7 +79,6 @@ describe('AlertHandler', () => {
       mockDomManager,
       mockTickerManager,
       mockAlertTickerManager,
-      mockUIUtil,
       mockTickerHandler,
       mockAlertTickerHandler
     );
@@ -310,113 +304,6 @@ describe('AlertHandler', () => {
       expect(mockDomManager.getTicker).toHaveBeenCalled();
       expect(mockDomManager.getCurrentExchange).toHaveBeenCalled();
       expect(mockTickerManager.setExchange).toHaveBeenCalledWith('TV:INFY', 'NSE');
-    });
-  });
-
-  describe('alert ticker delink', () => {
-    let capturedHandler: Function;
-    let mockRowJQ: { attr: jest.Mock };
-
-    beforeEach(() => {
-      capturedHandler = {} as any;
-
-      mockRowJQ = {
-        attr: jest.fn((key: string) => {
-          if (key === 'data-alert-ticker-symbol') return 'INFY.PA';
-          if (key === 'data-alert-ticker-type') return 'SECONDARY';
-          return '';
-        }),
-      };
-
-      const mockCardJQ = {
-        on: jest.fn((_event: string, _selector: string, handler: any) => {
-          capturedHandler = handler;
-        }),
-      };
-
-      (global as any).$ = jest.fn((arg: any) => {
-        if (arg === '#aman-display') return mockCardJQ;
-        // Return mockRowJQ when called with e.currentTarget (object, not string)
-        if (typeof arg !== 'string') {
-          return arg && (arg as any).attr ? arg : { on: jest.fn() };
-        }
-        return { on: jest.fn() };
-      });
-    });
-
-    it('registers delegated contextmenu handler on display card', () => {
-      handler.registerAlertTickerDelinkHandler();
-      expect(typeof capturedHandler).toBe('function');
-    });
-
-    it('deletes SECONDARY after confirm', async () => {
-      handler.registerAlertTickerDelinkHandler();
-      mockUIUtil.showConfirm.mockReturnValue(true);
-
-      const mockEvent = {
-        preventDefault: jest.fn(),
-        stopPropagation: jest.fn(),
-        currentTarget: mockRowJQ,
-      };
-      await capturedHandler(mockEvent);
-
-      expect(mockEvent.preventDefault).toHaveBeenCalled();
-      expect(mockEvent.stopPropagation).toHaveBeenCalled();
-      expect(mockUIUtil.showConfirm).toHaveBeenCalledWith('Delink INFY.PA?');
-      expect(mockAlertTickerManager.deleteAlertTicker).toHaveBeenCalledWith('INFY.PA', 'TV:INFY');
-      expect(Notifier.success).toHaveBeenCalledWith('⏹ Delinked INFY.PA');
-    });
-
-    it('uses stronger confirm text for PRIMARY', async () => {
-      mockRowJQ.attr.mockImplementation((key: string) => {
-        if (key === 'data-alert-ticker-symbol') return 'INFY';
-        if (key === 'data-alert-ticker-type') return 'PRIMARY';
-        return '';
-      });
-
-      handler.registerAlertTickerDelinkHandler();
-      mockUIUtil.showConfirm.mockReturnValue(true);
-
-      const mockEvent = {
-        preventDefault: jest.fn(),
-        stopPropagation: jest.fn(),
-        currentTarget: mockRowJQ,
-      };
-      await capturedHandler(mockEvent);
-
-      expect(mockUIUtil.showConfirm).toHaveBeenCalledWith(
-        expect.stringContaining('PRIMARY')
-      );
-      expect(mockAlertTickerManager.deleteAlertTicker).toHaveBeenCalledWith('INFY', 'TV:INFY');
-    });
-
-    it('does not delete when confirm is cancelled', async () => {
-      handler.registerAlertTickerDelinkHandler();
-      mockUIUtil.showConfirm.mockReturnValue(false);
-
-      const mockEvent = {
-        preventDefault: jest.fn(),
-        stopPropagation: jest.fn(),
-        currentTarget: mockRowJQ,
-      };
-      await capturedHandler(mockEvent);
-
-      expect(mockAlertTickerManager.deleteAlertTicker).not.toHaveBeenCalled();
-    });
-
-    it('warns when delete fails', async () => {
-      mockAlertTickerManager.deleteAlertTicker.mockRejectedValue(new Error('Not found'));
-      handler.registerAlertTickerDelinkHandler();
-      mockUIUtil.showConfirm.mockReturnValue(true);
-
-      const mockEvent = {
-        preventDefault: jest.fn(),
-        stopPropagation: jest.fn(),
-        currentTarget: mockRowJQ,
-      };
-      await capturedHandler(mockEvent);
-
-      expect(Notifier.warn).toHaveBeenCalledWith('Failed to delink INFY.PA: Not found');
     });
   });
 });

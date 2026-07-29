@@ -10,7 +10,6 @@ import { ITradingViewManager } from '../manager/tv';
 import { Constants } from '../models/constant';
 import { ApiError } from '../models/api_error';
 import { Notifier } from '../util/notify';
-import { IUIUtil } from '../util/ui';
 import { AlertTicker } from '../models/alert_ticker';
 import { AlertClicked, AlertClickAction } from '../models/events';
 import { ITickerHandler } from './ticker';
@@ -71,14 +70,7 @@ export interface IAlertHandler {
    * Ensures UI is refreshed after operation
    */
   handleResetAlerts(): Promise<void>;
-
-  /**
-   * Registers a delegated right-click handler on display-area alert ticker rows
-   * for delink/delete of individual alert ticker mappings.
-   */
-  registerAlertTickerDelinkHandler(): void;
 }
-
 /**
  * Handles alert operations and user interactions
  */
@@ -90,7 +82,6 @@ export class AlertHandler implements IAlertHandler {
     private readonly domManager: IDomManager,
     private readonly tickerManager: ITickerManager,
     private readonly alertTickerManager: IAlertTickerManager,
-    private readonly uiUtil: IUIUtil,
     private readonly tickerHandler: ITickerHandler,
     private readonly alertTickerHandler: IAlertTickerHandler
   ) {}
@@ -270,48 +261,5 @@ export class AlertHandler implements IAlertHandler {
   public async handleResetAlerts(): Promise<void> {
     await this.alertManager.deleteAllAlerts();
     Notifier.red('❌ 🚀 All alerts deleted');
-  }
-
-  // ── Alert Ticker Delink ──
-
-  /** @inheritdoc */
-  public registerAlertTickerDelinkHandler(): void {
-    const $card = $(`#${Constants.UI.IDS.DISPLAY.CARD}`);
-    $card.on('contextmenu', `.${Constants.UI.IDS.DISPLAY.ALERT_TICKER_ROW}`, (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      void this.handleAlertTickerDelink($(e.currentTarget));
-    });
-  }
-
-  /**
-   * Handles right-click delink on an alert ticker row.
-   * Confirms deletion, then refreshes display on success.
-   * @param $row - The right-clicked alert ticker row element
-   */
-  private async handleAlertTickerDelink($row: JQuery): Promise<void> {
-    const symbol = $row.attr(Constants.UI.IDS.DISPLAY.ATTR_ALERT_TICKER_SYMBOL) || '';
-    const type = $row.attr(Constants.UI.IDS.DISPLAY.ATTR_ALERT_TICKER_TYPE) || '';
-
-    if (!symbol) {
-      return;
-    }
-
-    const isPrimary = type === 'PRIMARY';
-    const confirmText = isPrimary
-      ? `Delink PRIMARY ${symbol}? This ticker will be unmapped until you map a new primary.`
-      : `Delink ${symbol}?`;
-
-    if (!this.uiUtil.showConfirm(confirmText)) {
-      return;
-    }
-
-    try {
-      const ticker = this.domManager.getTicker();
-      await this.alertTickerManager.deleteAlertTicker(symbol, ticker);
-      Notifier.success(`⏹ Delinked ${symbol}`);
-    } catch (error) {
-      Notifier.warn(`Failed to delink ${symbol}: ${(error as Error).message}`);
-    }
   }
 }

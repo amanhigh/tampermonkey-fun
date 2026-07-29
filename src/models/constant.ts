@@ -70,13 +70,6 @@ export const Constants = Object.freeze({
         ORDERS: 'aman-orders', // Old Name: ordersId
         JOURNAL: 'aman-journal', // Old Name: journalId
       },
-      DISPLAY: {
-        CARD: 'aman-display', // Old Name: displayId (was INPUTS.DISPLAY)
-        CARD_CLASS: 'aman-display-card',
-        ALERT_TICKER_ROW: 'aman-display-alert-ticker-row',
-        ATTR_ALERT_TICKER_SYMBOL: 'data-alert-ticker-symbol',
-        ATTR_ALERT_TICKER_TYPE: 'data-alert-ticker-type',
-      },
       TIMEFRAME_BAR: {
         CONTAINER: 'aman-tf-bar',
         CHIP_CLASS: 'aman-tf-chip',
@@ -187,6 +180,9 @@ export const Constants = Object.freeze({
         'WOW', // Waiting WoW
       ], // Old name: reasons
       OVERRIDES: ['egf', 'int', 'lc', 'loc', 'doji', 'big', 'pn', 'tc', 'cfl', 'acm', 'adv'], // Old name: overrides
+      OVERRIDE_GROUP_ID: 'reason-override',
+      SEQUENCE_GROUP_ID: 'journal-sequence',
+      SEQUENCE_CHOICES: ['MWD', 'YR'],
       TRADE_INFO: `Trends
 HTF - Up
 MTF - Up

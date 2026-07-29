@@ -1,15 +1,18 @@
 import { JournalHandler } from '../../src/handler/journal';
 import { IOsClient } from '../../src/client/os';
 import { IJournalManager } from '../../src/manager/journal';
-import { ISmartPrompt } from '../../src/util/smart';
+import { ISmartPrompt, SmartChoiceGroup, SmartPromptResponseType } from '../../src/util/smart';
 import { IUIUtil } from '../../src/util/ui';
 import { ITradingViewManager } from '../../src/manager/tv';
 import { IStyleManager } from '../../src/manager/style';
 import { DomManager } from '../../src/manager/dom';
 import { IAlertManager } from '../../src/manager/alert';
+import { ICategoryManager } from '../../src/manager/category';
+import { ITimeFrameManager } from '../../src/manager/timeframe';
 import { AlertClickAction } from '../../src/models/events';
 import { JournalActionType } from '../../src/models/journal';
 import { Constants } from '../../src/models/constant';
+import { TickerTimeframe, Sequence } from '../../src/models/timeframe';
 import { Notifier } from '../../src/util/notify';
 
 jest.mock('../../src/util/notify', () => ({
@@ -34,6 +37,8 @@ describe('JournalHandler', () => {
   let mockTradingViewManager: jest.Mocked<ITradingViewManager>;
   let mockStyleManager: jest.Mocked<IStyleManager>;
   let mockAlertManager: jest.Mocked<IAlertManager>;
+  let mockCategoryManager: jest.Mocked<ICategoryManager>;
+  let mockTimeFrameManager: jest.Mocked<ITimeFrameManager>;
   let mockDocument: { querySelector: jest.Mock; querySelectorAll: jest.Mock };
   let mockReviewLink: { addEventListener: jest.Mock };
   let mockJournalOpenListener: (
@@ -41,6 +46,29 @@ describe('JournalHandler', () => {
     _oldValue: unknown,
     newValue: unknown
   ) => void;
+
+  const DL_SEQUENCE: Sequence = [TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL];
+  const NO_DL_SEQUENCE: Sequence = [TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK];
+
+  const expectedOverrideGroup: SmartChoiceGroup = {
+    id: Constants.TRADING.PROMPT.OVERRIDE_GROUP_ID,
+    label: 'Override',
+    choices: Constants.TRADING.PROMPT.OVERRIDES,
+  };
+
+  const expectedSequenceGroupMWD: SmartChoiceGroup = {
+    id: Constants.TRADING.PROMPT.SEQUENCE_GROUP_ID,
+    label: 'Timeframe',
+    choices: Constants.TRADING.PROMPT.SEQUENCE_CHOICES,
+    defaultChoice: 'MWD',
+  };
+
+  const expectedSequenceGroupYR: SmartChoiceGroup = {
+    id: Constants.TRADING.PROMPT.SEQUENCE_GROUP_ID,
+    label: 'Timeframe',
+    choices: Constants.TRADING.PROMPT.SEQUENCE_CHOICES,
+    defaultChoice: 'YR',
+  };
 
   beforeEach(() => {
     mockTickerManager = {
@@ -89,6 +117,21 @@ describe('JournalHandler', () => {
       createAlertClickEvent: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<IAlertManager>;
 
+    mockCategoryManager = {
+      getTickerCategory: jest.fn(),
+      evictTicker: jest.fn(),
+      publishCategoryChanged: jest.fn().mockResolvedValue(undefined),
+      recordWatchCategory: jest.fn().mockResolvedValue(undefined),
+      recordFlagCategory: jest.fn().mockResolvedValue(undefined),
+      getBatchCategory: jest.fn().mockResolvedValue(new Map()),
+      toggleReadyState: jest.fn().mockResolvedValue(undefined),
+      clearReadyState: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<ICategoryManager>;
+
+    mockTimeFrameManager = {
+      getSequence: jest.fn().mockResolvedValue(DL_SEQUENCE),
+    } as unknown as jest.Mocked<ITimeFrameManager>;
+
     mockDocument = {
       querySelector: jest.fn(),
       querySelectorAll: jest.fn(),
@@ -120,7 +163,9 @@ describe('JournalHandler', () => {
       mockUiUtil,
       mockTradingViewManager,
       mockStyleManager,
-      mockAlertManager
+      mockAlertManager,
+      mockCategoryManager,
+      mockTimeFrameManager
     );
   });
 
@@ -158,9 +203,16 @@ describe('JournalHandler', () => {
   });
 
   describe('handleRecordJournal', () => {
-    it('should route REJECTED journal to screenshot ticker flow', async () => {
+    it('should combine primary selection with override into reason-override format for REJECTED', async () => {
       mockTickerManager.getTicker.mockReturnValue('TCS');
-      mockSmartPrompt.showModal.mockResolvedValue({ type: 'reason', value: 'oe' });
+      mockSmartPrompt.showModal.mockResolvedValue({
+        type: SmartPromptResponseType.SELECTED,
+        primarySelection: 'oe',
+        answers: {
+          [Constants.TRADING.PROMPT.OVERRIDE_GROUP_ID]: 'egf',
+          [Constants.TRADING.PROMPT.SEQUENCE_GROUP_ID]: 'MWD',
+        },
+      });
       (mockJournalManager.screenshotTicker as jest.Mock).mockResolvedValue([
         { file_name: 'TCS.tmn.rejected_20240422_0930.png', full_path: '/home/aman/Downloads/TCS.tmn.rejected_20240422_0930.png' },
       ]);
@@ -176,18 +228,131 @@ describe('JournalHandler', () => {
 
       await journalHandler.handleRecordJournal(JournalActionType.REJECTED);
 
+      expect(mockJournalManager.createJournal).toHaveBeenCalledWith(
+        expect.objectContaining({ reason: 'oe-egf', sequence: 'MWD' })
+      );
+    });
+
+    it('should use primary selection alone when no override selected for REJECTED', async () => {
+      mockTickerManager.getTicker.mockReturnValue('TCS');
+      mockSmartPrompt.showModal.mockResolvedValue({
+        type: SmartPromptResponseType.SELECTED,
+        primarySelection: 'oe',
+        answers: {
+          [Constants.TRADING.PROMPT.OVERRIDE_GROUP_ID]: null,
+          [Constants.TRADING.PROMPT.SEQUENCE_GROUP_ID]: 'YR',
+        },
+      });
+      (mockJournalManager.screenshotTicker as jest.Mock).mockResolvedValue([
+        { file_name: 'TCS.tmn.rejected_20240422_0930.png', full_path: '/home/aman/Downloads/TCS.tmn.rejected_20240422_0930.png' },
+      ]);
+      (mockJournalManager.createJournal as jest.Mock).mockResolvedValue({
+        id: 'jrn_1',
+        ticker: 'TCS',
+        sequence: 'YR',
+        type: 'REJECTED',
+        status: 'FAIL',
+        created_at: '2026-04-22T00:00:00Z',
+      });
+      (mockJournalManager.publishJournalOpenEvent as jest.Mock).mockResolvedValue(undefined);
+
+      await journalHandler.handleRecordJournal(JournalActionType.REJECTED);
+
+      expect(mockJournalManager.createJournal).toHaveBeenCalledWith(
+        expect.objectContaining({ reason: 'oe', sequence: 'YR' })
+      );
+    });
+
+    it('should route REJECTED journal to screenshot ticker flow with sequence', async () => {
+      mockTickerManager.getTicker.mockReturnValue('TCS');
+      mockSmartPrompt.showModal.mockResolvedValue({
+        type: SmartPromptResponseType.SELECTED,
+        primarySelection: 'oe',
+        answers: {
+          [Constants.TRADING.PROMPT.SEQUENCE_GROUP_ID]: 'MWD',
+        },
+      });
+      (mockJournalManager.screenshotTicker as jest.Mock).mockResolvedValue([
+        { file_name: 'TCS.tmn.rejected_20240422_0930.png', full_path: '/home/aman/Downloads/TCS.tmn.rejected_20240422_0930.png' },
+      ]);
+      (mockJournalManager.createJournal as jest.Mock).mockResolvedValue({
+        id: 'jrn_1',
+        ticker: 'TCS',
+        sequence: 'MWD',
+        type: 'REJECTED',
+        status: 'FAIL',
+        created_at: '2026-04-22T00:00:00Z',
+      });
+      (mockJournalManager.publishJournalOpenEvent as jest.Mock).mockResolvedValue(undefined);
+
+      await journalHandler.handleRecordJournal(JournalActionType.REJECTED);
+
+      expect(mockTimeFrameManager.getSequence).toHaveBeenCalled();
+      expect(mockSmartPrompt.showModal).toHaveBeenCalledWith(
+        Constants.TRADING.PROMPT.REASONS,
+        [expectedOverrideGroup, expectedSequenceGroupMWD]
+      );
       expect(mockJournalManager.screenshotTicker).toHaveBeenCalledWith('TCS', 'rejected');
       expect(mockJournalManager.createJournal).toHaveBeenCalledWith({
         ticker: 'TCS',
         reason: 'oe',
         type: 'REJECTED',
         status: 'FAIL',
+        sequence: 'MWD',
         screenshots: [{ file_name: 'TCS.tmn.rejected_20240422_0930.png', full_path: '/home/aman/Downloads/TCS.tmn.rejected_20240422_0930.png' }],
       });
       expect(mockJournalManager.publishJournalOpenEvent).toHaveBeenCalledWith('jrn_1');
     });
 
-    it('should route SET journal to taken setup flow with required note', async () => {
+    it('should default sequence to YR when ticker has non-DL sequence', async () => {
+      mockTimeFrameManager.getSequence.mockResolvedValue(NO_DL_SEQUENCE);
+      mockTickerManager.getTicker.mockReturnValue('TCS');
+      mockSmartPrompt.showModal.mockResolvedValue({
+        type: SmartPromptResponseType.SELECTED,
+        primarySelection: 'oe',
+        answers: { [Constants.TRADING.PROMPT.SEQUENCE_GROUP_ID]: 'YR' },
+      });
+      (mockJournalManager.screenshotTicker as jest.Mock).mockResolvedValue([
+        { file_name: 'TCS.smn.rejected.png', full_path: '/p' },
+      ]);
+      (mockJournalManager.createJournal as jest.Mock).mockResolvedValue({
+        id: 'jrn_1', ticker: 'TCS', sequence: 'YR', type: 'REJECTED', status: 'FAIL', created_at: '2026-04-22T00:00:00Z',
+      });
+      (mockJournalManager.publishJournalOpenEvent as jest.Mock).mockResolvedValue(undefined);
+
+      await journalHandler.handleRecordJournal(JournalActionType.REJECTED);
+
+      expect(mockSmartPrompt.showModal).toHaveBeenCalledWith(
+        Constants.TRADING.PROMPT.REASONS,
+        [expectedOverrideGroup, expectedSequenceGroupYR]
+      );
+      expect(mockJournalManager.createJournal).toHaveBeenCalledWith(
+        expect.objectContaining({ sequence: 'YR' })
+      );
+    });
+
+    it('should retain default sequence when REJECTED reason prompt returns NONE', async () => {
+      mockTickerManager.getTicker.mockReturnValue('TCS');
+      mockSmartPrompt.showModal.mockResolvedValue({
+        type: SmartPromptResponseType.NONE,
+        value: 'none',
+        answers: { [Constants.TRADING.PROMPT.SEQUENCE_GROUP_ID]: 'MWD' },
+      });
+      (mockJournalManager.screenshotTicker as jest.Mock).mockResolvedValue([
+        { file_name: 'TCS.tmn.rejected_20240422_0930.png', full_path: '/p' },
+      ]);
+      (mockJournalManager.createJournal as jest.Mock).mockResolvedValue({
+        id: 'jrn_1', ticker: 'TCS', sequence: 'MWD', type: 'REJECTED', status: 'FAIL', created_at: '2026-04-22T00:00:00Z',
+      });
+      (mockJournalManager.publishJournalOpenEvent as jest.Mock).mockResolvedValue(undefined);
+
+      await journalHandler.handleRecordJournal(JournalActionType.REJECTED);
+
+      expect(Notifier.warn).toHaveBeenCalledWith('Rejected entries require a reason. Please provide a reason or cancel.');
+      expect(mockJournalManager.createJournal).not.toHaveBeenCalled();
+    });
+
+    it('should route SET journal to taken setup flow with sequence', async () => {
       mockTickerManager.getTicker.mockReturnValue('TCS');
       // Step 1: note
       mockSmartPrompt.showTextareaModal.mockResolvedValue(Constants.TRADING.PROMPT.TRADE_INFO);
@@ -197,8 +362,12 @@ describe('JournalHandler', () => {
         full_path: '/home/aman/Downloads/TCS_20240422_0930_checklist_set.png',
         timeframe: 'TMN',
       });
-      // Step 3: reason prompt
-      mockSmartPrompt.showModal.mockResolvedValue({ type: 'reason', value: 'oe' });
+      // Step 3: reason prompt with sequence
+      mockSmartPrompt.showModal.mockResolvedValue({
+        type: SmartPromptResponseType.SELECTED,
+        primarySelection: 'oe',
+        answers: { [Constants.TRADING.PROMPT.SEQUENCE_GROUP_ID]: 'MWD' },
+      });
       // Step 4: full screenshots
       (mockJournalManager.screenshotTicker as jest.Mock).mockResolvedValue([
         { file_name: 'TCS_20240422_0930_1_tmn_set.png', full_path: '/home/aman/Downloads/TCS_20240422_0930_1_tmn_set.png' },
@@ -215,14 +384,16 @@ describe('JournalHandler', () => {
 
       await journalHandler.handleRecordJournal(JournalActionType.SET);
 
-      // Verify ordering: note -> checklist -> reason -> full screenshots -> createJournal
       expect(mockSmartPrompt.showTextareaModal).toHaveBeenCalledWith(
         'Trade Setup Note',
         Constants.TRADING.PROMPT.TRADE_INFO,
         'Save Note'
       );
       expect(mockOsClient.screenshotRegion).toHaveBeenCalledWith('TCS', 'set');
-      expect(mockSmartPrompt.showModal).toHaveBeenCalled();
+      expect(mockSmartPrompt.showModal).toHaveBeenCalledWith(
+        Constants.TRADING.PROMPT.REASONS,
+        [expectedOverrideGroup, expectedSequenceGroupMWD]
+      );
       expect(mockJournalManager.screenshotTicker).toHaveBeenCalledWith('TCS', 'set');
       expect(mockJournalManager.createJournal).toHaveBeenCalledWith({
         ticker: 'TCS',
@@ -233,6 +404,7 @@ describe('JournalHandler', () => {
         ],
         type: 'TAKEN',
         status: 'SET',
+        sequence: 'MWD',
         notes: [
           {
             status: 'SET',
@@ -241,6 +413,7 @@ describe('JournalHandler', () => {
           },
         ],
       });
+      expect(mockCategoryManager.publishCategoryChanged).toHaveBeenCalledWith(['TCS']);
       expect(mockJournalManager.publishJournalOpenEvent).toHaveBeenCalledWith('jrn_2');
     });
 
@@ -291,7 +464,7 @@ describe('JournalHandler', () => {
         full_path: '/home/aman/Downloads/TCS_20240422_0930_checklist_set.png',
         timeframe: 'TMN',
       });
-      mockSmartPrompt.showModal.mockResolvedValue({ type: 'cancel', value: null });
+      mockSmartPrompt.showModal.mockResolvedValue({ type: SmartPromptResponseType.CANCEL, value: null });
 
       await journalHandler.handleRecordJournal(JournalActionType.SET);
 
@@ -301,7 +474,7 @@ describe('JournalHandler', () => {
       expect(mockJournalManager.publishJournalOpenEvent).not.toHaveBeenCalled();
     });
 
-    it('should route RESULT journal via running journal flow', async () => {
+    it('should route RESULT journal via running journal flow without Timeframe group', async () => {
       mockTickerManager.getTicker.mockReturnValue('TCS');
       (mockJournalManager.findRunningJournal as jest.Mock).mockResolvedValue({
         id: 'jrn_running',
@@ -311,8 +484,8 @@ describe('JournalHandler', () => {
       });
       // Status -> reason prompts
       mockSmartPrompt.showModal
-        .mockResolvedValueOnce({ type: 'reason', value: 'SUCCESS' })
-        .mockResolvedValueOnce({ type: 'reason', value: 'oe' });
+        .mockResolvedValueOnce({ type: SmartPromptResponseType.SELECTED, primarySelection: 'SUCCESS', answers: {} })
+        .mockResolvedValueOnce({ type: SmartPromptResponseType.SELECTED, primarySelection: 'oe', answers: {} });
       (mockJournalManager.screenshotTicker as jest.Mock).mockResolvedValue([
         { file_name: 'TCS_20240422_0930_1_tmn_result.png', full_path: '/path/1', timeframe: 'TMN' },
       ]);
@@ -321,13 +494,15 @@ describe('JournalHandler', () => {
 
       expect(mockJournalManager.findRunningJournal).toHaveBeenCalledWith('TCS');
       expect(mockSmartPrompt.showModal).toHaveBeenNthCalledWith(1, ['SUCCESS', 'FAIL', 'MISSED']);
-      expect(mockSmartPrompt.showModal).toHaveBeenNthCalledWith(2, Constants.TRADING.PROMPT.REASONS, Constants.TRADING.PROMPT.OVERRIDES);
+      expect(mockSmartPrompt.showModal).toHaveBeenNthCalledWith(2, Constants.TRADING.PROMPT.REASONS, [expectedOverrideGroup]);
+      expect(mockTimeFrameManager.getSequence).not.toHaveBeenCalled();
       expect(mockJournalManager.screenshotTicker).toHaveBeenCalledWith('TCS', 'result');
       expect(mockJournalManager.addJournalImages).toHaveBeenCalledWith('jrn_running', [
         { file_name: 'TCS_20240422_0930_1_tmn_result.png', full_path: '/path/1', timeframe: 'TMN' },
       ]);
       expect(mockJournalManager.addReasonTags).toHaveBeenCalledWith('jrn_running', 'oe');
       expect(mockJournalManager.updateJournalStatus).toHaveBeenCalledWith('jrn_running', 'SUCCESS');
+      expect(mockCategoryManager.publishCategoryChanged).toHaveBeenCalledWith(['TCS']);
       expect(mockJournalManager.publishJournalOpenEvent).toHaveBeenCalledWith('jrn_running');
     });
 
@@ -349,7 +524,7 @@ describe('JournalHandler', () => {
       (mockJournalManager.findRunningJournal as jest.Mock).mockResolvedValue({
         id: 'jrn_running', ticker: 'TCS', type: 'TAKEN', status: 'RUNNING',
       });
-      mockSmartPrompt.showModal.mockResolvedValue({ type: 'cancel', value: null });
+      mockSmartPrompt.showModal.mockResolvedValue({ type: SmartPromptResponseType.CANCEL, value: null });
 
       await journalHandler.handleRecordJournal(JournalActionType.RESULT);
 
@@ -363,13 +538,33 @@ describe('JournalHandler', () => {
         id: 'jrn_running', ticker: 'TCS', type: 'TAKEN', status: 'RUNNING',
       });
       mockSmartPrompt.showModal
-        .mockResolvedValueOnce({ type: 'reason', value: 'SUCCESS' })
-        .mockResolvedValueOnce({ type: 'cancel', value: null });
+        .mockResolvedValueOnce({ type: SmartPromptResponseType.SELECTED, primarySelection: 'SUCCESS', answers: {} })
+        .mockResolvedValueOnce({ type: SmartPromptResponseType.CANCEL, value: null });
 
       await journalHandler.handleRecordJournal(JournalActionType.RESULT);
 
       expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
       expect(mockJournalManager.updateJournalStatus).not.toHaveBeenCalled();
+    });
+
+    it('should NOT publish category change when updateJournalStatus fails', async () => {
+      mockTickerManager.getTicker.mockReturnValue('TCS');
+      (mockJournalManager.findRunningJournal as jest.Mock).mockResolvedValue({
+        id: 'jrn_running', ticker: 'TCS', type: 'TAKEN', status: 'RUNNING',
+      });
+      mockSmartPrompt.showModal
+        .mockResolvedValueOnce({ type: SmartPromptResponseType.SELECTED, primarySelection: 'SUCCESS', answers: {} })
+        .mockResolvedValueOnce({ type: SmartPromptResponseType.SELECTED, primarySelection: 'oe', answers: {} });
+      (mockJournalManager.screenshotTicker as jest.Mock).mockResolvedValue([
+        { file_name: 'TCS_fail.png', full_path: '/path/fail', timeframe: 'TMN' },
+      ]);
+      (mockJournalManager.updateJournalStatus as jest.Mock).mockRejectedValue(new Error('Backend error'));
+
+      await expect(journalHandler.handleRecordJournal(JournalActionType.RESULT)).rejects.toThrow('Backend error');
+
+      expect(mockJournalManager.updateJournalStatus).toHaveBeenCalledWith('jrn_running', 'SUCCESS');
+      expect(mockCategoryManager.publishCategoryChanged).not.toHaveBeenCalled();
+      expect(mockJournalManager.publishJournalOpenEvent).not.toHaveBeenCalled();
     });
   });
 

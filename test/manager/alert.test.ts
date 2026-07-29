@@ -64,7 +64,6 @@ describe('AlertManager', () => {
     } as any;
 
     mockDomManager = {
-      getInvestingTicker: jest.fn(),
       getTicker: jest.fn(),
     } as any;
 

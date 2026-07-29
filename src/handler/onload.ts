@@ -26,7 +26,7 @@ export interface IOnLoadHandler {
  *
  * Initialization is serial:
  * 1. Register all domain event consumers (so FIRST_LOAD is handled)
- * 2. Set up static listeners (keydown, alert click, delink)
+ * 2. Set up static listeners (keydown, alert click)
  * 3. Set up ticker observer
  * 4. Inside ticker callback, set up watchlist observer
  * 5. Inside watchlist callback, publish FIRST_LOAD and set up screener observer
@@ -61,7 +61,6 @@ export class OnLoadHandler implements IOnLoadHandler {
     // 2. Set up static listeners (no DOM dependency)
     this.setupKeydownEventListener();
     this.setupAlertClickListener();
-    this.alertHandler.registerAlertTickerDelinkHandler();
 
     // 3. Start serial DOM observer setup
     this.setupTickerObserver(() => {

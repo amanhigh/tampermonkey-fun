@@ -38,7 +38,7 @@ import { IAlertTickerManager, AlertTickerManager } from '../manager/alert_ticker
 import { IInvestingManager, InvestingManager } from '../manager/investing';
 
 // Handler Imports
-import { AlertHandler } from '../handler/alert';
+import { IAlertHandler, AlertHandler } from '../handler/alert';
 import { AlertSummaryHandler, IAlertSummaryHandler } from '../handler/alert_summary';
 import { AuditHandler, IAuditHandler } from '../handler/audit';
 import { JournalHandler, IJournalHandler } from '../handler/journal';
@@ -47,7 +47,7 @@ import { KeyConfig } from '../handler/key_config';
 import { IModifierKeyConfig, ModifierKeyConfig } from '../handler/modifier_config';
 
 import { IDashboardSyncHandler, DashboardSyncHandler } from '../handler/dashboard_sync';
-import { IDisplayHandler, DisplayHandler } from '../handler/display';
+import { IAlertBar, AlertBar } from '../handler/bar/alert';
 import { ITimeFrameHandler, TimeFrameHandler } from '../handler/timeframe';
 import { IKiteHandler, KiteHandler } from '../handler/kite';
 import { IKiteManager, KiteManager } from '../manager/kite';
@@ -221,12 +221,7 @@ export class Factory {
     category: (): ICategoryManager =>
       Factory.getInstance(
         'categoryManager',
-        () =>
-          new CategoryManager(
-            Factory.manager.ticker(),
-            () => Factory.manager.journal(),
-            Factory.manager.eventPublisher()
-          )
+        () => new CategoryManager(Factory.manager.ticker(), Factory.manager.journal(), Factory.manager.eventPublisher())
       ),
 
     paint: (): IPaintManager =>
@@ -242,10 +237,7 @@ export class Factory {
       ),
 
     dom: (): IDomManager =>
-      Factory.getInstance(
-        'domManager',
-        () => new DomManager(Factory.util.wait(), Factory.manager.ticker(), Factory.manager.alertTicker())
-      ),
+      Factory.getInstance('domManager', () => new DomManager(Factory.util.wait(), Factory.manager.ticker())),
 
     kite: (): IKiteManager =>
       Factory.getInstance('kiteManager', () => new KiteManager(Factory.client.kite(), Factory.repo.kite())),
@@ -404,7 +396,7 @@ export class Factory {
    */
   public static handler = {
     global: (): IGlobalErrorHandler => Factory.getInstance('globalErrorHandler', () => new GlobalErrorHandler()),
-    alert: (): AlertHandler =>
+    alert: (): IAlertHandler =>
       Factory.getInstance(
         'alertHandler',
         () =>
@@ -414,7 +406,6 @@ export class Factory {
             Factory.manager.dom(),
             Factory.manager.ticker(),
             Factory.manager.alertTicker(),
-            Factory.util.ui(),
             Factory.handler.ticker(),
             Factory.handler.alertTicker()
           )
@@ -458,7 +449,7 @@ export class Factory {
             [
               Factory.handler.alertFeed(),
               Factory.handler.timeFrame(),
-              Factory.handler.display(),
+              Factory.handler.alertBar(),
               Factory.handler.kite(),
               Factory.handler.alertSummary(),
               Factory.handler.audit(),
@@ -558,10 +549,10 @@ export class Factory {
       ),
     flag: (): IFlagHandler =>
       Factory.getInstance('flagHandler', () => new FlagHandler(Factory.manager.category(), Factory.manager.dom())),
-    display: (): IDisplayHandler =>
+    alertBar: (): IAlertBar =>
       Factory.getInstance(
-        'displayHandler',
-        () => new DisplayHandler(Factory.manager.dom(), Factory.manager.alertTicker())
+        'alertBar',
+        () => new AlertBar(Factory.manager.dom(), Factory.manager.alertTicker(), Factory.util.ui())
       ),
     timeFrame: (): ITimeFrameHandler =>
       Factory.getInstance('timeFrameHandler', () => new TimeFrameHandler(Factory.manager.timeFrame())),
@@ -577,7 +568,9 @@ export class Factory {
             Factory.util.ui(),
             Factory.manager.tv(),
             Factory.manager.style(),
-            Factory.manager.alert()
+            Factory.manager.alert(),
+            Factory.manager.category(),
+            Factory.manager.timeFrame()
           )
       ),
     imdb: (): IImdbHandler =>

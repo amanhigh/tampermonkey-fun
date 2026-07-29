@@ -1,25 +1,63 @@
 /**
- * Smart prompt response types
+ * Smart prompt response types and choice group configuration.
+ *
+ * The modal presents:
+ * 1. Primary choice buttons — the main submit actions
+ * 2. Zero or more choice groups — each renders independent radio buttons
+ * 3. A free-text input for custom text
+ * 4. Cancel / None action buttons
+ */
+export interface SmartChoiceGroup {
+  /** Unique identifier for this group, used as the key in answers */
+  id: string;
+  /** Visible label displayed above the group's radio buttons */
+  label: string;
+  /** Available choices rendered as radio buttons */
+  choices: readonly string[];
+  /** Pre-selected choice when the modal opens */
+  defaultChoice?: string;
+}
+
+/** Discriminant for SmartPromptResponse variants. */
+export enum SmartPromptResponseType {
+  /** User pressed Cancel or Escape (no selection made) */
+  CANCEL = 'cancel',
+  /** User pressed None or submitted empty text (no primary chosen) */
+  NONE = 'none',
+  /** User clicked a primary button or submitted custom text */
+  SELECTED = 'selected',
+}
+
+/**
+ * Response from SmartPrompt.showModal()
+ *
+ * - `cancel`   — user pressed Cancel or Escape (no selection made)
+ * - `none`     — user pressed None or submitted empty text (no primary chosen)
+ * - `selected` — user clicked a primary button or submitted custom text
  */
 export type SmartPromptResponse =
-  | { type: 'cancel'; value: null }
-  | { type: 'none'; value: 'none' }
-  | { type: 'reason'; value: string };
+  | { type: SmartPromptResponseType.CANCEL; value: null }
+  | { type: SmartPromptResponseType.NONE; value: 'none'; answers: Readonly<Record<string, string | null>> }
+  | {
+      type: SmartPromptResponseType.SELECTED;
+      primarySelection: string;
+      answers: Readonly<Record<string, string | null>>;
+    };
 
 /**
  * Interface for smart prompt utility operations
  */
 export interface ISmartPrompt {
   /**
-   * Shows a modal dialog with customizable buttons and options
-   * @param reasons - Array of reason buttons to display
-   * @param overrides - Optional array of override radio buttons
+   * Shows a modal dialog with primary choice buttons and structured choice groups.
+   * @param primaryChoices - Array of primary choice button labels
+   * @param groups - Choice groups, each rendering as an independent set of radio buttons
    * @returns Promise that resolves with SmartPromptResponse:
-   * - { type: 'cancel', value: null } if user cancelled (Cancel button only)
-   * - { type: 'none', value: 'none' } if user chose none/empty (None button or Escape key)
-   * - { type: 'reason', value: string } if user selected a reason or entered text
+   * - { type: SmartPromptResponseType.CANCEL, value: null } if user cancelled
+   * - { type: SmartPromptResponseType.NONE, value: 'none', answers } if user chose none (None button or Escape key)
+   * - { type: SmartPromptResponseType.SELECTED, primarySelection: string, answers } if user selected a primary choice or entered text
    */
-  showModal(reasons: string[], overrides?: string[]): Promise<SmartPromptResponse>;
+  showModal(primaryChoices: string[], groups?: SmartChoiceGroup[]): Promise<SmartPromptResponse>;
 
   /**
    * Shows a textarea modal dialog with default text and explicit save/cancel actions.
@@ -32,7 +70,11 @@ export interface ISmartPrompt {
 }
 
 /**
- * Smart prompt utility for creating interactive modal dialogs
+ * Smart prompt utility for creating interactive modal dialogs.
+ *
+ * Renders a fixed-position overlay with primary choice buttons,
+ * optional choice groups (radio buttons), a free-text input, and
+ * Cancel / None action buttons.
  */
 export class SmartPrompt implements ISmartPrompt {
   private modal: HTMLDivElement | null = null;
@@ -47,6 +89,9 @@ export class SmartPrompt implements ISmartPrompt {
     MODAL_INPUT: 'aman-modal-input',
     MODAL_TEXTAREA: 'aman-modal-textarea',
     MODAL_RADIO_LABEL: 'aman-modal-radio-label',
+    MODAL_GROUP: 'aman-modal-group',
+    MODAL_GROUP_LABEL: 'aman-modal-group-label',
+    MODAL_ACTIONS: 'aman-modal-actions',
   };
 
   private createModal(): HTMLDivElement {
@@ -56,16 +101,19 @@ export class SmartPrompt implements ISmartPrompt {
     return modal;
   }
 
-  private createButton(text: string, id: string, callback: (response: SmartPromptResponse) => void): HTMLButtonElement {
+  private createPrimaryButton(
+    text: string,
+    id: string,
+    callback: (response: SmartPromptResponse) => void
+  ): HTMLButtonElement {
     const button = document.createElement('button');
     button.id = id;
-    button.innerHTML = text;
+    button.textContent = text;
     button.className = SmartPrompt.CLASSES.MODAL_BUTTON;
 
     button.onclick = () => {
-      const selectedOverride = this.getSelectedOverride();
-      const value = selectedOverride ? `${text}-${selectedOverride}` : text;
-      callback({ type: 'reason', value });
+      const answers = this.getGroupAnswers();
+      callback({ type: SmartPromptResponseType.SELECTED, primarySelection: text, answers });
       this.destroyModal();
     };
     return button;
@@ -74,11 +122,11 @@ export class SmartPrompt implements ISmartPrompt {
   private createCancelButton(id: string, callback: (response: SmartPromptResponse) => void): HTMLButtonElement {
     const button = document.createElement('button');
     button.id = id;
-    button.innerHTML = 'Cancel';
+    button.textContent = 'Cancel';
     button.className = SmartPrompt.CLASSES.MODAL_BUTTON;
 
     button.onclick = () => {
-      callback({ type: 'cancel', value: null });
+      callback({ type: SmartPromptResponseType.CANCEL, value: null });
       this.destroyModal();
     };
     return button;
@@ -87,11 +135,12 @@ export class SmartPrompt implements ISmartPrompt {
   private createNoneButton(id: string, callback: (response: SmartPromptResponse) => void): HTMLButtonElement {
     const button = document.createElement('button');
     button.id = id;
-    button.innerHTML = 'None';
+    button.textContent = 'None';
     button.className = SmartPrompt.CLASSES.MODAL_BUTTON;
 
     button.onclick = () => {
-      callback({ type: 'none', value: 'none' });
+      const answers = this.getGroupAnswers();
+      callback({ type: SmartPromptResponseType.NONE, value: 'none', answers });
       this.destroyModal();
     };
     return button;
@@ -101,16 +150,18 @@ export class SmartPrompt implements ISmartPrompt {
     const textBox = document.createElement('input');
     textBox.id = id;
     textBox.type = 'text';
-    textBox.placeholder = 'Enter Reason';
+    textBox.placeholder = 'Enter custom text…';
     textBox.className = SmartPrompt.CLASSES.MODAL_INPUT;
 
     textBox.onkeydown = (event) => {
       if (event.key === 'Enter') {
         const value = textBox.value.trim();
         if (value === '') {
-          callback({ type: 'none', value: 'none' });
+          const answers = this.getGroupAnswers();
+          callback({ type: SmartPromptResponseType.NONE, value: 'none', answers });
         } else {
-          callback({ type: 'reason', value });
+          const answers = this.getGroupAnswers();
+          callback({ type: SmartPromptResponseType.SELECTED, primarySelection: value, answers });
         }
         this.destroyModal();
       }
@@ -133,26 +184,40 @@ export class SmartPrompt implements ISmartPrompt {
     return textArea;
   }
 
-  private createRadioButton(text: string, id: string): HTMLLabelElement {
+  private createGroupContainer(group: SmartChoiceGroup): HTMLDivElement {
+    const container = document.createElement('div');
+    container.className = SmartPrompt.CLASSES.MODAL_GROUP;
+
+    if (group.label) {
+      const label = document.createElement('div');
+      label.className = SmartPrompt.CLASSES.MODAL_GROUP_LABEL;
+      label.textContent = group.label;
+      container.appendChild(label);
+    }
+
+    group.choices.forEach((choice, index) => {
+      const radioLabel = this.createGroupRadioButton(choice, group.id, index, group.defaultChoice);
+      container.appendChild(radioLabel);
+    });
+
+    return container;
+  }
+
+  private createGroupRadioButton(
+    text: string,
+    groupId: string,
+    index: number,
+    defaultChoice?: string
+  ): HTMLLabelElement {
     const label = document.createElement('label');
     label.className = SmartPrompt.CLASSES.MODAL_RADIO_LABEL;
 
     const radioButton = document.createElement('input');
-    radioButton.id = id;
+    radioButton.id = `smart-radio-${groupId}-${index}`;
     radioButton.type = 'radio';
-    radioButton.name = 'override';
+    radioButton.name = `group-${groupId}`;
     radioButton.value = text;
-
-    radioButton.addEventListener('change', function () {
-      document.querySelectorAll('input[name="override"]').forEach((rb) => {
-        if (rb instanceof HTMLInputElement) {
-          rb.style.backgroundColor = 'black';
-        }
-      });
-      if (this instanceof HTMLInputElement && this.checked) {
-        this.style.backgroundColor = 'white';
-      }
-    });
+    radioButton.checked = text === defaultChoice;
 
     label.appendChild(radioButton);
     label.appendChild(document.createTextNode(` ${text}`));
@@ -161,46 +226,41 @@ export class SmartPrompt implements ISmartPrompt {
   }
 
   /** @inheritdoc */
-  public async showModal(reasons: string[], overrides: string[] = []): Promise<SmartPromptResponse> {
+  public async showModal(primaryChoices: string[], groups: SmartChoiceGroup[] = []): Promise<SmartPromptResponse> {
     return new Promise((resolve) => {
       this.destroyModal();
       this.modal = this.createModal();
       document.body.appendChild(this.modal);
 
-      // Reset state at start
-      this.resetRadioState();
-
-      reasons.forEach((reason, index) => {
-        const button = this.createButton(reason, `smart-button-${index}`, resolve);
-        if (!this.modal) {
-          throw new Error('Modal not initialized');
-        }
-        this.modal.appendChild(button);
+      // Primary choice buttons
+      primaryChoices.forEach((choice, index) => {
+        const button = this.createPrimaryButton(choice, `smart-button-${index}`, resolve);
+        this.modal!.appendChild(button);
       });
 
-      const overrideContainer = document.createElement('div');
-      overrideContainer.className = SmartPrompt.CLASSES.MODAL_CONTENT;
-      this.modal.appendChild(overrideContainer);
-
-      overrides.forEach((override, index) => {
-        const radioButton = this.createRadioButton(override, `smart-radio-${index}`);
-        overrideContainer.appendChild(radioButton);
+      // Choice groups
+      groups.forEach((group) => {
+        const groupContainer = this.createGroupContainer(group);
+        this.modal!.appendChild(groupContainer);
       });
 
+      // Free-text input
       const textBox = this.createTextBox('smart-text', resolve);
-      this.modal.appendChild(textBox);
+      this.modal!.appendChild(textBox);
 
-      const cancelButton = this.createCancelButton('smart-cancel', resolve);
-      this.modal.appendChild(cancelButton);
-
-      const noneButton = this.createNoneButton('smart-none', resolve);
-      this.modal.appendChild(noneButton);
+      // Action buttons
+      const actionsContainer = document.createElement('div');
+      actionsContainer.className = SmartPrompt.CLASSES.MODAL_ACTIONS;
+      actionsContainer.appendChild(this.createCancelButton('smart-cancel', resolve));
+      actionsContainer.appendChild(this.createNoneButton('smart-none', resolve));
+      this.modal!.appendChild(actionsContainer);
 
       this.modal.style.display = 'block';
 
       const keydownHandler = (event: KeyboardEvent) => {
         if (event.key === 'Escape') {
-          resolve({ type: 'none', value: 'none' });
+          const answers = this.getGroupAnswers();
+          resolve({ type: SmartPromptResponseType.NONE, value: 'none', answers });
           this.destroyModal();
         }
       };
@@ -226,19 +286,19 @@ export class SmartPrompt implements ISmartPrompt {
       this.modal.appendChild(textArea);
 
       const buttonContainer = document.createElement('div');
-      buttonContainer.className = SmartPrompt.CLASSES.MODAL_CONTENT;
+      buttonContainer.className = SmartPrompt.CLASSES.MODAL_ACTIONS;
 
       const saveButton = document.createElement('button');
       saveButton.id = 'smart-textarea-save';
-      saveButton.innerHTML = submitLabel;
+      saveButton.textContent = submitLabel;
       saveButton.className = SmartPrompt.CLASSES.MODAL_BUTTON;
       saveButton.onclick = () => {
         resolve(textArea.value.trim());
         this.destroyModal();
       };
 
-      const cancelButton = this.createCancelButton('smart-textarea-cancel', (response) => {
-        resolve(response.value);
+      const cancelButton = this.createCancelButton('smart-textarea-cancel', () => {
+        resolve(null);
       });
 
       buttonContainer.appendChild(saveButton);
@@ -270,18 +330,28 @@ export class SmartPrompt implements ISmartPrompt {
     this.modal = null;
   }
 
-  private resetRadioState(): void {
-    const radioButtons = document.querySelectorAll('input[name="override"]');
-    radioButtons.forEach((rb) => {
-      if (rb instanceof HTMLInputElement) {
-        rb.checked = false;
-        rb.style.backgroundColor = 'black';
+  /**
+   * Collects current radio selections across all choice groups.
+   * Returns a record keyed by group id, with the selected value or null.
+   */
+  private getGroupAnswers(): Readonly<Record<string, string | null>> {
+    const answers: Record<string, string | null> = {};
+    if (!this.modal) return answers;
+
+    const radios = this.modal.querySelectorAll('input[type="radio"]') as NodeListOf<HTMLInputElement>;
+    const groupIds = new Set<string>();
+
+    radios.forEach((radio) => {
+      if (radio.name.startsWith('group-')) {
+        groupIds.add(radio.name.slice(6)); // strip "group-" prefix
       }
     });
-  }
 
-  private getSelectedOverride(): string | null {
-    const selectedRadio = document.querySelector('input[name="override"]:checked');
-    return selectedRadio instanceof HTMLInputElement && selectedRadio.checked ? selectedRadio.value : null;
+    groupIds.forEach((groupId) => {
+      const checked = this.modal!.querySelector(`input[name="group-${groupId}"]:checked`) as HTMLInputElement | null;
+      answers[groupId] = checked ? checked.value : null;
+    });
+
+    return answers;
   }
 }

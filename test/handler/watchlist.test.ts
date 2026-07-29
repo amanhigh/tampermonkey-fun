@@ -42,7 +42,6 @@ describe('WatchListHandler', () => {
       isScreenerVisible: jest.fn().mockReturnValue(false),
       getTickers: jest.fn().mockReturnValue(new Set()),
       getCurrentExchange: jest.fn(),
-      getInvestingTicker: jest.fn(),
       openTicker: jest.fn(),
       openBenchmarkTicker: jest.fn(),
       navigateTickers: jest.fn(),

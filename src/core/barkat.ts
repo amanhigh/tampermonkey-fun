@@ -1,6 +1,7 @@
 import '../style/main.less';
 import { UIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
+import { BarId } from '../models/bar';
 import { ITickerHandler } from '../handler/ticker';
 import { IOnLoadHandler } from '../handler/onload';
 import { IAlertHandler } from '../handler/alert';
@@ -154,7 +155,7 @@ export class Barkat {
     this.uiUtil
       .buildWrapper(Constants.UI.IDS.AREAS.MID, Constants.UI.POSITIONS.WRAPPER_WIDTH)
       .appendTo($area)
-      .append(this.uiUtil.buildWrapper(Constants.UI.IDS.DISPLAY.CARD).addClass(Constants.UI.IDS.DISPLAY.CARD_CLASS))
+      .append(this.uiUtil.buildBar(BarId.ALERT))
       .append(this.uiUtil.buildWrapper(Constants.UI.IDS.TIMEFRAME_BAR.CONTAINER))
       .append(
         this.uiUtil.buildInput(Constants.UI.IDS.INPUTS.COMMAND).on('keydown', (e) => {

@@ -1,5 +1,5 @@
 import { PairInfo } from '../models/alert';
-import { ISmartPrompt } from '../util/smart';
+import { ISmartPrompt, SmartPromptResponseType } from '../util/smart';
 import { IInvestingClient } from '../client/investing';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { IDomManager } from '../manager/dom';
@@ -46,12 +46,12 @@ export class AlertTickerHandler implements IAlertTickerHandler {
     const options = this.formatPairOptions(pairs);
     const response = await this.smartPrompt.showModal(options.slice(0, 10));
 
-    if (response.type === 'cancel' || response.type === 'none') {
+    if (response.type === SmartPromptResponseType.CANCEL || response.type === SmartPromptResponseType.NONE) {
       return;
     }
 
-    if (response.type === 'reason') {
-      const selected = response.value;
+    if (response.type === SmartPromptResponseType.SELECTED) {
+      const selected = response.primarySelection;
       const selectedPair = this.findSelectedPair(pairs, selected);
       if (selectedPair) {
         Notifier.info(`Selected: ${this.formatPair(selectedPair)}`);

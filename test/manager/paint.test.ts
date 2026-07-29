@@ -38,7 +38,6 @@ describe('PaintManager', () => {
     mockDomManager = {
       getTicker: jest.fn().mockReturnValue('CURRENT'),
       getCurrentExchange: jest.fn(),
-      getInvestingTicker: jest.fn(),
       openTicker: jest.fn(),
       getTickers: jest.fn().mockReturnValue(new Set()),
       isScreenerVisible: jest.fn().mockReturnValue(false),

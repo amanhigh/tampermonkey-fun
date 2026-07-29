@@ -98,13 +98,14 @@ describe('JournalManager', () => {
   });
 
   describe('createJournal', () => {
-    it('should create journal with legacy sequence MWD when screenshots contain DL', async () => {
+    it('should forward explicit sequence from input to request', async () => {
       const input: CreateJournalInput = {
         ticker: 'AAPL',
         type: 'TAKEN',
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
+        sequence: 'MWD',
       };
 
       await journalManager.createJournal(input);
@@ -117,20 +118,14 @@ describe('JournalManager', () => {
       );
     });
 
-    it('should create journal with legacy sequence YR when screenshots do not contain DL', async () => {
-      const screenshots: ScreenshotResponse[] = [
-        { file_name: 'ss1.png', full_path: '/ss1.png', timeframe: 'SMN' as JournalTimeframe },
-        { file_name: 'ss2.png', full_path: '/ss2.png', timeframe: 'TMN' as JournalTimeframe },
-        { file_name: 'ss3.png', full_path: '/ss3.png', timeframe: 'MN' as JournalTimeframe },
-        { file_name: 'ss4.png', full_path: '/ss4.png', timeframe: 'WK' as JournalTimeframe },
-      ];
-
+    it('should forward YR sequence from input even when screenshots contain DL', async () => {
       const input: CreateJournalInput = {
         ticker: 'AAPL',
         type: 'TAKEN',
         status: 'RUNNING',
-        screenshots,
+        screenshots: createDefaultScreenshots(),
         reason: '',
+        sequence: 'YR',
       };
 
       await journalManager.createJournal(input);
@@ -149,6 +144,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
+        sequence: 'MWD',
       };
 
       await journalManager.createJournal(input);
@@ -172,6 +168,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: 'HGS - oe',
+        sequence: 'MWD',
       };
 
       await journalManager.createJournal(input);
@@ -190,6 +187,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
+        sequence: 'MWD',
       };
 
       await journalManager.createJournal(input);
@@ -211,6 +209,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
+        sequence: 'MWD',
       };
 
       const result = await journalManager.createJournal(input);
@@ -227,6 +226,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
+        sequence: 'MWD',
       };
 
       await expect(journalManager.createJournal(input)).rejects.toThrow('API Error');

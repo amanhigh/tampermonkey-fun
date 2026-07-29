@@ -67,8 +67,7 @@ describe('CategoryManager', () => {
       publish: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<IPublisher>;
 
-    // Lazy getter to break factory cycle
-    categoryManager = new CategoryManager(mockTickerManager, () => mockJournalManager, mockPublisher);
+    categoryManager = new CategoryManager(mockTickerManager, mockJournalManager, mockPublisher);
   });
 
   // ── Constructor ──
@@ -714,6 +713,53 @@ describe('CategoryManager', () => {
 
       expect(mockTickerManager.updateTicker).not.toHaveBeenCalled();
       expect(mockPublisher.publish).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── publishCategoryChanged ──
+
+  describe('publishCategoryChanged', () => {
+    it('should evict a cached RUNNING category and publish for the ticker', async () => {
+      // Prime the cache with RUNNING category
+      mockJournalManager.listJournals
+        .mockResolvedValueOnce([{ id: 'jrn_1', ticker: 'EVICT_TEST', status: 'RUNNING' } as any])
+        .mockResolvedValueOnce([])  // no SET journals
+        .mockResolvedValueOnce([])  // fresh lookup: no RUNNING
+        .mockResolvedValueOnce([]); // fresh lookup: no SET
+
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'EVICT_TEST', state: TickerState.WATCHED })
+      );
+
+      // First lookup primes cache with RUNNING
+      const firstResult = await categoryManager.getTickerCategory('EVICT_TEST');
+      expect(firstResult.watch?.id).toBe(WatchCategoryId.RUNNING);
+
+      // Change backend state: no more RUNNING journal
+      mockJournalManager.listJournals.mockReset();
+      mockJournalManager.listJournals
+        .mockResolvedValueOnce([]) // no RUNNING
+        .mockResolvedValueOnce([]); // no SET
+
+      // Publish category change (should evict + publish)
+      await categoryManager.publishCategoryChanged(['EVICT_TEST']);
+
+      // Verify event was published with correct ticker
+      expect(mockPublisher.publish).toHaveBeenCalledWith({
+        type: DomainEventType.TICKER_CATEGORY_CHANGED,
+        tickers: ['EVICT_TEST'],
+      });
+
+      // Verify cache was evicted — next lookup re-fetches and no longer returns RUNNING
+      const secondResult = await categoryManager.getTickerCategory('EVICT_TEST');
+      expect(secondResult.watch?.id).toBeUndefined();
+    });
+
+    it('should not evict or publish for an empty ticker list', async () => {
+      await categoryManager.publishCategoryChanged([]);
+
+      expect(mockPublisher.publish).not.toHaveBeenCalled();
+      // No tickers means no eviction calls — LRU cache delete not called
     });
   });
 });

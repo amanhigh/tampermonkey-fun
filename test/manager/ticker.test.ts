@@ -2,7 +2,6 @@ import { DomManager, IDomManager } from '../../src/manager/dom';
 import { TickerArea, TickerVisibility } from '../../src/models/dom';
 import { IWaitUtil } from '../../src/util/wait';
 import { ITickerManager } from '../../src/manager/ticker';
-import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { Constants } from '../../src/models/constant';
 import { Ticker } from '../../src/models/ticker';
 
@@ -28,7 +27,6 @@ describe('DomManager', () => {
   let tickerManager: IDomManager;
   let mockWaitUtil: jest.Mocked<IWaitUtil>;
   let mockTickerManager: jest.Mocked<ITickerManager>;
-  let mockAlertTickerManager: jest.Mocked<IAlertTickerManager>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -54,15 +52,7 @@ describe('DomManager', () => {
       setExchange: jest.fn(),
     } as unknown as jest.Mocked<ITickerManager>;
 
-    // Mock AlertTickerManager
-    mockAlertTickerManager = {
-      getPrimaryAlertTicker: jest.fn(),
-      fetchAlertTicker: jest.fn(),
-      linkAlertTicker: jest.fn(),
-      getAlertTickers: jest.fn(),
-    } as unknown as jest.Mocked<IAlertTickerManager>;
-
-    tickerManager = new DomManager(mockWaitUtil, mockTickerManager, mockAlertTickerManager);
+    tickerManager = new DomManager(mockWaitUtil, mockTickerManager);
   });
 
   describe('getTicker', () => {
@@ -344,35 +334,4 @@ describe('DomManager', () => {
     });
   });
 
-  describe('getInvestingTicker', () => {
-    it('should return first alert ticker symbol', async () => {
-      ((global as any).$ as jest.Mock).mockReturnValue({
-        text: jest.fn().mockReturnValue('TV:HDFC'),
-      });
-      mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue({
-        symbol: 'HDFC',
-        pair_id: '123',
-        name: 'HDFC Bank',
-        exchange: 'NSE',
-        type: 'SECONDARY',
-        ticker: 'TV:HDFC',
-        created_at: '',
-        updated_at: '',
-      });
-
-      const result = await tickerManager.getInvestingTicker();
-
-      expect(mockAlertTickerManager.getPrimaryAlertTicker).toHaveBeenCalledWith('TV:HDFC');
-      expect(result).toBe('HDFC');
-    });
-
-    it('should throw when no alert ticker found', async () => {
-      ((global as any).$ as jest.Mock).mockReturnValue({
-        text: jest.fn().mockReturnValue('TV:UNKNOWN'),
-      });
-      mockAlertTickerManager.getPrimaryAlertTicker.mockResolvedValue(null);
-
-      await expect(tickerManager.getInvestingTicker()).rejects.toThrow('Investing ticker not found for TV:UNKNOWN');
-    });
-  });
 });
