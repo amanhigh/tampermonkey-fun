@@ -553,7 +553,13 @@ export class Factory {
     alertBar: (): IAlertBar =>
       Factory.getInstance(
         'alertBar',
-        () => new AlertBar(Factory.manager.dom(), Factory.manager.alertTicker(), Factory.util.ui())
+        () =>
+          new AlertBar(
+            Factory.manager.dom(),
+            Factory.manager.alertTicker(),
+            Factory.manager.ticker(),
+            Factory.util.ui()
+          )
       ),
     timeFrameBar: (): ITimeFrameHandler =>
       Factory.getInstance('timeFrameBar', () => new TimeFrameBar(Factory.manager.timeFrame())),

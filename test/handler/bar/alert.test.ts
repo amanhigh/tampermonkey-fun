@@ -2,6 +2,8 @@ import { AlertBar, IAlertBar, AlertBarData } from '../../../src/handler/bar/aler
 import { AlertTicker } from '../../../src/models/alert_ticker';
 import { IDomManager } from '../../../src/manager/dom';
 import { IAlertTickerManager } from '../../../src/manager/alert_ticker';
+import { ITickerManager } from '../../../src/manager/ticker';
+import { Ticker } from '../../../src/models/ticker';
 import { IUIUtil } from '../../../src/util/ui';
 import { ISubscriber } from '../../../src/manager/event_bus';
 import { DomainEventType } from '../../../src/models/domain_event';
@@ -51,6 +53,7 @@ const { Notifier } = jest.requireMock('../../../src/util/notify');
 // ── Mock jQuery ──
 
 let mockRootEl: any;
+let mockTickerManager: jest.Mocked<ITickerManager>;
 
 function createMockElement(): any {
   return {
@@ -125,6 +128,16 @@ function createMockAlertTickerManager(): jest.Mocked<IAlertTickerManager> {
   };
 }
 
+function createMockTickerManager(): jest.Mocked<ITickerManager> {
+  return {
+    getTicker: jest.fn().mockResolvedValue({ exchange: 'NSE' }),
+    updateTicker: jest.fn(),
+    markRecent: jest.fn(),
+    listTickers: jest.fn(),
+    setExchange: jest.fn(),
+  };
+}
+
 function createMockUIUtil(): jest.Mocked<IUIUtil> {
   return {
     buildArea: jest.fn().mockReturnValue(createMockElement()),
@@ -145,6 +158,14 @@ function createMockUIUtil(): jest.Mocked<IUIUtil> {
 
 /** Test-only wrapper exposing protected `render(data)` for direct data application. */
 class TestableAlertBar extends AlertBar {
+  constructor(
+    domManager: IDomManager,
+    alertTickerManager: IAlertTickerManager,
+    uiUtil: IUIUtil
+  ) {
+    super(domManager, alertTickerManager, mockTickerManager, uiUtil);
+  }
+
   public render(data: AlertBarData): void {
     super.render(data);
   }
@@ -162,6 +183,7 @@ describe('AlertBar', () => {
     mockRootEl = createMockElement();
     mockDomManager = createMockDomManager();
     mockAlertTickerManager = createMockAlertTickerManager();
+    mockTickerManager = createMockTickerManager();
     mockUIUtil = createMockUIUtil();
     mockJQuery.mockImplementation(createDefaultJQuery);
   });
@@ -230,7 +252,7 @@ describe('AlertBar', () => {
   // ── registerEvents() ──
 
   describe('registerEvents', () => {
-    it('should subscribe to five domain event types including TICKER_TRACKING_STARTED', () => {
+    it('should subscribe to six domain event types including TICKER_METADATA_CHANGED', () => {
       const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       const mockSubscriber: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn(),
@@ -246,6 +268,7 @@ describe('AlertBar', () => {
           DomainEventType.TICKER_TRACKING_STOPPED,
           DomainEventType.ALERT_TICKER_LINKED,
           DomainEventType.ALERT_TICKER_DELETED,
+          DomainEventType.TICKER_METADATA_CHANGED,
         ],
         expect.any(Function)
       );
@@ -647,6 +670,40 @@ describe('AlertBar', () => {
         expect.stringContaining('🔔2')
       );
     });
+
+    it('should render an exchange-mismatch warning badge with both exchange values', async () => {
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      mockDomManager.getCurrentExchange.mockReturnValue('NSE');
+      mockTickerManager.getTicker.mockResolvedValue(new Ticker({ exchange: 'BSE' }));
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
+        createAlertTicker({ symbol: 'INFY', type: 'PRIMARY' }),
+      ]);
+
+      await bar.refresh();
+
+      const html = mockRootEl.html.mock.calls[0][0] as string;
+      const exchangeDescription = 'Opened exchange: NSE · Backend exchange: BSE';
+
+      expect(html).toContain('⚠️');
+      expect(html).toContain(`title="${exchangeDescription}"`);
+      expect(html).toContain(`aria-label="${exchangeDescription}"`);
+    });
+
+    it('should not render an exchange-mismatch warning for NYSE Arca and AMEX aliases', async () => {
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      mockDomManager.getCurrentExchange.mockReturnValue('NYSE Arca');
+      mockTickerManager.getTicker.mockResolvedValue(new Ticker({ exchange: 'AMEX' }));
+      mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([
+        createAlertTicker({ symbol: 'SPY', type: 'PRIMARY' }),
+      ]);
+
+      await bar.refresh();
+
+      const html = mockRootEl.html.mock.calls[0][0] as string;
+
+      expect(html).not.toContain('Opened exchange:');
+      expect(html).not.toContain('Backend exchange:');
+    });
   });
 
   // ── Root status classes ──
@@ -698,6 +755,19 @@ describe('AlertBar', () => {
 
       expect(mockRootEl.removeClass).toHaveBeenCalledWith(STATUS.ALL);
       expect(mockRootEl.addClass).toHaveBeenCalledWith(STATUS.ERROR);
+    });
+
+    it('should apply WARN status when opened and backend exchanges differ', () => {
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      bar.render({
+        tvTicker: 'NSE:INFY',
+        alertTickers: [createAlertTicker({ type: 'PRIMARY' })],
+        isUntracked: false,
+        exchangeMismatch: { opened: 'NSE', backend: 'BSE' },
+      });
+
+      expect(mockRootEl.removeClass).toHaveBeenCalledWith(STATUS.ALL);
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(STATUS.WARN);
     });
   });
 
