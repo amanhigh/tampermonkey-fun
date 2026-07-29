@@ -149,12 +149,12 @@ export class Barkat {
             // Toggle audit area visibility (audit data loaded via FIRST_LOAD event)
             this.uiUtil.toggleUI(auditAreaId);
           })
-      )
-      .append(this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.SUMMARY));
+      );
 
     this.uiUtil
       .buildWrapper(Constants.UI.IDS.AREAS.MID, Constants.UI.POSITIONS.WRAPPER_WIDTH)
       .appendTo($area)
+      .append(this.uiUtil.buildBar(BarId.WATCHLIST))
       .append(this.uiUtil.buildBar(BarId.ALERT))
       .append(this.uiUtil.buildBar(BarId.TIMEFRAME))
       .append(this.uiUtil.buildBar(BarId.ALERT_SUMMARY))

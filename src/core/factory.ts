@@ -57,6 +57,7 @@ import { IRecentManager, RecentManager } from '../manager/recent';
 import { IDashboardSyncManager, DashboardSyncManager } from '../manager/dashboard_sync';
 import { IDisplayManager, DisplayManager } from '../manager/display';
 import { IWatchListHandler, WatchListHandler } from '../handler/watchlist';
+import { IWatchlistBar, WatchlistBar } from '../handler/bar/watchlist';
 import { IOnLoadHandler, OnLoadHandler } from '../handler/onload';
 import { IFlagHandler, FlagHandler } from '../handler/flag';
 import { IKiteRepo, KiteRepo } from '../repo/kite';
@@ -210,13 +211,12 @@ export class Factory {
           new TradingViewWatchlistManager(
             Factory.manager.paint(),
             Factory.manager.category(),
-            Factory.manager.filter(),
             Factory.manager.dom(),
             Factory.manager.eventPublisher()
           )
       ),
 
-    filter: (): IFilterManager => Factory.getInstance('filterManager', () => new FilterManager(Factory.util.ui())),
+    filter: (): IFilterManager => Factory.getInstance('filterManager', () => new FilterManager()),
 
     category: (): ICategoryManager =>
       Factory.getInstance(
@@ -451,6 +451,7 @@ export class Factory {
               Factory.handler.alertBar(),
               Factory.handler.kite(),
               Factory.handler.alertSummaryBar(),
+              Factory.handler.watchlistBar(),
               Factory.handler.audit(),
               Factory.handler.watchlist(),
               Factory.handler.tickerChange(),
@@ -544,7 +545,8 @@ export class Factory {
             Factory.manager.watchlist(),
             Factory.util.sync(),
             Factory.manager.category(),
-            Factory.manager.dom()
+            Factory.manager.dom(),
+            Factory.handler.watchlistBar()
           )
       ),
     flag: (): IFlagHandler =>
@@ -556,6 +558,8 @@ export class Factory {
       ),
     timeFrameBar: (): ITimeFrameHandler =>
       Factory.getInstance('timeFrameBar', () => new TimeFrameBar(Factory.manager.timeFrame())),
+    watchlistBar: (): IWatchlistBar =>
+      Factory.getInstance('watchlistBar', () => new WatchlistBar(Factory.manager.paint(), Factory.manager.filter())),
     journal: (): IJournalHandler =>
       Factory.getInstance(
         'journalHandler',

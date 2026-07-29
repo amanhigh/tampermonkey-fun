@@ -62,7 +62,7 @@ export const Constants = Object.freeze({
     IDS: {
       AREAS: {
         MAIN: 'aman-area', // Old Name: areaId
-        SUMMARY: 'aman-summary', // Old Name: summaryId
+
         TOP: 'aman-top', // Old Name: topId
         MID: 'aman-mid', // Old Name: midId
         AUDIT: 'aman-audit', // Old Name: auditId

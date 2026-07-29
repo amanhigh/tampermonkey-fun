@@ -29,4 +29,6 @@ export enum BarId {
   ALERT_SUMMARY = 'aman-alerts',
   /** Timeframe bar — displays recommended timeframe chips for the current ticker. */
   TIMEFRAME = 'aman-tf-bar',
+  /** Watchlist bar — compact chip display of watch categories with filter controls. */
+  WATCHLIST = 'aman-watchlist-bar',
 }
