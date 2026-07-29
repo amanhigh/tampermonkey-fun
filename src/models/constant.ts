@@ -65,19 +65,11 @@ export const Constants = Object.freeze({
         SUMMARY: 'aman-summary', // Old Name: summaryId
         TOP: 'aman-top', // Old Name: topId
         MID: 'aman-mid', // Old Name: midId
-        ALERTS: 'aman-alerts', // Old Name: alertsId
         AUDIT: 'aman-audit', // Old Name: auditId
         ORDERS: 'aman-orders', // Old Name: ordersId
         JOURNAL: 'aman-journal', // Old Name: journalId
       },
-      TIMEFRAME_BAR: {
-        CONTAINER: 'aman-tf-bar',
-        CHIP_CLASS: 'aman-tf-chip',
-        ACTIVE_CLASS: 'aman-tf-active',
-        INACTIVE_CLASS: 'aman-tf-inactive',
-        LOADING_CLASS: 'aman-tf-loading',
-        ATTR_CODE: 'data-tf-code',
-      },
+
       INPUTS: {
         COMMAND: 'aman-input', // Old Name: inputId
       },

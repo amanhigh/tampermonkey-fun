@@ -27,7 +27,7 @@
 // ============================================
 // Timeframe Bar Container
 // ============================================
-#aman-tf-bar {
+.aman-tf-bar {
     display: block;
     background: @tf-bg;
     font-family: @tf-font;
@@ -38,13 +38,13 @@
     border-radius: @tf-radius;
     line-height: 1.6;
     box-sizing: border-box;
-    width: 180px;
+    width: calc(100% - (2 * @tf-margin));
     user-select: none;
 
     // ============================================
     // Timeframe Chip
     // ============================================
-    .aman-tf-chip {
+    .aman-tf-bar__chip {
         display: inline-block;
         padding: 0 5px;
         border-radius: 3px;
@@ -54,7 +54,7 @@
         transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
 
         // Inactive state
-        &.aman-tf-inactive {
+        &.aman-tf-bar__chip--inactive {
             color: @tf-color-inactive;
             background: @tf-bg-inactive;
 
@@ -66,14 +66,14 @@
 
         // Active state colors per timeframe (via mixin)
         .tf-active-color(@code, @color) {
-            &.aman-tf-chip[data-tf-code="@{code}"] {
+            &.aman-tf-bar__chip[data-tf-code="@{code}"] {
                 color: @color;
                 background: fade(@color, 15%);
                 &:hover { background: fade(@color, 25%); }
             }
         }
 
-        &.aman-tf-active {
+        &.aman-tf-bar__chip--active {
             .tf-active-color(YR, @tf-color-yr);   // Coral Red
             .tf-active-color(SMN, @tf-color-smn);  // Orange
             .tf-active-color(TMN, @tf-color-tmn);  // Amber
@@ -83,7 +83,7 @@
         }
 
         // Loading state
-        &.aman-tf-loading {
+        &.aman-tf-bar__chip--loading {
             opacity: 0.5;
             pointer-events: none;
             cursor: default;

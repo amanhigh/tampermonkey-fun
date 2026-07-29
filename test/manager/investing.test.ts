@@ -16,6 +16,31 @@ describe('InvestingManager', () => {
     manager = new InvestingManager(mockInstrumentClient);
   });
 
+  describe('searchInstruments', () => {
+    it('should forward query and limit to client and return quotes', async () => {
+      mockInstrumentClient.getInstruments.mockResolvedValue({
+        quotes: [
+          { id: 8874, url: '/indices/nq-100-futures', description: 'Nasdaq 100 Futures', symbol: 'NQM26', exchange: 'CME' },
+        ],
+      });
+
+      const result = await manager.searchInstruments('nasdaq', 5);
+
+      expect(mockInstrumentClient.getInstruments).toHaveBeenCalledWith('nasdaq', 5);
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(8874);
+    });
+
+    it('should return empty array when quotes are absent', async () => {
+      mockInstrumentClient.getInstruments.mockResolvedValue({});
+
+      const result = await manager.searchInstruments('zzzzz');
+
+      expect(mockInstrumentClient.getInstruments).toHaveBeenCalledWith('zzzzz', undefined);
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('getInstrument', () => {
     it('should return instrument with matching href path', async () => {
       mockInstrumentClient.getInstruments.mockResolvedValue({

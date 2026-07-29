@@ -6,7 +6,7 @@ import { Constants } from '../models/constant';
 
 /**
  * OsClient handles OS-level operations against the local Kohan API:
- * screenshots, clipboard, and keyboard submap control.
+ * screenshots and clipboard.
  */
 export interface IOsClient extends IBaseClient {
   /**
@@ -30,18 +30,6 @@ export interface IOsClient extends IBaseClient {
    * @returns Promise resolving with clipboard text
    */
   getClip(): Promise<string>;
-
-  /**
-   * Enable a keyboard submap (e.g. 'swiftkeys').
-   * @param submap - Submap name to enable
-   */
-  enableSubmap(submap: string): Promise<void>;
-
-  /**
-   * Disable a keyboard submap.
-   * @param submap - Submap name to disable
-   */
-  disableSubmap(submap: string): Promise<void>;
 }
 
 /**
@@ -96,32 +84,6 @@ export class OsClient extends BaseClient implements IOsClient {
       return await this.makeRequest<string>('/os/clip/');
     } catch (error) {
       throw new Error(`Failed to get clip: ${(error as Error).message}`);
-    }
-  }
-
-  /** @inheritdoc */
-  async enableSubmap(submap: string): Promise<void> {
-    try {
-      await this.makeRequest<void>('/os/submap/enable', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        data: JSON.stringify({ submap }),
-      });
-    } catch (error) {
-      throw new Error(`Failed to enable submap: ${(error as Error).message}`);
-    }
-  }
-
-  /** @inheritdoc */
-  async disableSubmap(submap: string): Promise<void> {
-    try {
-      await this.makeRequest<void>('/os/submap/disable', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        data: JSON.stringify({ submap }),
-      });
-    } catch (error) {
-      throw new Error(`Failed to disable submap: ${(error as Error).message}`);
     }
   }
 }

@@ -1,5 +1,4 @@
-import { Alert, PairInfo } from '../models/alert';
-import { SearchResponse, SearchResultItem } from '../models/investing';
+import { Alert } from '../models/alert';
 import { BaseClient, IBaseClient } from './base';
 
 /**
@@ -24,11 +23,6 @@ export interface IInvestingClient extends IBaseClient {
    * Deletes an existing alert
    */
   deleteAlert(alert: Alert): Promise<void>;
-
-  /**
-   * Fetch symbol data from the investing.com API
-   */
-  fetchSymbolData(symbol: string): Promise<PairInfo[]>;
 
   /**
    * Fetches HTML content from alert center page
@@ -101,39 +95,6 @@ export class InvestingClient extends BaseClient implements IInvestingClient {
       });
     } catch (error) {
       throw new Error(`Failed to delete alert: ${(error as Error).message}`);
-    }
-  }
-
-  /**
-   * Fetch symbol data from the investing.com API
-   */
-  async fetchSymbolData(symbol: string): Promise<PairInfo[]> {
-    const data = new URLSearchParams({
-      search_text: symbol,
-      term: symbol,
-      country_id: '0',
-      tab_id: 'All',
-    });
-
-    try {
-      const response = await this.makeRequest<SearchResponse>(
-        '/search/service/search?searchType=alertCenterInstruments',
-        {
-          method: 'POST',
-          data: data.toString(),
-        }
-      );
-
-      if (!response.All?.length) {
-        throw new Error(`No results found for symbol: ${symbol}`);
-      }
-
-      return response.All.map(
-        (item: SearchResultItem) =>
-          new PairInfo(item.name, item.pair_ID.toString(), item.exchange_name_short, item.symbol)
-      );
-    } catch (error) {
-      throw new Error(`Failed to fetch symbol data: ${(error as Error).message}`);
     }
   }
 

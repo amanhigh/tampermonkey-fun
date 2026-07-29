@@ -826,4 +826,67 @@ describe('BaseBar', () => {
       );
     });
   });
+
+  // ── Compact-only mode (renderDetails returns null) ──
+
+  /** Compact-only subclass: relies on default `renderDetails()` returning null. */
+  class CompactOnlyBar extends BaseBar<TestData> {
+    public render(data: TestData): void {
+      super.render(data);
+    }
+
+    protected renderCompact(data: TestData): string {
+      return `compact:${data.label}:${data.count}`;
+    }
+
+    // renderDetails intentionally omitted — inherits default null return
+
+    protected async loadData(): Promise<TestData> {
+      return { label: 'default', count: 0 };
+    }
+
+    protected get refreshEvents(): readonly DomainEventType[] {
+      return [];
+    }
+  }
+
+  describe('compact-only mode (renderDetails returns null)', () => {
+    it('should render compact HTML directly without disclosure button or details markup', () => {
+      const bar = new CompactOnlyBar(BarId.ALERT);
+      bar.render({ label: 'Simple', count: 3 });
+
+      const html = mockRootEl.html.mock.calls[0][0] as string;
+      expect(html).toBe('compact:Simple:3');
+      expect(html).not.toContain('aria-expanded');
+      expect(html).not.toContain('aria-controls');
+      expect(html).not.toContain('hidden');
+      expect(html).not.toContain('toggle');
+    });
+
+    it('should not bind a disclosure click handler', () => {
+      const bar = new CompactOnlyBar(BarId.ALERT);
+      bar.render({ label: 'NoClick', count: 1 });
+
+      const clickCalls = mockRootEl.on.mock.calls.filter(
+        (c: any[]) => c[0] === `click.${EVENT_NS}`
+      );
+      expect(clickCalls.length).toBe(0);
+    });
+
+    it('should still call onPaint for compact-only mode', () => {
+      class CompactOnlyWithPaint extends CompactOnlyBar {
+        public onPaintCount = 0;
+
+        protected onPaint(): void {
+          this.onPaintCount++;
+        }
+      }
+
+      const bar = new CompactOnlyWithPaint(BarId.ALERT);
+      bar.render({ label: 'Paint', count: 1 });
+
+      expect(bar.onPaintCount).toBe(1);
+    });
+
+  });
 });

@@ -39,7 +39,7 @@ import { IInvestingManager, InvestingManager } from '../manager/investing';
 
 // Handler Imports
 import { IAlertHandler, AlertHandler } from '../handler/alert';
-import { AlertSummaryHandler, IAlertSummaryHandler } from '../handler/alert_summary';
+import { IAlertSummaryBar, AlertSummaryBar } from '../handler/bar/alert_summary';
 import { AuditHandler, IAuditHandler } from '../handler/audit';
 import { JournalHandler, IJournalHandler } from '../handler/journal';
 import { HotkeyHandler, IHotkeyHandler } from '../handler/hotkey';
@@ -48,7 +48,7 @@ import { IModifierKeyConfig, ModifierKeyConfig } from '../handler/modifier_confi
 
 import { IDashboardSyncHandler, DashboardSyncHandler } from '../handler/dashboard_sync';
 import { IAlertBar, AlertBar } from '../handler/bar/alert';
-import { ITimeFrameHandler, TimeFrameHandler } from '../handler/timeframe';
+import { ITimeFrameHandler, TimeFrameBar } from '../handler/bar/timeframe';
 import { IKiteHandler, KiteHandler } from '../handler/kite';
 import { IKiteManager, KiteManager } from '../manager/kite';
 import { IStyleManager, StyleManager } from '../manager/style';
@@ -263,8 +263,7 @@ export class Factory {
           )
       ),
 
-    tv: (): ITradingViewManager =>
-      Factory.getInstance('tvManager', () => new TradingViewManager(Factory.util.wait(), Factory.client.os())),
+    tv: (): ITradingViewManager => Factory.getInstance('tvManager', () => new TradingViewManager(Factory.util.wait())),
 
     alertTicker: (): IAlertTickerManager =>
       Factory.getInstance(
@@ -410,15 +409,15 @@ export class Factory {
             Factory.handler.alertTicker()
           )
       ),
-    alertSummary: (): IAlertSummaryHandler =>
+    alertSummaryBar: (): IAlertSummaryBar =>
       Factory.getInstance(
-        'alertSummaryHandler',
+        'alertSummaryBar',
         () =>
-          new AlertSummaryHandler(
+          new AlertSummaryBar(
             Factory.manager.alert(),
             Factory.manager.category(),
             Factory.manager.tv(),
-            Factory.util.ui()
+            Factory.manager.dom()
           )
       ),
     audit: (): IAuditHandler =>
@@ -448,16 +447,17 @@ export class Factory {
             Factory.manager.eventPublisher(),
             [
               Factory.handler.alertFeed(),
-              Factory.handler.timeFrame(),
+              Factory.handler.timeFrameBar(),
               Factory.handler.alertBar(),
               Factory.handler.kite(),
-              Factory.handler.alertSummary(),
+              Factory.handler.alertSummaryBar(),
               Factory.handler.audit(),
               Factory.handler.watchlist(),
               Factory.handler.tickerChange(),
               Factory.handler.dashboardSync(),
             ],
-            Factory.manager.eventSubscriber()
+            Factory.manager.eventSubscriber(),
+            Factory.manager.tv()
           )
       ),
     hotkey: (): IHotkeyHandler =>
@@ -501,7 +501,7 @@ export class Factory {
         'alertTickerHandler',
         () =>
           new AlertTickerHandler(
-            Factory.client.investing(),
+            Factory.manager.investing(),
             Factory.manager.alertTicker(),
             Factory.util.smart(),
             Factory.manager.dom()
@@ -554,8 +554,8 @@ export class Factory {
         'alertBar',
         () => new AlertBar(Factory.manager.dom(), Factory.manager.alertTicker(), Factory.util.ui())
       ),
-    timeFrame: (): ITimeFrameHandler =>
-      Factory.getInstance('timeFrameHandler', () => new TimeFrameHandler(Factory.manager.timeFrame())),
+    timeFrameBar: (): ITimeFrameHandler =>
+      Factory.getInstance('timeFrameBar', () => new TimeFrameBar(Factory.manager.timeFrame())),
     journal: (): IJournalHandler =>
       Factory.getInstance(
         'journalHandler',

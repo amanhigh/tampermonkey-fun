@@ -7,6 +7,7 @@ import { IAlertHandler } from '../../src/handler/alert';
 import { ITickerChangeHandler } from '../../src/handler/ticker_change';
 import { IPaintManager } from '../../src/manager/paint';
 import { IDomManager } from '../../src/manager/dom';
+import { ITradingViewManager } from '../../src/manager/tv';
 import { IDomainEventConsumer, ISubscriber, IPublisher } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
 import { Constants } from '../../src/models/constant';
@@ -16,6 +17,7 @@ import { TickerArea } from '../../src/models/dom';
 const mockDocument = {
   addEventListener: jest.fn(),
   body: {} as HTMLElement,
+  createElement: jest.fn(() => ({} as HTMLElement)),
 } as unknown as Document;
 
 const mockJQuery = jest.fn(() => ({
@@ -41,6 +43,7 @@ describe('OnLoadHandler', () => {
   let mockTickerChangeHandler: jest.Mocked<ITickerChangeHandler>;
   let mockPaintManager: jest.Mocked<IPaintManager>;
   let mockDomManager: jest.Mocked<IDomManager>;
+  let mockTradingViewManager: jest.Mocked<ITradingViewManager>;
   let mockPublisher: jest.Mocked<IPublisher>;
   let mockDomainEventConsumers: jest.Mocked<IDomainEventConsumer>[];
   let mockSubscriber: jest.Mocked<ISubscriber>;
@@ -56,6 +59,12 @@ describe('OnLoadHandler', () => {
           get: jest.fn(() => document.body),
         } as unknown as JQuery;
         callback(mockElement);
+      }),
+      waitEE: jest.fn((_selector, callback) => {
+        const titleEl = document.createElement('title');
+        if (_selector === 'title') {
+          callback(titleEl);
+        }
       }),
     } as unknown as jest.Mocked<IWaitUtil>;
 
@@ -95,6 +104,11 @@ describe('OnLoadHandler', () => {
       getTicker: jest.fn().mockReturnValue('TEST'),
     } as unknown as jest.Mocked<IDomManager>;
 
+    mockTradingViewManager = {
+      isSwiftKeysEnabled: jest.fn().mockReturnValue(true),
+      setSwiftKeysState: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<ITradingViewManager>;
+
     mockPublisher = {
       publish: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<IPublisher>;
@@ -120,7 +134,8 @@ describe('OnLoadHandler', () => {
       mockDomManager,
       mockPublisher,
       mockDomainEventConsumers,
-      mockSubscriber
+      mockSubscriber,
+      mockTradingViewManager
     );
   });
 
@@ -217,6 +232,60 @@ describe('OnLoadHandler', () => {
       expect(mockPaintManager.paintHeader).toHaveBeenCalledTimes(1);
 
       jest.useRealTimers();
+    });
+  });
+
+  describe('title marker restoration', () => {
+    it('should wait for title element via waitEE during init', () => {
+      onLoadHandler.init();
+
+      expect(mockWaitUtil.waitEE).toHaveBeenCalledWith('title', expect.any(Function), 10);
+    });
+
+    it('should call setSwiftKeysState(true) on title mutation when SwiftKeys is enabled', () => {
+      mockTradingViewManager.isSwiftKeysEnabled.mockReturnValue(true);
+
+      onLoadHandler.init();
+
+      // Capture the callback registered via waitEE for title
+      const waitEECalls = (mockWaitUtil.waitEE as jest.Mock).mock.calls;
+      const titleCall = waitEECalls.find(([sel]: [string]) => sel === 'title');
+      expect(titleCall).toBeDefined();
+
+      // Simulate title DOM mutation by invoking the registered mutation callback
+      // The observer is set up inside waitEE callback, so we need to get the nodeObserver call
+      const nodeObserverCalls = mockObserveUtil.nodeObserver.mock.calls;
+      // Find the title-related nodeObserver call (last one after header-title)
+      const titleObserverCall = nodeObserverCalls[nodeObserverCalls.length - 1];
+      const mutationCallback = titleObserverCall[1] as () => void;
+
+      mutationCallback();
+
+      expect(mockTradingViewManager.setSwiftKeysState).toHaveBeenCalledWith(true);
+    });
+
+    it('should NOT call setSwiftKeysState when SwiftKeys is disabled', () => {
+      mockTradingViewManager.isSwiftKeysEnabled.mockReturnValue(false);
+
+      onLoadHandler.init();
+
+      // Simulate title mutation
+      const nodeObserverCalls = mockObserveUtil.nodeObserver.mock.calls;
+      const titleObserverCall = nodeObserverCalls[nodeObserverCalls.length - 1];
+      const mutationCallback = titleObserverCall[1] as () => void;
+
+      mutationCallback();
+
+      expect(mockTradingViewManager.setSwiftKeysState).not.toHaveBeenCalled();
+    });
+
+    it('should observe title parent element for childList mutations', () => {
+      onLoadHandler.init();
+
+      const nodeObserverCalls = mockObserveUtil.nodeObserver.mock.calls;
+      // The last nodeObserver call should be the title observer
+      const titleObserverCall = nodeObserverCalls[nodeObserverCalls.length - 1];
+      expect(titleObserverCall[2]).toEqual({ childList: true, subtree: true });
     });
   });
 

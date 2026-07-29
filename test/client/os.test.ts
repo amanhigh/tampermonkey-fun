@@ -117,32 +117,4 @@ describe('OsClient', () => {
       expect(mockMakeRequest).toHaveBeenCalledWith('/os/clip/');
     });
   });
-
-  describe('enableSubmap', () => {
-    it('should make POST request to /os/submap/enable', async () => {
-      mockMakeRequest.mockResolvedValue(undefined);
-
-      await osClient.enableSubmap('swiftkeys');
-
-      expect(mockMakeRequest).toHaveBeenCalledWith('/os/submap/enable', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        data: JSON.stringify({ submap: 'swiftkeys' }),
-      });
-    });
-  });
-
-  describe('disableSubmap', () => {
-    it('should make POST request to /os/submap/disable', async () => {
-      mockMakeRequest.mockResolvedValue(undefined);
-
-      await osClient.disableSubmap('swiftkeys');
-
-      expect(mockMakeRequest).toHaveBeenCalledWith('/os/submap/disable', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        data: JSON.stringify({ submap: 'swiftkeys' }),
-      });
-    });
-  });
 });

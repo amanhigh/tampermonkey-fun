@@ -70,7 +70,6 @@ describe('AlertManager', () => {
     mockInvestingClient = {
       createAlert: jest.fn(),
       deleteAlert: jest.fn(),
-      fetchSymbolData: jest.fn(),
       getAllAlerts: jest.fn(),
     } as any;
 

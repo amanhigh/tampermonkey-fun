@@ -96,7 +96,6 @@ describe('LifecycleManager', () => {
     mockInvestingClient = {
       deleteAlert: jest.fn().mockResolvedValue(undefined),
       createAlert: jest.fn(),
-      fetchSymbolData: jest.fn(),
       getAllAlerts: jest.fn(),
     } as unknown as jest.Mocked<IInvestingClient>;
 

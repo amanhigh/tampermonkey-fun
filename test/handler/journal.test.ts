@@ -79,8 +79,6 @@ describe('JournalHandler', () => {
       screenshotRegion: jest.fn(),
       screenshot: jest.fn(),
       getClip: jest.fn(),
-      enableSubmap: jest.fn(),
-      disableSubmap: jest.fn(),
       getBaseUrl: jest.fn(),
     } as unknown as jest.Mocked<IOsClient>;
 
