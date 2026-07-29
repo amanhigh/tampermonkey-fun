@@ -165,7 +165,6 @@ export class Barkat {
       );
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.ORDERS, Constants.UI.POSITIONS.WRAPPER_WIDTH).appendTo($area);
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.JOURNAL).hide().appendTo($area);
-    // BUG 3.1: Toolbar lives inside journal wrapper so it disappears when journal collapses; move toolbar outside for persistent access
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.AUDIT).hide().appendTo($area);
     this.journalUI();
     this.kiteHandler.setupGttRefreshListener();
