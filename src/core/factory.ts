@@ -263,8 +263,7 @@ export class Factory {
           )
       ),
 
-    tv: (): ITradingViewManager =>
-      Factory.getInstance('tvManager', () => new TradingViewManager(Factory.util.wait(), Factory.client.os())),
+    tv: (): ITradingViewManager => Factory.getInstance('tvManager', () => new TradingViewManager(Factory.util.wait())),
 
     alertTicker: (): IAlertTickerManager =>
       Factory.getInstance(
@@ -457,7 +456,8 @@ export class Factory {
               Factory.handler.tickerChange(),
               Factory.handler.dashboardSync(),
             ],
-            Factory.manager.eventSubscriber()
+            Factory.manager.eventSubscriber(),
+            Factory.manager.tv()
           )
       ),
     hotkey: (): IHotkeyHandler =>

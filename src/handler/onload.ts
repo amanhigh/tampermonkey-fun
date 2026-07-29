@@ -8,6 +8,7 @@ import { IHotkeyHandler } from './hotkey';
 import { IAlertHandler } from './alert';
 import { IPaintManager } from '../manager/paint';
 import { IDomManager } from '../manager/dom';
+import { ITradingViewManager } from '../manager/tv';
 import { IDomainEventConsumer, ISubscriber, IPublisher } from '../manager/event_bus';
 import { DomainEventType } from '../models/domain_event';
 
@@ -48,7 +49,8 @@ export class OnLoadHandler implements IOnLoadHandler {
     private readonly domManager: IDomManager,
     private readonly publisher: IPublisher,
     private readonly domainEventConsumers: IDomainEventConsumer[],
-    private readonly subscriber: ISubscriber
+    private readonly subscriber: ISubscriber,
+    private readonly tradingViewManager: ITradingViewManager
   ) {}
 
   /** @inheritdoc */
@@ -69,6 +71,7 @@ export class OnLoadHandler implements IOnLoadHandler {
         this.publishFirstLoad();
         this.setupScreenerObserver();
         this.setupHeaderTitleObserver();
+        this.setupSwiftKeysTitleObserver();
       });
     });
   }
@@ -189,6 +192,31 @@ export class OnLoadHandler implements IOnLoadHandler {
             this.headerRepaintTimer = setTimeout(() => {
               void this.paintManager.paintHeader();
             }, 150);
+          },
+          { childList: true, subtree: true }
+        );
+      },
+      10
+    );
+  }
+
+  /**
+   * Sets up observer on the document title element to restore SwiftKeys state.
+   *
+   * When TradingView updates the page title (e.g. ticker change), the title
+   * marker suffix (" - Barkat") may be removed. This observer detects title
+   * mutations and re-applies the SwiftKeys state when enabled.
+   */
+  private setupSwiftKeysTitleObserver(): void {
+    this.waitUtil.waitEE(
+      'title',
+      (titleElement) => {
+        this.observeUtil.nodeObserver(
+          titleElement,
+          () => {
+            if (this.tradingViewManager.isSwiftKeysEnabled()) {
+              void this.tradingViewManager.setSwiftKeysState(true);
+            }
           },
           { childList: true, subtree: true }
         );

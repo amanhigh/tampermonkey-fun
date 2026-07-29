@@ -1,10 +1,10 @@
 import { Constants } from '../models/constant';
 import { Notifier } from '../util/notify';
 import { IWaitUtil } from '../util/wait';
-import { IOsClient } from '../client/os';
 
 // Price and validation related constants
 const PRICE_REGEX = /-?\d{1,3}(?:,\d{3})*(?:\.\d+)?/;
+const SWIFTKEYS_TITLE_SUFFIX = ' - Barkat';
 
 // Error messages for LTP operations
 const TV_ERRORS = Object.freeze({
@@ -51,7 +51,7 @@ export interface ITradingViewManager {
   isSwiftKeysEnabled(): boolean;
 
   /**
-   * Set swift keys state and control Hyprland submap
+   * Set swift keys state and toggle title suffix
    * @param enabled true to enable swift keys, false to disable
    * @returns Promise resolving when state change is complete
    */
@@ -71,12 +71,8 @@ export class TradingViewManager implements ITradingViewManager {
 
   /**
    * @param waitUtil Manager for DOM operations
-   * @param osClient Client for HTTP API communication
    */
-  constructor(
-    private readonly waitUtil: IWaitUtil,
-    private readonly osClient: IOsClient
-  ) {}
+  constructor(private readonly waitUtil: IWaitUtil) {}
 
   public startAutoSave(): void {
     setInterval(() => this.autoSave(), TradingViewManager.SAVE_INTERVAL);
@@ -160,21 +156,25 @@ export class TradingViewManager implements ITradingViewManager {
     return $(`#${Constants.UI.IDS.CHECKBOXES.SWIFT}`).prop('checked');
   }
 
-  /** @inheritdoc */
+  /**
+   * Set swift keys state and toggle title suffix
+   * @param enabled true to enable swift keys, false to disable
+   * @returns Promise resolving when state change is complete
+   */
   async setSwiftKeysState(enabled: boolean): Promise<void> {
-    try {
-      // Update UI checkbox
-      this.updateSwiftKeysCheckbox(enabled);
+    this.updateSwiftKeysCheckbox(enabled);
 
-      // Control Hyprland submap via HTTP API
-      if (enabled) {
-        await this.osClient.enableSubmap('swiftkeys');
-      } else {
-        await this.osClient.disableSubmap('swiftkeys');
+    if (enabled) {
+      if (!document.title.endsWith(SWIFTKEYS_TITLE_SUFFIX)) {
+        document.title += SWIFTKEYS_TITLE_SUFFIX;
       }
-    } catch (error) {
-      throw new Error(`SwiftKey state change failed: ${(error as Error).message}`);
+    } else {
+      if (document.title.endsWith(SWIFTKEYS_TITLE_SUFFIX)) {
+        document.title = document.title.slice(0, -SWIFTKEYS_TITLE_SUFFIX.length);
+      }
     }
+
+    return Promise.resolve();
   }
 
   /**

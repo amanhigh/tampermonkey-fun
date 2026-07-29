@@ -1,6 +1,5 @@
 import { TradingViewManager } from '../../src/manager/tv';
 import { WaitUtil } from '../../src/util/wait';
-import { IOsClient } from '../../src/client/os';
 import { Constants } from '../../src/models/constant';
 
 // Mock Notifier to avoid DOM issues
@@ -44,13 +43,17 @@ const mockJQuery = jest.fn((selector: string) => {
 // Setup global $
 (global as any).$ = mockJQuery;
 
+// Minimal mutable document mock for Node/Jest (no real DOM)
+const doc = { title: 'RELIANCE - Reliance Industries Ltd' };
+(globalThis as any).document = doc;
+
 describe('TradingViewManager', () => {
   let manager: TradingViewManager;
   let mockWaitUtil: jest.Mocked<WaitUtil>;
-  let mockOsClient: jest.Mocked<IOsClient>;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    doc.title = 'RELIANCE - Reliance Industries Ltd';
 
     mockWaitUtil = {
       waitEE: jest.fn(),
@@ -60,16 +63,7 @@ describe('TradingViewManager', () => {
       waitInput: jest.fn(),
     };
 
-    mockOsClient = {
-      screenshot: jest.fn(),
-      screenshotRegion: jest.fn(),
-      getClip: jest.fn(),
-      enableSubmap: jest.fn().mockResolvedValue(undefined),
-      disableSubmap: jest.fn().mockResolvedValue(undefined),
-      getBaseUrl: jest.fn(),
-    };
-
-    manager = new TradingViewManager(mockWaitUtil, mockOsClient);
+    manager = new TradingViewManager(mockWaitUtil);
 
     // Reset mock states
     mockJQueryElement.text.mockReturnValue('100.50');
@@ -316,70 +310,54 @@ describe('TradingViewManager', () => {
   });
 
   describe('setSwiftKeysState', () => {
-    test('should enable swift keys and call kohan client', async () => {
-      const mockSwiftElement = {
+    const mockSwiftCheckbox = () => {
+      const el = {
         length: 1,
         text: jest.fn(),
         click: jest.fn(),
         prop: jest.fn(),
         innerHTML: '',
       };
-      mockJQuery.mockImplementation((selector) => {
+      mockJQuery.mockImplementation((selector: string) => {
         if (selector === `#${Constants.UI.IDS.CHECKBOXES.SWIFT}`) {
-          return mockSwiftElement;
+          return el;
         }
         return mockJQueryElement;
       });
+      return el;
+    };
+
+    test('should enable swift keys by appending " - Barkat" suffix to document.title and updating checkbox', async () => {
+      const el = mockSwiftCheckbox();
 
       await manager.setSwiftKeysState(true);
 
-      expect(mockSwiftElement.prop).toHaveBeenCalledWith('checked', true);
-      expect(mockOsClient.enableSubmap).toHaveBeenCalledWith('swiftkeys');
-      expect(mockOsClient.disableSubmap).not.toHaveBeenCalled();
+      expect(el.prop).toHaveBeenCalledWith('checked', true);
+      expect(document.title).toBe('RELIANCE - Reliance Industries Ltd - Barkat');
     });
 
-    test('should disable swift keys and call kohan client', async () => {
-      const mockSwiftElement = {
-        length: 1,
-        text: jest.fn(),
-        click: jest.fn(),
-        prop: jest.fn(),
-        innerHTML: '',
-      };
-      mockJQuery.mockImplementation((selector) => {
-        if (selector === `#${Constants.UI.IDS.CHECKBOXES.SWIFT}`) {
-          return mockSwiftElement;
-        }
-        return mockJQueryElement;
-      });
+    test('should disable swift keys by removing " - Barkat" suffix from document.title and updating checkbox', async () => {
+      const el = mockSwiftCheckbox();
+      document.title = 'RELIANCE - Reliance Industries Ltd - Barkat';
 
       await manager.setSwiftKeysState(false);
 
-      expect(mockSwiftElement.prop).toHaveBeenCalledWith('checked', false);
-      expect(mockOsClient.disableSubmap).toHaveBeenCalledWith('swiftkeys');
-      expect(mockOsClient.enableSubmap).not.toHaveBeenCalled();
+      expect(el.prop).toHaveBeenCalledWith('checked', false);
+      expect(document.title).toBe('RELIANCE - Reliance Industries Ltd');
     });
 
-    test('should throw error when kohan client enable fails', async () => {
-      const errorMessage = 'Network error';
-      mockOsClient.enableSubmap.mockRejectedValue(new Error(errorMessage));
+    test('should not duplicate suffix on repeated enable', async () => {
+      mockSwiftCheckbox();
 
-      await expect(manager.setSwiftKeysState(true)).rejects.toThrow(`SwiftKey state change failed: ${errorMessage}`);
+      await manager.setSwiftKeysState(true);
+      await manager.setSwiftKeysState(true);
+      await manager.setSwiftKeysState(true);
+
+      const suffixCount = (document.title.match(/ - Barkat/g) || []).length;
+      expect(suffixCount).toBe(1);
+      expect(document.title).toBe('RELIANCE - Reliance Industries Ltd - Barkat');
     });
 
-    test('should throw error when kohan client disable fails', async () => {
-      const errorMessage = 'API error';
-      mockOsClient.disableSubmap.mockRejectedValue(new Error(errorMessage));
-
-      await expect(manager.setSwiftKeysState(false)).rejects.toThrow(`SwiftKey state change failed: ${errorMessage}`);
-    });
-
-    test('should handle non-Error objects in catch block', async () => {
-      const errorObj = { message: 'String error' };
-      mockOsClient.enableSubmap.mockRejectedValue(errorObj);
-
-      await expect(manager.setSwiftKeysState(true)).rejects.toThrow('SwiftKey state change failed: String error');
-    });
   });
 
   describe('Integration tests', () => {
