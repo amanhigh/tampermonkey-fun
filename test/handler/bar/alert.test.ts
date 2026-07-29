@@ -211,7 +211,7 @@ describe('AlertBar', () => {
 
       expect(mockDomManager.getTicker).toHaveBeenCalled();
       expect(mockAlertTickerManager.getAlertTickersForTicker).toHaveBeenCalledWith('NSE:INFY');
-      expect(mockRootEl.html).toHaveBeenCalledWith(expect.stringContaining('🔗 INFY'));
+      expect(mockRootEl.html).not.toHaveBeenCalledWith(expect.stringContaining('🔗'));
     });
 
     it('should call render with isUntracked false on success', async () => {
@@ -222,7 +222,7 @@ describe('AlertBar', () => {
       await bar.refresh();
 
       // Verify the bar rendered the unmapped state (no tickers, not untracked)
-      expect(mockRootEl.html).toHaveBeenCalledWith(expect.stringContaining('⚠️ NSE:INFY'));
+      expect(mockRootEl.html).not.toHaveBeenCalledWith(expect.stringContaining('⚠️'));
       expect(mockRootEl.html).not.toHaveBeenCalledWith(expect.stringContaining('Untracked'));
     });
 
@@ -594,7 +594,7 @@ describe('AlertBar', () => {
   // ── Compact output ──
 
   describe('compact output', () => {
-    it('should render mapped ticker with link emoji and alert count', () => {
+    it('should render mapped ticker without link emoji and with alert count', () => {
       const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:INFY',
@@ -602,15 +602,13 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      expect(mockRootEl.html).toHaveBeenCalledWith(
-        expect.stringContaining('🔗 INFY')
-      );
+      expect(mockRootEl.html).toHaveBeenCalledWith(expect.not.stringContaining('🔗'));
       expect(mockRootEl.html).toHaveBeenCalledWith(
         expect.stringContaining(`class="${BEM.COUNT}"`)
       );
     });
 
-    it('should render unmapped ticker with warning emoji and zero count', () => {
+    it('should render unmapped ticker without warning emoji and with zero count', () => {
       const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:BHEL',
@@ -618,9 +616,7 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      expect(mockRootEl.html).toHaveBeenCalledWith(
-        expect.stringContaining('⚠️ NSE:BHEL')
-      );
+      expect(mockRootEl.html).toHaveBeenCalledWith(expect.not.stringContaining('⚠️'));
       expect(mockRootEl.html).toHaveBeenCalledWith(
         expect.stringContaining('🔔0')
       );
@@ -637,6 +633,7 @@ describe('AlertBar', () => {
       expect(mockRootEl.html).toHaveBeenCalledWith(
         expect.stringContaining('Untracked · NSE:BHEL')
       );
+      expect(mockRootEl.html).toHaveBeenCalledWith(expect.not.stringContaining('⚠️'));
       expect(mockRootEl.html).toHaveBeenCalledWith(
         expect.stringContaining('🔔0')
       );
@@ -650,9 +647,8 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      expect(mockRootEl.html).toHaveBeenCalledWith(
-        expect.stringContaining('🔗 INVESTING_SYM')
-      );
+      expect(mockRootEl.html).toHaveBeenCalledWith(expect.stringContaining('INVESTING_SYM'));
+      expect(mockRootEl.html).not.toHaveBeenCalledWith(expect.stringContaining('🔗'));
     });
 
     it('should show correct count for multiple linked tickers', () => {
@@ -671,7 +667,7 @@ describe('AlertBar', () => {
       );
     });
 
-    it('should render an exchange-mismatch warning badge with both exchange values', async () => {
+    it('should render exchange-mismatch text with both exchange values', async () => {
       const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       mockDomManager.getCurrentExchange.mockReturnValue('NSE');
       mockTickerManager.getTicker.mockResolvedValue(new Ticker({ exchange: 'BSE' }));
@@ -684,7 +680,8 @@ describe('AlertBar', () => {
       const html = mockRootEl.html.mock.calls[0][0] as string;
       const exchangeDescription = 'Opened exchange: NSE · Backend exchange: BSE';
 
-      expect(html).toContain('⚠️');
+      expect(html).not.toContain('⚠️');
+      expect(html).toContain('NSE ≠ BSE');
       expect(html).toContain(`title="${exchangeDescription}"`);
       expect(html).toContain(`aria-label="${exchangeDescription}"`);
     });
@@ -786,7 +783,7 @@ describe('AlertBar', () => {
       clickHandler!();
 
       const lastHtml = mockRootEl.html.mock.calls[mockRootEl.html.mock.calls.length - 1][0];
-      expect(lastHtml).toContain('🔗 INFY ·');
+      expect(lastHtml).not.toContain('🔗');
       expect(lastHtml).toContain(`id="${DETAILS_ID}"`);
       expect(lastHtml).toContain(`class="${BEM.DETAILS}"`);
     });
@@ -878,6 +875,7 @@ describe('AlertBar', () => {
       const lastHtml = mockRootEl.html.mock.calls[mockRootEl.html.mock.calls.length - 1][0];
       expect(lastHtml).toContain(BEM.EMPTY);
       expect(lastHtml).toContain('No linked alert tickers');
+      expect(lastHtml).not.toContain('⚠️');
     });
 
     it('should show untracked expanded message when untracked', () => {
@@ -894,6 +892,7 @@ describe('AlertBar', () => {
       const lastHtml = mockRootEl.html.mock.calls[mockRootEl.html.mock.calls.length - 1][0];
       expect(lastHtml).toContain(BEM.EMPTY);
       expect(lastHtml).toContain('Untracked ticker — no backend record');
+      expect(lastHtml).not.toContain('⚠️');
     });
   });
 

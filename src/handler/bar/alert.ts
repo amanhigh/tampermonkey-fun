@@ -13,8 +13,6 @@ import { escapeHtml } from '../../util/html';
 // ── Emoji constants ──
 
 const EMOJI = {
-  LINKED: '🔗',
-  UNMAPPED: '⚠️',
   PRIMARY: '⭐',
   SECONDARY: '🔹',
   ALERT: '🔔',
@@ -156,22 +154,21 @@ export class AlertBar extends BaseBar<AlertBarData> implements IAlertBar {
   /** @inheritdoc */
   protected renderCompact(data: AlertBarData): string {
     const primaryTicker = data.alertTickers.find((t) => t.type === 'PRIMARY') ?? null;
-    const isMapped = primaryTicker !== null;
     const displayTicker = primaryTicker?.symbol ?? data.tvTicker;
     const alertCount = data.alertTickers.length;
 
-    const statusEmoji = isMapped ? EMOJI.LINKED : EMOJI.UNMAPPED;
     const label = data.isUntracked ? `Untracked · ${escapeHtml(displayTicker)}` : escapeHtml(displayTicker);
     const countHtml = `<span class="${this.bemElement('count')}">${EMOJI.ALERT}${alertCount}</span>`;
     const exchangeWarning = data.exchangeMismatch ? this.buildExchangeWarning(data.exchangeMismatch) : '';
 
-    return `${statusEmoji} ${label} · ${countHtml}${exchangeWarning}`;
+    return `${label} · ${countHtml}${exchangeWarning}`;
   }
 
   /** Builds the compact exchange mismatch diagnostic badge. */
   private buildExchangeWarning(mismatch: { opened: string; backend: string }): string {
     const description = `Opened exchange: ${mismatch.opened} · Backend exchange: ${mismatch.backend}`;
-    return ` <span class="${this.bemElement('exchange-warning')}" title="${escapeHtml(description)}" aria-label="${escapeHtml(description)}">${EMOJI.UNMAPPED}</span>`;
+    const exchangeText = `${escapeHtml(mismatch.opened)} ≠ ${escapeHtml(mismatch.backend)}`;
+    return ` <span class="${this.bemElement('exchange-warning')}" title="${escapeHtml(description)}" aria-label="${escapeHtml(description)}">${exchangeText}</span>`;
   }
 
   /** @inheritdoc */
@@ -189,9 +186,9 @@ export class AlertBar extends BaseBar<AlertBarData> implements IAlertBar {
   private buildAlertTickerRows(data: AlertBarData): string {
     if (data.alertTickers.length === 0) {
       if (data.isUntracked) {
-        return `<div class="${this.bemElement('empty')}">${EMOJI.UNMAPPED} Untracked ticker — no backend record</div>`;
+        return `<div class="${this.bemElement('empty')}">Untracked ticker — no backend record</div>`;
       }
-      return `<div class="${this.bemElement('empty')}">${EMOJI.UNMAPPED} No linked alert tickers</div>`;
+      return `<div class="${this.bemElement('empty')}">No linked alert tickers</div>`;
     }
 
     return data.alertTickers.map((t) => this.buildAlertTickerRowDiv(t)).join('');
