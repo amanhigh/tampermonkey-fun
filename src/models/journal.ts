@@ -1,5 +1,6 @@
 import { ScreenshotResponse } from './os';
 import { PaginationMetadata } from './api';
+import { TickerTimeframe } from './timeframe';
 
 // ── Journal API Types ──
 
@@ -66,8 +67,8 @@ export interface CreateJournalInput {
   type: JournalType;
   /** Journal API status to assign. */
   status: JournalStatus;
-  /** Journal sequence selected by the user. */
-  sequence: JournalSequence;
+  /** TradingView timeframe bucket used to derive the backend journal sequence. */
+  timeframe: TickerTimeframe;
   /** Optional notes to attach on journal creation. */
   notes?: CreateJournalNoteRequest[];
 }
