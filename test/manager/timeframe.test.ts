@@ -426,6 +426,67 @@ describe('TimeFrameManager', () => {
     });
   });
 
+  // ── Explicit Timeframe Support ──
+
+  describe('getSequence with explicit timeframe', () => {
+    it('should return YR_SEQUENCE when called with TickerTimeframe.YR', async () => {
+      // Backend returns TMN+DL (would auto-derive TMN_SEQUENCE), but
+      // explicit YR argument should override and return YR_SEQUENCE.
+      mockTickerManager.getTicker.mockResolvedValue(
+        createMockTicker({ timeframes: [TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL] })
+      );
+
+      const result = await timeFrameManager.getSequence(TickerTimeframe.YR);
+
+      expect(result).toEqual(YR_SEQUENCE);
+    });
+
+    it('should return SMN_SEQUENCE when called with TickerTimeframe.SMN', async () => {
+      // Backend returns TMN+DL (would auto-derive TMN_SEQUENCE), but
+      // explicit SMN argument should override and return SMN_SEQUENCE.
+      mockTickerManager.getTicker.mockResolvedValue(
+        createMockTicker({ timeframes: [TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL] })
+      );
+
+      const result = await timeFrameManager.getSequence(TickerTimeframe.SMN);
+
+      expect(result).toEqual(SMN_SEQUENCE);
+    });
+
+    it('should return TMN_SEQUENCE when called with TickerTimeframe.TMN', async () => {
+      // Backend returns YR+SMN (would auto-derive YR_SEQUENCE), but
+      // explicit TMN argument should override and return TMN_SEQUENCE.
+      mockTickerManager.getTicker.mockResolvedValue(
+        createMockTicker({ timeframes: [TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN] })
+      );
+
+      const result = await timeFrameManager.getSequence(TickerTimeframe.TMN);
+
+      expect(result).toEqual(TMN_SEQUENCE);
+    });
+  });
+
+  // ── Apply with explicit Sequence override ──
+
+  describe('apply with explicit sequence', () => {
+    it('should use supplied YR_SEQUENCE and click toolbar 7 even when AUTO would derive TMN_SEQUENCE', async () => {
+      // Backend has DL → AUTO would derive TMN_SEQUENCE (position 0 = TMN → toolbar 5)
+      mockTickerManager.getTicker.mockResolvedValue(
+        createMockTicker({ timeframes: [TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL] })
+      );
+      const mockClick = jest.fn();
+      mockJQuery.mockReturnValue({ length: 1, click: mockClick });
+
+      // Explicit YR_SEQUENCE overrides AUTO derivation
+      const result = await timeFrameManager.apply(0, YR_SEQUENCE);
+
+      expect(result).toBe(true);
+      // YR_SEQUENCE[0] = YR → toolbar 7 (NOT toolbar 5 which AUTO would produce)
+      expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(7)`);
+      expect(mockClick).toHaveBeenCalled();
+    });
+  });
+
   // ── Integration Tests ──
 
   describe('Integration Tests', () => {

@@ -17,6 +17,7 @@ import {
 import { ScreenshotResponse } from '../models/os';
 import { Constants } from '../models/constant';
 import { JournalOpenEvent } from '../models/events';
+import { TickerTimeframe } from '../models/timeframe';
 
 /**
  * Interface for managing trading journal operations
@@ -102,7 +103,7 @@ export class JournalManager extends BaseManager implements IJournalManager {
   public async createJournal(input: CreateJournalInput): Promise<JournalRecord> {
     const request: CreateJournalRequest = {
       ticker: input.ticker.toUpperCase(),
-      sequence: input.sequence,
+      sequence: input.timeframe === TickerTimeframe.TMN ? 'MWD' : 'YR',
       type: input.type,
       status: input.status,
       images: input.screenshots.map((screenshot) => ({
