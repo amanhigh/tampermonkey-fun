@@ -48,7 +48,7 @@ import { IModifierKeyConfig, ModifierKeyConfig } from '../handler/modifier_confi
 
 import { IDashboardSyncHandler, DashboardSyncHandler } from '../handler/dashboard_sync';
 import { IAlertBar, AlertBar } from '../handler/bar/alert';
-import { ITimeFrameHandler, TimeFrameHandler } from '../handler/timeframe';
+import { ITimeFrameHandler, TimeFrameBar } from '../handler/bar/timeframe';
 import { IKiteHandler, KiteHandler } from '../handler/kite';
 import { IKiteManager, KiteManager } from '../manager/kite';
 import { IStyleManager, StyleManager } from '../manager/style';
@@ -448,7 +448,7 @@ export class Factory {
             Factory.manager.eventPublisher(),
             [
               Factory.handler.alertFeed(),
-              Factory.handler.timeFrame(),
+              Factory.handler.timeFrameBar(),
               Factory.handler.alertBar(),
               Factory.handler.kite(),
               Factory.handler.alertSummary(),
@@ -554,8 +554,8 @@ export class Factory {
         'alertBar',
         () => new AlertBar(Factory.manager.dom(), Factory.manager.alertTicker(), Factory.util.ui())
       ),
-    timeFrame: (): ITimeFrameHandler =>
-      Factory.getInstance('timeFrameHandler', () => new TimeFrameHandler(Factory.manager.timeFrame())),
+    timeFrameBar: (): ITimeFrameHandler =>
+      Factory.getInstance('timeFrameBar', () => new TimeFrameBar(Factory.manager.timeFrame())),
     journal: (): IJournalHandler =>
       Factory.getInstance(
         'journalHandler',

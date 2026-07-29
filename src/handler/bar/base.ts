@@ -56,9 +56,21 @@ export interface IBaseBar extends IDomainEventConsumer {
  *
  * @see {@link IBaseBar} for the full lifecycle and BEM contract.
  *
+ * ## Expansion Contract
+ *
+ * Bars can optionally support expandable details via {@link renderDetails}:
+ * - **Return `null`** (default): Compact-only mode. Renders only
+ *   `renderCompact(data)` directly in the root without disclosure shell,
+ *   toggle button, details container, or expanded modifier handling.
+ *   Context-menu binding is still available if compact content includes
+ *   context-action attributes.
+ * - **Return `string`**: Expandable mode. Renders the full disclosure shell
+ *   with toggle button, details container, and expanded modifier handling.
+ *   Context-menu binding is available on `[data-{ns}-context-action]` selectors.
+ *
  * ## Handler Binding
  *
- * - Left-click: delegated to the generated `.{block}__toggle` button via
+ * - Left-click (expandable mode only): delegated to the generated `.{block}__toggle` button via
  *   `$root.off('click.{ns}', sel).on('click.{ns}', sel, handler)`.
  *   Calls only `this.onLeftClick()`; the default implementation toggles.
  *   Native `<button>` semantics provide Enter/Space activation.
@@ -229,16 +241,42 @@ export abstract class BaseBar<TData> implements IBaseBar {
    */
   protected abstract renderCompact(data: TData): string;
 
+  // ── Nullable expansion contract ──
+
   /**
    * Render expanded detail content for the given data.
-   * Called only when the bar is expanded. BaseBar composes the details
-   * container; subclasses return only the inner content (rows, empty
-   * state, etc.).
    *
-   * @param data The current data.
-   * @returns HTML string for expanded detail content.
+   * Evaluated during every {@link paint} call to determine whether the
+   * bar supports expansion. When a string is returned, paint renders
+   * the full disclosure shell (toggle button, details container,
+   * expanded modifier) and the returned HTML populates the details
+   * container when the bar is expanded. BaseBar composes the shell;
+   * subclasses return only the inner content (rows, empty state, etc.).
+   *
+   * Override this method to return a string to enable expandable behavior
+   * with disclosure shell, toggle button, details container, and expanded
+   * modifier handling. Return `null` (the default) to disable expansion
+   * and render only compact content directly in the root.
+   *
+   * When a string is returned, the bar supports:
+   * - Disclosure toggle button with `aria-expanded`/`aria-controls`
+   * - Hidden details container that shows/hides on toggle
+   * - Expanded modifier class toggling
+   * - Context-menu binding on `[data-{ns}-context-action]` selectors
+   * - Handler deduplication via namespace
+   * - Stale-request protection for refresh sequencing
+   *
+   * When `null` is returned (default), the bar renders only
+   * `renderCompact(data)` directly in the root without any expansion
+   * infrastructure. Context-menu binding is still available if compact
+   * content includes context-action attributes.
+   *
+   * @param _data The current data.
+   * @returns HTML string for expanded detail content, or `null` to disable expansion.
    */
-  protected abstract renderDetails(data: TData): string;
+  protected renderDetails(_data: TData): string | null {
+    return null;
+  }
 
   // ── Protected hooks ──
 
@@ -281,6 +319,14 @@ export abstract class BaseBar<TData> implements IBaseBar {
    * Unified paint cycle: query root, render HTML, optionally bind handlers, call onPaint.
    * Called from {@link render} with `bindHandlers=true` and from {@link toggle} with `false`.
    *
+   * When {@link renderDetails} returns `null` (no expansion), renders only
+   * compact content directly in the root without disclosure shell, toggle button,
+   * details container, or expanded modifier handling. Context-menu is still
+   * bound if compact content includes context-action attributes.
+   *
+   * When {@link renderDetails} returns a string, renders the full disclosure shell
+   * with toggle button, details container, and expanded modifier handling.
+   *
    * @param bindHandlers When true, rebind click/contextmenu via off/on deduplication.
    *                     When false, only update HTML and modifier state (toggle path).
    */
@@ -293,31 +339,43 @@ export abstract class BaseBar<TData> implements IBaseBar {
       return;
     }
 
-    // Render disclosure shell: toggle button + details container
-    const detailsId = this.bemChildId('details');
-    const toggleClass = this.bemElement('toggle');
-    const detailsClass = this.bemElement('details');
-    const expandedAttr = this.expanded ? 'true' : 'false';
-    const hiddenAttr = this.expanded ? '' : ' hidden';
-    const compactHtml = this.renderCompact(data);
-    const detailsContent = this.expanded ? this.renderDetails(data) : '';
-
-    const html = [
-      `<button type="button" class="${toggleClass}" aria-expanded="${expandedAttr}" aria-controls="${detailsId}">${compactHtml}</button>`,
-      `<div id="${detailsId}" class="${detailsClass}"${hiddenAttr}>${detailsContent}</div>`,
-    ].join('');
-    $root.html(html);
-
     // Ensure the generated block class is present
     $root.addClass(this.blockClass);
 
-    // Synchronize the generated expanded modifier
+    const detailsHtml = this.renderDetails(data);
+    const compactHtml = this.renderCompact(data);
+
+    if (detailsHtml === null) {
+      // Compact-only mode: render compact content directly in root.
+      // Explicitly reset expanded state so a subclass cannot retain
+      // stale expanded state if its renderDetails mode changes between paints.
+      this.expanded = false;
+      $root.html(compactHtml);
+    } else {
+      // Expandable mode: render disclosure shell with toggle + details container
+      const detailsId = this.bemChildId('details');
+      const toggleClass = this.bemElement('toggle');
+      const detailsClass = this.bemElement('details');
+      const expandedAttr = this.expanded ? 'true' : 'false';
+      const hiddenAttr = this.expanded ? '' : ' hidden';
+      const contentHtml = this.expanded ? detailsHtml : '';
+
+      const html = [
+        `<button type="button" class="${toggleClass}" aria-expanded="${expandedAttr}" aria-controls="${detailsId}">${compactHtml}</button>`,
+        `<div id="${detailsId}" class="${detailsClass}"${hiddenAttr}>${contentHtml}</div>`,
+      ].join('');
+      $root.html(html);
+    }
+
+    // Synchronize expanded modifier (common to both modes)
     this.syncExpandedModifier($root);
 
-    // Bind namespaced handlers only on full paint (not during toggle repaint)
+    // Bind context-menu (common) and disclosure click (expandable only)
     if (bindHandlers) {
-      this.bindClick($root);
       this.bindContextMenu($root, data);
+      if (detailsHtml !== null) {
+        this.bindClick($root);
+      }
     }
 
     // Post-paint hook (called last)
@@ -326,6 +384,8 @@ export abstract class BaseBar<TData> implements IBaseBar {
 
   /**
    * Toggle expanded state and repaint without rebinding handlers.
+   * Only invoked via the expandable branch's click binding; compact-only bars
+   * never reach this method because no click handler is bound for them.
    */
   private toggle(): void {
     this.expanded = !this.expanded;

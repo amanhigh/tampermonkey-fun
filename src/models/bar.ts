@@ -7,4 +7,6 @@
 export enum BarId {
   /** Alert ticker bar — displays linked alert ticker status. */
   ALERT = 'aman-alert-ticker-bar',
+  /** Timeframe bar — displays recommended timeframe chips for the current ticker. */
+  TIMEFRAME = 'aman-tf-bar',
 }

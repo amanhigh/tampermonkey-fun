@@ -156,7 +156,7 @@ export class Barkat {
       .buildWrapper(Constants.UI.IDS.AREAS.MID, Constants.UI.POSITIONS.WRAPPER_WIDTH)
       .appendTo($area)
       .append(this.uiUtil.buildBar(BarId.ALERT))
-      .append(this.uiUtil.buildWrapper(Constants.UI.IDS.TIMEFRAME_BAR.CONTAINER))
+      .append(this.uiUtil.buildBar(BarId.TIMEFRAME))
       .append(
         this.uiUtil.buildInput(Constants.UI.IDS.INPUTS.COMMAND).on('keydown', (e) => {
           void this.commandHandler.handleInput(e);
