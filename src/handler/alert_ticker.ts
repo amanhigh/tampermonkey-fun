@@ -1,6 +1,6 @@
-import { PairInfo } from '../models/alert';
 import { ISmartPrompt, SmartPromptResponseType } from '../util/smart';
-import { IInvestingClient } from '../client/investing';
+import { IInvestingManager } from '../manager/investing';
+import { Instrument } from '../models/investing';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { IDomManager } from '../manager/dom';
 import { Notifier } from '../util/notify';
@@ -27,7 +27,7 @@ export interface IAlertTickerHandler {
  */
 export class AlertTickerHandler implements IAlertTickerHandler {
   constructor(
-    private readonly investingClient: IInvestingClient,
+    private readonly investingManager: IInvestingManager,
     private readonly alertTickerManager: IAlertTickerManager,
     private readonly smartPrompt: ISmartPrompt,
     private readonly domManager: IDomManager
@@ -39,11 +39,8 @@ export class AlertTickerHandler implements IAlertTickerHandler {
 
     const tvTicker = this.domManager.getTicker();
 
-    // FIXME: replace fetchSymbolData (old InvestingClient) with InstrumentClient.getInstruments()
-    //        via InvestingManager — this endpoint is legacy; the new public API lives in
-    //        src/client/instrument.ts and is already wrapped by src/manager/investing.ts
-    const pairs = await this.investingClient.fetchSymbolData(searchQuery);
-    const options = this.formatPairOptions(pairs);
+    const instruments = await this.investingManager.searchInstruments(searchQuery);
+    const options = this.formatInstrumentOptions(instruments);
     const response = await this.smartPrompt.showModal(options.slice(0, 10));
 
     if (response.type === SmartPromptResponseType.CANCEL || response.type === SmartPromptResponseType.NONE) {
@@ -52,15 +49,15 @@ export class AlertTickerHandler implements IAlertTickerHandler {
 
     if (response.type === SmartPromptResponseType.SELECTED) {
       const selected = response.primarySelection;
-      const selectedPair = this.findSelectedPair(pairs, selected);
-      if (selectedPair) {
-        Notifier.info(`Selected: ${this.formatPair(selectedPair)}`);
+      const selectedInstrument = this.findSelectedInstrument(instruments, selected);
+      if (selectedInstrument) {
+        Notifier.info(`Selected: ${this.formatInstrument(selectedInstrument)}`);
 
         await this.alertTickerManager.linkAlertTicker(tvTicker, {
-          symbol: selectedPair.symbol,
-          pair_id: selectedPair.pairId,
-          name: selectedPair.name,
-          exchange: TickerManager.canonicalizeExchange(selectedPair.exchange),
+          symbol: selectedInstrument.symbol,
+          pair_id: selectedInstrument.id.toString(),
+          name: selectedInstrument.description,
+          exchange: TickerManager.canonicalizeExchange(selectedInstrument.exchange),
         });
       } else {
         Notifier.warn(`Invalid selection for ${searchQuery} on ${exchange}, cant map Pair.`);
@@ -68,15 +65,15 @@ export class AlertTickerHandler implements IAlertTickerHandler {
     }
   }
 
-  private formatPairOptions(pairs: PairInfo[]): string[] {
-    return pairs.map((pair) => this.formatPair(pair));
+  private formatInstrumentOptions(instruments: Instrument[]): string[] {
+    return instruments.map((instrument) => this.formatInstrument(instrument));
   }
 
-  private formatPair(pair: PairInfo): string {
-    return `${pair.name} (SYMBOL: ${pair.symbol}, Exchange: ${pair.exchange})`;
+  private formatInstrument(instrument: Instrument): string {
+    return `${instrument.description} (SYMBOL: ${instrument.symbol}, Exchange: ${instrument.exchange})`;
   }
 
-  private findSelectedPair(pairs: PairInfo[], selected: string): PairInfo | undefined {
-    return pairs.find((pair) => this.formatPair(pair) === selected);
+  private findSelectedInstrument(instruments: Instrument[], selected: string): Instrument | undefined {
+    return instruments.find((instrument) => this.formatInstrument(instrument) === selected);
   }
 }

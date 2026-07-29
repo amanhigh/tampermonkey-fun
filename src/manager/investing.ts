@@ -5,9 +5,19 @@ import { Instrument } from '../models/investing';
  * Interface for managing Investing.com instrument resolution.
  *
  * Domain methods:
+ * - searchInstruments → forward query to public API, return matching quotes (or empty)
  * - getInstrument → search public API, match by href or exact name, return best candidate or null
  */
 export interface IInvestingManager {
+  /**
+   * Search public Investing instruments by query string.
+   *
+   * @param query - Search term
+   * @param limit - Maximum results (defaults to client default)
+   * @returns Promise resolving with matching Instruments, or empty array
+   */
+  searchInstruments(query: string, limit?: number): Promise<Instrument[]>;
+
   /**
    * Resolve an Investing.com instrument by name and optional href.
    *
@@ -30,10 +40,15 @@ export class InvestingManager implements IInvestingManager {
   constructor(private readonly instrumentClient: IInstrumentClient) {}
 
   /** @inheritdoc */
+  async searchInstruments(query: string, limit?: number): Promise<Instrument[]> {
+    const response = await this.instrumentClient.getInstruments(query, limit);
+    return response.quotes ?? [];
+  }
+
+  /** @inheritdoc */
   async getInstrument(name: string, href?: string): Promise<Instrument | null> {
-    const response = await this.instrumentClient.getInstruments(name);
-    const quotes = response.quotes;
-    if (!quotes || quotes.length === 0) {
+    const quotes = await this.searchInstruments(name);
+    if (quotes.length === 0) {
       return null;
     }
 

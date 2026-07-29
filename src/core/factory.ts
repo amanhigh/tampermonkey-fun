@@ -501,7 +501,7 @@ export class Factory {
         'alertTickerHandler',
         () =>
           new AlertTickerHandler(
-            Factory.client.investing(),
+            Factory.manager.investing(),
             Factory.manager.alertTicker(),
             Factory.util.smart(),
             Factory.manager.dom()
