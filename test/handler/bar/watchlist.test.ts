@@ -131,9 +131,9 @@ function invokeToggleHandler(): void {
     (c: any[]) => c[0] === 'click.bar-watchlist' && c[1] === `.${BEM.TOGGLE}`
   );
   expect(call).toBeDefined();
-  const handler = call?.[2] as (() => void) | undefined;
+  const handler = call?.[2] as ((event: JQuery.ClickEvent) => void) | undefined;
   expect(handler).toBeDefined();
-  handler!();
+  handler!({ target: {} } as JQuery.ClickEvent);
 }
 
 /**

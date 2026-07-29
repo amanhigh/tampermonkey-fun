@@ -121,7 +121,7 @@ class TestBarOverrideLeftClick extends TestBarBase {
     return `details:${data.label}`;
   }
 
-  protected onLeftClick(): void {
+  protected onLeftClick(_event: JQuery.ClickEvent): void {
     this.leftClickCount++;
   }
 }
@@ -138,9 +138,9 @@ class TestBarSuperLeftClick extends TestBarBase {
     return `details:${data.label}`;
   }
 
-  protected onLeftClick(): void {
+  protected onLeftClick(event: JQuery.ClickEvent): void {
     this.leftClickCount++;
-    super.onLeftClick();
+    super.onLeftClick(event);
   }
 }
 
@@ -232,10 +232,12 @@ class TestBarWithEvents extends TestBarBase {
 
 // ── Helpers ──
 
-function getClickHandler(): (() => void) | undefined {
+function getClickHandler(): ((event: JQuery.ClickEvent) => void) | undefined {
   const call = mockRootEl.on.mock.calls.find((c: any[]) => c[0] === `click.${EVENT_NS}`);
-  return call?.[2] as (() => void) | undefined;
+  return call?.[2] as ((event: JQuery.ClickEvent) => void) | undefined;
 }
+
+const MOCK_CLICK_EVENT = {} as JQuery.ClickEvent;
 
 function getContextMenuHandler(): ((event: JQuery.ContextMenuEvent) => void) | undefined {
   const call = mockRootEl.on.mock.calls.find((c: any[]) => c[0] === `contextmenu.${EVENT_NS}`);
@@ -345,7 +347,7 @@ describe('BaseBar', () => {
       bar.render({ label: 'First', count: 10 });
 
       const clickHandler = getClickHandler()!;
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
 
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('details:First:10')
@@ -370,12 +372,12 @@ describe('BaseBar', () => {
 
       const clickHandler = getClickHandler()!;
 
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('details:Toggle:3')
       );
 
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('compact:Toggle:3')
       );
@@ -390,12 +392,12 @@ describe('BaseBar', () => {
         expect.stringContaining('compact:Lifecycle:7')
       );
 
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('details:Lifecycle:7')
       );
 
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('compact:Lifecycle:7')
       );
@@ -408,11 +410,11 @@ describe('BaseBar', () => {
       expect(mockRootEl.removeClass).toHaveBeenCalledWith(EXPANDED_MOD);
 
       const clickHandler = getClickHandler()!;
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
 
       expect(mockRootEl.addClass).toHaveBeenCalledWith(EXPANDED_MOD);
 
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(mockRootEl.removeClass).toHaveBeenCalledWith(EXPANDED_MOD);
     });
   });
@@ -447,7 +449,7 @@ describe('BaseBar', () => {
       bar.render({ label: 'Expand', count: 1 });
 
       const clickHandler = getClickHandler()!;
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
 
       const html = mockRootEl.html.mock.calls[mockRootEl.html.mock.calls.length - 1][0] as string;
       expect(html).toContain('aria-expanded="true"');
@@ -465,7 +467,7 @@ describe('BaseBar', () => {
       expect(initialHtml).not.toContain('details:Content:1');
 
       const clickHandler = getClickHandler()!;
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
 
       const expandedHtml = mockRootEl.html.mock.calls[mockRootEl.html.mock.calls.length - 1][0] as string;
       expect(expandedHtml).toContain('details:Content:1');
@@ -654,7 +656,7 @@ describe('BaseBar', () => {
       bar.render({ label: 'Override', count: 1 });
       const clickHandler = getClickHandler()!;
 
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(bar.leftClickCount).toBe(1);
       expect(mockRootEl.html).toHaveBeenCalledTimes(1);
     });
@@ -664,13 +666,13 @@ describe('BaseBar', () => {
       bar.render({ label: 'Super', count: 5 });
       const clickHandler = getClickHandler()!;
 
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(bar.leftClickCount).toBe(1);
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('details:Super')
       );
 
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(bar.leftClickCount).toBe(2);
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('compact:Super')
@@ -774,7 +776,7 @@ describe('BaseBar', () => {
       handler(mockEvent);
 
       const clickHandler = getClickHandler()!;
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('details:Rerender:10')
       );
@@ -796,7 +798,7 @@ describe('BaseBar', () => {
       expect(bar.onPaintCount).toBe(1);
 
       const clickHandler = getClickHandler()!;
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(bar.onPaintCount).toBe(2);
       expect(bar.handlersBoundAtPaint).toBe(2);
     });
@@ -878,7 +880,7 @@ describe('BaseBar', () => {
       bar.render({ label: 'New', count: 99 });
 
       const clickHandler = getClickHandler()!;
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
 
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('details:New:99')
@@ -890,7 +892,7 @@ describe('BaseBar', () => {
       bar.render({ label: 'A', count: 1 });
 
       const clickHandler = getClickHandler()!;
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('details:A:1')
       );
@@ -900,7 +902,7 @@ describe('BaseBar', () => {
         expect.stringContaining('compact:B:2')
       );
 
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('details:B:2')
       );

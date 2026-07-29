@@ -37,7 +37,7 @@ import { BAR_CLASS, BarId, BarStatus } from '../../models/bar';
  *    ensures block class, syncs expanded modifier and `aria-expanded`/`hidden`,
  *    optionally binds delegated click + contextmenu (only on full paint), calls `onPaint()` last.
  * 3. **`toggle()`** — flips expanded, calls `paint(false)` (no handler rebinding).
- * 4. **`onLeftClick()`** — default calls `toggle()`; override replaces unless `super` called.
+ * 4. **`onLeftClick(event)`** — default calls `toggle()`; override replaces unless `super` called.
  * 5. **`onRightClick(event, data)`** — protected hook for context-menu actions.
  * 6. **`onPaint($root, data)`** — default no-op called after handler binding.
  * 7. **`refresh()`** — latest-request-wins: increments revision, awaits `loadData()`,
@@ -72,7 +72,7 @@ export interface IBaseBar extends IDomainEventConsumer {
  *
  * - Left-click (expandable mode only): delegated to the generated `.{block}__toggle` button via
  *   `$root.off('click.{ns}', sel).on('click.{ns}', sel, handler)`.
- *   Calls only `this.onLeftClick()`; the default implementation toggles.
+ *   Calls `this.onLeftClick(event)`; the default implementation toggles.
  *   Native `<button>` semantics provide Enter/Space activation.
  * - Context-menu: `$root.off('contextmenu.{ns}', sel).on('contextmenu.{ns}', sel, handler)`.
  *   Always binds to the generated `[data-{ns}-context-action]` selector.
@@ -306,10 +306,11 @@ export abstract class BaseBar<TData> implements IBaseBar {
   /**
    * Called when the root element is left-clicked.
    * Default implementation toggles expanded state via {@link toggle}.
-   * Override to replace the default behavior; call `super.onLeftClick()`
+   * @param _event The jQuery click event.
+   * Override to replace the default behavior; call `super.onLeftClick(event)`
    * to retain the toggle.
    */
-  protected onLeftClick(): void {
+  protected onLeftClick(_event: JQuery.ClickEvent): void {
     this.toggle();
   }
 
@@ -435,16 +436,18 @@ export abstract class BaseBar<TData> implements IBaseBar {
   /**
    * Bind the delegated left-click handler to the disclosure toggle button
    * with namespace deduplication.
-   * Calls only `this.onLeftClick()` — the default implementation toggles,
+   * Calls `this.onLeftClick(event)` — the default implementation toggles,
    * but an override can replace or extend via `super`.
    *
    * @param $root Root jQuery element.
    */
   private bindClick($root: JQuery): void {
     const toggleSelector = `.${this.bemElement('toggle')}`;
-    $root.off(`click.${this.eventNs}`, toggleSelector).on(`click.${this.eventNs}`, toggleSelector, () => {
-      this.onLeftClick();
-    });
+    $root
+      .off(`click.${this.eventNs}`, toggleSelector)
+      .on(`click.${this.eventNs}`, toggleSelector, (event: JQuery.ClickEvent) => {
+        this.onLeftClick(event);
+      });
   }
 
   /**

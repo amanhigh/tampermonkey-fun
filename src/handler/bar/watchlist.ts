@@ -116,8 +116,8 @@ export class WatchlistBar extends BaseBar<BucketSummary> implements IWatchlistBa
   }
 
   /** Ignore clicks originating from a filter chip; other clicks toggle details. */
-  protected onLeftClick(event?: JQuery.ClickEvent): void {
-    const target = event?.target as
+  protected onLeftClick(event: JQuery.ClickEvent): void {
+    const target = event.target as
       | {
           closest?: (selector: string) => unknown;
           matches?: (selector: string) => boolean;
