@@ -6,7 +6,7 @@ import { IUIUtil } from '../../../src/util/ui';
 import { ISubscriber } from '../../../src/manager/event_bus';
 import { DomainEventType } from '../../../src/models/domain_event';
 import { ApiError, wrapClientError } from '../../../src/models/api_error';
-import { BarId } from '../../../src/models/bar';
+import { BarId, BAR_CLASS, BarStatus } from '../../../src/models/bar';
 
 // ── Constants ──
 
@@ -15,8 +15,6 @@ const EVENT_NS = 'bar-alert-ticker';
 
 /** BEM class names expected from the finalized BaseBar/AlertBar contract. */
 const BEM = {
-  MAPPED: 'aman-alert-ticker-bar--mapped',
-  UNMAPPED: 'aman-alert-ticker-bar--unmapped',
   EXPANDED: 'aman-alert-ticker-bar--expanded',
   DETAILS: 'aman-alert-ticker-bar__details',
   COUNT: 'aman-alert-ticker-bar__count',
@@ -24,6 +22,14 @@ const BEM = {
   ROW_PRIMARY: 'aman-alert-ticker-bar__row--primary',
   ROW_SECONDARY: 'aman-alert-ticker-bar__row--secondary',
   EMPTY: 'aman-alert-ticker-bar__empty',
+} as const;
+
+/** Expected status modifier class names from the approved status contract. */
+const STATUS = {
+  OK: `${BAR_CLASS}--${BarStatus.OK}`,
+  WARN: `${BAR_CLASS}--${BarStatus.WARN}`,
+  ERROR: `${BAR_CLASS}--${BarStatus.ERROR}`,
+  ALL: `${BAR_CLASS}--${BarStatus.OK} ${BAR_CLASS}--${BarStatus.WARN} ${BAR_CLASS}--${BarStatus.ERROR}`,
 } as const;
 
 const DETAILS_ID = 'aman-alert-ticker-bar-details';
@@ -643,10 +649,10 @@ describe('AlertBar', () => {
     });
   });
 
-  // ── Root classes ──
+  // ── Root status classes ──
 
-  describe('root classes', () => {
-    it('should apply mapped class when primary ticker exists', () => {
+  describe('status classes', () => {
+    it('should apply OK status when primary ticker is linked', () => {
       const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:INFY',
@@ -654,11 +660,11 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      expect(mockRootEl.removeClass).toHaveBeenCalledWith(`${BEM.MAPPED} ${BEM.UNMAPPED}`);
-      expect(mockRootEl.addClass).toHaveBeenCalledWith(BEM.MAPPED);
+      expect(mockRootEl.removeClass).toHaveBeenCalledWith(STATUS.ALL);
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(STATUS.OK);
     });
 
-    it('should apply unmapped class when no tickers present', () => {
+    it('should apply WARN status when tracked without primary', () => {
       const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:BHEL',
@@ -666,11 +672,11 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      expect(mockRootEl.removeClass).toHaveBeenCalledWith(`${BEM.MAPPED} ${BEM.UNMAPPED}`);
-      expect(mockRootEl.addClass).toHaveBeenCalledWith(BEM.UNMAPPED);
+      expect(mockRootEl.removeClass).toHaveBeenCalledWith(STATUS.ALL);
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(STATUS.WARN);
     });
 
-    it('should apply unmapped class when only secondary tickers present', () => {
+    it('should apply WARN status when only secondary tickers present', () => {
       const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
       bar.render({
         tvTicker: 'NSE:INFY',
@@ -678,11 +684,21 @@ describe('AlertBar', () => {
         isUntracked: false,
       });
 
-      expect(mockRootEl.removeClass).toHaveBeenCalledWith(`${BEM.MAPPED} ${BEM.UNMAPPED}`);
-      expect(mockRootEl.addClass).toHaveBeenCalledWith(BEM.UNMAPPED);
+      expect(mockRootEl.removeClass).toHaveBeenCalledWith(STATUS.ALL);
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(STATUS.WARN);
     });
 
+    it('should apply ERROR status when untracked', () => {
+      const bar = new TestableAlertBar(mockDomManager, mockAlertTickerManager, mockUIUtil);
+      bar.render({
+        tvTicker: 'NSE:BHEL',
+        alertTickers: [],
+        isUntracked: true,
+      });
 
+      expect(mockRootEl.removeClass).toHaveBeenCalledWith(STATUS.ALL);
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(STATUS.ERROR);
+    });
   });
 
   // ── Expanded output ──

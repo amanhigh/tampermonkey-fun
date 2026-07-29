@@ -5,17 +5,7 @@
 //   state:   --
 //   `data-alert-ticker-context-action` is behaviour-only and intentionally absent.
 
-@display-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-@display-bg: rgba(20, 20, 28, 0.92);
-@display-border: 1px solid rgba(255, 255, 255, 0.12);
-@display-radius: 6px;
-@display-padding: 6px 10px;
-@display-font-size: 12px;
-@display-margin: 3px;
-
 // Color tokens
-@color-mapped: #34d058;
-@color-unmapped: #a855f7;
 @color-primary: #ffd700;
 @color-secondary: #58a6ff;
 @alert-count-active: #34d058;
@@ -25,36 +15,12 @@
 // ============================================
 .aman-alert-ticker-bar {
     display: block;
-    background: @display-bg;
-    font-family: @display-font;
-    font-size: @display-font-size;
-    margin: @display-margin;
-    padding: @display-padding;
-    border: @display-border;
-    border-left: 3px solid rgba(255, 255, 255, 0.15);
-    border-radius: @display-radius;
-    user-select: none;
-    transition: background 0.2s ease, border-color 0.2s ease;
-    line-height: 1.5;
-    min-height: 18px;
-    box-sizing: border-box;
-    width: calc(100% - (2 * @display-margin));
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 
     &:hover {
         background: rgba(30, 30, 38, 0.95);
-    }
-
-    // --mapped state
-    &--mapped {
-        border-left-color: @color-mapped;
-    }
-
-    // --unmapped state
-    &--unmapped {
-        border-left-color: @color-unmapped;
     }
 
     // --expanded state — wraps and grows
@@ -64,6 +30,11 @@
         text-overflow: clip;
         height: auto;
     }
+}
+
+// Collapsed details contribute no spacing
+.aman-alert-ticker-bar__details[hidden] {
+    display: none;
 }
 
 // ============================================
@@ -90,7 +61,7 @@
 }
 
 // ============================================
-// Element: __details
+// Element: __details (visible expanded layout)
 // ============================================
 .aman-alert-ticker-bar__details {
     margin-top: 6px;

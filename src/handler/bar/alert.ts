@@ -1,5 +1,5 @@
 import { BaseBar, IBaseBar } from './base';
-import { BarId } from '../../models/bar';
+import { BarId, BarStatus } from '../../models/bar';
 import { AlertTicker, AlertTickerType } from '../../models/alert_ticker';
 import { IDomManager } from '../../manager/dom';
 import { IAlertTickerManager } from '../../manager/alert_ticker';
@@ -48,8 +48,6 @@ export interface IAlertBar extends IBaseBar {}
  * Renders a compact one-liner showing the ticker status (mapped/unmapped/untracked)
  * with linked-alert count, and expands to show individual alert ticker rows
  * with primary/secondary type indicators.
- *
- * Uses {@link onPaint} to apply mapped/unmapped root classes after each paint cycle.
  */
 export class AlertBar extends BaseBar<AlertBarData> implements IAlertBar {
   constructor(
@@ -85,6 +83,15 @@ export class AlertBar extends BaseBar<AlertBarData> implements IAlertBar {
       }
       throw error;
     }
+  }
+
+  /** @inheritdoc */
+  protected resolveStatus(data: AlertBarData): BarStatus {
+    if (data.isUntracked) {
+      return BarStatus.ERROR;
+    }
+    const hasPrimary = data.alertTickers.some((t) => t.type === 'PRIMARY');
+    return hasPrimary ? BarStatus.OK : BarStatus.WARN;
   }
 
   // ── Context-menu delink ──
@@ -130,15 +137,6 @@ export class AlertBar extends BaseBar<AlertBarData> implements IAlertBar {
   /** @inheritdoc */
   protected renderDetails(data: AlertBarData): string {
     return this.buildAlertTickerRows(data);
-  }
-
-  /** @inheritdoc */
-  protected onPaint($root: JQuery, data: AlertBarData): void {
-    const primaryTicker = data.alertTickers.find((t) => t.type === 'PRIMARY') ?? null;
-    const isMapped = primaryTicker !== null;
-
-    $root.removeClass(`${this.bemModifier('mapped')} ${this.bemModifier('unmapped')}`);
-    $root.addClass(isMapped ? this.bemModifier('mapped') : this.bemModifier('unmapped'));
   }
 
   // ── Private rendering ──

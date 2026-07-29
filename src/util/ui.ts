@@ -1,4 +1,4 @@
-import { BarId } from '../models/bar';
+import { BAR_CLASS, BarId } from '../models/bar';
 
 /**
  * Interface for UI building operations
@@ -91,6 +91,7 @@ export class UIUtil implements IUIUtil {
   // UI Component Classes
   private static readonly CLASSES = {
     AREA: 'aman-area',
+    BAR: BAR_CLASS,
     BUTTON: 'aman-button',
     CHECKBOX: 'aman-checkbox',
     INPUT: 'aman-input',
@@ -173,6 +174,6 @@ export class UIUtil implements IUIUtil {
 
   /** @inheritdoc */
   public buildBar(barId: BarId): JQuery {
-    return $('<div>').attr({ id: barId }).addClass(barId);
+    return $('<div>').attr({ id: barId }).addClass(UIUtil.CLASSES.BAR).addClass(barId);
   }
 }

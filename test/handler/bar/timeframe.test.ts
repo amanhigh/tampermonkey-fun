@@ -4,7 +4,7 @@ import { TickerTimeframe } from '../../../src/models/timeframe';
 import { ISubscriber } from '../../../src/manager/event_bus';
 import { DomainEventType } from '../../../src/models/domain_event';
 import { Notifier } from '../../../src/util/notify';
-import { BarId } from '../../../src/models/bar';
+import { BarId, BAR_CLASS, BarStatus } from '../../../src/models/bar';
 
 // ── Constants ──
 
@@ -282,12 +282,63 @@ describe('TimeFrameBar', () => {
     });
   });
 
-  describe('root class synchronization', () => {
+  describe('status synchronization', () => {
     it('should apply block class to root element during render', async () => {
       const bar = new TimeFrameBar(mockTimeFrameManager);
       await bar.refresh();
 
       expect(mockRootEl.addClass).toHaveBeenCalledWith(BEM.ROOT);
+    });
+
+    it('should apply BAR_CLASS to root element during render', async () => {
+      const bar = new TimeFrameBar(mockTimeFrameManager);
+      await bar.refresh();
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(BAR_CLASS);
+    });
+
+    it('should apply ERROR status when fewer than 3 active timeframes', async () => {
+      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
+        TickerTimeframe.WK, TickerTimeframe.DL,
+      ]);
+
+      const bar = new TimeFrameBar(mockTimeFrameManager);
+      await bar.refresh();
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.ERROR}`);
+    });
+
+    it('should apply ERROR when fewer than 3 even if YR is present', async () => {
+      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
+        TickerTimeframe.YR, TickerTimeframe.WK,
+      ]);
+
+      const bar = new TimeFrameBar(mockTimeFrameManager);
+      await bar.refresh();
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.ERROR}`);
+    });
+
+    it('should apply WARN status when at least 3 active timeframes without YR', async () => {
+      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
+        TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK,
+      ]);
+
+      const bar = new TimeFrameBar(mockTimeFrameManager);
+      await bar.refresh();
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.WARN}`);
+    });
+
+    it('should apply OK status when at least 3 active timeframes including YR', async () => {
+      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
+        TickerTimeframe.YR, TickerTimeframe.TMN, TickerTimeframe.MN,
+      ]);
+
+      const bar = new TimeFrameBar(mockTimeFrameManager);
+      await bar.refresh();
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.OK}`);
     });
   });
 

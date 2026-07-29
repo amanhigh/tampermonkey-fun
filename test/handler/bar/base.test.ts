@@ -20,7 +20,7 @@
  */
 
 import { BaseBar, IBaseBar } from '../../../src/handler/bar/base';
-import { BarId } from '../../../src/models/bar';
+import { BarId, BAR_CLASS, BarStatus } from '../../../src/models/bar';
 import { DomainEventType } from '../../../src/models/domain_event';
 
 // ── Mock jQuery ──
@@ -67,15 +67,26 @@ interface TestData {
 // Test subclasses — all extend TestBarBase for a coherent contract
 // ══════════════════════════════════════════════════════════════════════
 
-/** Concrete base supplying both protected contracts (`loadData`, `refreshEvents`). */
+/** Concrete base supplying both protected contracts (`loadData`, `refreshEvents`) and `resolveStatus`. */
 class TestBarBase extends BaseBar<TestData> {
+  private status: BarStatus = BarStatus.OK;
+
   constructor(barId: BarId) {
     super(barId);
+  }
+
+  /** Test-only setter for status control. */
+  public setStatus(status: BarStatus): void {
+    this.status = status;
   }
 
   /** Public wrapper for protected `render(data)` — test-only access path. */
   public render(data: TestData): void {
     super.render(data);
+  }
+
+  protected resolveStatus(_data: TestData): BarStatus {
+    return this.status;
   }
 
   protected renderCompact(data: TestData): string {
@@ -791,6 +802,75 @@ describe('BaseBar', () => {
     });
   });
 
+  describe('status synchronization', () => {
+    it('should apply BAR_CLASS to root element during paint', () => {
+      const bar = new TestBar(BarId.ALERT);
+      bar.render({ label: 'Status', count: 1 });
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(BAR_CLASS);
+    });
+
+    it('should apply aman-bar--ok modifier when resolveStatus returns OK', () => {
+      const bar = new TestBar(BarId.ALERT);
+      bar.setStatus(BarStatus.OK);
+      bar.render({ label: 'Ok', count: 1 });
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.OK}`);
+    });
+
+    it('should apply aman-bar--warn modifier when resolveStatus returns WARN', () => {
+      const bar = new TestBar(BarId.ALERT);
+      bar.setStatus(BarStatus.WARN);
+      bar.render({ label: 'Warn', count: 1 });
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.WARN}`);
+    });
+
+    it('should apply aman-bar--error modifier when resolveStatus returns ERROR', () => {
+      const bar = new TestBar(BarId.ALERT);
+      bar.setStatus(BarStatus.ERROR);
+      bar.render({ label: 'Error', count: 1 });
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.ERROR}`);
+    });
+
+    it('should remove prior status modifiers before applying new status', () => {
+      const bar = new TestBar(BarId.ALERT);
+      bar.setStatus(BarStatus.OK);
+      bar.render({ label: 'First', count: 1 });
+
+      // Verify OK was applied
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.OK}`);
+
+      // Reset mocks and re-render with WARN
+      jest.clearAllMocks();
+      mockRootEl = createMockElement();
+      mockJQuery.mockImplementation(createDefaultJQuery);
+
+      bar.setStatus(BarStatus.WARN);
+      bar.render({ label: 'Second', count: 2 });
+
+      // Should have removed the prior OK modifier
+      expect(mockRootEl.removeClass).toHaveBeenCalledWith(
+        expect.stringContaining(`${BAR_CLASS}--${BarStatus.OK}`)
+      );
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.WARN}`);
+    });
+
+    it('should update status on each render call', () => {
+      const bar = new TestBar(BarId.ALERT);
+      bar.setStatus(BarStatus.ERROR);
+      bar.render({ label: 'A', count: 1 });
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.ERROR}`);
+
+      bar.setStatus(BarStatus.OK);
+      bar.render({ label: 'B', count: 2 });
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.OK}`);
+    });
+  });
+
   describe('data retention', () => {
     it('should use latest data for toggle after multiple renders', () => {
       const bar = new TestBar(BarId.ALERT);
@@ -843,6 +923,10 @@ describe('BaseBar', () => {
 
     protected async loadData(): Promise<TestData> {
       return { label: 'default', count: 0 };
+    }
+
+    protected resolveStatus(_data: TestData): BarStatus {
+      return BarStatus.OK;
     }
 
     protected get refreshEvents(): readonly DomainEventType[] {

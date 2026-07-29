@@ -1,5 +1,5 @@
 import { BaseBar, IBaseBar } from './base';
-import { BarId } from '../../models/bar';
+import { BarId, BarStatus } from '../../models/bar';
 import { DomainEventType } from '../../models/domain_event';
 import { TickerTimeframe } from '../../models/timeframe';
 import { ITimeFrameManager } from '../../manager/timeframe';
@@ -55,6 +55,15 @@ export class TimeFrameBar extends BaseBar<readonly TickerTimeframe[]> implements
   /** @inheritdoc */
   protected async loadData(): Promise<readonly TickerTimeframe[]> {
     return this.timeFrameManager.getActiveTimeframes();
+  }
+
+  /** @inheritdoc */
+  protected resolveStatus(data: readonly TickerTimeframe[]): BarStatus {
+    if (data.length < 3) {
+      return BarStatus.ERROR;
+    }
+    const hasYr = data.includes(TickerTimeframe.YR);
+    return hasYr ? BarStatus.OK : BarStatus.WARN;
   }
 
   // ── Rendering ──

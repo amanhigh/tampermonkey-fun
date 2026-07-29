@@ -1,6 +1,6 @@
 import { IDomainEventConsumer, ISubscriber } from '../../manager/event_bus';
 import { DomainEventType } from '../../models/domain_event';
-import { BarId } from '../../models/bar';
+import { BAR_CLASS, BarId, BarStatus } from '../../models/bar';
 
 /**
  * Interface for bar-style UI components that manage a compact/expanded content lifecycle
@@ -241,6 +241,17 @@ export abstract class BaseBar<TData> implements IBaseBar {
    */
   protected abstract renderCompact(data: TData): string;
 
+  /**
+   * Determine the visual status for the bar based on the current data.
+   * Called during every successful {@link paint} to apply the appropriate
+   * BEM status modifier (`aman-bar--ok`, `aman-bar--warn`, or `aman-bar--error`)
+   * to the root element.
+   *
+   * @param data The current data.
+   * @returns The {@link BarStatus} to apply.
+   */
+  protected abstract resolveStatus(data: TData): BarStatus;
+
   // ── Nullable expansion contract ──
 
   /**
@@ -339,9 +350,6 @@ export abstract class BaseBar<TData> implements IBaseBar {
       return;
     }
 
-    // Ensure the generated block class is present
-    $root.addClass(this.blockClass);
-
     const detailsHtml = this.renderDetails(data);
     const compactHtml = this.renderCompact(data);
 
@@ -367,10 +375,12 @@ export abstract class BaseBar<TData> implements IBaseBar {
       $root.html(html);
     }
 
+    // Synchronize root classes (block + bar) and status modifier
+    this.syncRootClasses($root, data);
+
     // Synchronize expanded modifier (common to both modes)
     this.syncExpandedModifier($root);
 
-    // Bind context-menu (common) and disclosure click (expandable only)
     if (bindHandlers) {
       this.bindContextMenu($root, data);
       if (detailsHtml !== null) {
@@ -378,7 +388,6 @@ export abstract class BaseBar<TData> implements IBaseBar {
       }
     }
 
-    // Post-paint hook (called last)
     this.onPaint($root, data);
   }
 
@@ -403,6 +412,24 @@ export abstract class BaseBar<TData> implements IBaseBar {
     } else {
       $root.removeClass(expandedMod);
     }
+  }
+
+  /**
+   * Synchronize root element classes: ensure both the generated block class
+   * and the shared bar class are present, remove all status modifiers,
+   * and apply exactly one based on the result of {@link resolveStatus}.
+   *
+   * @param $root Root jQuery element.
+   * @param data Current bar data.
+   */
+  private syncRootClasses($root: JQuery, data: TData): void {
+    // Ensure block and bar classes are present
+    $root.addClass(this.blockClass);
+    $root.addClass(BAR_CLASS);
+
+    // Remove all possible status modifiers, then apply resolved one
+    $root.removeClass(`${BAR_CLASS}--${BarStatus.OK} ${BAR_CLASS}--${BarStatus.WARN} ${BAR_CLASS}--${BarStatus.ERROR}`);
+    $root.addClass(`${BAR_CLASS}--${this.resolveStatus(data)}`);
   }
 
   /**
