@@ -39,7 +39,7 @@ import { IInvestingManager, InvestingManager } from '../manager/investing';
 
 // Handler Imports
 import { IAlertHandler, AlertHandler } from '../handler/alert';
-import { AlertSummaryHandler, IAlertSummaryHandler } from '../handler/alert_summary';
+import { IAlertSummaryBar, AlertSummaryBar } from '../handler/bar/alert_summary';
 import { AuditHandler, IAuditHandler } from '../handler/audit';
 import { JournalHandler, IJournalHandler } from '../handler/journal';
 import { HotkeyHandler, IHotkeyHandler } from '../handler/hotkey';
@@ -410,15 +410,15 @@ export class Factory {
             Factory.handler.alertTicker()
           )
       ),
-    alertSummary: (): IAlertSummaryHandler =>
+    alertSummaryBar: (): IAlertSummaryBar =>
       Factory.getInstance(
-        'alertSummaryHandler',
+        'alertSummaryBar',
         () =>
-          new AlertSummaryHandler(
+          new AlertSummaryBar(
             Factory.manager.alert(),
             Factory.manager.category(),
             Factory.manager.tv(),
-            Factory.util.ui()
+            Factory.manager.dom()
           )
       ),
     audit: (): IAuditHandler =>
@@ -451,7 +451,7 @@ export class Factory {
               Factory.handler.timeFrameBar(),
               Factory.handler.alertBar(),
               Factory.handler.kite(),
-              Factory.handler.alertSummary(),
+              Factory.handler.alertSummaryBar(),
               Factory.handler.audit(),
               Factory.handler.watchlist(),
               Factory.handler.tickerChange(),

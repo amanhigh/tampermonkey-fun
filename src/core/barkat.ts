@@ -161,9 +161,8 @@ export class Barkat {
         this.uiUtil.buildInput(Constants.UI.IDS.INPUTS.COMMAND).on('keydown', (e) => {
           void this.commandHandler.handleInput(e);
         })
-      );
-
-    this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.ALERTS, Constants.UI.POSITIONS.WRAPPER_WIDTH).appendTo($area);
+      )
+      .append(this.uiUtil.buildBar(BarId.ALERT_SUMMARY));
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.ORDERS, Constants.UI.POSITIONS.WRAPPER_WIDTH).appendTo($area);
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.JOURNAL).hide().appendTo($area);
     // BUG 3.1: Toolbar lives inside journal wrapper so it disappears when journal collapses; move toolbar outside for persistent access

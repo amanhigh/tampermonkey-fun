@@ -65,7 +65,6 @@ export const Constants = Object.freeze({
         SUMMARY: 'aman-summary', // Old Name: summaryId
         TOP: 'aman-top', // Old Name: topId
         MID: 'aman-mid', // Old Name: midId
-        ALERTS: 'aman-alerts', // Old Name: alertsId
         AUDIT: 'aman-audit', // Old Name: auditId
         ORDERS: 'aman-orders', // Old Name: ordersId
         JOURNAL: 'aman-journal', // Old Name: journalId
