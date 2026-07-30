@@ -246,7 +246,7 @@ export class JournalHandler implements IJournalHandler {
       return;
     }
 
-    // BUG: Backend YR sequence conflates YR and SMN selections, so RESULT cannot recover the original timeframe.
+    // TODO: Backend YR sequence conflates YR and SMN selections, so RESULT cannot recover the original timeframe.
     // Step 4: Derive screenshot timeframe from backend sequence
     const screenshotTimeframe = runningJournal.sequence === 'MWD' ? TickerTimeframe.TMN : TickerTimeframe.SMN;
 

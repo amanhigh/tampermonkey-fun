@@ -22,6 +22,11 @@ const TIMEFRAMES: readonly Timeframe[] = [
 
 const TIMEFRAME_BY_CODE: ReadonlyMap<TickerTimeframe, Timeframe> = new Map(TIMEFRAMES.map((tf) => [tf.code, tf]));
 const TIMEFRAME_BY_TOOLBAR: ReadonlyMap<number, Timeframe> = new Map(TIMEFRAMES.map((tf) => [tf.toolbar, tf]));
+const SEQUENCE_BY_TIMEFRAME: ReadonlyMap<TickerTimeframe, Sequence> = new Map([
+  [TickerTimeframe.YR, YR_SEQUENCE],
+  [TickerTimeframe.SMN, SMN_SEQUENCE],
+  [TickerTimeframe.TMN, TMN_SEQUENCE],
+]);
 
 /**
  * Filters timeframe codes to only those in the catalog, preserving catalog order.
@@ -146,14 +151,9 @@ export class TimeFrameManager implements ITimeFrameManager {
 
   /** @inheritdoc */
   async getSequence(timeframe?: TickerTimeframe): Promise<Sequence> {
-    if (timeframe === TickerTimeframe.YR) {
-      return YR_SEQUENCE;
-    }
-    if (timeframe === TickerTimeframe.SMN) {
-      return SMN_SEQUENCE;
-    }
-    if (timeframe === TickerTimeframe.TMN) {
-      return TMN_SEQUENCE;
+    const explicitSequence = timeframe === undefined ? undefined : SEQUENCE_BY_TIMEFRAME.get(timeframe);
+    if (explicitSequence) {
+      return explicitSequence;
     }
     // AUTO behaviour — derive from backend timeframes
     const codes = await this.getActiveTimeframes();
