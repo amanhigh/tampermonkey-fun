@@ -102,7 +102,7 @@ export class Barkat {
     );
     $area.appendTo('body');
 
-    // TODO: Move UI Build Logic to Handlers
+    // FIXME: Move UI Build Logic to Handlers
     this.uiUtil
       .buildWrapper(Constants.UI.IDS.AREAS.TOP, Constants.UI.POSITIONS.WRAPPER_WIDTH)
       .appendTo($area)
