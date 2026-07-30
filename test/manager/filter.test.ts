@@ -37,28 +37,6 @@ describe('FilterManager', () => {
     });
   });
 
-  describe('resetWatchList', () => {
-    it('should set widget height for expansion', () => {
-      jest.clearAllMocks();
-      mockJQuery.mockReturnValue(mockChain);
-
-      filterManager.resetWatchList();
-
-      expect(mockChain.css).toHaveBeenCalledWith('height', '20000px');
-    });
-
-    it('should show all watchlist and screener lines', () => {
-      jest.clearAllMocks();
-      mockJQuery.mockReturnValue(mockChain);
-
-      filterManager.resetWatchList();
-
-      expect(mockJQuery).toHaveBeenCalledWith(TickerArea.WATCHLIST.line);
-      expect(mockJQuery).toHaveBeenCalledWith(TickerArea.SCREENER.line);
-      expect(mockChain.show).toHaveBeenCalled();
-    });
-  });
-
   describe('applyColorFilter', () => {
     it('should replace filter chain when no modifiers', () => {
       jest.clearAllMocks();

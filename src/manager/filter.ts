@@ -22,12 +22,6 @@ interface WatchlistFilter {
  */
 export interface IFilterManager {
   /**
-   * Reset watchlist layout and visibility. Does NOT reset visual decals
-   * (colors, flags, F&O borders) — those are handled by PaintManager.paint().
-   */
-  resetWatchList(): void;
-
-  /**
    * Apply a color-based filter to the watchlist.
    * Without modifiers the chain is replaced; with ctrl/shift it is appended.
    * @param color - CSS color string to match against ticker symbols.
@@ -76,8 +70,11 @@ export class FilterManager implements IFilterManager {
     });
   }
 
-  /** @inheritdoc */
-  resetWatchList(): void {
+  /**
+   * Reset watchlist layout and visibility. Does NOT reset visual decals
+   * (colors, flags, F&O borders) — those are handled by PaintManager.paint().
+   */
+  private resetWatchList(): void {
     // Increase Widget Height to prevent Line Filtering
     $(TickerArea.WATCHLIST.mainSelector).css('height', '20000px');
 
@@ -102,8 +99,8 @@ export class FilterManager implements IFilterManager {
 
   /** @inheritdoc */
   resetFilters(): void {
-    this.resetWatchList();
     this.filterChain = [];
+    this.applyFilters();
   }
 
   /** @inheritdoc */

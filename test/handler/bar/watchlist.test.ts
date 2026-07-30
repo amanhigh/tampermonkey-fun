@@ -214,7 +214,6 @@ function createMockPaintManager(): jest.Mocked<IPaintManager> {
 
 function createMockFilterManager(): jest.Mocked<IFilterManager> {
   return {
-    resetWatchList: jest.fn(),
     applyColorFilter: jest.fn(),
     applyFlagFilter: jest.fn(),
     resetFilters: jest.fn(),
