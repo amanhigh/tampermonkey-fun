@@ -260,13 +260,13 @@ export class AuditRenderer {
     // Left-click: Primary action (no auto-refresh on left-click, user may just be viewing)
     $button.on('click', (e) => {
       e.preventDefault();
-      void Promise.resolve(this.section.onLeftClick(result));
+      void this.section.onLeftClick(result);
     });
 
     // Right-click: Secondary action (no auto-refresh for speed)
     $button.on('contextmenu', (e) => {
       e.preventDefault();
-      void Promise.resolve(this.section.onRightClick(result)).then((returnValue) => {
+      void this.section.onRightClick(result).then((returnValue) => {
         if (returnValue === false) {
           return;
         }
@@ -280,7 +280,7 @@ export class AuditRenderer {
       $button.on('mousedown', (e) => {
         if (e.which === 2) {
           e.preventDefault();
-          void Promise.resolve(this.section.onMiddleClick!(result));
+          void this.section.onMiddleClick!(result);
         }
       });
     }
@@ -358,7 +358,7 @@ export class AuditRenderer {
       return;
     }
 
-    await Promise.resolve(this.section.onFixAll(this.results));
+    await this.section.onFixAll(this.results);
     await this.refresh();
   }
 

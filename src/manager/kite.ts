@@ -24,7 +24,7 @@ export interface IKiteManager {
    * Deletes a GTT order by ID
    * @param gttId The GTT order ID to delete
    */
-  deleteOrder(gttId: string): void;
+  deleteOrder(gttId: string): Promise<void>;
 
   /**
    * Loads GTT orders and processes them with the provided callback
@@ -131,8 +131,8 @@ export class KiteManager implements IKiteManager {
   }
 
   /** @inheritdoc */
-  deleteOrder(gttId: string): void {
-    void this.kiteClient.deleteGTT(gttId);
+  async deleteOrder(gttId: string): Promise<void> {
+    await this.kiteClient.deleteGTT(gttId);
   }
 
   /** @inheritdoc */

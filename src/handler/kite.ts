@@ -151,7 +151,7 @@ export class KiteHandler implements IKiteHandler {
 
   /** @inheritdoc */
   handleGttDeleteEvent(event: GttDeleteEvent): void {
-    this.kiteManager.deleteOrder(event.orderId);
+    void this.kiteManager.deleteOrder(event.orderId);
     Notifier.red(`GTT Deleted: ${event.symbol}`);
   }
 

@@ -42,11 +42,10 @@ export interface IAuditSection {
   buttonColorMapper: (result: AuditResult, context?: unknown) => string; // Maps result to button color (required)
 
   // Interaction handlers
-  // HACK: Standardize to use Promise<void> ?
-  onLeftClick: (result: AuditResult) => void | Promise<void>; // Primary action (e.g., open in TV)
-  onRightClick: (result: AuditResult) => boolean | void | Promise<boolean | void>; // Secondary action — return false to cancel button removal
-  onMiddleClick?: (result: AuditResult) => void | Promise<void>; // Optional middle-click action
-  onFixAll?: (results: AuditResult[]) => void | Promise<void>; // Optional bulk-action handler for "Fix All" workflow
+  onLeftClick: (result: AuditResult) => Promise<void>; // Primary action (e.g., open in TV)
+  onRightClick: (result: AuditResult) => Promise<boolean>; // Secondary action — return false to cancel button removal
+  onMiddleClick?: (result: AuditResult) => Promise<void>; // Optional middle-click action
+  onFixAll?: (results: AuditResult[]) => Promise<void>; // Optional bulk-action handler for "Fix All" workflow
 
   // Display options
   limit?: number; // Items per page (0 or undefined = no pagination)

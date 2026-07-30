@@ -28,7 +28,7 @@ describe('TradeRiskSection', () => {
     };
 
     mockTickerHandler = { openTicker: jest.fn() };
-    mockKiteManager = { deleteOrder: jest.fn() };
+    mockKiteManager = { deleteOrder: jest.fn().mockResolvedValue(undefined) };
 
     notifySuccessSpy = jest.spyOn(Notifier, 'success').mockImplementation();
     notifyWarnSpy = jest.spyOn(Notifier, 'warn').mockImplementation();
@@ -49,33 +49,33 @@ describe('TradeRiskSection', () => {
   });
 
   describe('onLeftClick', () => {
-    test('opens tvTicker in TradingView', () => {
-      section.onLeftClick(createResult('HDFC', 'ord-1'));
+    test('opens tvTicker in TradingView', async () => {
+      await section.onLeftClick(createResult('HDFC', 'ord-1'));
       expect(mockTickerHandler.openTicker).toHaveBeenCalledWith('HDFC');
     });
   });
 
   describe('onRightClick', () => {
-    test('deletes all orders for the same ticker', () => {
+    test('deletes all orders for the same ticker', async () => {
       // Populate allResults via headerFormatter
       const results = [createResult('HDFC', 'ord-1'), createResult('HDFC', 'ord-2'), createResult('TCS', 'ord-3')];
       section.headerFormatter(results);
 
-      section.onRightClick(createResult('HDFC', 'ord-1'));
+      await expect(section.onRightClick(createResult('HDFC', 'ord-1'))).resolves.toBe(true);
       expect(mockKiteManager.deleteOrder).toHaveBeenCalledWith('ord-1');
       expect(mockKiteManager.deleteOrder).toHaveBeenCalledWith('ord-2');
       expect(mockKiteManager.deleteOrder).not.toHaveBeenCalledWith('ord-3');
       expect(notifySuccessSpy).toHaveBeenCalledWith('✓ Deleted 2 order(s) for HDFC');
     });
 
-    test('deletes single order when only one for ticker', () => {
+    test('deletes single order when only one for ticker', async () => {
       section.headerFormatter([createResult('HDFC', 'ord-1')]);
-      section.onRightClick(createResult('HDFC', 'ord-1'));
+      await expect(section.onRightClick(createResult('HDFC', 'ord-1'))).resolves.toBe(true);
       expect(mockKiteManager.deleteOrder).toHaveBeenCalledWith('ord-1');
       expect(notifySuccessSpy).toHaveBeenCalledWith('✓ Deleted 1 order(s) for HDFC');
     });
 
-    test('warns when no order ID found in allResults', () => {
+    test('warns when no order ID found in allResults', async () => {
       section.headerFormatter([]);
       const result: AuditResult = {
         code: 'INVALID_RISK_MULTIPLE',
@@ -83,28 +83,28 @@ describe('TradeRiskSection', () => {
         severity: 'HIGH',
         data: { tvTicker: 'HDFC' },
       };
-      section.onRightClick(result);
+      await expect(section.onRightClick(result)).resolves.toBe(false);
       expect(notifyWarnSpy).toHaveBeenCalled();
       expect(mockKiteManager.deleteOrder).not.toHaveBeenCalled();
     });
   });
 
   describe('onFixAll', () => {
-    test('deletes all non-compliant orders', () => {
+    test('deletes all non-compliant orders', async () => {
       const results = [createResult('HDFC', 'ord-1'), createResult('TCS', 'ord-2')];
-      section.onFixAll!(results);
+      await section.onFixAll!(results);
       expect(mockKiteManager.deleteOrder).toHaveBeenCalledTimes(2);
       expect(mockKiteManager.deleteOrder).toHaveBeenCalledWith('ord-1');
       expect(mockKiteManager.deleteOrder).toHaveBeenCalledWith('ord-2');
       expect(notifySuccessSpy).toHaveBeenCalled();
     });
 
-    test('skips results without order ID', () => {
+    test('skips results without order ID', async () => {
       const results: AuditResult[] = [
         createResult('HDFC', 'ord-1'),
         { code: 'X', target: 'BAD', severity: 'HIGH', data: {} },
       ];
-      section.onFixAll!(results);
+      await section.onFixAll!(results);
       expect(mockKiteManager.deleteOrder).toHaveBeenCalledTimes(1);
     });
   });

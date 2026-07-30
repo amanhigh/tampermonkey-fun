@@ -31,10 +31,10 @@ export class TradeRiskSection extends BaseAuditSection implements IAuditSection 
   readonly limit = 10;
   readonly context: unknown = undefined;
 
-  readonly onLeftClick = (result: AuditResult) => {
+  readonly onLeftClick = async (result: AuditResult): Promise<void> => {
     const tvTicker = result.target;
     if (tvTicker) {
-      void this.tickerHandler.openTicker(tvTicker);
+      await this.tickerHandler.openTicker(tvTicker);
     } else {
       Notifier.warn(`No tvTicker found for ${result.target}`);
     }
@@ -42,7 +42,7 @@ export class TradeRiskSection extends BaseAuditSection implements IAuditSection 
 
   private allResults: AuditResult[] = [];
 
-  readonly onRightClick = (result: AuditResult): void => {
+  readonly onRightClick = async (result: AuditResult): Promise<boolean> => {
     const tvTicker = result.target;
     // Find all non-compliant orders for this ticker
     const tickerResults = this.allResults.filter((r) => r.target === tvTicker);
@@ -50,22 +50,29 @@ export class TradeRiskSection extends BaseAuditSection implements IAuditSection 
 
     if (orderIds.length === 0) {
       Notifier.warn('No order ID found for this finding');
-      return;
+      return false;
     }
 
-    orderIds.forEach((orderId) => this.kiteManager.deleteOrder(orderId));
+    await Promise.all(
+      orderIds.map(async (orderId) => {
+        await this.kiteManager.deleteOrder(orderId);
+      })
+    );
     Notifier.success(`✓ Deleted ${orderIds.length} order(s) for ${tvTicker}`);
+    return true;
   };
 
-  readonly onFixAll = (results: AuditResult[]): void => {
+  readonly onFixAll = async (results: AuditResult[]): Promise<void> => {
     let totalDeleted = 0;
+    const deletePromises: Promise<void>[] = [];
     results.forEach((result) => {
       const orderId = result.data?.orderId as string | undefined;
       if (orderId) {
-        this.kiteManager.deleteOrder(orderId);
+        deletePromises.push(this.kiteManager.deleteOrder(orderId));
         totalDeleted++;
       }
     });
+    await Promise.all(deletePromises);
     Notifier.success(`✓ Deleted ${totalDeleted} non-compliant order(s)`);
   };
 
