@@ -1,5 +1,5 @@
 import { UIUtil } from '../../src/util/ui';
-import { BarId } from '../../src/models/bar';
+import { BarId, BAR_CLASS } from '../../src/models/bar';
 
 // ── Local jQuery mock ──
 
@@ -37,9 +37,10 @@ describe('UIUtil.buildBar', () => {
     expect(jqMock.attr).toHaveBeenCalledWith({ id: BarId.ALERT });
   });
 
-  test('adds the BarId value as the BEM block class', () => {
+  test('adds both BAR_CLASS and the BarId BEM block class', () => {
     util.buildBar(BarId.ALERT);
 
+    expect(jqMock.addClass).toHaveBeenCalledWith(BAR_CLASS);
     expect(jqMock.addClass).toHaveBeenCalledWith(BarId.ALERT);
   });
 

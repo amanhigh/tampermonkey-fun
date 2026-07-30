@@ -20,7 +20,7 @@
  */
 
 import { BaseBar, IBaseBar } from '../../../src/handler/bar/base';
-import { BarId } from '../../../src/models/bar';
+import { BarId, BAR_CLASS, BarStatus } from '../../../src/models/bar';
 import { DomainEventType } from '../../../src/models/domain_event';
 
 // ── Mock jQuery ──
@@ -67,15 +67,26 @@ interface TestData {
 // Test subclasses — all extend TestBarBase for a coherent contract
 // ══════════════════════════════════════════════════════════════════════
 
-/** Concrete base supplying both protected contracts (`loadData`, `refreshEvents`). */
+/** Concrete base supplying both protected contracts (`loadData`, `refreshEvents`) and `resolveStatus`. */
 class TestBarBase extends BaseBar<TestData> {
+  private status: BarStatus = BarStatus.OK;
+
   constructor(barId: BarId) {
     super(barId);
+  }
+
+  /** Test-only setter for status control. */
+  public setStatus(status: BarStatus): void {
+    this.status = status;
   }
 
   /** Public wrapper for protected `render(data)` — test-only access path. */
   public render(data: TestData): void {
     super.render(data);
+  }
+
+  protected resolveStatus(_data: TestData): BarStatus {
+    return this.status;
   }
 
   protected renderCompact(data: TestData): string {
@@ -110,7 +121,7 @@ class TestBarOverrideLeftClick extends TestBarBase {
     return `details:${data.label}`;
   }
 
-  protected onLeftClick(): void {
+  protected onLeftClick(_event: JQuery.ClickEvent): void {
     this.leftClickCount++;
   }
 }
@@ -127,9 +138,9 @@ class TestBarSuperLeftClick extends TestBarBase {
     return `details:${data.label}`;
   }
 
-  protected onLeftClick(): void {
+  protected onLeftClick(event: JQuery.ClickEvent): void {
     this.leftClickCount++;
-    super.onLeftClick();
+    super.onLeftClick(event);
   }
 }
 
@@ -221,10 +232,12 @@ class TestBarWithEvents extends TestBarBase {
 
 // ── Helpers ──
 
-function getClickHandler(): (() => void) | undefined {
+function getClickHandler(): ((event: JQuery.ClickEvent) => void) | undefined {
   const call = mockRootEl.on.mock.calls.find((c: any[]) => c[0] === `click.${EVENT_NS}`);
-  return call?.[2] as (() => void) | undefined;
+  return call?.[2] as ((event: JQuery.ClickEvent) => void) | undefined;
 }
+
+const MOCK_CLICK_EVENT = {} as JQuery.ClickEvent;
 
 function getContextMenuHandler(): ((event: JQuery.ContextMenuEvent) => void) | undefined {
   const call = mockRootEl.on.mock.calls.find((c: any[]) => c[0] === `contextmenu.${EVENT_NS}`);
@@ -334,7 +347,7 @@ describe('BaseBar', () => {
       bar.render({ label: 'First', count: 10 });
 
       const clickHandler = getClickHandler()!;
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
 
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('details:First:10')
@@ -359,12 +372,12 @@ describe('BaseBar', () => {
 
       const clickHandler = getClickHandler()!;
 
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('details:Toggle:3')
       );
 
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('compact:Toggle:3')
       );
@@ -379,12 +392,12 @@ describe('BaseBar', () => {
         expect.stringContaining('compact:Lifecycle:7')
       );
 
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('details:Lifecycle:7')
       );
 
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('compact:Lifecycle:7')
       );
@@ -397,11 +410,11 @@ describe('BaseBar', () => {
       expect(mockRootEl.removeClass).toHaveBeenCalledWith(EXPANDED_MOD);
 
       const clickHandler = getClickHandler()!;
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
 
       expect(mockRootEl.addClass).toHaveBeenCalledWith(EXPANDED_MOD);
 
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(mockRootEl.removeClass).toHaveBeenCalledWith(EXPANDED_MOD);
     });
   });
@@ -436,7 +449,7 @@ describe('BaseBar', () => {
       bar.render({ label: 'Expand', count: 1 });
 
       const clickHandler = getClickHandler()!;
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
 
       const html = mockRootEl.html.mock.calls[mockRootEl.html.mock.calls.length - 1][0] as string;
       expect(html).toContain('aria-expanded="true"');
@@ -454,7 +467,7 @@ describe('BaseBar', () => {
       expect(initialHtml).not.toContain('details:Content:1');
 
       const clickHandler = getClickHandler()!;
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
 
       const expandedHtml = mockRootEl.html.mock.calls[mockRootEl.html.mock.calls.length - 1][0] as string;
       expect(expandedHtml).toContain('details:Content:1');
@@ -643,7 +656,7 @@ describe('BaseBar', () => {
       bar.render({ label: 'Override', count: 1 });
       const clickHandler = getClickHandler()!;
 
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(bar.leftClickCount).toBe(1);
       expect(mockRootEl.html).toHaveBeenCalledTimes(1);
     });
@@ -653,13 +666,13 @@ describe('BaseBar', () => {
       bar.render({ label: 'Super', count: 5 });
       const clickHandler = getClickHandler()!;
 
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(bar.leftClickCount).toBe(1);
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('details:Super')
       );
 
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(bar.leftClickCount).toBe(2);
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('compact:Super')
@@ -763,7 +776,7 @@ describe('BaseBar', () => {
       handler(mockEvent);
 
       const clickHandler = getClickHandler()!;
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('details:Rerender:10')
       );
@@ -785,9 +798,78 @@ describe('BaseBar', () => {
       expect(bar.onPaintCount).toBe(1);
 
       const clickHandler = getClickHandler()!;
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(bar.onPaintCount).toBe(2);
       expect(bar.handlersBoundAtPaint).toBe(2);
+    });
+  });
+
+  describe('status synchronization', () => {
+    it('should apply BAR_CLASS to root element during paint', () => {
+      const bar = new TestBar(BarId.ALERT);
+      bar.render({ label: 'Status', count: 1 });
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(BAR_CLASS);
+    });
+
+    it('should apply aman-bar--ok modifier when resolveStatus returns OK', () => {
+      const bar = new TestBar(BarId.ALERT);
+      bar.setStatus(BarStatus.OK);
+      bar.render({ label: 'Ok', count: 1 });
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.OK}`);
+    });
+
+    it('should apply aman-bar--warn modifier when resolveStatus returns WARN', () => {
+      const bar = new TestBar(BarId.ALERT);
+      bar.setStatus(BarStatus.WARN);
+      bar.render({ label: 'Warn', count: 1 });
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.WARN}`);
+    });
+
+    it('should apply aman-bar--error modifier when resolveStatus returns ERROR', () => {
+      const bar = new TestBar(BarId.ALERT);
+      bar.setStatus(BarStatus.ERROR);
+      bar.render({ label: 'Error', count: 1 });
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.ERROR}`);
+    });
+
+    it('should remove prior status modifiers before applying new status', () => {
+      const bar = new TestBar(BarId.ALERT);
+      bar.setStatus(BarStatus.OK);
+      bar.render({ label: 'First', count: 1 });
+
+      // Verify OK was applied
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.OK}`);
+
+      // Reset mocks and re-render with WARN
+      jest.clearAllMocks();
+      mockRootEl = createMockElement();
+      mockJQuery.mockImplementation(createDefaultJQuery);
+
+      bar.setStatus(BarStatus.WARN);
+      bar.render({ label: 'Second', count: 2 });
+
+      // Should have removed the prior OK modifier
+      expect(mockRootEl.removeClass).toHaveBeenCalledWith(
+        expect.stringContaining(`${BAR_CLASS}--${BarStatus.OK}`)
+      );
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.WARN}`);
+    });
+
+    it('should update status on each render call', () => {
+      const bar = new TestBar(BarId.ALERT);
+      bar.setStatus(BarStatus.ERROR);
+      bar.render({ label: 'A', count: 1 });
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.ERROR}`);
+
+      bar.setStatus(BarStatus.OK);
+      bar.render({ label: 'B', count: 2 });
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.OK}`);
     });
   });
 
@@ -798,7 +880,7 @@ describe('BaseBar', () => {
       bar.render({ label: 'New', count: 99 });
 
       const clickHandler = getClickHandler()!;
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
 
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('details:New:99')
@@ -810,7 +892,7 @@ describe('BaseBar', () => {
       bar.render({ label: 'A', count: 1 });
 
       const clickHandler = getClickHandler()!;
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('details:A:1')
       );
@@ -820,7 +902,7 @@ describe('BaseBar', () => {
         expect.stringContaining('compact:B:2')
       );
 
-      clickHandler();
+      clickHandler(MOCK_CLICK_EVENT);
       expect(mockRootEl.html).toHaveBeenLastCalledWith(
         expect.stringContaining('details:B:2')
       );
@@ -843,6 +925,10 @@ describe('BaseBar', () => {
 
     protected async loadData(): Promise<TestData> {
       return { label: 'default', count: 0 };
+    }
+
+    protected resolveStatus(_data: TestData): BarStatus {
+      return BarStatus.OK;
     }
 
     protected get refreshEvents(): readonly DomainEventType[] {

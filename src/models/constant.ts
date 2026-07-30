@@ -62,7 +62,7 @@ export const Constants = Object.freeze({
     IDS: {
       AREAS: {
         MAIN: 'aman-area', // Old Name: areaId
-        SUMMARY: 'aman-summary', // Old Name: summaryId
+
         TOP: 'aman-top', // Old Name: topId
         MID: 'aman-mid', // Old Name: midId
         AUDIT: 'aman-audit', // Old Name: auditId
@@ -174,7 +174,7 @@ export const Constants = Object.freeze({
       OVERRIDES: ['egf', 'int', 'lc', 'loc', 'doji', 'big', 'pn', 'tc', 'cfl', 'acm', 'adv'], // Old name: overrides
       OVERRIDE_GROUP_ID: 'reason-override',
       SEQUENCE_GROUP_ID: 'journal-sequence',
-      SEQUENCE_CHOICES: ['MWD', 'YR'],
+      SEQUENCE_CHOICES: ['YR', 'SMN', 'TMN'],
       TRADE_INFO: `Trends
 HTF - Up
 MTF - Up

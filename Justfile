@@ -81,7 +81,7 @@ analyze:
 [group('setup')]
 _setup-npm:
     just _title "SETUP" "NPM"
-    {{npm}} install
+    {{npm}} ci
 
 [group('setup')]
 [doc('One-time NPM setup')]
@@ -103,12 +103,12 @@ clean: _clean-node
 
 [group('setup')]
 [doc('Clean and rebuild everything')]
-reset: clean setup
+reset: clean _setup-npm setup
     just _info "RESET" "Clean build complete"
 
 [group('setup')]
 [doc('Full bootstrap: prepare + reset')]
-all: prepare reset
+all: reset
 
 # ── Misc ──
 [group('info')]

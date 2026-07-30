@@ -2,7 +2,6 @@ import { Constants } from '../models/constant';
 import { TickerArea, TickerVisibility } from '../models/dom';
 import { IPaintManager } from './paint';
 import { ICategoryManager } from './category';
-import type { IFilterManager } from './filter';
 import { IPublisher } from './event_bus';
 import { IDomManager } from './dom';
 import { DomainEventType } from '../models/domain_event';
@@ -10,19 +9,20 @@ import { DomainEventType } from '../models/domain_event';
 /**
  * Interface for managing TradingView watchlist operations.
  * Ticker retrieval and painting are delegated to DomManager and PaintManager.
- * Summary/filter rendering is delegated to FilterManager.
- * This interface only handles watchlist-specific orchestration.
+ * This interface only handles watchlist persistence, painting, diffing,
+ * and WATCHLIST_CHANGED publication. Summary/label refresh is owned by
+ * WatchlistBar's direct domain-event subscriptions.
  */
 export interface ITradingViewWatchlistManager {
   /**
-   * Refreshes watchlist UI: layout reset, ticker paint, summary labels, filters.
+   * Refreshes watchlist UI: layout reset, ticker paint, and diff publication.
+   * Summary refresh is handled by WatchlistBar's direct domain-event subscriptions.
    */
   refresh(): Promise<void>;
 
   /**
    * Targeted refresh for specific tickers that need repainting (category change,
-   * timeframe change, metadata change, etc). Always repaints tickers AND
-   * refreshes summary/filters together.
+   * timeframe change, metadata change, etc). Always repaints tickers.
    * @param tickers - Ticker symbols to repaint
    */
   refreshTickers(tickers: string[]): Promise<void>;
@@ -40,8 +40,8 @@ export interface ITradingViewWatchlistManager {
 /**
  * Manages TradingView watchlist refresh orchestration, ticker diffing,
  * DOM silo persistence, and WATCHLIST_CHANGED event publishing.
- * UI rendering (layout reset, summary labels, filters) is delegated
- * to FilterManager.
+ * Summary/label refresh is owned by WatchlistBar's direct domain-event
+ * subscriptions.
  */
 export class TradingViewWatchlistManager implements ITradingViewWatchlistManager {
   /**
@@ -55,7 +55,6 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   constructor(
     private readonly paintManager: IPaintManager,
     private readonly categoryManager: ICategoryManager,
-    private readonly filterManager: IFilterManager,
     private readonly domManager: IDomManager,
     private readonly publisher: IPublisher
   ) {}
@@ -64,8 +63,6 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
 
   /** @inheritdoc */
   async refresh(): Promise<void> {
-    this.filterManager.resetWatchList();
-
     const currentTickers = this.getCurrentWatchlistTickers();
     await this.saveWatchlistSilo(currentTickers);
 
@@ -80,7 +77,6 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     // Delegate all ticker painting (symbols, flags, FNO) to PaintManager
     await this.paintManager.paint();
 
-    await this.refreshSummary();
     this.publishWatchlistChanged(changedTickers);
   }
 
@@ -91,7 +87,6 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     }
 
     await this.paintManager.paintTickers(tickers);
-    await this.refreshSummary();
   }
 
   /** @inheritdoc */
@@ -119,14 +114,12 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
       // Targeted refresh for a single confirmed change
       await this.clearRemovedReadyState(diff.removedTickers);
       await this.paintManager.paintTickers(diff.changedTickers);
-      await this.refreshSummary();
       this.publishWatchlistChanged(diff.changedTickers);
       return;
     }
 
     // Multiple changes — fall back to full refresh
     await this.paintManager.paint();
-    await this.refreshSummary();
     this.publishWatchlistChanged(diff.changedTickers);
   }
 
@@ -161,19 +154,6 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
   }
 
   // ── Refresh helpers ──
-
-  /**
-   * Recompute bucket counts and refresh summary labels + filters.
-   * Internal — callers should use refreshTickers() or rely on refresh()
-   * / refreshChangedTickers() to call this automatically.
-   */
-  private async refreshSummary(): Promise<void> {
-    // Recompute bucket counts without repainting DOM
-    const result = await this.paintManager.summarizeBuckets();
-
-    // Delegate UI rendering (labels + filters) to FilterManager
-    this.filterManager.refreshSummary(result);
-  }
 
   /**
    * Clear READY state for tickers that have been removed from the watchlist.

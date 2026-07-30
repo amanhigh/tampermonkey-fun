@@ -1,7 +1,6 @@
 import { TradingViewWatchlistManager, ITradingViewWatchlistManager } from '../../src/manager/watchlist';
 import { IPaintManager } from '../../src/manager/paint';
 import { ICategoryManager } from '../../src/manager/category';
-import { IFilterManager } from '../../src/manager/filter';
 import { IDomManager } from '../../src/manager/dom';
 import { IPublisher } from '../../src/manager/event_bus';
 import { Constants } from '../../src/models/constant';
@@ -17,7 +16,6 @@ describe('TradingViewWatchlistManager', () => {
   let watchlistManager: ITradingViewWatchlistManager;
   let mockPaintManager: jest.Mocked<IPaintManager>;
   let mockCategoryManager: jest.Mocked<ICategoryManager>;
-  let mockFilterManager: jest.Mocked<IFilterManager>;
   let mockDomManager: jest.Mocked<IDomManager>;
   let mockPublisher: jest.Mocked<IPublisher>;
 
@@ -28,18 +26,12 @@ describe('TradingViewWatchlistManager', () => {
     mockPaintManager = {
       paint: jest.fn().mockResolvedValue(undefined),
       paintTickers: jest.fn().mockResolvedValue(undefined),
-      summarizeBuckets: jest.fn().mockResolvedValue({ buckets: new Map(), uncategorizedCount: 0 }),
     } as unknown as jest.Mocked<IPaintManager>;
 
     mockCategoryManager = {
       toggleReadyState: jest.fn().mockResolvedValue(undefined),
       clearReadyState: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<ICategoryManager>;
-
-    mockFilterManager = {
-      resetWatchList: jest.fn(),
-      refreshSummary: jest.fn(),
-    } as unknown as jest.Mocked<IFilterManager>;
 
     mockDomManager = {
       getTicker: jest.fn().mockReturnValue('CURRENT_TICKER'),
@@ -53,7 +45,6 @@ describe('TradingViewWatchlistManager', () => {
     watchlistManager = new TradingViewWatchlistManager(
       mockPaintManager,
       mockCategoryManager,
-      mockFilterManager,
       mockDomManager,
       mockPublisher
     );
@@ -87,14 +78,8 @@ describe('TradingViewWatchlistManager', () => {
     it('should execute complete watchlist refresh via paint()', async () => {
       await watchlistManager.refresh();
 
-      // Verify delegation to FilterManager for layout reset
-      expect(mockFilterManager.resetWatchList).toHaveBeenCalled();
-
       // Verify paint() was called for full visual refresh
       expect(mockPaintManager.paint).toHaveBeenCalled();
-
-      // Verify summarizeBuckets was called for summary display
-      expect(mockPaintManager.summarizeBuckets).toHaveBeenCalledWith();
     });
 
     it('should save current watchlist tickers to shared GM silo on refresh', async () => {
@@ -142,7 +127,6 @@ describe('TradingViewWatchlistManager', () => {
       const freshManager = new TradingViewWatchlistManager(
         mockPaintManager,
         mockCategoryManager,
-        mockFilterManager,
         mockDomManager,
         mockPublisher
       );
@@ -211,7 +195,7 @@ describe('TradingViewWatchlistManager', () => {
       expect(parsed.tickers).toEqual(expect.arrayContaining(['A', 'B', 'C']));
     });
 
-    it('should refresh summary and publish WATCHLIST_CHANGED', async () => {
+    it('should publish WATCHLIST_CHANGED', async () => {
       mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B']));
       await watchlistManager.refresh();
 
@@ -219,7 +203,6 @@ describe('TradingViewWatchlistManager', () => {
 
       await watchlistManager.refreshChangedTickers();
 
-      expect(mockPaintManager.summarizeBuckets).toHaveBeenCalled();
       expect(mockPublisher.publish).toHaveBeenCalledWith({
         type: DomainEventType.WATCHLIST_CHANGED,
         tickers: ['C'],
@@ -239,7 +222,7 @@ describe('TradingViewWatchlistManager', () => {
       expect(mockPaintManager.paintTickers).not.toHaveBeenCalled();
     });
 
-    it('should do nothing when there are no changes', async () => {
+    it('should not publish when there are no changes', async () => {
       mockDomManager.getTickers.mockReturnValue(new Set(['A', 'B']));
       await watchlistManager.refresh();
       jest.clearAllMocks();
@@ -256,18 +239,16 @@ describe('TradingViewWatchlistManager', () => {
   });
 
   describe('refreshTickers', () => {
-    it('should call paintTickers and refresh summary for non-empty ticker list', async () => {
+    it('should call paintTickers for non-empty ticker list', async () => {
       await watchlistManager.refreshTickers(['AAPL', 'GOOG']);
 
       expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['AAPL', 'GOOG']);
-      expect(mockPaintManager.summarizeBuckets).toHaveBeenCalled();
     });
 
     it('should skip painting for empty ticker list', async () => {
       await watchlistManager.refreshTickers([]);
 
       expect(mockPaintManager.paintTickers).not.toHaveBeenCalled();
-      expect(mockPaintManager.summarizeBuckets).not.toHaveBeenCalled();
     });
   });
 });

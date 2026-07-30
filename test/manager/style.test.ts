@@ -40,6 +40,7 @@ describe('StyleManager', () => {
       toggleTimeframe: jest.fn(),
       getSequence: jest.fn(),
       apply: jest.fn(),
+      applyTimeframe: jest.fn(),
       getCurrentConfig: jest.fn(),
     };
 

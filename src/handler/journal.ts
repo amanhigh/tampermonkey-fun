@@ -7,7 +7,7 @@ import { IJournalManager } from '../manager/journal';
 import { ISmartPrompt, SmartChoiceGroup, SmartPromptResponseType } from '../util/smart';
 import { IUIUtil } from '../util/ui';
 import { Constants } from '../models/constant';
-import { JournalActionType, JournalSequence } from '../models/journal';
+import { JournalActionType } from '../models/journal';
 import { DomManager } from '../manager/dom';
 import { Notifier } from '../util/notify';
 import { ITradingViewManager } from '../manager/tv';
@@ -97,7 +97,7 @@ export class JournalHandler implements IJournalHandler {
       return;
     }
 
-    const { reason, sequence } = await this.showReasonModal(true);
+    const { reason, timeframe } = await this.showReasonModal(true);
 
     if (reason === null) {
       return;
@@ -111,10 +111,7 @@ export class JournalHandler implements IJournalHandler {
     const ticker = this.domManager.getTicker();
 
     if (type === JournalActionType.REJECTED) {
-      if (sequence === null) {
-        return;
-      }
-      await this.handleRejectedJournal(ticker, reason, sequence, type);
+      await this.handleRejectedJournal(ticker, reason, timeframe, type);
       return;
     }
   }
@@ -122,12 +119,12 @@ export class JournalHandler implements IJournalHandler {
   private async handleRejectedJournal(
     ticker: string,
     reason: string,
-    sequence: JournalSequence,
+    timeframe: TickerTimeframe,
     type: JournalActionType
   ): Promise<void> {
-    const screenshots = await this.takeJournalScreenshots(ticker, type);
+    const screenshots = await this.takeJournalScreenshots(ticker, type, timeframe);
     const journal = await this.journalManager
-      .createJournal({ ticker, reason, screenshots, type: 'REJECTED', status: 'FAIL', sequence })
+      .createJournal({ ticker, reason, screenshots, type: 'REJECTED', status: 'FAIL', timeframe })
       .catch((error) => {
         throw new Error(`Failed to record journal entry: ${error}`);
       });
@@ -161,22 +158,18 @@ export class JournalHandler implements IJournalHandler {
       throw new Error(`Failed to capture checklist screenshot: ${(error as Error).message}`);
     }
 
-    // Step 3: Show reason prompt with sequence selection after checklist screenshot
-    const { reason, sequence } = await this.showReasonModal(true);
+    // Step 3: Show reason prompt with timeframe selection after checklist screenshot
+    const { reason, timeframe } = await this.showReasonModal(true);
 
     if (reason === null) {
       return;
     }
 
-    if (sequence === null) {
-      return;
-    }
-
     // Step 4: Take normal timeframe screenshots
-    const timeframeScreenshots = await this.takeJournalScreenshots(ticker, type);
+    const timeframeScreenshots = await this.takeJournalScreenshots(ticker, type, timeframe);
 
     // Step 5: Create journal
-    await this.createTakenJournal(ticker, reason, [checklistScreenshot, ...timeframeScreenshots], note, sequence);
+    await this.createTakenJournal(ticker, reason, [checklistScreenshot, ...timeframeScreenshots], note, timeframe);
   }
 
   private createSetupNotes(note: string): CreateJournalNoteRequest[] {
@@ -191,9 +184,10 @@ export class JournalHandler implements IJournalHandler {
 
   private async takeJournalScreenshots(
     ticker: string,
-    type: JournalActionType
+    type: JournalActionType,
+    timeframe: TickerTimeframe
   ): Promise<Awaited<ReturnType<IJournalManager['screenshotTicker']>>> {
-    return this.journalManager.screenshotTicker(ticker, type).catch((error) => {
+    return this.journalManager.screenshotTicker(ticker, type, timeframe).catch((error) => {
       throw new Error(`Failed to take screenshot journal entry: ${error}`);
     });
   }
@@ -203,7 +197,7 @@ export class JournalHandler implements IJournalHandler {
     reason: string,
     screenshots: ScreenshotResponse[],
     note: string,
-    sequence: JournalSequence
+    timeframe: TickerTimeframe
   ): Promise<void> {
     const journal = await this.journalManager
       .createJournal({
@@ -212,7 +206,7 @@ export class JournalHandler implements IJournalHandler {
         screenshots,
         type: 'TAKEN',
         status: 'SET',
-        sequence,
+        timeframe,
         notes: this.createSetupNotes(note),
       })
       .catch((error) => {
@@ -252,10 +246,14 @@ export class JournalHandler implements IJournalHandler {
       return;
     }
 
-    // Step 4: Take result screenshots
-    const screenshots = await this.takeJournalScreenshots(ticker, JournalActionType.RESULT);
+    // TODO: Backend YR sequence conflates YR and SMN selections, so RESULT cannot recover the original timeframe.
+    // Step 4: Derive screenshot timeframe from backend sequence
+    const screenshotTimeframe = runningJournal.sequence === 'MWD' ? TickerTimeframe.TMN : TickerTimeframe.SMN;
 
-    // Step 5: Add images, tags, and update status
+    // Step 5: Take result screenshots
+    const screenshots = await this.takeJournalScreenshots(ticker, JournalActionType.RESULT, screenshotTimeframe);
+
+    // Step 6: Add images, tags, and update status
     await this.journalManager.addJournalImages(runningJournal.id, screenshots);
 
     if (reason) {
@@ -337,18 +335,23 @@ export class JournalHandler implements IJournalHandler {
    * Disables Swift keys while modal is open to prevent keyboard interference.
    * Re-enables them after modal closes.
    *
-   * When {@link includeSequence} is true, also shows a Timeframe sequence group
-   * and returns both the reason and selected sequence.
+   * When {@link includeSequence} is true, also shows a Timeframe group
+   * and returns both the reason and selected timeframe. The default
+   * timeframe is derived from the active backend sequence: TMN when the
+   * sequence includes DL, SMN otherwise. The timeframe is non-null for
+   * this overload and null when the group is not shown.
    *
-   * @param includeSequence - When true, shows Timeframe group and returns `{ reason, sequence }`.
-   *                          When false (default), returns `{ reason, sequence: null }`.
-   * @returns `{ reason, sequence }` where `reason` is `null` if cancelled.
-   *          `sequence` is `null` when `includeSequence` is false.
+   * @param includeSequence - When true, shows the Timeframe group and returns a non-null timeframe;
+   *                          when false or omitted, returns `timeframe: null`.
+   * @returns For `true`, `{ reason: string | null; timeframe: TickerTimeframe }`.
+   *          For `false` or omitted, `{ reason: string | null; timeframe: null }`.
    * @private
    */
+  private showReasonModal(includeSequence: true): Promise<{ reason: string | null; timeframe: TickerTimeframe }>;
+  private showReasonModal(includeSequence?: false): Promise<{ reason: string | null; timeframe: null }>;
   private async showReasonModal(
     includeSequence = false
-  ): Promise<{ reason: string | null; sequence: JournalSequence | null }> {
+  ): Promise<{ reason: string | null; timeframe: TickerTimeframe | null }> {
     try {
       await this.tvManager.setSwiftKeysState(false);
       const groups: SmartChoiceGroup[] = [
@@ -359,22 +362,22 @@ export class JournalHandler implements IJournalHandler {
         },
       ];
 
-      let defaultSequence: JournalSequence = 'YR';
+      let defaultTimeframe: TickerTimeframe = TickerTimeframe.SMN;
       if (includeSequence) {
         const sequence = await this.timeframeManager.getSequence();
-        defaultSequence = sequence.includes(TickerTimeframe.DL) ? 'MWD' : 'YR';
+        defaultTimeframe = sequence.includes(TickerTimeframe.DL) ? TickerTimeframe.TMN : TickerTimeframe.SMN;
         groups.push({
           id: Constants.TRADING.PROMPT.SEQUENCE_GROUP_ID,
           label: 'Timeframe',
           choices: Constants.TRADING.PROMPT.SEQUENCE_CHOICES,
-          defaultChoice: defaultSequence,
+          defaultChoice: defaultTimeframe,
         });
       }
 
       // TODO: Build REASONS from journal tag frequency analysis instead of hardcoded list.
       const response = await this.smartPrompt.showModal(Constants.TRADING.PROMPT.REASONS, groups);
       if (response.type === SmartPromptResponseType.CANCEL) {
-        return { reason: null, sequence: includeSequence ? defaultSequence : null };
+        return { reason: null, timeframe: includeSequence ? defaultTimeframe : null };
       }
 
       const override = response.answers[Constants.TRADING.PROMPT.OVERRIDE_GROUP_ID];
@@ -385,11 +388,11 @@ export class JournalHandler implements IJournalHandler {
             ? `${response.primarySelection}-${override}`
             : response.primarySelection;
       if (includeSequence) {
-        const selectedSequence =
-          (response.answers[Constants.TRADING.PROMPT.SEQUENCE_GROUP_ID] as JournalSequence) ?? defaultSequence;
-        return { reason, sequence: selectedSequence };
+        const selectedTimeframe =
+          (response.answers[Constants.TRADING.PROMPT.SEQUENCE_GROUP_ID] as TickerTimeframe) ?? defaultTimeframe;
+        return { reason, timeframe: selectedTimeframe };
       }
-      return { reason, sequence: null };
+      return { reason, timeframe: null };
     } catch (error) {
       throw new Error(`Failed to show reason modal: ${error}`);
     } finally {

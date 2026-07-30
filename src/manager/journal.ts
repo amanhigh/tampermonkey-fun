@@ -17,6 +17,7 @@ import {
 import { ScreenshotResponse } from '../models/os';
 import { Constants } from '../models/constant';
 import { JournalOpenEvent } from '../models/events';
+import { TickerTimeframe } from '../models/timeframe';
 
 /**
  * Interface for managing trading journal operations
@@ -30,12 +31,13 @@ export interface IJournalManager {
   createJournal(input: CreateJournalInput): Promise<JournalRecord>;
 
   /**
-   * Takes screenshots for the given ticker using the ticker's applied timeframes.
+   * Takes screenshots for the given ticker using the derived timeframe sequence.
    * @param ticker Trading symbol to capture
    * @param type Screenshot purpose/type used in filenames
-   * @returns Promise resolving with screenshot metadata
+   * @param timeframe TradingView timeframe bucket that selects the screenshot sequence
+   * @returns Promise resolving with successfully captured screenshots; timeframes that cannot be applied are warned and skipped
    */
-  screenshotTicker(ticker: string, type: string): Promise<ScreenshotResponse[]>;
+  screenshotTicker(ticker: string, type: string, timeframe: TickerTimeframe): Promise<ScreenshotResponse[]>;
 
   /**
    * Finds the latest TAKEN/RUNNING journal for a ticker.
@@ -102,7 +104,7 @@ export class JournalManager extends BaseManager implements IJournalManager {
   public async createJournal(input: CreateJournalInput): Promise<JournalRecord> {
     const request: CreateJournalRequest = {
       ticker: input.ticker.toUpperCase(),
-      sequence: input.sequence,
+      sequence: input.timeframe === TickerTimeframe.TMN ? 'MWD' : 'YR',
       type: input.type,
       status: input.status,
       images: input.screenshots.map((screenshot) => ({
@@ -183,24 +185,24 @@ export class JournalManager extends BaseManager implements IJournalManager {
     await GM.setValue(Constants.STORAGE.EVENTS.JOURNAL_OPEN, new JournalOpenEvent(journalId).stringify());
   }
 
-  /**
-   * Takes screenshots for a journal using the ticker's applied timeframes.
-   * @param ticker Trading symbol to capture
-   * @param type Screenshot purpose/type used in filenames
-   * @returns Promise resolving with screenshot metadata
-   */
-  public async screenshotTicker(ticker: string, type: string): Promise<ScreenshotResponse[]> {
-    const sequence = await this.timeframeManager.getSequence();
+  /** @inheritdoc */
+  public async screenshotTicker(
+    ticker: string,
+    type: string,
+    timeframe: TickerTimeframe
+  ): Promise<ScreenshotResponse[]> {
+    const sequence = await this.timeframeManager.getSequence(timeframe);
     const screenshots: ScreenshotResponse[] = [];
     const screenshotType = type.toLowerCase();
 
     for (let position = 0; position < sequence.length; position++) {
-      // BUG 3.10: Ignored return value from apply() — when a timeframe is
-      // deactivated, apply returns false silently and screenshot proceeds
-      // on the wrong timeframe. Must warn user and skip the deactivated position.
-      await this.timeframeManager.apply(position);
       const code = sequence[position];
       const order = position + 1;
+      const applied = this.timeframeManager.applyTimeframe(code);
+      if (!applied) {
+        Notifier.warn(`Skipped screenshot: timeframe ${code} could not be applied`);
+        continue;
+      }
 
       const fileName = `${ticker.toUpperCase()}_${this.getScreenshotTimestamp()}_${order}_${code.toLowerCase()}_${screenshotType}.png`;
       const screenshot = await this.osClient.screenshot({

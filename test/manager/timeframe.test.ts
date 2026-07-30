@@ -426,6 +426,73 @@ describe('TimeFrameManager', () => {
     });
   });
 
+  // ── Explicit Timeframe Support ──
+
+  describe('getSequence with explicit timeframe', () => {
+    it('should return YR_SEQUENCE when called with TickerTimeframe.YR', async () => {
+      // Backend returns TMN+DL (would auto-derive TMN_SEQUENCE), but
+      // explicit YR argument should override and return YR_SEQUENCE.
+      mockTickerManager.getTicker.mockResolvedValue(
+        createMockTicker({ timeframes: [TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL] })
+      );
+
+      const result = await timeFrameManager.getSequence(TickerTimeframe.YR);
+
+      expect(result).toEqual(YR_SEQUENCE);
+    });
+
+    it('should return SMN_SEQUENCE when called with TickerTimeframe.SMN', async () => {
+      // Backend returns TMN+DL (would auto-derive TMN_SEQUENCE), but
+      // explicit SMN argument should override and return SMN_SEQUENCE.
+      mockTickerManager.getTicker.mockResolvedValue(
+        createMockTicker({ timeframes: [TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL] })
+      );
+
+      const result = await timeFrameManager.getSequence(TickerTimeframe.SMN);
+
+      expect(result).toEqual(SMN_SEQUENCE);
+    });
+
+    it('should return TMN_SEQUENCE when called with TickerTimeframe.TMN', async () => {
+      // Backend returns YR+SMN (would auto-derive YR_SEQUENCE), but
+      // explicit TMN argument should override and return TMN_SEQUENCE.
+      mockTickerManager.getTicker.mockResolvedValue(
+        createMockTicker({ timeframes: [TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN] })
+      );
+
+      const result = await timeFrameManager.getSequence(TickerTimeframe.TMN);
+
+      expect(result).toEqual(TMN_SEQUENCE);
+    });
+  });
+
+  // ── Apply direct Timeframe ──
+
+  describe('applyTimeframe', () => {
+    it.each([
+      [TickerTimeframe.YR, 7],
+      [TickerTimeframe.TMN, 5],
+      [TickerTimeframe.DL, 2],
+    ])('should apply %s using toolbar %s', async (code, toolbar) => {
+      const mockClick = jest.fn();
+      mockJQuery.mockReturnValue({ length: 1, click: mockClick });
+
+      const result = await timeFrameManager.applyTimeframe(code);
+
+      expect(result).toBe(true);
+      expect(mockJQuery).toHaveBeenCalledWith(`${Constants.DOM.HEADER.TIMEFRAME}:nth(${toolbar})`);
+      expect(mockClick).toHaveBeenCalled();
+    });
+
+    it('should return false when toolbar element not found', async () => {
+      mockJQuery.mockReturnValue({ length: 0 });
+
+      const result = await timeFrameManager.applyTimeframe(TickerTimeframe.YR);
+
+      expect(result).toBe(false);
+    });
+  });
+
   // ── Integration Tests ──
 
   describe('Integration Tests', () => {

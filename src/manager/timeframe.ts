@@ -22,6 +22,11 @@ const TIMEFRAMES: readonly Timeframe[] = [
 
 const TIMEFRAME_BY_CODE: ReadonlyMap<TickerTimeframe, Timeframe> = new Map(TIMEFRAMES.map((tf) => [tf.code, tf]));
 const TIMEFRAME_BY_TOOLBAR: ReadonlyMap<number, Timeframe> = new Map(TIMEFRAMES.map((tf) => [tf.toolbar, tf]));
+const SEQUENCE_BY_TIMEFRAME: ReadonlyMap<TickerTimeframe, Sequence> = new Map([
+  [TickerTimeframe.YR, YR_SEQUENCE],
+  [TickerTimeframe.SMN, SMN_SEQUENCE],
+  [TickerTimeframe.TMN, TMN_SEQUENCE],
+]);
 
 /**
  * Filters timeframe codes to only those in the catalog, preserving catalog order.
@@ -48,18 +53,25 @@ export interface ITimeFrameManager {
   toggleTimeframe(code: TickerTimeframe): Promise<TickerTimeframe[]>;
 
   /** Get the derived Sequence (4-tuple) for the current ticker.
-   * Selects TMN_SEQUENCE, SMN_SEQUENCE, or YR_SEQUENCE based on which
-   * timeframes the ticker's allowed timeframe list includes:
+   * @param timeframe - When supplied with `YR`, `SMN`, or `TMN`, returns
+   *   the corresponding `YR_SEQUENCE`, `SMN_SEQUENCE`, or `TMN_SEQUENCE`
+   *   directly, bypassing backend auto-derivation.  When omitted the normal
+   *   AUTO behaviour applies:
    *   - Empty/unsupported list → TMN_SEQUENCE (TMN, MN, WK, DL)
    *   - Contains DL            → TMN_SEQUENCE (TMN, MN, WK, DL)
    *   - Contains WK, no DL     → SMN_SEQUENCE (SMN, TMN, MN, WK)
    *   - Lacks WK and DL        → YR_SEQUENCE (YR, SMN, TMN, MN) */
-  getSequence(): Promise<Sequence>;
+  getSequence(timeframe?: TickerTimeframe): Promise<Sequence>;
 
-  /** Apply timeframe to chart at given position in the current ticker's Sequence.
+  /** Apply timeframe to chart at given position in the auto-derived Sequence.
    * @param position - Position in Sequence (0-3)
    * @returns True if successfully applied */
   apply(position: number): Promise<boolean>;
+
+  /** Apply a timeframe code directly through the chart toolbar.
+   * @param code - Timeframe code to apply
+   * @returns True if successfully applied */
+  applyTimeframe(code: TickerTimeframe): boolean;
 
   /** Get currently selected timeframe from the DOM toolbar.
    * @returns Current timeframe metadata */
@@ -138,7 +150,12 @@ export class TimeFrameManager implements ITimeFrameManager {
   }
 
   /** @inheritdoc */
-  async getSequence(): Promise<Sequence> {
+  async getSequence(timeframe?: TickerTimeframe): Promise<Sequence> {
+    const explicitSequence = timeframe === undefined ? undefined : SEQUENCE_BY_TIMEFRAME.get(timeframe);
+    if (explicitSequence) {
+      return explicitSequence;
+    }
+    // AUTO behaviour — derive from backend timeframes
     const codes = await this.getActiveTimeframes();
     if (codes.length === 0 || codes.includes(TickerTimeframe.DL)) {
       return TMN_SEQUENCE;
@@ -153,11 +170,16 @@ export class TimeFrameManager implements ITimeFrameManager {
 
   /** @inheritdoc */
   async apply(position: number): Promise<boolean> {
-    const sequence = await this.getSequence();
-    if (position < 0 || position >= sequence.length) {
+    const resolvedSequence = await this.getSequence();
+    if (position < 0 || position >= resolvedSequence.length) {
       return false;
     }
-    const code = sequence[position];
+    const code = resolvedSequence[position];
+    return this.applyTimeframe(code);
+  }
+
+  /** @inheritdoc */
+  applyTimeframe(code: TickerTimeframe): boolean {
     const config = TIMEFRAME_BY_CODE.get(code);
     if (!config) {
       return false;

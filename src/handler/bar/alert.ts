@@ -1,8 +1,9 @@
 import { BaseBar, IBaseBar } from './base';
-import { BarId } from '../../models/bar';
+import { BarId, BarStatus } from '../../models/bar';
 import { AlertTicker, AlertTickerType } from '../../models/alert_ticker';
 import { IDomManager } from '../../manager/dom';
 import { IAlertTickerManager } from '../../manager/alert_ticker';
+import { ITickerManager, TickerManager } from '../../manager/ticker';
 import { IUIUtil } from '../../util/ui';
 import { DomainEventType } from '../../models/domain_event';
 import { ApiError } from '../../models/api_error';
@@ -12,8 +13,6 @@ import { escapeHtml } from '../../util/html';
 // ── Emoji constants ──
 
 const EMOJI = {
-  LINKED: '🔗',
-  UNMAPPED: '⚠️',
   PRIMARY: '⭐',
   SECONDARY: '🔹',
   ALERT: '🔔',
@@ -29,6 +28,8 @@ export interface AlertBarData {
   readonly alertTickers: readonly AlertTicker[];
   /** Whether the ticker is untracked (no backend record). */
   readonly isUntracked: boolean;
+  /** Exchange discrepancy between the opened ticker and primary backend record. */
+  readonly exchangeMismatch?: { opened: string; backend: string } | null;
 }
 
 /**
@@ -48,13 +49,12 @@ export interface IAlertBar extends IBaseBar {}
  * Renders a compact one-liner showing the ticker status (mapped/unmapped/untracked)
  * with linked-alert count, and expands to show individual alert ticker rows
  * with primary/secondary type indicators.
- *
- * Uses {@link onPaint} to apply mapped/unmapped root classes after each paint cycle.
  */
 export class AlertBar extends BaseBar<AlertBarData> implements IAlertBar {
   constructor(
     private readonly domManager: IDomManager,
     private readonly alertTickerManager: IAlertTickerManager,
+    private readonly tickerManager: ITickerManager,
     private readonly uiUtil: IUIUtil
   ) {
     super(BarId.ALERT);
@@ -70,21 +70,59 @@ export class AlertBar extends BaseBar<AlertBarData> implements IAlertBar {
       DomainEventType.TICKER_TRACKING_STOPPED,
       DomainEventType.ALERT_TICKER_LINKED,
       DomainEventType.ALERT_TICKER_DELETED,
+      DomainEventType.TICKER_METADATA_CHANGED,
     ];
   }
 
   /** @inheritdoc */
   protected async loadData(): Promise<AlertBarData> {
     const ticker = this.domManager.getTicker();
+    const exchangeMismatch = await this.loadExchangeMismatch(ticker);
     try {
       const alertTickers = await this.alertTickerManager.getAlertTickersForTicker(ticker);
-      return { tvTicker: ticker, alertTickers, isUntracked: false };
+      return { tvTicker: ticker, alertTickers, isUntracked: false, exchangeMismatch };
     } catch (error) {
       if (ApiError.isNotFoundError(error)) {
-        return { tvTicker: ticker, alertTickers: [], isUntracked: true };
+        return { tvTicker: ticker, alertTickers: [], isUntracked: true, exchangeMismatch };
       }
       throw error;
     }
+  }
+
+  /** Loads the optional primary exchange diagnostic without affecting bar loading. */
+  private async loadExchangeMismatch(ticker: string): Promise<{ opened: string; backend: string } | null> {
+    try {
+      const backendTicker = await this.tickerManager.getTicker(ticker);
+      const opened = this.domManager.getCurrentExchange();
+      const backend = backendTicker.exchange;
+      const normalizedOpened = this.normalizeExchange(opened);
+      const normalizedBackend = this.normalizeExchange(backend);
+
+      if (!normalizedOpened || !normalizedBackend || normalizedOpened === normalizedBackend) {
+        return null;
+      }
+
+      return { opened, backend };
+    } catch {
+      return null;
+    }
+  }
+
+  /** Normalizes exchange names for comparison while retaining raw values for display. */
+  private normalizeExchange(exchange: string): string {
+    return TickerManager.canonicalizeExchange(exchange).toUpperCase().trim();
+  }
+
+  /** @inheritdoc */
+  protected resolveStatus(data: AlertBarData): BarStatus {
+    if (data.isUntracked) {
+      return BarStatus.ERROR;
+    }
+    if (data.exchangeMismatch) {
+      return BarStatus.WARN;
+    }
+    const hasPrimary = data.alertTickers.some((t) => t.type === 'PRIMARY');
+    return hasPrimary ? BarStatus.OK : BarStatus.WARN;
   }
 
   // ── Context-menu delink ──
@@ -116,29 +154,26 @@ export class AlertBar extends BaseBar<AlertBarData> implements IAlertBar {
   /** @inheritdoc */
   protected renderCompact(data: AlertBarData): string {
     const primaryTicker = data.alertTickers.find((t) => t.type === 'PRIMARY') ?? null;
-    const isMapped = primaryTicker !== null;
     const displayTicker = primaryTicker?.symbol ?? data.tvTicker;
     const alertCount = data.alertTickers.length;
 
-    const statusEmoji = isMapped ? EMOJI.LINKED : EMOJI.UNMAPPED;
     const label = data.isUntracked ? `Untracked · ${escapeHtml(displayTicker)}` : escapeHtml(displayTicker);
     const countHtml = `<span class="${this.bemElement('count')}">${EMOJI.ALERT}${alertCount}</span>`;
+    const exchangeWarning = data.exchangeMismatch ? this.buildExchangeWarning(data.exchangeMismatch) : '';
 
-    return `${statusEmoji} ${label} · ${countHtml}`;
+    return `${label} · ${countHtml}${exchangeWarning}`;
+  }
+
+  /** Builds the compact exchange mismatch diagnostic badge. */
+  private buildExchangeWarning(mismatch: { opened: string; backend: string }): string {
+    const description = `Opened exchange: ${mismatch.opened} · Backend exchange: ${mismatch.backend}`;
+    const exchangeText = `${escapeHtml(mismatch.opened)} ≠ ${escapeHtml(mismatch.backend)}`;
+    return ` <span class="${this.bemElement('exchange-warning')}" title="${escapeHtml(description)}" aria-label="${escapeHtml(description)}">${exchangeText}</span>`;
   }
 
   /** @inheritdoc */
   protected renderDetails(data: AlertBarData): string {
     return this.buildAlertTickerRows(data);
-  }
-
-  /** @inheritdoc */
-  protected onPaint($root: JQuery, data: AlertBarData): void {
-    const primaryTicker = data.alertTickers.find((t) => t.type === 'PRIMARY') ?? null;
-    const isMapped = primaryTicker !== null;
-
-    $root.removeClass(`${this.bemModifier('mapped')} ${this.bemModifier('unmapped')}`);
-    $root.addClass(isMapped ? this.bemModifier('mapped') : this.bemModifier('unmapped'));
   }
 
   // ── Private rendering ──
@@ -151,9 +186,9 @@ export class AlertBar extends BaseBar<AlertBarData> implements IAlertBar {
   private buildAlertTickerRows(data: AlertBarData): string {
     if (data.alertTickers.length === 0) {
       if (data.isUntracked) {
-        return `<div class="${this.bemElement('empty')}">${EMOJI.UNMAPPED} Untracked ticker — no backend record</div>`;
+        return `<div class="${this.bemElement('empty')}">Untracked ticker — no backend record</div>`;
       }
-      return `<div class="${this.bemElement('empty')}">${EMOJI.UNMAPPED} No linked alert tickers</div>`;
+      return `<div class="${this.bemElement('empty')}">No linked alert tickers</div>`;
     }
 
     return data.alertTickers.map((t) => this.buildAlertTickerRowDiv(t)).join('');

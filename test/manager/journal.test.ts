@@ -9,8 +9,9 @@ import {
   JournalSequence,
   JournalResultStatus,
 } from '../../src/models/journal';
-import { Sequence, TickerTimeframe } from '../../src/models/timeframe';
+import { TickerTimeframe, TMN_SEQUENCE, SMN_SEQUENCE, YR_SEQUENCE } from '../../src/models/timeframe';
 import { ScreenshotResponse } from '../../src/models/os';
+import { Notifier } from '../../src/util/notify';
 
 // Mock Notifier
 jest.mock('../../src/util/notify', () => ({
@@ -70,10 +71,13 @@ describe('JournalManager', () => {
     mockTimeFrameManager = {
       getActiveTimeframes: jest.fn(),
       toggleTimeframe: jest.fn(),
-      getSequence: jest.fn().mockResolvedValue(
-        ['TMN', 'MN', 'WK', 'DL'] as Sequence
-      ),
+      getSequence: jest.fn().mockImplementation((tf: TickerTimeframe) => {
+        if (tf === TickerTimeframe.YR) return Promise.resolve(YR_SEQUENCE);
+        if (tf === TickerTimeframe.SMN) return Promise.resolve(SMN_SEQUENCE);
+        return Promise.resolve(TMN_SEQUENCE);
+      }),
       apply: jest.fn().mockResolvedValue(true),
+      applyTimeframe: jest.fn().mockReturnValue(true),
       getCurrentConfig: jest.fn().mockReturnValue({ code: TickerTimeframe.TMN, label: '3M', rank: 2, toolbar: 5, style: 'T' }),
     } as jest.Mocked<ITimeFrameManager>;
 
@@ -105,7 +109,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
-        sequence: 'MWD',
+        timeframe: TickerTimeframe.TMN,
       };
 
       await journalManager.createJournal(input);
@@ -125,7 +129,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
-        sequence: 'YR',
+        timeframe: TickerTimeframe.YR,
       };
 
       await journalManager.createJournal(input);
@@ -144,7 +148,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
-        sequence: 'MWD',
+        timeframe: TickerTimeframe.TMN,
       };
 
       await journalManager.createJournal(input);
@@ -168,7 +172,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: 'HGS - oe',
-        sequence: 'MWD',
+        timeframe: TickerTimeframe.TMN,
       };
 
       await journalManager.createJournal(input);
@@ -187,7 +191,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
-        sequence: 'MWD',
+        timeframe: TickerTimeframe.TMN,
       };
 
       await journalManager.createJournal(input);
@@ -209,7 +213,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
-        sequence: 'MWD',
+        timeframe: TickerTimeframe.TMN,
       };
 
       const result = await journalManager.createJournal(input);
@@ -226,7 +230,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
-        sequence: 'MWD',
+        timeframe: TickerTimeframe.TMN,
       };
 
       await expect(journalManager.createJournal(input)).rejects.toThrow('API Error');
@@ -241,18 +245,15 @@ describe('JournalManager', () => {
     });
 
     it('should capture screenshots for applied tuple TMN, MN, WK, DL', async () => {
-      mockTimeFrameManager.getSequence.mockResolvedValue(
-        ['TMN', 'MN', 'WK', 'DL'] as Sequence
-      );
+      const screenshots = await journalManager.screenshotTicker('AAPL', 'set', TickerTimeframe.TMN);
 
-      const screenshots = await journalManager.screenshotTicker('AAPL', 'set');
-
+      expect(mockTimeFrameManager.getSequence).toHaveBeenCalledWith(TickerTimeframe.TMN);
       expect(screenshots).toHaveLength(4);
-      expect(mockTimeFrameManager.apply).toHaveBeenCalledTimes(4);
-      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(1, 0);
-      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(2, 1);
-      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(3, 2);
-      expect(mockTimeFrameManager.apply).toHaveBeenNthCalledWith(4, 3);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenCalledTimes(4);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(1, TickerTimeframe.TMN);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(2, TickerTimeframe.MN);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(3, TickerTimeframe.WK);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(4, TickerTimeframe.DL);
       expect(screenshots[0].file_name).toContain('_1_tmn_set.png');
       expect(screenshots[1].file_name).toContain('_2_mn_set.png');
       expect(screenshots[2].file_name).toContain('_3_wk_set.png');
@@ -260,17 +261,39 @@ describe('JournalManager', () => {
     });
 
     it('should capture screenshots for applied tuple SMN, TMN, MN, WK', async () => {
-      mockTimeFrameManager.getSequence.mockResolvedValue(
-        ['SMN', 'TMN', 'MN', 'WK'] as Sequence
-      );
+      const screenshots = await journalManager.screenshotTicker('AAPL', 'set', TickerTimeframe.SMN);
 
-      const screenshots = await journalManager.screenshotTicker('AAPL', 'set');
-
+      expect(mockTimeFrameManager.getSequence).toHaveBeenCalledWith(TickerTimeframe.SMN);
       expect(screenshots).toHaveLength(4);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenCalledTimes(4);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(1, TickerTimeframe.SMN);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(2, TickerTimeframe.TMN);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(3, TickerTimeframe.MN);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(4, TickerTimeframe.WK);
       expect(screenshots[0].file_name).toContain('_1_smn_set.png');
       expect(screenshots[1].file_name).toContain('_2_tmn_set.png');
       expect(screenshots[2].file_name).toContain('_3_mn_set.png');
       expect(screenshots[3].file_name).toContain('_4_wk_set.png');
+    });
+
+    it('should capture screenshots for applied tuple YR, SMN, TMN, MN', async () => {
+      const screenshots = await journalManager.screenshotTicker('AAPL', 'set', TickerTimeframe.YR);
+
+      expect(mockTimeFrameManager.getSequence).toHaveBeenCalledWith(TickerTimeframe.YR);
+      expect(screenshots).toHaveLength(4);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenCalledTimes(4);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(1, TickerTimeframe.YR);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(2, TickerTimeframe.SMN);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(3, TickerTimeframe.TMN);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(4, TickerTimeframe.MN);
+      expect(screenshots[0].file_name).toContain('_1_yr_set.png');
+      expect(screenshots[0].timeframe).toBe('YR');
+      expect(screenshots[1].file_name).toContain('_2_smn_set.png');
+      expect(screenshots[1].timeframe).toBe('SMN');
+      expect(screenshots[2].file_name).toContain('_3_tmn_set.png');
+      expect(screenshots[2].timeframe).toBe('TMN');
+      expect(screenshots[3].file_name).toContain('_4_mn_set.png');
+      expect(screenshots[3].timeframe).toBe('MN');
     });
 
     it('should abort when screenshot fails', async () => {
@@ -279,22 +302,36 @@ describe('JournalManager', () => {
         .mockResolvedValueOnce({ file_name: 'ok.png', full_path: '/ok.png', timeframe: 'TMN' as JournalTimeframe })
         .mockRejectedValue(new Error('Screenshot failed'));
 
-      mockTimeFrameManager.getSequence.mockResolvedValue(
-        ['TMN', 'MN', 'WK', 'DL'] as Sequence
-      );
-
-      await expect(journalManager.screenshotTicker('AAPL', 'error')).rejects.toThrow('Screenshot failed');
-      expect(mockTimeFrameManager.apply).toHaveBeenCalledTimes(2);
+      await expect(journalManager.screenshotTicker('AAPL', 'error', TickerTimeframe.TMN)).rejects.toThrow('Screenshot failed');
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenCalledTimes(2);
     });
 
-    it('should always capture exactly 4 screenshots from applied tuple', async () => {
-      mockTimeFrameManager.getSequence.mockResolvedValue(
-        ['SMN', 'TMN', 'MN', 'WK'] as Sequence
+    it('should skip screenshot when apply returns false and warn user', async () => {
+      mockTimeFrameManager.applyTimeframe
+        .mockReturnValueOnce(true)   // TMN
+        .mockReturnValueOnce(false)  // MN (deactivated)
+        .mockReturnValueOnce(true)   // WK
+        .mockReturnValueOnce(true);  // DL
+
+      const screenshots = await journalManager.screenshotTicker('AAPL', 'set', TickerTimeframe.TMN);
+
+      expect(screenshots).toHaveLength(3);
+      expect(mockOsClient.screenshot).toHaveBeenCalledTimes(3);
+      expect(mockTimeFrameManager.getSequence).toHaveBeenCalledWith(TickerTimeframe.TMN);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenCalledTimes(4);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(1, TickerTimeframe.TMN);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(2, TickerTimeframe.MN);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(3, TickerTimeframe.WK);
+      expect(mockTimeFrameManager.applyTimeframe).toHaveBeenNthCalledWith(4, TickerTimeframe.DL);
+      expect(Notifier.warn).toHaveBeenCalledWith(
+        expect.stringContaining('MN')
       );
-
-      const screenshots = await journalManager.screenshotTicker('AAPL', 'journal');
-
-      expect(screenshots).toHaveLength(4);
+      expect(screenshots[0].file_name).toContain('_1_tmn_set.png');
+      expect(screenshots[0].timeframe).toBe('TMN');
+      expect(screenshots[1].file_name).toContain('_3_wk_set.png');
+      expect(screenshots[1].timeframe).toBe('WK');
+      expect(screenshots[2].file_name).toContain('_4_dl_set.png');
+      expect(screenshots[2].timeframe).toBe('DL');
     });
   });
 

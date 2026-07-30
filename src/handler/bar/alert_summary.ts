@@ -1,5 +1,5 @@
 import { BaseBar, IBaseBar } from './base';
-import { BarId } from '../../models/bar';
+import { BarId, BarStatus } from '../../models/bar';
 import { Alert } from '../../models/alert';
 import { IDomManager } from '../../manager/dom';
 import { IAlertManager } from '../../manager/alert';
@@ -83,6 +83,15 @@ export class AlertSummaryBar extends BaseBar<readonly Alert[] | null> implements
 
       return null;
     }
+  }
+
+  /** @inheritdoc */
+  protected resolveStatus(data: readonly Alert[] | null): BarStatus {
+    if (data === null || data.length === 0) {
+      return BarStatus.ERROR;
+    }
+    const hasPending = data.some((alert) => alert.id === '');
+    return hasPending ? BarStatus.WARN : BarStatus.OK;
   }
 
   // ── Rendering ──

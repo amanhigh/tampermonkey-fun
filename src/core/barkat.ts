@@ -102,7 +102,7 @@ export class Barkat {
     );
     $area.appendTo('body');
 
-    // TODO: Move UI Build Logic to Handlers
+    // FIXME: Move UI Build Logic to Handlers
     this.uiUtil
       .buildWrapper(Constants.UI.IDS.AREAS.TOP, Constants.UI.POSITIONS.WRAPPER_WIDTH)
       .appendTo($area)
@@ -149,23 +149,22 @@ export class Barkat {
             // Toggle audit area visibility (audit data loaded via FIRST_LOAD event)
             this.uiUtil.toggleUI(auditAreaId);
           })
-      )
-      .append(this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.SUMMARY));
+      );
 
     this.uiUtil
       .buildWrapper(Constants.UI.IDS.AREAS.MID, Constants.UI.POSITIONS.WRAPPER_WIDTH)
       .appendTo($area)
+      .append(this.uiUtil.buildBar(BarId.WATCHLIST))
       .append(this.uiUtil.buildBar(BarId.ALERT))
       .append(this.uiUtil.buildBar(BarId.TIMEFRAME))
+      .append(this.uiUtil.buildBar(BarId.ALERT_SUMMARY))
       .append(
         this.uiUtil.buildInput(Constants.UI.IDS.INPUTS.COMMAND).on('keydown', (e) => {
           void this.commandHandler.handleInput(e);
         })
-      )
-      .append(this.uiUtil.buildBar(BarId.ALERT_SUMMARY));
+      );
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.ORDERS, Constants.UI.POSITIONS.WRAPPER_WIDTH).appendTo($area);
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.JOURNAL).hide().appendTo($area);
-    // BUG 3.1: Toolbar lives inside journal wrapper so it disappears when journal collapses; move toolbar outside for persistent access
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.AUDIT).hide().appendTo($area);
     this.journalUI();
     this.kiteHandler.setupGttRefreshListener();
@@ -175,7 +174,7 @@ export class Barkat {
   }
 
   journalUI() {
-    // BUG 3.2: Journal toolbar is bespoke; combine with journal left-click toolbar and build via shared util with short emoji labels to save space
+    // TODO 3.2: Journal toolbar is bespoke; combine with journal left-click toolbar and build via shared util with short emoji labels to save space
     this.uiUtil
       .buildWrapper(`${Constants.UI.IDS.AREAS.JOURNAL}-type`)
       .appendTo(`#${Constants.UI.IDS.AREAS.JOURNAL}`)

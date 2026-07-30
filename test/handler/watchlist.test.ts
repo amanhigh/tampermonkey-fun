@@ -47,6 +47,7 @@ describe('WatchListHandler', () => {
       navigateTickers: jest.fn(),
     } as unknown as jest.Mocked<IDomManager>;
 
+    // WatchListHandler uses a four-argument constructor (no bar dependency)
     handler = new WatchListHandler(
       mockWatchlistManager,
       mockSyncUtil,
@@ -122,6 +123,23 @@ describe('WatchListHandler', () => {
   });
 
   describe('registerEvents', () => {
+    it('should subscribe to FIRST_LOAD and refresh manager', async () => {
+      let firstLoadCallback: Function | undefined;
+      const mockSubscriber: jest.Mocked<ISubscriber> = {
+        subscribe: jest.fn((type, cb) => {
+          if (type === DomainEventType.FIRST_LOAD) {
+            firstLoadCallback = cb;
+          }
+        }),
+        subscribeMany: jest.fn(),
+      };
+
+      handler.registerEvents(mockSubscriber);
+      await firstLoadCallback!({ type: DomainEventType.FIRST_LOAD });
+
+      expect(mockWatchlistManager.refresh).toHaveBeenCalled();
+    });
+
     it('should subscribe to TICKER_TIMEFRAMES_CHANGED separately (eviction logic)', () => {
       const mockSubscriber: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn(),
@@ -194,5 +212,6 @@ describe('WatchListHandler', () => {
       expect(mockCategoryManager.evictTicker).not.toHaveBeenCalled();
       expect(mockWatchlistManager.refreshTickers).toHaveBeenCalledWith(['TV:INFY']);
     });
+
   });
 });

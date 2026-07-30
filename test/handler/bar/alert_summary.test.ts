@@ -25,6 +25,7 @@ import { Alert } from '../../../src/models/alert';
 import { ISubscriber } from '../../../src/manager/event_bus';
 import { DomainEventType } from '../../../src/models/domain_event';
 import { WatchCategoryId } from '../../../src/models/watch';
+import { BAR_CLASS, BarStatus } from '../../../src/models/bar';
 
 // ── Constants ──
 
@@ -587,6 +588,78 @@ describe('AlertSummaryBar', () => {
         expect.stringContaining('Failed to load alerts for NSE:INFY')
       );
       warnSpy.mockRestore();
+    });
+  });
+
+  // ── Status synchronization ──
+
+  describe('status synchronization', () => {
+    it('should apply BAR_CLASS to root element during render', async () => {
+      const bar = new AlertSummaryBar(
+        mockAlertManager, mockCategoryManager, mockTVManager, mockDomManager
+      );
+      mockAlertManager.getAlertsForTicker.mockResolvedValue([]);
+
+      await bar.refresh();
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(BAR_CLASS);
+    });
+
+    it('should apply ERROR status when alerts is null', async () => {
+      const bar = new AlertSummaryBar(
+        mockAlertManager, mockCategoryManager, mockTVManager, mockDomManager
+      );
+      mockAlertManager.getAlertsForTicker.mockRejectedValue(new Error('not found'));
+      mockCategoryManager.getTickerCategory.mockResolvedValue({
+        watch: { id: WatchCategoryId.COMPOSITE, color: 'darkkhaki', label: 'Composite', recordUpdate: null },
+        flag: undefined,
+        isFno: false,
+      });
+
+      await bar.refresh();
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.ERROR}`);
+    });
+
+    it('should apply ERROR status when alerts list is empty', async () => {
+      const bar = new AlertSummaryBar(
+        mockAlertManager, mockCategoryManager, mockTVManager, mockDomManager
+      );
+      mockAlertManager.getAlertsForTicker.mockResolvedValue([]);
+
+      await bar.refresh();
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.ERROR}`);
+    });
+
+    it('should apply WARN status when any pending alert exists', async () => {
+      const bar = new AlertSummaryBar(
+        mockAlertManager, mockCategoryManager, mockTVManager, mockDomManager
+      );
+      mockTVManager.getLastTradedPrice.mockReturnValue(200);
+      mockAlertManager.getAlertsForTicker.mockResolvedValue([
+        createAlert({ id: 'alert-1', price: 100 }),
+        createAlert({ id: '', price: 150 }),
+      ]);
+
+      await bar.refresh();
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.WARN}`);
+    });
+
+    it('should apply OK status when all alerts are persisted', async () => {
+      const bar = new AlertSummaryBar(
+        mockAlertManager, mockCategoryManager, mockTVManager, mockDomManager
+      );
+      mockTVManager.getLastTradedPrice.mockReturnValue(200);
+      mockAlertManager.getAlertsForTicker.mockResolvedValue([
+        createAlert({ id: 'alert-1', price: 100 }),
+        createAlert({ id: 'alert-2', price: 300 }),
+      ]);
+
+      await bar.refresh();
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.OK}`);
     });
   });
 });

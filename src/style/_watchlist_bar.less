@@ -1,0 +1,141 @@
+// ── Watchlist Bar Styles ──
+// Compact chip display of watch categories with filter controls.
+
+// ============================================
+// Watchlist Bar Container
+// ============================================
+.aman-watchlist-bar {
+    display: block;
+
+    .aman-watchlist-bar__toggle {
+        display: flex;
+        width: 100%;
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        font: inherit;
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
+
+        &:focus-visible {
+            outline: 1px solid rgba(255, 255, 255, 0.6);
+            outline-offset: 1px;
+        }
+    }
+
+    .aman-watchlist-bar__row {
+        display: flex;
+        flex: 1 1 auto;
+        flex-wrap: nowrap;
+        align-items: center;
+        min-width: 0;
+        gap: 3px;
+        overflow: hidden;
+    }
+
+    .aman-watchlist-bar__chevron {
+        flex: 0 0 auto;
+        padding: 0 2px;
+        font-size: 12px;
+        line-height: 1.2;
+    }
+
+    .aman-watchlist-bar__details-row {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+    }
+
+    .aman-watchlist-bar__details-label {
+        color: dimgrey;
+        font-size: 10px;
+        line-height: 1.2;
+    }
+
+    // ============================================
+    // Watchlist Chip
+    // ============================================
+    .aman-watchlist-bar__chip {
+        display: inline-block;
+        flex: 0 0 auto;
+        margin: 0;
+        padding: 3px 6px;
+        border-radius: 3px;
+        font-weight: 600;
+        font-size: 12px;
+        line-height: 1.2;
+        white-space: nowrap;
+        cursor: pointer;
+        outline: none;
+        transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+
+        &:focus-visible {
+            outline: 1px solid rgba(255, 255, 255, 0.6);
+            outline-offset: 1px;
+        }
+
+        &:active {
+            opacity: 0.7;
+        }
+
+        // Category colors via data-color attribute selectors
+        // Colors from ALL_WATCH_CATEGORIES: orange, red, dodgerblue, cyan, lime, white, brown, darkkhaki, dimgrey
+
+        &[data-color="orange"] {
+            color: orange;
+            background: rgba(255, 165, 0, 0.15);
+            &:hover { background: rgba(255, 165, 0, 0.25); }
+        }
+
+        &[data-color="red"] {
+            color: red;
+            background: rgba(255, 0, 0, 0.15);
+            &:hover { background: rgba(255, 0, 0, 0.25); }
+        }
+
+        &[data-color="dodgerblue"] {
+            color: dodgerblue;
+            background: rgba(30, 144, 255, 0.15);
+            &:hover { background: rgba(30, 144, 255, 0.25); }
+        }
+
+        &[data-color="cyan"] {
+            color: cyan;
+            background: rgba(0, 255, 255, 0.15);
+            &:hover { background: rgba(0, 255, 255, 0.25); }
+        }
+
+        &[data-color="lime"] {
+            color: lime;
+            background: rgba(0, 255, 0, 0.15);
+            &:hover { background: rgba(0, 255, 0, 0.25); }
+        }
+
+        &[data-color="white"] {
+            color: white;
+            background: rgba(255, 255, 255, 0.10);
+            &:hover { background: rgba(255, 255, 255, 0.18); }
+        }
+
+        &[data-color="brown"] {
+            color: brown;
+            background: rgba(139, 69, 19, 0.15);
+            &:hover { background: rgba(139, 69, 19, 0.25); }
+        }
+
+        &[data-color="darkkhaki"] {
+            color: darkkhaki;
+            background: rgba(189, 183, 107, 0.15);
+            &:hover { background: rgba(189, 183, 107, 0.25); }
+        }
+
+        &[data-color="dimgrey"] {
+            color: dimgrey;
+            background: rgba(105, 105, 105, 0.15);
+            &:hover { background: rgba(105, 105, 105, 0.25); }
+        }
+    }
+}

@@ -1,6 +1,6 @@
 import { IDomainEventConsumer, ISubscriber } from '../../manager/event_bus';
 import { DomainEventType } from '../../models/domain_event';
-import { BarId } from '../../models/bar';
+import { BAR_CLASS, BarId, BarStatus } from '../../models/bar';
 
 /**
  * Interface for bar-style UI components that manage a compact/expanded content lifecycle
@@ -37,7 +37,7 @@ import { BarId } from '../../models/bar';
  *    ensures block class, syncs expanded modifier and `aria-expanded`/`hidden`,
  *    optionally binds delegated click + contextmenu (only on full paint), calls `onPaint()` last.
  * 3. **`toggle()`** — flips expanded, calls `paint(false)` (no handler rebinding).
- * 4. **`onLeftClick()`** — default calls `toggle()`; override replaces unless `super` called.
+ * 4. **`onLeftClick(event)`** — default calls `toggle()`; override replaces unless `super` called.
  * 5. **`onRightClick(event, data)`** — protected hook for context-menu actions.
  * 6. **`onPaint($root, data)`** — default no-op called after handler binding.
  * 7. **`refresh()`** — latest-request-wins: increments revision, awaits `loadData()`,
@@ -72,7 +72,7 @@ export interface IBaseBar extends IDomainEventConsumer {
  *
  * - Left-click (expandable mode only): delegated to the generated `.{block}__toggle` button via
  *   `$root.off('click.{ns}', sel).on('click.{ns}', sel, handler)`.
- *   Calls only `this.onLeftClick()`; the default implementation toggles.
+ *   Calls `this.onLeftClick(event)`; the default implementation toggles.
  *   Native `<button>` semantics provide Enter/Space activation.
  * - Context-menu: `$root.off('contextmenu.{ns}', sel).on('contextmenu.{ns}', sel, handler)`.
  *   Always binds to the generated `[data-{ns}-context-action]` selector.
@@ -241,6 +241,17 @@ export abstract class BaseBar<TData> implements IBaseBar {
    */
   protected abstract renderCompact(data: TData): string;
 
+  /**
+   * Determine the visual status for the bar based on the current data.
+   * Called during every successful {@link paint} to apply the appropriate
+   * BEM status modifier (`aman-bar--ok`, `aman-bar--warn`, or `aman-bar--error`)
+   * to the root element.
+   *
+   * @param data The current data.
+   * @returns The {@link BarStatus} to apply.
+   */
+  protected abstract resolveStatus(data: TData): BarStatus;
+
   // ── Nullable expansion contract ──
 
   /**
@@ -295,10 +306,11 @@ export abstract class BaseBar<TData> implements IBaseBar {
   /**
    * Called when the root element is left-clicked.
    * Default implementation toggles expanded state via {@link toggle}.
-   * Override to replace the default behavior; call `super.onLeftClick()`
+   * @param _event The jQuery click event.
+   * Override to replace the default behavior; call `super.onLeftClick(event)`
    * to retain the toggle.
    */
-  protected onLeftClick(): void {
+  protected onLeftClick(_event: JQuery.ClickEvent): void {
     this.toggle();
   }
 
@@ -339,9 +351,6 @@ export abstract class BaseBar<TData> implements IBaseBar {
       return;
     }
 
-    // Ensure the generated block class is present
-    $root.addClass(this.blockClass);
-
     const detailsHtml = this.renderDetails(data);
     const compactHtml = this.renderCompact(data);
 
@@ -367,10 +376,12 @@ export abstract class BaseBar<TData> implements IBaseBar {
       $root.html(html);
     }
 
+    // Synchronize root classes (block + bar) and status modifier
+    this.syncRootClasses($root, data);
+
     // Synchronize expanded modifier (common to both modes)
     this.syncExpandedModifier($root);
 
-    // Bind context-menu (common) and disclosure click (expandable only)
     if (bindHandlers) {
       this.bindContextMenu($root, data);
       if (detailsHtml !== null) {
@@ -378,7 +389,6 @@ export abstract class BaseBar<TData> implements IBaseBar {
       }
     }
 
-    // Post-paint hook (called last)
     this.onPaint($root, data);
   }
 
@@ -406,18 +416,38 @@ export abstract class BaseBar<TData> implements IBaseBar {
   }
 
   /**
+   * Synchronize root element classes: ensure both the generated block class
+   * and the shared bar class are present, remove all status modifiers,
+   * and apply exactly one based on the result of {@link resolveStatus}.
+   *
+   * @param $root Root jQuery element.
+   * @param data Current bar data.
+   */
+  private syncRootClasses($root: JQuery, data: TData): void {
+    // Ensure block and bar classes are present
+    $root.addClass(this.blockClass);
+    $root.addClass(BAR_CLASS);
+
+    // Remove all possible status modifiers, then apply resolved one
+    $root.removeClass(`${BAR_CLASS}--${BarStatus.OK} ${BAR_CLASS}--${BarStatus.WARN} ${BAR_CLASS}--${BarStatus.ERROR}`);
+    $root.addClass(`${BAR_CLASS}--${this.resolveStatus(data)}`);
+  }
+
+  /**
    * Bind the delegated left-click handler to the disclosure toggle button
    * with namespace deduplication.
-   * Calls only `this.onLeftClick()` — the default implementation toggles,
+   * Calls `this.onLeftClick(event)` — the default implementation toggles,
    * but an override can replace or extend via `super`.
    *
    * @param $root Root jQuery element.
    */
   private bindClick($root: JQuery): void {
     const toggleSelector = `.${this.bemElement('toggle')}`;
-    $root.off(`click.${this.eventNs}`, toggleSelector).on(`click.${this.eventNs}`, toggleSelector, () => {
-      this.onLeftClick();
-    });
+    $root
+      .off(`click.${this.eventNs}`, toggleSelector)
+      .on(`click.${this.eventNs}`, toggleSelector, (event: JQuery.ClickEvent) => {
+        this.onLeftClick(event);
+      });
   }
 
   /**
