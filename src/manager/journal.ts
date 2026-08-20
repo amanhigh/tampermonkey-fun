@@ -104,7 +104,7 @@ export class JournalManager extends BaseManager implements IJournalManager {
   public async createJournal(input: CreateJournalInput): Promise<JournalRecord> {
     const request: CreateJournalRequest = {
       ticker: input.ticker.toUpperCase(),
-      sequence: input.timeframe === TickerTimeframe.TMN ? 'MWD' : 'YR',
+      top_timeframe: input.topTimeframe,
       type: input.type,
       status: input.status,
       images: input.screenshots.map((screenshot) => ({

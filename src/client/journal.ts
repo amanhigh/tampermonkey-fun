@@ -87,6 +87,7 @@ export class JournalClient extends KohanClient implements IJournalClient {
     try {
       const query = this.buildQuery([
         ['ticker', params.ticker],
+        ['top_timeframe', params.top_timeframe],
         ['type', params.type],
         ['status', params.status],
         ['limit', params.limit],

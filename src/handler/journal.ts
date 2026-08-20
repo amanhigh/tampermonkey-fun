@@ -16,7 +16,7 @@ import { IAlertManager } from '../manager/alert';
 import { ICategoryManager } from '../manager/category';
 import { ITimeFrameManager } from '../manager/timeframe';
 import { AlertClickAction, JournalOpenEvent } from '../models/events';
-import { CreateJournalNoteRequest, JournalResultStatus } from '../models/journal';
+import { CreateJournalNoteRequest, JournalResultStatus, JournalTopTimeframe } from '../models/journal';
 import { ScreenshotResponse } from '../models/os';
 import { TickerTimeframe } from '../models/timeframe';
 
@@ -119,12 +119,19 @@ export class JournalHandler implements IJournalHandler {
   private async handleRejectedJournal(
     ticker: string,
     reason: string,
-    timeframe: TickerTimeframe,
+    timeframe: JournalTopTimeframe,
     type: JournalActionType
   ): Promise<void> {
     const screenshots = await this.takeJournalScreenshots(ticker, type, timeframe);
     const journal = await this.journalManager
-      .createJournal({ ticker, reason, screenshots, type: 'REJECTED', status: 'FAIL', timeframe })
+      .createJournal({
+        ticker,
+        reason,
+        screenshots,
+        type: 'REJECTED',
+        status: 'FAIL',
+        topTimeframe: timeframe,
+      })
       .catch((error) => {
         throw new Error(`Failed to record journal entry: ${error}`);
       });
@@ -197,7 +204,7 @@ export class JournalHandler implements IJournalHandler {
     reason: string,
     screenshots: ScreenshotResponse[],
     note: string,
-    timeframe: TickerTimeframe
+    timeframe: JournalTopTimeframe
   ): Promise<void> {
     const journal = await this.journalManager
       .createJournal({
@@ -206,7 +213,7 @@ export class JournalHandler implements IJournalHandler {
         screenshots,
         type: 'TAKEN',
         status: 'SET',
-        timeframe,
+        topTimeframe: timeframe,
         notes: this.createSetupNotes(note),
       })
       .catch((error) => {

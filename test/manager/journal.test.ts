@@ -6,7 +6,6 @@ import {
   CreateJournalInput,
   JournalRecord,
   JournalTimeframe,
-  JournalSequence,
   JournalResultStatus,
 } from '../../src/models/journal';
 import { TickerTimeframe, TMN_SEQUENCE, SMN_SEQUENCE, YR_SEQUENCE } from '../../src/models/timeframe';
@@ -36,7 +35,7 @@ describe('JournalManager', () => {
   const createMockJournalRecord = (overrides: Partial<JournalRecord> = {}): JournalRecord => ({
     id: 'ext-1',
     ticker: 'AAPL',
-    sequence: 'MWD' as JournalSequence,
+    top_timeframe: TickerTimeframe.TMN,
     type: 'TAKEN',
     status: 'RUNNING',
     created_at: '2024-01-01T00:00:00Z',
@@ -102,14 +101,14 @@ describe('JournalManager', () => {
   });
 
   describe('createJournal', () => {
-    it('should forward explicit sequence from input to request', async () => {
+    it('should forward TMN top timeframe from input to request', async () => {
       const input: CreateJournalInput = {
         ticker: 'AAPL',
         type: 'TAKEN',
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
-        timeframe: TickerTimeframe.TMN,
+        topTimeframe: TickerTimeframe.TMN,
       };
 
       await journalManager.createJournal(input);
@@ -117,27 +116,63 @@ describe('JournalManager', () => {
       expect(mockJournalClient.createJournal).toHaveBeenCalledWith(
         expect.objectContaining({
           ticker: 'AAPL',
-          sequence: 'MWD',
+          top_timeframe: 'TMN',
         })
       );
     });
 
-    it('should forward YR sequence from input even when screenshots contain DL', async () => {
+    it('should forward YR top timeframe from input even when screenshots contain DL', async () => {
       const input: CreateJournalInput = {
         ticker: 'AAPL',
         type: 'TAKEN',
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
-        timeframe: TickerTimeframe.YR,
+        topTimeframe: TickerTimeframe.YR,
       };
 
       await journalManager.createJournal(input);
 
       expect(mockJournalClient.createJournal).toHaveBeenCalledWith(
         expect.objectContaining({
-          sequence: 'YR',
+          top_timeframe: 'YR',
         })
+      );
+    });
+
+    it('should forward SMN top timeframe from input', async () => {
+      const input: CreateJournalInput = {
+        ticker: 'AAPL',
+        type: 'TAKEN',
+        status: 'RUNNING',
+        screenshots: createDefaultScreenshots(),
+        reason: '',
+        topTimeframe: TickerTimeframe.SMN,
+      };
+
+      await journalManager.createJournal(input);
+
+      expect(mockJournalClient.createJournal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          top_timeframe: 'SMN',
+        })
+      );
+    });
+
+    it('should never send legacy sequence field in creation payload', async () => {
+      const input: CreateJournalInput = {
+        ticker: 'AAPL',
+        type: 'TAKEN',
+        status: 'RUNNING',
+        screenshots: createDefaultScreenshots(),
+        reason: '',
+        topTimeframe: TickerTimeframe.TMN,
+      };
+
+      await journalManager.createJournal(input);
+
+      expect(mockJournalClient.createJournal).toHaveBeenCalledWith(
+        expect.not.objectContaining({ sequence: expect.any(String) })
       );
     });
 
@@ -148,7 +183,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
-        timeframe: TickerTimeframe.TMN,
+        topTimeframe: TickerTimeframe.TMN,
       };
 
       await journalManager.createJournal(input);
@@ -172,7 +207,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: 'HGS - oe',
-        timeframe: TickerTimeframe.TMN,
+        topTimeframe: TickerTimeframe.TMN,
       };
 
       await journalManager.createJournal(input);
@@ -191,7 +226,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
-        timeframe: TickerTimeframe.TMN,
+        topTimeframe: TickerTimeframe.TMN,
       };
 
       await journalManager.createJournal(input);
@@ -213,7 +248,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
-        timeframe: TickerTimeframe.TMN,
+        topTimeframe: TickerTimeframe.TMN,
       };
 
       const result = await journalManager.createJournal(input);
@@ -230,7 +265,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
-        timeframe: TickerTimeframe.TMN,
+        topTimeframe: TickerTimeframe.TMN,
       };
 
       await expect(journalManager.createJournal(input)).rejects.toThrow('API Error');
