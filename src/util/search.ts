@@ -57,10 +57,7 @@ export class SearchUtil implements ISearchUtil {
 
   /** @inheritdoc */
   public xtremeSearch(query: string): void {
-    void GM.openInTab(
-      `https://www.airtelxstream.in/search?q=${encodeURIComponent(query)}`,
-      true
-    );
+    void GM.openInTab(`https://www.airtelxstream.in/search?q=${encodeURIComponent(query)}`, true);
   }
 
   /** @inheritdoc */
