@@ -253,9 +253,8 @@ export class JournalHandler implements IJournalHandler {
       return;
     }
 
-    // FIXME: #A Backend YR sequence conflates YR and SMN selections, so RESULT cannot recover the original timeframe.
-    // Step 4: Derive screenshot timeframe from backend sequence
-    const screenshotTimeframe = runningJournal.sequence === 'MWD' ? TickerTimeframe.TMN : TickerTimeframe.SMN;
+    // Step 4: Use the stored journal top timeframe for result screenshots
+    const screenshotTimeframe = runningJournal.top_timeframe;
 
     // Step 5: Take result screenshots
     const screenshots = await this.takeJournalScreenshots(ticker, JournalActionType.RESULT, screenshotTimeframe);
@@ -342,23 +341,25 @@ export class JournalHandler implements IJournalHandler {
    * Disables Swift keys while modal is open to prevent keyboard interference.
    * Re-enables them after modal closes.
    *
-   * When {@link includeSequence} is true, also shows a Timeframe group
-   * and returns both the reason and selected timeframe. The default
-   * timeframe is derived from the active backend sequence: TMN when the
-   * sequence includes DL, SMN otherwise. The timeframe is non-null for
-   * this overload and null when the group is not shown.
+   * When {@link includeTopTimeframe} is true, also shows a Timeframe group
+   * and returns both the reason and selected journal top timeframe. The
+   * default top timeframe is derived from the active screenshot tuple: TMN
+   * when the tuple includes DL, SMN otherwise. The timeframe is non-null
+   * for this overload and null when the group is not shown.
    *
-   * @param includeSequence - When true, shows the Timeframe group and returns a non-null timeframe;
-   *                          when false or omitted, returns `timeframe: null`.
-   * @returns For `true`, `{ reason: string | null; timeframe: TickerTimeframe }`.
+   * @param includeTopTimeframe - When true, shows the Timeframe group and returns a non-null top timeframe;
+   *                              when false or omitted, returns `timeframe: null`.
+   * @returns For `true`, `{ reason: string | null; timeframe: JournalTopTimeframe }`.
    *          For `false` or omitted, `{ reason: string | null; timeframe: null }`.
    * @private
    */
-  private showReasonModal(includeSequence: true): Promise<{ reason: string | null; timeframe: TickerTimeframe }>;
-  private showReasonModal(includeSequence?: false): Promise<{ reason: string | null; timeframe: null }>;
+  private showReasonModal(
+    includeTopTimeframe: true
+  ): Promise<{ reason: string | null; timeframe: JournalTopTimeframe }>;
+  private showReasonModal(includeTopTimeframe?: false): Promise<{ reason: string | null; timeframe: null }>;
   private async showReasonModal(
-    includeSequence = false
-  ): Promise<{ reason: string | null; timeframe: TickerTimeframe | null }> {
+    includeTopTimeframe = false
+  ): Promise<{ reason: string | null; timeframe: JournalTopTimeframe | null }> {
     try {
       await this.tvManager.setSwiftKeysState(false);
       const groups: SmartChoiceGroup[] = [
@@ -369,14 +370,13 @@ export class JournalHandler implements IJournalHandler {
         },
       ];
 
-      let defaultTimeframe: TickerTimeframe = TickerTimeframe.SMN;
-      if (includeSequence) {
-        const sequence = await this.timeframeManager.getSequence();
-        defaultTimeframe = sequence.includes(TickerTimeframe.DL) ? TickerTimeframe.TMN : TickerTimeframe.SMN;
+      let defaultTimeframe: JournalTopTimeframe = TickerTimeframe.SMN;
+      if (includeTopTimeframe) {
+        defaultTimeframe = await this.resolveDefaultTopTimeframe();
         groups.push({
-          id: Constants.TRADING.PROMPT.SEQUENCE_GROUP_ID,
+          id: Constants.TRADING.PROMPT.TOP_TIMEFRAME_GROUP_ID,
           label: 'Timeframe',
-          choices: Constants.TRADING.PROMPT.SEQUENCE_CHOICES,
+          choices: Constants.TRADING.PROMPT.TOP_TIMEFRAME_CHOICES,
           defaultChoice: defaultTimeframe,
         });
       }
@@ -384,7 +384,7 @@ export class JournalHandler implements IJournalHandler {
       // TODO: Build REASONS from journal tag frequency analysis instead of hardcoded list.
       const response = await this.smartPrompt.showModal(Constants.TRADING.PROMPT.REASONS, groups);
       if (response.type === SmartPromptResponseType.CANCEL) {
-        return { reason: null, timeframe: includeSequence ? defaultTimeframe : null };
+        return { reason: null, timeframe: includeTopTimeframe ? defaultTimeframe : null };
       }
 
       const override = response.answers[Constants.TRADING.PROMPT.OVERRIDE_GROUP_ID];
@@ -394,9 +394,10 @@ export class JournalHandler implements IJournalHandler {
           : override
             ? `${response.primarySelection}-${override}`
             : response.primarySelection;
-      if (includeSequence) {
+      if (includeTopTimeframe) {
         const selectedTimeframe =
-          (response.answers[Constants.TRADING.PROMPT.SEQUENCE_GROUP_ID] as TickerTimeframe) ?? defaultTimeframe;
+          (response.answers[Constants.TRADING.PROMPT.TOP_TIMEFRAME_GROUP_ID] as JournalTopTimeframe) ??
+          defaultTimeframe;
         return { reason, timeframe: selectedTimeframe };
       }
       return { reason, timeframe: null };
@@ -405,6 +406,17 @@ export class JournalHandler implements IJournalHandler {
     } finally {
       await this.tvManager.setSwiftKeysState(true);
     }
+  }
+
+  /**
+   * Resolves the default journal top timeframe from the active screenshot tuple:
+   * TMN when the tuple includes DL, SMN otherwise.
+   * @returns Default journal top timeframe for the reason prompt Timeframe group
+   * @private
+   */
+  private async resolveDefaultTopTimeframe(): Promise<JournalTopTimeframe> {
+    const sequence = await this.timeframeManager.getSequence();
+    return sequence.includes(TickerTimeframe.DL) ? TickerTimeframe.TMN : TickerTimeframe.SMN;
   }
 
   private async showSetupNoteModal(): Promise<string | null> {
