@@ -204,6 +204,7 @@ Support:
       ALERT_FEED_UPDATE: 'alertFeedEvent', // Old Name: tvWatchChangeEvent
       ALERT_CLICKED: 'alertClickedEvent', // Old Name: alertClickedEvent
       JOURNAL_OPEN: 'journalOpenEvent',
+      JOURNAL_TICKER: 'journalTickerEvent',
       TICKER_CHANGED: 'tickerChangedEvent',
       GTT_REFERSH: 'gttRefereshEvent', // Old Name: gttOrderEvent
       GTT_CREATE: 'gttCreateEvent', // Old Name: gttRequest
@@ -215,6 +216,7 @@ Support:
   DOM_EVENTS: {
     WATCHLIST_CHANGE: 'watchListChangeEvent',
     TICKER_CHANGE: 'tickerChange',
+    JOURNAL_READY: 'kohan:journal-ready',
   },
 
   MISC: {

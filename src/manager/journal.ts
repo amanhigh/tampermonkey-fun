@@ -86,6 +86,12 @@ export interface IJournalManager {
    * @param journalId Created journal identifier
    */
   publishJournalOpenEvent(journalId: string): Promise<void>;
+
+  /**
+   * Publishes the primary ticker from a loaded localhost journal to TradingView.
+   * @param ticker Primary TradingView ticker symbol
+   */
+  publishJournalTickerEvent(ticker: string): Promise<void>;
 }
 
 /**
@@ -183,6 +189,11 @@ export class JournalManager extends BaseManager implements IJournalManager {
   /** @inheritdoc */
   public async publishJournalOpenEvent(journalId: string): Promise<void> {
     await GM.setValue(Constants.STORAGE.EVENTS.JOURNAL_OPEN, new JournalOpenEvent(journalId).stringify());
+  }
+
+  /** @inheritdoc */
+  public async publishJournalTickerEvent(ticker: string): Promise<void> {
+    await GM.setValue(Constants.STORAGE.EVENTS.JOURNAL_TICKER, ticker);
   }
 
   /** @inheritdoc */

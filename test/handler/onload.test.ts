@@ -102,6 +102,7 @@ describe('OnLoadHandler', () => {
 
     mockDomManager = {
       getTicker: jest.fn().mockReturnValue('TEST'),
+      openTicker: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<IDomManager>;
 
     mockTradingViewManager = {
@@ -167,6 +168,18 @@ describe('OnLoadHandler', () => {
 
       // Screener observer set up (after watchlist)
       expect(mockObserveUtil.nodeObserver).toHaveBeenCalledWith(document.body, expect.any(Function));
+    });
+
+    it('opens the primary ticker when a journal sync event fires', () => {
+      onLoadHandler.init();
+
+      const listener = mockGM_addValueChangeListener.mock.calls.find(
+        ([key]) => key === Constants.STORAGE.EVENTS.JOURNAL_TICKER
+      )?.[1] as ((key: string, oldValue: unknown, newValue: unknown) => void);
+
+      listener(Constants.STORAGE.EVENTS.JOURNAL_TICKER, undefined, 'NSE:TCS');
+
+      expect(mockDomManager.openTicker).toHaveBeenCalledWith('NSE:TCS');
     });
 
     it('should register all domain event consumers before FIRST_LOAD publish', () => {

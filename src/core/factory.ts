@@ -577,7 +577,6 @@ export class Factory {
             Factory.util.ui(),
             Factory.manager.tv(),
             Factory.manager.style(),
-            Factory.manager.alert(),
             Factory.manager.category(),
             Factory.manager.timeFrame()
           )

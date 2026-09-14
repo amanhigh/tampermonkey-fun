@@ -100,6 +100,14 @@ describe('JournalManager', () => {
     });
   });
 
+  describe('publishJournalTickerEvent', () => {
+    it('should persist the primary ticker for TradingView synchronization', async () => {
+      await journalManager.publishJournalTickerEvent('AAPL');
+
+      expect(GM.setValue).toHaveBeenCalledWith('journalTickerEvent', 'AAPL');
+    });
+  });
+
   describe('createJournal', () => {
     it('should forward TMN top timeframe from input to request', async () => {
       const input: CreateJournalInput = {
