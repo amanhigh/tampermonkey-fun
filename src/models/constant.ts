@@ -133,9 +133,7 @@ export const Constants = Object.freeze({
       ALERT_TITLE: '.alertDataTitle',
     },
     JOURNAL: {
-      REVIEW_LINK: 'a[href^="/journal/"]',
-      CURRENT_TICKER: 'h2.text-3xl',
-      REVIEW_TICKER: 'span.font-semibold[x-text="item.ticker"]',
+      BRIDGE: '[data-journal-bridge="journal-detail"]',
     },
     SIDEBAR: {
       DELETE_ARROW: 'div [data-name="removeAllDrawingTools"] button[class^=arrow]', // Old Name: deleteArrowSelector
@@ -204,7 +202,7 @@ Support:
       ALERT_FEED_UPDATE: 'alertFeedEvent', // Old Name: tvWatchChangeEvent
       ALERT_CLICKED: 'alertClickedEvent', // Old Name: alertClickedEvent
       JOURNAL_OPEN: 'journalOpenEvent',
-      JOURNAL_TICKER: 'journalTickerEvent',
+      JOURNAL_OPENED: 'journalOpenedEvent',
       TICKER_CHANGED: 'tickerChangedEvent',
       GTT_REFERSH: 'gttRefereshEvent', // Old Name: gttOrderEvent
       GTT_CREATE: 'gttCreateEvent', // Old Name: gttRequest
@@ -216,7 +214,7 @@ Support:
   DOM_EVENTS: {
     WATCHLIST_CHANGE: 'watchListChangeEvent',
     TICKER_CHANGE: 'tickerChange',
-    JOURNAL_READY: 'kohan:journal-ready',
+    JOURNAL_OPENED: 'kohan:journal-opened',
   },
 
   MISC: {

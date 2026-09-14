@@ -12,10 +12,9 @@ import { DomManager } from '../manager/dom';
 import { Notifier } from '../util/notify';
 import { ITradingViewManager } from '../manager/tv';
 import { IStyleManager } from '../manager/style';
-import { IAlertManager } from '../manager/alert';
 import { ICategoryManager } from '../manager/category';
 import { ITimeFrameManager } from '../manager/timeframe';
-import { AlertClickAction, JournalOpenEvent } from '../models/events';
+import { JournalOpenEvent } from '../models/events';
 import { CreateJournalNoteRequest, JournalResultStatus, JournalTopTimeframe } from '../models/journal';
 import { ScreenshotResponse } from '../models/os';
 import { TickerTimeframe } from '../models/timeframe';
@@ -44,15 +43,15 @@ export interface IJournalHandler {
   handleJournalReasonPrompt(): Promise<void>;
 
   /**
-   * Handles opening a reviewed journal ticker in TradingView via alert click event.
-   * @param event Optional click event used to infer the clicked review item
+   * Publishes the ticker for an opened journal.
+   * @param ticker Primary ticker from the opened journal
    */
-  handleReviewJournal(event?: Event): void;
+  handleJournalOpened(ticker: string): void;
 
   /**
-   * Registers localhost review handlers and action button.
+   * Registers the localhost journal-opened handler.
    */
-  registerJournalReviewHandler(): void;
+  registerJournalOpenedHandler(): void;
 
   /**
    * Registers localhost journal-open listener.
@@ -73,7 +72,6 @@ export class JournalHandler implements IJournalHandler {
     private readonly uiUtil: IUIUtil,
     private readonly tvManager: ITradingViewManager,
     private readonly styleManager: IStyleManager,
-    private readonly alertManager: IAlertManager,
     private readonly categoryManager: ICategoryManager,
     private readonly timeframeManager: ITimeFrameManager
   ) {}
@@ -291,21 +289,22 @@ export class JournalHandler implements IJournalHandler {
   }
 
   /** @inheritdoc */
-  public handleReviewJournal(event?: Event): void {
-    const ticker = this.extractReviewTicker(event);
-    if (!ticker) {
+  public handleJournalOpened(ticker: string): void {
+    const normalizedTicker = ticker.trim();
+    if (!normalizedTicker) {
       return;
     }
 
-    void this.alertManager.createAlertClickEvent(ticker, AlertClickAction.OPEN);
+    void this.journalManager.publishJournalOpenedEvent(normalizedTicker);
   }
 
   /** @inheritdoc */
-  public registerJournalReviewHandler(): void {
-    document.querySelectorAll(Constants.DOM.JOURNAL.REVIEW_LINK).forEach((reviewLink) => {
-      reviewLink.addEventListener('click', (event) => {
-        void this.handleReviewJournal(event);
-      });
+  public registerJournalOpenedHandler(): void {
+    document.addEventListener(Constants.DOM_EVENTS.JOURNAL_OPENED, (event) => {
+      const ticker = (event as CustomEvent<string>).detail;
+      if (typeof ticker === 'string') {
+        this.handleJournalOpened(ticker);
+      }
     });
   }
 
@@ -320,20 +319,6 @@ export class JournalHandler implements IJournalHandler {
         }
       }
     );
-  }
-
-  private extractReviewTicker(event?: Event): string | null {
-    if (typeof Element !== 'undefined' && event?.target instanceof Element) {
-      const reviewLink = event.target.closest('a[href^="/journal/"]');
-      return (
-        reviewLink?.querySelector(Constants.DOM.JOURNAL.REVIEW_TICKER)?.textContent?.trim() ??
-        reviewLink?.querySelector('span.font-semibold')?.textContent?.trim() ??
-        document.querySelector(Constants.DOM.JOURNAL.CURRENT_TICKER)?.textContent?.trim() ??
-        null
-      );
-    }
-
-    return document.querySelector(Constants.DOM.JOURNAL.CURRENT_TICKER)?.textContent?.trim() || null;
   }
 
   /**

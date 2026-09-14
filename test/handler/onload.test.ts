@@ -174,10 +174,10 @@ describe('OnLoadHandler', () => {
       onLoadHandler.init();
 
       const listener = mockGM_addValueChangeListener.mock.calls.find(
-        ([key]) => key === Constants.STORAGE.EVENTS.JOURNAL_TICKER
+        ([key]) => key === Constants.STORAGE.EVENTS.JOURNAL_OPENED
       )?.[1] as ((key: string, oldValue: unknown, newValue: unknown) => void);
 
-      listener(Constants.STORAGE.EVENTS.JOURNAL_TICKER, undefined, 'NSE:TCS');
+      listener(Constants.STORAGE.EVENTS.JOURNAL_OPENED, undefined, 'NSE:TCS');
 
       expect(mockDomManager.openTicker).toHaveBeenCalledWith('NSE:TCS');
     });

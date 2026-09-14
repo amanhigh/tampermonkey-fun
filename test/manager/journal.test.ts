@@ -100,11 +100,11 @@ describe('JournalManager', () => {
     });
   });
 
-  describe('publishJournalTickerEvent', () => {
+  describe('publishJournalOpenedEvent', () => {
     it('should persist the primary ticker for TradingView synchronization', async () => {
-      await journalManager.publishJournalTickerEvent('AAPL');
+      await journalManager.publishJournalOpenedEvent('AAPL');
 
-      expect(GM.setValue).toHaveBeenCalledWith('journalTickerEvent', 'AAPL');
+      expect(GM.setValue).toHaveBeenCalledWith('journalOpenedEvent', 'AAPL');
     });
   });
 

@@ -36,7 +36,7 @@ describe('JournalHandler', () => {
   let mockStyleManager: jest.Mocked<IStyleManager>;
   let mockCategoryManager: jest.Mocked<ICategoryManager>;
   let mockTimeFrameManager: jest.Mocked<ITimeFrameManager>;
-  let mockDocument: { addEventListener: jest.Mock; querySelector: jest.Mock; querySelectorAll: jest.Mock };
+  let mockDocument: { addEventListener: jest.Mock };
   let mockJournalOpenListener: (
     _keyName: string,
     _oldValue: unknown,
@@ -82,7 +82,7 @@ describe('JournalHandler', () => {
       createReasonText: jest.fn(),
       createJournal: jest.fn(),
       publishJournalOpenEvent: jest.fn().mockResolvedValue(undefined),
-      publishJournalTickerEvent: jest.fn().mockResolvedValue(undefined),
+      publishJournalOpenedEvent: jest.fn().mockResolvedValue(undefined),
       screenshotTicker: jest.fn(),
       findRunningJournal: jest.fn(),
       addJournalImages: jest.fn().mockResolvedValue(undefined),
@@ -125,14 +125,9 @@ describe('JournalHandler', () => {
 
     mockDocument = {
       addEventListener: jest.fn(),
-      querySelector: jest.fn(),
-      querySelectorAll: jest.fn(),
     };
 
     (global as any).document = mockDocument;
-    (global as any).Element = class {
-      closest = jest.fn();
-    };
     (global as any).GM_addValueChangeListener = jest.fn((_, listener) => {
       mockJournalOpenListener = listener;
     });
@@ -156,36 +151,17 @@ describe('JournalHandler', () => {
     );
   });
 
-  describe('handleReviewJournal', () => {
-    it('should publish a targeted journal ticker event for the current journal ticker', () => {
-      mockDocument.querySelector.mockReturnValue({ textContent: 'KLAC' });
+  describe('handleJournalOpened', () => {
+    it('should publish a targeted event for the opened journal ticker', () => {
+      journalHandler.handleJournalOpened(' KLAC ');
 
-      journalHandler.handleReviewJournal();
-
-      expect(mockJournalManager.publishJournalTickerEvent).toHaveBeenCalledWith('KLAC');
+      expect(mockJournalManager.publishJournalOpenedEvent).toHaveBeenCalledWith('KLAC');
     });
 
-    it('should skip event creation when ticker is empty', () => {
-      mockDocument.querySelector.mockReturnValue({ textContent: '' });
+    it('should skip event publication when ticker is empty', () => {
+      journalHandler.handleJournalOpened(' ');
 
-      journalHandler.handleReviewJournal();
-
-      expect(mockJournalManager.publishJournalTickerEvent).not.toHaveBeenCalled();
-    });
-
-    it('should publish OPEN alert-click event for clicked review item', () => {
-      mockDocument.querySelector.mockReturnValue({ textContent: 'KLAC' });
-      const clickedTicker = { textContent: 'MSFT' };
-      const reviewLink = {
-        querySelector: jest.fn().mockImplementation((selector: string) => (selector.includes('x-text') ? clickedTicker : null)),
-      };
-      const target = new (global as any).Element();
-      target.closest.mockReturnValue(reviewLink);
-      const event = { target } as unknown as Event;
-
-      journalHandler.handleReviewJournal(event);
-
-      expect(mockJournalManager.publishJournalTickerEvent).toHaveBeenCalledWith('MSFT');
+      expect(mockJournalManager.publishJournalOpenedEvent).not.toHaveBeenCalled();
     });
   });
 
@@ -609,29 +585,23 @@ describe('JournalHandler', () => {
     });
   });
 
-  describe('registerJournalReviewHandler', () => {
-    it('should install the journal-ready listener', () => {
-      journalHandler.registerJournalReviewHandler();
+  describe('registerJournalOpenedHandler', () => {
+    it('should install the journal-opened listener without publishing immediately', () => {
+      journalHandler.registerJournalOpenedHandler();
 
-      expect(mockDocument.addEventListener).toHaveBeenCalledWith('kohan:journal-ready', expect.any(Function));
+      expect(mockDocument.addEventListener).toHaveBeenCalledWith(Constants.DOM_EVENTS.JOURNAL_OPENED, expect.any(Function));
+      expect(mockJournalManager.publishJournalOpenedEvent).not.toHaveBeenCalled();
     });
 
-    it('should publish the ticker carried by a journal-ready event', () => {
-      journalHandler.registerJournalReviewHandler();
+    it('should publish the ticker carried by a journal-opened event', () => {
+      journalHandler.registerJournalOpenedHandler();
 
       const listener = (mockDocument.addEventListener as jest.Mock).mock.calls[0][1] as (event: Event) => void;
       listener({ detail: 'MSFT' } as unknown as Event);
 
-      expect(mockJournalManager.publishJournalTickerEvent).toHaveBeenCalledWith('MSFT');
+      expect(mockJournalManager.publishJournalOpenedEvent).toHaveBeenCalledWith('MSFT');
     });
 
-    it('should publish the ticker retained on the journal bridge', () => {
-      mockDocument.querySelector.mockReturnValue({ dataset: { journalTicker: 'NSE:TCS' } });
-
-      journalHandler.registerJournalReviewHandler();
-
-      expect(mockJournalManager.publishJournalTickerEvent).toHaveBeenCalledWith('NSE:TCS');
-    });
   });
 
   describe('registerOpenJournalHandler', () => {
