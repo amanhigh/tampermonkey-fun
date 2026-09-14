@@ -66,7 +66,7 @@ export class Barkat {
 
   private setupJournalHost(): void {
     console.info('Barkat localhost detected');
-    this.journalHandler.registerJournalReviewHandler();
+    this.journalHandler.registerJournalOpenedHandler();
     this.journalHandler.registerOpenJournalHandler();
   }
 

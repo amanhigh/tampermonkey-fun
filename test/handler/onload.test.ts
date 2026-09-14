@@ -7,6 +7,7 @@ import { IAlertHandler } from '../../src/handler/alert';
 import { ITickerChangeHandler } from '../../src/handler/ticker_change';
 import { IPaintManager } from '../../src/manager/paint';
 import { IDomManager } from '../../src/manager/dom';
+import { IJournalHandler } from '../../src/handler/journal';
 import { ITradingViewManager } from '../../src/manager/tv';
 import { IDomainEventConsumer, ISubscriber, IPublisher } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
@@ -43,6 +44,7 @@ describe('OnLoadHandler', () => {
   let mockTickerChangeHandler: jest.Mocked<ITickerChangeHandler>;
   let mockPaintManager: jest.Mocked<IPaintManager>;
   let mockDomManager: jest.Mocked<IDomManager>;
+  let mockJournalHandler: jest.Mocked<IJournalHandler>;
   let mockTradingViewManager: jest.Mocked<ITradingViewManager>;
   let mockPublisher: jest.Mocked<IPublisher>;
   let mockDomainEventConsumers: jest.Mocked<IDomainEventConsumer>[];
@@ -105,6 +107,13 @@ describe('OnLoadHandler', () => {
       openTicker: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<IDomManager>;
 
+    mockJournalHandler = {
+      handleJournalOpened: jest.fn(),
+      publishJournalOpenedEvent: jest.fn(),
+      registerJournalOpenedHandler: jest.fn(),
+      registerOpenJournalHandler: jest.fn(),
+    } as unknown as jest.Mocked<IJournalHandler>;
+
     mockTradingViewManager = {
       isSwiftKeysEnabled: jest.fn().mockReturnValue(true),
       setSwiftKeysState: jest.fn().mockResolvedValue(undefined),
@@ -133,6 +142,7 @@ describe('OnLoadHandler', () => {
       mockTickerChangeHandler,
       mockPaintManager,
       mockDomManager,
+      mockJournalHandler,
       mockPublisher,
       mockDomainEventConsumers,
       mockSubscriber,
@@ -179,7 +189,8 @@ describe('OnLoadHandler', () => {
 
       listener(Constants.STORAGE.EVENTS.JOURNAL_OPENED, undefined, 'NSE:TCS');
 
-      expect(mockDomManager.openTicker).toHaveBeenCalledWith('NSE:TCS');
+      expect(mockJournalHandler.handleJournalOpened).toHaveBeenCalledWith('NSE:TCS');
+      expect(mockDomManager.openTicker).not.toHaveBeenCalled();
     });
 
     it('should register all domain event consumers before FIRST_LOAD publish', () => {

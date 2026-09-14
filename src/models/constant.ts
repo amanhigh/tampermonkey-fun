@@ -132,9 +132,6 @@ export const Constants = Object.freeze({
       ALERT_DATA: 'div.alertNotifData > a',
       ALERT_TITLE: '.alertDataTitle',
     },
-    JOURNAL: {
-      BRIDGE: '[data-journal-bridge="journal-detail"]',
-    },
     SIDEBAR: {
       DELETE_ARROW: 'div [data-name="removeAllDrawingTools"] button[class^=arrow]', // Old Name: deleteArrowSelector
       DELETE_DRAWING: 'div [data-name="remove-drawing-tools"]', // Old Name: deleteDrawingSelector

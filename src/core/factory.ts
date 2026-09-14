@@ -444,6 +444,7 @@ export class Factory {
             Factory.handler.tickerChange(),
             Factory.manager.paint(),
             Factory.manager.dom(),
+            Factory.handler.journal(),
             Factory.manager.eventPublisher(),
             [
               Factory.handler.alertFeed(),

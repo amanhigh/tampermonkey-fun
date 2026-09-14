@@ -43,10 +43,16 @@ export interface IJournalHandler {
   handleJournalReasonPrompt(): Promise<void>;
 
   /**
-   * Publishes the ticker for an opened journal.
+   * Opens the primary ticker from a journal-opened event.
    * @param ticker Primary ticker from the opened journal
    */
   handleJournalOpened(ticker: string): void;
+
+  /**
+   * Publishes the ticker for an opened journal to other tabs.
+   * @param ticker Primary ticker from the opened journal
+   */
+  publishJournalOpenedEvent(ticker: string): void;
 
   /**
    * Registers the localhost journal-opened handler.
@@ -295,6 +301,16 @@ export class JournalHandler implements IJournalHandler {
       return;
     }
 
+    void this.domManager.openTicker(normalizedTicker);
+  }
+
+  /** @inheritdoc */
+  public publishJournalOpenedEvent(ticker: string): void {
+    const normalizedTicker = ticker.trim();
+    if (!normalizedTicker) {
+      return;
+    }
+
     void this.journalManager.publishJournalOpenedEvent(normalizedTicker);
   }
 
@@ -303,7 +319,7 @@ export class JournalHandler implements IJournalHandler {
     document.addEventListener(Constants.DOM_EVENTS.JOURNAL_OPENED, (event) => {
       const ticker = (event as CustomEvent<string>).detail;
       if (typeof ticker === 'string') {
-        this.handleJournalOpened(ticker);
+        this.publishJournalOpenedEvent(ticker);
       }
     });
   }

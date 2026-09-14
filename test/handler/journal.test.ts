@@ -69,6 +69,7 @@ describe('JournalHandler', () => {
   beforeEach(() => {
     mockTickerManager = {
       getTicker: jest.fn(),
+      openTicker: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<DomManager>;
 
     mockOsClient = {
@@ -152,14 +153,29 @@ describe('JournalHandler', () => {
   });
 
   describe('handleJournalOpened', () => {
+    it('should open the targeted journal ticker through the DOM manager', () => {
+      journalHandler.handleJournalOpened(' NSE:KLAC ');
+
+      expect(mockTickerManager.openTicker).toHaveBeenCalledWith('NSE:KLAC');
+      expect(mockJournalManager.publishJournalOpenedEvent).not.toHaveBeenCalled();
+    });
+
+    it('should skip ticker opening when ticker is empty', () => {
+      journalHandler.handleJournalOpened(' ');
+
+      expect(mockTickerManager.openTicker).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('publishJournalOpenedEvent', () => {
     it('should publish a targeted event for the opened journal ticker', () => {
-      journalHandler.handleJournalOpened(' KLAC ');
+      journalHandler.publishJournalOpenedEvent(' KLAC ');
 
       expect(mockJournalManager.publishJournalOpenedEvent).toHaveBeenCalledWith('KLAC');
     });
 
     it('should skip event publication when ticker is empty', () => {
-      journalHandler.handleJournalOpened(' ');
+      journalHandler.publishJournalOpenedEvent(' ');
 
       expect(mockJournalManager.publishJournalOpenedEvent).not.toHaveBeenCalled();
     });
