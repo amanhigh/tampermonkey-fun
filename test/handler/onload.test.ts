@@ -7,7 +7,7 @@ import { IAlertHandler } from '../../src/handler/alert';
 import { ITickerChangeHandler } from '../../src/handler/ticker_change';
 import { IPaintManager } from '../../src/manager/paint';
 import { IDomManager } from '../../src/manager/dom';
-import { IJournalHandler } from '../../src/handler/journal';
+import { IJournalSyncHandler } from '../../src/handler/journal_sync';
 import { ITradingViewManager } from '../../src/manager/tv';
 import { IDomainEventConsumer, ISubscriber, IPublisher } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
@@ -44,7 +44,7 @@ describe('OnLoadHandler', () => {
   let mockTickerChangeHandler: jest.Mocked<ITickerChangeHandler>;
   let mockPaintManager: jest.Mocked<IPaintManager>;
   let mockDomManager: jest.Mocked<IDomManager>;
-  let mockJournalHandler: jest.Mocked<IJournalHandler>;
+  let mockJournalSyncHandler: jest.Mocked<IJournalSyncHandler>;
   let mockTradingViewManager: jest.Mocked<ITradingViewManager>;
   let mockPublisher: jest.Mocked<IPublisher>;
   let mockDomainEventConsumers: jest.Mocked<IDomainEventConsumer>[];
@@ -107,9 +107,9 @@ describe('OnLoadHandler', () => {
       openTicker: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<IDomManager>;
 
-    mockJournalHandler = {
+    mockJournalSyncHandler = {
       registerBarkatJournalOpenListener: jest.fn(),
-    } as unknown as jest.Mocked<IJournalHandler>;
+    } as unknown as jest.Mocked<IJournalSyncHandler>;
 
     mockTradingViewManager = {
       isSwiftKeysEnabled: jest.fn().mockReturnValue(true),
@@ -139,7 +139,7 @@ describe('OnLoadHandler', () => {
       mockTickerChangeHandler,
       mockPaintManager,
       mockDomManager,
-      mockJournalHandler,
+      mockJournalSyncHandler,
       mockPublisher,
       mockDomainEventConsumers,
       mockSubscriber,
@@ -160,7 +160,7 @@ describe('OnLoadHandler', () => {
       // Static listeners set up
       expect(mockDocument.addEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
       expect(mockGM_addValueChangeListener).toHaveBeenCalled();
-      expect(mockJournalHandler.registerBarkatJournalOpenListener).toHaveBeenCalled();
+      expect(mockJournalSyncHandler.registerBarkatJournalOpenListener).toHaveBeenCalled();
 
       // Ticker observer setup (first wait)
       expect(mockWaitUtil.waitJEE).toHaveBeenCalledWith(Constants.DOM.HEADER.MAIN, expect.any(Function), 10);

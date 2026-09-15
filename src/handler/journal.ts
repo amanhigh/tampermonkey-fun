@@ -1,5 +1,3 @@
-/* eslint-disable max-lines */
-
 /**
  * Interface and implementations for journal handling operations
  */
@@ -16,10 +14,10 @@ import { ITradingViewManager } from '../manager/tv';
 import { IStyleManager } from '../manager/style';
 import { ICategoryManager } from '../manager/category';
 import { ITimeFrameManager } from '../manager/timeframe';
-import { JournalOpenEvent } from '../models/events';
 import { CreateJournalNoteRequest, JournalResultStatus, JournalTopTimeframe } from '../models/journal';
 import { ScreenshotResponse } from '../models/os';
 import { TickerTimeframe } from '../models/timeframe';
+import { IJournalSyncHandler } from './journal_sync';
 
 /**
  * Interface for managing journal entry operations at UI/Event level
@@ -45,25 +43,6 @@ export interface IJournalHandler {
    * Shows reason prompt modal and copies formatted text to clipboard
    */
   handleJournalReasonPrompt(): Promise<void>;
-
-  // ── Sync Publisher ──
-
-  /**
-   * Detects a journal page URL on the localhost host and publishes the journal-open event so TradingView opens the chart.
-   */
-  publishBarkatJournalOpen(): void;
-
-  // ── Sync Consumer ──
-
-  /**
-   * Registers the TradingView listener for the journal-open event published by the Barkat host.
-   */
-  registerBarkatJournalOpenListener(): void;
-
-  /**
-   * Registers the localhost listener for the journal-open event published by TradingView.
-   */
-  registerTvJournalRecordedListener(): void;
 }
 
 /**
@@ -80,7 +59,8 @@ export class JournalHandler implements IJournalHandler {
     private readonly tvManager: ITradingViewManager,
     private readonly styleManager: IStyleManager,
     private readonly categoryManager: ICategoryManager,
-    private readonly timeframeManager: ITimeFrameManager
+    private readonly timeframeManager: ITimeFrameManager,
+    private readonly journalSyncHandler: IJournalSyncHandler
   ) {}
 
   // ── Journal Operations ──
@@ -156,7 +136,7 @@ export class JournalHandler implements IJournalHandler {
         throw new Error(`Failed to record journal entry: ${error}`);
       });
 
-    await this.publishTvJournalRecorded(journal.id);
+    await this.journalSyncHandler.publishTvJournalRecorded(journal.id);
   }
 
   private async handleSetupJournal(ticker: string, type: JournalActionType): Promise<void> {
@@ -241,7 +221,7 @@ export class JournalHandler implements IJournalHandler {
       });
 
     await this.categoryManager.publishCategoryChanged([ticker]);
-    await this.publishTvJournalRecorded(journal.id);
+    await this.journalSyncHandler.publishTvJournalRecorded(journal.id);
   }
 
   private async handleResultJournal(ticker: string): Promise<void> {
@@ -288,7 +268,7 @@ export class JournalHandler implements IJournalHandler {
 
     await this.journalManager.updateJournalStatus(runningJournal.id, status);
     await this.categoryManager.publishCategoryChanged([ticker]);
-    await this.publishTvJournalRecorded(runningJournal.id);
+    await this.journalSyncHandler.publishTvJournalRecorded(runningJournal.id);
   }
 
   /**
@@ -410,100 +390,5 @@ export class JournalHandler implements IJournalHandler {
     } finally {
       await this.tvManager.setSwiftKeysState(true);
     }
-  }
-
-  // ── Sync Publisher ──
-
-  /** @inheritdoc */
-  public publishBarkatJournalOpen(): void {
-    const journalMatch = window.location.pathname.match(/^\/journal\/([^/]+)$/);
-    if (!journalMatch) {
-      return;
-    }
-
-    const journalId = journalMatch[1];
-    void this.journalManager.publishJournalOpenedEvent(journalId);
-  }
-
-  private async publishTvJournalRecorded(journalId: string): Promise<void> {
-    await this.journalManager.publishJournalOpenEvent(journalId).catch((error) => {
-      throw new Error(`Failed to publish journal open event: ${error}`);
-    });
-  }
-
-  // ── Sync Consumer ──
-
-  /**
-   * Registers the TradingView listener for the journal-open event published by the Barkat host.
-   */
-  public registerBarkatJournalOpenListener(): void {
-    GM_addValueChangeListener(
-      Constants.STORAGE.EVENTS.JOURNAL_OPENED,
-      (_keyName: string, _oldValue: unknown, newValue: unknown) => {
-        if (typeof newValue === 'string' && newValue.trim()) {
-          let event: JournalOpenEvent;
-          try {
-            event = JournalOpenEvent.fromString(newValue);
-          } catch {
-            console.warn('[JournalSync][TradingView] Ignoring malformed journalOpenedEvent value', { newValue });
-            return;
-          }
-
-          if (typeof event.journalId !== 'string' || !event.journalId.trim()) {
-            console.warn('[JournalSync][TradingView] Ignoring journalOpenedEvent with empty journal id', { newValue });
-            return;
-          }
-
-          this.handleBarkatJournalOpen(event.journalId);
-        } else {
-          console.warn('[JournalSync][TradingView] Ignoring invalid journalOpenedEvent value', { newValue });
-        }
-      }
-    );
-  }
-
-  /** Opens the chart for the journal announced by the Barkat host. */
-  private handleBarkatJournalOpen(journalId: string): void {
-    const normalizedJournalId = journalId.trim();
-    if (!normalizedJournalId) {
-      return;
-    }
-
-    void this.openJournalTicker(normalizedJournalId);
-  }
-
-  private async openJournalTicker(journalId: string): Promise<void> {
-    try {
-      const journal = await this.journalManager.getJournal(journalId);
-      await this.domManager.openTicker(journal.ticker);
-    } catch (error) {
-      console.error('[JournalSync][TradingView] Failed to open journal', {
-        journalId,
-        error: (error as Error).message,
-      });
-    }
-  }
-
-  /** @inheritdoc */
-  public registerTvJournalRecordedListener(): void {
-    GM_addValueChangeListener(
-      Constants.STORAGE.EVENTS.JOURNAL_OPEN,
-      (_keyName: string, _oldValue: unknown, newValue: unknown) => {
-        if (newValue && typeof newValue === 'string') {
-          const journalOpenEvent = JournalOpenEvent.fromString(newValue);
-          this.handleTvJournalRecorded(journalOpenEvent.journalId);
-        }
-      }
-    );
-  }
-
-  /** Navigates to the journal review page after a journal was recorded on TradingView. */
-  private handleTvJournalRecorded(journalId: string): void {
-    const normalizedJournalId = journalId.trim();
-    if (!normalizedJournalId) {
-      return;
-    }
-
-    window.location.replace(`/journal/${normalizedJournalId}`);
   }
 }

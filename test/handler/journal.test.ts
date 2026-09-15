@@ -8,9 +8,9 @@ import { IStyleManager } from '../../src/manager/style';
 import { DomManager } from '../../src/manager/dom';
 import { ICategoryManager } from '../../src/manager/category';
 import { ITimeFrameManager } from '../../src/manager/timeframe';
+import { IJournalSyncHandler } from '../../src/handler/journal_sync';
 import { JournalActionType } from '../../src/models/journal';
 import { Constants } from '../../src/models/constant';
-import { JournalOpenEvent } from '../../src/models/events';
 import { TickerTimeframe, Sequence } from '../../src/models/timeframe';
 import { Notifier } from '../../src/util/notify';
 
@@ -37,11 +37,7 @@ describe('JournalHandler', () => {
   let mockStyleManager: jest.Mocked<IStyleManager>;
   let mockCategoryManager: jest.Mocked<ICategoryManager>;
   let mockTimeFrameManager: jest.Mocked<ITimeFrameManager>;
-  let mockJournalOpenListener: (
-    _keyName: string,
-    _oldValue: unknown,
-    newValue: unknown
-  ) => void;
+  let mockJournalSyncHandler: jest.Mocked<IJournalSyncHandler>;
 
   const DL_SEQUENCE: Sequence = [TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL];
   const NO_DL_SEQUENCE: Sequence = [TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK];
@@ -82,9 +78,7 @@ describe('JournalHandler', () => {
     mockJournalManager = {
       createReasonText: jest.fn(),
       createJournal: jest.fn(),
-      getJournal: jest.fn(),
       publishJournalOpenEvent: jest.fn().mockResolvedValue(undefined),
-      publishJournalOpenedEvent: jest.fn().mockResolvedValue(undefined),
       screenshotTicker: jest.fn(),
       findRunningJournal: jest.fn(),
       addJournalImages: jest.fn().mockResolvedValue(undefined),
@@ -125,16 +119,9 @@ describe('JournalHandler', () => {
       getSequence: jest.fn().mockResolvedValue(DL_SEQUENCE),
     } as unknown as jest.Mocked<ITimeFrameManager>;
 
-    (global as any).GM_addValueChangeListener = jest.fn((_, listener) => {
-      mockJournalOpenListener = listener;
-    });
-    (global as any).window = {
-      location: {
-        pathname: '/journal',
-        assign: jest.fn(),
-        replace: jest.fn(),
-      },
-    };
+    mockJournalSyncHandler = {
+      publishTvJournalRecorded: jest.fn((journalId: string) => mockJournalManager.publishJournalOpenEvent(journalId)),
+    } as unknown as jest.Mocked<IJournalSyncHandler>;
 
     journalHandler = new JournalHandler(
       mockTickerManager,
@@ -145,7 +132,8 @@ describe('JournalHandler', () => {
       mockTradingViewManager,
       mockStyleManager,
       mockCategoryManager,
-      mockTimeFrameManager
+      mockTimeFrameManager,
+      mockJournalSyncHandler
     );
   });
 
@@ -569,124 +557,4 @@ describe('JournalHandler', () => {
     });
   });
 
-  describe('publishBarkatJournalOpen', () => {
-    it('should publish the journal id parsed from the current page synchronously', () => {
-      (global as any).window.location.pathname = '/journal/jrn_abc123';
-
-      journalHandler.publishBarkatJournalOpen();
-
-      expect(mockJournalManager.publishJournalOpenedEvent).toHaveBeenCalledWith('jrn_abc123');
-      expect(mockJournalManager.publishJournalOpenedEvent).toHaveBeenCalledTimes(1);
-      expect(mockJournalManager.createJournal).not.toHaveBeenCalled();
-      expect(mockJournalManager.findRunningJournal).not.toHaveBeenCalled();
-      expect(mockJournalManager.screenshotTicker).not.toHaveBeenCalled();
-    });
-
-    it('should not publish on the journal list page', () => {
-      (global as any).window.location.pathname = '/journal';
-
-      journalHandler.publishBarkatJournalOpen();
-
-      expect(mockJournalManager.publishJournalOpenedEvent).not.toHaveBeenCalled();
-    });
-
-    it('should not publish on unrelated paths', () => {
-      (global as any).window.location.pathname = '/alerts';
-
-      journalHandler.publishBarkatJournalOpen();
-
-      expect(mockJournalManager.publishJournalOpenedEvent).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('registerBarkatJournalOpenListener', () => {
-    it('should fetch the journal and open its primary ticker through the DOM manager', async () => {
-      mockJournalManager.getJournal.mockResolvedValue({
-        id: 'jrn_abc123',
-        ticker: 'NSE:KLAC',
-        top_timeframe: TickerTimeframe.TMN,
-        type: 'TAKEN',
-        status: 'RUNNING',
-        created_at: '2024-01-01T00:00:00Z',
-      });
-
-      journalHandler.registerBarkatJournalOpenListener();
-      mockJournalOpenListener(
-        Constants.STORAGE.EVENTS.JOURNAL_OPENED,
-        undefined,
-        new JournalOpenEvent(' jrn_abc123 ', 1700000000000).stringify()
-      );
-      await new Promise<void>((resolve) => setImmediate(resolve));
-
-      expect(mockTickerManager.openTicker).toHaveBeenCalledWith('NSE:KLAC');
-      expect(mockJournalManager.getJournal).toHaveBeenCalledWith('jrn_abc123');
-      expect(mockJournalManager.publishJournalOpenedEvent).not.toHaveBeenCalled();
-    });
-
-    it('should skip journal fetching and ticker opening when journal id is empty', () => {
-      journalHandler.registerBarkatJournalOpenListener();
-      mockJournalOpenListener(
-        Constants.STORAGE.EVENTS.JOURNAL_OPENED,
-        undefined,
-        new JournalOpenEvent(' ', 1700000000000).stringify()
-      );
-
-      expect(mockJournalManager.getJournal).not.toHaveBeenCalled();
-      expect(mockTickerManager.openTicker).not.toHaveBeenCalled();
-    });
-
-    it('should skip a non-string journal-open payload', () => {
-      journalHandler.registerBarkatJournalOpenListener();
-      mockJournalOpenListener(Constants.STORAGE.EVENTS.JOURNAL_OPENED, undefined, 123);
-
-      expect(mockJournalManager.getJournal).not.toHaveBeenCalled();
-      expect(mockTickerManager.openTicker).not.toHaveBeenCalled();
-    });
-
-    it('should skip a malformed journal-open payload', () => {
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
-      journalHandler.registerBarkatJournalOpenListener();
-      mockJournalOpenListener(Constants.STORAGE.EVENTS.JOURNAL_OPENED, undefined, '{malformed');
-
-      expect(warnSpy).toHaveBeenCalledWith('[JournalSync][TradingView] Ignoring malformed journalOpenedEvent value', {
-        newValue: '{malformed',
-      });
-      expect(mockJournalManager.getJournal).not.toHaveBeenCalled();
-      expect(mockTickerManager.openTicker).not.toHaveBeenCalled();
-
-      warnSpy.mockRestore();
-    });
-
-    it('should not open a ticker when fetching the journal fails', async () => {
-      mockJournalManager.getJournal.mockRejectedValue(new Error('API down'));
-      const consoleError = jest.spyOn(console, 'error').mockImplementation();
-
-      journalHandler.registerBarkatJournalOpenListener();
-      mockJournalOpenListener(
-        Constants.STORAGE.EVENTS.JOURNAL_OPENED,
-        undefined,
-        new JournalOpenEvent('jrn_abc123', 1700000000000).stringify()
-      );
-      await new Promise<void>((resolve) => setImmediate(resolve));
-
-      expect(mockTickerManager.openTicker).not.toHaveBeenCalled();
-      expect(consoleError).toHaveBeenCalled();
-      consoleError.mockRestore();
-    });
-  });
-
-  describe('registerTvJournalRecordedListener', () => {
-    it('should install journal open listener and navigate to the review page', () => {
-      journalHandler.registerTvJournalRecordedListener();
-
-      expect((global as any).GM_addValueChangeListener).toHaveBeenCalledWith(
-        Constants.STORAGE.EVENTS.JOURNAL_OPEN,
-        expect.any(Function)
-      );
-
-      mockJournalOpenListener(Constants.STORAGE.EVENTS.JOURNAL_OPEN, undefined, JSON.stringify({ journalId: 'jrn_123' }));
-
-      expect((global as any).window.location.replace).toHaveBeenCalledWith('/journal/jrn_123');
-    });
-  });
 });

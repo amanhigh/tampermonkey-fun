@@ -6,6 +6,7 @@ import { ITickerHandler } from '../handler/ticker';
 import { IOnLoadHandler } from '../handler/onload';
 import { IAlertHandler } from '../handler/alert';
 import { IJournalHandler } from '../handler/journal';
+import { IJournalSyncHandler } from '../handler/journal_sync';
 import { ICommandInputHandler } from '../handler/command';
 import { IKiteHandler } from '../handler/kite';
 import { IAlertFeedHandler } from '../handler/alertfeed';
@@ -25,6 +26,7 @@ export class Barkat {
     private readonly onloadHandler: IOnLoadHandler,
     private readonly alertHandler: IAlertHandler,
     private readonly journalHandler: IJournalHandler,
+    private readonly journalSyncHandler: IJournalSyncHandler,
     private readonly commandHandler: ICommandInputHandler,
     private readonly kiteHandler: IKiteHandler,
     private readonly alertFeedHandler: IAlertFeedHandler,
@@ -66,8 +68,8 @@ export class Barkat {
 
   private setupJournalHost(): void {
     console.info('Barkat localhost detected');
-    this.journalHandler.publishBarkatJournalOpen();
-    this.journalHandler.registerTvJournalRecordedListener();
+    this.journalSyncHandler.publishBarkatJournalOpen();
+    this.journalSyncHandler.registerTvJournalRecordedListener();
   }
 
   private setupDashyHost(): void {

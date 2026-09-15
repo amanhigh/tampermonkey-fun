@@ -42,6 +42,7 @@ import { IAlertHandler, AlertHandler } from '../handler/alert';
 import { IAlertSummaryBar, AlertSummaryBar } from '../handler/bar/alert_summary';
 import { AuditHandler, IAuditHandler } from '../handler/audit';
 import { JournalHandler, IJournalHandler } from '../handler/journal';
+import { JournalSyncHandler, IJournalSyncHandler } from '../handler/journal_sync';
 import { HotkeyHandler, IHotkeyHandler } from '../handler/hotkey';
 import { KeyConfig } from '../handler/key_config';
 import { IModifierKeyConfig, ModifierKeyConfig } from '../handler/modifier_config';
@@ -119,6 +120,7 @@ export class Factory {
             Factory.handler.onload(),
             Factory.handler.alert(),
             Factory.handler.journal(),
+            Factory.handler.journalSync(),
             Factory.handler.command(),
             Factory.handler.kite(),
             Factory.handler.alertFeed(),
@@ -444,7 +446,7 @@ export class Factory {
             Factory.handler.tickerChange(),
             Factory.manager.paint(),
             Factory.manager.dom(),
-            Factory.handler.journal(),
+            Factory.handler.journalSync(),
             Factory.manager.eventPublisher(),
             [
               Factory.handler.alertFeed(),
@@ -579,8 +581,14 @@ export class Factory {
             Factory.manager.tv(),
             Factory.manager.style(),
             Factory.manager.category(),
-            Factory.manager.timeFrame()
+            Factory.manager.timeFrame(),
+            Factory.handler.journalSync()
           )
+      ),
+    journalSync: (): IJournalSyncHandler =>
+      Factory.getInstance(
+        'journalSyncHandler',
+        () => new JournalSyncHandler(Factory.manager.journal(), Factory.manager.dom())
       ),
     imdb: (): IImdbHandler =>
       Factory.getInstance('imdbHandler', () => new ImdbHandler(Factory.manager.imdb(), Factory.util.search())),
