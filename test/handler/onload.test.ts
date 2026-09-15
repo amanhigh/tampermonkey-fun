@@ -111,7 +111,6 @@ describe('OnLoadHandler', () => {
     mockJournalHandler = {
       handleJournalOpened: jest.fn(),
       publishJournalOpenedEvent: jest.fn(),
-      registerJournalOpenedHandler: jest.fn(),
       registerOpenJournalHandler: jest.fn(),
     } as unknown as jest.Mocked<IJournalHandler>;
 

@@ -43,21 +43,21 @@ export interface IJournalHandler {
   handleJournalReasonPrompt(): Promise<void>;
 
   /**
-   * Opens the primary ticker from a journal-opened event.
-   * @param ticker Primary ticker from the opened journal
+   * Opens the primary ticker of the journal identified by journalId; fetches the journal then opens its ticker.
+   * @param journalId Identifier of the opened journal
    */
-  handleJournalOpened(ticker: string): void;
+  handleJournalOpened(journalId: string): void;
 
   /**
-   * Publishes the ticker for an opened journal to other tabs.
-   * @param ticker Primary ticker from the opened journal
+   * Handles opening a localhost journal page by publishing its journal identifier.
    */
-  publishJournalOpenedEvent(ticker: string): void;
+  handleJournalPageOpened(): void;
 
   /**
-   * Registers the localhost journal-opened handler.
+   * Publishes the identifier for an opened journal to other tabs.
+   * @param journalId Identifier from the opened journal page
    */
-  registerJournalOpenedHandler(): void;
+  publishJournalOpenedEvent(journalId: string): void;
 
   /**
    * Registers localhost journal-open listener.
@@ -295,33 +295,46 @@ export class JournalHandler implements IJournalHandler {
   }
 
   /** @inheritdoc */
-  public handleJournalOpened(ticker: string): void {
-    const normalizedTicker = ticker.trim();
-    if (!normalizedTicker) {
+  public handleJournalOpened(journalId: string): void {
+    const normalizedJournalId = journalId.trim();
+    if (!normalizedJournalId) {
       return;
     }
 
-    void this.domManager.openTicker(normalizedTicker);
+    void this.openJournalTicker(normalizedJournalId);
+  }
+
+  private async openJournalTicker(journalId: string): Promise<void> {
+    try {
+      const journal = await this.journalManager.getJournal(journalId);
+      await this.domManager.openTicker(journal.ticker);
+    } catch (error) {
+      console.error('[JournalSync][TradingView] Failed to open journal', {
+        journalId,
+        error: (error as Error).message,
+      });
+    }
   }
 
   /** @inheritdoc */
-  public publishJournalOpenedEvent(ticker: string): void {
-    const normalizedTicker = ticker.trim();
-    if (!normalizedTicker) {
+  public handleJournalPageOpened(): void {
+    const journalMatch = window.location.pathname.match(/^\/journal\/([^/]+)$/);
+    if (!journalMatch) {
       return;
     }
 
-    void this.journalManager.publishJournalOpenedEvent(normalizedTicker);
+    const journalId = journalMatch[1];
+    this.publishJournalOpenedEvent(journalId);
   }
 
   /** @inheritdoc */
-  public registerJournalOpenedHandler(): void {
-    document.addEventListener(Constants.DOM_EVENTS.JOURNAL_OPENED, (event) => {
-      const ticker = (event as CustomEvent<string>).detail;
-      if (typeof ticker === 'string') {
-        this.publishJournalOpenedEvent(ticker);
-      }
-    });
+  public publishJournalOpenedEvent(journalId: string): void {
+    const normalizedJournalId = journalId.trim();
+    if (!normalizedJournalId) {
+      return;
+    }
+
+    void this.journalManager.publishJournalOpenedEvent(normalizedJournalId);
   }
 
   /** @inheritdoc */

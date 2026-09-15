@@ -12,6 +12,7 @@ import { IDomManager } from '../manager/dom';
 import { ITradingViewManager } from '../manager/tv';
 import { IDomainEventConsumer, ISubscriber, IPublisher } from '../manager/event_bus';
 import { DomainEventType } from '../models/domain_event';
+import { JournalOpenEvent } from '../models/events';
 
 /**
  * Interface for application initialization handling
@@ -137,7 +138,22 @@ export class OnLoadHandler implements IOnLoadHandler {
       Constants.STORAGE.EVENTS.JOURNAL_OPENED,
       (_keyName: string, _oldValue: unknown, newValue: unknown) => {
         if (typeof newValue === 'string' && newValue.trim()) {
-          this.journalHandler.handleJournalOpened(newValue.trim());
+          let event: JournalOpenEvent;
+          try {
+            event = JournalOpenEvent.fromString(newValue);
+          } catch {
+            console.warn('[JournalSync][TradingView] Ignoring malformed journalOpenedEvent value', { newValue });
+            return;
+          }
+
+          if (typeof event.journalId !== 'string' || !event.journalId.trim()) {
+            console.warn('[JournalSync][TradingView] Ignoring journalOpenedEvent with empty journal id', { newValue });
+            return;
+          }
+
+          this.journalHandler.handleJournalOpened(event.journalId);
+        } else {
+          console.warn('[JournalSync][TradingView] Ignoring invalid journalOpenedEvent value', { newValue });
         }
       }
     );
