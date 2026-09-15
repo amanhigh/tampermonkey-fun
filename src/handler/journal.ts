@@ -32,6 +32,12 @@ export interface IJournalHandler {
   handleJournalButton(): void;
 
   /**
+   * Builds the journal action toolbar (RJ/RS/ST) inside the mounted `#aman-journal` wrapper.
+   * Must be called after the journal wrapper is appended to the DOM.
+   */
+  renderToolbar(): void;
+
+  /**
    * Handles Journal Creation operation
    * Shows reason prompt modal and creates journal entry
    * @param type Journal entry type (REJECTED, RESULT, SET)
@@ -68,6 +74,29 @@ export class JournalHandler implements IJournalHandler {
   /** @inheritdoc */
   public handleJournalButton(): void {
     this.uiUtil.toggleUI(`#${Constants.UI.IDS.AREAS.JOURNAL}`);
+  }
+
+  /** @inheritdoc */
+  public renderToolbar(): void {
+    // TODO 3.2: Journal toolbar is bespoke; combine with journal left-click toolbar and build via shared util with short emoji labels to save space
+    this.uiUtil
+      .buildWrapper(`${Constants.UI.IDS.AREAS.JOURNAL}-type`)
+      .appendTo(`#${Constants.UI.IDS.AREAS.JOURNAL}`)
+      .append(
+        this.uiUtil.buildButton('trend', 'RJ', () => {
+          void this.handleRecordJournal(JournalActionType.REJECTED);
+        })
+      )
+      .append(
+        this.uiUtil.buildButton('trend', 'RS', () => {
+          void this.handleRecordJournal(JournalActionType.RESULT);
+        })
+      )
+      .append(
+        this.uiUtil.buildButton('trend', 'ST', () => {
+          void this.handleRecordJournal(JournalActionType.SET);
+        })
+      );
   }
 
   /** @inheritdoc */

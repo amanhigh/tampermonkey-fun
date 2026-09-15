@@ -38,6 +38,7 @@ describe('JournalHandler', () => {
   let mockCategoryManager: jest.Mocked<ICategoryManager>;
   let mockTimeFrameManager: jest.Mocked<ITimeFrameManager>;
   let mockJournalSyncHandler: jest.Mocked<IJournalSyncHandler>;
+  let mockUiChain: { appendTo: jest.Mock; append: jest.Mock };
 
   const DL_SEQUENCE: Sequence = [TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL];
   const NO_DL_SEQUENCE: Sequence = [TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK];
@@ -91,8 +92,17 @@ describe('JournalHandler', () => {
       showTextareaModal: jest.fn(),
     } as unknown as jest.Mocked<ISmartPrompt>;
 
+    mockUiChain = {
+      appendTo: jest.fn(),
+      append: jest.fn(),
+    };
+    mockUiChain.appendTo.mockReturnValue(mockUiChain);
+    mockUiChain.append.mockReturnValue(mockUiChain);
+
     mockUiUtil = {
       toggleUI: jest.fn(),
+      buildWrapper: jest.fn().mockReturnValue(mockUiChain),
+      buildButton: jest.fn().mockReturnValue(mockUiChain),
     } as unknown as jest.Mocked<IUIUtil>;
 
     mockTradingViewManager = {
@@ -554,6 +564,32 @@ describe('JournalHandler', () => {
       expect(mockJournalManager.updateJournalStatus).toHaveBeenCalledWith('jrn_running', 'SUCCESS');
       expect(mockCategoryManager.publishCategoryChanged).not.toHaveBeenCalled();
       expect(mockJournalManager.publishJournalOpenEvent).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('renderToolbar', () => {
+    it('builds the journal toolbar wrapper inside the journal area', () => {
+      journalHandler.renderToolbar();
+
+      expect(mockUiUtil.buildWrapper).toHaveBeenCalledWith(`${Constants.UI.IDS.AREAS.JOURNAL}-type`);
+      expect(mockUiChain.appendTo).toHaveBeenCalledWith(`#${Constants.UI.IDS.AREAS.JOURNAL}`);
+    });
+
+    it('builds RJ, RS, and ST buttons that record the matching journal action', () => {
+      const recordJournalSpy = jest.spyOn(journalHandler, 'handleRecordJournal').mockResolvedValue(undefined);
+
+      journalHandler.renderToolbar();
+
+      expect(mockUiUtil.buildButton).toHaveBeenCalledTimes(3);
+      expect(mockUiUtil.buildButton.mock.calls.map((call) => call[1])).toEqual(['RJ', 'RS', 'ST']);
+
+      mockUiUtil.buildButton.mock.calls.forEach((call) => {
+        (call[2] as () => void)();
+      });
+
+      expect(recordJournalSpy).toHaveBeenNthCalledWith(1, JournalActionType.REJECTED);
+      expect(recordJournalSpy).toHaveBeenNthCalledWith(2, JournalActionType.RESULT);
+      expect(recordJournalSpy).toHaveBeenNthCalledWith(3, JournalActionType.SET);
     });
   });
 

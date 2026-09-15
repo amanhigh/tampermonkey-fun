@@ -87,6 +87,7 @@ import { GttAuditSection } from '../handler/gtt_section';
 import { TradeRiskSection } from '../handler/trade_risk_section';
 import { StaleReviewPlugin } from '../manager/stale_review_plugin';
 import { StaleReviewSection } from '../handler/stale_review_section';
+import { IToolbarHandler, ToolbarHandler } from '../handler/toolbar';
 
 /**
  * Project Architecture Overview
@@ -116,17 +117,14 @@ export class Factory {
           new Barkat(
             Factory.handler.global(),
             Factory.util.ui(),
-            Factory.handler.ticker(),
+            Factory.handler.toolbar(),
             Factory.handler.onload(),
-            Factory.handler.alert(),
             Factory.handler.journal(),
             Factory.handler.journalSync(),
             Factory.handler.command(),
             Factory.handler.kite(),
             Factory.handler.alertFeed(),
             Factory.handler.dashboardSync(),
-            Factory.handler.panel(),
-            Factory.manager.dom(),
             Factory.manager.tv()
           )
       ),
@@ -617,6 +615,19 @@ export class Factory {
       Factory.getInstance(
         'panelHandler',
         () => new PanelHandler(Factory.util.smart(), Factory.handler.ticker(), Factory.manager.dom())
+      ),
+    toolbar: (): IToolbarHandler =>
+      Factory.getInstance(
+        'toolbarHandler',
+        () =>
+          new ToolbarHandler(
+            Factory.util.ui(),
+            Factory.handler.ticker(),
+            Factory.handler.alert(),
+            Factory.handler.panel(),
+            Factory.handler.journal(),
+            Factory.manager.dom()
+          )
       ),
     picasso: (): IPicassoHandler =>
       Factory.getInstance(
