@@ -23,6 +23,8 @@ import { TickerTimeframe } from '../models/timeframe';
  * Interface for managing journal entry operations at UI/Event level
  */
 export interface IJournalHandler {
+  // ── Journal Operations ──
+
   /**
    * Handles click on Journal Button in UI
    * Toggles visibility of journal area in UI
@@ -42,27 +44,29 @@ export interface IJournalHandler {
    */
   handleJournalReasonPrompt(): Promise<void>;
 
-  /**
-   * Opens the primary ticker of the journal identified by journalId; fetches the journal then opens its ticker.
-   * @param journalId Identifier of the opened journal
-   */
-  handleJournalOpened(journalId: string): void;
+  // ── Sync Publisher ──
 
   /**
-   * Handles opening a localhost journal page by publishing its journal identifier.
+   * Detects a journal page URL on the localhost host and publishes the journal-open event so TradingView opens the chart.
    */
-  handleJournalPageOpened(): void;
+  publishBarkatJournalOpen(): void;
+
+  // ── Sync Consumer ──
 
   /**
-   * Publishes the identifier for an opened journal to other tabs.
-   * @param journalId Identifier from the opened journal page
+   * Opens the chart for the journal announced by the Barkat host.
    */
-  publishJournalOpenedEvent(journalId: string): void;
+  handleBarkatJournalOpen(journalId: string): void;
 
   /**
-   * Registers localhost journal-open listener.
+   * Navigates to the journal review page after a journal was recorded on TradingView.
    */
-  registerOpenJournalHandler(): void;
+  handleTvJournalRecorded(journalId: string): void;
+
+  /**
+   * Registers the localhost listener for the journal-open event published by TradingView.
+   */
+  registerTvJournalRecordedListener(): void;
 }
 
 /**
@@ -81,6 +85,8 @@ export class JournalHandler implements IJournalHandler {
     private readonly categoryManager: ICategoryManager,
     private readonly timeframeManager: ITimeFrameManager
   ) {}
+
+  // ── Journal Operations ──
 
   /** @inheritdoc */
   public handleJournalButton(): void {
@@ -120,6 +126,19 @@ export class JournalHandler implements IJournalHandler {
     }
   }
 
+  /** @inheritdoc */
+  public async handleJournalReasonPrompt(): Promise<void> {
+    const { reason } = await this.showReasonModal();
+
+    if (!reason) {
+      return;
+    }
+
+    const text = this.journalManager.createReasonText(reason);
+    this.tvManager.clipboardCopy(text);
+    this.styleManager.selectToolbar(Constants.DOM.TOOLBARS.TEXT);
+  }
+
   private async handleRejectedJournal(
     ticker: string,
     reason: string,
@@ -140,7 +159,7 @@ export class JournalHandler implements IJournalHandler {
         throw new Error(`Failed to record journal entry: ${error}`);
       });
 
-    await this.publishJournalOpenEvent(journal.id);
+    await this.publishTvJournalRecorded(journal.id);
   }
 
   private async handleSetupJournal(ticker: string, type: JournalActionType): Promise<void> {
@@ -225,7 +244,7 @@ export class JournalHandler implements IJournalHandler {
       });
 
     await this.categoryManager.publishCategoryChanged([ticker]);
-    await this.publishJournalOpenEvent(journal.id);
+    await this.publishTvJournalRecorded(journal.id);
   }
 
   private async handleResultJournal(ticker: string): Promise<void> {
@@ -272,82 +291,7 @@ export class JournalHandler implements IJournalHandler {
 
     await this.journalManager.updateJournalStatus(runningJournal.id, status);
     await this.categoryManager.publishCategoryChanged([ticker]);
-    await this.publishJournalOpenEvent(runningJournal.id);
-  }
-
-  private async publishJournalOpenEvent(journalId: string): Promise<void> {
-    await this.journalManager.publishJournalOpenEvent(journalId).catch((error) => {
-      throw new Error(`Failed to publish journal open event: ${error}`);
-    });
-  }
-
-  /** @inheritdoc */
-  public async handleJournalReasonPrompt(): Promise<void> {
-    const { reason } = await this.showReasonModal();
-
-    if (!reason) {
-      return;
-    }
-
-    const text = this.journalManager.createReasonText(reason);
-    this.tvManager.clipboardCopy(text);
-    this.styleManager.selectToolbar(Constants.DOM.TOOLBARS.TEXT);
-  }
-
-  /** @inheritdoc */
-  public handleJournalOpened(journalId: string): void {
-    const normalizedJournalId = journalId.trim();
-    if (!normalizedJournalId) {
-      return;
-    }
-
-    void this.openJournalTicker(normalizedJournalId);
-  }
-
-  private async openJournalTicker(journalId: string): Promise<void> {
-    try {
-      const journal = await this.journalManager.getJournal(journalId);
-      await this.domManager.openTicker(journal.ticker);
-    } catch (error) {
-      console.error('[JournalSync][TradingView] Failed to open journal', {
-        journalId,
-        error: (error as Error).message,
-      });
-    }
-  }
-
-  /** @inheritdoc */
-  public handleJournalPageOpened(): void {
-    const journalMatch = window.location.pathname.match(/^\/journal\/([^/]+)$/);
-    if (!journalMatch) {
-      return;
-    }
-
-    const journalId = journalMatch[1];
-    this.publishJournalOpenedEvent(journalId);
-  }
-
-  /** @inheritdoc */
-  public publishJournalOpenedEvent(journalId: string): void {
-    const normalizedJournalId = journalId.trim();
-    if (!normalizedJournalId) {
-      return;
-    }
-
-    void this.journalManager.publishJournalOpenedEvent(normalizedJournalId);
-  }
-
-  /** @inheritdoc */
-  public registerOpenJournalHandler(): void {
-    GM_addValueChangeListener(
-      Constants.STORAGE.EVENTS.JOURNAL_OPEN,
-      (_keyName: string, _oldValue: unknown, newValue: unknown) => {
-        if (newValue && typeof newValue === 'string') {
-          const journalOpenEvent = JournalOpenEvent.fromString(newValue);
-          window.location.replace(`/journal/${journalOpenEvent.journalId}`);
-        }
-      }
-    );
+    await this.publishTvJournalRecorded(runningJournal.id);
   }
 
   /**
@@ -469,5 +413,71 @@ export class JournalHandler implements IJournalHandler {
     } finally {
       await this.tvManager.setSwiftKeysState(true);
     }
+  }
+
+  // ── Sync Publisher ──
+
+  /** @inheritdoc */
+  public publishBarkatJournalOpen(): void {
+    const journalMatch = window.location.pathname.match(/^\/journal\/([^/]+)$/);
+    if (!journalMatch) {
+      return;
+    }
+
+    const journalId = journalMatch[1];
+    void this.journalManager.publishJournalOpenedEvent(journalId);
+  }
+
+  private async publishTvJournalRecorded(journalId: string): Promise<void> {
+    await this.journalManager.publishJournalOpenEvent(journalId).catch((error) => {
+      throw new Error(`Failed to publish journal open event: ${error}`);
+    });
+  }
+
+  // ── Sync Consumer ──
+
+  /** @inheritdoc */
+  public handleBarkatJournalOpen(journalId: string): void {
+    const normalizedJournalId = journalId.trim();
+    if (!normalizedJournalId) {
+      return;
+    }
+
+    void this.openJournalTicker(normalizedJournalId);
+  }
+
+  private async openJournalTicker(journalId: string): Promise<void> {
+    try {
+      const journal = await this.journalManager.getJournal(journalId);
+      await this.domManager.openTicker(journal.ticker);
+    } catch (error) {
+      console.error('[JournalSync][TradingView] Failed to open journal', {
+        journalId,
+        error: (error as Error).message,
+      });
+    }
+  }
+
+  /** @inheritdoc */
+  public handleTvJournalRecorded(journalId: string): void {
+    const normalizedJournalId = journalId.trim();
+    if (!normalizedJournalId) {
+      return;
+    }
+
+    window.location.replace(`/journal/${normalizedJournalId}`);
+  }
+
+  /** @inheritdoc */
+  public registerTvJournalRecordedListener(): void {
+    GM_addValueChangeListener(
+      Constants.STORAGE.EVENTS.JOURNAL_OPEN,
+      (_keyName: string, _oldValue: unknown, newValue: unknown) => {
+        if (newValue && typeof newValue === 'string') {
+          const journalOpenEvent = JournalOpenEvent.fromString(newValue);
+          this.handleTvJournalRecorded(journalOpenEvent.journalId);
+        }
+      }
+    );
   }
 }

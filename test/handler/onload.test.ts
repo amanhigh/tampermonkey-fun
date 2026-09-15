@@ -109,9 +109,8 @@ describe('OnLoadHandler', () => {
     } as unknown as jest.Mocked<IDomManager>;
 
     mockJournalHandler = {
-      handleJournalOpened: jest.fn(),
-      publishJournalOpenedEvent: jest.fn(),
-      registerOpenJournalHandler: jest.fn(),
+      handleBarkatJournalOpen: jest.fn(),
+      registerTvJournalRecordedListener: jest.fn(),
     } as unknown as jest.Mocked<IJournalHandler>;
 
     mockTradingViewManager = {
@@ -193,7 +192,7 @@ describe('OnLoadHandler', () => {
         new JournalOpenEvent('jrn_abc123', 1700000000000).stringify()
       );
 
-      expect(mockJournalHandler.handleJournalOpened).toHaveBeenCalledWith('jrn_abc123');
+      expect(mockJournalHandler.handleBarkatJournalOpen).toHaveBeenCalledWith('jrn_abc123');
       expect(mockDomManager.openTicker).not.toHaveBeenCalled();
     });
 
@@ -206,7 +205,7 @@ describe('OnLoadHandler', () => {
 
       listener(Constants.STORAGE.EVENTS.JOURNAL_OPENED, undefined, new JournalOpenEvent(' ', 123).stringify());
 
-      expect(mockJournalHandler.handleJournalOpened).not.toHaveBeenCalled();
+      expect(mockJournalHandler.handleBarkatJournalOpen).not.toHaveBeenCalled();
       expect(mockDomManager.openTicker).not.toHaveBeenCalled();
     });
 
@@ -219,7 +218,7 @@ describe('OnLoadHandler', () => {
 
       listener(Constants.STORAGE.EVENTS.JOURNAL_OPENED, undefined, 123);
 
-      expect(mockJournalHandler.handleJournalOpened).not.toHaveBeenCalled();
+      expect(mockJournalHandler.handleBarkatJournalOpen).not.toHaveBeenCalled();
       expect(mockDomManager.openTicker).not.toHaveBeenCalled();
     });
 
@@ -236,7 +235,7 @@ describe('OnLoadHandler', () => {
       expect(warnSpy).toHaveBeenCalledWith('[JournalSync][TradingView] Ignoring malformed journalOpenedEvent value', {
         newValue: '{malformed',
       });
-      expect(mockJournalHandler.handleJournalOpened).not.toHaveBeenCalled();
+      expect(mockJournalHandler.handleBarkatJournalOpen).not.toHaveBeenCalled();
       expect(mockDomManager.openTicker).not.toHaveBeenCalled();
 
       warnSpy.mockRestore();
