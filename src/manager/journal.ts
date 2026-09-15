@@ -31,6 +31,13 @@ export interface IJournalManager {
   createJournal(input: CreateJournalInput): Promise<JournalRecord>;
 
   /**
+   * Gets a journal by its external ID.
+   * @param journalId Journal external ID
+   * @returns Promise resolving with the journal record
+   */
+  getJournal(journalId: string): Promise<JournalRecord>;
+
+  /**
    * Takes screenshots for the given ticker using the derived timeframe sequence.
    * @param ticker Trading symbol to capture
    * @param type Screenshot purpose/type used in filenames
@@ -88,10 +95,10 @@ export interface IJournalManager {
   publishJournalOpenEvent(journalId: string): Promise<void>;
 
   /**
-   * Publishes that a localhost journal has opened, including its primary ticker.
-   * @param ticker Primary TradingView ticker symbol
+   * Publishes that a localhost journal page has opened.
+   * @param journalId Identifier from the opened localhost journal page
    */
-  publishJournalOpenedEvent(ticker: string): Promise<void>;
+  publishJournalOpenedEvent(journalId: string): Promise<void>;
 }
 
 /**
@@ -124,6 +131,11 @@ export class JournalManager extends BaseManager implements IJournalManager {
     const journal = await this.journalClient.createJournal(request);
     Notifier.success(`Journal created: ${journal.ticker} ${journal.type} ${journal.status}`);
     return journal;
+  }
+
+  /** @inheritdoc */
+  public async getJournal(journalId: string): Promise<JournalRecord> {
+    return this.journalClient.getJournal(journalId);
   }
 
   /** @inheritdoc */
@@ -192,8 +204,8 @@ export class JournalManager extends BaseManager implements IJournalManager {
   }
 
   /** @inheritdoc */
-  public async publishJournalOpenedEvent(ticker: string): Promise<void> {
-    await GM.setValue(Constants.STORAGE.EVENTS.JOURNAL_OPENED, ticker);
+  public async publishJournalOpenedEvent(journalId: string): Promise<void> {
+    await GM.setValue(Constants.STORAGE.EVENTS.JOURNAL_OPENED, new JournalOpenEvent(journalId).stringify());
   }
 
   /** @inheritdoc */

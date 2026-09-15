@@ -54,6 +54,7 @@ describe('CategoryManager', () => {
     mockJournalManager = {
       listJournals: jest.fn().mockResolvedValue([]),
       createJournal: jest.fn(),
+      getJournal: jest.fn(),
       screenshotTicker: jest.fn(),
       findRunningJournal: jest.fn(),
       addJournalImages: jest.fn(),

@@ -13,12 +13,13 @@ import { IDomainEventConsumer, ISubscriber, IPublisher } from '../../src/manager
 import { DomainEventType } from '../../src/models/domain_event';
 import { Constants } from '../../src/models/constant';
 import { TickerArea } from '../../src/models/dom';
+import { JournalOpenEvent } from '../../src/models/events';
 
 // Mock document and jQuery
 const mockDocument = {
   addEventListener: jest.fn(),
   body: {} as HTMLElement,
-  createElement: jest.fn(() => ({} as HTMLElement)),
+  createElement: jest.fn(() => ({}) as HTMLElement),
 } as unknown as Document;
 
 const mockJQuery = jest.fn(() => ({
@@ -180,17 +181,66 @@ describe('OnLoadHandler', () => {
       expect(mockObserveUtil.nodeObserver).toHaveBeenCalledWith(document.body, expect.any(Function));
     });
 
-    it('opens the primary ticker when a journal sync event fires', () => {
+    it('forwards the journal id when a journal sync event fires', () => {
       onLoadHandler.init();
 
       const listener = mockGM_addValueChangeListener.mock.calls.find(
         ([key]) => key === Constants.STORAGE.EVENTS.JOURNAL_OPENED
-      )?.[1] as ((key: string, oldValue: unknown, newValue: unknown) => void);
+      )?.[1] as (key: string, oldValue: unknown, newValue: unknown) => void;
 
-      listener(Constants.STORAGE.EVENTS.JOURNAL_OPENED, undefined, 'NSE:TCS');
+      listener(
+        Constants.STORAGE.EVENTS.JOURNAL_OPENED,
+        undefined,
+        new JournalOpenEvent('jrn_abc123', 1700000000000).stringify()
+      );
 
-      expect(mockJournalHandler.handleJournalOpened).toHaveBeenCalledWith('NSE:TCS');
+      expect(mockJournalHandler.handleJournalOpened).toHaveBeenCalledWith('jrn_abc123');
       expect(mockDomManager.openTicker).not.toHaveBeenCalled();
+    });
+
+    it('skips a journal sync event with an empty journal id', () => {
+      onLoadHandler.init();
+
+      const listener = mockGM_addValueChangeListener.mock.calls.find(
+        ([key]) => key === Constants.STORAGE.EVENTS.JOURNAL_OPENED
+      )?.[1] as (key: string, oldValue: unknown, newValue: unknown) => void;
+
+      listener(Constants.STORAGE.EVENTS.JOURNAL_OPENED, undefined, new JournalOpenEvent(' ', 123).stringify());
+
+      expect(mockJournalHandler.handleJournalOpened).not.toHaveBeenCalled();
+      expect(mockDomManager.openTicker).not.toHaveBeenCalled();
+    });
+
+    it('skips a journal sync event with a non-string payload', () => {
+      onLoadHandler.init();
+
+      const listener = mockGM_addValueChangeListener.mock.calls.find(
+        ([key]) => key === Constants.STORAGE.EVENTS.JOURNAL_OPENED
+      )?.[1] as (key: string, oldValue: unknown, newValue: unknown) => void;
+
+      listener(Constants.STORAGE.EVENTS.JOURNAL_OPENED, undefined, 123);
+
+      expect(mockJournalHandler.handleJournalOpened).not.toHaveBeenCalled();
+      expect(mockDomManager.openTicker).not.toHaveBeenCalled();
+    });
+
+    it('skips a journal sync event with malformed JSON', () => {
+      onLoadHandler.init();
+
+      const listener = mockGM_addValueChangeListener.mock.calls.find(
+        ([key]) => key === Constants.STORAGE.EVENTS.JOURNAL_OPENED
+      )?.[1] as (key: string, oldValue: unknown, newValue: unknown) => void;
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      listener(Constants.STORAGE.EVENTS.JOURNAL_OPENED, undefined, '{malformed');
+
+      expect(warnSpy).toHaveBeenCalledWith('[JournalSync][TradingView] Ignoring malformed journalOpenedEvent value', {
+        newValue: '{malformed',
+      });
+      expect(mockJournalHandler.handleJournalOpened).not.toHaveBeenCalled();
+      expect(mockDomManager.openTicker).not.toHaveBeenCalled();
+
+      warnSpy.mockRestore();
     });
 
     it('should register all domain event consumers before FIRST_LOAD publish', () => {

@@ -138,4 +138,28 @@ describe('JournalClient', () => {
       expect(result).toEqual(apiEnvelope.data);
     });
   });
+
+  describe('getJournal', () => {
+    it('should GET a journal by id and unwrap Kohan envelope data', async () => {
+      const apiEnvelope = {
+        status: 'success',
+        data: { id: 'jrn_abc123', ticker: 'NSE:KLAC' },
+      };
+
+      mockMakeRequest.mockResolvedValue(apiEnvelope as any);
+
+      const result = await journalClient.getJournal('jrn_abc123');
+
+      expect(mockMakeRequest).toHaveBeenCalledWith('/journals/jrn_abc123');
+      expect(result).toEqual(apiEnvelope.data);
+    });
+
+    it('should wrap get journal errors with context', async () => {
+      mockMakeRequest.mockRejectedValue(new Error('404 Not Found'));
+
+      await expect(journalClient.getJournal('jrn_abc123')).rejects.toThrow(
+        'Failed to get journal: 404 Not Found'
+      );
+    });
+  });
 });

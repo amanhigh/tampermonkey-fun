@@ -32,6 +32,13 @@ export interface IJournalClient extends IKohanClient {
   createJournal(request: CreateJournalRequest): Promise<JournalRecord>;
 
   /**
+   * Get a journal by its external ID.
+   * @param journalId Journal external ID
+   * @returns Promise resolving with the journal record
+   */
+  getJournal(journalId: string): Promise<JournalRecord>;
+
+  /**
    * Add an image to an existing journal.
    * @param journalId Journal external ID
    * @param image Image request payload
@@ -79,6 +86,16 @@ export class JournalClient extends KohanClient implements IJournalClient {
       return response.data;
     } catch (error) {
       throw new Error(`Failed to create journal: ${(error as Error).message}`);
+    }
+  }
+
+  /** @inheritdoc */
+  async getJournal(journalId: string): Promise<JournalRecord> {
+    try {
+      const response = await this.makeRequest<KohanEnvelope<JournalRecord>>(`/journals/${journalId}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to get journal: ${(error as Error).message}`);
     }
   }
 

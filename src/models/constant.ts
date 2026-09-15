@@ -211,7 +211,6 @@ Support:
   DOM_EVENTS: {
     WATCHLIST_CHANGE: 'watchListChangeEvent',
     TICKER_CHANGE: 'tickerChange',
-    JOURNAL_OPENED: 'kohan:journal-opened',
   },
 
   MISC: {
