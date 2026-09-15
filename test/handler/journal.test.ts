@@ -10,6 +10,7 @@ import { ICategoryManager } from '../../src/manager/category';
 import { ITimeFrameManager } from '../../src/manager/timeframe';
 import { JournalActionType } from '../../src/models/journal';
 import { Constants } from '../../src/models/constant';
+import { JournalOpenEvent } from '../../src/models/events';
 import { TickerTimeframe, Sequence } from '../../src/models/timeframe';
 import { Notifier } from '../../src/util/notify';
 
@@ -598,7 +599,7 @@ describe('JournalHandler', () => {
     });
   });
 
-  describe('handleBarkatJournalOpen', () => {
+  describe('registerBarkatJournalOpenListener', () => {
     it('should fetch the journal and open its primary ticker through the DOM manager', async () => {
       mockJournalManager.getJournal.mockResolvedValue({
         id: 'jrn_abc123',
@@ -609,7 +610,12 @@ describe('JournalHandler', () => {
         created_at: '2024-01-01T00:00:00Z',
       });
 
-      journalHandler.handleBarkatJournalOpen(' jrn_abc123 ');
+      journalHandler.registerBarkatJournalOpenListener();
+      mockJournalOpenListener(
+        Constants.STORAGE.EVENTS.JOURNAL_OPENED,
+        undefined,
+        new JournalOpenEvent(' jrn_abc123 ', 1700000000000).stringify()
+      );
       await new Promise<void>((resolve) => setImmediate(resolve));
 
       expect(mockTickerManager.openTicker).toHaveBeenCalledWith('NSE:KLAC');
@@ -618,17 +624,49 @@ describe('JournalHandler', () => {
     });
 
     it('should skip journal fetching and ticker opening when journal id is empty', () => {
-      journalHandler.handleBarkatJournalOpen(' ');
+      journalHandler.registerBarkatJournalOpenListener();
+      mockJournalOpenListener(
+        Constants.STORAGE.EVENTS.JOURNAL_OPENED,
+        undefined,
+        new JournalOpenEvent(' ', 1700000000000).stringify()
+      );
 
       expect(mockJournalManager.getJournal).not.toHaveBeenCalled();
       expect(mockTickerManager.openTicker).not.toHaveBeenCalled();
+    });
+
+    it('should skip a non-string journal-open payload', () => {
+      journalHandler.registerBarkatJournalOpenListener();
+      mockJournalOpenListener(Constants.STORAGE.EVENTS.JOURNAL_OPENED, undefined, 123);
+
+      expect(mockJournalManager.getJournal).not.toHaveBeenCalled();
+      expect(mockTickerManager.openTicker).not.toHaveBeenCalled();
+    });
+
+    it('should skip a malformed journal-open payload', () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      journalHandler.registerBarkatJournalOpenListener();
+      mockJournalOpenListener(Constants.STORAGE.EVENTS.JOURNAL_OPENED, undefined, '{malformed');
+
+      expect(warnSpy).toHaveBeenCalledWith('[JournalSync][TradingView] Ignoring malformed journalOpenedEvent value', {
+        newValue: '{malformed',
+      });
+      expect(mockJournalManager.getJournal).not.toHaveBeenCalled();
+      expect(mockTickerManager.openTicker).not.toHaveBeenCalled();
+
+      warnSpy.mockRestore();
     });
 
     it('should not open a ticker when fetching the journal fails', async () => {
       mockJournalManager.getJournal.mockRejectedValue(new Error('API down'));
       const consoleError = jest.spyOn(console, 'error').mockImplementation();
 
-      journalHandler.handleBarkatJournalOpen('jrn_abc123');
+      journalHandler.registerBarkatJournalOpenListener();
+      mockJournalOpenListener(
+        Constants.STORAGE.EVENTS.JOURNAL_OPENED,
+        undefined,
+        new JournalOpenEvent('jrn_abc123', 1700000000000).stringify()
+      );
       await new Promise<void>((resolve) => setImmediate(resolve));
 
       expect(mockTickerManager.openTicker).not.toHaveBeenCalled();

@@ -1,3 +1,5 @@
+/* eslint-disable max-lines */
+
 /**
  * Interface and implementations for journal handling operations
  */
@@ -54,14 +56,9 @@ export interface IJournalHandler {
   // ── Sync Consumer ──
 
   /**
-   * Opens the chart for the journal announced by the Barkat host.
+   * Registers the TradingView listener for the journal-open event published by the Barkat host.
    */
-  handleBarkatJournalOpen(journalId: string): void;
-
-  /**
-   * Navigates to the journal review page after a journal was recorded on TradingView.
-   */
-  handleTvJournalRecorded(journalId: string): void;
+  registerBarkatJournalOpenListener(): void;
 
   /**
    * Registers the localhost listener for the journal-open event published by TradingView.
@@ -436,8 +433,37 @@ export class JournalHandler implements IJournalHandler {
 
   // ── Sync Consumer ──
 
-  /** @inheritdoc */
-  public handleBarkatJournalOpen(journalId: string): void {
+  /**
+   * Registers the TradingView listener for the journal-open event published by the Barkat host.
+   */
+  public registerBarkatJournalOpenListener(): void {
+    GM_addValueChangeListener(
+      Constants.STORAGE.EVENTS.JOURNAL_OPENED,
+      (_keyName: string, _oldValue: unknown, newValue: unknown) => {
+        if (typeof newValue === 'string' && newValue.trim()) {
+          let event: JournalOpenEvent;
+          try {
+            event = JournalOpenEvent.fromString(newValue);
+          } catch {
+            console.warn('[JournalSync][TradingView] Ignoring malformed journalOpenedEvent value', { newValue });
+            return;
+          }
+
+          if (typeof event.journalId !== 'string' || !event.journalId.trim()) {
+            console.warn('[JournalSync][TradingView] Ignoring journalOpenedEvent with empty journal id', { newValue });
+            return;
+          }
+
+          this.handleBarkatJournalOpen(event.journalId);
+        } else {
+          console.warn('[JournalSync][TradingView] Ignoring invalid journalOpenedEvent value', { newValue });
+        }
+      }
+    );
+  }
+
+  /** Opens the chart for the journal announced by the Barkat host. */
+  private handleBarkatJournalOpen(journalId: string): void {
     const normalizedJournalId = journalId.trim();
     if (!normalizedJournalId) {
       return;
@@ -459,16 +485,6 @@ export class JournalHandler implements IJournalHandler {
   }
 
   /** @inheritdoc */
-  public handleTvJournalRecorded(journalId: string): void {
-    const normalizedJournalId = journalId.trim();
-    if (!normalizedJournalId) {
-      return;
-    }
-
-    window.location.replace(`/journal/${normalizedJournalId}`);
-  }
-
-  /** @inheritdoc */
   public registerTvJournalRecordedListener(): void {
     GM_addValueChangeListener(
       Constants.STORAGE.EVENTS.JOURNAL_OPEN,
@@ -479,5 +495,15 @@ export class JournalHandler implements IJournalHandler {
         }
       }
     );
+  }
+
+  /** Navigates to the journal review page after a journal was recorded on TradingView. */
+  private handleTvJournalRecorded(journalId: string): void {
+    const normalizedJournalId = journalId.trim();
+    if (!normalizedJournalId) {
+      return;
+    }
+
+    window.location.replace(`/journal/${normalizedJournalId}`);
   }
 }

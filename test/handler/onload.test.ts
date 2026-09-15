@@ -13,7 +13,6 @@ import { IDomainEventConsumer, ISubscriber, IPublisher } from '../../src/manager
 import { DomainEventType } from '../../src/models/domain_event';
 import { Constants } from '../../src/models/constant';
 import { TickerArea } from '../../src/models/dom';
-import { JournalOpenEvent } from '../../src/models/events';
 
 // Mock document and jQuery
 const mockDocument = {
@@ -109,8 +108,7 @@ describe('OnLoadHandler', () => {
     } as unknown as jest.Mocked<IDomManager>;
 
     mockJournalHandler = {
-      handleBarkatJournalOpen: jest.fn(),
-      registerTvJournalRecordedListener: jest.fn(),
+      registerBarkatJournalOpenListener: jest.fn(),
     } as unknown as jest.Mocked<IJournalHandler>;
 
     mockTradingViewManager = {
@@ -162,6 +160,7 @@ describe('OnLoadHandler', () => {
       // Static listeners set up
       expect(mockDocument.addEventListener).toHaveBeenCalledWith('keydown', expect.any(Function));
       expect(mockGM_addValueChangeListener).toHaveBeenCalled();
+      expect(mockJournalHandler.registerBarkatJournalOpenListener).toHaveBeenCalled();
 
       // Ticker observer setup (first wait)
       expect(mockWaitUtil.waitJEE).toHaveBeenCalledWith(Constants.DOM.HEADER.MAIN, expect.any(Function), 10);
@@ -177,68 +176,6 @@ describe('OnLoadHandler', () => {
 
       // Screener observer set up (after watchlist)
       expect(mockObserveUtil.nodeObserver).toHaveBeenCalledWith(document.body, expect.any(Function));
-    });
-
-    it('forwards the journal id when a journal sync event fires', () => {
-      onLoadHandler.init();
-
-      const listener = mockGM_addValueChangeListener.mock.calls.find(
-        ([key]) => key === Constants.STORAGE.EVENTS.JOURNAL_OPENED
-      )?.[1] as (key: string, oldValue: unknown, newValue: unknown) => void;
-
-      listener(
-        Constants.STORAGE.EVENTS.JOURNAL_OPENED,
-        undefined,
-        new JournalOpenEvent('jrn_abc123', 1700000000000).stringify()
-      );
-
-      expect(mockJournalHandler.handleBarkatJournalOpen).toHaveBeenCalledWith('jrn_abc123');
-      expect(mockDomManager.openTicker).not.toHaveBeenCalled();
-    });
-
-    it('skips a journal sync event with an empty journal id', () => {
-      onLoadHandler.init();
-
-      const listener = mockGM_addValueChangeListener.mock.calls.find(
-        ([key]) => key === Constants.STORAGE.EVENTS.JOURNAL_OPENED
-      )?.[1] as (key: string, oldValue: unknown, newValue: unknown) => void;
-
-      listener(Constants.STORAGE.EVENTS.JOURNAL_OPENED, undefined, new JournalOpenEvent(' ', 123).stringify());
-
-      expect(mockJournalHandler.handleBarkatJournalOpen).not.toHaveBeenCalled();
-      expect(mockDomManager.openTicker).not.toHaveBeenCalled();
-    });
-
-    it('skips a journal sync event with a non-string payload', () => {
-      onLoadHandler.init();
-
-      const listener = mockGM_addValueChangeListener.mock.calls.find(
-        ([key]) => key === Constants.STORAGE.EVENTS.JOURNAL_OPENED
-      )?.[1] as (key: string, oldValue: unknown, newValue: unknown) => void;
-
-      listener(Constants.STORAGE.EVENTS.JOURNAL_OPENED, undefined, 123);
-
-      expect(mockJournalHandler.handleBarkatJournalOpen).not.toHaveBeenCalled();
-      expect(mockDomManager.openTicker).not.toHaveBeenCalled();
-    });
-
-    it('skips a journal sync event with malformed JSON', () => {
-      onLoadHandler.init();
-
-      const listener = mockGM_addValueChangeListener.mock.calls.find(
-        ([key]) => key === Constants.STORAGE.EVENTS.JOURNAL_OPENED
-      )?.[1] as (key: string, oldValue: unknown, newValue: unknown) => void;
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
-
-      listener(Constants.STORAGE.EVENTS.JOURNAL_OPENED, undefined, '{malformed');
-
-      expect(warnSpy).toHaveBeenCalledWith('[JournalSync][TradingView] Ignoring malformed journalOpenedEvent value', {
-        newValue: '{malformed',
-      });
-      expect(mockJournalHandler.handleBarkatJournalOpen).not.toHaveBeenCalled();
-      expect(mockDomManager.openTicker).not.toHaveBeenCalled();
-
-      warnSpy.mockRestore();
     });
 
     it('should register all domain event consumers before FIRST_LOAD publish', () => {
