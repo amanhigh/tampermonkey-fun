@@ -42,6 +42,7 @@ import { IAlertHandler, AlertHandler } from '../handler/alert';
 import { IAlertSummaryBar, AlertSummaryBar } from '../handler/bar/alert_summary';
 import { AuditHandler, IAuditHandler } from '../handler/audit';
 import { JournalHandler, IJournalHandler } from '../handler/journal';
+import { JournalSyncHandler, IJournalSyncHandler } from '../handler/journal_sync';
 import { HotkeyHandler, IHotkeyHandler } from '../handler/hotkey';
 import { KeyConfig } from '../handler/key_config';
 import { IModifierKeyConfig, ModifierKeyConfig } from '../handler/modifier_config';
@@ -86,6 +87,7 @@ import { GttAuditSection } from '../handler/gtt_section';
 import { TradeRiskSection } from '../handler/trade_risk_section';
 import { StaleReviewPlugin } from '../manager/stale_review_plugin';
 import { StaleReviewSection } from '../handler/stale_review_section';
+import { IToolbarHandler, ToolbarHandler } from '../handler/toolbar';
 
 /**
  * Project Architecture Overview
@@ -115,16 +117,14 @@ export class Factory {
           new Barkat(
             Factory.handler.global(),
             Factory.util.ui(),
-            Factory.handler.ticker(),
+            Factory.handler.toolbar(),
             Factory.handler.onload(),
-            Factory.handler.alert(),
             Factory.handler.journal(),
+            Factory.handler.journalSync(),
             Factory.handler.command(),
             Factory.handler.kite(),
             Factory.handler.alertFeed(),
             Factory.handler.dashboardSync(),
-            Factory.handler.panel(),
-            Factory.manager.dom(),
             Factory.manager.tv()
           )
       ),
@@ -444,6 +444,7 @@ export class Factory {
             Factory.handler.tickerChange(),
             Factory.manager.paint(),
             Factory.manager.dom(),
+            Factory.handler.journalSync(),
             Factory.manager.eventPublisher(),
             [
               Factory.handler.alertFeed(),
@@ -577,10 +578,15 @@ export class Factory {
             Factory.util.ui(),
             Factory.manager.tv(),
             Factory.manager.style(),
-            Factory.manager.alert(),
             Factory.manager.category(),
-            Factory.manager.timeFrame()
+            Factory.manager.timeFrame(),
+            Factory.handler.journalSync()
           )
+      ),
+    journalSync: (): IJournalSyncHandler =>
+      Factory.getInstance(
+        'journalSyncHandler',
+        () => new JournalSyncHandler(Factory.manager.journal(), Factory.manager.dom())
       ),
     imdb: (): IImdbHandler =>
       Factory.getInstance('imdbHandler', () => new ImdbHandler(Factory.manager.imdb(), Factory.util.search())),
@@ -609,6 +615,19 @@ export class Factory {
       Factory.getInstance(
         'panelHandler',
         () => new PanelHandler(Factory.util.smart(), Factory.handler.ticker(), Factory.manager.dom())
+      ),
+    toolbar: (): IToolbarHandler =>
+      Factory.getInstance(
+        'toolbarHandler',
+        () =>
+          new ToolbarHandler(
+            Factory.util.ui(),
+            Factory.handler.ticker(),
+            Factory.handler.alert(),
+            Factory.handler.panel(),
+            Factory.handler.journal(),
+            Factory.manager.dom()
+          )
       ),
     picasso: (): IPicassoHandler =>
       Factory.getInstance(

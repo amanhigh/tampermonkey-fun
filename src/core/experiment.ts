@@ -5,6 +5,8 @@ import { IKeyUtil } from '../util/key';
 import { Notifier } from '../util/notify';
 import { RunBarkat } from './barkat';
 
+// FIXME: Migrate Seer Script to this Repo, not checked in currently.
+
 interface TestComponents {
   input: JQuery;
   experimentButton: JQuery;

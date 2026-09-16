@@ -6,11 +6,11 @@ import {
   CreateJournalInput,
   JournalRecord,
   JournalTimeframe,
-  JournalSequence,
   JournalResultStatus,
 } from '../../src/models/journal';
 import { TickerTimeframe, TMN_SEQUENCE, SMN_SEQUENCE, YR_SEQUENCE } from '../../src/models/timeframe';
 import { ScreenshotResponse } from '../../src/models/os';
+import { JournalOpenEvent } from '../../src/models/events';
 import { Notifier } from '../../src/util/notify';
 
 // Mock Notifier
@@ -36,7 +36,7 @@ describe('JournalManager', () => {
   const createMockJournalRecord = (overrides: Partial<JournalRecord> = {}): JournalRecord => ({
     id: 'ext-1',
     ticker: 'AAPL',
-    sequence: 'MWD' as JournalSequence,
+    top_timeframe: TickerTimeframe.TMN,
     type: 'TAKEN',
     status: 'RUNNING',
     created_at: '2024-01-01T00:00:00Z',
@@ -56,6 +56,7 @@ describe('JournalManager', () => {
     // Mock JournalClient
     mockJournalClient = {
       createJournal: jest.fn().mockResolvedValue(createMockJournalRecord()),
+      getJournal: jest.fn(),
       listJournals: jest.fn(),
       addJournalImage: jest.fn(),
       addJournalTag: jest.fn(),
@@ -101,15 +102,50 @@ describe('JournalManager', () => {
     });
   });
 
+  describe('publishJournalOpenedEvent', () => {
+    it('should persist the journal id and timestamp for TradingView synchronization', async () => {
+      const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1700000000000);
+
+      await journalManager.publishJournalOpenedEvent('AAPL');
+
+      expect(GM.setValue).toHaveBeenCalledWith(
+        'journalOpenedEvent',
+        new JournalOpenEvent('AAPL', 1700000000000).stringify()
+      );
+
+      nowSpy.mockRestore();
+    });
+
+    it('should produce different payloads for successive publishes', async () => {
+      const nowSpy = jest.spyOn(Date, 'now').mockReturnValueOnce(1000).mockReturnValueOnce(2000);
+
+      await journalManager.publishJournalOpenedEvent('AAPL');
+      await journalManager.publishJournalOpenedEvent('AAPL');
+
+      expect(GM.setValue).toHaveBeenNthCalledWith(
+        1,
+        'journalOpenedEvent',
+        new JournalOpenEvent('AAPL', 1000).stringify()
+      );
+      expect(GM.setValue).toHaveBeenNthCalledWith(
+        2,
+        'journalOpenedEvent',
+        new JournalOpenEvent('AAPL', 2000).stringify()
+      );
+
+      nowSpy.mockRestore();
+    });
+  });
+
   describe('createJournal', () => {
-    it('should forward explicit sequence from input to request', async () => {
+    it('should forward TMN top timeframe from input to request', async () => {
       const input: CreateJournalInput = {
         ticker: 'AAPL',
         type: 'TAKEN',
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
-        timeframe: TickerTimeframe.TMN,
+        topTimeframe: TickerTimeframe.TMN,
       };
 
       await journalManager.createJournal(input);
@@ -117,27 +153,63 @@ describe('JournalManager', () => {
       expect(mockJournalClient.createJournal).toHaveBeenCalledWith(
         expect.objectContaining({
           ticker: 'AAPL',
-          sequence: 'MWD',
+          top_timeframe: 'TMN',
         })
       );
     });
 
-    it('should forward YR sequence from input even when screenshots contain DL', async () => {
+    it('should forward YR top timeframe from input even when screenshots contain DL', async () => {
       const input: CreateJournalInput = {
         ticker: 'AAPL',
         type: 'TAKEN',
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
-        timeframe: TickerTimeframe.YR,
+        topTimeframe: TickerTimeframe.YR,
       };
 
       await journalManager.createJournal(input);
 
       expect(mockJournalClient.createJournal).toHaveBeenCalledWith(
         expect.objectContaining({
-          sequence: 'YR',
+          top_timeframe: 'YR',
         })
+      );
+    });
+
+    it('should forward SMN top timeframe from input', async () => {
+      const input: CreateJournalInput = {
+        ticker: 'AAPL',
+        type: 'TAKEN',
+        status: 'RUNNING',
+        screenshots: createDefaultScreenshots(),
+        reason: '',
+        topTimeframe: TickerTimeframe.SMN,
+      };
+
+      await journalManager.createJournal(input);
+
+      expect(mockJournalClient.createJournal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          top_timeframe: 'SMN',
+        })
+      );
+    });
+
+    it('should never send legacy sequence field in creation payload', async () => {
+      const input: CreateJournalInput = {
+        ticker: 'AAPL',
+        type: 'TAKEN',
+        status: 'RUNNING',
+        screenshots: createDefaultScreenshots(),
+        reason: '',
+        topTimeframe: TickerTimeframe.TMN,
+      };
+
+      await journalManager.createJournal(input);
+
+      expect(mockJournalClient.createJournal).toHaveBeenCalledWith(
+        expect.not.objectContaining({ sequence: expect.any(String) })
       );
     });
 
@@ -148,7 +220,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
-        timeframe: TickerTimeframe.TMN,
+        topTimeframe: TickerTimeframe.TMN,
       };
 
       await journalManager.createJournal(input);
@@ -172,7 +244,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: 'HGS - oe',
-        timeframe: TickerTimeframe.TMN,
+        topTimeframe: TickerTimeframe.TMN,
       };
 
       await journalManager.createJournal(input);
@@ -191,7 +263,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
-        timeframe: TickerTimeframe.TMN,
+        topTimeframe: TickerTimeframe.TMN,
       };
 
       await journalManager.createJournal(input);
@@ -213,7 +285,7 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
-        timeframe: TickerTimeframe.TMN,
+        topTimeframe: TickerTimeframe.TMN,
       };
 
       const result = await journalManager.createJournal(input);
@@ -230,10 +302,28 @@ describe('JournalManager', () => {
         status: 'RUNNING',
         screenshots: createDefaultScreenshots(),
         reason: '',
-        timeframe: TickerTimeframe.TMN,
+        topTimeframe: TickerTimeframe.TMN,
       };
 
       await expect(journalManager.createJournal(input)).rejects.toThrow('API Error');
+    });
+  });
+
+  describe('getJournal', () => {
+    it('should delegate to the journal client and return the journal', async () => {
+      const expectedJournal = createMockJournalRecord({ id: 'jrn_abc123', ticker: 'NSE:KLAC' });
+      mockJournalClient.getJournal.mockResolvedValue(expectedJournal);
+
+      const result = await journalManager.getJournal('jrn_abc123');
+
+      expect(mockJournalClient.getJournal).toHaveBeenCalledWith('jrn_abc123');
+      expect(result).toEqual(expectedJournal);
+    });
+
+    it('should propagate client errors', async () => {
+      mockJournalClient.getJournal.mockRejectedValue(new Error('API down'));
+
+      await expect(journalManager.getJournal('jrn_abc123')).rejects.toThrow('API down');
     });
   });
 

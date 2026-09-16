@@ -9,7 +9,6 @@ import { Notifier } from '../util/notify';
 export interface ICommandInputHandler {
   /**
    * Unified handler for all input changes/submissions:
-   * - Quick ticker opening with "xox" suffix (e.g "HDFC xox")
    * - Price list for alerts (e.g "100.5 102.3")
    * - Command format (e.g "E=NSE")
    * @param e Input event (keyboard/change)
@@ -22,7 +21,7 @@ export interface ICommandInputHandler {
   focusCommandInput(): void;
 }
 
-type InputType = 'TICKER' | 'PRICES' | 'COMMAND' | 'UNKNOWN';
+type InputType = 'PRICES' | 'COMMAND' | 'UNKNOWN';
 
 interface InputProcessor {
   type: InputType;
@@ -34,7 +33,6 @@ interface InputProcessor {
  */
 export class CommandInputHandler implements ICommandInputHandler {
   private readonly ENTER_KEY_CODE = 13;
-  private readonly TICKER_SUFFIX = 'xox';
 
   constructor(
     private readonly tickerHandler: ITickerHandler,
@@ -50,17 +48,11 @@ export class CommandInputHandler implements ICommandInputHandler {
 
     const processor = this.determineInputType(input);
 
-    // Only require Enter key for non-ticker inputs
-    if (processor.type !== 'TICKER') {
-      const keyEvent = e as JQuery.KeyDownEvent;
-      if (!this.isEnterKey(keyEvent)) {
-        return;
-      }
+    const keyEvent = e as JQuery.KeyDownEvent;
+    if (!this.isEnterKey(keyEvent)) {
+      return;
     }
     switch (processor.type) {
-      case 'TICKER':
-        this.processTickerInput(processor.value);
-        break;
       case 'PRICES':
         await this.processPriceInput(processor.value);
         break;
@@ -79,14 +71,6 @@ export class CommandInputHandler implements ICommandInputHandler {
   }
 
   private determineInputType(value: string): InputProcessor {
-    // HACK:  Improved Ends With Symbol
-    if (this.hasTickerSuffix(value)) {
-      return {
-        type: 'TICKER',
-        value: this.extractTickerFromInput(value),
-      };
-    }
-
     // Check for command format (action=value)
     if (value.includes('=')) {
       return {
@@ -109,25 +93,12 @@ export class CommandInputHandler implements ICommandInputHandler {
     };
   }
 
-  private processTickerInput(ticker: string): void {
-    void this.tickerHandler.openTicker(ticker);
-    this.clearInputField();
-  }
-
   private async processPriceInput(input: string): Promise<void> {
     await this.alertHandler.createAlertsFromTextBox(input);
   }
 
   private isPriceList(value: string): boolean {
     return value.split(' ').every((item) => !isNaN(parseFloat(item)));
-  }
-
-  private hasTickerSuffix(value: string): boolean {
-    return value.endsWith(this.TICKER_SUFFIX);
-  }
-
-  private extractTickerFromInput(value: string): string {
-    return value.substring(0, value.length - this.TICKER_SUFFIX.length);
   }
 
   private clearInputField(): void {
@@ -156,7 +127,6 @@ export class CommandInputHandler implements ICommandInputHandler {
         <div style="${styles.container}">
             <div style="${styles.section}">Quick Commands:</div>
             <div style="${styles.list}">
-                <div style="${styles.item}">• TICKER${this.TICKER_SUFFIX} - Open New Ticker</div>
                 <div style="${styles.item}">• 100.5 102.3 - Create Price Alerts</div>
             </div>
 

@@ -134,16 +134,16 @@ describe('SearchUtil', () => {
       searchUtil.xtremeSearch(query);
 
       expect(mockGM.openInTab).toHaveBeenCalledWith(
-        `https://www.airtelxstream.in/search/${encodeURIComponent('bollywood movies')}?q=${encodeURIComponent('bollywood movies')}`,
+        `https://www.airtelxstream.in/search?q=${encodeURIComponent('bollywood movies')}`,
         true
       );
     });
 
-    test('should include query in both path and query parameter', () => {
+    test('should handle query parameter correctly', () => {
       const query = 'action films';
       searchUtil.xtremeSearch(query);
 
-      const expectedUrl = `https://www.airtelxstream.in/search/${encodeURIComponent('action films')}?q=${encodeURIComponent('action films')}`;
+      const expectedUrl = `https://www.airtelxstream.in/search?q=${encodeURIComponent('action films')}`;
       expect(mockGM.openInTab).toHaveBeenCalledWith(expectedUrl, true);
     });
 
@@ -152,7 +152,7 @@ describe('SearchUtil', () => {
       searchUtil.xtremeSearch(query);
 
       expect(mockGM.openInTab).toHaveBeenCalledWith(
-        `https://www.airtelxstream.in/search/${encodeURIComponent('sci-fi & fantasy')}?q=${encodeURIComponent('sci-fi & fantasy')}`,
+        `https://www.airtelxstream.in/search?q=${encodeURIComponent('sci-fi & fantasy')}`,
         true
       );
     });
@@ -225,7 +225,7 @@ describe('SearchUtil', () => {
       searchUtil.xtremeSearch(query);
 
       const calledUrl = mockGM.openInTab.mock.calls[0][0];
-      expect(calledUrl).toMatch(/^https:\/\/www\.airtelxstream\.in\/search\/.+\?q=.+$/);
+      expect(calledUrl).toMatch(/^https:\/\/www\.airtelxstream\.in\/search\?q=.+$/);
     });
 
     test('should construct valid Tata Play Binge URLs', () => {

@@ -26,8 +26,8 @@ describe('AuditSectionRegistry', () => {
         plugin: mockPlugin,
         headerFormatter: jest.fn().mockReturnValue('Header'),
         buttonColorMapper: jest.fn().mockReturnValue('blue'),
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
+        onLeftClick: jest.fn().mockResolvedValue(undefined),
+        onRightClick: jest.fn().mockResolvedValue(true),
       };
 
       registry.registerSection(mockSection);
@@ -48,8 +48,8 @@ describe('AuditSectionRegistry', () => {
         },
         headerFormatter: jest.fn().mockReturnValue('Header'),
         buttonColorMapper: jest.fn().mockReturnValue('blue'),
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
+        onLeftClick: jest.fn().mockResolvedValue(undefined),
+        onRightClick: jest.fn().mockResolvedValue(true),
       };
       
       registry.registerSection(mockSection);
@@ -76,8 +76,8 @@ describe('AuditSectionRegistry', () => {
         plugin: mockPlugin,
         headerFormatter: jest.fn().mockReturnValue('Header'),
         buttonColorMapper: jest.fn().mockReturnValue('blue'),
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
+        onLeftClick: jest.fn().mockResolvedValue(undefined),
+        onRightClick: jest.fn().mockResolvedValue(true),
       };
 
       registry.registerSection(mockSection);
@@ -119,8 +119,8 @@ describe('AuditSectionRegistry', () => {
         plugin: mockPlugin1,
         headerFormatter: jest.fn().mockReturnValue('Header 1'),
         buttonColorMapper: jest.fn().mockReturnValue('blue'),
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
+        onLeftClick: jest.fn().mockResolvedValue(undefined),
+        onRightClick: jest.fn().mockResolvedValue(true),
       };
 
       const mockSection2: IAuditSection = {
@@ -130,8 +130,8 @@ describe('AuditSectionRegistry', () => {
         plugin: mockPlugin2,
         headerFormatter: jest.fn().mockReturnValue('Header 2'),
         buttonColorMapper: jest.fn().mockReturnValue('red'),
-        onLeftClick: jest.fn(),
-        onRightClick: jest.fn(),
+        onLeftClick: jest.fn().mockResolvedValue(undefined),
+        onRightClick: jest.fn().mockResolvedValue(true),
       };
 
       registry.registerSection(mockSection1);

@@ -6,6 +6,7 @@ import { IWatchListHandler } from './watchlist';
 import { ITickerChangeHandler } from './ticker_change';
 import { IHotkeyHandler } from './hotkey';
 import { IAlertHandler } from './alert';
+import { IJournalSyncHandler } from './journal_sync';
 import { IPaintManager } from '../manager/paint';
 import { IDomManager } from '../manager/dom';
 import { ITradingViewManager } from '../manager/tv';
@@ -27,7 +28,7 @@ export interface IOnLoadHandler {
  *
  * Initialization is serial:
  * 1. Register all domain event consumers (so FIRST_LOAD is handled)
- * 2. Set up static listeners (keydown, alert click)
+ * 2. Set up static listeners (keydown, alert click, journal opened)
  * 3. Set up ticker observer
  * 4. Inside ticker callback, set up watchlist observer
  * 5. Inside watchlist callback, publish FIRST_LOAD and set up screener observer
@@ -47,6 +48,7 @@ export class OnLoadHandler implements IOnLoadHandler {
     private readonly tickerChangeHandler: ITickerChangeHandler,
     private readonly paintManager: IPaintManager,
     private readonly domManager: IDomManager,
+    private readonly journalSyncHandler: IJournalSyncHandler,
     private readonly publisher: IPublisher,
     private readonly domainEventConsumers: IDomainEventConsumer[],
     private readonly subscriber: ISubscriber,
@@ -63,6 +65,7 @@ export class OnLoadHandler implements IOnLoadHandler {
     // 2. Set up static listeners (no DOM dependency)
     this.setupKeydownEventListener();
     this.setupAlertClickListener();
+    this.journalSyncHandler.registerBarkatJournalOpenListener();
 
     // 3. Start serial DOM observer setup
     this.setupTickerObserver(() => {

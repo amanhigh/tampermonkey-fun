@@ -48,12 +48,13 @@ export class AlertsAuditSection extends BaseAuditSection implements IAuditSectio
   readonly context: unknown = undefined;
 
   // Interaction handlers
-  readonly onLeftClick = (result: AuditResult) => {
-    void this.tickerHandler.openTicker(result.target);
+  readonly onLeftClick = async (result: AuditResult): Promise<void> => {
+    await this.tickerHandler.openTicker(result.target);
   };
 
-  readonly onRightClick = async (result: AuditResult): Promise<void> => {
+  readonly onRightClick = async (result: AuditResult): Promise<boolean> => {
     await this.tickerHandler.stopTracking(result.target);
+    return true;
   };
 
   readonly onFixAll = async (results: AuditResult[]): Promise<void> => {

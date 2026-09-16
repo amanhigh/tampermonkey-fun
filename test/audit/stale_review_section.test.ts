@@ -45,8 +45,8 @@ describe('StaleReviewSection', () => {
   });
 
   describe('onLeftClick', () => {
-    test('opens ticker in TradingView', () => {
-      section.onLeftClick(createResult('TCS', 100));
+    test('opens ticker in TradingView', async () => {
+      await section.onLeftClick(createResult('TCS', 100));
       expect(mockTickerHandler.openTicker).toHaveBeenCalledWith('TCS');
     });
   });

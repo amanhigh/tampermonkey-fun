@@ -132,11 +132,6 @@ export const Constants = Object.freeze({
       ALERT_DATA: 'div.alertNotifData > a',
       ALERT_TITLE: '.alertDataTitle',
     },
-    JOURNAL: {
-      REVIEW_LINK: 'a[href^="/journal/"]',
-      CURRENT_TICKER: 'h2.text-3xl',
-      REVIEW_TICKER: 'span.font-semibold[x-text="item.ticker"]',
-    },
     SIDEBAR: {
       DELETE_ARROW: 'div [data-name="removeAllDrawingTools"] button[class^=arrow]', // Old Name: deleteArrowSelector
       DELETE_DRAWING: 'div [data-name="remove-drawing-tools"]', // Old Name: deleteDrawingSelector
@@ -173,8 +168,8 @@ export const Constants = Object.freeze({
       ], // Old name: reasons
       OVERRIDES: ['egf', 'int', 'lc', 'loc', 'doji', 'big', 'pn', 'tc', 'cfl', 'acm', 'adv'], // Old name: overrides
       OVERRIDE_GROUP_ID: 'reason-override',
-      SEQUENCE_GROUP_ID: 'journal-sequence',
-      SEQUENCE_CHOICES: ['YR', 'SMN', 'TMN'],
+      TOP_TIMEFRAME_GROUP_ID: 'journal-sequence',
+      TOP_TIMEFRAME_CHOICES: ['YR', 'SMN', 'TMN'],
       TRADE_INFO: `Trends
 HTF - Up
 MTF - Up
@@ -204,6 +199,7 @@ Support:
       ALERT_FEED_UPDATE: 'alertFeedEvent', // Old Name: tvWatchChangeEvent
       ALERT_CLICKED: 'alertClickedEvent', // Old Name: alertClickedEvent
       JOURNAL_OPEN: 'journalOpenEvent',
+      JOURNAL_OPENED: 'journalOpenedEvent',
       TICKER_CHANGED: 'tickerChangedEvent',
       GTT_REFERSH: 'gttRefereshEvent', // Old Name: gttOrderEvent
       GTT_CREATE: 'gttCreateEvent', // Old Name: gttRequest

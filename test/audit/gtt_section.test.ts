@@ -28,7 +28,7 @@ describe('GttAuditSection', () => {
     };
 
     mockKiteManager = {
-      deleteOrder: jest.fn(),
+      deleteOrder: jest.fn().mockResolvedValue(undefined),
     };
 
     mockUIUtil = {
@@ -71,7 +71,7 @@ describe('GttAuditSection', () => {
   });
 
   describe('Left Click Handler', () => {
-    test('opens ticker in TradingView', () => {
+    test('opens ticker in TradingView', async () => {
       const result: AuditResult = {
         code: 'UNWATCHED',
         target: 'SBIN',
@@ -79,14 +79,14 @@ describe('GttAuditSection', () => {
         data: { orderIds: ['123', '456'] },
       };
 
-      section.onLeftClick(result);
+      await section.onLeftClick(result);
 
       expect(mockTickerHandler.openTicker).toHaveBeenCalledWith('SBIN');
     });
   });
 
   describe('Right Click Handler', () => {
-    test('deletes GTT orders after confirmation', () => {
+    test('deletes GTT orders after confirmation', async () => {
       const result: AuditResult = {
         code: 'UNWATCHED',
         target: 'SBIN',
@@ -96,14 +96,14 @@ describe('GttAuditSection', () => {
 
       (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(true);
 
-      section.onRightClick(result);
+      await expect(section.onRightClick(result)).resolves.toBe(true);
 
       expect(mockKiteManager.deleteOrder).toHaveBeenCalledWith('123');
       expect(mockKiteManager.deleteOrder).toHaveBeenCalledWith('456');
       expect(notifySuccessSpy).toHaveBeenCalledWith('Deleted 2 GTT order(s) for SBIN');
     });
 
-    test('cancels when user declines', () => {
+    test('cancels when user declines', async () => {
       const result: AuditResult = {
         code: 'UNWATCHED',
         target: 'SBIN',
@@ -113,13 +113,13 @@ describe('GttAuditSection', () => {
 
       (mockUIUtil.showConfirm as jest.Mock).mockReturnValue(false);
 
-      section.onRightClick(result);
+      await expect(section.onRightClick(result)).resolves.toBe(false);
 
       expect(mockKiteManager.deleteOrder).not.toHaveBeenCalled();
       expect(notifyInfoSpy).toHaveBeenCalledWith('Deletion cancelled');
     });
 
-    test('warns when no order IDs', () => {
+    test('warns when no order IDs', async () => {
       const result: AuditResult = {
         code: 'UNWATCHED',
         target: 'SBIN',
@@ -127,14 +127,14 @@ describe('GttAuditSection', () => {
         data: {},
       };
 
-      section.onRightClick(result);
+      await expect(section.onRightClick(result)).resolves.toBe(false);
 
       expect(notifyWarnSpy).toHaveBeenCalledWith('No GTT orders found for this ticker');
     });
   });
 
   describe('Fix All Handler', () => {
-    test('deletes all GTT orders for all tickers', () => {
+    test('deletes all GTT orders for all tickers', async () => {
       const results: AuditResult[] = [
         {
           code: 'UNWATCHED',
@@ -150,7 +150,7 @@ describe('GttAuditSection', () => {
         },
       ];
 
-      section.onFixAll!(results);
+      await section.onFixAll!(results);
 
       expect(mockKiteManager.deleteOrder).toHaveBeenCalledTimes(3);
       expect(mockKiteManager.deleteOrder).toHaveBeenCalledWith('123');
@@ -159,7 +159,7 @@ describe('GttAuditSection', () => {
       expect(notifySuccessSpy).toHaveBeenCalledWith('Deleted 3 GTT order(s) for 2 ticker(s)');
     });
 
-    test('skips results with no order IDs', () => {
+    test('skips results with no order IDs', async () => {
       const results: AuditResult[] = [
         {
           code: 'UNWATCHED',
@@ -169,14 +169,14 @@ describe('GttAuditSection', () => {
         },
       ];
 
-      section.onFixAll!(results);
+      await section.onFixAll!(results);
 
       expect(mockKiteManager.deleteOrder).not.toHaveBeenCalled();
       expect(notifySuccessSpy).toHaveBeenCalledWith('Deleted 0 GTT order(s) for 1 ticker(s)');
     });
 
-    test('handles empty results', () => {
-      section.onFixAll!([]);
+    test('handles empty results', async () => {
+      await section.onFixAll!([]);
 
       expect(mockKiteManager.deleteOrder).not.toHaveBeenCalled();
       expect(notifySuccessSpy).toHaveBeenCalledWith('Deleted 0 GTT order(s) for 0 ticker(s)');

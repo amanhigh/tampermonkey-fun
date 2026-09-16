@@ -31,6 +31,13 @@ export interface IJournalManager {
   createJournal(input: CreateJournalInput): Promise<JournalRecord>;
 
   /**
+   * Gets a journal by its external ID.
+   * @param journalId Journal external ID
+   * @returns Promise resolving with the journal record
+   */
+  getJournal(journalId: string): Promise<JournalRecord>;
+
+  /**
    * Takes screenshots for the given ticker using the derived timeframe sequence.
    * @param ticker Trading symbol to capture
    * @param type Screenshot purpose/type used in filenames
@@ -86,6 +93,12 @@ export interface IJournalManager {
    * @param journalId Created journal identifier
    */
   publishJournalOpenEvent(journalId: string): Promise<void>;
+
+  /**
+   * Publishes that a localhost journal page has opened.
+   * @param journalId Identifier from the opened localhost journal page
+   */
+  publishJournalOpenedEvent(journalId: string): Promise<void>;
 }
 
 /**
@@ -104,7 +117,7 @@ export class JournalManager extends BaseManager implements IJournalManager {
   public async createJournal(input: CreateJournalInput): Promise<JournalRecord> {
     const request: CreateJournalRequest = {
       ticker: input.ticker.toUpperCase(),
-      sequence: input.timeframe === TickerTimeframe.TMN ? 'MWD' : 'YR',
+      top_timeframe: input.topTimeframe,
       type: input.type,
       status: input.status,
       images: input.screenshots.map((screenshot) => ({
@@ -118,6 +131,11 @@ export class JournalManager extends BaseManager implements IJournalManager {
     const journal = await this.journalClient.createJournal(request);
     Notifier.success(`Journal created: ${journal.ticker} ${journal.type} ${journal.status}`);
     return journal;
+  }
+
+  /** @inheritdoc */
+  public async getJournal(journalId: string): Promise<JournalRecord> {
+    return this.journalClient.getJournal(journalId);
   }
 
   /** @inheritdoc */
@@ -183,6 +201,11 @@ export class JournalManager extends BaseManager implements IJournalManager {
   /** @inheritdoc */
   public async publishJournalOpenEvent(journalId: string): Promise<void> {
     await GM.setValue(Constants.STORAGE.EVENTS.JOURNAL_OPEN, new JournalOpenEvent(journalId).stringify());
+  }
+
+  /** @inheritdoc */
+  public async publishJournalOpenedEvent(journalId: string): Promise<void> {
+    await GM.setValue(Constants.STORAGE.EVENTS.JOURNAL_OPENED, new JournalOpenEvent(journalId).stringify());
   }
 
   /** @inheritdoc */

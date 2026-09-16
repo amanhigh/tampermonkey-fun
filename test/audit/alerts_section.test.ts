@@ -56,8 +56,8 @@ describe('AlertsAuditSection', () => {
   });
 
   describe('onLeftClick', () => {
-    test('opens TV ticker directly', () => {
-      section.onLeftClick(createResult('NSE:INFY'));
+    test('opens TV ticker directly', async () => {
+      await section.onLeftClick(createResult('NSE:INFY'));
       expect(mockTickerHandler.openTicker).toHaveBeenCalledWith('NSE:INFY');
     });
   });

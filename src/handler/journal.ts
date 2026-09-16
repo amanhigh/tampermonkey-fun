@@ -12,23 +12,30 @@ import { DomManager } from '../manager/dom';
 import { Notifier } from '../util/notify';
 import { ITradingViewManager } from '../manager/tv';
 import { IStyleManager } from '../manager/style';
-import { IAlertManager } from '../manager/alert';
 import { ICategoryManager } from '../manager/category';
 import { ITimeFrameManager } from '../manager/timeframe';
-import { AlertClickAction, JournalOpenEvent } from '../models/events';
-import { CreateJournalNoteRequest, JournalResultStatus } from '../models/journal';
+import { CreateJournalNoteRequest, JournalResultStatus, JournalTopTimeframe } from '../models/journal';
 import { ScreenshotResponse } from '../models/os';
 import { TickerTimeframe } from '../models/timeframe';
+import { IJournalSyncHandler } from './journal_sync';
 
 /**
  * Interface for managing journal entry operations at UI/Event level
  */
 export interface IJournalHandler {
+  // ── Journal Operations ──
+
   /**
    * Handles click on Journal Button in UI
    * Toggles visibility of journal area in UI
    */
   handleJournalButton(): void;
+
+  /**
+   * Builds the journal action toolbar (RJ/RS/ST) inside the mounted `#aman-journal` wrapper.
+   * Must be called after the journal wrapper is appended to the DOM.
+   */
+  renderToolbar(): void;
 
   /**
    * Handles Journal Creation operation
@@ -42,22 +49,6 @@ export interface IJournalHandler {
    * Shows reason prompt modal and copies formatted text to clipboard
    */
   handleJournalReasonPrompt(): Promise<void>;
-
-  /**
-   * Handles opening a reviewed journal ticker in TradingView via alert click event.
-   * @param event Optional click event used to infer the clicked review item
-   */
-  handleReviewJournal(event?: Event): void;
-
-  /**
-   * Registers localhost review handlers and action button.
-   */
-  registerJournalReviewHandler(): void;
-
-  /**
-   * Registers localhost journal-open listener.
-   */
-  registerOpenJournalHandler(): void;
 }
 
 /**
@@ -73,14 +64,39 @@ export class JournalHandler implements IJournalHandler {
     private readonly uiUtil: IUIUtil,
     private readonly tvManager: ITradingViewManager,
     private readonly styleManager: IStyleManager,
-    private readonly alertManager: IAlertManager,
     private readonly categoryManager: ICategoryManager,
-    private readonly timeframeManager: ITimeFrameManager
+    private readonly timeframeManager: ITimeFrameManager,
+    private readonly journalSyncHandler: IJournalSyncHandler
   ) {}
+
+  // ── Journal Operations ──
 
   /** @inheritdoc */
   public handleJournalButton(): void {
     this.uiUtil.toggleUI(`#${Constants.UI.IDS.AREAS.JOURNAL}`);
+  }
+
+  /** @inheritdoc */
+  public renderToolbar(): void {
+    // TODO 3.2: Journal toolbar is bespoke; combine with journal left-click toolbar and build via shared util with short emoji labels to save space
+    this.uiUtil
+      .buildWrapper(`${Constants.UI.IDS.AREAS.JOURNAL}-type`)
+      .appendTo(`#${Constants.UI.IDS.AREAS.JOURNAL}`)
+      .append(
+        this.uiUtil.buildButton('trend', 'RJ', () => {
+          void this.handleRecordJournal(JournalActionType.REJECTED);
+        })
+      )
+      .append(
+        this.uiUtil.buildButton('trend', 'RS', () => {
+          void this.handleRecordJournal(JournalActionType.RESULT);
+        })
+      )
+      .append(
+        this.uiUtil.buildButton('trend', 'ST', () => {
+          void this.handleRecordJournal(JournalActionType.SET);
+        })
+      );
   }
 
   /** @inheritdoc */
@@ -116,20 +132,40 @@ export class JournalHandler implements IJournalHandler {
     }
   }
 
+  /** @inheritdoc */
+  public async handleJournalReasonPrompt(): Promise<void> {
+    const { reason } = await this.showReasonModal();
+
+    if (!reason) {
+      return;
+    }
+
+    const text = this.journalManager.createReasonText(reason);
+    this.tvManager.clipboardCopy(text);
+    this.styleManager.selectToolbar(Constants.DOM.TOOLBARS.TEXT);
+  }
+
   private async handleRejectedJournal(
     ticker: string,
     reason: string,
-    timeframe: TickerTimeframe,
+    timeframe: JournalTopTimeframe,
     type: JournalActionType
   ): Promise<void> {
     const screenshots = await this.takeJournalScreenshots(ticker, type, timeframe);
     const journal = await this.journalManager
-      .createJournal({ ticker, reason, screenshots, type: 'REJECTED', status: 'FAIL', timeframe })
+      .createJournal({
+        ticker,
+        reason,
+        screenshots,
+        type: 'REJECTED',
+        status: 'FAIL',
+        topTimeframe: timeframe,
+      })
       .catch((error) => {
         throw new Error(`Failed to record journal entry: ${error}`);
       });
 
-    await this.publishJournalOpenEvent(journal.id);
+    await this.journalSyncHandler.publishTvJournalRecorded(journal.id);
   }
 
   private async handleSetupJournal(ticker: string, type: JournalActionType): Promise<void> {
@@ -197,7 +233,7 @@ export class JournalHandler implements IJournalHandler {
     reason: string,
     screenshots: ScreenshotResponse[],
     note: string,
-    timeframe: TickerTimeframe
+    timeframe: JournalTopTimeframe
   ): Promise<void> {
     const journal = await this.journalManager
       .createJournal({
@@ -206,7 +242,7 @@ export class JournalHandler implements IJournalHandler {
         screenshots,
         type: 'TAKEN',
         status: 'SET',
-        timeframe,
+        topTimeframe: timeframe,
         notes: this.createSetupNotes(note),
       })
       .catch((error) => {
@@ -214,7 +250,7 @@ export class JournalHandler implements IJournalHandler {
       });
 
     await this.categoryManager.publishCategoryChanged([ticker]);
-    await this.publishJournalOpenEvent(journal.id);
+    await this.journalSyncHandler.publishTvJournalRecorded(journal.id);
   }
 
   private async handleResultJournal(ticker: string): Promise<void> {
@@ -246,9 +282,8 @@ export class JournalHandler implements IJournalHandler {
       return;
     }
 
-    // TODO: Backend YR sequence conflates YR and SMN selections, so RESULT cannot recover the original timeframe.
-    // Step 4: Derive screenshot timeframe from backend sequence
-    const screenshotTimeframe = runningJournal.sequence === 'MWD' ? TickerTimeframe.TMN : TickerTimeframe.SMN;
+    // Step 4: Use the stored journal top timeframe for result screenshots
+    const screenshotTimeframe = runningJournal.top_timeframe;
 
     // Step 5: Take result screenshots
     const screenshots = await this.takeJournalScreenshots(ticker, JournalActionType.RESULT, screenshotTimeframe);
@@ -262,72 +297,7 @@ export class JournalHandler implements IJournalHandler {
 
     await this.journalManager.updateJournalStatus(runningJournal.id, status);
     await this.categoryManager.publishCategoryChanged([ticker]);
-    await this.publishJournalOpenEvent(runningJournal.id);
-  }
-
-  private async publishJournalOpenEvent(journalId: string): Promise<void> {
-    await this.journalManager.publishJournalOpenEvent(journalId).catch((error) => {
-      throw new Error(`Failed to publish journal open event: ${error}`);
-    });
-  }
-
-  /** @inheritdoc */
-  public async handleJournalReasonPrompt(): Promise<void> {
-    const { reason } = await this.showReasonModal();
-
-    if (!reason) {
-      return;
-    }
-
-    const text = this.journalManager.createReasonText(reason);
-    this.tvManager.clipboardCopy(text);
-    this.styleManager.selectToolbar(Constants.DOM.TOOLBARS.TEXT);
-  }
-
-  /** @inheritdoc */
-  public handleReviewJournal(event?: Event): void {
-    const ticker = this.extractReviewTicker(event);
-    if (!ticker) {
-      return;
-    }
-
-    void this.alertManager.createAlertClickEvent(ticker, AlertClickAction.OPEN);
-  }
-
-  /** @inheritdoc */
-  public registerJournalReviewHandler(): void {
-    document.querySelectorAll(Constants.DOM.JOURNAL.REVIEW_LINK).forEach((reviewLink) => {
-      reviewLink.addEventListener('click', (event) => {
-        void this.handleReviewJournal(event);
-      });
-    });
-  }
-
-  /** @inheritdoc */
-  public registerOpenJournalHandler(): void {
-    GM_addValueChangeListener(
-      Constants.STORAGE.EVENTS.JOURNAL_OPEN,
-      (_keyName: string, _oldValue: unknown, newValue: unknown) => {
-        if (newValue && typeof newValue === 'string') {
-          const journalOpenEvent = JournalOpenEvent.fromString(newValue);
-          window.location.replace(`/journal/${journalOpenEvent.journalId}`);
-        }
-      }
-    );
-  }
-
-  private extractReviewTicker(event?: Event): string | null {
-    if (typeof Element !== 'undefined' && event?.target instanceof Element) {
-      const reviewLink = event.target.closest('a[href^="/journal/"]');
-      return (
-        reviewLink?.querySelector(Constants.DOM.JOURNAL.REVIEW_TICKER)?.textContent?.trim() ??
-        reviewLink?.querySelector('span.font-semibold')?.textContent?.trim() ??
-        document.querySelector(Constants.DOM.JOURNAL.CURRENT_TICKER)?.textContent?.trim() ??
-        null
-      );
-    }
-
-    return document.querySelector(Constants.DOM.JOURNAL.CURRENT_TICKER)?.textContent?.trim() || null;
+    await this.journalSyncHandler.publishTvJournalRecorded(runningJournal.id);
   }
 
   /**
@@ -335,23 +305,25 @@ export class JournalHandler implements IJournalHandler {
    * Disables Swift keys while modal is open to prevent keyboard interference.
    * Re-enables them after modal closes.
    *
-   * When {@link includeSequence} is true, also shows a Timeframe group
-   * and returns both the reason and selected timeframe. The default
-   * timeframe is derived from the active backend sequence: TMN when the
-   * sequence includes DL, SMN otherwise. The timeframe is non-null for
-   * this overload and null when the group is not shown.
+   * When {@link includeTopTimeframe} is true, also shows a Timeframe group
+   * and returns both the reason and selected journal top timeframe. The
+   * default top timeframe is derived from the active screenshot tuple: TMN
+   * when the tuple includes DL, SMN otherwise. The timeframe is non-null
+   * for this overload and null when the group is not shown.
    *
-   * @param includeSequence - When true, shows the Timeframe group and returns a non-null timeframe;
-   *                          when false or omitted, returns `timeframe: null`.
-   * @returns For `true`, `{ reason: string | null; timeframe: TickerTimeframe }`.
+   * @param includeTopTimeframe - When true, shows the Timeframe group and returns a non-null top timeframe;
+   *                              when false or omitted, returns `timeframe: null`.
+   * @returns For `true`, `{ reason: string | null; timeframe: JournalTopTimeframe }`.
    *          For `false` or omitted, `{ reason: string | null; timeframe: null }`.
    * @private
    */
-  private showReasonModal(includeSequence: true): Promise<{ reason: string | null; timeframe: TickerTimeframe }>;
-  private showReasonModal(includeSequence?: false): Promise<{ reason: string | null; timeframe: null }>;
+  private showReasonModal(
+    includeTopTimeframe: true
+  ): Promise<{ reason: string | null; timeframe: JournalTopTimeframe }>;
+  private showReasonModal(includeTopTimeframe?: false): Promise<{ reason: string | null; timeframe: null }>;
   private async showReasonModal(
-    includeSequence = false
-  ): Promise<{ reason: string | null; timeframe: TickerTimeframe | null }> {
+    includeTopTimeframe = false
+  ): Promise<{ reason: string | null; timeframe: JournalTopTimeframe | null }> {
     try {
       await this.tvManager.setSwiftKeysState(false);
       const groups: SmartChoiceGroup[] = [
@@ -362,14 +334,13 @@ export class JournalHandler implements IJournalHandler {
         },
       ];
 
-      let defaultTimeframe: TickerTimeframe = TickerTimeframe.SMN;
-      if (includeSequence) {
-        const sequence = await this.timeframeManager.getSequence();
-        defaultTimeframe = sequence.includes(TickerTimeframe.DL) ? TickerTimeframe.TMN : TickerTimeframe.SMN;
+      let defaultTimeframe: JournalTopTimeframe = TickerTimeframe.SMN;
+      if (includeTopTimeframe) {
+        defaultTimeframe = await this.resolveDefaultTopTimeframe();
         groups.push({
-          id: Constants.TRADING.PROMPT.SEQUENCE_GROUP_ID,
+          id: Constants.TRADING.PROMPT.TOP_TIMEFRAME_GROUP_ID,
           label: 'Timeframe',
-          choices: Constants.TRADING.PROMPT.SEQUENCE_CHOICES,
+          choices: Constants.TRADING.PROMPT.TOP_TIMEFRAME_CHOICES,
           defaultChoice: defaultTimeframe,
         });
       }
@@ -377,7 +348,7 @@ export class JournalHandler implements IJournalHandler {
       // TODO: Build REASONS from journal tag frequency analysis instead of hardcoded list.
       const response = await this.smartPrompt.showModal(Constants.TRADING.PROMPT.REASONS, groups);
       if (response.type === SmartPromptResponseType.CANCEL) {
-        return { reason: null, timeframe: includeSequence ? defaultTimeframe : null };
+        return { reason: null, timeframe: includeTopTimeframe ? defaultTimeframe : null };
       }
 
       const override = response.answers[Constants.TRADING.PROMPT.OVERRIDE_GROUP_ID];
@@ -387,9 +358,10 @@ export class JournalHandler implements IJournalHandler {
           : override
             ? `${response.primarySelection}-${override}`
             : response.primarySelection;
-      if (includeSequence) {
+      if (includeTopTimeframe) {
         const selectedTimeframe =
-          (response.answers[Constants.TRADING.PROMPT.SEQUENCE_GROUP_ID] as TickerTimeframe) ?? defaultTimeframe;
+          (response.answers[Constants.TRADING.PROMPT.TOP_TIMEFRAME_GROUP_ID] as JournalTopTimeframe) ??
+          defaultTimeframe;
         return { reason, timeframe: selectedTimeframe };
       }
       return { reason, timeframe: null };
@@ -398,6 +370,17 @@ export class JournalHandler implements IJournalHandler {
     } finally {
       await this.tvManager.setSwiftKeysState(true);
     }
+  }
+
+  /**
+   * Resolves the default journal top timeframe from the active screenshot tuple:
+   * TMN when the tuple includes DL, SMN otherwise.
+   * @returns Default journal top timeframe for the reason prompt Timeframe group
+   * @private
+   */
+  private async resolveDefaultTopTimeframe(): Promise<JournalTopTimeframe> {
+    const sequence = await this.timeframeManager.getSequence();
+    return sequence.includes(TickerTimeframe.DL) ? TickerTimeframe.TMN : TickerTimeframe.SMN;
   }
 
   private async showSetupNoteModal(): Promise<string | null> {

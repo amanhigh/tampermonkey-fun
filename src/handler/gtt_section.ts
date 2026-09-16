@@ -41,12 +41,12 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
   readonly context: unknown = undefined;
 
   // Interaction handlers
-  readonly onLeftClick = (result: AuditResult) => {
+  readonly onLeftClick = async (result: AuditResult): Promise<void> => {
     const tvTicker = result.target;
-    void this.tickerHandler.openTicker(tvTicker);
+    await this.tickerHandler.openTicker(tvTicker);
   };
 
-  readonly onRightClick = (result: AuditResult): boolean => {
+  readonly onRightClick = async (result: AuditResult): Promise<boolean> => {
     try {
       // Extract order IDs from result data
       const orderIds = result.data?.orderIds as string[] | undefined;
@@ -74,9 +74,11 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
       Notifier.info(`Deleting ${orderIds.length} GTT order(s)...`);
 
       // Delete all orders for this ticker
-      orderIds.forEach((orderId) => {
-        this.kiteManager.deleteOrder(orderId);
-      });
+      await Promise.all(
+        orderIds.map(async (orderId) => {
+          await this.kiteManager.deleteOrder(orderId);
+        })
+      );
 
       // Success notification
       Notifier.success(`Deleted ${orderIds.length} GTT order(s) for ${tvTicker}`);
@@ -87,17 +89,19 @@ export class GttAuditSection extends BaseAuditSection implements IAuditSection {
     }
   };
 
-  readonly onFixAll = (results: AuditResult[]) => {
+  readonly onFixAll = async (results: AuditResult[]): Promise<void> => {
     let totalDeleted = 0;
+    const deletePromises: Promise<void>[] = [];
     results.forEach((result) => {
       const orderIds = result.data?.orderIds as string[] | undefined;
       if (orderIds && orderIds.length > 0) {
         orderIds.forEach((orderId) => {
-          this.kiteManager.deleteOrder(orderId);
+          deletePromises.push(this.kiteManager.deleteOrder(orderId));
         });
         totalDeleted += orderIds.length;
       }
     });
+    await Promise.all(deletePromises);
     Notifier.success(`Deleted ${totalDeleted} GTT order(s) for ${results.length} ticker(s)`);
   };
 

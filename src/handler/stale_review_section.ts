@@ -30,8 +30,8 @@ export class StaleReviewSection extends BaseAuditSection implements IAuditSectio
   readonly limit = 10;
   readonly context: unknown = undefined;
 
-  readonly onLeftClick = (result: AuditResult) => {
-    void this.tickerHandler.openTicker(result.target);
+  readonly onLeftClick = async (result: AuditResult): Promise<void> => {
+    await this.tickerHandler.openTicker(result.target);
   };
 
   readonly onRightClick = async (result: AuditResult): Promise<boolean> => {

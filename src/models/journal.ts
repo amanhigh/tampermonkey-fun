@@ -8,7 +8,11 @@ export type JournalType = 'REJECTED' | 'TAKEN';
 
 export type JournalStatus = 'SET' | 'RUNNING' | 'SUCCESS' | 'FAIL' | 'MISSED' | 'JUST_LOSS' | 'BROKEN';
 
-export type JournalSequence = 'MWD' | 'YR';
+/**
+ * Strict journal anchor top timeframe forwarded to the Journal API.
+ * Only the writable top-of-tuple values are valid for journal creation.
+ */
+export type JournalTopTimeframe = TickerTimeframe.YR | TickerTimeframe.SMN | TickerTimeframe.TMN;
 
 export type JournalTimeframe = 'DL' | 'WK' | 'MN' | 'TMN' | 'SMN' | 'YR';
 
@@ -48,7 +52,7 @@ export interface CreateJournalNoteRequest {
 
 export interface CreateJournalRequest {
   ticker: string;
-  sequence: JournalSequence;
+  top_timeframe: JournalTopTimeframe;
   type: JournalType;
   status: JournalStatus;
   images: CreateJournalImageRequest[];
@@ -67,8 +71,8 @@ export interface CreateJournalInput {
   type: JournalType;
   /** Journal API status to assign. */
   status: JournalStatus;
-  /** TradingView timeframe bucket used to derive the backend journal sequence. */
-  timeframe: TickerTimeframe;
+  /** Journal anchor top timeframe (YR/SMN/TMN) forwarded directly to the Journal API. */
+  topTimeframe: JournalTopTimeframe;
   /** Optional notes to attach on journal creation. */
   notes?: CreateJournalNoteRequest[];
 }
@@ -100,6 +104,7 @@ export interface JournalNoteRecord {
 /** Query parameters for listing journals. */
 export interface JournalQueryParams {
   ticker?: string;
+  top_timeframe?: JournalTopTimeframe;
   type?: JournalType;
   status?: JournalStatus;
   limit?: number;
@@ -129,7 +134,7 @@ export interface UpdateJournalStatusResponse {
 export interface JournalRecord {
   id: string;
   ticker: string;
-  sequence: JournalSequence;
+  top_timeframe: JournalTopTimeframe;
   type: JournalType;
   status: JournalStatus;
   created_at: string;

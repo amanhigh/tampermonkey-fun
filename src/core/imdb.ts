@@ -28,6 +28,7 @@ export class ImdbApp {
   }
 
   private initializeMovieFeatures(): void {
+    // FIXME: Cleanup legacy IMDb scripts and related unused code now that we use the Radarr stack.
     // Register menu commands
     GM.registerMenuCommand('YSearch', () => void this.imdbHandler.signalSearch(SearchCommand.YTS));
     GM.registerMenuCommand('XSearch', () => void this.imdbHandler.signalSearch(SearchCommand.X1337));

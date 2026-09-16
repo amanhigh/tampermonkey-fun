@@ -105,6 +105,37 @@ describe('KiteManager', () => {
     });
   });
 
+  describe('deleteOrder', () => {
+    it('should await completion of client deletion', async () => {
+      let resolveDeletion!: () => void;
+      const deletion = new Promise<void>((resolve) => {
+        resolveDeletion = resolve;
+      });
+      mockKiteClient.deleteGTT.mockReturnValue(deletion);
+
+      const managerDeletion = kiteManager.deleteOrder('123');
+      let completed = false;
+      managerDeletion.then(() => {
+        completed = true;
+      });
+
+      await Promise.resolve();
+      expect(completed).toBe(false);
+
+      resolveDeletion();
+      await expect(managerDeletion).resolves.toBeUndefined();
+      expect(completed).toBe(true);
+      expect(mockKiteClient.deleteGTT).toHaveBeenCalledWith('123');
+    });
+
+    it('should propagate client deletion rejection', async () => {
+      const error = new Error('Delete failed');
+      mockKiteClient.deleteGTT.mockRejectedValue(error);
+
+      await expect(kiteManager.deleteOrder('123')).rejects.toBe(error);
+    });
+  });
+
   describe('getGttRefereshEvent', () => {
     it('should successfully get refresh event', async () => {
       const mockEvent = new GttRefreshEvent();
