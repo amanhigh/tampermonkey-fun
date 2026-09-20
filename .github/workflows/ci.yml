@@ -30,6 +30,9 @@ jobs:
       
     - name: Build and lint
       run: just build
+
+    - name: Build IMDb userscript
+      run: just imdb
       
     - name: Run tests
       run: just test
