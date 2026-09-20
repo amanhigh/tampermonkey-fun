@@ -123,3 +123,19 @@ describe('Factory Client Providers', () => {
     expect(audit).toBe(auditAgain);
   });
 });
+
+describe('Factory IMDb Providers', () => {
+  beforeEach(() => {
+    (Factory as any).instances = {};
+  });
+
+  it('should provide singleton IMDb manager and handler', () => {
+    const manager = Factory.manager.imdb();
+    const handler = Factory.handler.imdb();
+
+    expect(manager).toBeDefined();
+    expect(Factory.manager.imdb()).toBe(manager);
+    expect(handler).toBeDefined();
+    expect(Factory.handler.imdb()).toBe(handler);
+  });
+});
