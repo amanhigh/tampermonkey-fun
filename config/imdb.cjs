@@ -13,10 +13,7 @@ const metadata = {
   },
   match: ["*://*.imdb.com/*"],
   grant: [
-    "GM.getValue",
-    "GM.setValue",
     "GM.openInTab",
-    "GM_addValueChangeListener",
     "GM.registerMenuCommand"
   ]
 };
