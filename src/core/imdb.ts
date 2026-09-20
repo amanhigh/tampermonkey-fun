@@ -1,7 +1,6 @@
 import { IImdbHandler } from '../handler/imdb';
 import { IImdbManager } from '../manager/imdb';
 import { IGlobalErrorHandler } from '../handler/error';
-import { IMDB_CONSTANTS } from '../models/imdb';
 import { Factory } from './factory';
 
 export class ImdbApp {
