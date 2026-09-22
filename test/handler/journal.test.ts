@@ -581,9 +581,14 @@ describe('JournalHandler', () => {
       journalHandler.renderToolbar();
 
       expect(mockUiUtil.buildButton).toHaveBeenCalledTimes(3);
+      expect(mockUiUtil.buildButton.mock.calls.map((call) => call[0])).toEqual([
+        Constants.UI.IDS.BUTTONS.JOURNAL_REJECTED,
+        Constants.UI.IDS.BUTTONS.JOURNAL_RESULT,
+        Constants.UI.IDS.BUTTONS.JOURNAL_SET,
+      ]);
       expect(mockUiUtil.buildButton.mock.calls.map((call) => call[1])).toEqual(['RJ', 'RS', 'ST']);
-
       mockUiUtil.buildButton.mock.calls.forEach((call) => {
+        expect(call[2]).toEqual(expect.any(Function));
         (call[2] as () => void)();
       });
 

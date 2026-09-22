@@ -78,6 +78,9 @@ export const Constants = Object.freeze({
         REFRESH: 'aman-refresh', // Old Name: refreshBtnId
         ALERT_CREATE: 'aman-alert-create', // Old Name: altCreateBtnId
         JOURNAL: 'aman-journal-btn', // Old Name: journalBtnId
+        JOURNAL_REJECTED: 'aman-journal-rejected',
+        JOURNAL_RESULT: 'aman-journal-result',
+        JOURNAL_SET: 'aman-journal-set',
         HOOK: 'aman-hook', // Add this line
         AUDIT_GLOBAL_REFRESH: 'aman-audit-global-refresh', // Global refresh button for all audits
         AUDIT_STOP_TRACKING: 'aman-audit-stop-tracking', // Stop tracking button in audit toolbar
