@@ -232,8 +232,10 @@ describe('TradingViewWatchlistManager', () => {
 
       await watchlistManager.refreshChangedTickers();
 
+      // Current tickers are repainted via targeted paint only
+      expect(mockPaintManager.paintTickers).toHaveBeenCalledWith(['A', 'B']);
       expect(mockPaintManager.paint).not.toHaveBeenCalled();
-      expect(mockPaintManager.paintTickers).not.toHaveBeenCalled();
+      expect(mockCategoryManager.clearReadyState).not.toHaveBeenCalled();
       expect(mockPublisher.publish).not.toHaveBeenCalled();
     });
   });

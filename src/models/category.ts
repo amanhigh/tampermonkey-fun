@@ -2,6 +2,14 @@ import { WatchCategory } from './watch';
 import { FlagCategory } from './flag';
 
 /**
+ * Supplemental ticker annotations, independent of watch and flag categories.
+ */
+export enum TickerTag {
+  /** Saved timeframes are missing the yearly (YR) timeframe. */
+  TIMEFRAME_PENDING = 'TIMEFRAME_PENDING',
+}
+
+/**
  * Unified result of ticker category classification.
  *
  * All fields are resolved from the same backend ticker record.
@@ -17,4 +25,10 @@ export interface TickerCategory {
 
   /** Whether the ticker is an F&O (Futures & Options) symbol. */
   readonly isFno: boolean;
+
+  /**
+   * Supplemental annotation tags for the ticker.
+   * Empty when the ticker record carries no additional annotations.
+   */
+  readonly tags?: readonly TickerTag[];
 }

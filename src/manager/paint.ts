@@ -5,7 +5,7 @@ import { IDisplayManager } from './display';
 import { IRecentManager } from './recent';
 import { Constants } from '../models/constant';
 import { BucketSummary, WatchCategoryId, WatchCategory } from '../models/watch';
-import { TickerCategory } from '../models/category';
+import { TickerCategory, TickerTag } from '../models/category';
 
 /**
  * Interface for managing painting operations for TradingView elements
@@ -129,6 +129,11 @@ export class PaintManager implements IPaintManager {
     // Reset F&O border style
     $(selector).css('border-top-style', '');
     $(selector).css('border-width', '');
+
+    // Remove owned tag nodes (watchlist only; host nodes are left untouched)
+    if (panel === TickerArea.WATCHLIST) {
+      $(selector).siblings(TAG_CONTAINER_SELECTOR).remove();
+    }
   }
 
   /**
@@ -285,6 +290,7 @@ export class PaintManager implements IPaintManager {
     this.paintSymbolColor($symbol, symbolColor);
     this.paintFnoBorder($symbol, categories.isFno);
     this.paintSingleFlag($symbol, context.itemSelector, context.flagSelector, categories.flag?.color);
+    this.paintTickerTags($symbol, context.area, categories.tags);
   }
 
   // ── Summary output ──
@@ -363,6 +369,75 @@ export class PaintManager implements IPaintManager {
     }
   }
 
+  // ── Ticker tag painters ──
+
+  /**
+   * Reconcile the supplemental tag badges rendered beside a watchlist symbol.
+   *
+   * Badges live in an owned sibling container so the host symbol text and
+   * row content are never modified. Tags apply to WATCHLIST rows only —
+   * screener rows and the ticker header never receive badges. Tag semantics
+   * are owned by {@link TickerTag}; this manager owns their presentation.
+   */
+  private paintTickerTags($symbol: JQuery<HTMLElement>, area: TickerArea, tags?: readonly TickerTag[]): void {
+    if (area !== TickerArea.WATCHLIST) {
+      return;
+    }
+
+    const desired = new Set((tags ?? []).filter((tag) => TICKER_TAG_VISUALS[tag] !== undefined));
+    const $owned = $symbol.siblings(TAG_CONTAINER_SELECTOR);
+
+    // No renderable tags — drop any obsolete owned container
+    if (desired.size === 0) {
+      $owned.remove();
+      return;
+    }
+
+    const $container = $owned.length > 0 ? $owned.first() : this.createTagContainer($symbol);
+    this.reconcileTagBadges($container, desired);
+  }
+
+  /**
+   * Create and insert an owned tag container immediately after the symbol.
+   */
+  private createTagContainer($symbol: JQuery<HTMLElement>): JQuery<HTMLElement> {
+    const $container = $('<span>').addClass(TAG_CONTAINER_CLASS);
+    $symbol.after($container);
+    return $container;
+  }
+
+  /**
+   * Align the container's badges with the desired tags without
+   * duplicating badges that are already present.
+   */
+  private reconcileTagBadges($container: JQuery<HTMLElement>, desired: ReadonlySet<TickerTag>): void {
+    $container.children(TAG_BADGE_SELECTOR).each((_: number, element: HTMLElement) => {
+      const tag = $(element).attr(TAG_ATTRIBUTE);
+      if (tag === undefined || !desired.has(tag as TickerTag)) {
+        $(element).remove();
+      }
+    });
+
+    for (const tag of desired) {
+      const selector = `[${TAG_ATTRIBUTE}="${tag}"]`;
+      if ($container.children(selector).length === 0) {
+        $container.append(this.createTagBadge(tag));
+      }
+    }
+  }
+
+  /**
+   * Build a single owned tag badge carrying its icon and tooltip.
+   */
+  private createTagBadge(tag: TickerTag): JQuery<HTMLElement> {
+    const visual = TICKER_TAG_VISUALS[tag]!;
+    return $('<span>')
+      .addClass(TAG_BADGE_CLASS)
+      .attr(TAG_ATTRIBUTE, tag)
+      .attr('title', visual.tooltip)
+      .text(visual.icon);
+  }
+
   /**
    * Apply or clear F&O border style on a header element.
    */
@@ -375,3 +450,27 @@ export class PaintManager implements IPaintManager {
     }
   }
 }
+
+// ── Owned ticker tag nodes ──
+/** Container rendered as a sibling of a watchlist symbol (never inside it). */
+const TAG_CONTAINER_CLASS = 'aman-ticker-tag';
+const TAG_CONTAINER_SELECTOR = `.${TAG_CONTAINER_CLASS}`;
+/** Badge rendered inside a tag container. */
+const TAG_BADGE_CLASS = 'aman-ticker-tag__badge';
+const TAG_BADGE_SELECTOR = `.${TAG_BADGE_CLASS}`;
+/** Attribute carrying the source {@link TickerTag} value on a badge. */
+const TAG_ATTRIBUTE = 'data-ticker-tag';
+
+/** Presentation metadata for a single supplemental tag. */
+interface TickerTagVisual {
+  readonly icon: string;
+  readonly tooltip: string;
+}
+
+/** Badge metadata keyed by tag; tags without an entry are not rendered. */
+const TICKER_TAG_VISUALS: Readonly<Partial<Record<TickerTag, TickerTagVisual>>> = {
+  [TickerTag.TIMEFRAME_PENDING]: {
+    icon: '🕒',
+    tooltip: 'Timeframe Pending — YR timeframe not selected',
+  },
+};

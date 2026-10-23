@@ -6,7 +6,9 @@ import { Notifier } from '../util/notify';
 import { TickerState, TickerUpdateRequest } from '../models/ticker';
 import { WatchCategory, WatchCategoryId } from '../models/watch';
 import { FlagCategory, FlagCategoryId } from '../models/flag';
-import { TickerCategory } from '../models/category';
+import { TickerCategory, TickerTag } from '../models/category';
+import { Ticker } from '../models/ticker';
+import { TickerTimeframe } from '../models/timeframe';
 import { WatchClassifier, FlagClassifier } from './classification';
 import { IPublisher } from './event_bus';
 import { DomainEventType } from '../models/domain_event';
@@ -122,7 +124,7 @@ export class CategoryManager implements ICategoryManager {
 
   /** @inheritdoc */
   async getTickerCategory(ticker: string): Promise<TickerCategory> {
-    return (await this.categoryCache.fetch(ticker)) ?? { watch: undefined, flag: undefined, isFno: false };
+    return (await this.categoryCache.fetch(ticker)) ?? { watch: undefined, flag: undefined, isFno: false, tags: [] };
   }
 
   /** @inheritdoc */
@@ -228,10 +230,14 @@ export class CategoryManager implements ICategoryManager {
   /**
    * Load a ticker's combined categories from backend data.
    * Backend COMPOSITE detection short-circuits journal lookup.
-   * Returns undefined only when no category and not FNO (avoids caching a complete miss).
+   * Returns undefined only when there is nothing to cache — no category,
+   * not FNO, and no tags (avoids caching a complete miss).
    */
   private async loadTickerCategory(ticker: string): Promise<TickerCategory | undefined> {
     const tickerRecord = await this.tickerManager.getTicker(ticker).catch(() => undefined);
+
+    // Supplemental tags from the same already-fetched record
+    const tags = this.deriveTags(tickerRecord);
 
     // Backend-derived watch category (may be COMPOSITE for composite tickers)
     const backendWatch = tickerRecord ? WatchClassifier.findByTicker(tickerRecord) : undefined;
@@ -242,6 +248,7 @@ export class CategoryManager implements ICategoryManager {
         watch: backendWatch,
         flag: FlagClassifier.findByTicker(tickerRecord!),
         isFno: tickerRecord!.is_fno,
+        tags,
       };
     }
 
@@ -264,11 +271,27 @@ export class CategoryManager implements ICategoryManager {
     }
 
     // Nothing to cache — avoid caching a complete miss
-    if (watch === undefined && flag === undefined && !isFno) {
+    if (watch === undefined && flag === undefined && !isFno && tags.length === 0) {
       return undefined;
     }
 
-    return { watch, flag, isFno };
+    return { watch, flag, isFno, tags };
+  }
+
+  // ── Tag helpers ──
+
+  /**
+   * Derives supplemental tags from an already-fetched ticker record.
+   *
+   * Rule semantics are owned by {@link TickerTag.TIMEFRAME_PENDING}.
+   * An unavailable record yields no tags.
+   */
+  private deriveTags(tickerRecord: Ticker | undefined): readonly TickerTag[] {
+    if (tickerRecord === undefined) {
+      return [];
+    }
+
+    return tickerRecord.timeframes.includes(TickerTimeframe.YR) ? [] : [TickerTag.TIMEFRAME_PENDING];
   }
 
   // ── Classification helpers ──

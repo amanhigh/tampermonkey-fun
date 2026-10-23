@@ -4,6 +4,7 @@ import { IJournalManager } from '../../src/manager/journal';
 import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/ticker';
 import { TickerTimeframe } from '../../src/models/timeframe';
 import { WatchCategoryId } from '../../src/models/watch';
+import { TickerTag } from '../../src/models/category';
 import { FlagCategoryId } from '../../src/models/flag';
 import { IPublisher } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/domain_event';
@@ -102,6 +103,8 @@ describe('CategoryManager', () => {
 
       expect(result.watch).toBeUndefined();
       expect(result.flag).toBeUndefined();
+      // Unavailable record yields no tags
+      expect(result.tags).toEqual([]);
     });
 
     it('should return SET_JOURNAL watch when only SET journal exists', async () => {
@@ -184,6 +187,8 @@ describe('CategoryManager', () => {
       const result = await categoryManager.getTickerCategory('COMP_A');
 
       expect(result.watch?.id).toBe(WatchCategoryId.COMPOSITE);
+      // Tags are retained on the composite short-circuit path
+      expect(result.tags).toEqual([TickerTag.TIMEFRAME_PENDING]);
     });
 
     it('should NOT treat slash FX ticker as composite when backend type is FX', async () => {
@@ -322,6 +327,8 @@ describe('CategoryManager', () => {
       expect(result.watch?.id).toBe(WatchCategoryId.READY);
       // Flag derived from trend=UPTREND
       expect(result.flag?.id).toBe(FlagCategoryId.UPTREND);
+      // Tags derived from the same record (defaults lack YR)
+      expect(result.tags).toEqual([TickerTag.TIMEFRAME_PENDING]);
       // Single backend ticker fetch
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
     });
@@ -401,6 +408,81 @@ describe('CategoryManager', () => {
       const result = await categoryManager.getTickerCategory('UNKNOWN');
 
       expect(result.isFno).toBe(false);
+    });
+
+    // ── Tag-specific tests ──
+
+    it.each([
+      {
+        label: 'saved timeframes miss YR',
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
+        expected: [TickerTag.TIMEFRAME_PENDING],
+      },
+      { label: 'saved timeframe list is empty', timeframes: [], expected: [TickerTag.TIMEFRAME_PENDING] },
+      {
+        label: 'saved timeframes include YR',
+        timeframes: [TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN],
+        expected: [],
+      },
+    ])('should derive tags when $label', async ({ timeframes, expected }) => {
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'TAG_T', timeframes: timeframes as TickerTimeframe[] })
+      );
+
+      const result = await categoryManager.getTickerCategory('TAG_T');
+
+      expect(result.tags).toEqual(expected);
+    });
+
+    it('should cache a tag-only result even when watch, flag and isFno are absent', async () => {
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({
+          ticker: 'TAG_ONLY',
+          type: TickerType.EQUITY,
+          state: TickerState.WATCHED,
+          trend: undefined,
+          timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
+        })
+      );
+
+      // First call — tag-only result is cached
+      const first = await categoryManager.getTickerCategory('TAG_ONLY');
+      expect(first.watch).toBeUndefined();
+      expect(first.flag).toBeUndefined();
+      expect(first.isFno).toBe(false);
+      expect(first.tags).toEqual([TickerTag.TIMEFRAME_PENDING]);
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
+
+      // Second call — cache hit, no backend call
+      jest.clearAllMocks();
+      const second = await categoryManager.getTickerCategory('TAG_ONLY');
+      expect(second.tags).toEqual([TickerTag.TIMEFRAME_PENDING]);
+      expect(mockTickerManager.getTicker).not.toHaveBeenCalled();
+    });
+
+    it('should recompute tags after eviction and a timeframe change', async () => {
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'TAG_EVICT', timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL] })
+      );
+
+      const before = await categoryManager.getTickerCategory('TAG_EVICT');
+      expect(before.tags).toEqual([TickerTag.TIMEFRAME_PENDING]);
+
+      // Backend now has YR saved
+      categoryManager.evictTicker('TAG_EVICT');
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({
+          ticker: 'TAG_EVICT',
+          timeframes: [TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN],
+        })
+      );
+
+      const after = await categoryManager.getTickerCategory('TAG_EVICT');
+      expect(after.tags).toEqual([]);
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(2);
     });
   });
 

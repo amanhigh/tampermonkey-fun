@@ -1,0 +1,26 @@
+// ── Ticker Tag Styles ──
+// Supplemental watchlist badges rendered beside the ticker symbol.
+// Badge labels and tooltips are owned by PaintManager
+// (src/manager/paint.ts) — this file only controls appearance.
+
+// ============================================
+// Tag Container (sibling of the symbol)
+// ============================================
+.aman-ticker-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: 4px;
+    vertical-align: middle;
+
+    // ============================================
+    // Tag Badge
+    // ============================================
+    .aman-ticker-tag__badge {
+        display: inline-block;
+        font-size: 10px;
+        line-height: 1.2;
+        opacity: 0.85;
+        cursor: default;
+    }
+}
