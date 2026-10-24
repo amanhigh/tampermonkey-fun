@@ -1,6 +1,3 @@
-// Mock experiment.ts to prevent top-level RunBarkat() call during import
-jest.mock('../../src/core/experiment', () => ({}));
-
 import { Factory } from '../../src/core/factory';
 import { Constants } from '../../src/models/constant';
 
@@ -36,7 +33,9 @@ import { Constants } from '../../src/models/constant';
  * without hitting cyclic dependency stack overflow (RangeError).
  *
  * Barkat is the top-level app that transitively depends on ALL handlers,
- * managers, repos, and audit components. If it builds, no cycles exist.
+ * managers, repos, and audit components. Construction succeeding means the
+ * exercised graph builds without a stack overflow; it does not prove that no
+ * import cycle exists anywhere in the project.
  */
 describe('Factory Integration - Cyclic Dependency Detection', () => {
   beforeEach(() => {

@@ -18,7 +18,6 @@ import { SyncUtil, ISyncUtil } from '../util/sync';
 import { KeyUtil, IKeyUtil } from '../util/key';
 import { SmartPrompt, ISmartPrompt } from '../util/smart';
 import { WaitUtil, IWaitUtil } from '../util/wait';
-import { ExperimentApp } from './experiment';
 import { ImdbApp } from './imdb';
 import { Barkat } from './barkat';
 
@@ -110,8 +109,6 @@ export class Factory {
    * Core application functionality
    */
   public static app = {
-    test: (): ExperimentApp =>
-      Factory.getInstance('testApp', () => new ExperimentApp(Factory.util.ui(), Factory.util.key())),
     barkat: (): Barkat =>
       Factory.getInstance(
         'barkat',

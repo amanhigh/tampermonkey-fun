@@ -127,7 +127,7 @@ export class ExperimentApp {
 
 export function RunExperiment(): void {
   console.info('Tamperfun Experiment started');
-  const app = Factory.app.test();
+  const app = new ExperimentApp(Factory.util.ui(), Factory.util.key());
   app.initialize();
 }
 
