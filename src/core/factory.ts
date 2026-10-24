@@ -9,6 +9,8 @@ import { AlertTickerClient, IAlertTickerClient } from '../client/alert_ticker';
 import { IPriceAlertClient, PriceAlertClient } from '../client/price_alert';
 import { IAuditClient, AuditClient } from '../client/audit';
 import { InstrumentClient, IInstrumentClient } from '../client/instrument';
+import { IBarkatClient, BarkatClient } from '../client/barkat';
+import { IBarkatManager, BarkatManager } from '../manager/barkat';
 import { UIUtil, IUIUtil } from '../util/ui';
 import { ObserveUtil, IObserveUtil } from '../util/observer';
 import { SearchUtil, ISearchUtil } from '../util/search';
@@ -152,6 +154,7 @@ export class Factory {
     priceAlert: (): IPriceAlertClient => Factory.getInstance('priceAlertClient', () => new PriceAlertClient()),
     audit: (): IAuditClient => Factory.getInstance('auditClient', () => new AuditClient()),
     instrument: (): IInstrumentClient => Factory.getInstance('instrumentClient', () => new InstrumentClient()),
+    barkat: (): IBarkatClient => Factory.getInstance('barkatClient', () => new BarkatClient()),
   };
 
   /**
@@ -187,6 +190,9 @@ export class Factory {
         'timeframeManager',
         () => new TimeFrameManager(Factory.manager.ticker(), Factory.manager.dom(), Factory.manager.eventPublisher())
       ),
+
+    barkat: (): IBarkatManager =>
+      Factory.getInstance('barkatManager', () => new BarkatManager(Factory.client.barkat())),
 
     alert: (): IAlertManager =>
       Factory.getInstance(
@@ -563,7 +569,10 @@ export class Factory {
           )
       ),
     timeFrameBar: (): ITimeFrameHandler =>
-      Factory.getInstance('timeFrameBar', () => new TimeFrameBar(Factory.manager.timeFrame())),
+      Factory.getInstance(
+        'timeFrameBar',
+        () => new TimeFrameBar(Factory.manager.timeFrame(), Factory.manager.barkat(), Factory.manager.dom())
+      ),
     watchlistBar: (): IWatchlistBar =>
       Factory.getInstance('watchlistBar', () => new WatchlistBar(Factory.manager.paint(), Factory.manager.filter())),
     journal: (): IJournalHandler =>

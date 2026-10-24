@@ -225,6 +225,11 @@ Support:
     PRICE_ALERT_PAGE_LIMIT: 10,
   },
 
+  /** Barkat read-only analysis API */
+  BARKAT: {
+    BASE_URL: 'http://localhost:8050/v1/api',
+  },
+
   /** Cache configuration for manager lookups */
   CACHE: {
     CATEGORY: {

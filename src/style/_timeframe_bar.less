@@ -1,5 +1,6 @@
 // ── Timeframe Bar Styles ──
 // Dedicated bar below the display card showing clickable timeframe chips.
+// Badges and tooltips are absolute overlays: they add no layout width or height.
 
 // Per-timeframe active colors — Heatmap Spectrum (long = warm, short = cool)
 @tf-color-yr: #f87171;    // Coral Red   — hottest
@@ -13,6 +14,11 @@
 @tf-color-inactive: rgba(255, 255, 255, 0.3);
 @tf-bg-inactive: rgba(255, 255, 255, 0.06);
 
+// Tooltip surface
+@tf-tip-bg: #1f2937;
+@tf-tip-border: rgba(255, 255, 255, 0.18);
+@tf-tip-color: rgba(255, 255, 255, 0.92);
+
 // ============================================
 // Timeframe Bar Container
 // ============================================
@@ -20,16 +26,39 @@
     display: block;
 
     // ============================================
+    // Chip item wrapper (tooltip positioning context)
+    // ============================================
+    .aman-tf-bar__item {
+        position: relative;
+        display: inline-block;
+
+        // Escape dismissal: CSS hover/focus rules are suppressed until the
+        // next hover or focus restores the tooltip.
+        &.aman-tf-bar__item--tip-dismissed .aman-tf-bar__tip {
+            display: none;
+        }
+    }
+
+    // ============================================
     // Timeframe Chip
     // ============================================
     .aman-tf-bar__chip {
+        position: relative;
         display: inline-block;
         padding: 0 5px;
+        border: 0;
+        background: none;
+        font-family: inherit;
         border-radius: 3px;
         font-weight: 600;
         font-size: 10px;
         cursor: pointer;
         transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+
+        &:focus-visible {
+            outline: 1px solid rgba(255, 255, 255, 0.7);
+            outline-offset: 1px;
+        }
 
         // Inactive state
         &.aman-tf-bar__chip--inactive {
@@ -65,6 +94,58 @@
             opacity: 0.5;
             pointer-events: none;
             cursor: default;
+        }
+    }
+
+    // ============================================
+    // Corner badge overlay (no layout impact)
+    // ============================================
+    .aman-tf-bar__badge {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        font-size: 8px;
+        line-height: 1;
+        font-weight: 700;
+        color: @tf-color-tmn;
+        pointer-events: none;
+    }
+
+    // ============================================
+    // Tooltip overlay (hover and keyboard focus)
+    // ============================================
+    .aman-tf-bar__tip {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 30;
+        width: max-content;
+        max-width: 260px;
+        padding: 6px 8px;
+        text-align: left;
+        white-space: normal;
+        font-size: 10px;
+        font-weight: 500;
+        line-height: 1.35;
+        color: @tf-tip-color;
+        background: @tf-tip-bg;
+        border: 1px solid @tf-tip-border;
+        border-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .aman-tf-bar__item:hover .aman-tf-bar__tip,
+    .aman-tf-bar__item:focus-within .aman-tf-bar__tip {
+        display: block;
+    }
+
+    .aman-tf-bar__tip-line {
+        display: block;
+
+        &.aman-tf-bar__tip-line--attention {
+            color: @tf-color-tmn;
+            font-weight: 600;
         }
     }
 }

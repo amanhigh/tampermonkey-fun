@@ -2,6 +2,7 @@
 jest.mock('../../src/core/experiment', () => ({}));
 
 import { Factory } from '../../src/core/factory';
+import { Constants } from '../../src/models/constant';
 
 // Minimal mocks for instantiation only (no runtime operations)
 (global as any).$ = jest.fn(() => ({
@@ -121,5 +122,18 @@ describe('Factory Client Providers', () => {
     // Verify singleton behavior
     const auditAgain = Factory.client.audit();
     expect(audit).toBe(auditAgain);
+  });
+
+  it('should provide singleton BarkatClient on its own base URL', () => {
+    const barkat = Factory.client.barkat();
+    expect(barkat).toBeDefined();
+    expect(barkat.getBaseUrl()).toBe(Constants.BARKAT.BASE_URL);
+
+    // Verify singleton behavior
+    const barkatAgain = Factory.client.barkat();
+    expect(barkat).toBe(barkatAgain);
+
+    // Barkat is a separate backend from Kohan
+    expect(barkat.getBaseUrl()).not.toBe(Constants.KOHAN.BASE_URL);
   });
 });
