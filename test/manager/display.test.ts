@@ -91,7 +91,7 @@ describe('DisplayManager', () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: READY_CATEGORY,
         flag: undefined,
-        isFno: false,
+        tags: [],
       });
 
       // Simulate watchlist silo containing the ticker
@@ -113,7 +113,7 @@ describe('DisplayManager', () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: READY_CATEGORY,
         flag: undefined,
-        isFno: false,
+        tags: [],
       });
       mockRecentManager.isRecent.mockResolvedValue(true);
 
@@ -136,7 +136,7 @@ describe('DisplayManager', () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: READY_CATEGORY,
         flag: undefined,
-        isFno: false,
+        tags: [],
       });
       mockRecentManager.isRecent.mockResolvedValue(false);
 
@@ -157,7 +157,7 @@ describe('DisplayManager', () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: READY_CATEGORY,
         flag: undefined,
-        isFno: false,
+        tags: [],
       });
       mockRecentManager.isRecent.mockResolvedValue(true);
 
@@ -175,7 +175,7 @@ describe('DisplayManager', () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: undefined,
         flag: undefined,
-        isFno: false,
+        tags: [],
       });
       mockRecentManager.isRecent.mockResolvedValue(true);
 
@@ -188,7 +188,7 @@ describe('DisplayManager', () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: undefined,
         flag: undefined,
-        isFno: false,
+        tags: [],
       });
       mockRecentManager.isRecent.mockResolvedValue(false);
 
@@ -210,7 +210,7 @@ describe('DisplayManager', () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: READY_CATEGORY,
         flag: undefined,
-        isFno: false,
+        tags: [],
       });
       mockRecentManager.isRecent.mockResolvedValue(true);
 

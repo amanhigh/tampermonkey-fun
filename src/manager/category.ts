@@ -124,7 +124,7 @@ export class CategoryManager implements ICategoryManager {
 
   /** @inheritdoc */
   async getTickerCategory(ticker: string): Promise<TickerCategory> {
-    return (await this.categoryCache.fetch(ticker)) ?? { watch: undefined, flag: undefined, isFno: false, tags: [] };
+    return (await this.categoryCache.fetch(ticker)) ?? { watch: undefined, flag: undefined, tags: [] };
   }
 
   /** @inheritdoc */
@@ -230,8 +230,8 @@ export class CategoryManager implements ICategoryManager {
   /**
    * Load a ticker's combined categories from backend data.
    * Backend COMPOSITE detection short-circuits journal lookup.
-   * Returns undefined only when there is nothing to cache — no category,
-   * not FNO, and no tags (avoids caching a complete miss).
+   * Returns undefined only when there is nothing to cache — no category
+   * and no tags (avoids caching a complete miss).
    */
   private async loadTickerCategory(ticker: string): Promise<TickerCategory | undefined> {
     const tickerRecord = await this.tickerManager.getTicker(ticker).catch(() => undefined);
@@ -247,7 +247,6 @@ export class CategoryManager implements ICategoryManager {
       return {
         watch: backendWatch,
         flag: FlagClassifier.findByTicker(tickerRecord!),
-        isFno: tickerRecord!.is_fno,
         tags,
       };
     }
@@ -255,7 +254,6 @@ export class CategoryManager implements ICategoryManager {
     // Non-composite: resolve journal-based category (RUNNING takes priority)
     let watch: WatchCategory | undefined;
     let flag: FlagCategory | undefined;
-    let isFno = false;
 
     const journalCategory = await this.resolveJournalCategory(ticker);
     if (journalCategory !== undefined) {
@@ -267,15 +265,14 @@ export class CategoryManager implements ICategoryManager {
     // Flag: derived from ticker record only
     if (tickerRecord !== undefined) {
       flag = FlagClassifier.findByTicker(tickerRecord);
-      isFno = tickerRecord.is_fno;
     }
 
     // Nothing to cache — avoid caching a complete miss
-    if (watch === undefined && flag === undefined && !isFno && tags.length === 0) {
+    if (watch === undefined && flag === undefined && tags.length === 0) {
       return undefined;
     }
 
-    return { watch, flag, isFno, tags };
+    return { watch, flag, tags };
   }
 
   // ── Tag helpers ──
@@ -283,7 +280,7 @@ export class CategoryManager implements ICategoryManager {
   /**
    * Derives supplemental tags from an already-fetched ticker record.
    *
-   * Rule semantics are owned by {@link TickerTag.TIMEFRAME_PENDING}.
+   * Each emitted tag's rule semantics are owned by {@link TickerTag}.
    * An unavailable record yields no tags.
    */
   private deriveTags(tickerRecord: Ticker | undefined): readonly TickerTag[] {
@@ -291,7 +288,14 @@ export class CategoryManager implements ICategoryManager {
       return [];
     }
 
-    return tickerRecord.timeframes.includes(TickerTimeframe.YR) ? [] : [TickerTag.TIMEFRAME_PENDING];
+    const tags: TickerTag[] = [];
+    if (!tickerRecord.timeframes.includes(TickerTimeframe.YR)) {
+      tags.push(TickerTag.TIMEFRAME_PENDING);
+    }
+    if (tickerRecord.is_fno) {
+      tags.push(TickerTag.FNO);
+    }
+    return tags;
   }
 
   // ── Classification helpers ──

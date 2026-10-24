@@ -75,7 +75,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     }
     this.updateSnapshot(currentTickers);
 
-    // Delegate all ticker painting (symbols, flags, FNO) to PaintManager
+    // Delegate all ticker painting (symbols, flags, tags) to PaintManager
     await this.paintManager.paint();
 
     this.publishWatchlistChanged(changedTickers);

@@ -182,13 +182,15 @@ describe('CategoryManager', () => {
 
     it('should return COMPOSITE watch for composite ticker', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
-      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'COMP_A', type: TickerType.COMPOSITE }));
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'COMP_A', type: TickerType.COMPOSITE, is_fno: true })
+      );
 
       const result = await categoryManager.getTickerCategory('COMP_A');
 
       expect(result.watch?.id).toBe(WatchCategoryId.COMPOSITE);
       // Tags are retained on the composite short-circuit path
-      expect(result.tags).toEqual([TickerTag.TIMEFRAME_PENDING]);
+      expect(result.tags).toEqual([TickerTag.TIMEFRAME_PENDING, TickerTag.FNO]);
     });
 
     it('should NOT treat slash FX ticker as composite when backend type is FX', async () => {
@@ -282,6 +284,8 @@ describe('CategoryManager', () => {
       const first = await categoryManager.getTickerCategory('MISS');
       expect(first.watch).toBeUndefined();
       expect(first.flag).toBeUndefined();
+      // Failed backend lookup yields no tags
+      expect(first.tags).toEqual([]);
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
 
       // Second call — still a miss, hits backend again
@@ -318,7 +322,7 @@ describe('CategoryManager', () => {
     it('should return both watch and flag categories from a single lookup', async () => {
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'BOTH', state: TickerState.READY, trend: TickerTrend.UPTREND })
+        makeTicker({ ticker: 'BOTH', state: TickerState.READY, trend: TickerTrend.UPTREND, is_fno: true })
       );
 
       const result = await categoryManager.getTickerCategory('BOTH');
@@ -327,8 +331,8 @@ describe('CategoryManager', () => {
       expect(result.watch?.id).toBe(WatchCategoryId.READY);
       // Flag derived from trend=UPTREND
       expect(result.flag?.id).toBe(FlagCategoryId.UPTREND);
-      // Tags derived from the same record (defaults lack YR)
-      expect(result.tags).toEqual([TickerTag.TIMEFRAME_PENDING]);
+      // Tags derived from the same record (defaults lack YR, record is FNO)
+      expect(result.tags).toEqual([TickerTag.TIMEFRAME_PENDING, TickerTag.FNO]);
       // Single backend ticker fetch
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
     });
@@ -357,77 +361,43 @@ describe('CategoryManager', () => {
       expect(result.flag).toBeUndefined();
     });
 
-    // ── FNO-specific tests ──
-
-    it('should return isFno=true when ticker has is_fno flag', async () => {
-      mockJournalManager.listJournals.mockResolvedValue([]);
-      mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'FNO_TICKER', is_fno: true })
-      );
-
-      const result = await categoryManager.getTickerCategory('FNO_TICKER');
-
-      expect(result.isFno).toBe(true);
-    });
-
-    it('should return isFno=false when ticker has no is_fno flag', async () => {
-      mockJournalManager.listJournals.mockResolvedValue([]);
-      mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'NON_FNO', is_fno: false })
-      );
-
-      const result = await categoryManager.getTickerCategory('NON_FNO');
-
-      expect(result.isFno).toBe(false);
-    });
-
-    it('should cache FNO status even when watch and flag are both undefined', async () => {
-      mockJournalManager.listJournals.mockResolvedValue([]);
-      mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'FNO_ONLY', is_fno: true, type: TickerType.EQUITY, state: TickerState.WATCHED, trend: undefined })
-      );
-
-      // First call — populates cache with isFno=true
-      const first = await categoryManager.getTickerCategory('FNO_ONLY');
-      expect(first.isFno).toBe(true);
-      expect(first.watch).toBeUndefined();
-      expect(first.flag).toBeUndefined();
-      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
-
-      // Second call — cache hit, no backend call
-      jest.clearAllMocks();
-      const second = await categoryManager.getTickerCategory('FNO_ONLY');
-      expect(second.isFno).toBe(true);
-      expect(mockTickerManager.getTicker).not.toHaveBeenCalled();
-    });
-
-    it('should return isFno=false when backend lookup fails', async () => {
-      mockJournalManager.listJournals.mockResolvedValue([]);
-      mockTickerManager.getTicker.mockRejectedValue(new Error('Not found'));
-
-      const result = await categoryManager.getTickerCategory('UNKNOWN');
-
-      expect(result.isFno).toBe(false);
-    });
-
     // ── Tag-specific tests ──
 
     it.each([
       {
         label: 'saved timeframes miss YR',
         timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
+        isFno: false,
         expected: [TickerTag.TIMEFRAME_PENDING],
       },
-      { label: 'saved timeframe list is empty', timeframes: [], expected: [TickerTag.TIMEFRAME_PENDING] },
+      {
+        label: 'saved timeframe list is empty',
+        timeframes: [],
+        isFno: false,
+        expected: [TickerTag.TIMEFRAME_PENDING],
+      },
       {
         label: 'saved timeframes include YR',
         timeframes: [TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN],
+        isFno: false,
         expected: [],
       },
-    ])('should derive tags when $label', async ({ timeframes, expected }) => {
+      {
+        label: 'FNO ticker misses YR',
+        timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
+        isFno: true,
+        expected: [TickerTag.TIMEFRAME_PENDING, TickerTag.FNO],
+      },
+      {
+        label: 'FNO ticker includes YR',
+        timeframes: [TickerTimeframe.YR, TickerTimeframe.DL],
+        isFno: true,
+        expected: [TickerTag.FNO],
+      },
+    ])('should derive tags when $label', async ({ timeframes, isFno, expected }) => {
       mockJournalManager.listJournals.mockResolvedValue([]);
       mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'TAG_T', timeframes: timeframes as TickerTimeframe[] })
+        makeTicker({ ticker: 'TAG_T', timeframes: timeframes as TickerTimeframe[], is_fno: isFno })
       );
 
       const result = await categoryManager.getTickerCategory('TAG_T');
@@ -435,53 +405,78 @@ describe('CategoryManager', () => {
       expect(result.tags).toEqual(expected);
     });
 
-    it('should cache a tag-only result even when watch, flag and isFno are absent', async () => {
-      mockJournalManager.listJournals.mockResolvedValue([]);
-      mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({
-          ticker: 'TAG_ONLY',
+    it.each([
+      {
+        label: 'pending-timeframe-only',
+        fixture: {
           type: TickerType.EQUITY,
           state: TickerState.WATCHED,
           trend: undefined,
           timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL],
-        })
-      );
+        },
+        expected: [TickerTag.TIMEFRAME_PENDING],
+      },
+      {
+        label: 'FNO-only',
+        fixture: {
+          type: TickerType.EQUITY,
+          state: TickerState.WATCHED,
+          trend: undefined,
+          timeframes: [TickerTimeframe.YR, TickerTimeframe.DL],
+          is_fno: true,
+        },
+        expected: [TickerTag.FNO],
+      },
+    ])('should cache a $label result even when watch and flag are absent', async ({ label, fixture, expected }) => {
+      const ticker = `CACHE_${label.toUpperCase().replace(/-/g, '_')}`;
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker, ...fixture }));
 
       // First call — tag-only result is cached
-      const first = await categoryManager.getTickerCategory('TAG_ONLY');
+      const first = await categoryManager.getTickerCategory(ticker);
       expect(first.watch).toBeUndefined();
       expect(first.flag).toBeUndefined();
-      expect(first.isFno).toBe(false);
-      expect(first.tags).toEqual([TickerTag.TIMEFRAME_PENDING]);
+      expect(first.tags).toEqual(expected);
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
 
       // Second call — cache hit, no backend call
       jest.clearAllMocks();
-      const second = await categoryManager.getTickerCategory('TAG_ONLY');
-      expect(second.tags).toEqual([TickerTag.TIMEFRAME_PENDING]);
+      const second = await categoryManager.getTickerCategory(ticker);
+      expect(second.tags).toEqual(expected);
       expect(mockTickerManager.getTicker).not.toHaveBeenCalled();
     });
 
-    it('should recompute tags after eviction and a timeframe change', async () => {
-      mockJournalManager.listJournals.mockResolvedValue([]);
-      mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({ ticker: 'TAG_EVICT', timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL] })
-      );
-
-      const before = await categoryManager.getTickerCategory('TAG_EVICT');
-      expect(before.tags).toEqual([TickerTag.TIMEFRAME_PENDING]);
-
-      // Backend now has YR saved
-      categoryManager.evictTicker('TAG_EVICT');
-      mockTickerManager.getTicker.mockResolvedValue(
-        makeTicker({
-          ticker: 'TAG_EVICT',
+    it.each([
+      {
+        label: 'timeframe change preserving FNO',
+        before: { timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL], is_fno: true },
+        expectedBefore: [TickerTag.TIMEFRAME_PENDING, TickerTag.FNO],
+        after: {
           timeframes: [TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN],
-        })
-      );
+          is_fno: true,
+        },
+        expectedAfter: [TickerTag.FNO],
+      },
+      {
+        label: 'FNO change preserving pending',
+        before: { timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL], is_fno: true },
+        expectedBefore: [TickerTag.TIMEFRAME_PENDING, TickerTag.FNO],
+        after: { timeframes: [TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL], is_fno: false },
+        expectedAfter: [TickerTag.TIMEFRAME_PENDING],
+      },
+    ])('should recompute tags after eviction on $label', async ({ before, expectedBefore, after, expectedAfter }) => {
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'TAG_EVICT', ...before }));
 
-      const after = await categoryManager.getTickerCategory('TAG_EVICT');
-      expect(after.tags).toEqual([]);
+      const first = await categoryManager.getTickerCategory('TAG_EVICT');
+      expect(first.tags).toEqual(expectedBefore);
+
+      // Backend record changed — evict to force a fresh derivation
+      categoryManager.evictTicker('TAG_EVICT');
+      mockTickerManager.getTicker.mockResolvedValue(makeTicker({ ticker: 'TAG_EVICT', ...after }));
+
+      const second = await categoryManager.getTickerCategory('TAG_EVICT');
+      expect(second.tags).toEqual(expectedAfter);
       expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(2);
     });
   });

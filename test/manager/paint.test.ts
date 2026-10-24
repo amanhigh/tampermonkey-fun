@@ -41,7 +41,8 @@ const TAG_CONTAINER_SELECTOR = `.${TAG_CONTAINER_CLASS}`;
 const TAG_BADGE_CLASS = 'aman-ticker-tag__badge';
 const TAG_BADGE_SELECTOR = `.${TAG_BADGE_CLASS}`;
 const TAG_ATTRIBUTE = 'data-ticker-tag';
-const TAG_TOOLTIP = 'Timeframe Pending — YR timeframe not selected';
+const TIMEFRAME_TOOLTIP = 'Timeframe Pending — YR timeframe not selected';
+const FNO_TOOLTIP = 'F&O — Futures & Options';
 
 /** One fixture element node. */
 class FixtureNode {
@@ -274,7 +275,7 @@ describe('PaintManager', () => {
     } as unknown as jest.Mocked<IDomManager>;
 
     mockCategoryManager = {
-      getTickerCategory: jest.fn().mockResolvedValue({ watch: undefined, flag: undefined, isFno: false }),
+      getTickerCategory: jest.fn().mockResolvedValue({ watch: undefined, flag: undefined, tags: [] }),
       getBatchCategory: jest.fn(),
       recordWatchCategory: jest.fn(),
       recordFlagCategory: jest.fn(),
@@ -320,7 +321,7 @@ describe('PaintManager', () => {
       mockJQueryElement.closest.mockReturnValue(mockJQueryElement);
       mockJQueryElement.find.mockReturnValue(mockJQueryElement);
       mockDomManager.getTickers.mockReturnValue(new Set(['NIFTY']));
-      mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, isFno: false });
+      mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, tags: [] });
     });
 
     it('should paint WATCHLIST area every time', async () => {
@@ -368,7 +369,7 @@ describe('PaintManager', () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null },
         flag: undefined,
-        isFno: false,
+        tags: [],
       });
       // Make resolve return a color so css is called
       mockDisplayManager.resolve.mockResolvedValue({ state: 'WATCH_CATEGORY' as any, color: 'red' });
@@ -383,7 +384,7 @@ describe('PaintManager', () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null },
         flag: { id: 'SIDEWAYS' as any, color: 'orange', label: 'Sideways', update: { trend: TickerTrend.SIDEWAYS } },
-        isFno: true,
+        tags: [],
       });
 
       await paintManager.paint();
@@ -392,8 +393,6 @@ describe('PaintManager', () => {
       expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'red');
       // Flag color painted directly
       expect(mockJQueryElement.css).toHaveBeenCalledWith('color', 'orange');
-      // FNO border applied
-      expect(mockJQueryElement.css).toHaveBeenCalledWith(Constants.UI.COLORS.FNO_CSS);
       // DisplayManager NOT called for ticker symbols
       expect(mockDisplayManager.resolve).toHaveBeenCalledTimes(1); // only for header
     });
@@ -407,14 +406,19 @@ describe('PaintManager', () => {
       mockJQueryElement.closest.mockReturnValue(mockJQueryElement);
       mockJQueryElement.find.mockReturnValue(mockJQueryElement);
       mockDomManager.getTickers.mockReturnValue(new Set());
-      mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, isFno: false });
+      mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, tags: [] });
     });
 
     it('should paint tickers in WATCHLIST area', async () => {
       mockDomManager.getTickers.mockReturnValue(new Set(['AAPL', 'GOOG']));
       mockCategoryManager.getTickerCategory.mockImplementation(async (ticker: string) => {
-        if (ticker === 'AAPL') return { watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null }, flag: undefined, isFno: false };
-        return { watch: undefined, flag: undefined, isFno: false };
+        if (ticker === 'AAPL')
+          return {
+            watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null },
+            flag: undefined,
+            tags: [],
+          };
+        return { watch: undefined, flag: undefined, tags: [] };
       });
       mockDomManager.isScreenerVisible.mockReturnValue(false);
 
@@ -471,20 +475,19 @@ describe('PaintManager', () => {
       mockDomManager.getTickers.mockReturnValue(new Set(['NIFTY']));
       mockDomManager.isScreenerVisible.mockReturnValue(false);
       mockDomManager.getTicker.mockReturnValue('CURRENT');
-      mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, isFno: false });
+      mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, tags: [] });
     });
 
     afterEach(() => {
       (global as any).$ = mockJQuery;
     });
 
-    /** Configure a categorized ticker carrying the supplied tags. */
-    const setTickerCategory = (tags?: TickerTag[]): void => {
+    /** Configure a categorized ticker carrying exactly the supplied tags. */
+    const setTickerCategory = (tags: TickerTag[]): void => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null },
         flag: { id: 'SIDEWAYS' as any, color: 'orange', label: 'Sideways', update: { trend: TickerTrend.SIDEWAYS } },
-        isFno: true,
-        tags,
+        tags: [...tags],
       });
     };
 
@@ -500,8 +503,20 @@ describe('PaintManager', () => {
         container.children.filter((child) => child.hasClass(TAG_BADGE_CLASS))
       );
 
-    it('should render one pending-timeframe badge beside the watchlist symbol', async () => {
-      setTickerCategory([TickerTag.TIMEFRAME_PENDING]);
+    /** Sorted tag identities currently rendered as badges. */
+    const renderedTags = (): TickerTag[] =>
+      ownedBadges()
+        .map((badge) => badge.attrs.get(TAG_ATTRIBUTE) as TickerTag)
+        .sort();
+
+    /** Badge glyph + tooltip expected per tag. */
+    const TAG_CASES: ReadonlyArray<readonly [TickerTag, string, string]> = [
+      [TickerTag.TIMEFRAME_PENDING, '🕒', TIMEFRAME_TOOLTIP],
+      [TickerTag.FNO, '○', FNO_TOOLTIP],
+    ];
+
+    it.each(TAG_CASES)('should render the %s badge beside the watchlist symbol', async (tag, icon, tooltip) => {
+      setTickerCategory([tag]);
 
       await paintManager.paint();
 
@@ -514,11 +529,11 @@ describe('PaintManager', () => {
       expect(row.children.indexOf(ownedContainers()[0])).toBe(row.children.indexOf(symbol) + 1);
       expect(symbol.children).toHaveLength(0);
 
-      // Badge carries the tag identity and tooltip
+      // Badge carries the tag identity, glyph and tooltip
       expect(ownedBadges()).toHaveLength(1);
-      expect(ownedBadges()[0].textContent).toBe('🕒');
-      expect(ownedBadges()[0].attrs.get(TAG_ATTRIBUTE)).toBe(TickerTag.TIMEFRAME_PENDING);
-      expect(ownedBadges()[0].attrs.get('title')).toBe(TAG_TOOLTIP);
+      expect(ownedBadges()[0].textContent).toBe(icon);
+      expect(ownedBadges()[0].attrs.get(TAG_ATTRIBUTE)).toBe(tag);
+      expect(ownedBadges()[0].attrs.get('title')).toBe(tooltip);
 
       // Host symbol text and row content are unaffected
       expect(symbol.textContent).toBe('NIFTY');
@@ -526,17 +541,17 @@ describe('PaintManager', () => {
       const flag = row.children.find((child) => child.hasClass('uiMarker'))!;
       expect(flag).toBeDefined();
 
-      // Existing color + flag + FNO painting still applies to the host nodes
+      // Host color + flag painting still applies; tags never paint a border
       expect(symbol.styles.get('color')).toBe('red');
-      expect(symbol.styles.get('border-top-style')).toBe('groove');
+      expect(symbol.styles.has('border-top-style')).toBe(false);
       expect(flag.styles.get('color')).toBe('orange');
     });
 
-    it('should keep one badge and preserve host content across repeated full and targeted paints', async () => {
+    it('should keep one container with both badges across repeated full and targeted paints', async () => {
       const row = fixture.rows.get('NIFTY')!;
       const foreign = new FixtureNode(['host-extra'], 'EXTRA');
       row.addChild(foreign);
-      setTickerCategory([TickerTag.TIMEFRAME_PENDING]);
+      setTickerCategory([TickerTag.TIMEFRAME_PENDING, TickerTag.FNO]);
 
       await paintManager.paint();
       await paintManager.paint();
@@ -545,49 +560,69 @@ describe('PaintManager', () => {
 
       // Only owned tag nodes are reconciled; foreign and host nodes survive
       expect(ownedContainers()).toHaveLength(1);
-      expect(ownedBadges()).toHaveLength(1);
+      expect(ownedBadges()).toHaveLength(2);
+      expect(renderedTags()).toEqual([TickerTag.FNO, TickerTag.TIMEFRAME_PENDING]);
       expect(row.children).toContain(foreign);
       expect(row.children).toHaveLength(4);
       expect(fixture.symbols.get('NIFTY')!.textContent).toBe('NIFTY');
     });
 
-    it('should remove the badge when tags are empty or omitted', async () => {
-      setTickerCategory([TickerTag.TIMEFRAME_PENDING]);
+    it('should reconcile tag subsets and remove the container when no tags remain', async () => {
+      setTickerCategory([TickerTag.TIMEFRAME_PENDING, TickerTag.FNO]);
       await paintManager.paint();
-      expect(ownedBadges()).toHaveLength(1);
+      expect(ownedBadges()).toHaveLength(2);
 
+      // Dropping FNO preserves the clock badge
+      setTickerCategory([TickerTag.TIMEFRAME_PENDING]);
+      await paintManager.paintTickers(['NIFTY']);
+      expect(ownedContainers()).toHaveLength(1);
+      expect(renderedTags()).toEqual([TickerTag.TIMEFRAME_PENDING]);
+
+      // Dropping the clock instead preserves the FNO badge
+      setTickerCategory([TickerTag.FNO]);
+      await paintManager.paintTickers(['NIFTY']);
+      expect(ownedContainers()).toHaveLength(1);
+      expect(renderedTags()).toEqual([TickerTag.FNO]);
+
+      // Restoring both reuses the same container
+      setTickerCategory([TickerTag.TIMEFRAME_PENDING, TickerTag.FNO]);
+      await paintManager.paintTickers(['NIFTY']);
+      expect(ownedContainers()).toHaveLength(1);
+      expect(ownedBadges()).toHaveLength(2);
+
+      // Empty tags drop the owned container entirely
       setTickerCategory([]);
       await paintManager.paintTickers(['NIFTY']);
       expect(ownedContainers()).toHaveLength(0);
-
-      setTickerCategory([TickerTag.TIMEFRAME_PENDING]);
-      await paintManager.paintTickers(['NIFTY']);
-      expect(ownedBadges()).toHaveLength(1);
-
-      mockCategoryManager.getTickerCategory.mockResolvedValue({ watch: undefined, flag: undefined, isFno: false });
-      await paintManager.paintTickers(['NIFTY']);
-      expect(ownedContainers()).toHaveLength(0);
+      expect(ownedBadges()).toHaveLength(0);
 
       const row = fixture.rows.get('NIFTY')!;
       expect(row.children).toHaveLength(2);
       expect(fixture.symbols.get('NIFTY')!.textContent).toBe('NIFTY');
     });
 
-    it('should not render badges for screener rows or the ticker header', async () => {
+    it('should not render badges or borders for screener rows or the ticker header', async () => {
       mockDomManager.isScreenerVisible.mockReturnValue(true);
-      setTickerCategory([TickerTag.TIMEFRAME_PENDING]);
+      setTickerCategory([TickerTag.TIMEFRAME_PENDING, TickerTag.FNO]);
 
       await paintManager.paint();
+      await paintManager.paintTickers(['NIFTY']);
 
       const screenerRow = fixture.screenerRows.get('NIFTY')!;
       expect(screenerRow.children.filter((child) => child.hasClass(TAG_CONTAINER_CLASS))).toHaveLength(0);
       expect(fixture.header.children.filter((child) => child.hasClass(TAG_CONTAINER_CLASS))).toHaveLength(0);
       expect(ownedContainers()).toHaveLength(1);
       expect(ownedContainers()[0].parent).toBe(fixture.rows.get('NIFTY'));
+
+      // No tag-driven border on watchlist symbol, screener symbol or header
+      expect(fixture.symbols.get('NIFTY')!.styles.has('border-top-style')).toBe(false);
+      const screenerSymbol = screenerRow.children.find((child) => child.textContent === 'NIFTY')!;
+      expect(screenerSymbol.styles.has('border-top-style')).toBe(false);
+      expect(fixture.header.styles.has('border-top-style')).toBe(false);
     });
 
     it('should not create badges when the watchlist row is missing', async () => {
-      setTickerCategory([TickerTag.TIMEFRAME_PENDING]);
+      setTickerCategory([TickerTag.TIMEFRAME_PENDING, TickerTag.FNO]);
 
       await paintManager.paintTickers(['MISSING']);
 
@@ -604,8 +639,13 @@ describe('PaintManager', () => {
     it('should summarize WATCHLIST buckets without painting DOM', async () => {
       mockDomManager.getTickers.mockReturnValue(new Set(['AAPL', 'GOOG']));
       mockCategoryManager.getTickerCategory.mockImplementation(async (ticker: string) => {
-        if (ticker === 'AAPL') return { watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null }, flag: undefined, isFno: false };
-        return { watch: undefined, flag: undefined, isFno: false };
+        if (ticker === 'AAPL')
+          return {
+            watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null },
+            flag: undefined,
+            tags: [],
+          };
+        return { watch: undefined, flag: undefined, tags: [] };
       });
 
       const result = await paintManager.summarizeBuckets();

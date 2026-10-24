@@ -7,6 +7,9 @@ import { FlagCategory } from './flag';
 export enum TickerTag {
   /** Saved timeframes are missing the yearly (YR) timeframe. */
   TIMEFRAME_PENDING = 'TIMEFRAME_PENDING',
+
+  /** Ticker is an F&O (Futures & Options) symbol. */
+  FNO = 'FNO',
 }
 
 /**
@@ -23,12 +26,9 @@ export interface TickerCategory {
   /** Flag/trend-based category (SIDEWAYS, UPTREND, CRYPTO, etc.). */
   readonly flag: FlagCategory | undefined;
 
-  /** Whether the ticker is an F&O (Futures & Options) symbol. */
-  readonly isFno: boolean;
-
   /**
    * Supplemental annotation tags for the ticker.
-   * Empty when the ticker record carries no additional annotations.
+   * Always present — empty when the ticker carries no annotations.
    */
-  readonly tags?: readonly TickerTag[];
+  readonly tags: readonly TickerTag[];
 }

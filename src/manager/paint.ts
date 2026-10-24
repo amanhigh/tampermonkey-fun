@@ -28,7 +28,7 @@ export interface IPaintManager {
   paintTickers(tickers: string[]): Promise<void>;
 
   /**
-   * Repaint only the current ticker's header (name, flag, exchange, FNO).
+   * Repaint only the current ticker's header (name, flag, exchange).
    * Uses DisplayManager.resolve() to pick the correct color.
    * Called by internal paint paths and by the header-replacement DOM observer.
    */
@@ -57,7 +57,7 @@ interface AreaPaintContext {
 
 /**
  * Manages painting operations for TradingView elements.
- * Orchestrates ticker symbol + flag + FNO painting per area.
+ * Orchestrates ticker symbol + flag painting and watchlist tag badges per area.
  */
 export class PaintManager implements IPaintManager {
   constructor(
@@ -112,8 +112,8 @@ export class PaintManager implements IPaintManager {
   // ── Private painters ──
 
   /**
-   * Reset all visual state (symbol color, flag color, F&O border)
-   * for every ticker in the given panel area back to defaults.
+   * Reset all visual state (symbol color, flag color) for every
+   * ticker in the given panel area back to defaults.
    */
   private resetArea(panel: TickerArea): void {
     const selector = panel.getSymbolSelector(TickerVisibility.ALL);
@@ -126,10 +126,6 @@ export class PaintManager implements IPaintManager {
     // Reset flag color
     $(selector).closest(itemSelector).find(flagSelector).css('color', Constants.UI.COLORS.DEFAULT);
 
-    // Reset F&O border style
-    $(selector).css('border-top-style', '');
-    $(selector).css('border-width', '');
-
     // Remove owned tag nodes (watchlist only; host nodes are left untouched)
     if (panel === TickerArea.WATCHLIST) {
       $(selector).siblings(TAG_CONTAINER_SELECTOR).remove();
@@ -139,7 +135,7 @@ export class PaintManager implements IPaintManager {
   /**
    * Paint all tickers in the given area (WATCHLIST or SCREENER).
    * Resets the area first, then resolves watch + flag categories
-   * and paints symbol + flag + FNO for every ticker.
+   * and paints symbol + flag + tags for every ticker.
    */
   private async paintArea(area: TickerArea): Promise<void> {
     this.resetArea(area);
@@ -190,8 +186,8 @@ export class PaintManager implements IPaintManager {
     $flag.css('color', Constants.UI.COLORS.DEFAULT);
     $exchange.css('color', Constants.UI.COLORS.DEFAULT);
 
-    // Fetch categories via unified manager (flag and FNO still needed here)
-    const { flag: flagCategory, isFno } = await this.categoryManager.getTickerCategory(ticker);
+    // Fetch categories via unified manager (flag still needed here)
+    const { flag: flagCategory } = await this.categoryManager.getTickerCategory(ticker);
 
     // Paint name — delegate color decision to shared display manager
     const displayInfo = await this.displayManager.resolve(ticker);
@@ -202,9 +198,6 @@ export class PaintManager implements IPaintManager {
       $flag.css('color', flagCategory.color);
       $exchange.css('color', flagCategory.color);
     }
-
-    // FNO marking on header name
-    this.applyFnoBorder($name, isFno);
   }
 
   // ── Area context ──
@@ -269,7 +262,7 @@ export class PaintManager implements IPaintManager {
   }
 
   /**
-   * Paint all visuals (symbol color, FNO border, flag color) for a
+   * Paint all visuals (symbol color, flag color, tag badges) for a
    * single ticker using the context's pre-computed selectors.
    * Accepts an optional pre-resolved $symbol to avoid re-querying the DOM.
    */
@@ -288,7 +281,6 @@ export class PaintManager implements IPaintManager {
     }
 
     this.paintSymbolColor($symbol, symbolColor);
-    this.paintFnoBorder($symbol, categories.isFno);
     this.paintSingleFlag($symbol, context.itemSelector, context.flagSelector, categories.flag?.color);
     this.paintTickerTags($symbol, context.area, categories.tags);
   }
@@ -305,8 +297,8 @@ export class PaintManager implements IPaintManager {
   // ── Single-ticker painters ──
 
   /**
-   * Reset visual state (symbol color, flag color, F&O border) for a
-   * single ticker row back to defaults.
+   * Reset visual state (symbol color, flag color) for a single
+   * ticker row back to defaults.
    */
   private resetTickerVisuals($symbol: JQuery<HTMLElement>, context: AreaPaintContext): void {
     // Reset symbol color
@@ -314,10 +306,6 @@ export class PaintManager implements IPaintManager {
 
     // Reset flag color
     $symbol.closest(context.itemSelector).find(context.flagSelector).css('color', Constants.UI.COLORS.DEFAULT);
-
-    // Clear F&O border style
-    $symbol.css('border-top-style', '');
-    $symbol.css('border-width', '');
   }
 
   /**
@@ -337,16 +325,6 @@ export class PaintManager implements IPaintManager {
   private paintSymbolColor($symbol: JQuery<HTMLElement>, color: string): void {
     if (color !== Constants.UI.COLORS.DEFAULT) {
       $symbol.css('color', color);
-    }
-  }
-
-  /**
-   * Paint the F&O border on a single ticker's symbol element.
-   * No-op if the ticker is not F&O (resetArea already cleared the border).
-   */
-  private paintFnoBorder($symbol: JQuery<HTMLElement>, isFno: boolean): void {
-    if (isFno) {
-      $symbol.css(Constants.UI.COLORS.FNO_CSS);
     }
   }
 
@@ -379,12 +357,12 @@ export class PaintManager implements IPaintManager {
    * screener rows and the ticker header never receive badges. Tag semantics
    * are owned by {@link TickerTag}; this manager owns their presentation.
    */
-  private paintTickerTags($symbol: JQuery<HTMLElement>, area: TickerArea, tags?: readonly TickerTag[]): void {
+  private paintTickerTags($symbol: JQuery<HTMLElement>, area: TickerArea, tags: readonly TickerTag[]): void {
     if (area !== TickerArea.WATCHLIST) {
       return;
     }
 
-    const desired = new Set((tags ?? []).filter((tag) => TICKER_TAG_VISUALS[tag] !== undefined));
+    const desired = new Set(tags.filter((tag) => TICKER_TAG_VISUALS[tag] !== undefined));
     const $owned = $symbol.siblings(TAG_CONTAINER_SELECTOR);
 
     // No renderable tags — drop any obsolete owned container
@@ -437,18 +415,6 @@ export class PaintManager implements IPaintManager {
       .attr('title', visual.tooltip)
       .text(visual.icon);
   }
-
-  /**
-   * Apply or clear F&O border style on a header element.
-   */
-  private applyFnoBorder($element: JQuery<HTMLElement>, enabled: boolean): void {
-    if (enabled) {
-      $element.css(Constants.UI.COLORS.FNO_CSS);
-    } else {
-      $element.css('border-top-style', '');
-      $element.css('border-width', '');
-    }
-  }
 }
 
 // ── Owned ticker tag nodes ──
@@ -472,5 +438,9 @@ const TICKER_TAG_VISUALS: Readonly<Partial<Record<TickerTag, TickerTagVisual>>> 
   [TickerTag.TIMEFRAME_PENDING]: {
     icon: '🕒',
     tooltip: 'Timeframe Pending — YR timeframe not selected',
+  },
+  [TickerTag.FNO]: {
+    icon: '○',
+    tooltip: 'F&O — Futures & Options',
   },
 };

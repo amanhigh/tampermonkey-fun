@@ -22,5 +22,14 @@
         line-height: 1.2;
         opacity: 0.85;
         cursor: default;
+
+        // FNO is a subtle hollow marker: smaller and muted, ordered after
+        // the clock badge so the timeframe annotation leads.
+        &[data-ticker-tag='FNO'] {
+            order: 1;
+            font-size: 8px;
+            color: #9e9e9e;
+            opacity: 0.55;
+        }
     }
 }

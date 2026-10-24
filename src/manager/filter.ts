@@ -72,7 +72,7 @@ export class FilterManager implements IFilterManager {
 
   /**
    * Reset watchlist layout and visibility. Does NOT reset visual decals
-   * (colors, flags, F&O borders) — those are handled by PaintManager.paint().
+   * (colors, flags, tag badges) — those are handled by PaintManager.paint().
    */
   private resetWatchList(): void {
     // Increase Widget Height to prevent Line Filtering
