@@ -3,7 +3,7 @@ import { ITimeFrameManager } from '../../../src/manager/timeframe';
 import { IBarkatManager } from '../../../src/manager/barkat';
 import { IDomManager } from '../../../src/manager/dom';
 import { TickerTimeframe } from '../../../src/models/timeframe';
-import { BarkatStatus, BarkatTickerAnalysis } from '../../../src/models/barkat';
+import { BarkatStatus, BarkatTickerAnalysis, BarkatTimeframe } from '../../../src/models/barkat';
 import { ISubscriber } from '../../../src/manager/event_bus';
 import { DomainEventType } from '../../../src/models/domain_event';
 import { Notifier } from '../../../src/util/notify';
@@ -37,7 +37,7 @@ const BEM = {
 } as const;
 
 /** Supported (assessed) Barkat frames. */
-const ASSESSED: readonly TickerTimeframe[] = [
+const ASSESSED: readonly BarkatTimeframe[] = [
   TickerTimeframe.SMN,
   TickerTimeframe.TMN,
   TickerTimeframe.MN,
@@ -153,21 +153,11 @@ function buildAnalysis(
 ): BarkatTickerAnalysis {
   return {
     ticker,
-    timeframes: ASSESSED.map((timeframe) => {
-      return {
-        timeframe,
-        status: statuses[timeframe] ?? 'pass',
-        metrics: {
-          zone_failures: {
-            percentage: 0,
-            status: statuses[timeframe] ?? 'pass',
-          },
-          strategy_wins: { percentage: null, status: 'pass' },
-          strategy_entries: { percentage: 50, status: 'pass' },
-        },
-      };
-    }),
-  } as BarkatTickerAnalysis;
+    timeframes: ASSESSED.map((timeframe) => ({
+      timeframe,
+      status: statuses[timeframe] ?? 'pass',
+    })),
+  };
 }
 
 // ── Tests ──

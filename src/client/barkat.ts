@@ -1,18 +1,18 @@
 import { Constants } from '../models/constant';
-import { BarkatTickerAnalysis, parseBarkatTickerAnalysis } from '../models/barkat';
+import { BarkatTickerAnalysis } from '../models/barkat';
 import { BaseClient, IBaseClient, wrapClientError } from './base';
 
 /**
  * Read-only client for the Barkat analysis API.
- * Contract and policy are owned by the Barkat backend; this layer only
- * transports and validates responses (see models/barkat.ts).
+ * Contract and policy are owned by the Barkat backend (see models/barkat.ts);
+ * this layer only transports responses.
  */
 export interface IBarkatClient extends IBaseClient {
   /**
    * Get the multi-timeframe analysis for a ticker.
    * Raw ticker symbol is sent as-is (URL-encoded); no exchange conversion is applied.
    * @param ticker - Native ticker symbol, no exchange prefix (e.g. "BRK.B")
-   * @returns Promise resolving to the validated analysis payload
+   * @returns Promise resolving to the analysis payload
    */
   getTickerAnalysis(ticker: string): Promise<BarkatTickerAnalysis>;
 }
@@ -30,8 +30,8 @@ export class BarkatClient extends BaseClient implements IBarkatClient {
   /** @inheritdoc */
   async getTickerAnalysis(ticker: string): Promise<BarkatTickerAnalysis> {
     try {
-      const response = await this.makeRequest<unknown>(`/tickers/${encodeURIComponent(ticker)}`);
-      return parseBarkatTickerAnalysis(response, ticker);
+      const response = await this.makeRequest<{ data: BarkatTickerAnalysis }>(`/tickers/${encodeURIComponent(ticker)}`);
+      return response.data;
     } catch (error) {
       throw wrapClientError(error, `Failed to get ticker analysis for ${ticker}`);
     }

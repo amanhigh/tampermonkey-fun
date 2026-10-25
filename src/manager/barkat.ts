@@ -10,7 +10,7 @@ export interface IBarkatManager {
    * Get the multi-timeframe analysis for a ticker.
    * No caching, event publication or policy evaluation happens here.
    * @param ticker - Native ticker symbol, no exchange prefix (e.g. "BRK.B")
-   * @returns Promise resolving to the validated analysis payload
+   * @returns Promise resolving to the analysis payload
    */
   getTickerAnalysis(ticker: string): Promise<BarkatTickerAnalysis>;
 }

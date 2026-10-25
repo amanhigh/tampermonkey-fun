@@ -6,7 +6,7 @@ describe('BarkatManager', () => {
   let barkatManager: IBarkatManager;
   let mockBarkatClient: jest.Mocked<IBarkatClient>;
 
-  // Validation belongs to the client; the manager only needs a typed payload.
+  // The server contract owns the payload shape; the manager only passes it through.
   const analysis: BarkatTickerAnalysis = { ticker: 'BRK.B', timeframes: [] };
 
   beforeEach(() => {
