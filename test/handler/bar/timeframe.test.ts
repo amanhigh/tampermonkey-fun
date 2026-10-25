@@ -700,9 +700,39 @@ describe('TimeFrameBar', () => {
           expect(state.badge).toBe(BEM.BADGE_GLYPH);
         } else {
           expect(state.badge).toBeNull();
+          // Matching rows are never decorated: no title write, no badge lookup/append
+          expect(chipEl(TickerTimeframe.TMN).attr).not.toHaveBeenCalled();
+          expect(chipEl(TickerTimeframe.TMN).find).not.toHaveBeenCalled();
+          expect(chipEl(TickerTimeframe.TMN).append).not.toHaveBeenCalled();
         }
       }
     );
+
+    it('should leave every chip undecorated when all assessed selections match', async () => {
+      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
+        TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK,
+      ]);
+      // Unselected SMN is not preferred, so every assessed row agrees with the selection
+      mockBarkatManager.getTickerAnalysis.mockResolvedValue(
+        buildAnalysis('AAPL', { [TickerTimeframe.SMN]: 'fail' })
+      );
+
+      const bar = createBar();
+      await bar.refresh();
+
+      for (const code of Object.values(TickerTimeframe) as TickerTimeframe[]) {
+        expect(chipState(code).badge).toBeNull();
+        expect(chipEl(code).attr).not.toHaveBeenCalled();
+        expect(chipEl(code).append).not.toHaveBeenCalled();
+      }
+
+      // Indicator lifecycle settles READY with no remaining loading marker
+      expect(mockMarkerEl.remove).toHaveBeenCalled();
+      expect(mockMarkerEl.length).toBe(0);
+      expect(rootAttrs.get('aria-busy')).toBe('false');
+      // In-place only: one clear plus one mandatory paint
+      expect(contentHtmlCalls()).toHaveLength(1);
+    });
 
     it('should never badge YR or DL even when active and unassessed', async () => {
       mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
@@ -728,35 +758,6 @@ describe('TimeFrameBar', () => {
       // Active rows that fail are badged, proving the overlay is live
       expect(chipState(TickerTimeframe.MN).badge).toBe(BEM.BADGE_GLYPH);
       expect(chipState(TickerTimeframe.MN).title).toBe(TITLE_SELECTED_NOT_PREFERRED);
-    });
-
-    it('should update badges on the existing chip nodes without repainting', async () => {
-      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
-        TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK,
-      ]);
-      mockBarkatManager.getTickerAnalysis.mockResolvedValue(
-        buildAnalysis('AAPL', { [TickerTimeframe.TMN]: 'fail' })
-      );
-
-      const bar = createBar();
-      await bar.refresh();
-
-      // One clear + one mandatory paint: the analysis never re-renders the root
-      expect(mockRootEl.html).toHaveBeenCalledTimes(2);
-      expect(contentHtmlCalls()).toHaveLength(1);
-      expect(contentHtmlCalls()[0]).not.toContain(BADGE_CLASS);
-
-      // The badge is appended to the already-painted chip node
-      expect(chipEl(TickerTimeframe.TMN).append).toHaveBeenCalledWith(
-        expect.stringContaining(`class="${BADGE_CLASS}"`)
-      );
-      expect(chipEl(TickerTimeframe.TMN).append).toHaveBeenCalledWith(
-        expect.stringContaining(BEM.BADGE_GLYPH)
-      );
-      expect(chipEl(TickerTimeframe.TMN).attr).toHaveBeenCalledWith('title', TITLE_SELECTED_NOT_PREFERRED);
-      // Non-mismatch chips are decorated in place with the plain hint
-      expect(chipEl(TickerTimeframe.MN).attr).toHaveBeenCalledWith('title', CLICK_HINT);
-      expect(chipState(TickerTimeframe.MN).badge).toBeNull();
     });
 
     it('should paint usable chips and a loading marker while Barkat is pending', async () => {
@@ -792,6 +793,21 @@ describe('TimeFrameBar', () => {
       expect(chipState(TickerTimeframe.TMN).badge).toBe(BEM.BADGE_GLYPH);
       expect(mockMarkerEl.remove).toHaveBeenCalled();
       expect(rootAttrs.get('aria-busy')).toBe('false');
+
+      // One clear + one mandatory paint: the analysis never re-renders the root
+      expect(mockRootEl.html).toHaveBeenCalledTimes(2);
+      expect(contentHtmlCalls()).toHaveLength(1);
+      expect(contentHtmlCalls()[0]).not.toContain(BADGE_CLASS);
+
+      // The badge is appended to the already-painted chip node
+      expect(chipEl(TickerTimeframe.TMN).append).toHaveBeenCalledWith(
+        expect.stringContaining(`class="${BADGE_CLASS}"`)
+      );
+      expect(chipEl(TickerTimeframe.TMN).append).toHaveBeenCalledWith(
+        expect.stringContaining(BEM.BADGE_GLYPH)
+      );
+      expect(chipEl(TickerTimeframe.TMN).attr).toHaveBeenCalledWith('title', TITLE_SELECTED_NOT_PREFERRED);
+      expect(chipState(TickerTimeframe.MN).badge).toBeNull();
     });
   });
 

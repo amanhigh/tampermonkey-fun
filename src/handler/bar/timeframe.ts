@@ -118,52 +118,35 @@ export class TimeFrameBar extends BaseBar<TimeFrameBarData> implements ITimeFram
   }
 
   /**
-   * Loads the Barkat analysis for the captured ticker and converts it into
-   * in-place badge/title updates for every chip. A rejection propagates to
-   * BaseBar, which marks indicators unavailable quietly.
+   * Loads the Barkat analysis for the captured ticker and emits in-place
+   * badge/title updates for mismatching chips only: one update per assessed row
+   * whose `pass` verdict disagrees with the painted selection. Matching rows and
+   * unassessed timeframes (YR, DL never appear as analysis rows) are left
+   * undecorated, so a full match yields no updates at all. A rejection propagates
+   * to BaseBar, which marks indicators unavailable quietly.
    *
    * @inheritdoc
    */
   protected async loadIndicators(data: TimeFrameBarData): Promise<readonly BarIndicatorUpdate[]> {
     const analysis = await this.barkatManager.getTickerAnalysis(data.ticker);
-    const preferred = new Map<TickerTimeframe, boolean>(
-      analysis.timeframes.map((row) => [row.timeframe, row.status === 'pass'])
-    );
+    const activeCodes = data.activeCodes;
+    const updates: BarIndicatorUpdate[] = [];
 
-    return Object.values(TickerTimeframe).map((code) => this.buildIndicatorUpdate(code, data.activeCodes, preferred));
-  }
+    for (const row of analysis.timeframes) {
+      const isActive = activeCodes.includes(row.timeframe);
+      const isPreferred = row.status === 'pass';
+      if (isActive === isPreferred) {
+        continue;
+      }
 
-  /**
-   * Builds the update for one chip.
-   *
-   * Mismatch is resolved once here: an assessed timeframe (`preferred` defined)
-   * always mismatches when its preference disagrees with the selection, and
-   * drives both the native title and the corner badge. An unassessed timeframe
-   * (`undefined`) is kept distinct from `false` and never mismatches.
-   *
-   * @param code - Timeframe code (YR, SMN, etc.)
-   * @param activeCodes - Backend-active timeframe codes for the painted request
-   * @param preferred - Assessed timeframe → whether Barkat prefers it
-   */
-  private buildIndicatorUpdate(
-    code: TickerTimeframe,
-    activeCodes: readonly TickerTimeframe[],
-    preferred: ReadonlyMap<TickerTimeframe, boolean>
-  ): BarIndicatorUpdate {
-    const isActive = activeCodes.includes(code);
-    const verdict = preferred.get(code);
-    const mismatch = verdict !== undefined && isActive !== verdict;
-
-    let title = CLICK_HINT;
-    if (mismatch) {
-      title = isActive ? TITLE_SELECTED_NOT_PREFERRED : TITLE_UNSELECTED_PREFERRED;
+      updates.push({
+        selector: `.${this.bemElement('chip')}[${this.bemDataAttr('code')}="${row.timeframe}"]`,
+        badge: MISMATCH_GLYPH,
+        title: isActive ? TITLE_SELECTED_NOT_PREFERRED : TITLE_UNSELECTED_PREFERRED,
+      });
     }
 
-    return {
-      selector: `.${this.bemElement('chip')}[${this.bemDataAttr('code')}="${code}"]`,
-      badge: mismatch ? MISMATCH_GLYPH : '',
-      title,
-    };
+    return updates;
   }
 
   // ── Rendering ──
