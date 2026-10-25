@@ -1,5 +1,8 @@
 import { AlertFeedEvent } from '../models/alertfeed';
 import { Constants } from '../models/constant';
+import { WatchCategoryId } from '../models/watch';
+import { IAlertTickerManager } from './alert_ticker';
+import { ICategoryManager } from './category';
 import { IDisplayManager } from './display';
 
 /**
@@ -22,6 +25,14 @@ export interface IAlertFeedManager {
   createAlertFeedEvent(alertTicker: string, ticker?: string): Promise<void>;
 
   /**
+   * Resolve all alert tickers linked to a TV ticker and create alert feed events for each.
+   * Composite tickers and unmapped tickers are skipped silently.
+   * @param ticker - The TV ticker whose linked alert feed rows should be repainted
+   * @returns Promise that resolves when all linked events are written
+   */
+  createAlertFeedEventsForTicker(ticker: string): Promise<void>;
+
+  /**
    * Create a reset feed event
    * @returns Promise that resolves when event is created
    */
@@ -32,13 +43,32 @@ export interface IAlertFeedManager {
  * Implementation of IAlertFeedManager
  */
 export class AlertFeedManager implements IAlertFeedManager {
-  constructor(private readonly displayManager: IDisplayManager) {}
+  constructor(
+    private readonly displayManager: IDisplayManager,
+    private readonly categoryManager: ICategoryManager,
+    private readonly alertTickerManager: IAlertTickerManager
+  ) {}
 
   /** @inheritdoc */
   public async createAlertFeedEvent(alertTicker: string, ticker?: string): Promise<void> {
     const feedInfo = await this.displayManager.resolve(ticker ?? null);
     const event = new AlertFeedEvent(alertTicker, feedInfo);
     await GM.setValue(Constants.STORAGE.EVENTS.ALERT_FEED_UPDATE, event.stringify());
+  }
+
+  /** @inheritdoc */
+  public async createAlertFeedEventsForTicker(ticker: string): Promise<void> {
+    // Composite TradingView formulas (e.g. SENSEX/USDINR/XAUUSD)
+    // never have Investing alert ticker mappings — skip silently.
+    const category = await this.categoryManager.getTickerCategory(ticker);
+    if (category.watch?.id === WatchCategoryId.COMPOSITE) {
+      return;
+    }
+
+    const alertTickers = await this.alertTickerManager.getAlertTickersForTicker(ticker);
+    for (const alertTicker of alertTickers) {
+      await this.createAlertFeedEvent(alertTicker.symbol, alertTicker.ticker);
+    }
   }
 
   /** @inheritdoc */

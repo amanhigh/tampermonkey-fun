@@ -56,16 +56,32 @@ export interface TickerArea {
 
 // ── Factory ──
 
-function createTickerArea(
-  id: TickerAreaId,
-  symbol: string,
-  selected: string,
-  item: string,
-  flag: string,
-  line: string,
-  mainSelector: string,
-  containerSelector: string
-): TickerArea {
+/**
+ * Named configuration for {@link createTickerArea}.
+ * Kept unexported: callers use the {@link TickerArea} singletons instead.
+ */
+interface TickerAreaConfig {
+  /** Stable identifier used for cache keys and equality checks. */
+  id: TickerAreaId;
+  /** Raw symbol selector for this area. */
+  symbol: string;
+  /** Prefix selector identifying the selected row. */
+  selected: string;
+  /** Row/item container selector. */
+  item: string;
+  /** Flag element selector. */
+  flag: string;
+  /** Row-level CSS selector for all ticker lines in this area. */
+  line: string;
+  /** Widget/panel presence CSS selector to detect if the area is open. */
+  mainSelector: string;
+  /** Container CSS selector for the outermost list element. */
+  containerSelector: string;
+}
+
+function createTickerArea(config: TickerAreaConfig): TickerArea {
+  const { id, symbol, selected, item, flag, line, mainSelector, containerSelector } = config;
+
   return {
     id,
     line,
@@ -97,26 +113,26 @@ export const TickerArea: Readonly<{
   SCREENER: TickerArea;
 }> = {
   /** Main watchlist panel (always present). */
-  WATCHLIST: createTickerArea(
-    'WATCHLIST',
-    'span[class*=symbolNameText]',
-    'div[class*=selected]',
-    'div[class*=symbol-]',
-    'div[class^=uiMarker]',
-    'div[class^=listContainer] > div > div',
-    'div.widgetbar-widgetbody:first',
-    'div[class^=listContainer]'
-  ),
+  WATCHLIST: createTickerArea({
+    id: 'WATCHLIST',
+    symbol: 'span[class*=symbolNameText]',
+    selected: 'div[class*=selected]',
+    item: 'div[class*=symbol-]',
+    flag: 'div[class^=uiMarker]',
+    line: 'div[class^=listContainer] > div > div',
+    mainSelector: 'div.widgetbar-widgetbody:first',
+    containerSelector: 'div[class^=listContainer]',
+  }),
 
   /** Screener panel (may be hidden/closed). */
-  SCREENER: createTickerArea(
-    'SCREENER',
-    'a.tickerName-GrtoTeat',
-    '.tv-screener-table__result-row--selected',
-    'tr.row-RdUXZpkv',
-    'div[class^=uiMarker]',
-    'tr.row-RdUXZpkv',
-    '[data-qa-id="screener-widget"]',
-    '[data-qa-id="screener-widget"]'
-  ),
+  SCREENER: createTickerArea({
+    id: 'SCREENER',
+    symbol: 'a.tickerName-GrtoTeat',
+    selected: '.tv-screener-table__result-row--selected',
+    item: 'tr.row-RdUXZpkv',
+    flag: 'div[class^=uiMarker]',
+    line: 'tr.row-RdUXZpkv',
+    mainSelector: '[data-qa-id="screener-widget"]',
+    containerSelector: '[data-qa-id="screener-widget"]',
+  }),
 };

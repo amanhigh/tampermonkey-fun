@@ -1,18 +1,15 @@
 import { Constants } from '../models/constant';
 import { IUIUtil } from '../util/ui';
-import { ISyncUtil } from '../util/sync';
 import { Notifier } from '../util/notify';
 import { AlertClickAction } from '../models/events';
 import { IAlertManager } from '../manager/alert';
 import { IAlertFeedManager } from '../manager/alertfeed';
-import { ICategoryManager } from '../manager/category';
 import { IDisplayManager } from '../manager/display';
 import { DisplayState, DisplayInfo } from '../models/display';
 import { AlertFeedEvent } from '../models/alertfeed';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { IInvestingManager } from '../manager/investing';
 import { AlertTicker } from '../models/alert_ticker';
-import { WatchCategoryId } from '../models/watch';
 import { ISubscriber, IDomainEventConsumer } from '../manager/event_bus';
 import { DomainEventType } from '../models/domain_event';
 
@@ -36,8 +33,6 @@ export interface IAlertFeedHandler extends IDomainEventConsumer {
 export class AlertFeedHandler implements IAlertFeedHandler {
   constructor(
     private readonly uiUtil: IUIUtil,
-    private readonly syncUtil: ISyncUtil,
-    private readonly categoryManager: ICategoryManager,
     private readonly displayManager: IDisplayManager,
     private readonly alertManager: IAlertManager,
     private readonly alertFeedManager: IAlertFeedManager,
@@ -46,8 +41,6 @@ export class AlertFeedHandler implements IAlertFeedHandler {
   ) {}
 
   public initialize(): void {
-    void this.syncUtil; // Will be used in handleHookButton
-
     const $area = this.uiUtil.buildArea(Constants.UI.IDS.AREAS.MAIN, '20px', '20px').css({
       position: 'fixed',
     });
@@ -102,44 +95,23 @@ export class AlertFeedHandler implements IAlertFeedHandler {
         DomainEventType.TICKER_TIMEFRAMES_CHANGED,
       ],
       async (event) => {
-        await this.createAlertFeedEventsForTicker(event.ticker);
+        await this.alertFeedManager.createAlertFeedEventsForTicker(event.ticker);
       }
     );
 
     // WATCHLIST_CHANGED carries the changed ticker list, so repaint only those tickers
     subscriber.subscribe(DomainEventType.WATCHLIST_CHANGED, async (event) => {
       for (const ticker of event.tickers) {
-        await this.createAlertFeedEventsForTicker(ticker);
+        await this.alertFeedManager.createAlertFeedEventsForTicker(ticker);
       }
     });
 
     // TICKER_CATEGORY_CHANGED — repaint all linked alert tickers for affected tickers
     subscriber.subscribe(DomainEventType.TICKER_CATEGORY_CHANGED, async (event) => {
       for (const ticker of event.tickers) {
-        await this.createAlertFeedEventsForTicker(ticker);
+        await this.alertFeedManager.createAlertFeedEventsForTicker(ticker);
       }
     });
-  }
-
-  /**
-   * Resolve all alert tickers linked to a TV ticker and create alert feed events for each.
-   * Silent skip: composite tickers and unmapped tickers are skipped without logging.
-   */
-  private async createAlertFeedEventsForTicker(ticker: string): Promise<void> {
-    // Composite TradingView formulas (e.g. SENSEX/USDINR/XAUUSD)
-    // never have Investing alert ticker mappings — skip silently.
-    const category = await this.categoryManager.getTickerCategory(ticker);
-    if (category.watch?.id === WatchCategoryId.COMPOSITE) {
-      return;
-    }
-
-    const alertTickers = await this.alertTickerManager.getAlertTickersForTicker(ticker);
-    if (alertTickers.length === 0) {
-      return;
-    }
-    for (const alertTicker of alertTickers) {
-      await this.alertFeedManager.createAlertFeedEvent(alertTicker.symbol, alertTicker.ticker);
-    }
   }
 
   public handleHookButton(): void {

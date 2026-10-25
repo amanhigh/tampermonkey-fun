@@ -15,6 +15,9 @@ import { IToolbarHandler } from '../handler/toolbar';
 import { Factory } from './factory';
 
 export class Barkat {
+  // Application bootstrap: one collaborator per site handler must be injected
+  // together so initialize() can wire each site without hidden lookups.
+  // eslint-disable-next-line max-params
   constructor(
     private readonly errorHandler: IGlobalErrorHandler,
     private readonly uiUtil: UIUtil,

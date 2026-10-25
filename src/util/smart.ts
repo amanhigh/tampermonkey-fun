@@ -336,7 +336,9 @@ export class SmartPrompt implements ISmartPrompt {
    */
   private getGroupAnswers(): Readonly<Record<string, string | null>> {
     const answers: Record<string, string | null> = {};
-    if (!this.modal) return answers;
+    if (!this.modal) {
+      return answers;
+    }
 
     const radios = this.modal.querySelectorAll('input[type="radio"]') as NodeListOf<HTMLInputElement>;
     const groupIds = new Set<string>();
