@@ -5,13 +5,6 @@ import { TickerTimeframe } from '../../models/timeframe';
 import { ITimeFrameManager } from '../../manager/timeframe';
 import { IBarkatManager } from '../../manager/barkat';
 import { IDomManager } from '../../manager/dom';
-import {
-  BARKAT_METRIC_KEYS,
-  BarkatMetricKey,
-  BarkatStatus,
-  BarkatTimeframeAnalysis,
-  BARKAT_TIMEFRAMES,
-} from '../../models/barkat';
 import { escapeHtml } from '../../util/html';
 import { Notifier } from '../../util/notify';
 
@@ -20,37 +13,20 @@ import { Notifier } from '../../util/notify';
 /** Emoji prefix displayed before the timeframe chips. */
 const EMOJI_TIMEFRAMES = '\u{1F9ED}';
 
-/** Existing click affordance hint shown at the end of every chip tooltip. */
+/** Generic click affordance hint used as the native chip tooltip. */
 const CLICK_HINT = 'Click to add/remove.';
 
-/** Brief, non-predictive suitability disclaimer. */
-const SUITABILITY_DISCLAIMER = 'History-based suitability, not a forecast.';
+/** Native tooltip for a selected chip whose Barkat verdict is not preferred. */
+const TITLE_SELECTED_NOT_PREFERRED = 'Selected \u00B7 Barkat: not preferred. Click to remove.';
+
+/** Native tooltip for an unselected chip whose Barkat verdict is preferred. */
+const TITLE_UNSELECTED_PREFERRED = 'Not selected \u00B7 Barkat: preferred. Click to add.';
 
 /** Namespaced jQuery event namespace for delegated bindings on this bar. */
 const EVENT_NS = 'bar-tf';
 
-/** Human labels for the three Barkat metrics, in canonical order. */
-const METRIC_LABELS: Record<BarkatMetricKey, string> = {
-  zone_failures: 'Zone failures',
-  strategy_wins: 'Strategy wins',
-  strategy_entries: 'Strategy entries',
-};
-
-/** Preferred-reading label per Barkat status. */
-const STATUS_LABEL: Record<BarkatStatus, string> = {
-  pass: 'pass (preferred)',
-  warning: 'warning (not preferred)',
-  fail: 'fail (not preferred)',
-};
-
 /** Corner badge glyph for a selection/verdict mismatch. */
 const MISMATCH_GLYPH = '\u2260';
-
-/** Latest-wins analysis state rendered by the bar. */
-type AnalysisState =
-  | { readonly kind: 'loading' }
-  | { readonly kind: 'unavailable' }
-  | { readonly kind: 'ready'; readonly rows: ReadonlyMap<TickerTimeframe, BarkatTimeframeAnalysis> };
 
 /**
  * Interface for the timeframe bar presentation component.
@@ -68,8 +44,10 @@ export type ITimeFrameHandler = IBaseBar;
  * inactive chips are muted. Clicking toggles the code on/off in the backend.
  *
  * Barkat analysis is a secondary, read-only overlay: chips paint from the
- * selection load alone, then corner badges and hover/focus tooltips are added
- * when the analysis resolves. Analysis failure is quiet (no notifications).
+ * selection load alone, then a corner badge and a native `title` hint are added
+ * when the analysis resolves. Full analysis detail lives in the side panel, so
+ * no metric-level markup is rendered here. Analysis failure is quiet
+ * (no notifications).
  *
  * Compact-only: does not override {@link renderDetails} so BaseBar renders
  * compact content directly without disclosure shell.
@@ -84,14 +62,18 @@ export class TimeFrameBar extends BaseBar<readonly TickerTimeframe[]> implements
   /** Monotonic revision guarding both selection and analysis paints. */
   private refreshRevision = 0;
 
-  /** Active codes from the latest selection load, retained for analysis repaints. */
-  private activeCodes: readonly TickerTimeframe[] = [];
+  /**
+   * Active codes from the latest selection load, retained for analysis repaints.
+   * `undefined` until the first selection paints; an empty array is a valid state.
+   */
+  private activeCodes?: readonly TickerTimeframe[];
 
-  /** Analysis overlay state for the latest refresh. */
-  private analysis: AnalysisState = { kind: 'loading' };
-
-  /** Whether an earlier successful paint exists (drives overlay clearing). */
-  private hasPainted = false;
+  /**
+   * Supported timeframe → whether Barkat prefers it (`status === 'pass'`).
+   * `undefined` while the analysis is pending or unavailable. A missing key
+   * means the timeframe is unassessed and must be kept distinct from `false`.
+   */
+  private analysis?: ReadonlyMap<TickerTimeframe, boolean>;
 
   constructor(
     private readonly timeFrameManager: ITimeFrameManager,
@@ -133,17 +115,16 @@ export class TimeFrameBar extends BaseBar<readonly TickerTimeframe[]> implements
     const revision = ++this.refreshRevision;
     const ticker = this.domManager.getTicker();
 
-    // Drop the previous overlay immediately so stale badges and tooltip content
-    // are not displayed while fresh selections load.
-    this.analysis = { kind: 'loading' };
-    if (this.hasPainted) {
-      this.repaintPreservingFocus();
-    }
+    // Drop the previous overlay immediately so stale badges and titles are not
+    // displayed while fresh selections load.
+    this.analysis = undefined;
+    this.repaintPreservingFocus();
 
     const selectionPromise = this.loadData();
     const analysisPromise = this.barkatManager.getTickerAnalysis(ticker).then(
-      (value) => ({ ok: true as const, value }),
-      () => ({ ok: false as const })
+      (value) =>
+        new Map<TickerTimeframe, boolean>(value.timeframes.map((row) => [row.timeframe, row.status === 'pass'])),
+      () => undefined
     );
 
     const active = await selectionPromise;
@@ -151,16 +132,13 @@ export class TimeFrameBar extends BaseBar<readonly TickerTimeframe[]> implements
       return;
     }
     this.activeCodes = active;
-    this.hasPainted = true;
     this.render(active);
 
-    const settled = await analysisPromise;
+    const preferredByCode = await analysisPromise;
     if (revision !== this.refreshRevision) {
       return;
     }
-    this.analysis = settled.ok
-      ? { kind: 'ready', rows: new Map(settled.value.timeframes.map((row) => [row.timeframe, row])) }
-      : { kind: 'unavailable' };
+    this.analysis = preferredByCode;
     this.repaintPreservingFocus();
   }
 
@@ -178,7 +156,6 @@ export class TimeFrameBar extends BaseBar<readonly TickerTimeframe[]> implements
   /** @inheritdoc */
   protected onPaint($root: JQuery, _data: readonly TickerTimeframe[]): void {
     this.bindChipClicks($root);
-    this.bindTooltipInteractions($root);
   }
 
   // ── Binding ──
@@ -194,35 +171,6 @@ export class TimeFrameBar extends BaseBar<readonly TickerTimeframe[]> implements
       e.stopPropagation();
       void this.handleChipClick($(e.currentTarget));
     });
-  }
-
-  /**
-   * Binds tooltip re-show and Escape dismissal handlers (namespaced, deduplicated).
-   * Neither handler can trigger a timeframe toggle.
-   * @param $root - jQuery-wrapped bar root element
-   */
-  private bindTooltipInteractions($root: JQuery): void {
-    const chipSelector = `.${this.bemElement('chip')}`;
-    const itemSelector = `.${this.bemElement('item')}`;
-    const dismissedModifier = this.bemElementModifier('item', 'tip-dismissed');
-
-    const restoreTip = (e: JQuery.TriggeredEvent): void => {
-      $(e.currentTarget).removeClass(dismissedModifier);
-    };
-
-    $root
-      .off(`mouseenter.${EVENT_NS}`, itemSelector)
-      .on(`mouseenter.${EVENT_NS}`, itemSelector, restoreTip)
-      .off(`focusin.${EVENT_NS}`, itemSelector)
-      .on(`focusin.${EVENT_NS}`, itemSelector, restoreTip)
-      .off(`keydown.${EVENT_NS}`, chipSelector)
-      .on(`keydown.${EVENT_NS}`, chipSelector, (e: JQuery.KeyDownEvent) => {
-        if (e.key !== 'Escape') {
-          return;
-        }
-        e.stopPropagation();
-        $(e.currentTarget).closest(itemSelector).addClass(dismissedModifier);
-      });
   }
 
   // ── Toggle Workflow ──
@@ -263,12 +211,17 @@ export class TimeFrameBar extends BaseBar<readonly TickerTimeframe[]> implements
   // ── Focus preservation ──
 
   /**
-   * Repaints the current selection with the latest analysis overlay while
+   * Repaints the retained selection with the latest analysis overlay while
    * restoring focus to the same chip when this bar owned it.
+   * No-op until a selection has painted (`activeCodes === undefined`).
    */
   private repaintPreservingFocus(): void {
+    const codes = this.activeCodes;
+    if (codes === undefined) {
+      return;
+    }
     const focusedCode = this.captureFocusedChipCode();
-    this.render(this.activeCodes);
+    this.render(codes);
     if (focusedCode !== undefined) {
       this.restoreChipFocus(focusedCode);
     }
@@ -310,9 +263,13 @@ export class TimeFrameBar extends BaseBar<readonly TickerTimeframe[]> implements
   }
 
   /**
-   * Builds one chip item: a button chip plus its linked tooltip.
-   * Badges and tooltips are absolutely positioned overlays, so the row keeps
+   * Builds one chip button with its escaped native tooltip.
+   * The mismatch badge is an absolutely positioned overlay, so the row keeps
    * its original width and height.
+   *
+   * Mismatch is derived once here: an assessed timeframe (`preferred` defined)
+   * always mismatches when its preference disagrees with the selection, and
+   * drives both the native title and the corner badge.
    * @param code - Timeframe code (YR, SMN, etc.)
    * @param isActive - Whether this chip is currently active in the backend
    */
@@ -322,123 +279,21 @@ export class TimeFrameBar extends BaseBar<readonly TickerTimeframe[]> implements
       ? this.bemElementModifier('chip', 'active')
       : this.bemElementModifier('chip', 'inactive');
     const codeAttr = this.bemDataAttr('code');
-    const analysedAttr = this.bemDataAttr('barkat');
-    const tipId = this.bemChildId(`tip-${code}`);
-    const badge = this.buildBadge(code, isActive);
-    const analysedState = this.analysisKind(code);
+    const preferred = this.analysis?.get(code);
+    const mismatch = preferred !== undefined && isActive !== preferred;
+
+    let title = CLICK_HINT;
+    if (mismatch) {
+      title = isActive ? TITLE_SELECTED_NOT_PREFERRED : TITLE_UNSELECTED_PREFERRED;
+    }
+    const badge = mismatch
+      ? `<span class="${this.bemElement('badge')}" ${this.bemDataAttr('badge')}="mismatch" aria-hidden="true">${MISMATCH_GLYPH}</span>`
+      : '';
 
     return [
-      `<span class="${this.bemElement('item')}">`,
       `<button type="button" class="${chipClass} ${stateClass}" ${codeAttr}="${code}" `,
-      `aria-pressed="${isActive ? 'true' : 'false'}" aria-describedby="${tipId}" `,
-      `${analysedAttr}="${analysedState}">${code}${badge}</button>`,
-      this.buildTip(code, isActive, tipId),
-      `</span>`,
+      `aria-pressed="${isActive ? 'true' : 'false'}" title="${escapeHtml(title)}">`,
+      `${code}${badge}</button>`,
     ].join('');
-  }
-
-  /**
-   * Builds the corner badge for a chip, or an empty string when none applies.
-   * Badge appears only when the retained row's verdict differs from the
-   * effective selection (`active !== (status === 'pass')`).
-   * @param code - Timeframe code
-   * @param isActive - Whether the user has the timeframe selected
-   */
-  private buildBadge(code: TickerTimeframe, isActive: boolean): string {
-    if (this.analysis.kind !== 'ready') {
-      return '';
-    }
-    const row = this.analysis.rows.get(code);
-    if (!row || isActive === (row.status === 'pass')) {
-      return '';
-    }
-    return `<span class="${this.bemElement('badge')}" ${this.bemDataAttr('badge')}="mismatch" aria-hidden="true">${MISMATCH_GLYPH}</span>`;
-  }
-
-  /**
-   * @param code - Timeframe code
-   * @returns whether the Barkat API assesses this timeframe (SMN/TMN/MN/WK)
-   */
-  private isAssessed(code: TickerTimeframe): boolean {
-    return (BARKAT_TIMEFRAMES as readonly string[]).includes(code);
-  }
-
-  /**
-   * @param code - Timeframe code
-   * @returns analysis state name exposed on the chip for styling and tests
-   */
-  private analysisKind(code: TickerTimeframe): 'loading' | 'unavailable' | 'unassessed' | BarkatStatus {
-    if (!this.isAssessed(code)) {
-      return 'unassessed';
-    }
-    if (this.analysis.kind !== 'ready') {
-      return this.analysis.kind;
-    }
-    return this.analysis.rows.get(code)?.status ?? 'unassessed';
-  }
-
-  /**
-   * Builds the linked `role="tooltip"` element for a chip.
-   * @param code - Timeframe code
-   * @param isActive - Whether the user has the timeframe selected
-   * @param tipId - Element id referenced by the chip's aria-describedby
-   */
-  private buildTip(code: TickerTimeframe, isActive: boolean, tipId: string): string {
-    const lines = [
-      `<span class="${this.bemElement('tip-line')}">Your selection: ${isActive ? 'selected' : 'not selected'}</span>`,
-      ...this.buildAnalysisLines(code),
-      `<span class="${this.bemElement('tip-line')}">${escapeHtml(SUITABILITY_DISCLAIMER)}</span>`,
-      `<span class="${this.bemElement('tip-line')}">${escapeHtml(CLICK_HINT)}</span>`,
-    ];
-    return `<span id="${tipId}" role="tooltip" class="${this.bemElement('tip')}">${lines.join('')}</span>`;
-  }
-
-  /**
-   * Builds the analysis portion of a tooltip.
-   * @param code - Timeframe code
-   * @returns tooltip line markup for the current analysis state
-   */
-  private buildAnalysisLines(code: TickerTimeframe): string[] {
-    if (!this.isAssessed(code)) {
-      return [this.tipLine(`Barkat analysis: ${code} not assessed`)];
-    }
-    if (this.analysis.kind === 'loading') {
-      return [this.tipLine('Barkat analysis: loading…')];
-    }
-    if (this.analysis.kind === 'unavailable') {
-      return [this.tipLine('Barkat analysis: unavailable')];
-    }
-    const row = this.analysis.rows.get(code);
-    if (!row) {
-      return [this.tipLine('Barkat analysis: not assessed for this timeframe')];
-    }
-
-    const attention = row.status !== 'pass';
-    return [
-      this.tipLine(`Barkat: ${escapeHtml(STATUS_LABEL[row.status])}`, attention),
-      ...BARKAT_METRIC_KEYS.map((key) => this.buildMetricLine(key, row)),
-    ];
-  }
-
-  /**
-   * Builds one named metric line with its percentage (em dash when null)
-   * and the supplied metric status. Non-pass metrics are emphasised.
-   * @param key - Metric key
-   * @param row - Barkat row for the current timeframe
-   */
-  private buildMetricLine(key: BarkatMetricKey, row: BarkatTimeframeAnalysis): string {
-    const metric = row.metrics[key];
-    const value = metric.percentage === null ? '\u2014' : `${metric.percentage}%`;
-    const label = `${escapeHtml(METRIC_LABELS[key])}: ${value} (${escapeHtml(metric.status)})`;
-    return this.tipLine(label, metric.status !== 'pass');
-  }
-
-  /**
-   * @param html - Trusted markup for the line
-   * @param attention - Whether the line should be visually emphasised
-   */
-  private tipLine(html: string, attention = false): string {
-    const modifier = attention ? ` ${this.bemElementModifier('tip-line', 'attention')}` : '';
-    return `<span class="${this.bemElement('tip-line')}${modifier}">${html}</span>`;
   }
 }
