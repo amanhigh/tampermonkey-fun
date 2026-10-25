@@ -228,7 +228,7 @@ Support:
     PRICE_ALERT_PAGE_LIMIT: 10,
   },
 
-  /** Barkat read-only analysis API */
+  /** Barkat analysis + warm-up API (contract owned by the Barkat backend) */
   // FIXME: Extract Barkat configs (BASE_URL, webpack match/connect/grant) into a YAML file.
   BARKAT: {
     BASE_URL: 'http://localhost:8050/v1/api',

@@ -186,7 +186,10 @@ export class Factory {
       ),
 
     barkat: (): IBarkatManager =>
-      Factory.getInstance('barkatManager', () => new BarkatManager(Factory.client.barkat())),
+      Factory.getInstance(
+        'barkatManager',
+        () => new BarkatManager(Factory.client.barkat(), Factory.manager.ticker(), Factory.manager.dom())
+      ),
 
     alert: (): IAlertManager =>
       Factory.getInstance(
@@ -460,6 +463,7 @@ export class Factory {
               Factory.handler.watchlist(),
               Factory.handler.tickerChange(),
               Factory.handler.dashboardSync(),
+              Factory.manager.barkat(),
             ],
             Factory.manager.eventSubscriber(),
             Factory.manager.tv()

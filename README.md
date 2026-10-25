@@ -25,6 +25,28 @@ Build Steps:
 
 *Note: Don't checkin the modified entry point file.*
 
+## Barkat Watchlist Warm-up
+The Barkat userscript asks the backend to pre-warm analysis coverage for the
+watchlist. The backend request/response contract, accept semantics and all
+policy (including what "warm" means) are owned by the Barkat backend; this
+frontend only decides *which* tickers to submit and *when*.
+
+-   **Eligibility**: only tickers in the active watchlist that resolve to a
+    confirmed, tracked equity ticker record are submitted. Unknown tickers and
+    non-equity records are skipped silently.
+-   **Triggers**: the current watchlist snapshot is submitted once on first load
+    and again on every watchlist membership change. Each trigger re-reads the
+    full watchlist from the DOM, so event deltas (including removals) are never
+    trusted.
+    -   Chart selection, category, timeframe and metadata changes never trigger a
+        warm-up.
+    -   Warm-up runs independently of the paint/refresh path: it never delays the
+        UI, and a failed request only logs.
+-   **Accepted, not complete**: a resolved call means the backend *accepted* the
+    request; it does not mean coverage is ready yet.
+-   **Recovery**: there are no timers, retries or background polling. A failed
+    warm-up is retried only by the next load or membership trigger.
+
 ## NPM Commands
 Key `npm` commands for project and dependency management:
 - `npm init`: Initialize a new npm package (if starting from scratch).
