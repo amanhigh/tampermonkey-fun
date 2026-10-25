@@ -63,7 +63,7 @@ export class JournalOpenEvent extends BaseEvent {
 
 /**
  * Serializable event for cross-site ticker change synchronization.
- * Published via GM.setValue on TradingView, consumed on localhost dashboard.
+ * Published via GM.setValue on TradingView, consumed on the Barkat dashboard.
  */
 export class DashboardTickerChangedEvent extends BaseEvent {
   constructor(

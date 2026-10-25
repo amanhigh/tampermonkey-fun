@@ -31,7 +31,7 @@ describe('DashboardSyncHandler', () => {
     });
     (global as any).window = {
       location: {
-        href: 'http://localhost:8050/?ticker=OLD&tf=SMN',
+        href: 'http://barkat.app.lan/?ticker=OLD&tf=SMN',
         replace: jest.fn(),
       },
     };
@@ -71,7 +71,7 @@ describe('DashboardSyncHandler', () => {
       mockGMListener('tickerChangedEvent', null, event.stringify());
 
       expect(window.location.replace).toHaveBeenCalledWith(
-        'http://localhost:8050/?ticker=TCS&tf=SMN'
+        'http://barkat.app.lan/?ticker=TCS&tf=SMN'
       );
     });
 

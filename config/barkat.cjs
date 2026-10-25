@@ -11,8 +11,8 @@ const metadata = {
     $: "barkat",
     en: "Barkat"
   },
-  match: ["https://in.tradingview.com/chart*", "https://kite.zerodha.com/*", "https://in.investing.com/*", "http://localhost:9091/*", "http://localhost:8050/*"],
-  connect: ["investing.com", "kite.zerodha.com","localhost"],
+  match: ["https://in.tradingview.com/chart*", "https://kite.zerodha.com/*", "https://in.investing.com/*", "http://localhost:9091/*", "http://barkat.app.lan/*"],
+  connect: ["investing.com", "kite.zerodha.com","localhost", "barkat.app.lan"],
   grant: ["GM.xmlHttpRequest","GM.setValue","GM.getValue","GM_addValueChangeListener","GM.setClipboard"],
 };
 

@@ -1,6 +1,7 @@
 import { BarkatManager, IBarkatManager } from '../../src/manager/barkat';
 import { IBarkatClient } from '../../src/client/barkat';
 import { BarkatTickerAnalysis } from '../../src/models/barkat';
+import { Constants } from '../../src/models/constant';
 import { ITickerManager } from '../../src/manager/ticker';
 import { IDomManager } from '../../src/manager/dom';
 import { EventBus } from '../../src/manager/event_bus';
@@ -26,7 +27,7 @@ describe('BarkatManager', () => {
     jest.clearAllMocks();
 
     mockBarkatClient = {
-      getBaseUrl: jest.fn().mockReturnValue('http://localhost:8050/v1/api'),
+      getBaseUrl: jest.fn().mockReturnValue(Constants.BARKAT.BASE_URL),
       getTickerAnalysis: jest.fn(),
       warmupTickers: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<IBarkatClient>;

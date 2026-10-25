@@ -8,11 +8,11 @@ import { Constants } from '../models/constant';
  * Interface for handling dashboard synchronization.
  *
  * On TradingView, subscribes to TICKER_CHANGED and emits GM events.
- * On localhost dashboard, registers a GM listener to update the URL.
+ * On the Barkat dashboard, registers a GM listener to update the URL.
  */
 export interface IDashboardSyncHandler extends IDomainEventConsumer {
   /**
-   * Registers a GM_addValueChangeListener on the localhost dashboard
+   * Registers a GM_addValueChangeListener on the Barkat dashboard
    * to detect ticker changes from TradingView and update the page URL.
    */
   registerDashyListner(): void;
@@ -23,7 +23,7 @@ export interface IDashboardSyncHandler extends IDomainEventConsumer {
  *
  * Two sites, two roles:
  * 1. TradingView → subscribes to EventBus TICKER_CHANGED → GM.setValue
- * 2. localhost:8050 → GM_addValueChangeListener → URL replace
+ * 2. Barkat dashboard → GM_addValueChangeListener → URL replace
  */
 export class DashboardSyncHandler implements IDashboardSyncHandler {
   constructor(private readonly dashboardSyncManager: IDashboardSyncManager) {}

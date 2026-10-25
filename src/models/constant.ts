@@ -231,7 +231,7 @@ Support:
   /** Barkat analysis + warm-up API (contract owned by the Barkat backend) */
   // FIXME: Extract Barkat configs (BASE_URL, webpack match/connect/grant) into a YAML file.
   BARKAT: {
-    BASE_URL: 'http://localhost:8050/v1/api',
+    BASE_URL: 'http://barkat.app.lan/v1/api',
   },
 
   /** Cache configuration for manager lookups */

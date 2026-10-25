@@ -54,7 +54,7 @@ describe('BarkatClient', () => {
   describe('constructor', () => {
     it('should create instance with default Barkat base URL', () => {
       expect(new BarkatClient().getBaseUrl()).toBe(Constants.BARKAT.BASE_URL);
-      expect(Constants.BARKAT.BASE_URL).toBe('http://localhost:8050/v1/api');
+      expect(Constants.BARKAT.BASE_URL).toBe('http://barkat.app.lan/v1/api');
     });
 
     it('should create instance with custom base URL', () => {

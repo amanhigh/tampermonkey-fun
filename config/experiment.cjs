@@ -11,9 +11,9 @@ const metadata = {
     $: "experiment-script",
     en: "Experiment"
   },
-  match: ["*example.com/*"],
-  connect: ["reqres.in"],
-  grant: ["GM.xmlHttpRequest","GM.setValue","GM.getValue"],
+  match: ["https://in.tradingview.com/chart*", "https://kite.zerodha.com/*", "https://in.investing.com/*", "http://localhost:9091/*", "http://barkat.app.lan/*"],
+  connect: ["investing.com", "kite.zerodha.com","localhost", "barkat.app.lan"],
+  grant: ["GM.xmlHttpRequest","GM.setValue","GM.getValue","GM_addValueChangeListener","GM.setClipboard"],
 };
 
 // Override webpack config

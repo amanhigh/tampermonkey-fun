@@ -8,7 +8,7 @@ import { DashboardTickerChangedEvent } from '../models/events';
 export interface IDashboardSyncManager {
   /**
    * Publishes a ticker-changed event to GM storage.
-   * Called on TradingView when ticker changes, so the localhost
+   * Called on TradingView when ticker changes, so the Barkat
    * dashboard can pick it up via GM_addValueChangeListener.
    * @param ticker - The new ticker symbol
    */
