@@ -189,8 +189,9 @@ describe('CategoryManager', () => {
       const result = await categoryManager.getTickerCategory('COMP_A');
 
       expect(result.watch?.id).toBe(WatchCategoryId.COMPOSITE);
-      // Tags are retained on the composite short-circuit path
-      expect(result.tags).toEqual([TickerTag.TIMEFRAME_PENDING, TickerTag.FNO]);
+      // Tags are retained on the composite short-circuit path; COMPOSITE is
+      // exempt from the missing-YR rule so only the FNO tag remains
+      expect(result.tags).toEqual([TickerTag.FNO]);
     });
 
     it('should NOT treat slash FX ticker as composite when backend type is FX', async () => {
@@ -401,6 +402,27 @@ describe('CategoryManager', () => {
       );
 
       const result = await categoryManager.getTickerCategory('TAG_T');
+
+      expect(result.tags).toEqual(expected);
+    });
+
+    it.each([
+      { type: TickerType.INDEX, isFno: false, expected: [] },
+      { type: TickerType.COMPOSITE, isFno: false, expected: [] },
+      { type: TickerType.INDEX, isFno: true, expected: [TickerTag.FNO] },
+      { type: TickerType.COMPOSITE, isFno: true, expected: [TickerTag.FNO] },
+      { type: TickerType.EQUITY, isFno: false, expected: [TickerTag.TIMEFRAME_PENDING] },
+      { type: TickerType.FX, isFno: false, expected: [TickerTag.TIMEFRAME_PENDING] },
+      { type: TickerType.COMMODITY, isFno: false, expected: [TickerTag.TIMEFRAME_PENDING] },
+      { type: TickerType.BOND, isFno: false, expected: [TickerTag.TIMEFRAME_PENDING] },
+      { type: TickerType.CRYPTO, isFno: false, expected: [TickerTag.TIMEFRAME_PENDING] },
+    ])('should derive tags for $type missing YR (FNO: $isFno)', async ({ type, isFno, expected }) => {
+      mockJournalManager.listJournals.mockResolvedValue([]);
+      mockTickerManager.getTicker.mockResolvedValue(
+        makeTicker({ ticker: 'TEST', type, timeframes: [], is_fno: isFno })
+      );
+
+      const result = await categoryManager.getTickerCategory('TEST');
 
       expect(result.tags).toEqual(expected);
     });
