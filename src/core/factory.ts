@@ -1,4 +1,5 @@
 /* eslint-disable max-lines */
+// FIXME: Group models/manager/handler into feature sub-packages (barkat/, journal/, audit/) instead of flat files.
 import { InvestingClient, IInvestingClient } from '../client/investing';
 import { IImdbHandler, ImdbHandler } from '../handler/imdb';
 import { KiteClient, IKiteClient } from '../client/kite';
