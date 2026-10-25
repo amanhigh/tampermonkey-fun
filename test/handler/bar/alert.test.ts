@@ -80,6 +80,16 @@ const mockJQuery = jest.fn(createDefaultJQuery);
 
 // ── Helpers ──
 
+/**
+ * Non-empty root paints. `refresh()` first clears the root (empty bars stay hidden
+ * via CSS), so content assertions must skip that clear call.
+ */
+function contentHtmlCalls(): string[] {
+  return mockRootEl.html.mock.calls
+    .map((c: any[]) => c[0] as string)
+    .filter((html: string) => html !== '');
+}
+
 function getClickHandler(): (() => void) | undefined {
   const call = mockRootEl.on.mock.calls.find((c: any[]) => c[0] === `click.${EVENT_NS}`);
   return call?.[2] as (() => void) | undefined;
@@ -245,7 +255,8 @@ describe('AlertBar', () => {
       mockAlertTickerManager.getAlertTickersForTicker.mockRejectedValue(new Error('500 Internal Server Error'));
 
       await expect(bar.refresh()).rejects.toThrow('500 Internal Server Error');
-      expect(mockRootEl.html).not.toHaveBeenCalled();
+      // No data paint; the pre-load clear is permitted.
+      expect(contentHtmlCalls()).toHaveLength(0);
     });
   });
 
@@ -677,7 +688,7 @@ describe('AlertBar', () => {
 
       await bar.refresh();
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+      const html = contentHtmlCalls()[0];
       const exchangeDescription = 'Opened exchange: NSE · Backend exchange: BSE';
 
       expect(html).not.toContain('⚠️');
@@ -696,7 +707,7 @@ describe('AlertBar', () => {
 
       await bar.refresh();
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+      const html = contentHtmlCalls()[0];
 
       expect(html).not.toContain('Opened exchange:');
       expect(html).not.toContain('Backend exchange:');

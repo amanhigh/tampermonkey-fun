@@ -13,6 +13,7 @@
 @bar-line-height: 1.4;
 @bar-min-height: 26px;
 @bar-transition: background 0.2s ease, border-color 0.2s ease;
+@bar-indicator-size: 8px;
 
 // Status accent colors
 @bar-ok: #34d058;
@@ -49,5 +50,72 @@
 
     &--error {
         border-left-color: @bar-error;
+    }
+
+    // Cleared shell (mandatory data still loading) stays hidden until data renders.
+    &:empty {
+        display: none;
+    }
+}
+
+// ============================================
+// Element: .aman-bar__indicators — optional indicator marker
+// ============================================
+// Shown only by bars that opt into optional indicators; READY removes it.
+// LOADING animates a spinner ring; UNAVAILABLE renders a muted info glyph.
+.aman-bar__indicators {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: @bar-indicator-size;
+    height: @bar-indicator-size;
+    margin-left: 6px;
+    border: 1.5px solid @bar-accent;
+    border-top-color: @bar-warn;
+    border-radius: 50%;
+    vertical-align: middle;
+    animation: aman-bar-indicator-spin 0.8s linear infinite;
+}
+
+.aman-bar--indicators-unavailable .aman-bar__indicators {
+    // Not a spinner: drop the ring and show a muted information glyph instead.
+    width: auto;
+    height: auto;
+    border: 0;
+    border-radius: 0;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+    color: @bar-warn;
+    opacity: 0.6;
+    animation: none;
+
+    &::before {
+        content: 'ℹ';
+    }
+}
+
+// ============================================
+// Element: .aman-bar__badge — plain-text indicator badge
+// ============================================
+.aman-bar__badge {
+    margin-left: 2px;
+    font-size: 9px;
+    line-height: 1;
+    color: @bar-warn;
+    pointer-events: none;
+}
+
+@keyframes aman-bar-indicator-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+// Respect reduced-motion preferences: no spinner rotation.
+@media (prefers-reduced-motion: reduce) {
+    .aman-bar__indicators {
+        animation: none;
     }
 }

@@ -82,10 +82,14 @@
     // ============================================
     // Corner badge overlay (no layout impact)
     // ============================================
-    .aman-tf-bar__badge {
+    // Reuses the shared indicator badge class (`BAR_INDICATOR_BADGE_CLASS`)
+    // already styled in `_bar.less`; only the chip corner positioning is local,
+    // so the overlay adds no layout width or height.
+    .aman-bar__badge {
         position: absolute;
         top: -4px;
         right: -4px;
+        margin: 0;
         font-size: 8px;
         line-height: 1;
         font-weight: 700;

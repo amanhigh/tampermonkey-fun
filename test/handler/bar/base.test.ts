@@ -17,15 +17,29 @@
  *  - Default left-click toggles; override replaces toggle; super retains toggle
  *  - `onPaint` called after both click and contextmenu handlers are bound
  *  - Protected `render(data)` invalidates in-flight refresh
+ *  - Optional indicators: mandatory-first sequencing, quiet unavailable state,
+ *    stale success/rejection discard, explicit-render invalidation, disclosure
+ *    repaint without refetch, and missing-root no-op
  */
 
 import { BaseBar, IBaseBar } from '../../../src/handler/bar/base';
-import { BarId, BAR_CLASS, BarStatus } from '../../../src/models/bar';
+import {
+  BarId,
+  BAR_CLASS,
+  BAR_INDICATOR_BADGE_CLASS,
+  BAR_INDICATORS_CLASS,
+  BarIndicatorState,
+  BarIndicatorUpdate,
+  BarStatus,
+} from '../../../src/models/bar';
 import { DomainEventType } from '../../../src/models/domain_event';
 
 // ── Mock jQuery ──
 
 let mockRootEl: any;
+let mockMarkerEl: any;
+let mockChipEl: any;
+let mockBadgeEl: any;
 
 function createMockElement(): any {
   return {
@@ -36,9 +50,27 @@ function createMockElement(): any {
     removeClass: jest.fn().mockReturnThis(),
     toggleClass: jest.fn().mockReturnThis(),
     data: jest.fn().mockReturnThis(),
-    find: jest.fn().mockReturnThis(),
+    find: jest.fn((): any => createMockElement()),
+    append: jest.fn().mockReturnThis(),
+    remove: jest.fn().mockReturnThis(),
+    attr: jest.fn().mockReturnThis(),
+    text: jest.fn().mockReturnThis(),
     length: 1,
   };
+}
+
+/** Wire root → marker/chip/badge lookups for the indicator presentation tests. */
+function wireIndicatorDom(): void {
+  mockMarkerEl = createMockElement();
+  mockBadgeEl = createMockElement();
+  mockChipEl = createMockElement();
+  mockChipEl.find.mockReturnValue(mockBadgeEl);
+
+  mockRootEl.find.mockImplementation((selector: string): any => {
+    if (selector === `.${BAR_INDICATORS_CLASS}`) return mockMarkerEl;
+    if (selector === CHIP_SELECTOR) return mockChipEl;
+    return createMockElement();
+  });
 }
 
 const ALERT_ROOT = `#${BarId.ALERT}`;
@@ -47,6 +79,9 @@ const EXPANDED_MOD = 'aman-alert-ticker-bar--expanded';
 const CONTEXT_SELECTOR = '[data-alert-ticker-context-action]';
 const TOGGLE_SELECTOR = '.aman-alert-ticker-bar__toggle';
 const DETAILS_ID = 'aman-alert-ticker-bar-details';
+const CHIP_SELECTOR = '[data-alert-ticker-code="YR"]';
+const INDICATOR_STATE_CLASS = (state: BarIndicatorState): string =>
+  `${BAR_CLASS}--indicators-${state}`;
 
 function createDefaultJQuery(selector: string): any {
   if (selector === ALERT_ROOT) return mockRootEl;
@@ -230,6 +265,35 @@ class TestBarWithEvents extends TestBarBase {
   }
 }
 
+/** Opted-in indicators with deferred control for mandatory-first sequencing tests. */
+class TestBarWithIndicators extends TestBarWithLoadData {
+  public indicatorLoads = 0;
+  public indicatorData: TestData[] = [];
+  public indicatorDeferred: Array<{
+    resolve: (updates: readonly BarIndicatorUpdate[]) => void;
+    reject: (error: unknown) => void;
+  }> = [];
+
+  protected get supportsIndicators(): boolean {
+    return true;
+  }
+
+  protected async loadIndicators(data: TestData): Promise<readonly BarIndicatorUpdate[]> {
+    this.indicatorLoads++;
+    this.indicatorData.push(data);
+    return new Promise<readonly BarIndicatorUpdate[]>((resolve, reject) => {
+      this.indicatorDeferred.push({ resolve, reject });
+    });
+  }
+}
+
+const CHIP_BADGE = '≠';
+const CHIP_TITLE = 'Selected · not preferred.';
+
+const CHIP_UPDATE: readonly BarIndicatorUpdate[] = [
+  { selector: CHIP_SELECTOR, badge: CHIP_BADGE, title: CHIP_TITLE },
+];
+
 // ── Helpers ──
 
 function getClickHandler(): ((event: JQuery.ClickEvent) => void) | undefined {
@@ -252,6 +316,7 @@ describe('BaseBar', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRootEl = createMockElement();
+    wireIndicatorDom();
     mockJQuery.mockImplementation(createDefaultJQuery);
   });
 
@@ -974,5 +1039,253 @@ describe('BaseBar', () => {
       expect(bar.onPaintCount).toBe(1);
     });
 
+  });
+
+  // ── Optional indicators ──
+
+  describe('optional indicators', () => {
+    /**
+     * Resolve the mandatory load and flush the refresh continuation. Async
+     * `loadData`/`loadIndicators` adopt their deferred promises, so a single
+     * microtask tick is not enough for the paint to land.
+     */
+    async function resolveMandatory(bar: TestBarWithIndicators, data: TestData): Promise<void> {
+      bar.loadDeferred[bar.loadDeferred.length - 1](data);
+      await new Promise<void>((resolve) => {
+        setImmediate(resolve);
+      });
+    }
+
+    /** Last `--indicators-*` modifier added to the mocked root. */
+    function lastIndicatorStateClass(): string | undefined {
+      const calls = mockRootEl.addClass.mock.calls.filter((call: any[]) =>
+        String(call[0]).includes('--indicators-')
+      );
+      return calls.length > 0 ? String(calls[calls.length - 1][0]) : undefined;
+    }
+
+    it('should not touch indicator DOM for bars that do not opt in', () => {
+      const bar = new TestBar(BarId.ALERT);
+      bar.render({ label: 'plain', count: 1 });
+
+      expect(mockRootEl.find).not.toHaveBeenCalled();
+      expect(mockRootEl.append).not.toHaveBeenCalled();
+      expect(mockRootEl.attr).not.toHaveBeenCalled();
+    });
+
+    it('should clear the bar and await mandatory data before loading indicators', async () => {
+      const bar = new TestBarWithIndicators(BarId.ALERT);
+      const promise = bar.refresh();
+
+      expect(mockRootEl.html).toHaveBeenLastCalledWith('');
+      expect(bar.indicatorLoads).toBe(0);
+
+      await resolveMandatory(bar, { label: 'mandatory', count: 1 });
+
+      expect(mockRootEl.html).toHaveBeenLastCalledWith(
+        expect.stringContaining('compact:mandatory:1')
+      );
+      expect(bar.indicatorLoads).toBe(1);
+      expect(bar.indicatorData[0]).toEqual({ label: 'mandatory', count: 1 });
+
+      bar.indicatorDeferred[0].resolve(CHIP_UPDATE);
+      await promise;
+    });
+
+    it('should show a small accessible loading marker while indicators load', async () => {
+      mockMarkerEl.length = 0;
+      const bar = new TestBarWithIndicators(BarId.ALERT);
+      const promise = bar.refresh();
+
+      await resolveMandatory(bar, { label: 'marker', count: 1 });
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(
+        INDICATOR_STATE_CLASS(BarIndicatorState.LOADING)
+      );
+      expect(mockRootEl.attr).toHaveBeenCalledWith('aria-busy', 'true');
+      expect(mockRootEl.append).toHaveBeenCalledWith(
+        expect.stringContaining(BAR_INDICATORS_CLASS)
+      );
+      expect(mockRootEl.append).toHaveBeenCalledWith(
+        expect.stringContaining('aria-label="Loading indicators"')
+      );
+      expect(mockRootEl.append).toHaveBeenCalledWith(
+        expect.stringContaining('title="Loading indicators"')
+      );
+
+      bar.indicatorDeferred[0].resolve(CHIP_UPDATE);
+      await promise;
+    });
+
+    it('should apply badge and title in place and drop the loading marker when ready', async () => {
+      mockBadgeEl.length = 0;
+      const bar = new TestBarWithIndicators(BarId.ALERT);
+      const promise = bar.refresh();
+
+      await resolveMandatory(bar, { label: 'ready', count: 1 });
+      const contentCalls = mockRootEl.html.mock.calls.length;
+
+      bar.indicatorDeferred[0].resolve(CHIP_UPDATE);
+      await promise;
+
+      expect(mockChipEl.attr).toHaveBeenCalledWith('title', CHIP_TITLE);
+      expect(mockChipEl.append).toHaveBeenCalledWith(
+        expect.stringContaining(BAR_INDICATOR_BADGE_CLASS)
+      );
+      expect(mockChipEl.append).toHaveBeenCalledWith(expect.stringContaining(CHIP_BADGE));
+      expect(mockMarkerEl.remove).toHaveBeenCalled();
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(
+        INDICATOR_STATE_CLASS(BarIndicatorState.READY)
+      );
+      // Indicator presentation never repaints mandatory content
+      expect(mockRootEl.html.mock.calls.length).toBe(contentCalls);
+    });
+
+    it('should update an existing badge in place instead of appending another', async () => {
+      const bar = new TestBarWithIndicators(BarId.ALERT);
+      const promise = bar.refresh();
+
+      await resolveMandatory(bar, { label: 'existing', count: 1 });
+      bar.indicatorDeferred[0].resolve(CHIP_UPDATE);
+      await promise;
+
+      expect(mockBadgeEl.text).toHaveBeenCalledWith(CHIP_BADGE);
+      expect(mockChipEl.append).not.toHaveBeenCalled();
+    });
+
+    it('should mark indicators unavailable quietly when the optional load fails', async () => {
+      mockMarkerEl.length = 0;
+      const bar = new TestBarWithIndicators(BarId.ALERT);
+      const promise = bar.refresh();
+
+      await resolveMandatory(bar, { label: 'mandatory', count: 2 });
+      bar.indicatorDeferred[0].reject(new Error('indicators down'));
+
+      await expect(promise).resolves.toBeUndefined();
+
+      expect(lastIndicatorStateClass()).toBe(
+        INDICATOR_STATE_CLASS(BarIndicatorState.UNAVAILABLE)
+      );
+      expect(mockRootEl.attr).toHaveBeenLastCalledWith('aria-busy', 'false');
+      expect(mockRootEl.append).toHaveBeenCalledWith(
+        expect.stringContaining('aria-label="Indicators unavailable"')
+      );
+      expect(mockChipEl.attr).not.toHaveBeenCalledWith('title', CHIP_TITLE);
+      expect(mockRootEl.html).toHaveBeenLastCalledWith(
+        expect.stringContaining('compact:mandatory:2')
+      );
+    });
+
+    it('should discard a stale indicator success from an earlier refresh', async () => {
+      const bar = new TestBarWithIndicators(BarId.ALERT);
+      const first = bar.refresh();
+      await resolveMandatory(bar, { label: 'first', count: 1 });
+
+      const second = bar.refresh();
+      await resolveMandatory(bar, { label: 'second', count: 2 });
+
+      bar.indicatorDeferred[1].resolve([
+        { selector: CHIP_SELECTOR, badge: 'B2', title: 'newest' },
+      ]);
+      await second;
+
+      bar.indicatorDeferred[0].resolve(CHIP_UPDATE);
+      await first;
+
+      expect(mockBadgeEl.text).toHaveBeenCalledWith('B2');
+      expect(mockBadgeEl.text).not.toHaveBeenCalledWith(CHIP_BADGE);
+      expect(mockChipEl.attr).toHaveBeenCalledWith('title', 'newest');
+      expect(mockChipEl.attr).not.toHaveBeenCalledWith('title', CHIP_TITLE);
+    });
+
+    it('should discard a stale indicator rejection from an earlier refresh', async () => {
+      const bar = new TestBarWithIndicators(BarId.ALERT);
+      const first = bar.refresh();
+      await resolveMandatory(bar, { label: 'first', count: 1 });
+
+      const second = bar.refresh();
+      await resolveMandatory(bar, { label: 'second', count: 2 });
+
+      bar.indicatorDeferred[1].resolve(CHIP_UPDATE);
+      await second;
+
+      bar.indicatorDeferred[0].reject(new Error('stale failure'));
+      await expect(first).resolves.toBeUndefined();
+
+      expect(lastIndicatorStateClass()).toBe(INDICATOR_STATE_CLASS(BarIndicatorState.READY));
+      expect(mockRootEl.addClass).not.toHaveBeenCalledWith(
+        INDICATOR_STATE_CLASS(BarIndicatorState.UNAVAILABLE)
+      );
+      expect(mockChipEl.attr).toHaveBeenCalledWith('title', CHIP_TITLE);
+    });
+
+    it('should reset indicators to READY when an explicit render invalidates pending indicators', async () => {
+      mockMarkerEl.length = 0;
+      const bar = new TestBarWithIndicators(BarId.ALERT);
+      const promise = bar.refresh();
+
+      await resolveMandatory(bar, { label: 'mandatory', count: 1 });
+      expect(lastIndicatorStateClass()).toBe(
+        INDICATOR_STATE_CLASS(BarIndicatorState.LOADING)
+      );
+
+      bar.render({ label: 'explicit', count: 9 });
+
+      expect(mockRootEl.html).toHaveBeenLastCalledWith(
+        expect.stringContaining('compact:explicit:9')
+      );
+      expect(lastIndicatorStateClass()).toBe(INDICATOR_STATE_CLASS(BarIndicatorState.READY));
+      expect(mockRootEl.attr).toHaveBeenLastCalledWith('aria-busy', 'false');
+      expect(mockMarkerEl.remove).toHaveBeenCalled();
+
+      // A late indicator result from the invalidated refresh is discarded
+      bar.indicatorDeferred[0].resolve(CHIP_UPDATE);
+      await promise;
+
+      expect(lastIndicatorStateClass()).toBe(INDICATOR_STATE_CLASS(BarIndicatorState.READY));
+      expect(mockBadgeEl.text).not.toHaveBeenCalled();
+      expect(mockChipEl.append).not.toHaveBeenCalled();
+      // Explicit render leaves no permanent loading state behind
+      expect(lastIndicatorStateClass()).not.toBe(INDICATOR_STATE_CLASS(BarIndicatorState.LOADING));
+      expect(mockRootEl.attr).toHaveBeenLastCalledWith('aria-busy', 'false');
+    });
+
+    it('should preserve indicator presentation across a disclosure repaint without refetching', async () => {
+      const bar = new TestBarWithIndicators(BarId.ALERT);
+      const promise = bar.refresh();
+
+      await resolveMandatory(bar, { label: 'repaint', count: 1 });
+      bar.indicatorDeferred[0].resolve(CHIP_UPDATE);
+      await promise;
+
+      expect(bar.indicatorLoads).toBe(1);
+      mockBadgeEl.text.mockClear();
+      mockChipEl.attr.mockClear();
+
+      getClickHandler()!(MOCK_CLICK_EVENT);
+
+      expect(bar.indicatorLoads).toBe(1);
+      expect(mockBadgeEl.text).toHaveBeenCalledWith(CHIP_BADGE);
+      expect(mockChipEl.attr).toHaveBeenCalledWith('title', CHIP_TITLE);
+    });
+
+    it('should not throw when the root is missing during an indicator refresh', async () => {
+      const missingRootEl = createMockElement();
+      missingRootEl.length = 0;
+      mockJQuery.mockImplementation((selector: string) => {
+        if (selector === ALERT_ROOT) return missingRootEl;
+        return createMockElement();
+      });
+
+      const bar = new TestBarWithIndicators(BarId.ALERT);
+      const promise = bar.refresh();
+
+      await resolveMandatory(bar, { label: 'missing', count: 1 });
+      bar.indicatorDeferred[0].resolve(CHIP_UPDATE);
+
+      await expect(promise).resolves.toBeUndefined();
+      expect(missingRootEl.html).not.toHaveBeenCalled();
+      expect(missingRootEl.append).not.toHaveBeenCalled();
+    });
   });
 });
