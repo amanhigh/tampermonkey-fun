@@ -3,6 +3,9 @@ import { BarId, BarStatus } from '../../models/bar';
 import { DomainEventType } from '../../models/domain_event';
 import { TickerTimeframe } from '../../models/timeframe';
 import { ITimeFrameManager } from '../../manager/timeframe';
+import { IBarkatManager } from '../../manager/barkat';
+import { IDomManager } from '../../manager/dom';
+import { escapeHtml } from '../../util/html';
 import { Notifier } from '../../util/notify';
 
 // ── Module Constants ──
@@ -10,11 +13,20 @@ import { Notifier } from '../../util/notify';
 /** Emoji prefix displayed before the timeframe chips. */
 const EMOJI_TIMEFRAMES = '\u{1F9ED}';
 
-/**
- * Tooltip text shown when hovering over a timeframe chip.
- * Explains the recommended timeframe toggle purpose.
- */
-const TOOLTIP_TEXT = 'Recommended timeframe for this ticker. Click to add/remove.';
+/** Generic click affordance hint used as the native chip tooltip. */
+const CLICK_HINT = 'Click to add/remove.';
+
+/** Native tooltip for a selected chip whose Barkat verdict is not preferred. */
+const TITLE_SELECTED_NOT_PREFERRED = 'Selected \u00B7 Barkat: not preferred. Click to remove.';
+
+/** Native tooltip for an unselected chip whose Barkat verdict is preferred. */
+const TITLE_UNSELECTED_PREFERRED = 'Not selected \u00B7 Barkat: preferred. Click to add.';
+
+/** Namespaced jQuery event namespace for delegated bindings on this bar. */
+const EVENT_NS = 'bar-tf';
+
+/** Corner badge glyph for a selection/verdict mismatch. */
+const MISMATCH_GLYPH = '\u2260';
 
 /**
  * Interface for the timeframe bar presentation component.
@@ -31,6 +43,12 @@ export type ITimeFrameHandler = IBaseBar;
  * Active chips (those in the backend ticker.timeframes) are colored;
  * inactive chips are muted. Clicking toggles the code on/off in the backend.
  *
+ * Barkat analysis is a secondary, read-only overlay: chips paint from the
+ * selection load alone, then a corner badge and a native `title` hint are added
+ * when the analysis resolves. Full analysis detail lives in the side panel, so
+ * no metric-level markup is rendered here. Analysis failure is quiet
+ * (no notifications).
+ *
  * Compact-only: does not override {@link renderDetails} so BaseBar renders
  * compact content directly without disclosure shell.
  *
@@ -41,7 +59,27 @@ export class TimeFrameBar extends BaseBar<readonly TickerTimeframe[]> implements
   /** Prevents concurrent toggle operations. */
   private toggling = false;
 
-  constructor(private readonly timeFrameManager: ITimeFrameManager) {
+  /** Monotonic revision guarding both selection and analysis paints. */
+  private refreshRevision = 0;
+
+  /**
+   * Active codes from the latest selection load, retained for analysis repaints.
+   * `undefined` until the first selection paints; an empty array is a valid state.
+   */
+  private activeCodes?: readonly TickerTimeframe[];
+
+  /**
+   * Supported timeframe → whether Barkat prefers it (`status === 'pass'`).
+   * `undefined` while the analysis is pending or unavailable. A missing key
+   * means the timeframe is unassessed and must be kept distinct from `false`.
+   */
+  private analysis?: ReadonlyMap<TickerTimeframe, boolean>;
+
+  constructor(
+    private readonly timeFrameManager: ITimeFrameManager,
+    private readonly barkatManager: IBarkatManager,
+    private readonly domManager: IDomManager
+  ) {
     super(BarId.TIMEFRAME);
   }
 
@@ -66,6 +104,44 @@ export class TimeFrameBar extends BaseBar<readonly TickerTimeframe[]> implements
     return hasYr ? BarStatus.OK : BarStatus.WARN;
   }
 
+  // ── Refresh ──
+
+  /**
+   * Latest-wins refresh that starts selection and analysis loads together.
+   * Paint order: retained actives without overlay → selection only → analysis overlay.
+   * Stale revisions never paint.
+   */
+  public override async refresh(): Promise<void> {
+    const revision = ++this.refreshRevision;
+    const ticker = this.domManager.getTicker();
+
+    // Drop the previous overlay immediately so stale badges and titles are not
+    // displayed while fresh selections load.
+    this.analysis = undefined;
+    this.repaintPreservingFocus();
+
+    const selectionPromise = this.loadData();
+    const analysisPromise = this.barkatManager.getTickerAnalysis(ticker).then(
+      (value) =>
+        new Map<TickerTimeframe, boolean>(value.timeframes.map((row) => [row.timeframe, row.status === 'pass'])),
+      () => undefined
+    );
+
+    const active = await selectionPromise;
+    if (revision !== this.refreshRevision) {
+      return;
+    }
+    this.activeCodes = active;
+    this.render(active);
+
+    const preferredByCode = await analysisPromise;
+    if (revision !== this.refreshRevision) {
+      return;
+    }
+    this.analysis = preferredByCode;
+    this.repaintPreservingFocus();
+  }
+
   // ── Rendering ──
 
   /** @inheritdoc */
@@ -75,23 +151,23 @@ export class TimeFrameBar extends BaseBar<readonly TickerTimeframe[]> implements
     return `${EMOJI_TIMEFRAMES} ${chipsHtml}`;
   }
 
-  // ── Post-paint hook — delegated chip clicks ──
+  // ── Post-paint hook — delegated chip bindings ──
 
   /** @inheritdoc */
   protected onPaint($root: JQuery, _data: readonly TickerTimeframe[]): void {
     this.bindChipClicks($root);
   }
 
-  // ── Click Binding ──
+  // ── Binding ──
 
   /**
-   * Binds delegated chip click handler with off/on deduplication.
+   * Binds delegated chip click handler with namespaced off/on deduplication.
    * @param $root - jQuery-wrapped bar root element
    */
   private bindChipClicks($root: JQuery): void {
     const chipSelector = `.${this.bemElement('chip')}`;
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    $root.off('click', chipSelector).on('click', chipSelector, (e) => {
+    $root.off(`click.${EVENT_NS}`, chipSelector).on(`click.${EVENT_NS}`, chipSelector, (e) => {
       e.stopPropagation();
       void this.handleChipClick($(e.currentTarget));
     });
@@ -132,6 +208,48 @@ export class TimeFrameBar extends BaseBar<readonly TickerTimeframe[]> implements
     }
   }
 
+  // ── Focus preservation ──
+
+  /**
+   * Repaints the retained selection with the latest analysis overlay while
+   * restoring focus to the same chip when this bar owned it.
+   * No-op until a selection has painted (`activeCodes === undefined`).
+   */
+  private repaintPreservingFocus(): void {
+    const codes = this.activeCodes;
+    if (codes === undefined) {
+      return;
+    }
+    const focusedCode = this.captureFocusedChipCode();
+    this.render(codes);
+    if (focusedCode !== undefined) {
+      this.restoreChipFocus(focusedCode);
+    }
+  }
+
+  /**
+   * @returns code of the chip holding focus inside this bar, if any
+   */
+  private captureFocusedChipCode(): TickerTimeframe | undefined {
+    if (typeof document === 'undefined') {
+      return undefined;
+    }
+    const active = document.activeElement as HTMLElement | null;
+    if (!active || !active.classList.contains(this.bemElement('chip'))) {
+      return undefined;
+    }
+    return (active.getAttribute(this.bemDataAttr('code')) as TickerTimeframe | null) ?? undefined;
+  }
+
+  /**
+   * Focuses the chip for the given code when it exists.
+   * @param code - Timeframe code to refocus
+   */
+  private restoreChipFocus(code: TickerTimeframe): void {
+    const selector = `#${this.blockClass} .${this.bemElement('chip')}[${this.bemDataAttr('code')}="${code}"]`;
+    document.querySelector<HTMLElement>(selector)?.focus();
+  }
+
   // ── Markup Builders ──
 
   /**
@@ -145,7 +263,13 @@ export class TimeFrameBar extends BaseBar<readonly TickerTimeframe[]> implements
   }
 
   /**
-   * Builds a single timeframe chip `<span>` element.
+   * Builds one chip button with its escaped native tooltip.
+   * The mismatch badge is an absolutely positioned overlay, so the row keeps
+   * its original width and height.
+   *
+   * Mismatch is derived once here: an assessed timeframe (`preferred` defined)
+   * always mismatches when its preference disagrees with the selection, and
+   * drives both the native title and the corner badge.
    * @param code - Timeframe code (YR, SMN, etc.)
    * @param isActive - Whether this chip is currently active in the backend
    */
@@ -155,6 +279,21 @@ export class TimeFrameBar extends BaseBar<readonly TickerTimeframe[]> implements
       ? this.bemElementModifier('chip', 'active')
       : this.bemElementModifier('chip', 'inactive');
     const codeAttr = this.bemDataAttr('code');
-    return `<span class="${chipClass} ${stateClass}" ${codeAttr}="${code}" title="${TOOLTIP_TEXT}">${code}</span>`;
+    const preferred = this.analysis?.get(code);
+    const mismatch = preferred !== undefined && isActive !== preferred;
+
+    let title = CLICK_HINT;
+    if (mismatch) {
+      title = isActive ? TITLE_SELECTED_NOT_PREFERRED : TITLE_UNSELECTED_PREFERRED;
+    }
+    const badge = mismatch
+      ? `<span class="${this.bemElement('badge')}" ${this.bemDataAttr('badge')}="mismatch" aria-hidden="true">${MISMATCH_GLYPH}</span>`
+      : '';
+
+    return [
+      `<button type="button" class="${chipClass} ${stateClass}" ${codeAttr}="${code}" `,
+      `aria-pressed="${isActive ? 'true' : 'false'}" title="${escapeHtml(title)}">`,
+      `${code}${badge}</button>`,
+    ].join('');
   }
 }

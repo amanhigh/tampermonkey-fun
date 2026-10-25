@@ -11,6 +11,10 @@ import typescriptParser from '@typescript-eslint/parser';
 
 export default [
   {
+    // Generated output is not source: never lint bundles or reports.
+    ignores: ['dist/**', 'coverage/**'],
+  },
+  {
     files: ['src/**/*.ts'],
     languageOptions: {
       parser: typescriptParser,

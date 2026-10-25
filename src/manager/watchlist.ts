@@ -30,9 +30,10 @@ export interface ITradingViewWatchlistManager {
   /**
    * Targeted refresh driven by observed DOM change.
    * Computes the actual added/removed tickers from the previous snapshot
-   * vs current DOM. For a single ticker change, performs a targeted
-   * refresh (paintTickers). For zero or multiple changes, falls back
-   * to full refresh().
+   * vs current DOM. For zero changes, repaints the current tickers with
+   * the same targeted paint as {@link refreshTickers}, without publishing
+   * WATCHLIST_CHANGED. For a single ticker change, performs a targeted
+   * refresh (paintTickers). For multiple changes, falls back to full refresh().
    */
   refreshChangedTickers(): Promise<void>;
 }
@@ -74,7 +75,7 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     }
     this.updateSnapshot(currentTickers);
 
-    // Delegate all ticker painting (symbols, flags, FNO) to PaintManager
+    // Delegate all ticker painting (symbols, flags, tags) to PaintManager
     await this.paintManager.paint();
 
     this.publishWatchlistChanged(changedTickers);
@@ -103,8 +104,9 @@ export class TradingViewWatchlistManager implements ITradingViewWatchlistManager
     const diff = this.diffWatchlistTickers(this.prevWatchlistTickers, currentTickers);
 
     if (diff.changedTickers.length === 0) {
-      // No membership change — just update snapshot
+      // No membership change — refresh snapshot and repaint current tickers only
       this.updateSnapshot(currentTickers);
+      await this.paintManager.paintTickers([...currentTickers]);
       return;
     }
 

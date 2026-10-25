@@ -49,7 +49,6 @@ export const Constants = Object.freeze({
       DEFAULT: 'white',
       HEADER_DEFAULT: 'brown', // Brown fallback for uncategorized ticker in watchlist (header/screener)
       SCREENER_RECENT: 'red', // Recent ticker highlight in screener
-      FNO_CSS: { 'border-top-style': 'groove', 'border-width': 'medium' }, // Old name: fnoCss
       // Severity colors for audit results
       SEVERITY: {
         LOW: 'darkgray', // Low severity - informational
@@ -227,6 +226,12 @@ Support:
     PAGE_LIMIT: 100,
     /** Backend-enforced price-alert page size (10). */
     PRICE_ALERT_PAGE_LIMIT: 10,
+  },
+
+  /** Barkat read-only analysis API */
+  // FIXME: Extract Barkat configs (BASE_URL, webpack match/connect/grant) into a YAML file.
+  BARKAT: {
+    BASE_URL: 'http://localhost:8050/v1/api',
   },
 
   /** Cache configuration for manager lookups */

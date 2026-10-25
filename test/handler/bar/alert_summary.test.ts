@@ -163,7 +163,7 @@ function createMockCategoryManager(): jest.Mocked<ICategoryManager> {
     getTickerCategory: jest.fn().mockResolvedValue({
       watch: undefined,
       flag: undefined,
-      isFno: false,
+      tags: [],
     }),
     recordWatchCategory: jest.fn().mockResolvedValue(undefined),
     recordFlagCategory: jest.fn().mockResolvedValue(undefined),
@@ -244,7 +244,7 @@ describe('AlertSummaryBar', () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: { id: WatchCategoryId.COMPOSITE, color: 'darkkhaki', label: 'Composite', recordUpdate: null },
         flag: undefined,
-        isFno: false,
+        tags: [],
       });
 
       await bar.refresh();
@@ -498,7 +498,7 @@ describe('AlertSummaryBar', () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: { id: WatchCategoryId.COMPOSITE, color: 'darkkhaki', label: 'Composite', recordUpdate: null },
         flag: undefined,
-        isFno: false,
+        tags: [],
       });
 
       const bar = new AlertSummaryBar(
@@ -515,7 +515,7 @@ describe('AlertSummaryBar', () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: { id: WatchCategoryId.COMPOSITE, color: 'darkkhaki', label: 'Composite', recordUpdate: null },
         flag: undefined,
-        isFno: false,
+        tags: [],
       });
 
       const bar = new AlertSummaryBar(
@@ -537,7 +537,7 @@ describe('AlertSummaryBar', () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: { id: WatchCategoryId.READY, color: 'red', label: 'Ready', recordUpdate: null },
         flag: undefined,
-        isFno: false,
+        tags: [],
       });
 
       const bar = new AlertSummaryBar(
@@ -613,7 +613,7 @@ describe('AlertSummaryBar', () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: { id: WatchCategoryId.COMPOSITE, color: 'darkkhaki', label: 'Composite', recordUpdate: null },
         flag: undefined,
-        isFno: false,
+        tags: [],
       });
 
       await bar.refresh();

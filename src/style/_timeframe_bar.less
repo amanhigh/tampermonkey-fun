@@ -1,5 +1,7 @@
 // ── Timeframe Bar Styles ──
 // Dedicated bar below the display card showing clickable timeframe chips.
+// Chips use escaped native `title` tooltips; the mismatch badge is an
+// absolute overlay so it adds no layout width or height.
 
 // Per-timeframe active colors — Heatmap Spectrum (long = warm, short = cool)
 @tf-color-yr: #f87171;    // Coral Red   — hottest
@@ -23,13 +25,22 @@
     // Timeframe Chip
     // ============================================
     .aman-tf-bar__chip {
+        position: relative;
         display: inline-block;
         padding: 0 5px;
+        border: 0;
+        background: none;
+        font-family: inherit;
         border-radius: 3px;
         font-weight: 600;
         font-size: 10px;
         cursor: pointer;
         transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+
+        &:focus-visible {
+            outline: 1px solid rgba(255, 255, 255, 0.7);
+            outline-offset: 1px;
+        }
 
         // Inactive state
         &.aman-tf-bar__chip--inactive {
@@ -66,5 +77,19 @@
             pointer-events: none;
             cursor: default;
         }
+    }
+
+    // ============================================
+    // Corner badge overlay (no layout impact)
+    // ============================================
+    .aman-tf-bar__badge {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        font-size: 8px;
+        line-height: 1;
+        font-weight: 700;
+        color: @tf-color-tmn;
+        pointer-events: none;
     }
 }

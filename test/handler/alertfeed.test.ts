@@ -112,7 +112,7 @@ describe('AlertFeedHandler', () => {
     } as any;
 
     mockCategoryManager = {
-      getTickerCategory: jest.fn().mockResolvedValue({ watch: undefined, flag: undefined, isFno: false }),
+      getTickerCategory: jest.fn().mockResolvedValue({ watch: undefined, flag: undefined, tags: [] }),
       evictTicker: jest.fn(),
     } as any;
 
@@ -299,7 +299,7 @@ describe('AlertFeedHandler', () => {
       mockCategoryManager.getTickerCategory.mockResolvedValue({
         watch: { id: WatchCategoryId.COMPOSITE, color: 'darkkhaki', label: 'Composite', recordUpdate: null },
         flag: undefined,
-        isFno: false,
+        tags: [],
       });
       let manyCallback: Function | undefined;
       const mockConsumer: jest.Mocked<ISubscriber> = {
@@ -438,10 +438,10 @@ describe('AlertFeedHandler', () => {
           return {
             watch: { id: WatchCategoryId.COMPOSITE, color: 'darkkhaki', label: 'Composite', recordUpdate: null },
             flag: undefined,
-            isFno: false,
+            tags: [],
           };
         }
-        return { watch: undefined, flag: undefined, isFno: false };
+        return { watch: undefined, flag: undefined, tags: [] };
       });
       mockAlertTickerManager.getAlertTickersForTicker.mockResolvedValue([]);
       let watchlistCallback: Function | undefined;

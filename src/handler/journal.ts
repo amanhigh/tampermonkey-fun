@@ -78,6 +78,7 @@ export class JournalHandler implements IJournalHandler {
 
   /** @inheritdoc */
   public renderToolbar(): void {
+    // TODO 3.2: Journal toolbar is bespoke; combine with journal left-click toolbar and build via shared util with short emoji labels to save space
     this.uiUtil
       .buildWrapper(`${Constants.UI.IDS.AREAS.JOURNAL}-type`)
       .appendTo(`#${Constants.UI.IDS.AREAS.JOURNAL}`)

@@ -1,7 +1,5 @@
-// Mock experiment.ts to prevent top-level RunBarkat() call during import
-jest.mock('../../src/core/experiment', () => ({}));
-
 import { Factory } from '../../src/core/factory';
+import { Constants } from '../../src/models/constant';
 
 // Minimal mocks for instantiation only (no runtime operations)
 (global as any).$ = jest.fn(() => ({
@@ -35,7 +33,9 @@ import { Factory } from '../../src/core/factory';
  * without hitting cyclic dependency stack overflow (RangeError).
  *
  * Barkat is the top-level app that transitively depends on ALL handlers,
- * managers, repos, and audit components. If it builds, no cycles exist.
+ * managers, repos, and audit components. Construction succeeding means the
+ * exercised graph builds without a stack overflow; it does not prove that no
+ * import cycle exists anywhere in the project.
  */
 describe('Factory Integration - Cyclic Dependency Detection', () => {
   beforeEach(() => {
@@ -121,6 +121,19 @@ describe('Factory Client Providers', () => {
     // Verify singleton behavior
     const auditAgain = Factory.client.audit();
     expect(audit).toBe(auditAgain);
+  });
+
+  it('should provide singleton BarkatClient on its own base URL', () => {
+    const barkat = Factory.client.barkat();
+    expect(barkat).toBeDefined();
+    expect(barkat.getBaseUrl()).toBe(Constants.BARKAT.BASE_URL);
+
+    // Verify singleton behavior
+    const barkatAgain = Factory.client.barkat();
+    expect(barkat).toBe(barkatAgain);
+
+    // Barkat is a separate backend from Kohan
+    expect(barkat.getBaseUrl()).not.toBe(Constants.KOHAN.BASE_URL);
   });
 });
 

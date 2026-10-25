@@ -1,6 +1,9 @@
 import { TimeFrameBar, ITimeFrameHandler } from '../../../src/handler/bar/timeframe';
 import { ITimeFrameManager } from '../../../src/manager/timeframe';
+import { IBarkatManager } from '../../../src/manager/barkat';
+import { IDomManager } from '../../../src/manager/dom';
 import { TickerTimeframe } from '../../../src/models/timeframe';
+import { BarkatStatus, BarkatTickerAnalysis, BarkatTimeframe } from '../../../src/models/barkat';
 import { ISubscriber } from '../../../src/manager/event_bus';
 import { DomainEventType } from '../../../src/models/domain_event';
 import { Notifier } from '../../../src/util/notify';
@@ -10,6 +13,17 @@ import { BarId, BAR_CLASS, BarStatus } from '../../../src/models/bar';
 
 const TF_ROOT = `#${BarId.TIMEFRAME}`; // #aman-tf-bar
 const CHIP_SELECTOR = '.aman-tf-bar__chip';
+const EVENT_NS = 'bar-tf';
+const CHIP_CLICK_EVENT = `click.${EVENT_NS}`;
+
+/** Generic click hint used as the native chip tooltip. */
+const CLICK_HINT = 'Click to add/remove.';
+
+/** Native tooltip for a selected chip whose Barkat verdict is not preferred. */
+const TITLE_SELECTED_NOT_PREFERRED = 'Selected \u00B7 Barkat: not preferred. Click to remove.';
+
+/** Native tooltip for an unselected chip whose Barkat verdict is preferred. */
+const TITLE_UNSELECTED_PREFERRED = 'Not selected \u00B7 Barkat: preferred. Click to add.';
 
 /** BEM class names expected from the finalized BaseBar/TimeFrameBar contract. */
 const BEM = {
@@ -18,7 +32,17 @@ const BEM = {
   ACTIVE: 'aman-tf-bar__chip--active',
   INACTIVE: 'aman-tf-bar__chip--inactive',
   LOADING: 'aman-tf-bar__chip--loading',
+  BADGE: 'aman-tf-bar__badge',
+  BADGE_GLYPH: '\u2260',
 } as const;
+
+/** Supported (assessed) Barkat frames. */
+const ASSESSED: readonly BarkatTimeframe[] = [
+  TickerTimeframe.SMN,
+  TickerTimeframe.TMN,
+  TickerTimeframe.MN,
+  TickerTimeframe.WK,
+];
 
 // ── Mock jQuery ──
 
@@ -31,7 +55,6 @@ function createMockElement(): any {
     on: jest.fn().mockReturnThis(),
     addClass: jest.fn().mockReturnThis(),
     removeClass: jest.fn().mockReturnThis(),
-    toggleClass: jest.fn().mockReturnThis(),
     attr: jest.fn().mockReturnValue(undefined),
     length: 1,
   };
@@ -46,6 +69,7 @@ const mockJQuery = jest.fn(createDefaultJQuery);
 (global as any).$ = mockJQuery;
 
 // ── Mock Notifier ──
+
 jest.mock('../../../src/util/notify', () => ({
   Notifier: {
     warn: jest.fn(),
@@ -59,21 +83,28 @@ jest.mock('../../../src/util/notify', () => ({
 // ── Helpers ──
 
 /**
+ * Finds a delegated handler bound on the bar root.
+ * @param event - Full namespaced event name (e.g. `click.bar-tf`)
+ * @param selector - Delegated selector
+ */
+function getHandler(event: string, selector: string): ((e: any) => void) | undefined {
+  const call = mockRootEl.on.mock.calls.find((c: any[]) => c[0] === event && c[1] === selector);
+  return call?.[2] as ((e: any) => void) | undefined;
+}
+
+/**
  * Finds the chip click handler bound via delegated `click` event
  * on the chip selector. Returns undefined if not found.
  */
 function getChipClickHandler(): ((event: any) => void) | undefined {
-  const call = mockRootEl.on.mock.calls.find(
-    (c: any[]) => c[0] === 'click' && c[1] === CHIP_SELECTOR
-  );
-  return call?.[2] as ((event: any) => void) | undefined;
+  return getHandler(CHIP_CLICK_EVENT, CHIP_SELECTOR);
 }
 
 /**
  * Simulates a click on a timeframe chip by invoking the delegated click handler.
  */
 function simulateChipClick(attrValue: string | undefined): void {
-  const fakeDomEl = { nodeType: 1, tagName: 'SPAN' };
+  const fakeDomEl = { nodeType: 1, tagName: 'BUTTON' };
   const mockWrappedEl = createMockElement();
   mockWrappedEl.attr.mockReturnValue(attrValue);
 
@@ -96,20 +127,45 @@ function simulateChipClick(attrValue: string | undefined): void {
  */
 async function flushMicrotasks(): Promise<void> {
   // Each await drains one level of the microtask queue.
-  // The fire-and-forget handleChipClick chain needs:
-  //   1. rejection → catch → Notifier.warn → await refresh()
-  //   2. await loadData() → resolve → render() → paint() → $root.html()
-  // Extra ticks guard against deeper chains.
+  // The refresh chain needs: selection paint → analysis paint.
   await Promise.resolve();
   await Promise.resolve();
   await Promise.resolve();
   await Promise.resolve();
 }
 
+/** Returns the last HTML string painted into the bar root. */
+function lastHtml(): string {
+  const calls = mockRootEl.html.mock.calls;
+  return (calls[calls.length - 1]?.[0] as string) ?? '';
+}
+
+/** Extracts the markup of a single chip button from rendered HTML. */
+function chipHtml(html: string, code: TickerTimeframe): string {
+  const match = html.match(new RegExp(`<button[^>]*data-tf-code="${code}"[\\s\\S]*?</button>`));
+  return match?.[0] ?? '';
+}
+
+/** Builds a valid analysis payload with all four assessed rows. */
+function buildAnalysis(
+  ticker: string,
+  statuses: Partial<Record<TickerTimeframe, BarkatStatus>> = {}
+): BarkatTickerAnalysis {
+  return {
+    ticker,
+    timeframes: ASSESSED.map((timeframe) => ({
+      timeframe,
+      status: statuses[timeframe] ?? 'pass',
+    })),
+  };
+}
+
 // ── Tests ──
 
 describe('TimeFrameBar', () => {
   let mockTimeFrameManager: jest.Mocked<ITimeFrameManager>;
+  let mockBarkatManager: jest.Mocked<IBarkatManager>;
+  let mockDomManager: jest.Mocked<IDomManager>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -123,11 +179,21 @@ describe('TimeFrameBar', () => {
       getSequence: jest.fn(),
       toggleTimeframe: jest.fn(),
     } as any;
+
+    mockBarkatManager = {
+      getTickerAnalysis: jest.fn().mockResolvedValue(buildAnalysis('AAPL')),
+    } as any;
+
+    mockDomManager = {
+      getTicker: jest.fn().mockReturnValue('AAPL'),
+    } as any;
   });
+
+  const createBar = (): TimeFrameBar => new TimeFrameBar(mockTimeFrameManager, mockBarkatManager, mockDomManager);
 
   describe('interface contract', () => {
     it('should satisfy ITimeFrameHandler interface without exposing render', () => {
-      const bar: ITimeFrameHandler = new TimeFrameBar(mockTimeFrameManager);
+      const bar: ITimeFrameHandler = createBar();
       expect(typeof bar.refresh).toBe('function');
       expect(typeof bar.registerEvents).toBe('function');
     });
@@ -135,7 +201,7 @@ describe('TimeFrameBar', () => {
 
   describe('refresh (compact chips)', () => {
     it('should render all six timeframe chips in YR to DL order', async () => {
-      const bar = new TimeFrameBar(mockTimeFrameManager);
+      const bar = createBar();
       await bar.refresh();
 
       const html = mockRootEl.html.mock.calls[0][0] as string;
@@ -157,7 +223,7 @@ describe('TimeFrameBar', () => {
         TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL,
       ]);
 
-      const bar = new TimeFrameBar(mockTimeFrameManager);
+      const bar = createBar();
       await bar.refresh();
 
       const html = mockRootEl.html.mock.calls[0][0] as string;
@@ -174,7 +240,7 @@ describe('TimeFrameBar', () => {
         TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL,
       ]);
 
-      const bar = new TimeFrameBar(mockTimeFrameManager);
+      const bar = createBar();
       await bar.refresh();
 
       const html = mockRootEl.html.mock.calls[0][0] as string;
@@ -182,28 +248,59 @@ describe('TimeFrameBar', () => {
       expect(html).toContain(BEM.INACTIVE);
     });
 
-    it('should include tooltip text on every chip', async () => {
-      const bar = new TimeFrameBar(mockTimeFrameManager);
+    it('should expose an escaped native title hint and no custom tooltip markup', async () => {
+      const bar = createBar();
       await bar.refresh();
 
       const html = mockRootEl.html.mock.calls[0][0] as string;
-      const expectedTooltip = 'Recommended timeframe for this ticker. Click to add/remove.';
 
-      expect(html).toContain(expectedTooltip);
+      // Unassessed YR keeps the generic click hint
+      expect(chipHtml(html, TickerTimeframe.YR)).toContain(`title="${CLICK_HINT}"`);
+      expect(html).not.toContain('role="tooltip"');
+      expect(html).not.toContain('aria-describedby');
+      expect(html).not.toContain('__tip');
+      expect(html).not.toContain('__item');
     });
 
     it('should do nothing when bar element is not found', async () => {
       mockRootEl = { length: 0 };
-      const bar = new TimeFrameBar(mockTimeFrameManager);
+      const bar = createBar();
       await bar.refresh();
 
       expect(mockRootEl.html).toBeUndefined();
+    });
+
+    it('should keep an empty retained selection valid while a refresh is pending', async () => {
+      // First refresh paints an empty selection (valid state, not "unpainted")
+      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([]);
+
+      const bar = createBar();
+      await bar.refresh();
+      expect(lastHtml()).toContain(BEM.INACTIVE);
+      expect(lastHtml()).not.toContain(BEM.ACTIVE);
+
+      // Next refresh is pending: the retained empty selection still repaints
+      let resolvePending!: (value: readonly TickerTimeframe[]) => void;
+      mockTimeFrameManager.getActiveTimeframes.mockReturnValue(
+        new Promise<readonly TickerTimeframe[]>((resolve) => {
+          resolvePending = resolve;
+        })
+      );
+      const pending = bar.refresh();
+
+      const pendingHtml = lastHtml();
+      expect(pendingHtml).toContain(BEM.INACTIVE);
+      expect(pendingHtml).not.toContain(BEM.ACTIVE);
+      expect(pendingHtml).not.toContain(BEM.BADGE);
+
+      resolvePending([]);
+      await pending;
     });
   });
 
   describe('registerEvents', () => {
     it('should subscribe to both timeframe refresh events through subscribeMany', () => {
-      const bar = new TimeFrameBar(mockTimeFrameManager);
+      const bar = createBar();
       const mockSubscriber: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn(),
         subscribeMany: jest.fn(),
@@ -221,7 +318,7 @@ describe('TimeFrameBar', () => {
 
   describe('chip click handling', () => {
     it('should toggle active chip through TimeFrameManager', async () => {
-      const bar = new TimeFrameBar(mockTimeFrameManager);
+      const bar = createBar();
       await bar.refresh();
 
       simulateChipClick(TickerTimeframe.WK);
@@ -230,10 +327,10 @@ describe('TimeFrameBar', () => {
     });
 
     it('should stop event propagation to prevent display card toggle', async () => {
-      const bar = new TimeFrameBar(mockTimeFrameManager);
+      const bar = createBar();
       await bar.refresh();
 
-      const fakeDomEl = { nodeType: 1, tagName: 'SPAN' };
+      const fakeDomEl = { nodeType: 1, tagName: 'BUTTON' };
       const mockWrappedEl = createMockElement();
       mockWrappedEl.attr.mockReturnValue('WK');
 
@@ -255,7 +352,7 @@ describe('TimeFrameBar', () => {
         new Error('Network error')
       );
 
-      const bar = new TimeFrameBar(mockTimeFrameManager);
+      const bar = createBar();
       await bar.refresh();
 
       mockRootEl.html.mockClear();
@@ -273,7 +370,7 @@ describe('TimeFrameBar', () => {
     });
 
     it('should do nothing when chip has no data-code attribute', async () => {
-      const bar = new TimeFrameBar(mockTimeFrameManager);
+      const bar = createBar();
       await bar.refresh();
 
       simulateChipClick(undefined);
@@ -284,14 +381,14 @@ describe('TimeFrameBar', () => {
 
   describe('status synchronization', () => {
     it('should apply block class to root element during render', async () => {
-      const bar = new TimeFrameBar(mockTimeFrameManager);
+      const bar = createBar();
       await bar.refresh();
 
       expect(mockRootEl.addClass).toHaveBeenCalledWith(BEM.ROOT);
     });
 
     it('should apply BAR_CLASS to root element during render', async () => {
-      const bar = new TimeFrameBar(mockTimeFrameManager);
+      const bar = createBar();
       await bar.refresh();
 
       expect(mockRootEl.addClass).toHaveBeenCalledWith(BAR_CLASS);
@@ -302,7 +399,7 @@ describe('TimeFrameBar', () => {
         TickerTimeframe.WK, TickerTimeframe.DL,
       ]);
 
-      const bar = new TimeFrameBar(mockTimeFrameManager);
+      const bar = createBar();
       await bar.refresh();
 
       expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.ERROR}`);
@@ -313,7 +410,7 @@ describe('TimeFrameBar', () => {
         TickerTimeframe.YR, TickerTimeframe.WK,
       ]);
 
-      const bar = new TimeFrameBar(mockTimeFrameManager);
+      const bar = createBar();
       await bar.refresh();
 
       expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.ERROR}`);
@@ -324,7 +421,7 @@ describe('TimeFrameBar', () => {
         TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK,
       ]);
 
-      const bar = new TimeFrameBar(mockTimeFrameManager);
+      const bar = createBar();
       await bar.refresh();
 
       expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.WARN}`);
@@ -335,7 +432,7 @@ describe('TimeFrameBar', () => {
         TickerTimeframe.YR, TickerTimeframe.TMN, TickerTimeframe.MN,
       ]);
 
-      const bar = new TimeFrameBar(mockTimeFrameManager);
+      const bar = createBar();
       await bar.refresh();
 
       expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.OK}`);
@@ -343,20 +440,272 @@ describe('TimeFrameBar', () => {
   });
 
   describe('compact-only mode', () => {
-    it('should render compact chips without disclosure button or details/aria markup', async () => {
-      const bar = new TimeFrameBar(mockTimeFrameManager);
+    it('should render compact chips without disclosure shell', async () => {
+      const bar = createBar();
       await bar.refresh();
 
       const html = mockRootEl.html.mock.calls[0][0] as string;
 
-      // Should contain chips but no disclosure shell
+      // Chip markup with native titles is allowed; the disclosure shell is not.
       expect(html).toContain(BEM.CHIP);
+      expect(html).toContain('title="');
       expect(html).not.toContain('aria-expanded');
       expect(html).not.toContain('aria-controls');
       expect(html).not.toContain('hidden');
-      expect(html).not.toContain('toggle');
       expect(html).not.toContain('__toggle');
       expect(html).not.toContain('__details');
+    });
+  });
+
+  // ── Barkat overlay ──
+
+  describe('Barkat badge policy', () => {
+    const matrix: Array<[string, boolean, BarkatStatus, boolean, string]> = [
+      ['active + pass', true, 'pass', false, CLICK_HINT],
+      ['active + warning', true, 'warning', true, TITLE_SELECTED_NOT_PREFERRED],
+      ['active + fail', true, 'fail', true, TITLE_SELECTED_NOT_PREFERRED],
+      ['inactive + pass', false, 'pass', true, TITLE_UNSELECTED_PREFERRED],
+      ['inactive + warning', false, 'warning', false, CLICK_HINT],
+      ['inactive + fail', false, 'fail', false, CLICK_HINT],
+    ];
+
+    it.each(matrix)(
+      'should badge and title only on mismatch: %s',
+      async (_label, isActive, status, expectBadge, expectedTitle) => {
+        mockTimeFrameManager.getActiveTimeframes.mockResolvedValue(
+          isActive
+            ? [TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK]
+            : [TickerTimeframe.SMN, TickerTimeframe.MN, TickerTimeframe.WK]
+        );
+        mockBarkatManager.getTickerAnalysis.mockResolvedValue(
+          buildAnalysis('AAPL', { [TickerTimeframe.TMN]: status })
+        );
+
+        const bar = createBar();
+        await bar.refresh();
+
+        const chip = chipHtml(lastHtml(), TickerTimeframe.TMN);
+        expect(chip).toContain(`aria-pressed="${isActive ? 'true' : 'false'}"`);
+        expect(chip).toContain(`title="${expectedTitle}"`);
+        if (expectBadge) {
+          expect(chip).toContain(BEM.BADGE);
+          expect(chip).toContain(BEM.BADGE_GLYPH);
+        } else {
+          expect(chip).not.toContain(BEM.BADGE);
+        }
+      }
+    );
+
+    it('should never badge YR or DL even when active and unassessed', async () => {
+      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
+        TickerTimeframe.YR, TickerTimeframe.DL, TickerTimeframe.MN, TickerTimeframe.WK,
+      ]);
+      mockBarkatManager.getTickerAnalysis.mockResolvedValue(
+        buildAnalysis('AAPL', {
+          [TickerTimeframe.SMN]: 'fail',
+          [TickerTimeframe.TMN]: 'fail',
+          [TickerTimeframe.MN]: 'fail',
+          [TickerTimeframe.WK]: 'fail',
+        })
+      );
+
+      const bar = createBar();
+      await bar.refresh();
+
+      const html = lastHtml();
+      expect(chipHtml(html, TickerTimeframe.YR)).not.toContain(BEM.BADGE);
+      expect(chipHtml(html, TickerTimeframe.DL)).not.toContain(BEM.BADGE);
+      // Unassessed YR/DL keep the generic hint, never a mismatch title
+      expect(chipHtml(html, TickerTimeframe.YR)).toContain(`title="${CLICK_HINT}"`);
+      expect(chipHtml(html, TickerTimeframe.DL)).toContain(`title="${CLICK_HINT}"`);
+      // Active rows that fail are badged, proving the overlay is live
+      expect(chipHtml(html, TickerTimeframe.MN)).toContain(BEM.BADGE);
+      expect(chipHtml(html, TickerTimeframe.MN)).toContain(`title="${TITLE_SELECTED_NOT_PREFERRED}"`);
+    });
+
+    it('should paint active selections without waiting for Barkat (pending selections usable)', async () => {
+      let resolveAnalysis!: (value: BarkatTickerAnalysis) => void;
+      mockBarkatManager.getTickerAnalysis.mockReturnValue(
+        new Promise<BarkatTickerAnalysis>((resolve) => {
+          resolveAnalysis = resolve;
+        })
+      );
+
+      const bar = createBar();
+      void bar.refresh();
+      await flushMicrotasks();
+
+      // Selection is painted with the generic hint and no badges yet
+      const pendingHtml = lastHtml();
+      expect(pendingHtml).toContain(BEM.ACTIVE);
+      expect(pendingHtml).not.toContain(BEM.BADGE);
+      expect(chipHtml(pendingHtml, TickerTimeframe.TMN)).toContain('aria-pressed="true"');
+      expect(chipHtml(pendingHtml, TickerTimeframe.TMN)).toContain(`title="${CLICK_HINT}"`);
+
+      // Chips stay clickable while analysis is pending
+      simulateChipClick(TickerTimeframe.WK);
+      expect(mockTimeFrameManager.toggleTimeframe).toHaveBeenCalledWith(TickerTimeframe.WK);
+
+      // Resolve so the pending refresh completes
+      resolveAnalysis(buildAnalysis('AAPL'));
+      await flushMicrotasks();
+    });
+  });
+
+  describe('Barkat failure handling', () => {
+    it('should stay quiet and remove old badges when analysis is rejected', async () => {
+      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
+        TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK,
+      ]);
+      mockBarkatManager.getTickerAnalysis.mockResolvedValueOnce(
+        buildAnalysis('AAPL', { [TickerTimeframe.TMN]: 'fail' })
+      );
+
+      const bar = createBar();
+      await bar.refresh();
+      expect(lastHtml()).toContain(BEM.BADGE);
+
+      mockBarkatManager.getTickerAnalysis.mockRejectedValueOnce(new Error('service down'));
+      await bar.refresh();
+
+      const html = lastHtml();
+      expect(html).not.toContain(BEM.BADGE);
+      // Selection survives the failed analysis and falls back to the generic hint
+      const tmnChip = chipHtml(html, TickerTimeframe.TMN);
+      expect(tmnChip).toContain('aria-pressed="true"');
+      expect(tmnChip).toContain(`title="${CLICK_HINT}"`);
+      expect(Notifier.warn).not.toHaveBeenCalled();
+    });
+
+    it('should keep the selection status policy unchanged when analysis fails', async () => {
+      mockBarkatManager.getTickerAnalysis.mockRejectedValue(new Error('service down'));
+      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
+        TickerTimeframe.YR, TickerTimeframe.TMN, TickerTimeframe.MN,
+      ]);
+
+      const bar = createBar();
+      await bar.refresh();
+
+      expect(mockRootEl.addClass).toHaveBeenCalledWith(`${BAR_CLASS}--${BarStatus.OK}`);
+    });
+  });
+
+  describe('latest-wins refresh', () => {
+    it('should ignore a stale selection phase result and clear old overlays while pending', async () => {
+      mockTimeFrameManager.getActiveTimeframes.mockResolvedValueOnce([
+        TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL,
+      ]);
+
+      const bar = createBar();
+      await bar.refresh();
+      // Earlier paint: SMN is unselected but preferred -> mismatch badge
+      expect(lastHtml()).toContain(BEM.BADGE);
+
+      // Newer refresh is pending on selections
+      let resolvePendingActive!: (value: readonly TickerTimeframe[]) => void;
+      mockTimeFrameManager.getActiveTimeframes.mockReturnValueOnce(
+        new Promise<readonly TickerTimeframe[]>((resolve) => {
+          resolvePendingActive = resolve;
+        })
+      );
+      const pending = bar.refresh();
+
+      // Old overlay is cleared immediately; retained selection is still shown
+      const pendingHtml = lastHtml();
+      expect(pendingHtml).not.toContain(BEM.BADGE);
+      expect(chipHtml(pendingHtml, TickerTimeframe.SMN)).toContain(`title="${CLICK_HINT}"`);
+      expect(chipHtml(pendingHtml, TickerTimeframe.DL)).toContain(BEM.ACTIVE);
+
+      // A still newer refresh completes and becomes the painted state
+      mockTimeFrameManager.getActiveTimeframes.mockResolvedValueOnce([
+        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN,
+      ]);
+      await bar.refresh();
+      expect(chipHtml(lastHtml(), TickerTimeframe.YR)).toContain(BEM.ACTIVE);
+
+      // The older pending selection resolves late and must be ignored
+      resolvePendingActive([TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL]);
+      await pending;
+
+      const html = lastHtml();
+      expect(chipHtml(html, TickerTimeframe.YR)).toContain(BEM.ACTIVE);
+      expect(chipHtml(html, TickerTimeframe.DL)).toContain(BEM.INACTIVE);
+    });
+
+    it('should ignore a stale analysis phase result', async () => {
+      let resolveFirstAnalysis!: (value: BarkatTickerAnalysis) => void;
+      mockBarkatManager.getTickerAnalysis
+        .mockReturnValueOnce(
+          new Promise<BarkatTickerAnalysis>((resolve) => {
+            resolveFirstAnalysis = resolve;
+          })
+        )
+        .mockResolvedValueOnce(buildAnalysis('AAPL'));
+
+      const bar = createBar();
+      const first = bar.refresh();
+      await flushMicrotasks();
+
+      await bar.refresh();
+
+      resolveFirstAnalysis(
+        buildAnalysis('AAPL', {
+          [TickerTimeframe.SMN]: 'fail',
+          [TickerTimeframe.TMN]: 'fail',
+          [TickerTimeframe.MN]: 'fail',
+          [TickerTimeframe.WK]: 'fail',
+        })
+      );
+      await first;
+
+      const html = lastHtml();
+      // Only the legitimate mismatch badge for the unselected SMN survives
+      expect(chipHtml(html, TickerTimeframe.MN)).not.toContain(BEM.BADGE);
+      expect(chipHtml(html, TickerTimeframe.MN)).toContain(`title="${CLICK_HINT}"`);
+      expect(chipHtml(html, TickerTimeframe.SMN)).toContain(BEM.BADGE);
+      expect(chipHtml(html, TickerTimeframe.SMN)).toContain(`title="${TITLE_UNSELECTED_PREFERRED}"`);
+    });
+  });
+
+  describe('native titles and bindings', () => {
+    it('should keep full detail out of the chip markup', async () => {
+      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
+        TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK,
+      ]);
+      mockBarkatManager.getTickerAnalysis.mockResolvedValue(
+        buildAnalysis('AAPL', { [TickerTimeframe.MN]: 'warning' })
+      );
+
+      const bar = createBar();
+      await bar.refresh();
+
+      const html = lastHtml();
+      const chip = chipHtml(html, TickerTimeframe.MN);
+      // Mismatch chip carries only the short native hint
+      expect(chip).toContain(`title="${TITLE_SELECTED_NOT_PREFERRED}"`);
+      expect(chip).not.toContain('Zone failures');
+      expect(chip).not.toContain('Strategy wins');
+      expect(chip).not.toContain('Strategy entries');
+      expect(chip).not.toContain('%');
+      // Metrics, disclaimer and detail lines are not rendered in the bar
+      expect(html).not.toContain('Zone failures');
+      expect(html).not.toContain('History-based suitability');
+      expect(html).not.toContain('Your selection:');
+      expect(html).not.toContain('role="tooltip"');
+      expect(html).not.toContain('data-tf-barkat');
+    });
+
+    it('should bind only the chip click handler and dedupe it through namespaced off/on', async () => {
+      const bar = createBar();
+      await bar.refresh();
+
+      expect(mockRootEl.off).toHaveBeenCalledWith(CHIP_CLICK_EVENT, CHIP_SELECTOR);
+      expect(getChipClickHandler()).toBeDefined();
+      // No tooltip (hover/focus/Escape) bindings remain on the bar
+      const eventNames = mockRootEl.on.mock.calls.map((c: any[]) => c[0] as string);
+      expect(eventNames).not.toContain(`keydown.${EVENT_NS}`);
+      expect(eventNames).not.toContain(`mouseenter.${EVENT_NS}`);
+      expect(eventNames).not.toContain(`focusin.${EVENT_NS}`);
     });
   });
 });

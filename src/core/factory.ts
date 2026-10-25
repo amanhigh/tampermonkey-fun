@@ -1,4 +1,5 @@
 /* eslint-disable max-lines */
+// FIXME: Group models/manager/handler into feature sub-packages (barkat/, journal/, audit/) instead of flat files.
 import { InvestingClient, IInvestingClient } from '../client/investing';
 import { IImdbHandler, ImdbHandler } from '../handler/imdb';
 import { KiteClient, IKiteClient } from '../client/kite';
@@ -9,13 +10,14 @@ import { AlertTickerClient, IAlertTickerClient } from '../client/alert_ticker';
 import { IPriceAlertClient, PriceAlertClient } from '../client/price_alert';
 import { IAuditClient, AuditClient } from '../client/audit';
 import { InstrumentClient, IInstrumentClient } from '../client/instrument';
+import { IBarkatClient, BarkatClient } from '../client/barkat';
+import { IBarkatManager, BarkatManager } from '../manager/barkat';
 import { UIUtil, IUIUtil } from '../util/ui';
 import { ObserveUtil, IObserveUtil } from '../util/observer';
 import { SyncUtil, ISyncUtil } from '../util/sync';
 import { KeyUtil, IKeyUtil } from '../util/key';
 import { SmartPrompt, ISmartPrompt } from '../util/smart';
 import { WaitUtil, IWaitUtil } from '../util/wait';
-import { ExperimentApp } from './experiment';
 import { ImdbApp } from './imdb';
 import { Barkat } from './barkat';
 
@@ -106,8 +108,6 @@ export class Factory {
    * Core application functionality
    */
   public static app = {
-    test: (): ExperimentApp =>
-      Factory.getInstance('testApp', () => new ExperimentApp(Factory.util.ui(), Factory.util.key())),
     barkat: (): Barkat =>
       Factory.getInstance(
         'barkat',
@@ -150,6 +150,7 @@ export class Factory {
     priceAlert: (): IPriceAlertClient => Factory.getInstance('priceAlertClient', () => new PriceAlertClient()),
     audit: (): IAuditClient => Factory.getInstance('auditClient', () => new AuditClient()),
     instrument: (): IInstrumentClient => Factory.getInstance('instrumentClient', () => new InstrumentClient()),
+    barkat: (): IBarkatClient => Factory.getInstance('barkatClient', () => new BarkatClient()),
   };
 
   /**
@@ -183,6 +184,9 @@ export class Factory {
         'timeframeManager',
         () => new TimeFrameManager(Factory.manager.ticker(), Factory.manager.dom(), Factory.manager.eventPublisher())
       ),
+
+    barkat: (): IBarkatManager =>
+      Factory.getInstance('barkatManager', () => new BarkatManager(Factory.client.barkat())),
 
     alert: (): IAlertManager =>
       Factory.getInstance(
@@ -559,7 +563,10 @@ export class Factory {
           )
       ),
     timeFrameBar: (): ITimeFrameHandler =>
-      Factory.getInstance('timeFrameBar', () => new TimeFrameBar(Factory.manager.timeFrame())),
+      Factory.getInstance(
+        'timeFrameBar',
+        () => new TimeFrameBar(Factory.manager.timeFrame(), Factory.manager.barkat(), Factory.manager.dom())
+      ),
     watchlistBar: (): IWatchlistBar =>
       Factory.getInstance('watchlistBar', () => new WatchlistBar(Factory.manager.paint(), Factory.manager.filter())),
     journal: (): IJournalHandler =>
@@ -584,8 +591,7 @@ export class Factory {
         'journalSyncHandler',
         () => new JournalSyncHandler(Factory.manager.journal(), Factory.manager.dom())
       ),
-    imdb: (): IImdbHandler =>
-      Factory.getInstance('imdbHandler', () => new ImdbHandler(Factory.manager.imdb())),
+    imdb: (): IImdbHandler => Factory.getInstance('imdbHandler', () => new ImdbHandler(Factory.manager.imdb())),
 
     command: (): ICommandInputHandler =>
       Factory.getInstance(
