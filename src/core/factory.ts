@@ -13,7 +13,6 @@ import { IBarkatClient, BarkatClient } from '../client/barkat';
 import { IBarkatManager, BarkatManager } from '../manager/barkat';
 import { UIUtil, IUIUtil } from '../util/ui';
 import { ObserveUtil, IObserveUtil } from '../util/observer';
-import { SearchUtil, ISearchUtil } from '../util/search';
 import { SyncUtil, ISyncUtil } from '../util/sync';
 import { KeyUtil, IKeyUtil } from '../util/key';
 import { SmartPrompt, ISmartPrompt } from '../util/smart';
@@ -72,8 +71,7 @@ import { AlertFeedHandler, IAlertFeedHandler } from '../handler/alertfeed';
 import { IGlobalErrorHandler, GlobalErrorHandler } from '../handler/error';
 import { IAlertFeedManager, AlertFeedManager } from '../manager/alertfeed';
 import { IPublisher, ISubscriber, IEventBus, EventBus } from '../manager/event_bus';
-import { IImdbRepo, ImdbRepo } from '../repo/imdb';
-import { IImdbManager as IImdbManager, ImdbManager } from '../manager/imdb';
+import { IImdbManager, ImdbManager } from '../manager/imdb';
 import { IPanelHandler, PanelHandler } from '../handler/panel';
 import { IPicassoHandler, PicassoHandler } from '../handler/picasso';
 import { PicassoApp } from './picasso';
@@ -161,7 +159,6 @@ export class Factory {
   public static util = {
     wait: (): IWaitUtil => Factory.getInstance('waitUtil', () => new WaitUtil()),
     observer: (): IObserveUtil => Factory.getInstance('observeUtil', () => new ObserveUtil()),
-    search: (): ISearchUtil => Factory.getInstance('searchUtil', () => new SearchUtil()),
     sync: (): ISyncUtil => Factory.getInstance('syncUtil', () => new SyncUtil()),
     key: (): IKeyUtil => Factory.getInstance('keyUtil', () => new KeyUtil(Factory.util.sync())),
     smart: (): ISmartPrompt => Factory.getInstance('smartPrompt', () => new SmartPrompt()),
@@ -174,7 +171,6 @@ export class Factory {
    */
   public static repo = {
     kite: (): IKiteRepo => Factory.getInstance('kiteRepo', () => new KiteRepo()),
-    imdb: (): IImdbRepo => Factory.getInstance('imdbRepo', () => new ImdbRepo()),
   };
 
   /**
@@ -205,7 +201,7 @@ export class Factory {
           )
       ),
 
-    imdb: (): IImdbManager => Factory.getInstance('imdbManager', () => new ImdbManager(Factory.repo.imdb())),
+    imdb: (): IImdbManager => Factory.getInstance('imdbManager', () => new ImdbManager()),
 
     watchlist: (): ITradingViewWatchlistManager =>
       Factory.getInstance(
@@ -594,8 +590,7 @@ export class Factory {
         'journalSyncHandler',
         () => new JournalSyncHandler(Factory.manager.journal(), Factory.manager.dom())
       ),
-    imdb: (): IImdbHandler =>
-      Factory.getInstance('imdbHandler', () => new ImdbHandler(Factory.manager.imdb(), Factory.util.search())),
+    imdb: (): IImdbHandler => Factory.getInstance('imdbHandler', () => new ImdbHandler(Factory.manager.imdb())),
 
     command: (): ICommandInputHandler =>
       Factory.getInstance(

@@ -83,17 +83,17 @@ export class JournalHandler implements IJournalHandler {
       .buildWrapper(`${Constants.UI.IDS.AREAS.JOURNAL}-type`)
       .appendTo(`#${Constants.UI.IDS.AREAS.JOURNAL}`)
       .append(
-        this.uiUtil.buildButton('trend', 'RJ', () => {
+        this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.JOURNAL_REJECTED, 'RJ', () => {
           void this.handleRecordJournal(JournalActionType.REJECTED);
         })
       )
       .append(
-        this.uiUtil.buildButton('trend', 'RS', () => {
+        this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.JOURNAL_RESULT, 'RS', () => {
           void this.handleRecordJournal(JournalActionType.RESULT);
         })
       )
       .append(
-        this.uiUtil.buildButton('trend', 'ST', () => {
+        this.uiUtil.buildButton(Constants.UI.IDS.BUTTONS.JOURNAL_SET, 'ST', () => {
           void this.handleRecordJournal(JournalActionType.SET);
         })
       );
