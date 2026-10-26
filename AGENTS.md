@@ -12,6 +12,7 @@
 ### Userscript Building
 - `just dev [project]`: Build and watch one userscript in development mode — defaults to `barkat`, pass `imdb`, `picasso` or `experiment` to select explicitly
 - `just install`: Build all production userscripts and serve them for local installation
+- `just bundle [project] [mode]`: Bundle with webpack directly — defaults to `all` + `production`; bypasses the quality gates (see the README's [Build](README.md#build) section)
 - Build mechanics, debug artifacts and install steps live in the README's [Build](README.md#build), [Debug](README.md#debug) and [Local Installation](README.md#local-installation) sections; refer to them instead of restating them.
 
 ### Project Management

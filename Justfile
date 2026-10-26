@@ -44,12 +44,13 @@ test:
 
 # ── Build scripts ──
 [group('run')]
-_bundle project="all" mode="production":
+[doc('Bundle userscripts with webpack (all projects, production mode by default)')]
+bundle project="all" mode="production":
     {{webpack}} --env project={{quote(project)}} --mode {{quote(mode)}}
 
 [group('run')]
 [doc('Build and serve all userscripts for local installation')]
-install: _bundle
+install: bundle
     just _title "BUILD" "Install"
     just _detail "OPEN" "http://127.0.0.1:8765/barkat.user.js"
     just _detail "OPEN" "http://127.0.0.1:8765/imdb.user.js"

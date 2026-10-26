@@ -57,8 +57,6 @@ function createConfig(project, mode, watch) {
       extensions: [".js", ".ts"],
     },
     optimization: {
-      // Keeping comments is required for the userscript header to survive.
-      minimize: false,
       moduleIds: "named",
     },
     target: "web",

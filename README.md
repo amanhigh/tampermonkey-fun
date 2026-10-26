@@ -23,7 +23,7 @@ To load the debug version of the script in Tampermonkey, grant the userscript ac
 ## Build
 Recipes are split by responsibility, not by app:
 -   **Quality gates**: `just format`, `just compile`, `just lint` and `just test` each do one job. `just build` stays the combination `format` + `compile` + `lint` and does not run tests.
--   **Bundling**: `just _bundle` is the only bundler. `just _bundle` builds all production userscripts in one webpack run, and `just _bundle experiment development` is the one-shot development build; CI runs both. There is deliberately no public `check` or public bundle recipe.
+-   **Bundling**: `just bundle` runs webpack once, without watching or serving. It defaults to every production userscript (`just bundle all`), builds a single project with `just bundle imdb`, and produces the one-shot development build with `just bundle experiment development`. `just build` has no dependency on bundling.
 
 All userscripts come from one webpack factory ([`config/webpack.config.cjs`](config/webpack.config.cjs)) with shared metadata ([`config/metadata.cjs`](config/metadata.cjs)) and an empty header-only entry ([`config/empty.cjs`](config/empty.cjs)). Because the same factory emits every artifact, delivery is not a separate build mode — [Local Installation](#local-installation) only builds and serves that output.
 

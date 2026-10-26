@@ -31,8 +31,11 @@ jobs:
     - name: Build and lint
       run: just build
 
-    - name: Build IMDb userscript
-      run: just imdb
+    - name: Bundle userscripts
+      run: just bundle
+
+    - name: Bundle experiment (one-shot)
+      run: just bundle experiment development
       
     - name: Run tests
       run: just test
