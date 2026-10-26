@@ -1,0 +1,49 @@
+// Seer sidekick deletion panel — scoped to Seer detail pages only
+@seer-panel-bg: rgba(24, 26, 34, 0.94);
+@seer-panel-border: 1px solid rgba(255, 255, 255, 0.12);
+@seer-panel-radius: 8px;
+@seer-danger-bg: rgba(180, 46, 42, 0.92);
+@seer-danger-bg-hover: rgba(210, 60, 56, 0.96);
+
+#seerr-sidekick-panel {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 9999;
+    padding: 6px;
+    background: @seer-panel-bg;
+    border: @seer-panel-border;
+    border-radius: @seer-panel-radius;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 12px;
+    line-height: 1.4;
+
+    .seer-panel__delete {
+        margin: 0;
+        padding: 6px 14px;
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        background: @seer-danger-bg;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        outline: none;
+        transition: background 0.2s ease, transform 0.1s ease;
+
+        &:hover {
+            background: @seer-danger-bg-hover;
+        }
+
+        &:active {
+            transform: scale(0.96);
+        }
+
+        &:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+    }
+}

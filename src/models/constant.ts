@@ -88,6 +88,10 @@ export const Constants = Object.freeze({
       CHECKBOXES: {
         SWIFT: 'aman-swift', // Old Name: swiftId
       },
+      SEER: {
+        PANEL: 'seerr-sidekick-panel',
+        DELETE_BUTTON: 'seerr-sidekick-delete',
+      },
     },
   },
 
@@ -232,6 +236,11 @@ Support:
   // FIXME: Extract Barkat configs (BASE_URL, webpack match/connect/grant) into a YAML file.
   BARKAT: {
     BASE_URL: 'http://barkat.app.lan/v1/api',
+  },
+
+  /** Seerr media server API consumed by the Seer userscript */
+  SEER: {
+    BASE_URL: 'http://seerr.media.lan/api/v1',
   },
 
   /** Cache configuration for manager lookups */

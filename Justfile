@@ -55,6 +55,7 @@ install: bundle
     just _detail "OPEN" "http://127.0.0.1:8765/barkat.user.js"
     just _detail "OPEN" "http://127.0.0.1:8765/imdb.user.js"
     just _detail "OPEN" "http://127.0.0.1:8765/picasso.user.js"
+    just _detail "OPEN" "http://127.0.0.1:8765/seer.user.js"
     just _info "STOP" "Press Ctrl+C to stop the local server"
     python3 -m http.server 8765 --bind 127.0.0.1 --directory dist/install
 

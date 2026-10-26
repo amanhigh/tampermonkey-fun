@@ -10,7 +10,7 @@
 ## Development Commands
 
 ### Userscript Building
-- `just dev [project]`: Build and watch one userscript in development mode — defaults to `barkat`, pass `imdb`, `picasso` or `experiment` to select explicitly
+- `just dev [project]`: Build and watch one userscript in development mode — defaults to `barkat`, pass `imdb`, `picasso`, `seer` or `experiment` to select explicitly
 - `just install`: Build all production userscripts and serve them for local installation
 - `just bundle [project] [mode]`: Bundle with webpack directly — defaults to `all` + `production`; bypasses the quality gates (see the README's [Build](README.md#build) section)
 - Build mechanics, debug artifacts and install steps live in the README's [Build](README.md#build), [Debug](README.md#debug) and [Local Installation](README.md#local-installation) sections; refer to them instead of restating them.
@@ -27,7 +27,7 @@
 This is a TypeScript-based Tampermonkey/Greasemonkey userscript development environment with webpack bundling.
 
 ### Core Structure
-- **`src/core/`**: Main application entry points (experiment.ts, barkat.ts, imdb.ts, picasso.ts)
+- **`src/core/`**: Main application entry points (experiment.ts, barkat.ts, imdb.ts, picasso.ts, seer.ts)
 - **`src/handler/`**: Event handlers and user interaction logic
 - **`src/manager/`**: Business logic managers for different features
 - **`src/models/`**: Data models and type definitions
@@ -41,7 +41,7 @@ This is a TypeScript-based Tampermonkey/Greasemonkey userscript development envi
 - One shared webpack factory builds every userscript, and per-script differences are data rather than configs; see the README's [Build](README.md#build) section
 - Experiment script (`src/core/experiment.ts`) is the scratch entry point, selected with `just dev experiment`
 - Production entry points are already wired; see the README's
-  [Local Installation](README.md#local-installation) section.
+  [Local Installation](README.md#local-installation) section. Seer deletion behaviour is documented in the README's [Seer Deletion](README.md#seer-deletion) section.
 
 ### Development Workflow
 1. Run `just prepare` once, then `just dev` (or `just dev experiment` for the scratch entry) to build and watch

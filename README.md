@@ -8,7 +8,7 @@ Experiment and Useful Grease/TamperMonkey Scripts.
 ## Debug
 For debugging, run `just dev` — it builds and watches a single userscript in development mode. `just dev` defaults to `barkat`; pass the project explicitly to pick another app or the scratch entry:
 -   `just dev` — watch `barkat` (default)
--   `just dev imdb` / `just dev picasso` — watch that app
+-   `just dev imdb` / `just dev picasso` / `just dev seer` — watch that app
 -   `just dev experiment` — watch [`src/core/experiment.ts`](src/core/experiment.ts:1), the scratch file for ad-hoc experiments
 
 No source edit is needed to switch targets: each core file is a standalone entry point, so the project passed to `just dev` selects what gets built (see [Build](#build)).
@@ -30,11 +30,12 @@ All userscripts come from one webpack factory ([`config/webpack.config.cjs`](con
 ## Local Installation
 The authoritative path for installing the built userscripts locally without editing any source file.
 - **Entry Points**: each core file is its own entry point and self-starts only when bundled directly; importing it (e.g. from `src/core/experiment.ts`) just exposes its classes and `Run*` function, so no source edit is needed.
-- **Command**: `just install` — builds `barkat`, `imdb` and `picasso` in one webpack run, then serves them.
+- **Command**: `just install` — builds `barkat`, `imdb`, `picasso` and `seer` in one webpack run, then serves them.
 - **Install**: open one of the served URLs and confirm the install in Tampermonkey:
   - `http://127.0.0.1:8765/barkat.user.js`
   - `http://127.0.0.1:8765/imdb.user.js`
   - `http://127.0.0.1:8765/picasso.user.js`
+  - `http://127.0.0.1:8765/seer.user.js`
 - **Confirmation**: the Tampermonkey dashboard lists the script under the name declared in its metadata.
 - **Manual reinstall**: the script version is unchanged between builds, so reinstall manually — rerun `just install` and open the same URL again (stop the running server first, see **Stop** below).
 - **Stop**: press `Ctrl+C`. The server is only needed for installation — installed scripts keep working without it.
@@ -62,6 +63,17 @@ frontend only decides *which* tickers to submit and *when*.
     request; it does not mean coverage is ready yet.
 -   **Recovery**: there are no timers, retries or background polling. A failed
     warm-up is retried only by the next load or membership trigger.
+
+## Seer Deletion
+The Seer userscript runs only on `http://seerr.media.lan/*` and adds a single Delete button to `movie` and `tv` detail pages. This section is the authoritative description of what that button does.
+
+-   **Confirmations**: the button asks for explicit confirmation before any request is sent, warns and asks again when one or more file deletions failed, and reports the combined outcome in a final summary.
+-   **Order (Arr-first)**: library files are removed first — Seer drives the configured Radarr/Sonarr services to delete them — then the media requests, then the media entry itself last.
+-   **Transport**: every call goes through the shared `BaseClient` (`GM.xmlHttpRequest`) against `Constants.SEER.BASE_URL`; there is no Seer-specific request code, so error statuses and empty delete bodies behave like every other client.
+-   **Partial failure is non-transactional**: each phase continues past an individual failure, completed steps are never rolled back, and failures are collected per step and reported rather than retried.
+-   **Mid-run exit**: leaving the detail route, or exiting the page (an unload/navigation away signalled by `pagehide`) prevents the next phase from starting, instead of deleting against a stale target. This is not tab visibility: switching tabs or backgrounding the page does not signal `pagehide` and does not interrupt the flow. A request already in flight is not cancelled — it may complete — but no further phase, summary or reload runs.
+-   **Out of scope**: no direct torrent client calls and no Airtel actions; deletion stays on the Seer API.
+-   **Completion**: the summary is alerted and the page reloads.
 
 ## NPM Commands
 Key `npm` commands for project and dependency management:

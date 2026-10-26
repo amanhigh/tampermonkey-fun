@@ -1,7 +1,8 @@
 /* eslint-disable max-lines */
 // FIXME: Group models/manager/handler into feature sub-packages (barkat/, journal/, audit/) instead of flat files.
 import { InvestingClient, IInvestingClient } from '../client/investing';
-import { IImdbHandler, ImdbHandler } from '../handler/imdb';
+import { ImdbHandler, IImdbHandler } from '../handler/imdb';
+import { ISeerHandler, SeerHandler } from '../handler/seer';
 import { KiteClient, IKiteClient } from '../client/kite';
 import { JournalClient, IJournalClient } from '../client/journal';
 import { OsClient, IOsClient } from '../client/os';
@@ -11,6 +12,7 @@ import { IPriceAlertClient, PriceAlertClient } from '../client/price_alert';
 import { IAuditClient, AuditClient } from '../client/audit';
 import { InstrumentClient, IInstrumentClient } from '../client/instrument';
 import { IBarkatClient, BarkatClient } from '../client/barkat';
+import { ISeerClient, SeerClient } from '../client/seer';
 import { IBarkatManager, BarkatManager } from '../manager/barkat';
 import { UIUtil, IUIUtil } from '../util/ui';
 import { ObserveUtil, IObserveUtil } from '../util/observer';
@@ -20,6 +22,7 @@ import { SmartPrompt, ISmartPrompt } from '../util/smart';
 import { WaitUtil, IWaitUtil } from '../util/wait';
 import { ImdbApp } from './imdb';
 import { Barkat } from './barkat';
+import { SeerApp } from './seer';
 
 // Repository Imports
 
@@ -71,6 +74,7 @@ import { ICommandInputHandler, CommandInputHandler } from '../handler/command';
 import { AlertFeedHandler, IAlertFeedHandler } from '../handler/alertfeed';
 import { IGlobalErrorHandler, GlobalErrorHandler } from '../handler/error';
 import { IAlertFeedManager, AlertFeedManager } from '../manager/alertfeed';
+import { ISeerManager, SeerManager } from '../manager/seer';
 import { IPublisher, ISubscriber, IEventBus, EventBus } from '../manager/event_bus';
 import { IImdbManager, ImdbManager } from '../manager/imdb';
 import { IPanelHandler, PanelHandler } from '../handler/panel';
@@ -134,6 +138,8 @@ export class Factory {
       ),
     picasso: (): PicassoApp =>
       Factory.getInstance('picassoApp', () => new PicassoApp(Factory.handler.global(), Factory.handler.picasso())),
+    seer: (): SeerApp =>
+      Factory.getInstance('seerApp', () => new SeerApp(Factory.handler.seer(), Factory.handler.global())),
   };
 
   /**
@@ -151,6 +157,7 @@ export class Factory {
     audit: (): IAuditClient => Factory.getInstance('auditClient', () => new AuditClient()),
     instrument: (): IInstrumentClient => Factory.getInstance('instrumentClient', () => new InstrumentClient()),
     barkat: (): IBarkatClient => Factory.getInstance('barkatClient', () => new BarkatClient()),
+    seer: (): ISeerClient => Factory.getInstance('seerClient', () => new SeerClient()),
   };
 
   /**
@@ -308,6 +315,7 @@ export class Factory {
         'alertFeedManager',
         () => new AlertFeedManager(Factory.manager.display(), Factory.manager.category(), Factory.manager.alertTicker())
       ),
+    seer: (): ISeerManager => Factory.getInstance('seerManager', () => new SeerManager(Factory.client.seer())),
   };
 
   /**
@@ -641,6 +649,7 @@ export class Factory {
         'picassoHandler',
         () => new PicassoHandler(Factory.util.wait(), Factory.util.key(), Factory.util.smart())
       ),
+    seer: (): ISeerHandler => Factory.getInstance('seerHandler', () => new SeerHandler(Factory.manager.seer())),
   };
 
   /**

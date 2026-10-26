@@ -63,6 +63,14 @@ const projects = {
     connect: [],
     description: "Drawing accelerator for enhanced productivity",
   },
+  seer: {
+    name: "Seerr Sidekick",
+    namespace: "local.seerr.sidekick",
+    match: ["http://seerr.media.lan/*"],
+    grant: ["GM.xmlHttpRequest"],
+    connect: ["seerr.media.lan"],
+    description: "Delete library files and Seerr request/media state",
+  },
 };
 
 module.exports = { defaults, projects };
