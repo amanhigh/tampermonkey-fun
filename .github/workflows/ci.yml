@@ -32,10 +32,9 @@ jobs:
       run: just build
 
     - name: Bundle userscripts
-      run: just bundle
-
-    - name: Bundle experiment (one-shot)
-      run: just bundle experiment development
+      run: |
+        just bundle
+        just bundle barkat development
       
     - name: Run tests
       run: just test

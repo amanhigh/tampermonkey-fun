@@ -2,9 +2,9 @@ set shell := ["bash", "-cu"]
 
 import './.just/lib.just'
 
-# ── Default ──
+# ── Help ──
 [doc('Show available recipes')]
-default:
+help:
     just --list
 
 # ── Format & Quality ──
@@ -49,25 +49,17 @@ bundle project="all" mode="production":
     {{webpack}} --env project={{quote(project)}} --mode {{quote(mode)}}
 
 [group('run')]
-[doc('Build and serve all userscripts for local installation')]
-install: bundle
+[doc('Build every production userscript plus the selected development build, then serve them')]
+install project="barkat": (bundle "all" "production") (bundle project "development")
     just _title "BUILD" "Install"
-    just _detail "OPEN" "http://127.0.0.1:8765/barkat.user.js"
-    just _detail "OPEN" "http://127.0.0.1:8765/imdb.user.js"
-    just _detail "OPEN" "http://127.0.0.1:8765/picasso.user.js"
-    just _detail "OPEN" "http://127.0.0.1:8765/seer.user.js"
+    just _detail "PROD" "http://127.0.0.1:8765/barkat.user.js"
+    just _detail "PROD" "http://127.0.0.1:8765/experiment.user.js"
+    just _detail "PROD" "http://127.0.0.1:8765/imdb.user.js"
+    just _detail "PROD" "http://127.0.0.1:8765/picasso.user.js"
+    just _detail "PROD" "http://127.0.0.1:8765/seer.user.js"
+    just _detail "DEV"  "http://127.0.0.1:8765/{{project}}.dev.user.js"
     just _info "STOP" "Press Ctrl+C to stop the local server"
     python3 -m http.server 8765 --bind 127.0.0.1 --directory dist/install
-
-[group('run')]
-[doc('Build and watch a userscript (dev)')]
-dev project="barkat":
-    just _title "BUILD" "Dev"
-    just _info "CSP" "https://chromewebstore.google.com/detail/disable-content-security/ieelmcmcagommplceebfedjlakkhpden?pli=1"
-    just _info "MAIN"  "src/core/{{project}}.ts"
-    just _detail "DEBUG" "dist/index.debug.js"
-    just _detail "DEV"   "dist/index.dev.user.js"
-    {{webpack}} --env project={{quote(project)}} --mode development --watch
 
 # ── Setup ──
 [group('setup')]
@@ -80,8 +72,13 @@ _setup-npm:
 prepare: _setup-npm
 
 [group('setup')]
-[doc('Build, test, and run dev watcher')]
-setup: build test dev
+[doc('Build, test, then build and watch the selected userscript')]
+setup project="barkat": build test
+    just _title "BUILD" "Setup"
+    just _info "MAIN" "src/core/{{project}}.ts"
+    just _detail "DEBUG" "dist/debug/{{project}}.js"
+    just _detail "DEV" "dist/install/{{project}}.dev.user.js"
+    {{webpack}} --env project={{quote(project)}} --mode development --watch
 
 # ── Clean ──
 [group('clean')]

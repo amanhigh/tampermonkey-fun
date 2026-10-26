@@ -3,10 +3,12 @@
  *
  * Takes project/mode/watch from the CLI and returns one config, or the whole
  * production set for `project=all`. Production emits dist/install/<project>.user.js
- * and self-starts the core entry; development emits dist/index.debug.js plus the
- * header-only dist/index.dev.user.js, watching only on an explicit --watch.
+ * and self-starts the core entry; development emits the real entry as
+ * dist/debug/<project>.js plus the header-only dist/install/<project>.dev.user.js
+ * that @requires it, watching only on an explicit --watch.
  */
 const path = require("path");
+const { pathToFileURL } = require("url");
 const LiveReloadPlugin = require("webpack-livereload-plugin");
 const { UserScriptMetaDataPlugin } = require("userscript-metadata-webpack-plugin");
 
@@ -14,13 +16,9 @@ const { defaults, projects } = require("./metadata.cjs");
 
 const DIST = path.resolve(__dirname, "../dist");
 const EMPTY_ENTRY = path.resolve(__dirname, "./empty.cjs");
-const DEBUG_PROJECT = "experiment";
-const DEBUG_SCRIPT = path.resolve(DIST, "index.debug.js");
 
 const MODES = ["production", "development"];
 const PROJECTS = Object.keys(projects);
-// `all` never includes the debug-only entry, so no source is bundled twice.
-const PRODUCTION_PROJECTS = PROJECTS.filter((name) => name !== DEBUG_PROJECT);
 
 function createConfig(project, mode, watch) {
   const development = mode === "development";
@@ -28,16 +26,21 @@ function createConfig(project, mode, watch) {
   const requireList = [...defaults.require];
 
   if (development) {
-    requireList.push(`file://${DEBUG_SCRIPT}`);
+    requireList.push(pathToFileURL(path.join(DIST, "debug", `${project}.js`)).href);
   }
 
   return {
     name: `${project}-${mode}`,
     mode,
-    entry: development ? { debug: entry, "dev.user": EMPTY_ENTRY } : entry,
+    entry: development
+      ? {
+          [`debug/${project}`]: entry,
+          [`install/${project}.dev.user`]: EMPTY_ENTRY,
+        }
+      : entry,
     output: {
       path: DIST,
-      filename: development ? "index.[name].js" : `install/${project}.user.js`,
+      filename: development ? "[name].js" : `install/${project}.user.js`,
     },
     devtool: development ? "eval-source-map" : false,
     // Watch only on an explicit CLI --watch, never implicitly.
@@ -47,8 +50,18 @@ function createConfig(project, mode, watch) {
       name: `${project}-${mode}`,
     },
     plugins: [
-      // A one-shot development build needs no reload server.
-      ...(development && watch ? [new LiveReloadPlugin({ delay: 500 })] : []),
+      // A one-shot development build needs no reload server; only a watch run
+      // gets the client script, injected from the local loopback server.
+      ...(development && watch
+        ? [
+            new LiveReloadPlugin({
+              appendScriptTag: true,
+              hostname: "localhost",
+              protocol: "http",
+              delay: 500,
+            }),
+          ]
+        : []),
       new UserScriptMetaDataPlugin({
         metadata: { ...defaults, ...projects[project], require: requireList },
       }),
@@ -90,23 +103,19 @@ module.exports = (env = {}, argv = {}) => {
     throw new Error(`Unknown mode "${mode}". Expected one of: ${MODES.join(", ")}`);
   }
 
+  // An omitted project means the whole production set; development requires an
+  // explicit project, so the default is rejected as production-only.
   const project = env.project || "all";
 
   if (project === "all") {
     if (mode !== "production") {
       throw new Error('Project "all" is production-only; build a single project for development.');
     }
-    return PRODUCTION_PROJECTS.map((name) => createConfig(name, mode, false));
+    return PROJECTS.map((name) => createConfig(name, mode, false));
   }
 
   if (!PROJECTS.includes(project)) {
     throw new Error(`Unknown project "${project}". Expected one of: all, ${PROJECTS.join(", ")}`);
-  }
-
-  if (project === DEBUG_PROJECT && mode !== "development") {
-    throw new Error(
-      `Project "${DEBUG_PROJECT}" is debug-only; build it with --mode development.`
-    );
   }
 
   return [createConfig(project, mode, argv.watch === true)];

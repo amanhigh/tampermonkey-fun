@@ -6,41 +6,54 @@
 Experiment and Useful Grease/TamperMonkey Scripts.
 
 ## Debug
-For debugging, run `just dev` — it builds and watches a single userscript in development mode. `just dev` defaults to `barkat`; pass the project explicitly to pick another app or the scratch entry:
--   `just dev` — watch `barkat` (default)
--   `just dev imdb` / `just dev picasso` / `just dev seer` — watch that app
--   `just dev experiment` — watch [`src/core/experiment.ts`](src/core/experiment.ts:1), the scratch file for ad-hoc experiments
+For debugging, run `just setup [project]` — it runs the quality gates and the test suite, then builds and watches one userscript in development mode. With no argument it defaults to `barkat`, set directly in the Justfile recipe; pass a project to override it:
+-   `just setup` — watch the default (`barkat`)
+-   `just setup imdb` / `just setup picasso` / `just setup seer` — watch that app
+-   `just setup experiment` — watch [`src/core/experiment.ts`](src/core/experiment.ts:1), the scratch file for ad-hoc experiments
 
-No source edit is needed to switch targets: each core file is a standalone entry point, so the project passed to `just dev` selects what gets built (see [Build](#build)).
+No source edit is needed to switch targets: each core file is a standalone entry point, so the project passed to `just setup` selects what gets built (see [Build](#build)). The recipe prints the entry file plus the two artifacts it writes: `dist/debug/<project>.js` (the watched code) and `dist/install/<project>.dev.user.js` (the header-only wrapper that `@require`s it).
 
-To load the debug version of the script in Tampermonkey, grant the userscript access to `file://` URLs and ensure your userscript metadata includes:
+**Install first, then watch.** Production and development builds share the `dist/install` directory and have separate webpack caches, so never run a one-shot build (`just bundle`, `just install`) while a `just setup` watcher is running:
+1.  `just install barkat` (or another project) and install from the served URLs — see [Local Installation](#local-installation).
+2.  Press `Ctrl+C` to stop the installation server.
+3.  `just setup barkat` and keep the watcher running while you debug.
+
+To load the development build in Tampermonkey, grant the userscript access to `file://` URLs. The installed wrapper is `dist/install/<project>.dev.user.js` and its header requires the watched bundle, e.g. for `barkat`:
 ```javascript
-// @require     file:///home/aman/Projects/tampermonkey-fun/dist/index.debug.js
+// @require     file:///home/aman/Projects/tampermonkey-fun/dist/debug/barkat.js
 ```
-
-`dist/index.dev.user.js` is the header-only wrapper carrying that `@require`; it is what Tampermonkey installs for hot reloading, while `dist/index.debug.js` holds the watched code.
+Tampermonkey installs that wrapper for hot reloading, while `dist/debug/barkat.js` holds the watched code. The debug file must exist and stay readable on disk for the development build to run; the watcher only adds automatic rebuilds and page reloads. Production scripts have no such dependency and keep working once the installation server is stopped.
 
 ## Build
 Recipes are split by responsibility, not by app:
 -   **Quality gates**: `just format`, `just compile`, `just lint` and `just test` each do one job. `just build` stays the combination `format` + `compile` + `lint` and does not run tests.
--   **Bundling**: `just bundle` runs webpack once, without watching or serving. It defaults to every production userscript (`just bundle all`), builds a single project with `just bundle imdb`, and produces the one-shot development build with `just bundle experiment development`. `just build` has no dependency on bundling.
+-   **Bundling**: `just bundle` runs webpack once, without watching or serving. It defaults to every production userscript with `just bundle all`, builds a single project with `just bundle imdb`, and produces a one-shot development build with `just bundle experiment development`. `experiment` is an ordinary production project like the others — development is a per-project build mode, not a separate scratch entry point. `just build` has no dependency on bundling.
 
 All userscripts come from one webpack factory ([`config/webpack.config.cjs`](config/webpack.config.cjs)) with shared metadata ([`config/metadata.cjs`](config/metadata.cjs)) and an empty header-only entry ([`config/empty.cjs`](config/empty.cjs)). Because the same factory emits every artifact, delivery is not a separate build mode — [Local Installation](#local-installation) only builds and serves that output.
+
+CI (`.github/workflows/ci.yml`) runs the same recipes in sequence:
+-   **Build and lint**: `just build` — the format, compile and lint combination from the quality-gates list above — so CI applies the same gates as local development.
+-   **Bundling**: `just bundle` for every production userscript plus the `barkat` one-shot development build.
+-   **Tests**: the test suite runs after bundling and uploads coverage.
 
 ## Local Installation
 The authoritative path for installing the built userscripts locally without editing any source file.
 - **Entry Points**: each core file is its own entry point and self-starts only when bundled directly; importing it (e.g. from `src/core/experiment.ts`) just exposes its classes and `Run*` function, so no source edit is needed.
-- **Command**: `just install` — builds `barkat`, `imdb`, `picasso` and `seer` in one webpack run, then serves them.
-- **Install**: open one of the served URLs and confirm the install in Tampermonkey:
+- **Command**: `just install [project]` — builds every production userscript in one webpack run, adds the development build of the selected project, then serves that output. The project defaults to `barkat` in the recipe.
+- **Install**: open one of the served URLs and confirm the install in Tampermonkey. Production builds:
   - `http://127.0.0.1:8765/barkat.user.js`
+  - `http://127.0.0.1:8765/experiment.user.js`
   - `http://127.0.0.1:8765/imdb.user.js`
   - `http://127.0.0.1:8765/picasso.user.js`
   - `http://127.0.0.1:8765/seer.user.js`
+
+  and the development build of the selected project, e.g. `http://127.0.0.1:8765/barkat.dev.user.js` for `just install barkat` (see [Debug](#debug) for what that build needs to keep working).
+- **Same script, no coexistence**: a production build and the development build of the same project declare the same script name and namespace, so installing one replaces the other rather than keeping both. Reinstall the variant you want by rerunning `just install [project]` and opening its URL again — do not uninstall first. Tampermonkey keeps the script's storage across a reinstall, so existing state survives the switch; confirm the result in the browser after each swap.
 - **Confirmation**: the Tampermonkey dashboard lists the script under the name declared in its metadata.
 - **Manual reinstall**: the script version is unchanged between builds, so reinstall manually — rerun `just install` and open the same URL again (stop the running server first, see **Stop** below).
-- **Stop**: press `Ctrl+C`. The server is only needed for installation — installed scripts keep working without it.
+- **Stop**: press `Ctrl+C`. The server is only needed for installation, so installed scripts keep executing without it; what a development build additionally requires is covered in [Debug](#debug).
 - **Fallback**: Tampermonkey Dashboard → Utilities → Import from URL → paste the same URL.
-- **Permissions**: no userscript file-URL access is needed for this path; the normal userscript execution permissions for the target sites are still required.
+- **Permissions**: no userscript file-URL access is needed for the production URLs; the development wrapper does need it (see [Debug](#debug)). Normal userscript execution permissions for the target sites are still required either way.
 
 ## Barkat Watchlist Warm-up
 The Barkat userscript asks the backend to pre-warm analysis coverage for the

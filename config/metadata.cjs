@@ -14,7 +14,6 @@ const BARKAT_GRANT = [
   "GM.setClipboard",
 ];
 
-// Barkat and the experiment entry share one site set.
 const BARKAT_MATCH = [
   "https://in.tradingview.com/chart*",
   "https://kite.zerodha.com/*",
@@ -46,9 +45,9 @@ const projects = {
   },
   experiment: {
     name: { $: "experiment-script", en: "Experiment" },
-    match: BARKAT_MATCH,
-    connect: BARKAT_CONNECT,
-    grant: BARKAT_GRANT,
+    match: ["https://example.com/*"],
+    connect: ["reqres.in"],
+    grant: ["GM.xmlHttpRequest"],
   },
   imdb: {
     name: { $: "imdb", en: "IMDB" },
