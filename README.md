@@ -17,13 +17,19 @@ To load the debug version of the script in Tampermonkey, ensure your userscript 
 // @require     file:///home/aman/Projects/tampermonkey-fun/dist/index.debug.js
 ```
 
-## Production Builds
-Build Steps:
-- Uncomment entry point in Core file. Eg `src/core/imdb.ts` uncomment `RunImdb();`
-- Build Target using Make File. Eg. `make imdb`, `make picasso`, etc.
-- Copy output of `dist/index.prod.user.js` to your Tampermonkey userscript manager.
-
-*Note: Don't checkin the modified entry point file.*
+## Local Installation
+The authoritative path for installing the built userscripts locally without editing any source file.
+- **Entry Points**: each core file is its own entry point and self-starts only when bundled directly; importing it (e.g. from `src/core/experiment.ts`) just exposes its classes and `Run*` function, so no source edit is needed.
+- **Command**: `just install` — builds `barkat`, `imdb` and `picasso` in one webpack run, then serves them.
+- **Install**: open one of the served URLs and confirm the install in Tampermonkey:
+  - `http://127.0.0.1:8765/barkat.user.js`
+  - `http://127.0.0.1:8765/imdb.user.js`
+  - `http://127.0.0.1:8765/picasso.user.js`
+- **Confirmation**: the Tampermonkey dashboard lists the script under the name declared in its metadata.
+- **Manual reinstall**: the script version is unchanged between builds, so reinstall manually — rerun `just install` and open the same URL again (stop the running server first, see **Stop** below).
+- **Stop**: press `Ctrl+C`. The server is only needed for installation — installed scripts keep working without it.
+- **Fallback**: Tampermonkey Dashboard → Utilities → Import from URL → paste the same URL.
+- **Permissions**: no userscript file-URL access is needed for this path; the normal userscript execution permissions for the target sites are still required.
 
 ## Barkat Watchlist Warm-up
 The Barkat userscript asks the backend to pre-warm analysis coverage for the

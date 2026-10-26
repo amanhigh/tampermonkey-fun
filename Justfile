@@ -66,6 +66,17 @@ imdb:
     {{npm}} run imdb
 
 [group('run')]
+[doc('Build and serve all userscripts for local installation')]
+install:
+    just _title "BUILD" "Install"
+    {{npm}} exec --no -- webpack --config config/barkat.cjs --config config/imdb.cjs --config config/picasso.cjs --env install
+    just _detail "OPEN" "http://127.0.0.1:8765/barkat.user.js"
+    just _detail "OPEN" "http://127.0.0.1:8765/imdb.user.js"
+    just _detail "OPEN" "http://127.0.0.1:8765/picasso.user.js"
+    just _info "STOP" "Press Ctrl+C to stop the local server"
+    python3 -m http.server 8765 --bind 127.0.0.1 --directory dist/install
+
+[group('run')]
 [doc('Build Picasso userscript')]
 picasso:
     just _title "BUILD" "Picasso"

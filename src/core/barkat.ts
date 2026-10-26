@@ -127,4 +127,6 @@ export function RunBarkat(): void {
   barkat.initialize();
 }
 
-// RunBarkat();
+if (require.main?.id === module.id) {
+  RunBarkat();
+}

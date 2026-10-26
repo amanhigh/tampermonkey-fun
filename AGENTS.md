@@ -39,13 +39,15 @@ This is a TypeScript-based Tampermonkey/Greasemonkey userscript development envi
 - Factory pattern used for dependency injection (`src/core/factory.ts`)
 - Each core script has its own webpack config in `config/` directory
 - Experiment script (`src/core/experiment.ts`) is the main development/debug entry point
-- Production builds require uncommenting entry point calls in core files
+- Production entry points are already wired; see the README's
+  [Local Installation](README.md#local-installation) section.
 
 ### Development Workflow
 1. Modify experiment entry point in `src/core/experiment.ts`
 2. Run `just setup` to build and start live reload
 3. Load `dist/index.dev.user.js` in Tampermonkey with file:// require for hot reloading
-4. For production: uncomment entry point in target core file, run specific just command, copy `dist/index.prod.user.js`
+4. For production: see the README's
+   [Local Installation](README.md#local-installation) section.
 
 ### Testing
 - Jest configuration with TypeScript support

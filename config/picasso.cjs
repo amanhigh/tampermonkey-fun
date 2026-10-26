@@ -1,6 +1,4 @@
-const path = require("path");
 const { merge } = require("webpack-merge");
-const baseConfig = require("./webpack.config.prod.cjs");
 const baseMetadata = require("./metadata.cjs");
 const { UserScriptMetaDataPlugin } = require("userscript-metadata-webpack-plugin");
 
@@ -17,13 +15,28 @@ const metadata = {
   description: "Drawing accelerator for enhanced productivity"
 };
 
-const cfg = merge(baseConfig, {
-  entry: "./src/core/picasso.ts",
-  plugins: [
-    new UserScriptMetaDataPlugin({
-      metadata
-    })
-  ]
-});
+const entry = "./src/core/picasso.ts";
 
-module.exports = cfg;
+module.exports = (env = {}) => {
+  const cfg = merge(require("./webpack.config.prod.cjs"), {
+    entry,
+    plugins: [
+      new UserScriptMetaDataPlugin({
+        metadata
+      })
+    ]
+  });
+
+  if (!env.install) {
+    return cfg;
+  }
+
+  return merge(cfg, {
+    output: {
+      filename: "install/picasso.user.js",
+    },
+    cache: {
+      name: "install-picasso",
+    },
+  });
+};

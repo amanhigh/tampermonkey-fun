@@ -20,4 +20,6 @@ export function RunPicasso(): void {
   app.initialize();
 }
 
-// RunPicasso();
+if (require.main?.id === module.id) {
+  RunPicasso();
+}

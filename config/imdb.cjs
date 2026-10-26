@@ -1,6 +1,4 @@
-const path = require("path");
 const { merge } = require("webpack-merge");
-const baseConfig = require("./webpack.config.prod.cjs");
 const baseMetadata = require("./metadata.cjs");
 const { UserScriptMetaDataPlugin } = require("userscript-metadata-webpack-plugin");
 
@@ -18,14 +16,28 @@ const metadata = {
   ]
 };
 
-// Override webpack config
-const cfg = merge(baseConfig, {
-  entry: "./src/core/imdb.ts",
-  plugins: [
-    new UserScriptMetaDataPlugin({
-      metadata
-    })
-  ]
-});
+const entry = "./src/core/imdb.ts";
 
-module.exports = cfg;
+module.exports = (env = {}) => {
+  const cfg = merge(require("./webpack.config.prod.cjs"), {
+    entry,
+    plugins: [
+      new UserScriptMetaDataPlugin({
+        metadata
+      })
+    ]
+  });
+
+  if (!env.install) {
+    return cfg;
+  }
+
+  return merge(cfg, {
+    output: {
+      filename: "install/imdb.user.js",
+    },
+    cache: {
+      name: "install-imdb",
+    },
+  });
+};

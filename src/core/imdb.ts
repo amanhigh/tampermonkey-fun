@@ -29,4 +29,6 @@ export function RunImdb(): void {
   app.initialize();
 }
 
-// RunImdb();
+if (require.main?.id === module.id) {
+  RunImdb();
+}

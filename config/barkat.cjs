@@ -1,12 +1,11 @@
 const path = require("path");
 const { merge } = require("webpack-merge");
-const baseConfig = require("./webpack.config.dev.cjs");
-const baseMetadata = require("./metadata.cjs");
 const { UserScriptMetaDataPlugin } = require("userscript-metadata-webpack-plugin");
 
-// Override metadata
+const entry = "./src/core/barkat.ts";
+
 const metadata = {
-  ...baseMetadata,
+  ...require("./metadata.cjs"),
   name: {
     $: "barkat",
     en: "Barkat"
@@ -16,17 +15,37 @@ const metadata = {
   grant: ["GM.xmlHttpRequest","GM.setValue","GM.getValue","GM_addValueChangeListener","GM.setClipboard"],
 };
 
-// Override webpack config
-const cfg = merge(baseConfig, {
-  entry: {
-    debug: "./src/core/barkat.ts",
-    "dev.user": path.resolve(__dirname, "./empty.cjs"),
-  },
-   plugins: [
-    new UserScriptMetaDataPlugin({
-      metadata
-    })
-  ]
-});
+module.exports = (env = {}) => {
+  // Install build: production base only, so no dev import or file:// metadata mutation.
+  // Dev build: importing the dev base appends the file:// debug require to metadata.
+  const baseConfig = env.install
+    ? require("./webpack.config.prod.cjs")
+    : require("./webpack.config.dev.cjs");
 
-module.exports = cfg;
+  const cfg = merge(baseConfig, {
+    entry: env.install
+      ? entry
+      : {
+          debug: entry,
+          "dev.user": path.resolve(__dirname, "./empty.cjs"),
+        },
+    plugins: [
+      new UserScriptMetaDataPlugin({
+        metadata
+      })
+    ]
+  });
+
+  if (!env.install) {
+    return cfg;
+  }
+
+  return merge(cfg, {
+    output: {
+      filename: "install/barkat.user.js",
+    },
+    cache: {
+      name: "install-barkat",
+    },
+  });
+};
