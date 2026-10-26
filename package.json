@@ -12,11 +12,6 @@
     "url": "https://github.com/amanhigh/tampermonkey-fun"
   },
   "scripts": {
-    "analyze": "cross-env npm_config_report=true npm run build",
-    "experiment": "webpack --config config/experiment.cjs",
-    "barkat": "webpack --config config/barkat.cjs",
-    "imdb": "webpack --config config/imdb.cjs",
-    "picasso": "webpack --config config/picasso.cjs",
     "test": "jest"
   },
   "devDependencies": {
@@ -28,7 +23,6 @@
     "@types/node": "^20.19.43",
     "@typescript-eslint/eslint-plugin": "^8.61.0",
     "@typescript-eslint/parser": "^8.61.0",
-    "cross-env": "^7.0.3",
     "css-loader": "^7.1.4",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.2",
@@ -42,10 +36,8 @@
     "ts-loader": "^9.6.0",
     "typescript": "^6.0.3",
     "userscript-metadata-webpack-plugin": "^0.4.2",
-    "webpack-bundle-analyzer": "^4.10.2",
     "webpack-cli": "^5.1.4",
     "webpack-livereload-plugin": "^3.0.2",
-    "webpack-merge": "^6.0.1",
     "webpack-sources": "^3.5.0"
   },
   "dependencies": {

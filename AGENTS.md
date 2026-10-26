@@ -10,16 +10,16 @@
 ## Development Commands
 
 ### Userscript Building
-- `just experiment`: Build experiment script for debugging (outputs to `dist/index.dev.user.js`)
-- `just barkat`: Build Barkat userscript
-- `just imdb`: Build IMDB userscript  
-- `just picasso`: Build Picasso userscript
+- `just dev [project]`: Build and watch one userscript in development mode — defaults to `barkat`, pass `imdb`, `picasso` or `experiment` to select explicitly
+- `just install`: Build all production userscripts and serve them for local installation
+- Build mechanics, debug artifacts and install steps live in the README's [Build](README.md#build), [Debug](README.md#debug) and [Local Installation](README.md#local-installation) sections; refer to them instead of restating them.
 
 ### Project Management
 - `just prepare`: One-time NPM setup
+- `just build`: Format, compile and lint (see the README's [Build](README.md#build) section)
+- `just setup`: Build, test, then start the dev watcher (defaults to `barkat`)
 - `just clean`: Remove dist and node_modules
-- `just reset`: Clean and rebuild everything
-- `just analyze`: Build with bundle analyzer
+- `just reset`: Clean, then prepare and setup again
 
 ## Architecture Overview
 
@@ -37,16 +37,15 @@ This is a TypeScript-based Tampermonkey/Greasemonkey userscript development envi
 
 ### Key Patterns
 - Factory pattern used for dependency injection (`src/core/factory.ts`)
-- Each core script has its own webpack config in `config/` directory
-- Experiment script (`src/core/experiment.ts`) is the main development/debug entry point
+- One shared webpack factory builds every userscript, and per-script differences are data rather than configs; see the README's [Build](README.md#build) section
+- Experiment script (`src/core/experiment.ts`) is the scratch entry point, selected with `just dev experiment`
 - Production entry points are already wired; see the README's
   [Local Installation](README.md#local-installation) section.
 
 ### Development Workflow
-1. Modify experiment entry point in `src/core/experiment.ts`
-2. Run `just setup` to build and start live reload
-3. Load `dist/index.dev.user.js` in Tampermonkey with file:// require for hot reloading
-4. For production: see the README's
+1. Run `just prepare` once, then `just dev` (or `just dev experiment` for the scratch entry) to build and watch
+2. Load the development userscript in Tampermonkey with file:// access for hot reloading (see the README's [Debug](README.md#debug) section)
+3. For production: see the README's
    [Local Installation](README.md#local-installation) section.
 
 ### Testing

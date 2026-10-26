@@ -5,11 +5,7 @@ eslint := "npm exec --no -- eslint"
 tsc := "npm exec --no -- tsc"
 prettier := "npm exec --no -- prettier"
 npm := "npm"
-root := `git rev-parse --show-toplevel`
-
-# ── Concise-mode plumbing ──
-export concise := env('concise', '0')
-log_file := "/tmp/tampermonkey-fun-build.log"
+webpack := "npm exec --no -- webpack --config config/webpack.config.cjs"
 
 # ── Print helpers (private) ──
 _info task info:
@@ -20,22 +16,3 @@ _detail task info:
 
 _title task info:
     echo '{{BOLD}}{{GREEN}}[{{task}}]{{NORMAL}} {{info}}'
-
-_warn task info:
-    echo '{{YELLOW}}[{{task}}]{{NORMAL}} {{info}}'
-
-# ── Command runner ──
-_run command:
-    if [ "{{concise}}" != "1" ]; then \
-        eval '{{command}}'; \
-    else \
-        { printf '\n=== %s ===\n' "$(date '+%Y-%m-%d %H:%M:%S')"; eval '{{command}}'; } >>'{{log_file}}' 2>&1 || { \
-            just _warn "RUN" "Command failed. Last 40 log lines:"; \
-            just _detail "RUN" "Detailed log: {{log_file}}"; \
-            tail -n 40 '{{log_file}}' >&2 || true; \
-            exit 1; \
-        }; \
-    fi
-
-_run-no-output command:
-    eval '{{command}}' >/dev/null 2>&1

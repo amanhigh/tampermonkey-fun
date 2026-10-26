@@ -44,32 +44,13 @@ test:
 
 # ── Build scripts ──
 [group('run')]
-[doc('Build experiment userscript (dev)')]
-experiment:
-    just _title "BUILD" "Experiment"
-    just _info "CSP" "https://chromewebstore.google.com/detail/disable-content-security/ieelmcmcagommplceebfedjlakkhpden?pli=1"
-    just _info "MAIN"  "src/core/experiment.ts (Keep only one)"
-    just _detail "DEBUG" "dist/index.dev.user.js"
-    just _detail "PROD"  "dist/index.prod.user.js"
-    {{npm}} run experiment
-
-[group('run')]
-[doc('Build Barkat userscript')]
-barkat:
-    just _title "BUILD" "Barkat"
-    {{npm}} run barkat
-
-[group('run')]
-[doc('Build IMDB userscript')]
-imdb:
-    just _title "BUILD" "IMDB"
-    {{npm}} run imdb
+_bundle project="all" mode="production":
+    {{webpack}} --env project={{quote(project)}} --mode {{quote(mode)}}
 
 [group('run')]
 [doc('Build and serve all userscripts for local installation')]
-install:
+install: _bundle
     just _title "BUILD" "Install"
-    {{npm}} exec --no -- webpack --config config/barkat.cjs --config config/imdb.cjs --config config/picasso.cjs --env install
     just _detail "OPEN" "http://127.0.0.1:8765/barkat.user.js"
     just _detail "OPEN" "http://127.0.0.1:8765/imdb.user.js"
     just _detail "OPEN" "http://127.0.0.1:8765/picasso.user.js"
@@ -77,16 +58,14 @@ install:
     python3 -m http.server 8765 --bind 127.0.0.1 --directory dist/install
 
 [group('run')]
-[doc('Build Picasso userscript')]
-picasso:
-    just _title "BUILD" "Picasso"
-    {{npm}} run picasso
-
-[group('run')]
-[doc('Analyze bundle size')]
-analyze:
-    just _title "ANALYZE" "Bundle"
-    {{npm}} run analyze
+[doc('Build and watch a userscript (dev)')]
+dev project="barkat":
+    just _title "BUILD" "Dev"
+    just _info "CSP" "https://chromewebstore.google.com/detail/disable-content-security/ieelmcmcagommplceebfedjlakkhpden?pli=1"
+    just _info "MAIN"  "src/core/{{project}}.ts"
+    just _detail "DEBUG" "dist/index.debug.js"
+    just _detail "DEV"   "dist/index.dev.user.js"
+    {{webpack}} --env project={{quote(project)}} --mode development --watch
 
 # ── Setup ──
 [group('setup')]
@@ -99,8 +78,8 @@ _setup-npm:
 prepare: _setup-npm
 
 [group('setup')]
-[doc('Build, test, and run experiment')]
-setup: build test experiment
+[doc('Build, test, and run dev watcher')]
+setup: build test dev
 
 # ── Clean ──
 [group('clean')]
@@ -116,19 +95,3 @@ clean: _clean-node
 [doc('Clean and rebuild everything')]
 reset: clean _setup-npm setup
     just _info "RESET" "Clean build complete"
-
-[group('setup')]
-[doc('Full bootstrap: prepare + reset')]
-all: reset
-
-# ── Misc ──
-[group('info')]
-[doc('Show project info')]
-info:
-    just _title "INFO" "tampermonkey-fun"
-    just _detail "SCRIPTS" "experiment, barkat, imdb, picasso"
-    just _detail "TEST"    "jest"
-    just _detail "LINT"    "eslint + prettier"
-
-[group('info')]
-infos: info

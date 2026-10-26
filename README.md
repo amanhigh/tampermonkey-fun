@@ -6,16 +6,26 @@
 Experiment and Useful Grease/TamperMonkey Scripts.
 
 ## Debug
-For debugging, use the experiment script. The main file for experiments is [`src/core/experiment.ts`](src/core/experiment.ts:1).
-To get started with a debug environment, run:
--   Add Call to EntryPoint Function in `src/core/experiment.ts`.
--   `make setup` (Build Project and start Live Reload)
--   Load Debug Script with Updated Header in Tamper Monkey. `dist/index.dev.user.js`
+For debugging, run `just dev` — it builds and watches a single userscript in development mode. `just dev` defaults to `barkat`; pass the project explicitly to pick another app or the scratch entry:
+-   `just dev` — watch `barkat` (default)
+-   `just dev imdb` / `just dev picasso` — watch that app
+-   `just dev experiment` — watch [`src/core/experiment.ts`](src/core/experiment.ts:1), the scratch file for ad-hoc experiments
 
-To load the debug version of the script in Tampermonkey, ensure your userscript metadata includes:
+No source edit is needed to switch targets: each core file is a standalone entry point, so the project passed to `just dev` selects what gets built (see [Build](#build)).
+
+To load the debug version of the script in Tampermonkey, grant the userscript access to `file://` URLs and ensure your userscript metadata includes:
 ```javascript
 // @require     file:///home/aman/Projects/tampermonkey-fun/dist/index.debug.js
 ```
+
+`dist/index.dev.user.js` is the header-only wrapper carrying that `@require`; it is what Tampermonkey installs for hot reloading, while `dist/index.debug.js` holds the watched code.
+
+## Build
+Recipes are split by responsibility, not by app:
+-   **Quality gates**: `just format`, `just compile`, `just lint` and `just test` each do one job. `just build` stays the combination `format` + `compile` + `lint` and does not run tests.
+-   **Bundling**: `just _bundle` is the only bundler. `just _bundle` builds all production userscripts in one webpack run, and `just _bundle experiment development` is the one-shot development build; CI runs both. There is deliberately no public `check` or public bundle recipe.
+
+All userscripts come from one webpack factory ([`config/webpack.config.cjs`](config/webpack.config.cjs)) with shared metadata ([`config/metadata.cjs`](config/metadata.cjs)) and an empty header-only entry ([`config/empty.cjs`](config/empty.cjs)). Because the same factory emits every artifact, delivery is not a separate build mode — [Local Installation](#local-installation) only builds and serves that output.
 
 ## Local Installation
 The authoritative path for installing the built userscripts locally without editing any source file.
