@@ -90,6 +90,7 @@ export const Constants = Object.freeze({
       },
       SEER: {
         PANEL: 'seerr-sidekick-panel',
+        XSTREAM_BUTTON: 'seerr-sidekick-xstream',
         DELETE_BUTTON: 'seerr-sidekick-delete',
       },
     },
@@ -241,6 +242,8 @@ Support:
   /** Seerr media server API consumed by the Seer userscript */
   SEER: {
     BASE_URL: 'http://seerr.media.lan/api/v1',
+    /** Airtel Xstream origin used for title search links */
+    AIRTEL_BASE_URL: 'https://www.airtelxstream.in',
   },
 
   /** Cache configuration for manager lookups */

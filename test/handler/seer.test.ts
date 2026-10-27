@@ -1,13 +1,25 @@
 import { SeerHandler } from '../../src/handler/seer';
 import { ISeerManager } from '../../src/manager/seer';
 import { Constants } from '../../src/models/constant';
-import { SeerDeleteTarget, SeerVariant } from '../../src/models/seer';
 
-/** Settle delay the handler waits before resolving a route. */
-const SETTLE_MS = 350;
+// The handler must only call Notifier; its DOM rendering is out of scope here.
+jest.mock('../../src/util/notify', () => ({
+  Notifier: {
+    success: jest.fn(),
+    error: jest.fn(),
+  },
+}));
 
-/** Poll interval the handler uses for same-page route changes. */
+import { Notifier } from '../../src/util/notify';
+
+/** Poll interval the handler uses to keep the panel in sync with the route. */
 const POLL_MS = 400;
+
+/** Delay the handler waits before refreshing the deleted route. */
+const REFRESH_MS = 2000;
+
+/** Display duration of the failure notification. */
+const FAILURE_TIMEOUT_MS = 8000;
 
 /** Detail route tracked by most tests. */
 const MOVIE_ROUTE = '/movie/603';
@@ -15,12 +27,8 @@ const MOVIE_ROUTE = '/movie/603';
 /** Other detail route used to simulate same-page navigation. */
 const TV_ROUTE = '/tv/1399';
 
-/** Deletion target resolved for the tracked route. */
-const TARGET: SeerDeleteTarget = {
-  mediaId: 11,
-  variants: [SeerVariant.STANDARD],
-  requestIds: [21],
-};
+/** Route without a Delete button. */
+const UNSUPPORTED_ROUTE = '/discover';
 
 /** Promise with its resolver kept out of the handler call. */
 interface Deferred<T> {
@@ -28,7 +36,7 @@ interface Deferred<T> {
   readonly resolve: (value: T) => void;
 }
 
-/** Build a promise that a test resolves when it decides the phase is done. */
+/** Build a promise that a test settles when it decides the deletion is done. */
 function defer<T>(): Deferred<T> {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((res) => {
@@ -45,6 +53,7 @@ class FakeElement {
   type = '';
   textContent = '';
   disabled = false;
+  hidden = false;
   private readonly listeners: Array<() => void> = [];
 
   constructor(
@@ -96,37 +105,42 @@ class FakeButtonElement extends FakeElement {
 class FakeDocument {
   private readonly elements = new Map<string, FakeElement>();
   readonly body = new FakeElement('body', this.elements);
+  readonly created: FakeElement[] = [];
 
   createElement(tagName: string): FakeElement {
-    return tagName === 'button' ? new FakeButtonElement(this.elements) : new FakeElement(tagName, this.elements);
+    const element =
+      tagName === 'button' ? new FakeButtonElement(this.elements) : new FakeElement(tagName, this.elements);
+    this.created.push(element);
+    return element;
   }
 
   getElementById(id: string): FakeElement | undefined {
     return this.elements.get(id);
+  }
+
+  /** Elements created with the given tag name, mounted or not. */
+  createdWithTag(tagName: string): FakeElement[] {
+    return this.created.filter((element) => element.tagName === tagName);
   }
 }
 
 /** Window stand-in carrying the location and listener surface the handler uses. */
 class FakeWindow {
   readonly location = { pathname: '/', reload: jest.fn() };
-  private readonly listeners = new Map<string, Set<() => void>>();
+  private readonly listeners = new Set<() => void>();
 
-  addEventListener(type: string, listener: () => void): void {
-    const bucket = this.listeners.get(type) ?? new Set<() => void>();
-    bucket.add(listener);
-    this.listeners.set(type, bucket);
+  addEventListener(_type: string, listener: () => void): void {
+    this.listeners.add(listener);
   }
 
-  removeEventListener(type: string, listener: () => void): void {
-    this.listeners.get(type)?.delete(listener);
+  removeEventListener(_type: string, listener: () => void): void {
+    this.listeners.delete(listener);
   }
 
   dispatch(type: string): void {
-    [...(this.listeners.get(type) ?? [])].forEach((listener) => listener());
-  }
-
-  listenerCount(type: string): number {
-    return this.listeners.get(type)?.size ?? 0;
+    if (type === 'pagehide') {
+      [...this.listeners].forEach((listener) => listener());
+    }
   }
 }
 
@@ -136,7 +150,7 @@ function installGlobal(name: string, value: unknown): void {
 }
 
 /** Globals replaced by these tests and restored after each case. */
-const PATCHED_GLOBALS = ['document', 'window', 'HTMLButtonElement', 'confirm', 'alert'] as const;
+const PATCHED_GLOBALS = ['document', 'window', 'HTMLButtonElement', 'confirm'] as const;
 
 describe('SeerHandler', () => {
   let fakeDocument: FakeDocument;
@@ -144,42 +158,39 @@ describe('SeerHandler', () => {
   let manager: jest.Mocked<ISeerManager>;
   let handler: SeerHandler;
   let confirmMock: jest.Mock;
-  let alertMock: jest.Mock;
-  let errorSpy: jest.SpyInstance;
   let savedGlobals: Map<string, PropertyDescriptor | undefined>;
 
   beforeEach(() => {
     jest.useFakeTimers();
 
-    savedGlobals = new Map(PATCHED_GLOBALS.map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
+    savedGlobals = new Map(
+      PATCHED_GLOBALS.map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)])
+    );
 
     fakeDocument = new FakeDocument();
     fakeWindow = new FakeWindow();
     fakeWindow.location.pathname = MOVIE_ROUTE;
     confirmMock = jest.fn().mockReturnValue(true);
-    alertMock = jest.fn();
-    errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
 
     installGlobal('document', fakeDocument);
     installGlobal('window', fakeWindow);
     installGlobal('HTMLButtonElement', FakeButtonElement);
     installGlobal('confirm', confirmMock);
-    installGlobal('alert', alertMock);
 
     manager = {
-      getDeleteTarget: jest.fn().mockResolvedValue(TARGET),
-      removeFiles: jest.fn().mockResolvedValue([]),
-      removeRecords: jest.fn().mockResolvedValue([]),
-    } as unknown as jest.Mocked<ISeerManager>;
+      isDetailPage: jest.fn().mockImplementation((pathname: string) => pathname !== UNSUPPORTED_ROUTE),
+      deleteMedia: jest.fn().mockResolvedValue(undefined),
+    };
+    jest.mocked(Notifier.success).mockClear();
+    jest.mocked(Notifier.error).mockClear();
 
     handler = new SeerHandler(manager);
   });
 
   afterEach(() => {
-    // Release the handler's timers while the fakes are still installed.
+    // Release the handler's poll timer while the fakes are still installed.
     fakeWindow.dispatch('pagehide');
     jest.useRealTimers();
-    errorSpy.mockRestore();
     savedGlobals.forEach((descriptor, name) => {
       if (descriptor) {
         Object.defineProperty(globalThis, name, descriptor);
@@ -189,22 +200,31 @@ describe('SeerHandler', () => {
     });
   });
 
-  /** Initialize the handler on the current route and let it settle. */
-  async function openRoute(): Promise<void> {
+  /** Initialize the handler on the current route. */
+  function openRoute(): void {
     handler.initialize();
-    await jest.advanceTimersByTimeAsync(SETTLE_MS);
-    await flush();
   }
 
-  /** Flush the microtasks queued by the handler's async phases. */
+  /** Flush the microtasks queued by the handler's async flow. */
   async function flush(): Promise<void> {
     await jest.advanceTimersByTimeAsync(0);
     await jest.advanceTimersByTimeAsync(0);
   }
 
-  /** Read the mounted Delete button, if any. */
-  function deleteButton(): FakeButtonElement | undefined {
-    return fakeDocument.getElementById(Constants.UI.IDS.SEER.DELETE_BUTTON) as FakeButtonElement | undefined;
+  /** Advance the pending refresh delay and flush the work it releases. */
+  async function advanceRefresh(): Promise<void> {
+    await jest.advanceTimersByTimeAsync(REFRESH_MS);
+    await flush();
+  }
+
+  /** Mounted panel, if any. */
+  function panel(): FakeElement | undefined {
+    return fakeDocument.getElementById(Constants.UI.IDS.SEER.PANEL);
+  }
+
+  /** Mounted Delete button, if any. */
+  function deleteButton(): FakeElement | undefined {
+    return fakeDocument.getElementById(Constants.UI.IDS.SEER.DELETE_BUTTON);
   }
 
   /** Click the mounted Delete button and let the queued work start. */
@@ -213,246 +233,245 @@ describe('SeerHandler', () => {
     await flush();
   }
 
-  /** Simulate a same-page route change followed by the popstate signal. */
+  /** Simulate a same-page route change without waiting for the poll. */
   function navigate(pathname: string): void {
     fakeWindow.location.pathname = pathname;
-    fakeWindow.dispatch('popstate');
   }
 
   describe('initialize', () => {
-    it('renders the Delete button for a resolved target', async () => {
-      await openRoute();
+    it('mounts the Delete button once', () => {
+      openRoute();
+      openRoute();
 
-      expect(manager.getDeleteTarget).toHaveBeenCalledWith(MOVIE_ROUTE);
+      expect(fakeDocument.createdWithTag('div')).toHaveLength(1);
       expect(deleteButton()?.textContent).toBe('Delete');
       expect(deleteButton()?.disabled).toBe(false);
     });
 
-    it('renders nothing when the route has no target', async () => {
-      manager.getDeleteTarget.mockResolvedValue(undefined);
+    it('shows the panel only on detail routes', async () => {
+      openRoute();
+      expect(panel()?.hidden).toBe(false);
 
-      await openRoute();
+      navigate(UNSUPPORTED_ROUTE);
+      await jest.advanceTimersByTimeAsync(POLL_MS);
 
-      expect(manager.getDeleteTarget).toHaveBeenCalledWith(MOVIE_ROUTE);
-      expect(deleteButton()).toBeUndefined();
-    });
-
-    it('logs a contextual error when the target cannot be resolved', async () => {
-      const failure = new Error('Malformed Seer media id');
-      manager.getDeleteTarget.mockRejectedValue(failure);
-
-      await openRoute();
-
-      expect(errorSpy).toHaveBeenCalledWith(`Seer: failed to resolve delete target for ${MOVIE_ROUTE}`, failure);
-      expect(deleteButton()).toBeUndefined();
-    });
-
-    it('ignores a target response that lands after navigation', async () => {
-      const stale = defer<SeerDeleteTarget | undefined>();
-      manager.getDeleteTarget.mockReturnValueOnce(stale.promise).mockResolvedValue(undefined);
-
-      handler.initialize();
-      await jest.advanceTimersByTimeAsync(SETTLE_MS);
+      expect(panel()?.hidden).toBe(true);
 
       navigate(TV_ROUTE);
-      await jest.advanceTimersByTimeAsync(SETTLE_MS);
+      await jest.advanceTimersByTimeAsync(POLL_MS);
 
-      stale.resolve(TARGET);
-      await flush();
-
-      expect(manager.getDeleteTarget).toHaveBeenLastCalledWith(TV_ROUTE);
-      expect(deleteButton()).toBeUndefined();
+      expect(panel()?.hidden).toBe(false);
+      expect(manager.deleteMedia).not.toHaveBeenCalled();
     });
 
-    it('removes the panel, listeners and polling when the page is hidden', async () => {
-      await openRoute();
-      expect(deleteButton()).toBeDefined();
+    it('hides the panel on an unsupported route before the first poll', () => {
+      fakeWindow.location.pathname = UNSUPPORTED_ROUTE;
+
+      openRoute();
+
+      expect(panel()?.hidden).toBe(true);
+    });
+
+    it('removes the panel and stops polling when the page exits', () => {
+      openRoute();
+      expect(jest.getTimerCount()).toBe(1);
 
       fakeWindow.dispatch('pagehide');
-      await jest.advanceTimersByTimeAsync(POLL_MS * 2);
 
-      expect(deleteButton()).toBeUndefined();
-      expect(fakeWindow.listenerCount('popstate')).toBe(0);
-      expect(fakeWindow.listenerCount('pagehide')).toBe(0);
-      expect(manager.getDeleteTarget).toHaveBeenCalledTimes(1);
+      expect(panel()).toBeUndefined();
+      expect(jest.getTimerCount()).toBe(0);
     });
   });
 
   describe('delete flow', () => {
-    it('removes files before records and reports each phase on the button', async () => {
-      const filePhase = defer<readonly string[]>();
-      const recordPhase = defer<readonly string[]>();
-      manager.removeFiles.mockReturnValue(filePhase.promise);
-      manager.removeRecords.mockReturnValue(recordPhase.promise);
+    it('deletes the captured route once and refreshes it after the delay', async () => {
+      openRoute();
 
-      await openRoute();
       await clickDelete();
 
       expect(confirmMock).toHaveBeenCalledTimes(1);
-      expect(manager.removeFiles).toHaveBeenCalledWith(TARGET);
-      expect(manager.removeRecords).not.toHaveBeenCalled();
-      expect(deleteButton()?.textContent).toBe('Removing files…');
+      expect(confirmMock.mock.calls[0][0]).toContain('cannot be undone');
+      expect(manager.deleteMedia).toHaveBeenCalledTimes(1);
+      expect(manager.deleteMedia).toHaveBeenCalledWith(MOVIE_ROUTE);
+      expect(Notifier.success).toHaveBeenCalledWith('Seer deletion finished for /movie/603. The page will refresh.');
+      expect(fakeWindow.location.reload).not.toHaveBeenCalled();
+
+      await advanceRefresh();
+
+      expect(fakeWindow.location.reload).toHaveBeenCalledTimes(1);
+      expect(deleteButton()?.textContent).toBe('Delete');
+      expect(deleteButton()?.disabled).toBe(false);
+    });
+
+    it('keeps the button busy until the pending refresh runs', async () => {
+      const deletion = defer<void>();
+      manager.deleteMedia.mockReturnValue(deletion.promise);
+      openRoute();
+
+      deleteButton()?.click();
+
+      expect(deleteButton()?.textContent).toBe('Deleting…');
       expect(deleteButton()?.disabled).toBe(true);
 
-      filePhase.resolve([]);
+      deletion.resolve();
       await flush();
 
-      expect(manager.removeRecords).toHaveBeenCalledWith(TARGET);
-      expect(deleteButton()?.textContent).toBe('Removing records…');
+      expect(deleteButton()?.textContent).toBe('Deleting…');
+      expect(deleteButton()?.disabled).toBe(true);
 
-      recordPhase.resolve([]);
-      await flush();
+      await advanceRefresh();
 
-      expect(manager.removeFiles.mock.invocationCallOrder[0]).toBeLessThan(
-        manager.removeRecords.mock.invocationCallOrder[0]
-      );
-      expect(alertMock).toHaveBeenCalledWith(expect.stringContaining('Seer deletion finished'));
       expect(fakeWindow.location.reload).toHaveBeenCalledTimes(1);
+      expect(deleteButton()?.textContent).toBe('Delete');
+      expect(deleteButton()?.disabled).toBe(false);
     });
 
-    it('does nothing when the initial confirmation is cancelled', async () => {
+    it('does nothing when the confirmation is cancelled', async () => {
       confirmMock.mockReturnValue(false);
+      openRoute();
 
-      await openRoute();
       await clickDelete();
 
       expect(confirmMock).toHaveBeenCalledTimes(1);
-      expect(manager.removeFiles).not.toHaveBeenCalled();
-      expect(manager.removeRecords).not.toHaveBeenCalled();
-      expect(alertMock).not.toHaveBeenCalled();
+      expect(manager.deleteMedia).not.toHaveBeenCalled();
+      expect(Notifier.success).not.toHaveBeenCalled();
+      expect(Notifier.error).not.toHaveBeenCalled();
+      expect(fakeWindow.location.reload).not.toHaveBeenCalled();
       expect(deleteButton()?.textContent).toBe('Delete');
-      expect(deleteButton()?.disabled).toBe(false);
     });
 
-    it('ignores duplicate clicks while the files phase is running', async () => {
-      const filePhase = defer<readonly string[]>();
-      manager.removeFiles.mockReturnValue(filePhase.promise);
+    it('ignores duplicate clicks while the deletion and its refresh are running', async () => {
+      const deletion = defer<void>();
+      manager.deleteMedia.mockReturnValue(deletion.promise);
+      openRoute();
 
-      await openRoute();
-      await clickDelete();
-      await clickDelete();
-      await clickDelete();
-
-      expect(confirmMock).toHaveBeenCalledTimes(1);
-      expect(manager.removeFiles).toHaveBeenCalledTimes(1);
-
-      filePhase.resolve([]);
+      deleteButton()?.click();
+      deleteButton()?.click();
+      deleteButton()?.click();
       await flush();
 
-      expect(manager.removeRecords).toHaveBeenCalledTimes(1);
+      expect(confirmMock).toHaveBeenCalledTimes(1);
+      expect(manager.deleteMedia).toHaveBeenCalledTimes(1);
+
+      deletion.resolve();
+      await flush();
+
+      deleteButton()?.click();
+      await flush();
+
+      expect(confirmMock).toHaveBeenCalledTimes(1);
+      expect(manager.deleteMedia).toHaveBeenCalledTimes(1);
+
+      await advanceRefresh();
+
       expect(fakeWindow.location.reload).toHaveBeenCalledTimes(1);
     });
 
-    it('stops after a cancelled file-failure warning and restores the button', async () => {
-      manager.removeFiles.mockResolvedValue(['standard files: Server Error']);
-      confirmMock.mockReturnValueOnce(true).mockReturnValueOnce(false);
+    it('ignores a stale panel click on an unsupported live route', async () => {
+      openRoute();
+      navigate(UNSUPPORTED_ROUTE);
 
-      await openRoute();
-      await clickDelete();
-
-      expect(confirmMock).toHaveBeenCalledTimes(2);
-      expect(manager.removeRecords).not.toHaveBeenCalled();
-      expect(alertMock).not.toHaveBeenCalled();
-      expect(fakeWindow.location.reload).not.toHaveBeenCalled();
-      expect(deleteButton()?.textContent).toBe('Delete');
-      expect(deleteButton()?.disabled).toBe(false);
-    });
-
-    it('continues past a file failure and reports it in the summary', async () => {
-      manager.removeFiles.mockResolvedValue(['standard files: Server Error']);
-      confirmMock.mockReturnValue(true);
-
-      await openRoute();
-      await clickDelete();
-
-      expect(confirmMock).toHaveBeenCalledTimes(2);
-      expect(manager.removeRecords).toHaveBeenCalledWith(TARGET);
-      expect(alertMock).toHaveBeenCalledWith(expect.stringContaining('1 warning(s)'));
-      expect(alertMock.mock.calls[0][0]).toContain('standard files: Server Error');
-      expect(fakeWindow.location.reload).toHaveBeenCalledTimes(1);
-    });
-
-    it('restores the button and skips the reload on an unexpected failure', async () => {
-      manager.removeRecords.mockRejectedValue(new Error('Boom'));
-
-      await openRoute();
-      await clickDelete();
-
-      expect(alertMock).toHaveBeenCalledWith('Seer deletion failed: Boom');
-      expect(fakeWindow.location.reload).not.toHaveBeenCalled();
-      expect(deleteButton()?.textContent).toBe('Delete');
-      expect(deleteButton()?.disabled).toBe(false);
-    });
-
-    it('does not delete when a stale button is clicked before the route poll', async () => {
-      await openRoute();
-
-      fakeWindow.location.pathname = TV_ROUTE;
       await clickDelete();
 
       expect(confirmMock).not.toHaveBeenCalled();
-      expect(manager.removeFiles).not.toHaveBeenCalled();
-      expect(manager.removeRecords).not.toHaveBeenCalled();
+      expect(manager.deleteMedia).not.toHaveBeenCalled();
+    });
+
+    it('deletes the live route captured at click, before the next poll', async () => {
+      openRoute();
+      navigate(TV_ROUTE);
+
+      await clickDelete();
+      await advanceRefresh();
+
+      expect(manager.deleteMedia).toHaveBeenCalledWith(TV_ROUTE);
+      expect(Notifier.success).toHaveBeenCalledWith('Seer deletion finished for /tv/1399. The page will refresh.');
+      expect(fakeWindow.location.reload).toHaveBeenCalledTimes(1);
+    });
+
+    it('notifies a failure with escaped HTML for eight seconds and never reloads', async () => {
+      manager.deleteMedia.mockRejectedValue(new Error('Seer file deletion failed: <b>4k</b> "files"'));
+      openRoute();
+
+      await clickDelete();
+
+      expect(Notifier.error).toHaveBeenCalledWith(expect.stringContaining('Seer deletion failed for /movie/603'), FAILURE_TIMEOUT_MS);
+      const message = jest.mocked(Notifier.error).mock.calls[0][0];
+      expect(message).not.toContain('<b>');
+      expect(message).toContain('&lt;b&gt;4k&lt;/b&gt;');
+      expect(message).toContain('&quot;files&quot;');
+      expect(Notifier.success).not.toHaveBeenCalled();
+      expect(fakeWindow.location.reload).not.toHaveBeenCalled();
+
+      await advanceRefresh();
+
+      expect(fakeWindow.location.reload).not.toHaveBeenCalled();
+      expect(deleteButton()?.textContent).toBe('Delete');
+      expect(deleteButton()?.disabled).toBe(false);
     });
   });
 
   describe('navigation during deletion', () => {
-    it('skips the record phase and stale alerts after navigating', async () => {
-      const filePhase = defer<readonly string[]>();
-      manager.removeFiles.mockReturnValue(filePhase.promise);
-
-      await openRoute();
+    it('finishes the confirmed route and only notifies it after navigating away', async () => {
+      const deletion = defer<void>();
+      manager.deleteMedia.mockReturnValue(deletion.promise);
+      openRoute();
       await clickDelete();
-      expect(deleteButton()?.textContent).toBe('Removing files…');
 
       navigate(TV_ROUTE);
-      await jest.advanceTimersByTimeAsync(SETTLE_MS);
-
-      expect(deleteButton()?.disabled).toBe(true);
-
-      filePhase.resolve([]);
+      deletion.resolve();
       await flush();
 
-      expect(manager.removeRecords).not.toHaveBeenCalled();
-      expect(alertMock).not.toHaveBeenCalled();
+      expect(manager.deleteMedia).toHaveBeenCalledTimes(1);
+      expect(manager.deleteMedia).toHaveBeenCalledWith(MOVIE_ROUTE);
+      expect(Notifier.success).toHaveBeenCalledWith('Seer deletion finished for /movie/603.');
+      expect(fakeWindow.location.reload).not.toHaveBeenCalled();
+
+      await advanceRefresh();
+
+      expect(fakeWindow.location.reload).not.toHaveBeenCalled();
+      expect(deleteButton()?.textContent).toBe('Delete');
+    });
+
+    it('suppresses the pending refresh when navigating during the delay', async () => {
+      openRoute();
+      await clickDelete();
+
+      navigate(TV_ROUTE);
+      await advanceRefresh();
+
+      expect(Notifier.success).toHaveBeenCalledTimes(1);
       expect(fakeWindow.location.reload).not.toHaveBeenCalled();
       expect(deleteButton()?.textContent).toBe('Delete');
       expect(deleteButton()?.disabled).toBe(false);
     });
 
-    it('skips the stale summary and reload after navigating mid-records', async () => {
-      const recordPhase = defer<readonly string[]>();
-      manager.removeRecords.mockReturnValue(recordPhase.promise);
-
-      await openRoute();
-      await clickDelete();
-      expect(deleteButton()?.textContent).toBe('Removing records…');
-
-      navigate(TV_ROUTE);
-      await jest.advanceTimersByTimeAsync(SETTLE_MS);
-
-      recordPhase.resolve([]);
-      await flush();
-
-      expect(alertMock).not.toHaveBeenCalled();
-      expect(fakeWindow.location.reload).not.toHaveBeenCalled();
-      expect(deleteButton()?.disabled).toBe(false);
-    });
-
-    it('stops the record phase when the page is hidden mid-flight', async () => {
-      const filePhase = defer<readonly string[]>();
-      manager.removeFiles.mockReturnValue(filePhase.promise);
-
-      await openRoute();
+    it('stays silent when the page exits (pagehide) mid-flight without cancelling the deletion', async () => {
+      const deletion = defer<void>();
+      manager.deleteMedia.mockReturnValue(deletion.promise);
+      openRoute();
       await clickDelete();
 
       fakeWindow.dispatch('pagehide');
-      filePhase.resolve([]);
+      deletion.resolve();
       await flush();
 
-      expect(manager.removeRecords).not.toHaveBeenCalled();
-      expect(alertMock).not.toHaveBeenCalled();
+      expect(manager.deleteMedia).toHaveBeenCalledTimes(1);
+      expect(Notifier.success).not.toHaveBeenCalled();
+      expect(Notifier.error).not.toHaveBeenCalled();
       expect(fakeWindow.location.reload).not.toHaveBeenCalled();
+    });
+
+    it('suppresses the pending refresh when the page exits during the delay', async () => {
+      openRoute();
+      await clickDelete();
+
+      fakeWindow.dispatch('pagehide');
+      await advanceRefresh();
+
+      expect(Notifier.success).toHaveBeenCalledTimes(1);
+      expect(fakeWindow.location.reload).not.toHaveBeenCalled();
+      expect(jest.getTimerCount()).toBe(0);
     });
   });
 });

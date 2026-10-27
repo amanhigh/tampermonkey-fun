@@ -68,25 +68,13 @@ describe('SeerClient', () => {
       });
     });
 
-    it('normalizes a tv detail path to its canonical form', async () => {
+    it('reads the canonical tv detail endpoint', async () => {
       respondWith({ mediaInfo: { id: 7, requests: [] } });
 
-      await client.getDeleteTarget(' tv/1399 ');
+      const target = await client.getDeleteTarget('/tv/1399');
 
       expect(lastRequest().url).toBe('http://seerr.media.lan/api/v1/tv/1399');
-    });
-
-    it('sends the shared BaseClient accept headers', async () => {
-      respondWith({ mediaInfo: { id: 7 } });
-
-      await client.getDeleteTarget('/movie/12');
-
-      expect(lastRequest().headers).toEqual({
-        Accept: 'application/json, text/javascript, */*; q=0.01',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'X-Requested-With': 'XMLHttpRequest',
-      });
+      expect(target).toEqual({ mediaId: 7, variants: [], requestIds: [] });
     });
 
     it('infers STANDARD from standard service metadata only', async () => {
@@ -96,8 +84,8 @@ describe('SeerClient', () => {
 
       const target = await client.getDeleteTarget('/movie/12');
 
-      expect(target?.variants).toEqual([SeerVariant.STANDARD]);
-      expect(target?.requestIds).toEqual([]);
+      expect(target.variants).toEqual([SeerVariant.STANDARD]);
+      expect(target.requestIds).toEqual([]);
     });
 
     it('ignores an empty service url as variant evidence', async () => {
@@ -119,8 +107,8 @@ describe('SeerClient', () => {
 
       const target = await client.getDeleteTarget('/movie/12');
 
-      expect(target?.variants).toEqual([SeerVariant.FOUR_K]);
-      expect(target?.requestIds).toEqual([8]);
+      expect(target.variants).toEqual([SeerVariant.FOUR_K]);
+      expect(target.requestIds).toEqual([8]);
     });
 
     it('infers both variants and dedupes request ids', async () => {
@@ -154,16 +142,28 @@ describe('SeerClient', () => {
       expect(target).toEqual({ mediaId: 6, variants: [], requestIds: [] });
     });
 
-    it('returns undefined when mediaInfo is absent', async () => {
-      respondWith({ title: 'Seer detail' });
+    it('treats missing requests as an empty collection and keeps serviceId 0 as STANDARD evidence', async () => {
+      respondWith({ mediaInfo: { id: 6, serviceId: 0 } });
 
-      await expect(client.getDeleteTarget('/movie/12')).resolves.toBeUndefined();
+      const target = await client.getDeleteTarget('/movie/12');
+
+      expect(target).toEqual({ mediaId: 6, variants: [SeerVariant.STANDARD], requestIds: [] });
     });
 
-    it('returns undefined when mediaInfo is null', async () => {
+    it('rejects when mediaInfo is absent', async () => {
+      respondWith({ title: 'Seer detail' });
+
+      await expect(client.getDeleteTarget('/movie/12')).rejects.toThrow(
+        'No Seer media record for /movie/12'
+      );
+    });
+
+    it('rejects when mediaInfo is null', async () => {
       respondWith({ mediaInfo: null });
 
-      await expect(client.getDeleteTarget('/tv/1')).resolves.toBeUndefined();
+      await expect(client.getDeleteTarget('/tv/1')).rejects.toThrow(
+        'No Seer media record for /tv/1'
+      );
     });
 
     it('rejects a non numeric media id', async () => {
@@ -200,13 +200,6 @@ describe('SeerClient', () => {
       );
     });
 
-    it('rejects a non canonical detail path without calling the API', async () => {
-      await expect(client.getDeleteTarget('/collection/12')).rejects.toThrow(
-        'Invalid Seer detail path: /collection/12'
-      );
-      expect(xmlHttpRequestMock).not.toHaveBeenCalled();
-    });
-
     it('preserves the HTTP status of a failing detail request', async () => {
       respondWith({ message: 'Not Found' }, 404);
 
@@ -214,6 +207,14 @@ describe('SeerClient', () => {
 
       expect(error).toBeInstanceOf(ApiError);
       expect((error as ApiError).status).toBe(404);
+    });
+
+    it('propagates a network failure unchanged', async () => {
+      failNetwork('Network down');
+
+      await expect(client.getDeleteTarget('/movie/12')).rejects.toThrow(
+        'Network error: Network down'
+      );
     });
   });
 
@@ -236,18 +237,6 @@ describe('SeerClient', () => {
       expect(lastRequest().url).toBe('http://seerr.media.lan/api/v1/media/42/file?is4k=true');
     });
 
-    it('accepts an empty success body', async () => {
-      respondWith(undefined, 200);
-
-      await expect(client.deleteFiles(1, SeerVariant.STANDARD)).resolves.toBeUndefined();
-    });
-
-    it('accepts a JSON null success body', async () => {
-      respondWith(null, 200);
-
-      await expect(client.deleteFiles(1, SeerVariant.STANDARD)).resolves.toBeUndefined();
-    });
-
     it('rejects an invalid media id without calling the API', async () => {
       await expect(client.deleteFiles(1.5, SeerVariant.STANDARD)).rejects.toThrow(
         'Invalid Seer media id: 1.5'
@@ -263,11 +252,11 @@ describe('SeerClient', () => {
       });
     });
 
-    it('wraps network failures with context', async () => {
+    it('propagates a network failure unchanged', async () => {
       failNetwork('Network down');
 
       await expect(client.deleteFiles(42, SeerVariant.STANDARD)).rejects.toThrow(
-        'Failed to delete Seer media files: Network error: Network down'
+        'Network error: Network down'
       );
     });
   });
@@ -310,12 +299,10 @@ describe('SeerClient', () => {
       expect(request.url).toBe('http://seerr.media.lan/api/v1/media/42');
     });
 
-    it('wraps network failures with context', async () => {
+    it('propagates a network failure unchanged', async () => {
       failNetwork('Network down');
 
-      await expect(client.deleteMedia(42)).rejects.toThrow(
-        'Failed to delete Seer media: Network error: Network down'
-      );
+      await expect(client.deleteMedia(42)).rejects.toThrow('Network error: Network down');
     });
   });
 });
