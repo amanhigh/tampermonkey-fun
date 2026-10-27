@@ -655,7 +655,7 @@ export class Factory {
     seer: (): ISeerHandler =>
       Factory.getInstance('seerHandler', () => new SeerHandler(Factory.manager.seer(), Factory.manager.search())),
     search: (): ISearchHandler =>
-      Factory.getInstance('searchHandler', () => new SearchHandler(Factory.manager.search())),
+      Factory.getInstance('searchHandler', () => new SearchHandler(Factory.manager.search(), Factory.util.observer())),
   };
 
   /**
