@@ -25,11 +25,9 @@ describe('ImdbApp', () => {
   function createApp(isMovieTab: boolean) {
     const imdbHandlerMock: jest.Mocked<IImdbHandler> = {
       handleListMovies: jest.fn(),
-      handleXtremeSearch: jest.fn(),
     };
     const imdbManagerMock: jest.Mocked<IImdbManager> = {
       isMovieTab: jest.fn().mockReturnValue(isMovieTab),
-      getMovieTitle: jest.fn(),
     };
     const errorHandlerMock: jest.Mocked<IGlobalErrorHandler> = {
       registerGlobalErrorHandlers: jest.fn(),
@@ -48,17 +46,14 @@ describe('ImdbApp', () => {
     };
   }
 
-  it('registers only Xtreme on title pages and delegates its action', () => {
+  it('registers no menu command on title pages while still registering error handlers', () => {
     const { app, imdbHandlerMock, errorHandlerMock, registerMenuCommandMock } = createApp(true);
 
     app.initialize();
 
     expect(errorHandlerMock.registerGlobalErrorHandlers).toHaveBeenCalledTimes(1);
-    expect(registerMenuCommandMock).toHaveBeenCalledTimes(1);
-    expect(registerMenuCommandMock).toHaveBeenCalledWith('Xtreme', expect.any(Function));
-    const action = registerMenuCommandMock.mock.calls[0][1] as () => void;
-    action();
-    expect(imdbHandlerMock.handleXtremeSearch).toHaveBeenCalledTimes(1);
+    expect(registerMenuCommandMock).not.toHaveBeenCalled();
+    expect(imdbHandlerMock.handleListMovies).not.toHaveBeenCalled();
   });
 
   it('registers only List on non-title pages and delegates its action', () => {

@@ -608,7 +608,7 @@ export class Factory {
         'journalSyncHandler',
         () => new JournalSyncHandler(Factory.manager.journal(), Factory.manager.dom())
       ),
-    imdb: (): IImdbHandler => Factory.getInstance('imdbHandler', () => new ImdbHandler(Factory.manager.imdb())),
+    imdb: (): IImdbHandler => Factory.getInstance('imdbHandler', () => new ImdbHandler()),
 
     command: (): ICommandInputHandler =>
       Factory.getInstance(
