@@ -50,8 +50,10 @@ bundle project="all" mode="production":
 
 [group('run')]
 [doc('Build every production userscript plus the selected development build, then serve them')]
-install project="barkat": (bundle "all" "production") (bundle project "development")
+install project="barkat":
     just _title "BUILD" "Install"
+    just _run-no-output {{quote("just bundle all production")}}
+    just _run-no-output {{quote("just bundle " + quote(project) + " development")}}
     just _detail "PROD" "http://127.0.0.1:8765/barkat.user.js"
     just _detail "PROD" "http://127.0.0.1:8765/experiment.user.js"
     just _detail "PROD" "http://127.0.0.1:8765/imdb.user.js"

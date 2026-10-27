@@ -80,20 +80,13 @@ frontend only decides *which* tickers to submit and *when*.
 ## Seer Sidekick
 The Seer userscript runs on `http://seerr.media.lan/*` and on `https://www.airtelxstream.in/*`. Only the Seerr origin gets the panel; the Airtel Xstream origin only gets the marked search assistant described in [Seer Xstream Search](#seer-xstream-search).
 
--   **Origin selection**: exactly one handler runs per page — the panel on the Seerr origin, the search assistant on the Airtel Xstream origin — after the global error handlers are registered. On any other origin neither handler runs.
-<<<<<<< HEAD
+-   **Origin selection**: exactly one handler runs per page — the panel on the Seerr origin, the search assistant on the Airtel Xstream origin. On any other origin neither handler runs.
+-   **Notifications only from own failures**: Seer registers no global `error` or `unhandledrejection` handler, so host-page errors (such as Airtel Xstream's React hydration warnings) stay console-only. Only failures Seer catches itself are reported through the shared `Notifier`.
 -   **Panel and route polling**: the panel is mounted once, and one local 400 ms poll of the live pathname shows it only on `/movie/{id}` and `/tv/{id}`, hides it elsewhere and removes it on `pagehide`. The poll only keeps the panel and Delete visibility current; the read-only media-record check behind that visibility is specified in [Seer Deletion](#seer-deletion), and nothing is opened or deleted on load.
 -   **Captured on click**: each button acts on the pathname captured when it is clicked and resolves its own target fresh at that moment; Delete additionally requires the route to be media-record verified as described in [Seer Deletion](#seer-deletion). Search never waits for that visibility. The two buttons share nothing beyond this panel; each section below is authoritative for its own button.
 
 ## Seer Xstream Search
 The authoritative description of the search button (labelled `▶️ Xtreme`) and of the search assistant it arms.
-=======
--   **Panel and route polling**: the panel is mounted once, and one local 400 ms poll of the live pathname shows it only on `/movie/{id}` and `/tv/{id}`, hides it elsewhere and removes it on `pagehide`. That poll only toggles visibility: no route is resolved, fetched or opened on load.
--   **Captured on click**: each button acts on the pathname captured when it is clicked and resolves its own target fresh at that moment. The two buttons share nothing beyond this panel; each section below is authoritative for its own button.
-
-## Seer Xstream Search
-The authoritative description of the Search Xstream button and of the search assistant it arms.
->>>>>>> master
 
 -   **Supported route required**: a click on any other live route does nothing — no lookup, no tab and no notification.
 -   **Title fallback**: the first usable title of the Seer detail response is searched on Airtel Xstream — `title` then `originalTitle` for movies, `name` then `originalName` for tv, trimmed with blank values skipped. The title is resolved fresh on every click; nothing is preloaded.
@@ -102,46 +95,27 @@ The authoritative description of the Search Xstream button and of the search ass
 -   **Stale results stay silent**: when the pathname changed or the page exited during the lookup, no tab opens, no notification is shown and the button returns to idle.
 -   **Escaped failures**: a failed lookup or tab open shows one escaped error notification naming the route for 8 s, and only while that route is still live. No retry, timer or background polling runs during that lookup phase.
 -   **Marked search url only**: the assistant runs only on Airtel Xstream `/search?q=…#seer-auto`. It consumes the fragment once with `history.replaceState`, keeping the query and the history state, and ignores every other origin, route, fragment or blank `q`.
-<<<<<<< HEAD
 -   **One title, immediate match and node observation**: after arming, the rendered results are matched against that one `q` title at once, then again whenever a node is added or removed below the document root, through a single node observer built with `childList` + `subtree`. A single 15 s deadline is the only timer: its final check reports the outcome when no result appeared meanwhile. Attribute changes and character-data changes are mutations too, but this node observer does not watch them, so such a change only triggers a match when a node addition or removal follows, or at the deadline. No polling and no retry runs.
 -   **Unique result wins**: when exactly one rendered grid or hero result matches the title (or its decoded slug, ignoring case, accents and punctuation), the tab navigates to that Airtel detail url with `location.replace`, so the back button does not return to the search page.
 -   **Manual fallback**: when no single result matches, the assistant navigates nowhere and shows one escaped notice asking for a manual pick. A match failure shows one escaped error instead and leaves the search page in place.
 -   **Independent tabs**: each marked search tab decides for itself from its own url; there is no storage, cache or cross-tab coordination.
 -   **Cancelled by the user**: editing the search box, selecting a grid or hero result, `pagehide`, `popstate` and `hashchange` cancel the pending match and release its timer, observer and listeners. A click is never intercepted, and a changed live url cancels the pending match.
-=======
--   **One title, one fixed wait**: after arming, a single 15 s timeout is the only timer. When it expires, the rendered results are matched against that one `q` title once — no observer, no polling, no retry, and no background work afterwards.
--   **Unique result wins**: when exactly one rendered grid or hero result matches the title (or its decoded slug, ignoring case, accents and punctuation), the tab navigates to that Airtel detail url with `location.replace`, so the back button does not return to the search page.
--   **Manual fallback**: when no single result matches, the assistant navigates nowhere and shows one escaped notice asking for a manual pick. A match failure shows one escaped error instead and leaves the search page in place.
--   **Independent tabs**: each marked search tab decides for itself from its own url; there is no storage, cache or cross-tab coordination.
--   **Cancelled by the user**: editing the search box, selecting a grid or hero result, `pagehide`, `popstate` and `hashchange` cancel the pending match and release its timer and listeners. A click is never intercepted, and a changed live url cancels the pending match.
->>>>>>> master
 -   **Out of scope**: search only opens the Airtel Xstream search page and follows its unique result; it never deletes and never touches Seer media state.
 
 
 ## Seer Deletion
 The authoritative description of what the Delete button does.
 
-<<<<<<< HEAD
 -   **On click, not on load**: the deletion target is read fresh from the pathname captured when the button is clicked. The read-only media-record check on route entry never reads a deletion target and changes nothing.
 -   **Delete visibility**: Delete is mounted hidden and shown only while the live route is a detail route whose read-only media-record check resolved true; a false result leaves it silently hidden. That check counts a record as present only when the detail response carries a `mediaInfo` object with a valid positive integer `mediaInfo.id`: an absent `mediaInfo`, a `null` `mediaInfo`, and a missing or `null` id all report absence and keep Delete hidden, while a malformed payload, a non-numeric id or a non-positive id rejects like any other failure. Each route entry the 400 ms poll observes runs that check exactly once, an unchanged route never refetches even after a failure, and an unsupported route hides the panel without any lookup. A rejection shows one escaped error naming the route for 8 s and is not retried. Results belong to the route entry that started them: a route change — including returning to the same route — or `pagehide` discards stale successes and failures, and Delete is hidden again before the next route's check. The poll can only react to route changes it detects, so a request added while the page stays on the same detail route is not noticed: reload the page, or leave the route and return, to run the check again — no periodic server refresh runs.
 -   **One confirmation**: the button asks once, generically, that the deletion is irreversible, before the deletion target is read and any mutation is sent. A click is ignored while the live pathname is not the verified route entry of the page. Cancelling or failing restores the idle button; the button stays disabled from the confirmation until the outcome and any pending refresh are settled, so a click while that is running is ignored.
-=======
--   **On click, not on load**: the deletion target is resolved fresh from the pathname captured when the button is clicked (see [panel and route polling](#seer-sidekick)).
--   **One confirmation**: the button asks once, generically, that the deletion is irreversible, before any request is sent. Cancelling or failing restores the idle button; the button stays disabled from the confirmation until the outcome and any pending refresh are settled, so a click while that is running is ignored.
->>>>>>> master
 -   **Order (Arr-first)**: library files are removed first — Seer drives the configured Radarr/Sonarr services to delete them for every available variant — then the media requests, then the media entry itself last.
 -   **File failures stop the record cleanup**: when any variant's file deletion fails (including a 404), no request and no media entry is deleted, and the failure is reported in an error notification. Nothing is rolled back.
 -   **Record cleanup continues past individual failures**: a request or media entry that is already gone (404, direct or wrapped) counts as cleaned up, other errors are collected, every remaining step is still attempted, and the aggregated failure is reported in one error notification once the attempts finish.
 -   **Transport**: every call goes through the shared `BaseClient` (`GM.xmlHttpRequest`) against `Constants.SEER.BASE_URL`; there is no Seer-specific request code, so error statuses and empty delete bodies behave like every other client.
-<<<<<<< HEAD
 -   **Confirmed route wins over navigation**: after the confirmation the captured route is deleted even if the SPA moves to another page, and the outcome feedback is labelled as described in **Notifications, not dialogs** below. A success on the captured route shows its notification immediately and refreshes the page 2 s later; the refresh is skipped when the pathname is no longer that route or the page is left during the delay, and the button then returns to idle. A success after navigating away only notifies and schedules no refresh, and an error never refreshes.
 -   **Notifications, not dialogs**: exactly two outcomes are reported through the shared `Notifier`, which renders HTML, so both messages are escaped. A success reads `Deleted "{title}". Library files, requests and media entry removed.` and appends ` The page will refresh.` only while the captured route is still live; a failure reads `Deletion failed for "{title}": {error}` and stays 8 s. `{title}` is taken from the captured route by the title-resolution rules of [Seer Xstream Search](#seer-xstream-search), resolved once after the confirmation and before the first deletion call. When that title lookup fails, the captured pathname is used as the label and the deletion still runs.
 -   **Page exit cannot guarantee completion**: `pagehide` removes the panel and its polling, discards any pending visibility check, and suppresses later feedback, but a deletion already in flight is not cancelled and may still complete server-side. This is not tab visibility: switching tabs or backgrounding the page does not signal `pagehide`.
-=======
--   **Confirmed route wins over navigation**: after the confirmation the captured route is deleted even if the SPA moves to another page, and all feedback names that route. A success on the captured route shows its notification immediately and refreshes the page 2 s later; the refresh is skipped when the pathname is no longer that route or the page is left during the delay, and the button then returns to idle. A success after navigating away only notifies and schedules no refresh, and an error never refreshes.
--   **Notifications, not dialogs**: outcomes are reported through the shared `Notifier` (escaped, since it renders HTML); the error notification stays 8 s.
--   **Page exit cannot guarantee completion**: `pagehide` removes the panel and its polling and suppresses later feedback, but a deletion already in flight is not cancelled and may still complete server-side. This is not tab visibility: switching tabs or backgrounding the page does not signal `pagehide`.
->>>>>>> master
 -   **Out of scope**: no direct torrent client calls; deletion stays on the Seer API. Opening the Airtel Xstream search is the separate [Seer Xstream Search](#seer-xstream-search) button.
 
 ## NPM Commands
