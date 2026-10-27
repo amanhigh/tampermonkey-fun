@@ -141,10 +141,7 @@ export class Factory {
     picasso: (): PicassoApp =>
       Factory.getInstance('picassoApp', () => new PicassoApp(Factory.handler.global(), Factory.handler.picasso())),
     seer: (): SeerApp =>
-      Factory.getInstance(
-        'seerApp',
-        () => new SeerApp(Factory.handler.seer(), Factory.handler.global(), Factory.handler.search())
-      ),
+      Factory.getInstance('seerApp', () => new SeerApp(Factory.handler.seer(), Factory.handler.search())),
   };
 
   /**
