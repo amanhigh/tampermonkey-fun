@@ -50,8 +50,13 @@ class FakeElement {
 class FakeTarget {
   private readonly listeners = new Map<string, Listener[]>();
 
-  addEventListener(type: string, listener: Listener): void {
+  addEventListener(type: string, listener: Listener, options?: { signal?: AbortSignal }): void {
+    const signal = options?.signal;
+    if (signal?.aborted === true) {
+      return;
+    }
     this.listeners.set(type, [...this.registered(type), listener]);
+    signal?.addEventListener('abort', () => this.removeEventListener(type, listener), { once: true });
   }
 
   removeEventListener(type: string, listener: Listener): void {

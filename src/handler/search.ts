@@ -19,10 +19,8 @@ export interface ISearchHandler {
  */
 export class SearchHandler implements ISearchHandler {
   private started = false;
-  private title = '';
-  private capturedHref = '';
   private timer: ReturnType<typeof setTimeout> | undefined;
-  private readonly listeners: Array<readonly [EventTarget, string, EventListener]> = [];
+  private readonly controller = new AbortController();
 
   constructor(private readonly search: ISearchManager) {}
 
@@ -44,28 +42,22 @@ export class SearchHandler implements ISearchHandler {
       return;
     }
 
-    this.title = title;
     url.hash = '';
     history.replaceState(history.state, '', url.href);
-    this.capturedHref = window.location.href;
+    const capturedHref = window.location.href;
 
     this.watch();
-    this.timer = setTimeout(this.match, MATCH_TIMEOUT_MS);
+    this.timer = setTimeout(() => this.match(title, capturedHref), MATCH_TIMEOUT_MS);
   }
 
   /** Watch the page for edits, selections, navigation and exit, never intercepting a click. */
   private watch(): void {
-    this.listen(document, 'input', this.handleInput);
-    this.listen(document, 'click', this.handleClick);
-    this.listen(window, 'pagehide', this.cleanup);
-    this.listen(window, 'popstate', this.cleanup);
-    this.listen(window, 'hashchange', this.cleanup);
-  }
-
-  /** Register one listener so that cleanup can always remove it again. */
-  private listen(target: EventTarget, type: string, listener: EventListener): void {
-    target.addEventListener(type, listener);
-    this.listeners.push([target, type, listener]);
+    const signal = this.controller.signal;
+    document.addEventListener('input', this.handleInput, { signal });
+    document.addEventListener('click', this.handleClick, { signal });
+    window.addEventListener('pagehide', this.cleanup, { signal });
+    window.addEventListener('popstate', this.cleanup, { signal });
+    window.addEventListener('hashchange', this.cleanup, { signal });
   }
 
   /** Cancel the pending match once the live search box is edited. */
@@ -83,43 +75,28 @@ export class SearchHandler implements ISearchHandler {
   };
 
   /** Follow the unique result of the captured title, or report the manual fallback. */
-  private readonly match = (): void => {
-    this.timer = undefined;
-    if (!this.isCapturedLive()) {
-      this.cleanup();
+  private match(title: string, capturedHref: string): void {
+    this.cleanup();
+    if (window.location.href !== capturedHref) {
       return;
     }
 
     try {
-      this.reportMatch(this.search.findXstreamMatch(document, this.title));
+      const destination = this.search.findXstreamMatch(document, title);
+      if (window.location.href !== capturedHref) {
+        return;
+      }
+      if (destination === undefined) {
+        Notifier.info(
+          escapeHtml(`No single Airtel Xstream result for "${title}". Pick the title manually.`),
+          NOTICE_TIMEOUT_MS
+        );
+        return;
+      }
+      window.location.replace(destination);
     } catch (error) {
-      Notifier.error(
-        escapeHtml(`Airtel Xstream match failed for "${this.title}": ${toMessage(error)}`),
-        NOTICE_TIMEOUT_MS
-      );
-    } finally {
-      this.cleanup();
+      Notifier.error(escapeHtml(`Airtel Xstream match failed for "${title}": ${toMessage(error)}`), NOTICE_TIMEOUT_MS);
     }
-  };
-
-  /** Navigate to the unique match or ask the user to pick one, only while the captured url is live. */
-  private reportMatch(destination: string | undefined): void {
-    if (!this.isCapturedLive()) {
-      return;
-    }
-    if (destination === undefined) {
-      Notifier.info(
-        escapeHtml(`No single Airtel Xstream result for "${this.title}". Pick the title manually.`),
-        NOTICE_TIMEOUT_MS
-      );
-      return;
-    }
-    window.location.replace(destination);
-  }
-
-  /** Report whether the live url is still the one captured after consuming the marker. */
-  private isCapturedLive(): boolean {
-    return window.location.href === this.capturedHref;
   }
 
   /** Release the timer and the page listeners of the finished run. */
@@ -128,9 +105,7 @@ export class SearchHandler implements ISearchHandler {
       clearTimeout(this.timer);
       this.timer = undefined;
     }
-    this.listeners.splice(0).forEach(([target, type, listener]) => {
-      target.removeEventListener(type, listener);
-    });
+    this.controller.abort();
   };
 }
 

@@ -71,6 +71,7 @@ function createConfig(project, mode, watch) {
     },
     optimization: {
       moduleIds: "named",
+      minimize: false,
     },
     target: "web",
     externals: {
