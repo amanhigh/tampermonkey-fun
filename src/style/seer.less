@@ -1,15 +1,19 @@
-// Seer sidekick deletion panel — scoped to Seer detail pages only
+// Seer sidekick panel — scoped to Seer detail pages only
 @seer-panel-bg: rgba(24, 26, 34, 0.94);
 @seer-panel-border: 1px solid rgba(255, 255, 255, 0.12);
 @seer-panel-radius: 8px;
 @seer-danger-bg: rgba(180, 46, 42, 0.92);
 @seer-danger-bg-hover: rgba(210, 60, 56, 0.96);
+@seer-search-bg: rgba(46, 84, 148, 0.92);
+@seer-search-bg-hover: rgba(60, 104, 176, 0.96);
 
 #seerr-sidekick-panel {
     position: fixed;
     right: 18px;
     bottom: 18px;
     z-index: 9999;
+    display: flex;
+    gap: 6px;
     padding: 6px;
     background: @seer-panel-bg;
     border: @seer-panel-border;
@@ -19,23 +23,24 @@
     font-size: 12px;
     line-height: 1.4;
 
-    .seer-panel__delete {
+    // Re-assert the hidden attribute over the author `display: flex` above.
+    &[hidden] {
+        display: none;
+    }
+
+    // Layout and interaction shared by every panel button.
+    .seer-panel__button {
         margin: 0;
         padding: 6px 14px;
         color: #ffffff;
         font-size: 12px;
         font-weight: 600;
         letter-spacing: 0.02em;
-        background: @seer-danger-bg;
         border: none;
         border-radius: 6px;
         cursor: pointer;
         outline: none;
         transition: background 0.2s ease, transform 0.1s ease;
-
-        &:hover {
-            background: @seer-danger-bg-hover;
-        }
 
         &:active {
             transform: scale(0.96);
@@ -44,6 +49,22 @@
         &:disabled {
             opacity: 0.4;
             cursor: not-allowed;
+        }
+    }
+
+    .seer-panel__xstream {
+        background: @seer-search-bg;
+
+        &:hover {
+            background: @seer-search-bg-hover;
+        }
+    }
+
+    .seer-panel__delete {
+        background: @seer-danger-bg;
+
+        &:hover {
+            background: @seer-danger-bg-hover;
         }
     }
 }

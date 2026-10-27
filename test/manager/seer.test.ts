@@ -24,6 +24,7 @@ describe('SeerManager', () => {
     client = {
       getBaseUrl: jest.fn().mockReturnValue('http://seerr.media.lan/api/v1'),
       getDeleteTarget: jest.fn().mockResolvedValue(buildTarget()),
+      getSearchTitle: jest.fn().mockResolvedValue('Dune'),
       deleteFiles: jest.fn().mockResolvedValue(undefined),
       deleteRequest: jest.fn().mockResolvedValue(undefined),
       deleteMedia: jest.fn().mockResolvedValue(undefined),

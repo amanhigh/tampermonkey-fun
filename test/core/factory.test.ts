@@ -158,20 +158,23 @@ describe('Factory Seer Providers', () => {
     (Factory as any).instances = {};
   });
 
-  it('should provide singleton Seer client, manager, handler and app without IO', () => {
+  it('should provide singleton Seer client, manager, search manager, handler and app without IO', () => {
     const client = Factory.client.seer();
     const manager = Factory.manager.seer();
+    const search = Factory.manager.search();
     const handler = Factory.handler.seer();
     const app = Factory.app.seer();
 
     expect(client).toBeDefined();
     expect(manager).toBeDefined();
+    expect(search).toBeDefined();
     expect(handler).toBeDefined();
     expect(app).toBeDefined();
 
     // Verify singleton behavior: construction must not start any runtime work
     expect(Factory.client.seer()).toBe(client);
     expect(Factory.manager.seer()).toBe(manager);
+    expect(Factory.manager.search()).toBe(search);
     expect(Factory.handler.seer()).toBe(handler);
     expect(Factory.app.seer()).toBe(app);
   });

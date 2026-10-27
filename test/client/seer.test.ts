@@ -218,6 +218,112 @@ describe('SeerClient', () => {
     });
   });
 
+  describe('getSearchTitle', () => {
+    it('reads the movie title from the canonical detail endpoint', async () => {
+      respondWith({ mediaInfo: { id: 11 }, title: 'Dune: Part Two', originalTitle: 'Dune 2' });
+
+      const title = await client.getSearchTitle('/movie/603');
+
+      const request = lastRequest();
+      expect(request.method).toBe('GET');
+      expect(request.url).toBe('http://seerr.media.lan/api/v1/movie/603');
+      expect(title).toBe('Dune: Part Two');
+    });
+
+    it('falls back to the movie original title when the title is absent', async () => {
+      respondWith({ originalTitle: 'Sen to Chihiro' });
+
+      await expect(client.getSearchTitle('/movie/129')).resolves.toBe('Sen to Chihiro');
+    });
+
+    it('falls back to the movie original title when the title is blank or non-string', async () => {
+      respondWith({ title: '   ', originalTitle: 'Fallen' });
+
+      await expect(client.getSearchTitle('/movie/1')).resolves.toBe('Fallen');
+
+      respondWith({ title: 42, originalTitle: 'Fallen' });
+
+      await expect(client.getSearchTitle('/movie/1')).resolves.toBe('Fallen');
+    });
+
+    it('trims the decoded title', async () => {
+      respondWith({ title: '  Shogun  ' });
+
+      await expect(client.getSearchTitle('/movie/1')).resolves.toBe('Shogun');
+    });
+
+    it('reads the tv name from the canonical detail endpoint', async () => {
+      respondWith({ name: 'Shogun', originalName: 'Shōgun' });
+
+      const title = await client.getSearchTitle('/tv/1399');
+
+      expect(lastRequest().url).toBe('http://seerr.media.lan/api/v1/tv/1399');
+      expect(title).toBe('Shogun');
+    });
+
+    it('falls back to the tv original name through blanks and non-strings', async () => {
+      respondWith({ name: ' ', originalName: 'Shōgun' });
+
+      await expect(client.getSearchTitle('/tv/1399')).resolves.toBe('Shōgun');
+
+      respondWith({ name: null, originalName: 'Shōgun' });
+
+      await expect(client.getSearchTitle('/tv/1399')).resolves.toBe('Shōgun');
+    });
+
+    it('ignores mediaInfo and other detail metadata', async () => {
+      respondWith({ mediaInfo: { id: 5, title: 'Ignored' }, title: 'Dune' });
+
+      await expect(client.getSearchTitle('/movie/603')).resolves.toBe('Dune');
+    });
+
+    it('rejects a detail response without any usable title', async () => {
+      respondWith({ mediaInfo: { id: 9 } });
+
+      await expect(client.getSearchTitle('/movie/603')).rejects.toThrow(
+        'No Seer title for /movie/603'
+      );
+    });
+
+    it('rejects when every title alternative is blank or non-string', async () => {
+      respondWith({ title: '', originalTitle: { name: 'Dune' } });
+
+      await expect(client.getSearchTitle('/movie/603')).rejects.toThrow(
+        'No Seer title for /movie/603'
+      );
+    });
+
+    it('rejects a tv response that only carries the movie title fields', async () => {
+      respondWith({ title: 'Dune', originalTitle: 'Dune 2' });
+
+      await expect(client.getSearchTitle('/tv/1399')).rejects.toThrow(
+        'No Seer title for /tv/1399'
+      );
+    });
+
+    it('rejects a title payload that is not an object', async () => {
+      respondWith('Dune');
+
+      await expect(client.getSearchTitle('/movie/603')).rejects.toThrow(
+        'Malformed Seer detail response'
+      );
+    });
+
+    it('preserves the HTTP status of a failing detail request', async () => {
+      respondWith({ message: 'Not Found' }, 404);
+
+      await expect(client.getSearchTitle('/movie/603')).rejects.toBeInstanceOf(ApiError);
+    });
+
+    it('propagates a network failure unchanged', async () => {
+      failNetwork('Network down');
+
+      await expect(client.getSearchTitle('/movie/603')).rejects.toThrow(
+        'Network error: Network down'
+      );
+    });
+  });
+
   describe('deleteFiles', () => {
     it('deletes standard files with is4k=false', async () => {
       respondWith(undefined, 204);

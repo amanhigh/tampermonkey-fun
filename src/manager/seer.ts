@@ -1,6 +1,7 @@
 import { ISeerClient } from '../client/seer';
 import { ApiError } from '../models/api_error';
-import { SeerDeleteTarget, SeerDetailPath } from '../models/seer';
+import { SeerDeleteTarget } from '../models/seer';
+import { canonicalSeerDetailPath, isSeerDetailPage } from '../util/seer';
 
 /**
  * ISeerManager recognizes Seer detail routes and deletes their library entries.
@@ -30,12 +31,12 @@ export class SeerManager implements ISeerManager {
 
   /** @inheritdoc */
   isDetailPage(pathname: string): boolean {
-    return DETAIL_ROUTE_PATTERN.test(pathname);
+    return isSeerDetailPage(pathname);
   }
 
   /** @inheritdoc */
   async deleteMedia(pathname: string): Promise<void> {
-    const target = await this.client.getDeleteTarget(SeerManager.canonicalDetailPath(pathname));
+    const target = await this.client.getDeleteTarget(canonicalSeerDetailPath(pathname));
     await this.removeFiles(target);
     await this.removeRecords(target);
   }
@@ -78,19 +79,7 @@ export class SeerManager implements ISeerManager {
       throw new Error(`Seer record deletion failed: ${failures.join('; ')}`);
     }
   }
-
-  /** Canonicalize a detail route to `/movie/{id}` or `/tv/{id}`, rejecting anything else. */
-  private static canonicalDetailPath(pathname: string): SeerDetailPath {
-    const match = DETAIL_ROUTE_PATTERN.exec(pathname);
-    if (!match) {
-      throw new Error(`Unsupported Seer route: ${pathname}`);
-    }
-    return `/${match[1]}/${match[2]}` as SeerDetailPath;
-  }
 }
-
-/** Detail routes that can expose a deletion target. */
-const DETAIL_ROUTE_PATTERN = /^\/(movie|tv)\/([1-9]\d*)(?:\/|$)/;
 
 /** Read a human readable message from an unknown error. */
 function toMessage(error: unknown): string {

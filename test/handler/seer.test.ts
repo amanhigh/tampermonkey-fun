@@ -1,4 +1,5 @@
 import { SeerHandler } from '../../src/handler/seer';
+import { ISearchManager } from '../../src/manager/search';
 import { ISeerManager } from '../../src/manager/seer';
 import { Constants } from '../../src/models/constant';
 
@@ -150,14 +151,19 @@ function installGlobal(name: string, value: unknown): void {
 }
 
 /** Globals replaced by these tests and restored after each case. */
-const PATCHED_GLOBALS = ['document', 'window', 'HTMLButtonElement', 'confirm'] as const;
+const PATCHED_GLOBALS = ['document', 'window', 'HTMLButtonElement', 'confirm', 'GM'] as const;
+
+/** Search url the manager resolves by default. */
+const XSTREAM_URL = 'https://www.airtelxstream.in/search?q=Dune';
 
 describe('SeerHandler', () => {
   let fakeDocument: FakeDocument;
   let fakeWindow: FakeWindow;
   let manager: jest.Mocked<ISeerManager>;
+  let search: jest.Mocked<ISearchManager>;
   let handler: SeerHandler;
   let confirmMock: jest.Mock;
+  let openInTabMock: jest.Mock;
   let savedGlobals: Map<string, PropertyDescriptor | undefined>;
 
   beforeEach(() => {
@@ -171,20 +177,25 @@ describe('SeerHandler', () => {
     fakeWindow = new FakeWindow();
     fakeWindow.location.pathname = MOVIE_ROUTE;
     confirmMock = jest.fn().mockReturnValue(true);
+    openInTabMock = jest.fn().mockResolvedValue(undefined);
 
     installGlobal('document', fakeDocument);
     installGlobal('window', fakeWindow);
     installGlobal('HTMLButtonElement', FakeButtonElement);
     installGlobal('confirm', confirmMock);
+    installGlobal('GM', { openInTab: openInTabMock });
 
     manager = {
       isDetailPage: jest.fn().mockImplementation((pathname: string) => pathname !== UNSUPPORTED_ROUTE),
       deleteMedia: jest.fn().mockResolvedValue(undefined),
     };
+    search = {
+      getXstreamUrl: jest.fn().mockResolvedValue(XSTREAM_URL),
+    };
     jest.mocked(Notifier.success).mockClear();
     jest.mocked(Notifier.error).mockClear();
 
-    handler = new SeerHandler(manager);
+    handler = new SeerHandler(manager, search);
   });
 
   afterEach(() => {
@@ -227,6 +238,17 @@ describe('SeerHandler', () => {
     return fakeDocument.getElementById(Constants.UI.IDS.SEER.DELETE_BUTTON);
   }
 
+  /** Mounted Search Xstream button, if any. */
+  function xstreamButton(): FakeElement | undefined {
+    return fakeDocument.getElementById(Constants.UI.IDS.SEER.XSTREAM_BUTTON);
+  }
+
+  /** Click the mounted Search Xstream button and let the queued work start. */
+  async function clickXstream(): Promise<void> {
+    xstreamButton()?.click();
+    await flush();
+  }
+
   /** Click the mounted Delete button and let the queued work start. */
   async function clickDelete(): Promise<void> {
     deleteButton()?.click();
@@ -239,11 +261,14 @@ describe('SeerHandler', () => {
   }
 
   describe('initialize', () => {
-    it('mounts the Delete button once', () => {
+    it('mounts the Search Xstream and Delete buttons once', () => {
       openRoute();
       openRoute();
 
       expect(fakeDocument.createdWithTag('div')).toHaveLength(1);
+      expect(fakeDocument.createdWithTag('button')).toHaveLength(2);
+      expect(xstreamButton()?.textContent).toBe('Search Xstream');
+      expect(xstreamButton()?.disabled).toBe(false);
       expect(deleteButton()?.textContent).toBe('Delete');
       expect(deleteButton()?.disabled).toBe(false);
     });
@@ -262,6 +287,7 @@ describe('SeerHandler', () => {
 
       expect(panel()?.hidden).toBe(false);
       expect(manager.deleteMedia).not.toHaveBeenCalled();
+      expect(search.getXstreamUrl).not.toHaveBeenCalled();
     });
 
     it('hides the panel on an unsupported route before the first poll', () => {
@@ -283,6 +309,140 @@ describe('SeerHandler', () => {
     });
   });
 
+  describe('xstream search', () => {
+    it('opens the resolved search url in the foreground tab of the live route captured at click', async () => {
+      openRoute();
+      navigate(TV_ROUTE);
+
+      await clickXstream();
+
+      expect(search.getXstreamUrl).toHaveBeenCalledTimes(1);
+      expect(search.getXstreamUrl).toHaveBeenCalledWith(TV_ROUTE);
+      expect(openInTabMock).toHaveBeenCalledTimes(1);
+      expect(openInTabMock).toHaveBeenCalledWith(XSTREAM_URL, { active: true, setParent: true });
+      expect(Notifier.success).not.toHaveBeenCalled();
+      expect(Notifier.error).not.toHaveBeenCalled();
+      expect(manager.deleteMedia).not.toHaveBeenCalled();
+      expect(xstreamButton()?.textContent).toBe('Search Xstream');
+      expect(xstreamButton()?.disabled).toBe(false);
+    });
+
+    it('does nothing on an unsupported live route', async () => {
+      openRoute();
+      navigate(UNSUPPORTED_ROUTE);
+
+      await clickXstream();
+
+      expect(search.getXstreamUrl).not.toHaveBeenCalled();
+      expect(openInTabMock).not.toHaveBeenCalled();
+      expect(Notifier.error).not.toHaveBeenCalled();
+    });
+
+    it('disables only the search button while opening and ignores duplicate clicks', async () => {
+      const lookup = defer<string>();
+      search.getXstreamUrl.mockReturnValue(lookup.promise);
+      openRoute();
+
+      xstreamButton()?.click();
+      xstreamButton()?.click();
+      await flush();
+
+      expect(search.getXstreamUrl).toHaveBeenCalledTimes(1);
+      expect(xstreamButton()?.textContent).toBe('Opening Xstream…');
+      expect(xstreamButton()?.disabled).toBe(true);
+      expect(deleteButton()?.textContent).toBe('Delete');
+      expect(deleteButton()?.disabled).toBe(false);
+      expect(openInTabMock).not.toHaveBeenCalled();
+
+      lookup.resolve(XSTREAM_URL);
+      await flush();
+
+      expect(openInTabMock).toHaveBeenCalledTimes(1);
+      expect(xstreamButton()?.textContent).toBe('Search Xstream');
+      expect(xstreamButton()?.disabled).toBe(false);
+    });
+
+    it('opens no tab for a route that changed during the lookup', async () => {
+      const lookup = defer<string>();
+      search.getXstreamUrl.mockReturnValue(lookup.promise);
+      openRoute();
+      await clickXstream();
+
+      navigate(TV_ROUTE);
+      lookup.resolve(XSTREAM_URL);
+      await flush();
+
+      expect(openInTabMock).not.toHaveBeenCalled();
+      expect(Notifier.error).not.toHaveBeenCalled();
+      expect(xstreamButton()?.textContent).toBe('Search Xstream');
+      expect(xstreamButton()?.disabled).toBe(false);
+    });
+
+    it('opens no tab and reports nothing after the page exits during the lookup', async () => {
+      const lookup = defer<string>();
+      search.getXstreamUrl.mockReturnValue(lookup.promise);
+      openRoute();
+      await clickXstream();
+
+      fakeWindow.dispatch('pagehide');
+      lookup.resolve(XSTREAM_URL);
+      await flush();
+
+      expect(openInTabMock).not.toHaveBeenCalled();
+      expect(Notifier.error).not.toHaveBeenCalled();
+    });
+
+    it('reports an escaped lookup failure for eight seconds and restores the button', async () => {
+      search.getXstreamUrl.mockRejectedValue(new Error('No Seer title for <b>/movie/603</b> "detail"'));
+      openRoute();
+
+      await clickXstream();
+
+      expect(openInTabMock).not.toHaveBeenCalled();
+      expect(Notifier.error).toHaveBeenCalledWith(
+        expect.stringContaining('Seer Xstream search failed for /movie/603'),
+        FAILURE_TIMEOUT_MS
+      );
+      const message = jest.mocked(Notifier.error).mock.calls[0][0];
+      expect(message).not.toContain('<b>');
+      expect(message).toContain('&lt;b&gt;/movie/603&lt;/b&gt;');
+      expect(message).toContain('&quot;detail&quot;');
+      expect(Notifier.success).not.toHaveBeenCalled();
+      expect(xstreamButton()?.textContent).toBe('Search Xstream');
+      expect(xstreamButton()?.disabled).toBe(false);
+    });
+
+    it('reports a failure when the tab cannot be opened', async () => {
+      openInTabMock.mockRejectedValue(new Error('GM.openInTab <denied>'));
+      openRoute();
+
+      await clickXstream();
+
+      expect(search.getXstreamUrl).toHaveBeenCalledWith(MOVIE_ROUTE);
+      expect(Notifier.error).toHaveBeenCalledWith(
+        expect.stringContaining('Seer Xstream search failed for /movie/603'),
+        FAILURE_TIMEOUT_MS
+      );
+      expect(jest.mocked(Notifier.error).mock.calls[0][0]).toContain('&lt;denied&gt;');
+      expect(xstreamButton()?.textContent).toBe('Search Xstream');
+      expect(xstreamButton()?.disabled).toBe(false);
+    });
+
+    it('stays silent when the lookup fails after navigating away', async () => {
+      search.getXstreamUrl.mockImplementation(() => {
+        navigate(TV_ROUTE);
+        return Promise.reject(new Error('boom'));
+      });
+      openRoute();
+
+      await clickXstream();
+
+      expect(openInTabMock).not.toHaveBeenCalled();
+      expect(Notifier.error).not.toHaveBeenCalled();
+      expect(xstreamButton()?.disabled).toBe(false);
+    });
+  });
+
   describe('delete flow', () => {
     it('deletes the captured route once and refreshes it after the delay', async () => {
       openRoute();
@@ -293,6 +453,8 @@ describe('SeerHandler', () => {
       expect(confirmMock.mock.calls[0][0]).toContain('cannot be undone');
       expect(manager.deleteMedia).toHaveBeenCalledTimes(1);
       expect(manager.deleteMedia).toHaveBeenCalledWith(MOVIE_ROUTE);
+      expect(search.getXstreamUrl).not.toHaveBeenCalled();
+      expect(openInTabMock).not.toHaveBeenCalled();
       expect(Notifier.success).toHaveBeenCalledWith('Seer deletion finished for /movie/603. The page will refresh.');
       expect(fakeWindow.location.reload).not.toHaveBeenCalled();
 

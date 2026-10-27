@@ -75,6 +75,7 @@ import { AlertFeedHandler, IAlertFeedHandler } from '../handler/alertfeed';
 import { IGlobalErrorHandler, GlobalErrorHandler } from '../handler/error';
 import { IAlertFeedManager, AlertFeedManager } from '../manager/alertfeed';
 import { ISeerManager, SeerManager } from '../manager/seer';
+import { ISearchManager, SearchManager } from '../manager/search';
 import { IPublisher, ISubscriber, IEventBus, EventBus } from '../manager/event_bus';
 import { IImdbManager, ImdbManager } from '../manager/imdb';
 import { IPanelHandler, PanelHandler } from '../handler/panel';
@@ -316,6 +317,7 @@ export class Factory {
         () => new AlertFeedManager(Factory.manager.display(), Factory.manager.category(), Factory.manager.alertTicker())
       ),
     seer: (): ISeerManager => Factory.getInstance('seerManager', () => new SeerManager(Factory.client.seer())),
+    search: (): ISearchManager => Factory.getInstance('searchManager', () => new SearchManager(Factory.client.seer())),
   };
 
   /**
@@ -649,7 +651,8 @@ export class Factory {
         'picassoHandler',
         () => new PicassoHandler(Factory.util.wait(), Factory.util.key(), Factory.util.smart())
       ),
-    seer: (): ISeerHandler => Factory.getInstance('seerHandler', () => new SeerHandler(Factory.manager.seer())),
+    seer: (): ISeerHandler =>
+      Factory.getInstance('seerHandler', () => new SeerHandler(Factory.manager.seer(), Factory.manager.search())),
   };
 
   /**
