@@ -287,7 +287,6 @@ class TestBarWithIndicators extends TestBarWithLoadData {
   }
 }
 
-<<<<<<< HEAD
 /** Opted-in indicators with data-dependent eligibility (skips when count is 0). */
 class TestBarWithConditionalIndicators extends TestBarWithIndicators {
   protected shouldLoadIndicators(data: TestData): boolean {
@@ -296,8 +295,6 @@ class TestBarWithConditionalIndicators extends TestBarWithIndicators {
 }
 
 
-=======
->>>>>>> master
 const CHIP_BADGE = '≠';
 const CHIP_TITLE = 'Selected · not preferred.';
 
@@ -1075,7 +1072,6 @@ describe('BaseBar', () => {
       return calls.length > 0 ? String(calls[calls.length - 1][0]) : undefined;
     }
 
-<<<<<<< HEAD
     it('should skip the optional phase when shouldLoadIndicators rejects the loaded data', async () => {
       const bar = new TestBarWithConditionalIndicators(BarId.ALERT);
       const promise = bar.refresh();
@@ -1100,8 +1096,6 @@ describe('BaseBar', () => {
       expect(bar.indicatorLoads).toBe(0);
     });
 
-=======
->>>>>>> master
     it('should not touch indicator DOM for bars that do not opt in', () => {
       const bar = new TestBar(BarId.ALERT);
       bar.render({ label: 'plain', count: 1 });

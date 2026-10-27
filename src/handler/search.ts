@@ -2,45 +2,30 @@ import { ISearchManager } from '../manager/search';
 import { Constants } from '../models/constant';
 import { escapeHtml } from '../util/html';
 import { Notifier } from '../util/notify';
-<<<<<<< HEAD
 import { IObserveUtil } from '../util/observer';
-=======
->>>>>>> master
 
 /**
  * ISearchHandler arms the automatic result match of one marked Xstream search page.
  */
 export interface ISearchHandler {
-<<<<<<< HEAD
   /**
    * Start the bounded match of the live Airtel Xstream search page, at most once per page: one
    * immediate attempt, one attempt per observed node addition or removal, and one final attempt
    * at the deadline.
    */
-=======
-  /** Arm the one-shot match of the live Airtel Xstream search page, at most once per page. */
->>>>>>> master
   searchXstream(): void;
 }
 
 /**
-<<<<<<< HEAD
  * SearchHandler follows the unique rendered result of the Airtel Xstream search page
  * opened by Seer. It matches the title as soon as it is armed and again on every node
  * inserted into the page, so a rendered result is followed at once while a 15 s deadline
  * reports the manual fallback when no single result ever appears. It runs once per page
  * and cancels on any user action that takes the decision away from it.
-=======
- * SearchHandler waits a fixed interval on the Airtel Xstream search page opened by
- * Seer, then follows the unique rendered result of its title or reports that the
- * result must be picked manually. It runs once per page and cancels on any user
- * action that takes the decision away from it.
->>>>>>> master
  */
 export class SearchHandler implements ISearchHandler {
   private started = false;
   private timer: ReturnType<typeof setTimeout> | undefined;
-<<<<<<< HEAD
   private observer: MutationObserver | undefined;
   private readonly controller = new AbortController();
 
@@ -48,11 +33,6 @@ export class SearchHandler implements ISearchHandler {
     private readonly search: ISearchManager,
     private readonly observe: IObserveUtil
   ) {}
-=======
-  private readonly controller = new AbortController();
-
-  constructor(private readonly search: ISearchManager) {}
->>>>>>> master
 
   /** @inheritdoc */
   searchXstream(): void {
@@ -76,7 +56,6 @@ export class SearchHandler implements ISearchHandler {
     history.replaceState(history.state, '', url.href);
     const capturedHref = window.location.href;
 
-<<<<<<< HEAD
     try {
       this.watch();
       this.timer = setTimeout(() => this.match(title, capturedHref, true), MATCH_TIMEOUT_MS);
@@ -89,10 +68,6 @@ export class SearchHandler implements ISearchHandler {
     } catch (error) {
       this.fail(title, error);
     }
-=======
-    this.watch();
-    this.timer = setTimeout(() => this.match(title, capturedHref), MATCH_TIMEOUT_MS);
->>>>>>> master
   }
 
   /** Watch the page for edits, selections, navigation and exit, never intercepting a click. */
@@ -119,7 +94,6 @@ export class SearchHandler implements ISearchHandler {
     }
   };
 
-<<<<<<< HEAD
   /**
    * Match the captured title against the rendered results of the live page.
    * @param title - Search title captured when the run was armed
@@ -128,17 +102,10 @@ export class SearchHandler implements ISearchHandler {
    */
   private match(title: string, capturedHref: string, final: boolean): void {
     if (this.controller.signal.aborted) {
-=======
-  /** Follow the unique result of the captured title, or report the manual fallback. */
-  private match(title: string, capturedHref: string): void {
-    this.cleanup();
-    if (window.location.href !== capturedHref) {
->>>>>>> master
       return;
     }
 
     try {
-<<<<<<< HEAD
       if (window.location.href !== capturedHref) {
         this.cleanup();
         return;
@@ -155,20 +122,12 @@ export class SearchHandler implements ISearchHandler {
           return;
         }
         this.cleanup();
-=======
-      const destination = this.search.findXstreamMatch(document, title);
-      if (window.location.href !== capturedHref) {
-        return;
-      }
-      if (destination === undefined) {
->>>>>>> master
         Notifier.info(
           escapeHtml(`No single Airtel Xstream result for "${title}". Pick the title manually.`),
           NOTICE_TIMEOUT_MS
         );
         return;
       }
-<<<<<<< HEAD
 
       this.cleanup();
       window.location.replace(destination);
@@ -184,25 +143,13 @@ export class SearchHandler implements ISearchHandler {
   }
 
   /** Release the timer, the node observation and the page listeners of the finished run. */
-=======
-      window.location.replace(destination);
-    } catch (error) {
-      Notifier.error(escapeHtml(`Airtel Xstream match failed for "${title}": ${toMessage(error)}`), NOTICE_TIMEOUT_MS);
-    }
-  }
-
-  /** Release the timer and the page listeners of the finished run. */
->>>>>>> master
   private readonly cleanup = (): void => {
     if (this.timer !== undefined) {
       clearTimeout(this.timer);
       this.timer = undefined;
     }
-<<<<<<< HEAD
     this.observer?.disconnect();
     this.observer = undefined;
-=======
->>>>>>> master
     this.controller.abort();
   };
 }
@@ -221,11 +168,7 @@ const RESULT_LINK_SELECTOR =
   '#search-layout-container-searchResultV2 li.cs-grid-tile a.cs-grid-tile-button[href], ' +
   '.cs-hero-banner-rail .hero-banner-wrapper a.hero-banner[href]';
 
-<<<<<<< HEAD
 /** Deadline after which the unmatched title reports the manual fallback once. */
-=======
-/** Fixed wait before the rendered results are matched, without polling or retries. */
->>>>>>> master
 const MATCH_TIMEOUT_MS = 15000;
 
 /** Display duration of a single notice or failure notification in milliseconds. */

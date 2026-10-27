@@ -15,7 +15,6 @@ export interface ISeerManager {
   isDetailPage(pathname: string): boolean;
 
   /**
-<<<<<<< HEAD
    * Report whether the Seer page has a media record, without changing anything.
    * @param pathname - Browser pathname of the page
    * @returns Promise resolving with true when the page has a valid media record
@@ -30,8 +29,6 @@ export interface ISeerManager {
   getMediaTitle(pathname: string): Promise<string>;
 
   /**
-=======
->>>>>>> master
    * Delete the files, requests and media entry of the page.
    * @param pathname - Browser pathname captured when the deletion was confirmed
    * @returns Promise resolving once every deletion step succeeded
@@ -52,7 +49,6 @@ export class SeerManager implements ISeerManager {
   }
 
   /** @inheritdoc */
-<<<<<<< HEAD
   async hasMediaRecord(pathname: string): Promise<boolean> {
     return this.client.hasMediaRecord(canonicalSeerDetailPath(pathname));
   }
@@ -63,8 +59,6 @@ export class SeerManager implements ISeerManager {
   }
 
   /** @inheritdoc */
-=======
->>>>>>> master
   async deleteMedia(pathname: string): Promise<void> {
     const target = await this.client.getDeleteTarget(canonicalSeerDetailPath(pathname));
     await this.removeFiles(target);

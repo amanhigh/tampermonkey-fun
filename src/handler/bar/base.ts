@@ -54,19 +54,12 @@ const INDICATORS_UNAVAILABLE_LABEL = 'Indicators unavailable';
  * 4. **`onLeftClick(event)`** — defaults to `toggle()`; overrides replace unless `super` is called.
  * 5. **`onRightClick(event, data)`** / **`onPaint($root, data)`** — protected hooks.
  * 6. **`refresh()`** — latest-request-wins: increments revision, clears root (empty bars stay
-<<<<<<< HEAD
  *    hidden via CSS) with indicators `READY`, awaits `loadData()`, then — when the revision is
  *    still current — resolves data-dependent eligibility through
  *    {@link BaseBar.shouldLoadIndicators}, marks `LOADING` only for eligible data *before* the
  *    mandatory paint, paints mandatory content, and awaits `loadIndicators()` for eligible data
  *    only. The mandatory paint does not bump the revision, so one revision guards both phases;
  *    an explicit `render()` still invalidates pending work.
-=======
- *    hidden via CSS), awaits `loadData()`, paints mandatory content when the revision is
- *    current, then for {@link BaseBar.supportsIndicators} bars only keeps the loading marker
- *    and awaits `loadIndicators()`. The mandatory paint does not bump the revision, so one
- *    revision guards both phases; an explicit `render()` still invalidates pending work.
->>>>>>> master
  *
  * @see {@link BaseBar} — expansion contract and handler-binding details.
  */
@@ -253,11 +246,7 @@ export abstract class BaseBar<TData> implements IBaseBar {
 
     // Drop the previous indicator overlay so stale decorations never repaint
     this.indicators = [];
-<<<<<<< HEAD
     this.indicatorState = BarIndicatorState.READY;
-=======
-    this.indicatorState = this.supportsIndicators ? BarIndicatorState.LOADING : BarIndicatorState.READY;
->>>>>>> master
 
     // Clear first: an empty bar stays hidden via CSS until mandatory data lands
     const $root = $(`#${this.barId}`);
@@ -271,7 +260,6 @@ export abstract class BaseBar<TData> implements IBaseBar {
       return;
     }
 
-<<<<<<< HEAD
     // Eligibility is derived from this request's data only, so concurrent requests
     // never share state; the marker is raised before the mandatory paint.
     const withIndicators = this.shouldLoadIndicators(data);
@@ -282,11 +270,6 @@ export abstract class BaseBar<TData> implements IBaseBar {
     // Paint with the intended indicator state intact (no revision bump here)
     this.applyMandatoryData(data);
     if (!withIndicators) {
-=======
-    // Paint with the intended indicator state intact (no revision bump here)
-    this.applyMandatoryData(data);
-    if (!this.supportsIndicators) {
->>>>>>> master
       return;
     }
 
@@ -369,7 +352,6 @@ export abstract class BaseBar<TData> implements IBaseBar {
   }
 
   /**
-<<<<<<< HEAD
    * Whether the optional indicator phase should run for this loaded data; called by
    * {@link refresh} after the mandatory load and before the mandatory paint.
    *
@@ -386,8 +368,6 @@ export abstract class BaseBar<TData> implements IBaseBar {
   }
 
   /**
-=======
->>>>>>> master
    * Load optional indicator updates for already-rendered mandatory data; called by
    * {@link refresh} only for opted-in bars. A rejection marks indicators unavailable
    * without touching business status.
