@@ -3,6 +3,7 @@
 import { InvestingClient, IInvestingClient } from '../client/investing';
 import { ImdbHandler, IImdbHandler } from '../handler/imdb';
 import { ISeerHandler, SeerHandler } from '../handler/seer';
+import { ISearchHandler, SearchHandler } from '../handler/search';
 import { KiteClient, IKiteClient } from '../client/kite';
 import { JournalClient, IJournalClient } from '../client/journal';
 import { OsClient, IOsClient } from '../client/os';
@@ -140,7 +141,10 @@ export class Factory {
     picasso: (): PicassoApp =>
       Factory.getInstance('picassoApp', () => new PicassoApp(Factory.handler.global(), Factory.handler.picasso())),
     seer: (): SeerApp =>
-      Factory.getInstance('seerApp', () => new SeerApp(Factory.handler.seer(), Factory.handler.global())),
+      Factory.getInstance(
+        'seerApp',
+        () => new SeerApp(Factory.handler.seer(), Factory.handler.global(), Factory.handler.search())
+      ),
   };
 
   /**
@@ -653,6 +657,8 @@ export class Factory {
       ),
     seer: (): ISeerHandler =>
       Factory.getInstance('seerHandler', () => new SeerHandler(Factory.manager.seer(), Factory.manager.search())),
+    search: (): ISearchHandler =>
+      Factory.getInstance('searchHandler', () => new SearchHandler(Factory.manager.search())),
   };
 
   /**

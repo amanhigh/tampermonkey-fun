@@ -191,6 +191,7 @@ describe('SeerHandler', () => {
     };
     search = {
       getXstreamUrl: jest.fn().mockResolvedValue(XSTREAM_URL),
+      findXstreamMatch: jest.fn(),
     };
     jest.mocked(Notifier.success).mockClear();
     jest.mocked(Notifier.error).mockClear();

@@ -244,6 +244,8 @@ Support:
     BASE_URL: 'http://seerr.media.lan/api/v1',
     /** Airtel Xstream origin used for title search links */
     AIRTEL_BASE_URL: 'https://www.airtelxstream.in',
+    /** Marker appended to every Airtel Xstream url Seer opens or resolves */
+    AUTO_MARKER: '#seer-auto',
   },
 
   /** Cache configuration for manager lookups */

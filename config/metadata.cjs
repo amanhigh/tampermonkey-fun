@@ -65,7 +65,7 @@ const projects = {
   seer: {
     name: "Seerr Sidekick",
     namespace: "local.seerr.sidekick",
-    match: ["http://seerr.media.lan/*"],
+    match: ["http://seerr.media.lan/*", "https://www.airtelxstream.in/*"],
     grant: ["GM.xmlHttpRequest", "GM.openInTab"],
     connect: ["seerr.media.lan"],
     description: "Search Airtel Xstream and delete Seerr library files and request/media state",

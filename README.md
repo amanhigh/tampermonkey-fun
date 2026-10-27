@@ -78,21 +78,29 @@ frontend only decides *which* tickers to submit and *when*.
     warm-up is retried only by the next load or membership trigger.
 
 ## Seer Sidekick
-The Seer userscript runs only on `http://seerr.media.lan/*` and adds a **Search Xstream** and a **Delete** button to `movie` and `tv` detail pages.
+The Seer userscript runs on `http://seerr.media.lan/*` and on `https://www.airtelxstream.in/*`. Only the Seerr origin gets the panel; the Airtel Xstream origin only gets the marked search assistant described in [Seer Xstream Search](#seer-xstream-search).
 
+-   **Origin selection**: exactly one handler runs per page — the panel on the Seerr origin, the search assistant on the Airtel Xstream origin — after the global error handlers are registered. On any other origin neither handler runs.
 -   **Panel and route polling**: the panel is mounted once, and one local 400 ms poll of the live pathname shows it only on `/movie/{id}` and `/tv/{id}`, hides it elsewhere and removes it on `pagehide`. That poll only toggles visibility: no route is resolved, fetched or opened on load.
 -   **Captured on click**: each button acts on the pathname captured when it is clicked and resolves its own target fresh at that moment. The two buttons share nothing beyond this panel; each section below is authoritative for its own button.
 
 ## Seer Xstream Search
-The authoritative description of the Search Xstream button.
+The authoritative description of the Search Xstream button and of the search assistant it arms.
 
 -   **Supported route required**: a click on any other live route does nothing — no lookup, no tab and no notification.
--   **Title fallback**: the first usable title of the Seer detail response is searched on Airtel Xstream — `title` then `originalTitle` for movies, `name` then `originalName` for tv, trimmed with blank values skipped. The title is resolved fresh on every click; nothing is cached, stored or preloaded.
+-   **Title fallback**: the first usable title of the Seer detail response is searched on Airtel Xstream — `title` then `originalTitle` for movies, `name` then `originalName` for tv, trimmed with blank values skipped. The title is resolved fresh on every click; nothing is preloaded.
 -   **One active tab**: the search opens in a foreground tab that keeps the Seer tab as its parent, and nothing else is opened.
 -   **Duplicate prevention**: the button disables itself and shows `Opening Xstream…` until the lookup and the tab open settle, so extra clicks meanwhile are ignored. Delete keeps its own busy state, so neither button blocks the other.
 -   **Stale results stay silent**: when the pathname changed or the page exited during the lookup, no tab opens, no notification is shown and the button returns to idle.
--   **Escaped failures**: a failed lookup or tab open shows one escaped error notification naming the route for 8 s, and only while that route is still live. There are no retries, no timers and no background polling.
--   **Out of scope**: search only opens the Airtel Xstream search page; it never deletes and never touches Seer media state.
+-   **Escaped failures**: a failed lookup or tab open shows one escaped error notification naming the route for 8 s, and only while that route is still live. No retry, timer or background polling runs during that lookup phase.
+-   **Marked search url only**: the assistant runs only on Airtel Xstream `/search?q=…#seer-auto`. It consumes the fragment once with `history.replaceState`, keeping the query and the history state, and ignores every other origin, route, fragment or blank `q`.
+-   **One title, one fixed wait**: after arming, a single 15 s timeout is the only timer. When it expires, the rendered results are matched against that one `q` title once — no observer, no polling, no retry, and no background work afterwards.
+-   **Unique result wins**: when exactly one rendered grid or hero result matches the title (or its decoded slug, ignoring case, accents and punctuation), the tab navigates to that Airtel detail url with `location.replace`, so the back button does not return to the search page.
+-   **Manual fallback**: when no single result matches, the assistant navigates nowhere and shows one escaped notice asking for a manual pick. A match failure shows one escaped error instead and leaves the search page in place.
+-   **Independent tabs**: each marked search tab decides for itself from its own url; there is no storage, cache or cross-tab coordination.
+-   **Cancelled by the user**: editing the search box, selecting a grid or hero result, `pagehide`, `popstate` and `hashchange` cancel the pending match and release its timer and listeners. A click is never intercepted, and a changed live url cancels the pending match.
+-   **Out of scope**: search only opens the Airtel Xstream search page and follows its unique result; it never deletes and never touches Seer media state.
+
 
 ## Seer Deletion
 The authoritative description of what the Delete button does.
