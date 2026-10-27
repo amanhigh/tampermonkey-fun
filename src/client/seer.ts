@@ -14,6 +14,13 @@ export interface ISeerClient extends IBaseClient {
   getDeleteTarget(detailPath: SeerDetailPath): Promise<SeerDeleteTarget>;
 
   /**
+   * Report whether a Seer detail page carries a media record.
+   * @param detailPath - Canonical detail path, `/movie/{tmdbId}` or `/tv/{id}`
+   * @returns Promise resolving with true when the page has a valid media record
+   */
+  hasMediaRecord(detailPath: SeerDetailPath): Promise<boolean>;
+
+  /**
    * Resolve the Airtel Xstream search title of a Seer detail page.
    * @param detailPath - Canonical detail path, `/movie/{tmdbId}` or `/tv/{id}`
    * @returns Promise resolving with the first usable title of the page
@@ -59,6 +66,22 @@ export class SeerClient extends BaseClient implements ISeerClient {
   async getDeleteTarget(detailPath: SeerDetailPath): Promise<SeerDeleteTarget> {
     const payload = await this.makeRequest<unknown>(detailPath);
     return this.decodeDeleteTarget(payload, detailPath);
+  }
+
+  /** @inheritdoc */
+  async hasMediaRecord(detailPath: SeerDetailPath): Promise<boolean> {
+    const payload = await this.makeRequest<unknown>(detailPath);
+    const detail = toRecord(payload, 'detail response');
+    const rawMedia = detail.mediaInfo;
+    if (rawMedia === undefined || rawMedia === null) {
+      return false;
+    }
+    const media = toRecord(rawMedia, 'mediaInfo');
+    if (media.id === undefined || media.id === null) {
+      return false;
+    }
+    toPositiveInteger(media.id, 'media id');
+    return true;
   }
 
   /** @inheritdoc */

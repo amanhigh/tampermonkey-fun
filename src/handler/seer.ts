@@ -22,6 +22,9 @@ export class SeerHandler implements ISeerHandler {
   private busy = false;
   private xstreamBusy = false;
   private gone = false;
+  private observedPath: string | null = null;
+  private generation = 0;
+  private eligible = false;
 
   constructor(
     private readonly manager: ISeerManager,
@@ -41,6 +44,7 @@ export class SeerHandler implements ISeerHandler {
       'pagehide',
       () => {
         this.gone = true;
+        this.generation += 1;
         clearInterval(timer);
         document.getElementById(Constants.UI.IDS.SEER.PANEL)?.remove();
       },
@@ -48,13 +52,65 @@ export class SeerHandler implements ISeerHandler {
     );
   }
 
-  /** Show the panel only while the live route is a Seer detail page. */
+  /**
+   * Show the panel only while the live route is a Seer detail page and verify
+   * its media record once per route entry, discarding results of older entries.
+   */
   private readonly syncVisibility = (): void => {
+    if (this.gone) {
+      return;
+    }
+    const pathname = window.location.pathname;
+    const supported = this.manager.isDetailPage(pathname);
     const panel = document.getElementById(Constants.UI.IDS.SEER.PANEL);
     if (panel) {
-      panel.hidden = !this.manager.isDetailPage(window.location.pathname);
+      panel.hidden = !supported;
+    }
+    if (pathname === this.observedPath) {
+      return;
+    }
+    this.observedPath = pathname;
+    this.generation += 1;
+    this.setEligible(false);
+    if (supported) {
+      void this.checkPresence(pathname, this.generation);
     }
   };
+
+  /** Verify the media record of one route entry, ignoring results of older entries. */
+  private async checkPresence(pathname: string, generation: number): Promise<void> {
+    try {
+      const present = await this.manager.hasMediaRecord(pathname);
+      if (this.isCurrentRoute(pathname, generation)) {
+        this.setEligible(present);
+      }
+    } catch (error) {
+      if (!this.isCurrentRoute(pathname, generation)) {
+        return;
+      }
+      this.setEligible(false);
+      Notifier.error(escapeHtml(`Seer media lookup failed for ${pathname}: ${toMessage(error)}`), FAILURE_TIMEOUT_MS);
+    }
+  }
+
+  /** Report whether a pending result still belongs to the live route entry of this page. */
+  private isCurrentRoute(pathname: string, generation: number): boolean {
+    return !this.gone && this.generation === generation && window.location.pathname === pathname;
+  }
+
+  /** Report whether the live path is still the verified route entry of the page. */
+  private canDeleteLive(pathname: string): boolean {
+    return this.eligible && pathname === this.observedPath;
+  }
+
+  /** Show or hide the Delete button without touching its busy label or state. */
+  private setEligible(eligible: boolean): void {
+    this.eligible = eligible;
+    const button = document.getElementById(Constants.UI.IDS.SEER.DELETE_BUTTON);
+    if (button instanceof HTMLButtonElement) {
+      button.hidden = !eligible;
+    }
+  }
 
   /** Click handler for the Xstream search button. */
   private readonly handleXstreamClick = (): void => {
@@ -100,13 +156,16 @@ export class SeerHandler implements ISeerHandler {
     Notifier.error(escapeHtml(`Seer Xstream search failed for ${pathname}: ${toMessage(error)}`), FAILURE_TIMEOUT_MS);
   }
 
-  /** Confirm the irreversible deletion of the live route, then run it once. */
+  /** Confirm the irreversible deletion of the verified live route, then run it once. */
   private async runDelete(): Promise<void> {
-    if (this.busy) {
+    if (this.busy || this.gone) {
       return;
     }
     const pathname = window.location.pathname;
     if (!this.manager.isDetailPage(pathname)) {
+      return;
+    }
+    if (!this.canDeleteLive(pathname)) {
       return;
     }
     if (!confirm(DELETE_WARNING)) {
@@ -115,14 +174,15 @@ export class SeerHandler implements ISeerHandler {
 
     this.busy = true;
     this.updateButton(Constants.UI.IDS.SEER.DELETE_BUTTON, DELETING_LABEL, true);
+    const label = await this.manager.getMediaTitle(pathname).catch(() => pathname);
     try {
       await this.manager.deleteMedia(pathname);
-      if (this.reportFinished(pathname)) {
+      if (this.reportFinished(pathname, label)) {
         await delay(REFRESH_DELAY_MS);
         this.reloadFinishedRoute(pathname);
       }
     } catch (error) {
-      this.reportFailure(pathname, error);
+      this.reportFailure(label, error);
     } finally {
       this.busy = false;
       this.updateButton(Constants.UI.IDS.SEER.DELETE_BUTTON, DELETE_LABEL, false);
@@ -133,13 +193,15 @@ export class SeerHandler implements ISeerHandler {
    * Report the completed deletion of the captured route and schedule a refresh
    * only while the live route is still that route.
    */
-  private reportFinished(pathname: string): boolean {
+  private reportFinished(pathname: string, label: string): boolean {
     if (this.gone) {
       return false;
     }
     const sameRoute = window.location.pathname === pathname;
     Notifier.success(
-      escapeHtml(`Seer deletion finished for ${pathname}.${sameRoute ? ' The page will refresh.' : ''}`)
+      escapeHtml(
+        `Deleted "${label}". Library files, requests and media entry removed.${sameRoute ? ' The page will refresh.' : ''}`
+      )
     );
     return sameRoute;
   }
@@ -153,11 +215,11 @@ export class SeerHandler implements ISeerHandler {
   }
 
   /** Report a failed deletion without refreshing. */
-  private reportFailure(pathname: string, error: unknown): void {
+  private reportFailure(label: string, error: unknown): void {
     if (this.gone) {
       return;
     }
-    Notifier.error(escapeHtml(`Seer deletion failed for ${pathname}: ${toMessage(error)}`), FAILURE_TIMEOUT_MS);
+    Notifier.error(escapeHtml(`Deletion failed for "${label}": ${toMessage(error)}`), FAILURE_TIMEOUT_MS);
   }
 
   /** Update the label and state of a mounted panel button when it exists. */
@@ -186,9 +248,14 @@ export class SeerHandler implements ISeerHandler {
         this.handleXstreamClick
       )
     );
-    panel.appendChild(
-      this.createButton(Constants.UI.IDS.SEER.DELETE_BUTTON, 'seer-panel__delete', DELETE_LABEL, this.handleDeleteClick)
+    const deleteButton = this.createButton(
+      Constants.UI.IDS.SEER.DELETE_BUTTON,
+      'seer-panel__delete',
+      DELETE_LABEL,
+      this.handleDeleteClick
     );
+    deleteButton.hidden = true;
+    panel.appendChild(deleteButton);
     document.body.appendChild(panel);
   }
 
@@ -214,13 +281,13 @@ const REFRESH_DELAY_MS = 2000;
 const FAILURE_TIMEOUT_MS = 8000;
 
 /** Idle label of the Xstream search button. */
-const XSTREAM_LABEL = 'Search Xstream';
+const XSTREAM_LABEL = '▶️ Xtreme';
 
 /** Label shown while the Xstream search url is resolved and the tab opens. */
 const OPENING_LABEL = 'Opening Xstream…';
 
 /** Idle label of the deletion button. */
-const DELETE_LABEL = 'Delete';
+const DELETE_LABEL = '🗑️ Delete';
 
 /** Label shown while the confirmed deletion runs. */
 const DELETING_LABEL = 'Deleting…';

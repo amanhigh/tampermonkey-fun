@@ -218,6 +218,94 @@ describe('SeerClient', () => {
     });
   });
 
+  describe('hasMediaRecord', () => {
+    it('reports a movie record from the canonical movie detail endpoint', async () => {
+      respondWith({ mediaInfo: { id: 11 } });
+
+      const present = await client.hasMediaRecord('/movie/603');
+
+      const request = lastRequest();
+      expect(request.method).toBe('GET');
+      expect(request.url).toBe('http://seerr.media.lan/api/v1/movie/603');
+      expect(present).toBe(true);
+    });
+
+    it('reports a tv record from the canonical tv detail endpoint', async () => {
+      respondWith({ mediaInfo: { id: 7 } });
+
+      const present = await client.hasMediaRecord('/tv/1399');
+
+      expect(lastRequest().url).toBe('http://seerr.media.lan/api/v1/tv/1399');
+      expect(present).toBe(true);
+    });
+
+    it.each([
+      ['mediaInfo is absent', { title: 'Seer detail' }],
+      ['mediaInfo is null', { mediaInfo: null }],
+      ['the media record has no id', { mediaInfo: { requests: [{ id: 21 }] } }],
+      ['the media id is null', { mediaInfo: { id: null } }],
+    ])('reports absence when %s', async (_case: string, body: unknown) => {
+      respondWith(body);
+
+      await expect(client.hasMediaRecord('/movie/603')).resolves.toBe(false);
+    });
+
+    it('rejects a non numeric media id', async () => {
+      respondWith({ mediaInfo: { id: '11' } });
+
+      await expect(client.hasMediaRecord('/movie/603')).rejects.toThrow(
+        'Malformed Seer media id'
+      );
+    });
+
+    it('rejects a non positive media id', async () => {
+      respondWith({ mediaInfo: { id: 0 } });
+
+      await expect(client.hasMediaRecord('/movie/603')).rejects.toThrow(
+        'Invalid Seer media id: 0'
+      );
+    });
+
+    it('rejects a malformed media record', async () => {
+      respondWith({ mediaInfo: 'record' });
+
+      await expect(client.hasMediaRecord('/movie/603')).rejects.toThrow(
+        'Malformed Seer mediaInfo'
+      );
+    });
+
+    it('rejects a payload that is not an object', async () => {
+      respondWith([1, 2, 3]);
+
+      await expect(client.hasMediaRecord('/movie/603')).rejects.toThrow(
+        'Malformed Seer detail response'
+      );
+    });
+
+    it('reports presence while ignoring malformed requests and variants', async () => {
+      respondWith({ mediaInfo: { id: 11, requests: {}, serviceUrl: {} } });
+
+      await expect(client.hasMediaRecord('/movie/603')).resolves.toBe(true);
+    });
+
+    it('preserves the HTTP status of a failing detail request', async () => {
+      respondWith({ message: 'Not Found' }, 404);
+
+      const error = await client.hasMediaRecord('/movie/603').catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect((error as ApiError).status).toBe(404);
+    });
+
+    it('propagates a network failure unchanged', async () => {
+      failNetwork('Network down');
+
+      await expect(client.hasMediaRecord('/movie/603')).rejects.toThrow(
+        'Network error: Network down'
+      );
+    });
+  });
+
   describe('getSearchTitle', () => {
     it('reads the movie title from the canonical detail endpoint', async () => {
       respondWith({ mediaInfo: { id: 11 }, title: 'Dune: Part Two', originalTitle: 'Dune 2' });
