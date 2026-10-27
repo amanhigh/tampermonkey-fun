@@ -3,6 +3,7 @@ import { ITickerManager } from '../../src/manager/ticker';
 import { IDomManager } from '../../src/manager/dom';
 import { IPublisher } from '../../src/manager/event_bus';
 import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/ticker';
+import { ApiError } from '../../src/models/api_error';
 import { Constants } from '../../src/models/constant';
 import { Notifier } from '../../src/util/notify';
 import { Sequence, TickerTimeframe, TMN_SEQUENCE, SMN_SEQUENCE, YR_SEQUENCE } from '../../src/models/timeframe';
@@ -79,39 +80,98 @@ describe('TimeFrameManager', () => {
     });
   });
 
-  // ── Active Timeframes ──
+  // ── Timeframe Info (active codes + review exemption) ──
 
-  describe('getActiveTimeframes', () => {
-    it('should preserve active backend timeframes including YR', async () => {
+  describe('getTimeFrameInfo', () => {
+    it('should read the supplied ticker exactly once and ignore the DOM ticker', async () => {
       mockTickerManager.getTicker.mockResolvedValue(
-        createMockTicker({ timeframes: [        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK] })
+        createMockTicker({ ticker: 'INFY', timeframes: [TickerTimeframe.DL, TickerTimeframe.MN] })
       );
 
-      const result = await timeFrameManager.getActiveTimeframes();
+      await timeFrameManager.getTimeFrameInfo('INFY');
 
-      expect(result).toEqual([        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK]);
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
+      expect(mockTickerManager.getTicker).toHaveBeenCalledWith('INFY');
+      expect(mockDomManager.getTicker).not.toHaveBeenCalled();
     });
 
-    it('should sort active backend timeframes in canonical order including YR', async () => {
+    it('should return active codes sorted by catalog order without extra reads', async () => {
       mockTickerManager.getTicker.mockResolvedValue(
-        createMockTicker({ timeframes: [TickerTimeframe.WK, TickerTimeframe.YR, TickerTimeframe.MN, TickerTimeframe.SMN, TickerTimeframe.DL, TickerTimeframe.TMN] })
+        createMockTicker({
+          timeframes: [
+            TickerTimeframe.DL,
+            TickerTimeframe.WK,
+            TickerTimeframe.MN,
+            TickerTimeframe.TMN,
+            TickerTimeframe.SMN,
+            TickerTimeframe.YR,
+          ],
+        })
       );
 
-      const result = await timeFrameManager.getActiveTimeframes();
+      const result = await timeFrameManager.getTimeFrameInfo('AAPL');
 
-      // Canonical with YR: YR, SMN, TMN, MN, WK, DL
-      expect(result).toEqual([        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL]);
+      expect(result).toEqual({
+        activeCodes: [
+          TickerTimeframe.YR,
+          TickerTimeframe.SMN,
+          TickerTimeframe.TMN,
+          TickerTimeframe.MN,
+          TickerTimeframe.WK,
+          TickerTimeframe.DL,
+        ],
+        reviewExempt: false,
+      });
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
     });
 
-    it('should fall back to default timeframes when backend read fails', async () => {
-      mockTickerManager.getTicker.mockRejectedValue(new Error('Not found'));
+    it('should drop unsupported timeframe codes', async () => {
+      mockTickerManager.getTicker.mockResolvedValue(
+        createMockTicker({ timeframes: ['XX' as TickerTimeframe, TickerTimeframe.TMN] })
+      );
 
-      const result = await timeFrameManager.getActiveTimeframes();
+      const result = await timeFrameManager.getTimeFrameInfo('AAPL');
 
+      expect(result.activeCodes).toEqual([TickerTimeframe.TMN]);
+    });
+
+    it.each([
+      { type: TickerType.EQUITY, reviewExempt: false },
+      { type: TickerType.INDEX, reviewExempt: true },
+      { type: TickerType.CRYPTO, reviewExempt: false },
+      { type: TickerType.COMMODITY, reviewExempt: false },
+      { type: TickerType.FX, reviewExempt: false },
+      { type: TickerType.BOND, reviewExempt: false },
+      { type: TickerType.COMPOSITE, reviewExempt: true },
+    ])('should map type $type to reviewExempt $reviewExempt', async ({ type, reviewExempt }) => {
+      mockTickerManager.getTicker.mockResolvedValue(
+        createMockTicker({ timeframes: [TickerTimeframe.TMN, TickerTimeframe.MN], type })
+      );
+
+      const result = await timeFrameManager.getTimeFrameInfo('AAPL');
+
+      expect(result.reviewExempt).toBe(reviewExempt);
+      expect(result.activeCodes).toEqual([TickerTimeframe.TMN, TickerTimeframe.MN]);
+    });
+
+    it('should fall back silently to TMN_SEQUENCE with reviewExempt false on 404', async () => {
+      mockTickerManager.getTicker.mockRejectedValue(new ApiError(404, 'Ticker not found'));
+
+      const result = await timeFrameManager.getTimeFrameInfo('UNTRACKED');
+
+      expect(result).toEqual({ activeCodes: [...TMN_SEQUENCE], reviewExempt: false });
+      expect(Notifier.warn).not.toHaveBeenCalled();
+    });
+
+    it('should fall back to TMN_SEQUENCE with reviewExempt false and warn on network failure', async () => {
+      mockTickerManager.getTicker.mockRejectedValue(new Error('Network error'));
+
+      const result = await timeFrameManager.getTimeFrameInfo('AAPL');
+
+      expect(result).toEqual({ activeCodes: [...TMN_SEQUENCE], reviewExempt: false });
       expect(Notifier.warn).toHaveBeenCalledWith(
         expect.stringContaining('Falling back to default timeframes')
       );
-      expect(result).toEqual([TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL]);
     });
   });
 
@@ -167,6 +227,20 @@ describe('TimeFrameManager', () => {
       const result = await timeFrameManager.getSequence();
 
       expect(result).toEqual(TMN_SEQUENCE);
+    });
+
+    it('should resolve active codes for the current DOM ticker with a single lookup', async () => {
+      mockTickerManager.getTicker.mockResolvedValue(
+        createMockTicker({ timeframes: [TickerTimeframe.WK, TickerTimeframe.TMN] })
+      );
+
+      const result = await timeFrameManager.getSequence();
+
+      expect(mockDomManager.getTicker).toHaveBeenCalledTimes(1);
+      expect(mockTickerManager.getTicker).toHaveBeenCalledTimes(1);
+      expect(mockTickerManager.getTicker).toHaveBeenCalledWith('AAPL');
+      // WK active without DL → SMN_SEQUENCE
+      expect(result).toEqual(SMN_SEQUENCE);
     });
   });
 
@@ -570,7 +644,7 @@ describe('TimeFrameManager', () => {
       mockJQuery.mockReturnValue({ length: 1, click: mockClick });
 
       // Active includes YR
-      const active = await timeFrameManager.getActiveTimeframes();
+      const { activeCodes: active } = await timeFrameManager.getTimeFrameInfo('AAPL');
       expect(active).toEqual([        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK]);
 
       // No DL → SMN_SEQUENCE

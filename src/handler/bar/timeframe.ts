@@ -1,7 +1,7 @@
 import { BaseBar, IBaseBar } from './base';
 import { BarId, BarIndicatorUpdate, BarStatus } from '../../models/bar';
 import { DomainEventType } from '../../models/domain_event';
-import { TickerTimeframe } from '../../models/timeframe';
+import { TickerTimeframe, TimeframeInfo } from '../../models/timeframe';
 import { ITimeFrameManager } from '../../manager/timeframe';
 import { IBarkatManager } from '../../manager/barkat';
 import { IDomManager } from '../../manager/dom';
@@ -32,17 +32,15 @@ const MISMATCH_GLYPH = '\u2260';
 
 /**
  * Mandatory data for the timeframe bar: the ticker captured before the selection
- * load plus the backend-active codes for it.
+ * load plus the backend selection (active codes and review exemption) for it.
  *
  * Capturing the ticker first binds any later analysis to the exact request that
  * produced the painted selection, so a late resolve or a ticker switch never
  * queries against the wrong ticker.
  */
-interface TimeFrameBarData {
+interface TimeFrameBarData extends TimeframeInfo {
   /** Ticker captured before the selection load. */
   readonly ticker: string;
-  /** Backend-active timeframe codes for {@link ticker}. */
-  readonly activeCodes: readonly TickerTimeframe[];
 }
 
 /**
@@ -66,13 +64,15 @@ export type ITimeFrameHandler = IBaseBar;
  * native `title` hint are updated in place once the analysis resolves. Full
  * analysis detail lives in the side panel, so no metric-level markup is rendered
  * here. Analysis failure is quiet (no notifications) and only marks indicators
- * unavailable through BaseBar.
+ * unavailable through BaseBar. Review-exempt ticker types skip this phase entirely
+ * (see {@link shouldLoadIndicators}).
  *
  * Compact-only: does not override {@link renderDetails} so BaseBar renders
  * compact content directly without disclosure shell.
  *
- * Listens to TICKER_CHANGED (ticker switch) and TICKER_TIMEFRAMES_CHANGED
- * (toggle result) to re-render when state changes.
+ * Listens to TICKER_CHANGED (ticker switch), TICKER_TIMEFRAMES_CHANGED (toggle
+ * result), and TICKER_CATEGORY_CHANGED / TICKER_METADATA_CHANGED (ticker type and
+ * classification changes that alter review exemption) to re-render when state changes.
  */
 export class TimeFrameBar extends BaseBar<TimeFrameBarData> implements ITimeFrameHandler {
   /** Prevents concurrent toggle operations. */
@@ -90,14 +90,19 @@ export class TimeFrameBar extends BaseBar<TimeFrameBarData> implements ITimeFram
 
   /** @inheritdoc */
   protected get refreshEvents(): readonly DomainEventType[] {
-    return [DomainEventType.TICKER_CHANGED, DomainEventType.TICKER_TIMEFRAMES_CHANGED];
+    return [
+      DomainEventType.TICKER_CHANGED,
+      DomainEventType.TICKER_TIMEFRAMES_CHANGED,
+      DomainEventType.TICKER_CATEGORY_CHANGED,
+      DomainEventType.TICKER_METADATA_CHANGED,
+    ];
   }
 
   /** @inheritdoc */
   protected async loadData(): Promise<TimeFrameBarData> {
     const ticker = this.domManager.getTicker();
-    const activeCodes = await this.timeFrameManager.getActiveTimeframes();
-    return { ticker, activeCodes };
+    const selection = await this.timeFrameManager.getTimeFrameInfo(ticker);
+    return { ticker, ...selection };
   }
 
   /** @inheritdoc */
@@ -115,6 +120,17 @@ export class TimeFrameBar extends BaseBar<TimeFrameBarData> implements ITimeFram
   /** @inheritdoc */
   protected get supportsIndicators(): boolean {
     return true;
+  }
+
+  /**
+   * Skips the Barkat analysis phase for review-exempt ticker types (INDEX/COMPOSITE):
+   * those tickers have no meaningful timeframe review, so chips paint from the
+   * selection alone with no marker and no analysis request.
+   *
+   * @inheritdoc
+   */
+  protected shouldLoadIndicators(data: TimeFrameBarData): boolean {
+    return !data.reviewExempt;
   }
 
   /**

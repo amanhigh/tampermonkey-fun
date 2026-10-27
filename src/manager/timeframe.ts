@@ -1,4 +1,12 @@
-import { Timeframe, TickerTimeframe, Sequence, TMN_SEQUENCE, SMN_SEQUENCE, YR_SEQUENCE } from '../models/timeframe';
+import {
+  Timeframe,
+  TickerTimeframe,
+  Sequence,
+  TimeframeInfo,
+  TMN_SEQUENCE,
+  SMN_SEQUENCE,
+  YR_SEQUENCE,
+} from '../models/timeframe';
 import { Constants } from '../models/constant';
 import { DomainEventType } from '../models/domain_event';
 import { Notifier } from '../util/notify';
@@ -6,6 +14,7 @@ import { ITickerManager } from './ticker';
 import { IDomManager } from './dom';
 import { IPublisher } from './event_bus';
 import { ApiError } from '../models/api_error';
+import { isTimeframeReviewExempt } from '../models/ticker';
 
 // ── Catalog & Lookups ──
 // Ordered catalog of all timeframe metadata with pre-built lookup maps.
@@ -42,10 +51,13 @@ function toSupportedTimeframes(codes: TickerTimeframe[]): Timeframe[] {
 // always operates on the current TradingView ticker.
 
 export interface ITimeFrameManager {
-  /** Returns the active backend timeframe codes for the current ticker,
-   * sorted by catalog order. Falls back to TMN_SEQUENCE when backend
-   * read fails. */
-  getActiveTimeframes(): Promise<readonly TickerTimeframe[]>;
+  /** Load the timeframe info (sorted active codes plus review
+   * exemption) for the given ticker in a single backend read.
+   * Falls back to TMN_SEQUENCE with `reviewExempt: false` when backend
+   * read fails.
+   * @param ticker Ticker symbol to resolve
+   */
+  getTimeFrameInfo(ticker: string): Promise<TimeframeInfo>;
 
   /** Toggle a timeframe code for the current ticker on/off in the backend.
    * Publishes TICKER_TIMEFRAMES_CHANGED on success.
@@ -105,19 +117,21 @@ export class TimeFrameManager implements ITimeFrameManager {
   // ── Backend Operations ──
 
   /** @inheritdoc */
-  async getActiveTimeframes(): Promise<readonly TickerTimeframe[]> {
-    const tvTicker = this.domManager.getTicker();
+  async getTimeFrameInfo(ticker: string): Promise<TimeframeInfo> {
     try {
-      const record = await this.tickerManager.getTicker(tvTicker);
+      const record = await this.tickerManager.getTicker(ticker);
       const active = toSupportedTimeframes(record.timeframes as TickerTimeframe[]);
-      return active.map((tf) => tf.code);
+      return {
+        activeCodes: active.map((tf) => tf.code),
+        reviewExempt: isTimeframeReviewExempt(record.type),
+      };
     } catch (error) {
       // Untracked ticker (404) — silently fall back to defaults, no warning
       if (ApiError.isNotFoundError(error)) {
-        return [...TMN_SEQUENCE];
+        return { activeCodes: [...TMN_SEQUENCE], reviewExempt: false };
       }
-      Notifier.warn(`getActiveTimeframes: ${(error as Error).message}. Falling back to default timeframes.`);
-      return [...TMN_SEQUENCE];
+      Notifier.warn(`getTimeFrameInfo: ${(error as Error).message}. Falling back to default timeframes.`);
+      return { activeCodes: [...TMN_SEQUENCE], reviewExempt: false };
     }
   }
 
@@ -201,6 +215,16 @@ export class TimeFrameManager implements ITimeFrameManager {
   }
 
   // ── Private Helpers ──
+
+  /**
+   * Resolve the active backend timeframe codes for the current DOM ticker,
+   * sorted by catalog order, through a single `getTimeFrameInfo` read.
+   * Shared by `toggleTimeframe` and `getSequence`.
+   */
+  private async getActiveTimeframes(): Promise<readonly TickerTimeframe[]> {
+    const selection = await this.getTimeFrameInfo(this.domManager.getTicker());
+    return selection.activeCodes;
+  }
 
   /**
    * Click toolbar button for timeframe selection.

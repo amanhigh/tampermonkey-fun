@@ -287,6 +287,14 @@ class TestBarWithIndicators extends TestBarWithLoadData {
   }
 }
 
+/** Opted-in indicators with data-dependent eligibility (skips when count is 0). */
+class TestBarWithConditionalIndicators extends TestBarWithIndicators {
+  protected shouldLoadIndicators(data: TestData): boolean {
+    return data.count > 0;
+  }
+}
+
+
 const CHIP_BADGE = '≠';
 const CHIP_TITLE = 'Selected · not preferred.';
 
@@ -1063,6 +1071,30 @@ describe('BaseBar', () => {
       );
       return calls.length > 0 ? String(calls[calls.length - 1][0]) : undefined;
     }
+
+    it('should skip the optional phase when shouldLoadIndicators rejects the loaded data', async () => {
+      const bar = new TestBarWithConditionalIndicators(BarId.ALERT);
+      const promise = bar.refresh();
+
+      await resolveMandatory(bar, { label: 'exempt', count: 0 });
+
+      // Mandatory content paints and the refresh settles without an indicator load
+      expect(mockRootEl.html).toHaveBeenLastCalledWith(
+        expect.stringContaining('compact:exempt:0')
+      );
+      expect(bar.indicatorLoads).toBe(0);
+      expect(mockRootEl.addClass).not.toHaveBeenCalledWith(
+        INDICATOR_STATE_CLASS(BarIndicatorState.LOADING)
+      );
+      expect(lastIndicatorStateClass()).toBe(
+        INDICATOR_STATE_CLASS(BarIndicatorState.READY)
+      );
+      expect(mockRootEl.attr).toHaveBeenLastCalledWith('aria-busy', 'false');
+      expect(mockMarkerEl.remove).toHaveBeenCalled();
+
+      await expect(promise).resolves.toBeUndefined();
+      expect(bar.indicatorLoads).toBe(0);
+    });
 
     it('should not touch indicator DOM for bars that do not opt in', () => {
       const bar = new TestBar(BarId.ALERT);
