@@ -218,6 +218,7 @@ describe('SeerClient', () => {
     });
   });
 
+<<<<<<< HEAD
   describe('hasMediaRecord', () => {
     it('reports a movie record from the canonical movie detail endpoint', async () => {
       respondWith({ mediaInfo: { id: 11 } });
@@ -306,6 +307,8 @@ describe('SeerClient', () => {
     });
   });
 
+=======
+>>>>>>> master
   describe('getSearchTitle', () => {
     it('reads the movie title from the canonical detail endpoint', async () => {
       respondWith({ mediaInfo: { id: 11 }, title: 'Dune: Part Two', originalTitle: 'Dune 2' });

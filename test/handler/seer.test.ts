@@ -35,6 +35,7 @@ const UNSUPPORTED_ROUTE = '/discover';
 interface Deferred<T> {
   readonly promise: Promise<T>;
   readonly resolve: (value: T) => void;
+<<<<<<< HEAD
   readonly reject: (reason: unknown) => void;
 }
 
@@ -47,6 +48,17 @@ function defer<T>(): Deferred<T> {
     reject = rej;
   });
   return { promise, resolve, reject };
+=======
+}
+
+/** Build a promise that a test settles when it decides the deletion is done. */
+function defer<T>(): Deferred<T> {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+>>>>>>> master
 }
 
 /** Minimal element stand-in covering the DOM surface the handler uses. */
@@ -190,8 +202,11 @@ describe('SeerHandler', () => {
 
     manager = {
       isDetailPage: jest.fn().mockImplementation((pathname: string) => pathname !== UNSUPPORTED_ROUTE),
+<<<<<<< HEAD
       hasMediaRecord: jest.fn().mockResolvedValue(true),
       getMediaTitle: jest.fn().mockResolvedValue('Dune'),
+=======
+>>>>>>> master
       deleteMedia: jest.fn().mockResolvedValue(undefined),
     };
     search = {
@@ -217,10 +232,16 @@ describe('SeerHandler', () => {
     });
   });
 
+<<<<<<< HEAD
   /** Initialize the handler on the current route and await its presence check. */
   async function openRoute(): Promise<void> {
     handler.initialize();
     await flush();
+=======
+  /** Initialize the handler on the current route. */
+  function openRoute(): void {
+    handler.initialize();
+>>>>>>> master
   }
 
   /** Flush the microtasks queued by the handler's async flow. */
@@ -268,6 +289,7 @@ describe('SeerHandler', () => {
   }
 
   describe('initialize', () => {
+<<<<<<< HEAD
     it('mounts the Search Xstream and Delete buttons once', async () => {
       await openRoute();
       await openRoute();
@@ -411,23 +433,46 @@ describe('SeerHandler', () => {
 
     it('shows the panel only on detail routes', async () => {
       await openRoute();
+=======
+    it('mounts the Search Xstream and Delete buttons once', () => {
+      openRoute();
+      openRoute();
+
+      expect(fakeDocument.createdWithTag('div')).toHaveLength(1);
+      expect(fakeDocument.createdWithTag('button')).toHaveLength(2);
+      expect(xstreamButton()?.textContent).toBe('Search Xstream');
+      expect(xstreamButton()?.disabled).toBe(false);
+      expect(deleteButton()?.textContent).toBe('Delete');
+      expect(deleteButton()?.disabled).toBe(false);
+    });
+
+    it('shows the panel only on detail routes', async () => {
+      openRoute();
+>>>>>>> master
       expect(panel()?.hidden).toBe(false);
 
       navigate(UNSUPPORTED_ROUTE);
       await jest.advanceTimersByTimeAsync(POLL_MS);
 
       expect(panel()?.hidden).toBe(true);
+<<<<<<< HEAD
       expect(deleteButton()?.hidden).toBe(true);
+=======
+>>>>>>> master
 
       navigate(TV_ROUTE);
       await jest.advanceTimersByTimeAsync(POLL_MS);
 
       expect(panel()?.hidden).toBe(false);
+<<<<<<< HEAD
       expect(deleteButton()?.hidden).toBe(false);
+=======
+>>>>>>> master
       expect(manager.deleteMedia).not.toHaveBeenCalled();
       expect(search.getXstreamUrl).not.toHaveBeenCalled();
     });
 
+<<<<<<< HEAD
     it('hides the panel on an unsupported route before the first poll', async () => {
       fakeWindow.location.pathname = UNSUPPORTED_ROUTE;
 
@@ -439,6 +484,18 @@ describe('SeerHandler', () => {
 
     it('removes the panel and stops polling when the page exits', async () => {
       await openRoute();
+=======
+    it('hides the panel on an unsupported route before the first poll', () => {
+      fakeWindow.location.pathname = UNSUPPORTED_ROUTE;
+
+      openRoute();
+
+      expect(panel()?.hidden).toBe(true);
+    });
+
+    it('removes the panel and stops polling when the page exits', () => {
+      openRoute();
+>>>>>>> master
       expect(jest.getTimerCount()).toBe(1);
 
       fakeWindow.dispatch('pagehide');
@@ -450,7 +507,11 @@ describe('SeerHandler', () => {
 
   describe('xstream search', () => {
     it('opens the resolved search url in the foreground tab of the live route captured at click', async () => {
+<<<<<<< HEAD
       await openRoute();
+=======
+      openRoute();
+>>>>>>> master
       navigate(TV_ROUTE);
 
       await clickXstream();
@@ -462,12 +523,20 @@ describe('SeerHandler', () => {
       expect(Notifier.success).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
       expect(manager.deleteMedia).not.toHaveBeenCalled();
+<<<<<<< HEAD
       expect(xstreamButton()?.textContent).toBe('▶️ Xtreme');
+=======
+      expect(xstreamButton()?.textContent).toBe('Search Xstream');
+>>>>>>> master
       expect(xstreamButton()?.disabled).toBe(false);
     });
 
     it('does nothing on an unsupported live route', async () => {
+<<<<<<< HEAD
       await openRoute();
+=======
+      openRoute();
+>>>>>>> master
       navigate(UNSUPPORTED_ROUTE);
 
       await clickXstream();
@@ -480,7 +549,11 @@ describe('SeerHandler', () => {
     it('disables only the search button while opening and ignores duplicate clicks', async () => {
       const lookup = defer<string>();
       search.getXstreamUrl.mockReturnValue(lookup.promise);
+<<<<<<< HEAD
       await openRoute();
+=======
+      openRoute();
+>>>>>>> master
 
       xstreamButton()?.click();
       xstreamButton()?.click();
@@ -489,7 +562,11 @@ describe('SeerHandler', () => {
       expect(search.getXstreamUrl).toHaveBeenCalledTimes(1);
       expect(xstreamButton()?.textContent).toBe('Opening Xstream…');
       expect(xstreamButton()?.disabled).toBe(true);
+<<<<<<< HEAD
       expect(deleteButton()?.textContent).toBe('🗑️ Delete');
+=======
+      expect(deleteButton()?.textContent).toBe('Delete');
+>>>>>>> master
       expect(deleteButton()?.disabled).toBe(false);
       expect(openInTabMock).not.toHaveBeenCalled();
 
@@ -497,14 +574,22 @@ describe('SeerHandler', () => {
       await flush();
 
       expect(openInTabMock).toHaveBeenCalledTimes(1);
+<<<<<<< HEAD
       expect(xstreamButton()?.textContent).toBe('▶️ Xtreme');
+=======
+      expect(xstreamButton()?.textContent).toBe('Search Xstream');
+>>>>>>> master
       expect(xstreamButton()?.disabled).toBe(false);
     });
 
     it('opens no tab for a route that changed during the lookup', async () => {
       const lookup = defer<string>();
       search.getXstreamUrl.mockReturnValue(lookup.promise);
+<<<<<<< HEAD
       await openRoute();
+=======
+      openRoute();
+>>>>>>> master
       await clickXstream();
 
       navigate(TV_ROUTE);
@@ -513,14 +598,22 @@ describe('SeerHandler', () => {
 
       expect(openInTabMock).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
+<<<<<<< HEAD
       expect(xstreamButton()?.textContent).toBe('▶️ Xtreme');
+=======
+      expect(xstreamButton()?.textContent).toBe('Search Xstream');
+>>>>>>> master
       expect(xstreamButton()?.disabled).toBe(false);
     });
 
     it('opens no tab and reports nothing after the page exits during the lookup', async () => {
       const lookup = defer<string>();
       search.getXstreamUrl.mockReturnValue(lookup.promise);
+<<<<<<< HEAD
       await openRoute();
+=======
+      openRoute();
+>>>>>>> master
       await clickXstream();
 
       fakeWindow.dispatch('pagehide');
@@ -533,7 +626,11 @@ describe('SeerHandler', () => {
 
     it('reports an escaped lookup failure for eight seconds and restores the button', async () => {
       search.getXstreamUrl.mockRejectedValue(new Error('No Seer title for <b>/movie/603</b> "detail"'));
+<<<<<<< HEAD
       await openRoute();
+=======
+      openRoute();
+>>>>>>> master
 
       await clickXstream();
 
@@ -547,13 +644,21 @@ describe('SeerHandler', () => {
       expect(message).toContain('&lt;b&gt;/movie/603&lt;/b&gt;');
       expect(message).toContain('&quot;detail&quot;');
       expect(Notifier.success).not.toHaveBeenCalled();
+<<<<<<< HEAD
       expect(xstreamButton()?.textContent).toBe('▶️ Xtreme');
+=======
+      expect(xstreamButton()?.textContent).toBe('Search Xstream');
+>>>>>>> master
       expect(xstreamButton()?.disabled).toBe(false);
     });
 
     it('reports a failure when the tab cannot be opened', async () => {
       openInTabMock.mockRejectedValue(new Error('GM.openInTab <denied>'));
+<<<<<<< HEAD
       await openRoute();
+=======
+      openRoute();
+>>>>>>> master
 
       await clickXstream();
 
@@ -563,7 +668,11 @@ describe('SeerHandler', () => {
         FAILURE_TIMEOUT_MS
       );
       expect(jest.mocked(Notifier.error).mock.calls[0][0]).toContain('&lt;denied&gt;');
+<<<<<<< HEAD
       expect(xstreamButton()?.textContent).toBe('▶️ Xtreme');
+=======
+      expect(xstreamButton()?.textContent).toBe('Search Xstream');
+>>>>>>> master
       expect(xstreamButton()?.disabled).toBe(false);
     });
 
@@ -572,7 +681,11 @@ describe('SeerHandler', () => {
         navigate(TV_ROUTE);
         return Promise.reject(new Error('boom'));
       });
+<<<<<<< HEAD
       await openRoute();
+=======
+      openRoute();
+>>>>>>> master
 
       await clickXstream();
 
@@ -580,6 +693,7 @@ describe('SeerHandler', () => {
       expect(Notifier.error).not.toHaveBeenCalled();
       expect(xstreamButton()?.disabled).toBe(false);
     });
+<<<<<<< HEAD
 
     it('opens the search while the Delete button is hidden for a route without a media record', async () => {
       manager.hasMediaRecord.mockResolvedValue(false);
@@ -610,11 +724,17 @@ describe('SeerHandler', () => {
 
       expect(deleteButton()?.hidden).toBe(false);
     });
+=======
+>>>>>>> master
   });
 
   describe('delete flow', () => {
     it('deletes the captured route once and refreshes it after the delay', async () => {
+<<<<<<< HEAD
       await openRoute();
+=======
+      openRoute();
+>>>>>>> master
 
       await clickDelete();
 
@@ -624,22 +744,34 @@ describe('SeerHandler', () => {
       expect(manager.deleteMedia).toHaveBeenCalledWith(MOVIE_ROUTE);
       expect(search.getXstreamUrl).not.toHaveBeenCalled();
       expect(openInTabMock).not.toHaveBeenCalled();
+<<<<<<< HEAD
       expect(Notifier.success).toHaveBeenCalledWith(
         'Deleted &quot;Dune&quot;. Library files, requests and media entry removed. The page will refresh.'
       );
+=======
+      expect(Notifier.success).toHaveBeenCalledWith('Seer deletion finished for /movie/603. The page will refresh.');
+>>>>>>> master
       expect(fakeWindow.location.reload).not.toHaveBeenCalled();
 
       await advanceRefresh();
 
       expect(fakeWindow.location.reload).toHaveBeenCalledTimes(1);
+<<<<<<< HEAD
       expect(deleteButton()?.textContent).toBe('🗑️ Delete');
+=======
+      expect(deleteButton()?.textContent).toBe('Delete');
+>>>>>>> master
       expect(deleteButton()?.disabled).toBe(false);
     });
 
     it('keeps the button busy until the pending refresh runs', async () => {
       const deletion = defer<void>();
       manager.deleteMedia.mockReturnValue(deletion.promise);
+<<<<<<< HEAD
       await openRoute();
+=======
+      openRoute();
+>>>>>>> master
 
       deleteButton()?.click();
 
@@ -655,13 +787,21 @@ describe('SeerHandler', () => {
       await advanceRefresh();
 
       expect(fakeWindow.location.reload).toHaveBeenCalledTimes(1);
+<<<<<<< HEAD
       expect(deleteButton()?.textContent).toBe('🗑️ Delete');
+=======
+      expect(deleteButton()?.textContent).toBe('Delete');
+>>>>>>> master
       expect(deleteButton()?.disabled).toBe(false);
     });
 
     it('does nothing when the confirmation is cancelled', async () => {
       confirmMock.mockReturnValue(false);
+<<<<<<< HEAD
       await openRoute();
+=======
+      openRoute();
+>>>>>>> master
 
       await clickDelete();
 
@@ -670,13 +810,21 @@ describe('SeerHandler', () => {
       expect(Notifier.success).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
       expect(fakeWindow.location.reload).not.toHaveBeenCalled();
+<<<<<<< HEAD
       expect(deleteButton()?.textContent).toBe('🗑️ Delete');
+=======
+      expect(deleteButton()?.textContent).toBe('Delete');
+>>>>>>> master
     });
 
     it('ignores duplicate clicks while the deletion and its refresh are running', async () => {
       const deletion = defer<void>();
       manager.deleteMedia.mockReturnValue(deletion.promise);
+<<<<<<< HEAD
       await openRoute();
+=======
+      openRoute();
+>>>>>>> master
 
       deleteButton()?.click();
       deleteButton()?.click();
@@ -701,7 +849,11 @@ describe('SeerHandler', () => {
     });
 
     it('ignores a stale panel click on an unsupported live route', async () => {
+<<<<<<< HEAD
       await openRoute();
+=======
+      openRoute();
+>>>>>>> master
       navigate(UNSUPPORTED_ROUTE);
 
       await clickDelete();
@@ -710,6 +862,7 @@ describe('SeerHandler', () => {
       expect(manager.deleteMedia).not.toHaveBeenCalled();
     });
 
+<<<<<<< HEAD
     it('ignores a click while the route has no media record', async () => {
       manager.hasMediaRecord.mockResolvedValue(false);
       await openRoute();
@@ -794,6 +947,27 @@ describe('SeerHandler', () => {
         expect.stringContaining('Deletion failed for &quot;Dune&quot;'),
         FAILURE_TIMEOUT_MS
       );
+=======
+    it('deletes the live route captured at click, before the next poll', async () => {
+      openRoute();
+      navigate(TV_ROUTE);
+
+      await clickDelete();
+      await advanceRefresh();
+
+      expect(manager.deleteMedia).toHaveBeenCalledWith(TV_ROUTE);
+      expect(Notifier.success).toHaveBeenCalledWith('Seer deletion finished for /tv/1399. The page will refresh.');
+      expect(fakeWindow.location.reload).toHaveBeenCalledTimes(1);
+    });
+
+    it('notifies a failure with escaped HTML for eight seconds and never reloads', async () => {
+      manager.deleteMedia.mockRejectedValue(new Error('Seer file deletion failed: <b>4k</b> "files"'));
+      openRoute();
+
+      await clickDelete();
+
+      expect(Notifier.error).toHaveBeenCalledWith(expect.stringContaining('Seer deletion failed for /movie/603'), FAILURE_TIMEOUT_MS);
+>>>>>>> master
       const message = jest.mocked(Notifier.error).mock.calls[0][0];
       expect(message).not.toContain('<b>');
       expect(message).toContain('&lt;b&gt;4k&lt;/b&gt;');
@@ -804,6 +978,7 @@ describe('SeerHandler', () => {
       await advanceRefresh();
 
       expect(fakeWindow.location.reload).not.toHaveBeenCalled();
+<<<<<<< HEAD
       expect(deleteButton()?.textContent).toBe('🗑️ Delete');
       expect(deleteButton()?.disabled).toBe(false);
     });
@@ -848,13 +1023,22 @@ describe('SeerHandler', () => {
 
       expect(fakeWindow.location.reload).not.toHaveBeenCalled();
     });
+=======
+      expect(deleteButton()?.textContent).toBe('Delete');
+      expect(deleteButton()?.disabled).toBe(false);
+    });
+>>>>>>> master
   });
 
   describe('navigation during deletion', () => {
     it('finishes the confirmed route and only notifies it after navigating away', async () => {
       const deletion = defer<void>();
       manager.deleteMedia.mockReturnValue(deletion.promise);
+<<<<<<< HEAD
       await openRoute();
+=======
+      openRoute();
+>>>>>>> master
       await clickDelete();
 
       navigate(TV_ROUTE);
@@ -863,19 +1047,31 @@ describe('SeerHandler', () => {
 
       expect(manager.deleteMedia).toHaveBeenCalledTimes(1);
       expect(manager.deleteMedia).toHaveBeenCalledWith(MOVIE_ROUTE);
+<<<<<<< HEAD
       expect(Notifier.success).toHaveBeenCalledWith(
         'Deleted &quot;Dune&quot;. Library files, requests and media entry removed.'
       );
+=======
+      expect(Notifier.success).toHaveBeenCalledWith('Seer deletion finished for /movie/603.');
+>>>>>>> master
       expect(fakeWindow.location.reload).not.toHaveBeenCalled();
 
       await advanceRefresh();
 
       expect(fakeWindow.location.reload).not.toHaveBeenCalled();
+<<<<<<< HEAD
       expect(deleteButton()?.textContent).toBe('🗑️ Delete');
     });
 
     it('suppresses the pending refresh when navigating during the delay', async () => {
       await openRoute();
+=======
+      expect(deleteButton()?.textContent).toBe('Delete');
+    });
+
+    it('suppresses the pending refresh when navigating during the delay', async () => {
+      openRoute();
+>>>>>>> master
       await clickDelete();
 
       navigate(TV_ROUTE);
@@ -883,14 +1079,22 @@ describe('SeerHandler', () => {
 
       expect(Notifier.success).toHaveBeenCalledTimes(1);
       expect(fakeWindow.location.reload).not.toHaveBeenCalled();
+<<<<<<< HEAD
       expect(deleteButton()?.textContent).toBe('🗑️ Delete');
+=======
+      expect(deleteButton()?.textContent).toBe('Delete');
+>>>>>>> master
       expect(deleteButton()?.disabled).toBe(false);
     });
 
     it('stays silent when the page exits (pagehide) mid-flight without cancelling the deletion', async () => {
       const deletion = defer<void>();
       manager.deleteMedia.mockReturnValue(deletion.promise);
+<<<<<<< HEAD
       await openRoute();
+=======
+      openRoute();
+>>>>>>> master
       await clickDelete();
 
       fakeWindow.dispatch('pagehide');
@@ -904,7 +1108,11 @@ describe('SeerHandler', () => {
     });
 
     it('suppresses the pending refresh when the page exits during the delay', async () => {
+<<<<<<< HEAD
       await openRoute();
+=======
+      openRoute();
+>>>>>>> master
       await clickDelete();
 
       fakeWindow.dispatch('pagehide');

@@ -1,4 +1,8 @@
 import '../style/seer.less';
+<<<<<<< HEAD
+=======
+import { IGlobalErrorHandler } from '../handler/error';
+>>>>>>> master
 import { ISearchHandler } from '../handler/search';
 import { ISeerHandler } from '../handler/seer';
 import { Constants } from '../models/constant';
@@ -13,10 +17,20 @@ const AIRTEL_ORIGIN = new URL(Constants.SEER.AIRTEL_BASE_URL).origin;
 export class SeerApp {
   constructor(
     private readonly seerHandler: ISeerHandler,
+<<<<<<< HEAD
+=======
+    private readonly errorHandler: IGlobalErrorHandler,
+>>>>>>> master
     private readonly searchHandler: ISearchHandler
   ) {}
 
   public initialize(): void {
+<<<<<<< HEAD
+=======
+    // Register error handlers first
+    this.errorHandler.registerGlobalErrorHandlers();
+
+>>>>>>> master
     const origin = window.location.origin;
     if (origin === SEERR_ORIGIN) {
       this.seerHandler.initialize();

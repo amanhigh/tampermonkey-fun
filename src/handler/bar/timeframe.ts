@@ -32,15 +32,27 @@ const MISMATCH_GLYPH = '\u2260';
 
 /**
  * Mandatory data for the timeframe bar: the ticker captured before the selection
+<<<<<<< HEAD
  * load plus the backend selection (active codes and review exemption) for it.
+=======
+ * load plus the backend-active codes for it.
+>>>>>>> master
  *
  * Capturing the ticker first binds any later analysis to the exact request that
  * produced the painted selection, so a late resolve or a ticker switch never
  * queries against the wrong ticker.
  */
+<<<<<<< HEAD
 interface TimeFrameBarData extends TimeframeInfo {
   /** Ticker captured before the selection load. */
   readonly ticker: string;
+=======
+interface TimeFrameBarData {
+  /** Ticker captured before the selection load. */
+  readonly ticker: string;
+  /** Backend-active timeframe codes for {@link ticker}. */
+  readonly activeCodes: readonly TickerTimeframe[];
+>>>>>>> master
 }
 
 /**
@@ -64,8 +76,12 @@ export type ITimeFrameHandler = IBaseBar;
  * native `title` hint are updated in place once the analysis resolves. Full
  * analysis detail lives in the side panel, so no metric-level markup is rendered
  * here. Analysis failure is quiet (no notifications) and only marks indicators
+<<<<<<< HEAD
  * unavailable through BaseBar. Review-exempt ticker types skip this phase entirely
  * (see {@link shouldLoadIndicators}).
+=======
+ * unavailable through BaseBar.
+>>>>>>> master
  *
  * Compact-only: does not override {@link renderDetails} so BaseBar renders
  * compact content directly without disclosure shell.
@@ -101,8 +117,13 @@ export class TimeFrameBar extends BaseBar<TimeFrameBarData> implements ITimeFram
   /** @inheritdoc */
   protected async loadData(): Promise<TimeFrameBarData> {
     const ticker = this.domManager.getTicker();
+<<<<<<< HEAD
     const selection = await this.timeFrameManager.getTimeFrameInfo(ticker);
     return { ticker, ...selection };
+=======
+    const activeCodes = await this.timeFrameManager.getActiveTimeframes();
+    return { ticker, activeCodes };
+>>>>>>> master
   }
 
   /** @inheritdoc */
@@ -123,6 +144,7 @@ export class TimeFrameBar extends BaseBar<TimeFrameBarData> implements ITimeFram
   }
 
   /**
+<<<<<<< HEAD
    * Skips the Barkat analysis phase for review-exempt ticker types (INDEX/COMPOSITE):
    * those tickers have no meaningful timeframe review, so chips paint from the
    * selection alone with no marker and no analysis request.
@@ -155,6 +177,29 @@ export class TimeFrameBar extends BaseBar<TimeFrameBarData> implements ITimeFram
         continue;
       }
 
+=======
+   * Loads the Barkat analysis for the captured ticker and emits in-place
+   * badge/title updates for mismatching chips only: one update per assessed row
+   * whose `pass` verdict disagrees with the painted selection. Matching rows and
+   * unassessed timeframes (YR, DL never appear as analysis rows) are left
+   * undecorated, so a full match yields no updates at all. A rejection propagates
+   * to BaseBar, which marks indicators unavailable quietly.
+   *
+   * @inheritdoc
+   */
+  protected async loadIndicators(data: TimeFrameBarData): Promise<readonly BarIndicatorUpdate[]> {
+    const analysis = await this.barkatManager.getTickerAnalysis(data.ticker);
+    const activeCodes = data.activeCodes;
+    const updates: BarIndicatorUpdate[] = [];
+
+    for (const row of analysis.timeframes) {
+      const isActive = activeCodes.includes(row.timeframe);
+      const isPreferred = row.status === 'pass';
+      if (isActive === isPreferred) {
+        continue;
+      }
+
+>>>>>>> master
       updates.push({
         selector: `.${this.bemElement('chip')}[${this.bemDataAttr('code')}="${row.timeframe}"]`,
         badge: MISMATCH_GLYPH,

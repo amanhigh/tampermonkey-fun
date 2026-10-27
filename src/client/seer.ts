@@ -14,6 +14,7 @@ export interface ISeerClient extends IBaseClient {
   getDeleteTarget(detailPath: SeerDetailPath): Promise<SeerDeleteTarget>;
 
   /**
+<<<<<<< HEAD
    * Report whether a Seer detail page carries a media record.
    * @param detailPath - Canonical detail path, `/movie/{tmdbId}` or `/tv/{id}`
    * @returns Promise resolving with true when the page has a valid media record
@@ -21,6 +22,8 @@ export interface ISeerClient extends IBaseClient {
   hasMediaRecord(detailPath: SeerDetailPath): Promise<boolean>;
 
   /**
+=======
+>>>>>>> master
    * Resolve the Airtel Xstream search title of a Seer detail page.
    * @param detailPath - Canonical detail path, `/movie/{tmdbId}` or `/tv/{id}`
    * @returns Promise resolving with the first usable title of the page
@@ -69,6 +72,7 @@ export class SeerClient extends BaseClient implements ISeerClient {
   }
 
   /** @inheritdoc */
+<<<<<<< HEAD
   async hasMediaRecord(detailPath: SeerDetailPath): Promise<boolean> {
     const payload = await this.makeRequest<unknown>(detailPath);
     const detail = toRecord(payload, 'detail response');
@@ -85,6 +89,8 @@ export class SeerClient extends BaseClient implements ISeerClient {
   }
 
   /** @inheritdoc */
+=======
+>>>>>>> master
   async getSearchTitle(detailPath: SeerDetailPath): Promise<string> {
     const payload = await this.makeRequest<unknown>(detailPath);
     return this.decodeSearchTitle(payload, detailPath);

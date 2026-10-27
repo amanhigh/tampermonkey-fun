@@ -141,7 +141,14 @@ export class Factory {
     picasso: (): PicassoApp =>
       Factory.getInstance('picassoApp', () => new PicassoApp(Factory.handler.global(), Factory.handler.picasso())),
     seer: (): SeerApp =>
+<<<<<<< HEAD
       Factory.getInstance('seerApp', () => new SeerApp(Factory.handler.seer(), Factory.handler.search())),
+=======
+      Factory.getInstance(
+        'seerApp',
+        () => new SeerApp(Factory.handler.seer(), Factory.handler.global(), Factory.handler.search())
+      ),
+>>>>>>> master
   };
 
   /**
@@ -655,7 +662,11 @@ export class Factory {
     seer: (): ISeerHandler =>
       Factory.getInstance('seerHandler', () => new SeerHandler(Factory.manager.seer(), Factory.manager.search())),
     search: (): ISearchHandler =>
+<<<<<<< HEAD
       Factory.getInstance('searchHandler', () => new SearchHandler(Factory.manager.search(), Factory.util.observer())),
+=======
+      Factory.getInstance('searchHandler', () => new SearchHandler(Factory.manager.search())),
+>>>>>>> master
   };
 
   /**

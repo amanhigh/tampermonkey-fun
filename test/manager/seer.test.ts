@@ -24,7 +24,10 @@ describe('SeerManager', () => {
     client = {
       getBaseUrl: jest.fn().mockReturnValue('http://seerr.media.lan/api/v1'),
       getDeleteTarget: jest.fn().mockResolvedValue(buildTarget()),
+<<<<<<< HEAD
       hasMediaRecord: jest.fn().mockResolvedValue(true),
+=======
+>>>>>>> master
       getSearchTitle: jest.fn().mockResolvedValue('Dune'),
       deleteFiles: jest.fn().mockResolvedValue(undefined),
       deleteRequest: jest.fn().mockResolvedValue(undefined),
@@ -50,6 +53,7 @@ describe('SeerManager', () => {
     );
   });
 
+<<<<<<< HEAD
   describe('hasMediaRecord', () => {
     it('delegates the canonical movie route to the client', async () => {
       await expect(manager.hasMediaRecord('/movie/603/')).resolves.toBe(true);
@@ -134,6 +138,8 @@ describe('SeerManager', () => {
     });
   });
 
+=======
+>>>>>>> master
   describe('deleteMedia', () => {
     it('runs files, then requests, then the media entry for the canonical route', async () => {
       await manager.deleteMedia('/movie/603/');

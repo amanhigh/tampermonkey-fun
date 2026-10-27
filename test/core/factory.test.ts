@@ -159,6 +159,7 @@ describe('Factory Seer Providers', () => {
   });
 
   it('should provide singleton Seer client, manager, search manager, search handler, handler and app without IO', () => {
+<<<<<<< HEAD
     const globalSpy = jest.spyOn(Factory.handler, 'global');
 
     try {
@@ -189,5 +190,28 @@ describe('Factory Seer Providers', () => {
     } finally {
       globalSpy.mockRestore();
     }
+=======
+    const client = Factory.client.seer();
+    const manager = Factory.manager.seer();
+    const search = Factory.manager.search();
+    const searchHandler = Factory.handler.search();
+    const handler = Factory.handler.seer();
+    const app = Factory.app.seer();
+
+    expect(client).toBeDefined();
+    expect(manager).toBeDefined();
+    expect(search).toBeDefined();
+    expect(searchHandler).toBeDefined();
+    expect(handler).toBeDefined();
+    expect(app).toBeDefined();
+
+    // Verify singleton behavior: construction must not start any runtime work
+    expect(Factory.client.seer()).toBe(client);
+    expect(Factory.manager.seer()).toBe(manager);
+    expect(Factory.manager.search()).toBe(search);
+    expect(Factory.handler.search()).toBe(searchHandler);
+    expect(Factory.handler.seer()).toBe(handler);
+    expect(Factory.app.seer()).toBe(app);
+>>>>>>> master
   });
 });
