@@ -66,9 +66,8 @@ export default [
       'no-implied-eval': 'error',
 
       // Code quality rules
-      'max-lines': ['warn', 200],
-      'max-lines': ['error', 500],
-      'max-lines-per-function': ['warn', 50],
+      'max-lines': ['error', { max: 500, skipComments: true, skipBlankLines: true }],
+      'max-lines-per-function': ['warn', { max: 50, skipComments: true, skipBlankLines: true }],
       complexity: ['warn', 10],
       'max-depth': ['warn', 3],
       'max-nested-callbacks': ['warn', 3],

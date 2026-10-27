@@ -47,7 +47,7 @@ describe('WatchListHandler', () => {
       navigateTickers: jest.fn(),
     } as unknown as jest.Mocked<IDomManager>;
 
-    // WatchListHandler uses a four-argument constructor (no bar dependency)
+    // WatchListHandler uses a four-argument constructor (no bar or Barkat dependency)
     handler = new WatchListHandler(
       mockWatchlistManager,
       mockSyncUtil,
@@ -212,6 +212,5 @@ describe('WatchListHandler', () => {
       expect(mockCategoryManager.evictTicker).not.toHaveBeenCalled();
       expect(mockWatchlistManager.refreshTickers).toHaveBeenCalledWith(['TV:INFY']);
     });
-
   });
 });

@@ -1,9 +1,8 @@
 /**
- * Constants for the retained IMDb list and Xtreme actions
+ * Constants for the retained IMDb list action
  */
 export const IMDB_CONSTANTS = {
   SELECTORS: {
-    MOVIE_TITLE: 'h1',
     LIST_LINKS: 'a.ipc-title-link-wrapper',
   },
 };

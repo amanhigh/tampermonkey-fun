@@ -54,7 +54,7 @@ describe('BarkatClient', () => {
   describe('constructor', () => {
     it('should create instance with default Barkat base URL', () => {
       expect(new BarkatClient().getBaseUrl()).toBe(Constants.BARKAT.BASE_URL);
-      expect(Constants.BARKAT.BASE_URL).toBe('http://localhost:8050/v1/api');
+      expect(Constants.BARKAT.BASE_URL).toBe('http://barkat.app.lan/v1/api');
     });
 
     it('should create instance with custom base URL', () => {
@@ -100,6 +100,33 @@ describe('BarkatClient', () => {
       expect(error.message).toBe('Failed to get ticker analysis for INTC: ticker not found');
       expect(error.cause).toBe(apiError);
       expect(ApiError.isNotFoundError(error)).toBe(true);
+    });
+  });
+
+  describe('warmupTickers', () => {
+    it('should POST /tickers/warm-up as JSON with the tickers array and resolve without the body', async () => {
+      const acceptanceEnvelope = { status: 'success', data: { tickers: ['BRK.B', 'INTC'] } };
+      mockMakeRequest.mockResolvedValue(acceptanceEnvelope as any);
+
+      await expect(barkatClient.warmupTickers(['BRK.B', 'INTC'])).resolves.toBeUndefined();
+
+      expect(mockMakeRequest).toHaveBeenCalledTimes(1);
+      expect(mockMakeRequest).toHaveBeenCalledWith('/tickers/warm-up', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        data: JSON.stringify({ tickers: ['BRK.B', 'INTC'] }),
+      });
+    });
+
+    it('should wrap request errors and preserve the original cause', async () => {
+      const apiError = new ApiError(500, 'queue unavailable');
+      mockMakeRequest.mockRejectedValue(apiError);
+
+      const error = await barkatClient.warmupTickers(['INTC', 'BRK.B']).catch((err) => err);
+
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toBe('Failed to warm up tickers: INTC, BRK.B: queue unavailable');
+      expect(error.cause).toBe(apiError);
     });
   });
 });

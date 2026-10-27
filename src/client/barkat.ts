@@ -3,9 +3,9 @@ import { BarkatTickerAnalysis } from '../models/barkat';
 import { BaseClient, IBaseClient, wrapClientError } from './base';
 
 /**
- * Read-only client for the Barkat analysis API.
- * Contract and policy are owned by the Barkat backend (see models/barkat.ts);
- * this layer only transports responses.
+ * Transport client for the Barkat API.
+ * Request/response contract, accept semantics and policy are owned by the
+ * Barkat backend (see models/barkat.ts); this layer only transports payloads.
  */
 export interface IBarkatClient extends IBaseClient {
   /**
@@ -15,9 +15,19 @@ export interface IBarkatClient extends IBaseClient {
    * @returns Promise resolving to the analysis payload
    */
   getTickerAnalysis(ticker: string): Promise<BarkatTickerAnalysis>;
+
+  /**
+   * Ask the backend to warm up its cache for the given tickers.
+   * Raw ticker symbols are sent as-is; no exchange conversion is applied.
+   * The backend acknowledges the request and performs the warm-up work in the
+   * background. Acceptance payload is not used by this client.
+   * @param tickers - Native ticker symbols, no exchange prefix (e.g. ["BRK.B", "INTC"])
+   * @returns Promise resolving once the backend has accepted the request
+   */
+  warmupTickers(tickers: readonly string[]): Promise<void>;
 }
 
-/** Read-only Barkat analysis client (defaults to Constants.BARKAT.BASE_URL). */
+/** Barkat transport client (defaults to Constants.BARKAT.BASE_URL). */
 export class BarkatClient extends BaseClient implements IBarkatClient {
   /**
    * Creates an instance of BarkatClient.
@@ -34,6 +44,19 @@ export class BarkatClient extends BaseClient implements IBarkatClient {
       return response.data;
     } catch (error) {
       throw wrapClientError(error, `Failed to get ticker analysis for ${ticker}`);
+    }
+  }
+
+  /** @inheritdoc */
+  async warmupTickers(tickers: readonly string[]): Promise<void> {
+    try {
+      await this.makeRequest<void>('/tickers/warm-up', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        data: JSON.stringify({ tickers }),
+      });
+    } catch (error) {
+      throw wrapClientError(error, `Failed to warm up tickers: ${tickers.join(', ')}`);
     }
   }
 }

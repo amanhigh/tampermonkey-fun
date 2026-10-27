@@ -112,6 +112,16 @@ jest.mock('../../../src/util/notify', () => ({
 
 // ── Helpers ──
 
+/**
+ * Non-empty root paints. `refresh()` first clears the root (empty bars stay hidden
+ * via CSS), so content assertions must skip that clear call.
+ */
+function contentHtmlCalls(): string[] {
+  return mockRootEl.html.mock.calls
+    .map((c: any[]) => c[0] as string)
+    .filter((html: string) => html !== '');
+}
+
 function getChipMouseDownHandler(): ((event: any) => void) | undefined {
   const call = mockRootEl.on.mock.calls.find(
     (c: any[]) => typeof c[0] === 'string' && c[0].startsWith('mousedown') && c[1] === CHIP_SELECTOR
@@ -320,7 +330,7 @@ describe('WatchlistBar', () => {
 
       await bar.refresh();
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+      const html = contentHtmlCalls()[0];
       expect(html).toContain(BEM.TOGGLE);
       expect(html).toContain('aria-expanded');
       expect(html).toContain('aria-controls');
@@ -334,7 +344,7 @@ describe('WatchlistBar', () => {
 
       await bar.refresh();
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+      const html = contentHtmlCalls()[0];
       expect(html).toContain(BEM.DETAILS);
     });
 
@@ -346,7 +356,7 @@ describe('WatchlistBar', () => {
 
       await bar.refresh();
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+      const html = contentHtmlCalls()[0];
       expect(html).toContain('aria-expanded="false"');
     });
   });
@@ -362,7 +372,7 @@ describe('WatchlistBar', () => {
 
       await bar.refresh();
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+      const html = contentHtmlCalls()[0];
 
       for (const cat of COMPACT_CATEGORIES) {
         expect(html).toContain(cat.label);
@@ -383,7 +393,7 @@ describe('WatchlistBar', () => {
 
       await bar.refresh();
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+      const html = contentHtmlCalls()[0];
 
       // Extract only the toggle button portion (between <button...> and </button>)
       const toggleMatch = html.match(/<button[^>]*>([\s\S]*?)<\/button>/);
@@ -401,7 +411,7 @@ describe('WatchlistBar', () => {
 
       await bar.refresh();
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+      const html = contentHtmlCalls()[0];
 
       for (const cat of COMPACT_CATEGORIES) {
         expect(html).toContain(cat.label);
@@ -420,7 +430,7 @@ describe('WatchlistBar', () => {
 
       await bar.refresh();
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+      const html = contentHtmlCalls()[0];
 
       expect(html).toContain('10');
       expect(html).toContain('5');
@@ -437,7 +447,7 @@ describe('WatchlistBar', () => {
 
       await bar.refresh();
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+      const html = contentHtmlCalls()[0];
 
       // DEFAULT_DAILY count (8) + uncategorizedCount (4) = 12
       expect(html).toContain('12');

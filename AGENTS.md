@@ -10,23 +10,23 @@
 ## Development Commands
 
 ### Userscript Building
-- `just experiment`: Build experiment script for debugging (outputs to `dist/index.dev.user.js`)
-- `just barkat`: Build Barkat userscript
-- `just imdb`: Build IMDB userscript  
-- `just picasso`: Build Picasso userscript
+- `just setup [project]`: Format, compile, lint, test, then build and watch one userscript in development mode — the project defaults to `barkat` directly in the Justfile recipe; pass `barkat`, `experiment`, `imdb`, `picasso` or `seer` to select explicitly
+- `just install [project]`: Build all five production userscripts plus the selected project's development build, then serve them for local installation
+- `just bundle [project] [mode]`: Bundle with webpack directly — defaults to `all` + `production`; bypasses the quality gates (see the README's [Build](README.md#build) section)
+- Build mechanics, debug artifacts and install steps live in the README's [Build](README.md#build), [Debug](README.md#debug) and [Local Installation](README.md#local-installation) sections; refer to them instead of restating them.
 
 ### Project Management
 - `just prepare`: One-time NPM setup
+- `just build`: Format, compile and lint (see the README's [Build](README.md#build) section)
 - `just clean`: Remove dist and node_modules
-- `just reset`: Clean and rebuild everything
-- `just analyze`: Build with bundle analyzer
+- `just reset`: Clean, then prepare and setup again
 
 ## Architecture Overview
 
 This is a TypeScript-based Tampermonkey/Greasemonkey userscript development environment with webpack bundling.
 
 ### Core Structure
-- **`src/core/`**: Main application entry points (experiment.ts, barkat.ts, imdb.ts, picasso.ts)
+- **`src/core/`**: Main application entry points (experiment.ts, barkat.ts, imdb.ts, picasso.ts, seer.ts)
 - **`src/handler/`**: Event handlers and user interaction logic
 - **`src/manager/`**: Business logic managers for different features
 - **`src/models/`**: Data models and type definitions
@@ -37,15 +37,15 @@ This is a TypeScript-based Tampermonkey/Greasemonkey userscript development envi
 
 ### Key Patterns
 - Factory pattern used for dependency injection (`src/core/factory.ts`)
-- Each core script has its own webpack config in `config/` directory
-- Experiment script (`src/core/experiment.ts`) is the main development/debug entry point
-- Production builds require uncommenting entry point calls in core files
+- One shared webpack factory builds every userscript, and per-script differences are data rather than configs; see the README's [Build](README.md#build) section
+- Experiment script (`src/core/experiment.ts`) is the scratch entry point, selected with `just setup experiment`
+- Production entry points are already wired; see the README's
+  [Local Installation](README.md#local-installation) section. Seer deletion behaviour is documented in the README's [Seer Deletion](README.md#seer-deletion) section.
 
 ### Development Workflow
-1. Modify experiment entry point in `src/core/experiment.ts`
-2. Run `just setup` to build and start live reload
-3. Load `dist/index.dev.user.js` in Tampermonkey with file:// require for hot reloading
-4. For production: uncomment entry point in target core file, run specific just command, copy `dist/index.prod.user.js`
+1. Run `just prepare` once.
+2. Install first — `just install [project]`, then install from the served URLs (see the README's [Local Installation](README.md#local-installation) section).
+3. Run `just setup [project]` to gate, build and watch one userscript (see the README's [Debug](README.md#debug) section).
 
 ### Testing
 - Jest configuration with TypeScript support

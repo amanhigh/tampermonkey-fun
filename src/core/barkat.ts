@@ -15,6 +15,9 @@ import { IToolbarHandler } from '../handler/toolbar';
 import { Factory } from './factory';
 
 export class Barkat {
+  // Application bootstrap: one collaborator per site handler must be injected
+  // together so initialize() can wire each site without hidden lookups.
+  // eslint-disable-next-line max-params
   constructor(
     private readonly errorHandler: IGlobalErrorHandler,
     private readonly uiUtil: UIUtil,
@@ -45,8 +48,8 @@ export class Barkat {
     return window.location.host.includes('localhost');
   }
 
-  private isDashyHost(): boolean {
-    return window.location.port === '8050';
+  private isDashboardSite(): boolean {
+    return window.location.origin === new URL(Constants.BARKAT.BASE_URL).origin;
   }
 
   private setupInvestingUI(): void {
@@ -65,20 +68,18 @@ export class Barkat {
     this.journalSyncHandler.registerTvJournalRecordedListener();
   }
 
-  private setupDashyHost(): void {
-    console.info('Barkat dashy host detected');
+  private setupDashboardHost(): void {
+    console.info('Barkat dashboard host detected');
     this.dashboardSyncHandler.registerDashyListner();
   }
 
   initialize(): void {
     console.info('Initializing Barkat');
     this.errorHandler.registerGlobalErrorHandlers();
-    if (this.isLocalhostSite()) {
-      if (this.isDashyHost()) {
-        this.setupDashyHost();
-      } else {
-        this.setupJournalHost();
-      }
+    if (this.isDashboardSite()) {
+      this.setupDashboardHost();
+    } else if (this.isLocalhostSite()) {
+      this.setupJournalHost();
     } else if (this.isInvestingSite()) {
       this.setupInvestingUI();
     } else if (this.isTradingViewSite()) {
@@ -126,4 +127,6 @@ export function RunBarkat(): void {
   barkat.initialize();
 }
 
-// RunBarkat();
+if (require.main?.id === module.id) {
+  RunBarkat();
+}

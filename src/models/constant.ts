@@ -88,6 +88,11 @@ export const Constants = Object.freeze({
       CHECKBOXES: {
         SWIFT: 'aman-swift', // Old Name: swiftId
       },
+      SEER: {
+        PANEL: 'seerr-sidekick-panel',
+        XSTREAM_BUTTON: 'seerr-sidekick-xstream',
+        DELETE_BUTTON: 'seerr-sidekick-delete',
+      },
     },
   },
 
@@ -228,10 +233,19 @@ Support:
     PRICE_ALERT_PAGE_LIMIT: 10,
   },
 
-  /** Barkat read-only analysis API */
+  /** Barkat analysis + warm-up API (contract owned by the Barkat backend) */
   // FIXME: Extract Barkat configs (BASE_URL, webpack match/connect/grant) into a YAML file.
   BARKAT: {
-    BASE_URL: 'http://localhost:8050/v1/api',
+    BASE_URL: 'http://barkat.app.lan/v1/api',
+  },
+
+  /** Seerr media server API consumed by the Seer userscript */
+  SEER: {
+    BASE_URL: 'http://seerr.media.lan/api/v1',
+    /** Airtel Xstream origin used for title search links */
+    AIRTEL_BASE_URL: 'https://www.airtelxstream.in',
+    /** Marker appended to every Airtel Xstream url Seer opens or resolves */
+    AUTO_MARKER: '#seer-auto',
   },
 
   /** Cache configuration for manager lookups */

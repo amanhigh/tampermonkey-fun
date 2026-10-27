@@ -2,9 +2,9 @@ set shell := ["bash", "-cu"]
 
 import './.just/lib.just'
 
-# ── Default ──
+# ── Help ──
 [doc('Show available recipes')]
-default:
+help:
     just --list
 
 # ── Format & Quality ──
@@ -44,38 +44,22 @@ test:
 
 # ── Build scripts ──
 [group('run')]
-[doc('Build experiment userscript (dev)')]
-experiment:
-    just _title "BUILD" "Experiment"
-    just _info "CSP" "https://chromewebstore.google.com/detail/disable-content-security/ieelmcmcagommplceebfedjlakkhpden?pli=1"
-    just _info "MAIN"  "src/core/experiment.ts (Keep only one)"
-    just _detail "DEBUG" "dist/index.dev.user.js"
-    just _detail "PROD"  "dist/index.prod.user.js"
-    {{npm}} run experiment
+[doc('Bundle userscripts with webpack (all projects, production mode by default)')]
+bundle project="all" mode="production":
+    {{webpack}} --env project={{quote(project)}} --mode {{quote(mode)}}
 
 [group('run')]
-[doc('Build Barkat userscript')]
-barkat:
-    just _title "BUILD" "Barkat"
-    {{npm}} run barkat
-
-[group('run')]
-[doc('Build IMDB userscript')]
-imdb:
-    just _title "BUILD" "IMDB"
-    {{npm}} run imdb
-
-[group('run')]
-[doc('Build Picasso userscript')]
-picasso:
-    just _title "BUILD" "Picasso"
-    {{npm}} run picasso
-
-[group('run')]
-[doc('Analyze bundle size')]
-analyze:
-    just _title "ANALYZE" "Bundle"
-    {{npm}} run analyze
+[doc('Build every production userscript plus the selected development build, then serve them')]
+install project="barkat": (bundle "all" "production") (bundle project "development")
+    just _title "BUILD" "Install"
+    just _detail "PROD" "http://127.0.0.1:8765/barkat.user.js"
+    just _detail "PROD" "http://127.0.0.1:8765/experiment.user.js"
+    just _detail "PROD" "http://127.0.0.1:8765/imdb.user.js"
+    just _detail "PROD" "http://127.0.0.1:8765/picasso.user.js"
+    just _detail "PROD" "http://127.0.0.1:8765/seer.user.js"
+    just _detail "DEV"  "http://127.0.0.1:8765/{{project}}.dev.user.js"
+    just _info "STOP" "Press Ctrl+C to stop the local server"
+    python3 -m http.server 8765 --bind 127.0.0.1 --directory dist/install
 
 # ── Setup ──
 [group('setup')]
@@ -88,8 +72,13 @@ _setup-npm:
 prepare: _setup-npm
 
 [group('setup')]
-[doc('Build, test, and run experiment')]
-setup: build test experiment
+[doc('Build, test, then build and watch the selected userscript')]
+setup project="barkat": build test
+    just _title "BUILD" "Setup"
+    just _info "MAIN" "src/core/{{project}}.ts"
+    just _detail "DEBUG" "dist/debug/{{project}}.js"
+    just _detail "DEV" "dist/install/{{project}}.dev.user.js"
+    {{webpack}} --env project={{quote(project)}} --mode development --watch
 
 # ── Clean ──
 [group('clean')]
@@ -105,19 +94,3 @@ clean: _clean-node
 [doc('Clean and rebuild everything')]
 reset: clean _setup-npm setup
     just _info "RESET" "Clean build complete"
-
-[group('setup')]
-[doc('Full bootstrap: prepare + reset')]
-all: reset
-
-# ── Misc ──
-[group('info')]
-[doc('Show project info')]
-info:
-    just _title "INFO" "tampermonkey-fun"
-    just _detail "SCRIPTS" "experiment, barkat, imdb, picasso"
-    just _detail "TEST"    "jest"
-    just _detail "LINT"    "eslint + prettier"
-
-[group('info')]
-infos: info

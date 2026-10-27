@@ -14,9 +14,7 @@ export class ImdbApp {
     // Register error handlers first
     this.errorHandler.registerGlobalErrorHandlers();
 
-    if (this.imdbManager.isMovieTab()) {
-      GM.registerMenuCommand('Xtreme', () => this.imdbHandler.handleXtremeSearch());
-    } else {
+    if (!this.imdbManager.isMovieTab()) {
       // IMDb list and search results
       GM.registerMenuCommand('List', () => this.imdbHandler.handleListMovies());
     }
@@ -29,4 +27,6 @@ export function RunImdb(): void {
   app.initialize();
 }
 
-// RunImdb();
+if (require.main?.id === module.id) {
+  RunImdb();
+}

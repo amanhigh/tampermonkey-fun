@@ -1,11 +1,10 @@
-import '../style/main.less';
-import { Factory } from './factory';
+import '../style/_button.less';
+import '../style/_input.less';
+import '../style/_label.less';
 import { UIUtil } from '../util/ui';
-import { IKeyUtil } from '../util/key';
+import { KeyUtil, IKeyUtil } from '../util/key';
+import { SyncUtil } from '../util/sync';
 import { Notifier } from '../util/notify';
-import { RunBarkat } from './barkat';
-
-// FIXME: Migrate Seer Script to this Repo, not checked in currently.
 
 interface TestComponents {
   input: JQuery;
@@ -127,10 +126,10 @@ export class ExperimentApp {
 
 export function RunExperiment(): void {
   console.info('Tamperfun Experiment started');
-  const app = new ExperimentApp(Factory.util.ui(), Factory.util.key());
+  const app = new ExperimentApp(new UIUtil(), new KeyUtil(new SyncUtil()));
   app.initialize();
 }
 
-// RunExperiment();
-
-RunBarkat();
+if (require.main?.id === module.id) {
+  RunExperiment();
+}

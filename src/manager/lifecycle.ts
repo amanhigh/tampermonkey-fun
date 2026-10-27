@@ -57,6 +57,9 @@ export interface ILifecycleManager {
  * 8. Publish TICKER_TRACKING_STOPPED
  */
 export class LifecycleManager implements ILifecycleManager {
+  // Ordered lifecycle cleanup requires each collaborator (ticker, category,
+  // alert ticker, publisher, alert, price alert, investing) to be explicit.
+  // eslint-disable-next-line max-params
   constructor(
     private readonly tickerClient: ITickerClient,
     private readonly categoryManager: ICategoryManager,

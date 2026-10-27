@@ -3,12 +3,10 @@ import { ImdbManager } from '../../src/manager/imdb';
 describe('ImdbManager', () => {
   let manager: ImdbManager;
   let originalWindowDescriptor: PropertyDescriptor | undefined;
-  let originalJQueryDescriptor: PropertyDescriptor | undefined;
 
   beforeEach(() => {
     manager = new ImdbManager();
     originalWindowDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'window');
-    originalJQueryDescriptor = Object.getOwnPropertyDescriptor(globalThis, '$');
   });
 
   afterEach(() => {
@@ -16,11 +14,6 @@ describe('ImdbManager', () => {
       Object.defineProperty(globalThis, 'window', originalWindowDescriptor);
     } else {
       Reflect.deleteProperty(globalThis, 'window');
-    }
-    if (originalJQueryDescriptor) {
-      Object.defineProperty(globalThis, '$', originalJQueryDescriptor);
-    } else {
-      Reflect.deleteProperty(globalThis, '$');
     }
   });
 
@@ -35,15 +28,5 @@ describe('ImdbManager', () => {
     });
 
     expect(manager.isMovieTab()).toBe(expected);
-  });
-
-  it('returns the IMDb title without its year', () => {
-    const jqueryMock = jest.fn().mockReturnValue({
-      text: jest.fn().mockReturnValue('Dune: Part Two (2024)'),
-    });
-    Object.defineProperty(globalThis, '$', { configurable: true, value: jqueryMock });
-
-    expect(manager.getMovieTitle()).toBe('Dune: Part Two');
-    expect(jqueryMock).toHaveBeenCalledWith('h1');
   });
 });

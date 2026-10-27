@@ -1,17 +1,33 @@
 import { IDomainEventConsumer, ISubscriber } from '../../manager/event_bus';
 import { DomainEventType } from '../../models/domain_event';
-import { BAR_CLASS, BarId, BarStatus } from '../../models/bar';
+import {
+  BAR_CLASS,
+  BAR_INDICATOR_BADGE_CLASS,
+  BAR_INDICATORS_CLASS,
+  BarId,
+  BarIndicatorState,
+  BarIndicatorUpdate,
+  BarStatus,
+} from '../../models/bar';
+import { escapeHtml } from '../../util/html';
+
+/** Accessible labels for the shared optional-indicator marker. */
+const INDICATORS_LOADING_LABEL = 'Loading indicators';
+const INDICATORS_UNAVAILABLE_LABEL = 'Indicators unavailable';
 
 /**
- * Interface for bar-style UI components that manage a compact/expanded content lifecycle
- * with domain-event-driven refresh.
+ * Contract for bar-style UI components: compact/expanded content lifecycle,
+ * domain-event refresh, and optional post-mandatory indicators.
  *
- * Extends {@link IDomainEventConsumer} so bars can register event subscriptions
- * that trigger automatic refresh.
+ * Extends {@link IDomainEventConsumer} so bars can register refresh
+ * subscriptions that trigger an automatic refresh. Consumers only see
+ * {@link IBaseBar.refresh} and {@link IDomainEventConsumer.registerEvents};
+ * rendering is internal and driven by the protected lifecycle below.
  *
  * ## BEM Contract
  *
- * Block class is the {@link BarId} value itself (e.g. `aman-alert-ticker-bar`).
+ * The block class is the {@link BarId} value itself (e.g. `aman-alert-ticker-bar`),
+ * so every class, child id, and data attribute is scoped to that one bar.
  *
  * | Helper                | Pattern                              | Example                                  |
  * |-----------------------|--------------------------------------|------------------------------------------|
@@ -22,26 +38,28 @@ import { BAR_CLASS, BarId, BarStatus } from '../../models/bar';
  * | `bemChildId(name)`    | `{block}-{name}`                     | `aman-alert-ticker-bar-count`            |
  * | `bemDataAttr(name)`   | `data-{ns}-{name}`                   | `data-alert-ticker-symbol`               |
  *
- * Namespace (`ns`) is derived by stripping a leading `aman-` and trailing `-bar`
- * from the {@link BarId} value (e.g. `aman-alert-ticker-bar` → `alert-ticker`).
- *
- * Event namespace is `bar-{ns}` (e.g. `bar-alert-ticker`) and is used for both
- * the jQuery `click` and `contextmenu` namespaced bindings.
+ * Namespace (`ns`) strips a leading `aman-` and trailing `-bar` from the
+ * {@link BarId} value (`aman-alert-ticker-bar` → `alert-ticker`). The event
+ * namespace is `bar-{ns}` (`bar-alert-ticker`) for `click` and `contextmenu`
+ * bindings, so handlers for distinct bars never collide.
  *
  * ## Lifecycle Ordering
  *
- * 1. **`render(data)`** — (protected) stores data, resets expanded, calls `paint()` (full bind),
- *    and invalidates any in-flight `refresh()`.
- * 2. **`paint(bindHandlers)`** — queries root `#<barId>`, early-returns if `$root.length === 0`,
- *    renders a disclosure shell (`<button>` toggle + `<div>` details container),
- *    ensures block class, syncs expanded modifier and `aria-expanded`/`hidden`,
- *    optionally binds delegated click + contextmenu (only on full paint), calls `onPaint()` last.
- * 3. **`toggle()`** — flips expanded, calls `paint(false)` (no handler rebinding).
- * 4. **`onLeftClick(event)`** — default calls `toggle()`; override replaces unless `super` called.
- * 5. **`onRightClick(event, data)`** — protected hook for context-menu actions.
- * 6. **`onPaint($root, data)`** — default no-op called after handler binding.
- * 7. **`refresh()`** — latest-request-wins: increments revision, awaits `loadData()`,
- *    calls `render()` only if revision is current.
+ * 1. **`render(data)`** — (protected) stores data, resets expanded and indicator
+ *    presentation (`READY`/`[]`), calls `paint(true)`, and invalidates in-flight `refresh()`.
+ * 2. **`paint(bindHandlers)`** — queries root, renders the disclosure shell (or compact
+ *    content when `renderDetails` is `null`), syncs root/status/expanded state, binds
+ *    handlers on full paint, re-applies retained indicators, then calls `onPaint()`.
+ * 3. **`toggle()`** — flips expanded and repaints without rebinding handlers.
+ * 4. **`onLeftClick(event)`** — defaults to `toggle()`; overrides replace unless `super` is called.
+ * 5. **`onRightClick(event, data)`** / **`onPaint($root, data)`** — protected hooks.
+ * 6. **`refresh()`** — latest-request-wins: increments revision, clears root (empty bars stay
+ *    hidden via CSS), awaits `loadData()`, paints mandatory content when the revision is
+ *    current, then for {@link BaseBar.supportsIndicators} bars only keeps the loading marker
+ *    and awaits `loadIndicators()`. The mandatory paint does not bump the revision, so one
+ *    revision guards both phases; an explicit `render()` still invalidates pending work.
+ *
+ * @see {@link BaseBar} — expansion contract and handler-binding details.
  */
 export interface IBaseBar extends IDomainEventConsumer {
   /** Fetch fresh data via `loadData()` and re-render (latest-request-wins). */
@@ -49,37 +67,42 @@ export interface IBaseBar extends IDomainEventConsumer {
 }
 
 /**
- * Generic abstract base for bar-style UI components that manage
- * a compact/expanded content lifecycle with event-driven refresh.
+ * Generic abstract base for bar-style UI components.
  *
  * @template TData The data type rendered by the bar.
- *
- * @see {@link IBaseBar} for the full lifecycle and BEM contract.
+ * @see {@link IBaseBar} — authoritative lifecycle and BEM contract.
  *
  * ## Expansion Contract
  *
- * Bars can optionally support expandable details via {@link renderDetails}:
- * - **Return `null`** (default): Compact-only mode. Renders only
- *   `renderCompact(data)` directly in the root without disclosure shell,
- *   toggle button, details container, or expanded modifier handling.
- *   Context-menu binding is still available if compact content includes
- *   context-action attributes.
- * - **Return `string`**: Expandable mode. Renders the full disclosure shell
- *   with toggle button, details container, and expanded modifier handling.
- *   Context-menu binding is available on `[data-{ns}-context-action]` selectors.
+ * {@link renderDetails} selects the rendering mode on every paint:
+ *
+ * - **Return `null`** (default) — *compact-only*. `renderCompact(data)` becomes the
+ *   entire root content: no toggle button, no details container, and no expanded
+ *   mode. The expanded modifier is still synchronized on every paint, so
+ *   `syncExpandedModifier` removes it instead of skipping it. Context-menu binding
+ *   still applies when the compact markup contains `[data-{ns}-context-action]` targets.
+ * - **Return `string`** — *expandable*. `BaseBar` owns the disclosure shell
+ *   (`<button class="{block}__toggle" aria-expanded aria-controls>` plus a hidden
+ *   `<div id="{block}-details" class="{block}__details">`) and the expanded modifier.
+ *   Subclasses supply only the inner HTML: compact markup as the button face and
+ *   details markup for the container, never the shell itself.
  *
  * ## Handler Binding
  *
- * - Left-click (expandable mode only): delegated to the generated `.{block}__toggle` button via
- *   `$root.off('click.{ns}', sel).on('click.{ns}', sel, handler)`.
- *   Calls `this.onLeftClick(event)`; the default implementation toggles.
- *   Native `<button>` semantics provide Enter/Space activation.
- * - Context-menu: `$root.off('contextmenu.{ns}', sel).on('contextmenu.{ns}', sel, handler)`.
- *   Always binds to the generated `[data-{ns}-context-action]` selector.
- *   Calls `preventDefault` + `stopPropagation`, then `onRightClick(event, data)`.
- *   Catches rejected thenables and sync errors to prevent unhandled rejections.
- * - Handler deduplication: `off()` is called before `on()` when `bindHandlers` is true.
- *   Toggle calls `paint(false)` which does not rebind handlers.
+ * - **Click** (expandable mode only) — delegated to `.{block}__toggle` via
+ *   `off('click.{ns}', sel).on('click.{ns}', sel, …)`; the native `<button>`
+ *   provides Enter/Space activation, so no key handlers are needed. Calls
+ *   {@link onLeftClick}, whose default toggles.
+ * - **Context-menu** (both modes) — delegated to the generated
+ *   `[data-{ns}-context-action]` selector, calls `preventDefault` +
+ *   `stopPropagation`, then {@link onRightClick}. Rejected thenables and sync
+ *   errors are caught to avoid unhandled rejections.
+ * - **Deduplication** — a full paint always calls `off()` before `on()` for the
+ *   same namespaced event and selector, so repeated renders never stack handlers.
+ *   Toggle repaints pass `bindHandlers = false` and never rebind.
+ * - **Hook order per paint** — HTML render → root/status classes → expanded
+ *   modifier → handler binding (full paint only) → retained indicators →
+ *   {@link onPaint} last.
  */
 export abstract class BaseBar<TData> implements IBaseBar {
   /** The BarId value used as the block class and root selector basis. */
@@ -100,9 +123,13 @@ export abstract class BaseBar<TData> implements IBaseBar {
   /** Monotonic revision counter for latest-request-wins refresh sequencing. */
   private loadRevision = 0;
 
-  /**
-   * @param barId The {@link BarId} enum value for this bar instance.
-   */
+  /** Lifecycle state of the optional indicators; only a real optional failure marks it unavailable. */
+  private indicatorState: BarIndicatorState = BarIndicatorState.READY;
+
+  /** Retained indicator updates, re-applied on every paint without refetching. */
+  private indicators: readonly BarIndicatorUpdate[] = [];
+
+  /** @param barId The {@link BarId} enum value for this bar instance. */
   constructor(barId: BarId) {
     this.barId = barId;
 
@@ -134,8 +161,9 @@ export abstract class BaseBar<TData> implements IBaseBar {
 
   /**
    * Generate a BEM element class.
+   *
    * @param element Element name.
-   * @returns `{blockClass}__{element}`
+   * @returns `{block}__{element}`
    */
   protected bemElement(element: string): string {
     return `${this.blockClass}__${element}`;
@@ -143,8 +171,9 @@ export abstract class BaseBar<TData> implements IBaseBar {
 
   /**
    * Generate a BEM modifier class.
+   *
    * @param modifier Modifier name.
-   * @returns `{blockClass}--{modifier}`
+   * @returns `{block}--{modifier}`
    */
   protected bemModifier(modifier: string): string {
     return `${this.blockClass}--${modifier}`;
@@ -152,31 +181,34 @@ export abstract class BaseBar<TData> implements IBaseBar {
 
   /**
    * Generate a BEM element-modifier class.
+   *
    * @param element Element name.
    * @param modifier Modifier name.
-   * @returns `{blockClass}__{element}--{modifier}`
+   * @returns `{block}__{element}--{modifier}`
    */
   protected bemElementModifier(element: string, modifier: string): string {
     return `${this.blockClass}__${element}--${modifier}`;
   }
 
   /**
-   * Generate a child element ID.
+   * Generate a child element id.
+   *
    * @param name Child name.
-   * @returns `{blockClass}-{name}`
+   * @returns `{block}-{name}`
    */
   protected bemChildId(name: string): string {
     return `${this.blockClass}-${name}`;
   }
 
   /**
-   * Generate a namespaced data attribute name.
-   * @param name Attribute name (without `data-` prefix or namespace).
-   * @returns `data-{namespace}-{name}`
+   * Generate a namespaced data-attribute name.
+   *
+   * @param name Attribute name, without `data-` prefix or namespace.
+   * @returns `data-{ns}-{name}`
    *
    * @example
    * // For BarId.ALERT (namespace = 'alert-ticker')
-   * this.bemDataAttr('symbol')       // 'data-alert-ticker-symbol'
+   * this.bemDataAttr('symbol')         // 'data-alert-ticker-symbol'
    * this.bemDataAttr('context-action') // 'data-alert-ticker-context-action'
    */
   protected bemDataAttr(name: string): string {
@@ -186,15 +218,21 @@ export abstract class BaseBar<TData> implements IBaseBar {
   // ── Protected data application ──
 
   /**
-   * Apply fresh data to the bar, reset expanded state, and perform a full paint.
-   * Also invalidates any in-flight `refresh()` so a stale `loadData()` result
-   * cannot overwrite this explicitly applied data.
+   * Apply fresh data, reset expanded state, and fully paint. Invalidates any in-flight
+   * `refresh()` (pending indicators included) and resets indicators to `READY`/`[]`, so
+   * explicit data never keeps a spinner or an earlier refresh's badges.
    *
    * @param data The data to render.
    */
   protected render(data: TData): void {
-    // Invalidate any pending refresh so it cannot overwrite newer data
     ++this.loadRevision;
+    this.indicators = [];
+    this.indicatorState = BarIndicatorState.READY;
+    this.applyMandatoryData(data);
+  }
+
+  /** Paint mandatory data without touching the revision or indicator state. */
+  private applyMandatoryData(data: TData): void {
     this.currentData = data;
     this.expanded = false;
     this.paint(true);
@@ -203,11 +241,49 @@ export abstract class BaseBar<TData> implements IBaseBar {
   /** @inheritdoc */
   public async refresh(): Promise<void> {
     const revision = ++this.loadRevision;
+
+    // Drop the previous indicator overlay so stale decorations never repaint
+    this.indicators = [];
+    this.indicatorState = this.supportsIndicators ? BarIndicatorState.LOADING : BarIndicatorState.READY;
+
+    // Clear first: an empty bar stays hidden via CSS until mandatory data lands
+    const $root = $(`#${this.barId}`);
+    if ($root.length > 0) {
+      $root.html('');
+    }
+
+    // Mandatory data: errors propagate and leave the bar empty (hidden)
     const data = await this.loadData();
     if (revision !== this.loadRevision) {
       return;
     }
-    this.render(data);
+
+    // Paint with the intended indicator state intact (no revision bump here)
+    this.applyMandatoryData(data);
+    if (!this.supportsIndicators) {
+      return;
+    }
+
+    let state = BarIndicatorState.READY;
+    let updates: readonly BarIndicatorUpdate[] = [];
+    try {
+      updates = await this.loadIndicators(data);
+    } catch {
+      // Optional indicators fail quietly; mandatory content stays as painted
+      state = BarIndicatorState.UNAVAILABLE;
+    }
+
+    if (revision !== this.loadRevision) {
+      return;
+    }
+
+    this.indicators = updates;
+    this.indicatorState = state;
+
+    const $painted = $(`#${this.barId}`);
+    if ($painted.length > 0) {
+      this.applyIndicators($painted);
+    }
   }
 
   /** @inheritdoc */
@@ -223,67 +299,73 @@ export abstract class BaseBar<TData> implements IBaseBar {
   // ── Protected abstract contracts ──
 
   /**
-   * Domain event types that should trigger a refresh when received.
+   * Domain event types that trigger a refresh when received.
    * Return an empty array to disable automatic refresh subscriptions.
    */
   protected abstract get refreshEvents(): readonly DomainEventType[];
 
   /**
    * Load fresh data for this bar. Called by {@link refresh}.
+   *
    * @returns The loaded data.
    */
   protected abstract loadData(): Promise<TData>;
 
   /**
    * Render compact (collapsed) HTML for the given data.
+   *
+   * Used as the whole root content in compact-only mode, or as the disclosure
+   * toggle face in expandable mode.
+   *
    * @param data The current data.
    * @returns HTML string for compact mode.
    */
   protected abstract renderCompact(data: TData): string;
 
   /**
-   * Determine the visual status for the bar based on the current data.
-   * Called during every successful {@link paint} to apply the appropriate
-   * BEM status modifier (`aman-bar--ok`, `aman-bar--warn`, or `aman-bar--error`)
-   * to the root element.
+   * Resolve the visual status applied to the root during every paint, as the
+   * shared `aman-bar--{status}` modifier (see the BEM contract on {@link IBaseBar}).
    *
    * @param data The current data.
    * @returns The {@link BarStatus} to apply.
    */
   protected abstract resolveStatus(data: TData): BarStatus;
 
+  // ── Optional indicators contract ──
+
+  /**
+   * Whether this bar opts into optional indicator loading after mandatory data.
+   * Opted-in bars get a small marker, in-place badge/title updates, and a quiet
+   * unavailable mark; when `false`, `loadIndicators` is never called.
+   */
+  protected get supportsIndicators(): boolean {
+    return false;
+  }
+
+  /**
+   * Load optional indicator updates for already-rendered mandatory data; called by
+   * {@link refresh} only for opted-in bars. A rejection marks indicators unavailable
+   * without touching business status.
+   *
+   * @param _data The current data.
+   * @returns Updates to apply in place, or `[]` for none.
+   */
+  protected async loadIndicators(_data: TData): Promise<readonly BarIndicatorUpdate[]> {
+    return await Promise.resolve([]);
+  }
+
   // ── Nullable expansion contract ──
 
   /**
-   * Render expanded detail content for the given data.
+   * Render expanded detail content, evaluated on every paint to select the mode.
    *
-   * Evaluated during every {@link paint} call to determine whether the
-   * bar supports expansion. When a string is returned, paint renders
-   * the full disclosure shell (toggle button, details container,
-   * expanded modifier) and the returned HTML populates the details
-   * container when the bar is expanded. BaseBar composes the shell;
-   * subclasses return only the inner content (rows, empty state, etc.).
-   *
-   * Override this method to return a string to enable expandable behavior
-   * with disclosure shell, toggle button, details container, and expanded
-   * modifier handling. Return `null` (the default) to disable expansion
-   * and render only compact content directly in the root.
-   *
-   * When a string is returned, the bar supports:
-   * - Disclosure toggle button with `aria-expanded`/`aria-controls`
-   * - Hidden details container that shows/hides on toggle
-   * - Expanded modifier class toggling
-   * - Context-menu binding on `[data-{ns}-context-action]` selectors
-   * - Handler deduplication via namespace
-   * - Stale-request protection for refresh sequencing
-   *
-   * When `null` is returned (default), the bar renders only
-   * `renderCompact(data)` directly in the root without any expansion
-   * infrastructure. Context-menu binding is still available if compact
-   * content includes context-action attributes.
+   * Return a string to enable the disclosure shell; return `null` (default) to
+   * stay compact-only with `renderCompact(data)` in the root. `BaseBar` composes
+   * the shell — subclasses return only the inner content (rows, empty state, …).
    *
    * @param _data The current data.
    * @returns HTML string for expanded detail content, or `null` to disable expansion.
+   * @see {@link BaseBar} — authoritative expansion contract.
    */
   protected renderDetails(_data: TData): string | null {
     return null;
@@ -292,31 +374,32 @@ export abstract class BaseBar<TData> implements IBaseBar {
   // ── Protected hooks ──
 
   /**
-   * Default no-op post-paint hook. Called after both click and contextmenu
-   * handlers are bound during a full paint, and after each toggle repaint.
-   * Override to apply additional root-level state based on the current data.
+   * Post-paint hook, called last on every paint — after handlers are bound on a
+   * full paint, and after each toggle repaint. Override to apply additional
+   * root-level state derived from the current data.
    *
-   * @param $root Root jQuery element.
-   * @param data Current bar data.
+   * @param _$root Root jQuery element.
+   * @param _data Current bar data.
    */
   protected onPaint(_$root: JQuery, _data: TData): void {
     // Default no-op
   }
 
   /**
-   * Called when the root element is left-clicked.
-   * Default implementation toggles expanded state via {@link toggle}.
+   * Root disclosure click hook; defaults to {@link toggle}.
+   *
+   * Overrides replace the toggle unless they call `super.onLeftClick(event)`.
+   * Native `<button>` semantics already provide Enter/Space activation.
+   *
    * @param _event The jQuery click event.
-   * Override to replace the default behavior; call `super.onLeftClick(event)`
-   * to retain the toggle.
    */
   protected onLeftClick(_event: JQuery.ClickEvent): void {
     this.toggle();
   }
 
   /**
-   * Called when a delegated contextmenu target is right-clicked.
-   * Override to add custom right-click behavior.
+   * Delegated contextmenu hook for `[data-{ns}-context-action]` targets.
+   * Default is a no-op; see the handler-binding contract on {@link BaseBar}.
    *
    * @param _event The jQuery contextmenu event.
    * @param _data The current bar data.
@@ -328,19 +411,15 @@ export abstract class BaseBar<TData> implements IBaseBar {
   // ── Private rendering ──
 
   /**
-   * Unified paint cycle: query root, render HTML, optionally bind handlers, call onPaint.
-   * Called from {@link render} with `bindHandlers=true` and from {@link toggle} with `false`.
+   * Unified paint cycle, per {@link IBaseBar} lifecycle ordering and the
+   * expansion/handler contract on {@link BaseBar}.
    *
-   * When {@link renderDetails} returns `null` (no expansion), renders only
-   * compact content directly in the root without disclosure shell, toggle button,
-   * details container, or expanded modifier handling. Context-menu is still
-   * bound if compact content includes context-action attributes.
+   * Called from {@link render} (`bindHandlers = true`) and from {@link toggle}
+   * (`bindHandlers = false`); renders compact content only when
+   * {@link renderDetails} returns `null`.
    *
-   * When {@link renderDetails} returns a string, renders the full disclosure shell
-   * with toggle button, details container, and expanded modifier handling.
-   *
-   * @param bindHandlers When true, rebind click/contextmenu via off/on deduplication.
-   *                     When false, only update HTML and modifier state (toggle path).
+   * @param bindHandlers When true, rebind click/contextmenu via off/on deduplication;
+   *                     when false, only update HTML and modifier state (toggle path).
    */
   private paint(bindHandlers: boolean): void {
     const $root = $(`#${this.barId}`);
@@ -355,9 +434,7 @@ export abstract class BaseBar<TData> implements IBaseBar {
     const compactHtml = this.renderCompact(data);
 
     if (detailsHtml === null) {
-      // Compact-only mode: render compact content directly in root.
-      // Explicitly reset expanded state so a subclass cannot retain
-      // stale expanded state if its renderDetails mode changes between paints.
+      // Compact-only mode; reset so a stale mode switch cannot leak expanded state.
       this.expanded = false;
       $root.html(compactHtml);
     } else {
@@ -389,13 +466,17 @@ export abstract class BaseBar<TData> implements IBaseBar {
       }
     }
 
+    // Re-apply retained indicators so a repaint never drops their presentation
+    this.applyIndicators($root);
+
     this.onPaint($root, data);
   }
 
   /**
-   * Toggle expanded state and repaint without rebinding handlers.
-   * Only invoked via the expandable branch's click binding; compact-only bars
-   * never reach this method because no click handler is bound for them.
+   * Flip expanded state and repaint without rebinding handlers.
+   *
+   * Reachable only from the expandable branch's click binding (default
+   * {@link onLeftClick}); compact-only bars never bind that handler.
    */
   private toggle(): void {
     this.expanded = !this.expanded;
@@ -404,6 +485,7 @@ export abstract class BaseBar<TData> implements IBaseBar {
 
   /**
    * Synchronize the expanded modifier class on the root element.
+   *
    * @param $root Root jQuery element.
    */
   private syncExpandedModifier($root: JQuery): void {
@@ -416,9 +498,8 @@ export abstract class BaseBar<TData> implements IBaseBar {
   }
 
   /**
-   * Synchronize root element classes: ensure both the generated block class
-   * and the shared bar class are present, remove all status modifiers,
-   * and apply exactly one based on the result of {@link resolveStatus}.
+   * Ensure the block and shared bar classes are present, then apply exactly one
+   * status modifier based on {@link resolveStatus}.
    *
    * @param $root Root jQuery element.
    * @param data Current bar data.
@@ -433,11 +514,92 @@ export abstract class BaseBar<TData> implements IBaseBar {
     $root.addClass(`${BAR_CLASS}--${this.resolveStatus(data)}`);
   }
 
+  // ── Optional indicators rendering ──
+
+  /** Apply indicator state, marker, and retained badge/title updates in place. */
+  private applyIndicators($root: JQuery): void {
+    if (!this.supportsIndicators) {
+      return;
+    }
+
+    this.syncIndicatorState($root);
+
+    if (this.indicatorState !== BarIndicatorState.READY) {
+      return;
+    }
+
+    for (const update of this.indicators) {
+      this.applyIndicatorUpdate($root, update);
+    }
+  }
+
   /**
-   * Bind the delegated left-click handler to the disclosure toggle button
-   * with namespace deduplication.
-   * Calls `this.onLeftClick(event)` — the default implementation toggles,
-   * but an override can replace or extend via `super`.
+   * Synchronize indicator modifier, `aria-busy`, and the shared marker. A full paint
+   * replaces root content, so the marker is (re)created whenever it is missing and
+   * only updated in place within a single paint.
+   */
+  private syncIndicatorState($root: JQuery): void {
+    const state = this.indicatorState;
+    const isLoading = state === BarIndicatorState.LOADING;
+    const stateClasses = Object.values(BarIndicatorState)
+      .map((value) => `${BAR_CLASS}--indicators-${value}`)
+      .join(' ');
+    $root.removeClass(stateClasses);
+    $root.addClass(`${BAR_CLASS}--indicators-${state}`);
+    $root.attr('aria-busy', isLoading ? 'true' : 'false');
+
+    const $marker = $root.find(`.${BAR_INDICATORS_CLASS}`);
+
+    if (state === BarIndicatorState.READY) {
+      $marker.remove();
+      return;
+    }
+
+    const label = isLoading ? INDICATORS_LOADING_LABEL : INDICATORS_UNAVAILABLE_LABEL;
+
+    if ($marker.length === 0) {
+      $root.append(
+        `<span class="${BAR_INDICATORS_CLASS}" role="status" aria-label="${label}" title="${label}"></span>`
+      );
+      return;
+    }
+
+    $marker.attr('aria-label', label);
+    $marker.attr('title', label);
+  }
+
+  /**
+   * Apply one update in place: badge as plain text inside the decorated chip/button
+   * (never replaced), title as the native `title` attribute.
+   */
+  private applyIndicatorUpdate($root: JQuery, update: BarIndicatorUpdate): void {
+    const $chip = $root.find(update.selector);
+    if ($chip.length === 0) {
+      return;
+    }
+
+    $chip.attr('title', update.title);
+
+    const $badge = $chip.find(`.${BAR_INDICATOR_BADGE_CLASS}`);
+
+    if (update.badge.length === 0) {
+      $badge.remove();
+      return;
+    }
+
+    if ($badge.length === 0) {
+      $chip.append(`<span class="${BAR_INDICATOR_BADGE_CLASS}" aria-hidden="true">${escapeHtml(update.badge)}</span>`);
+      return;
+    }
+
+    $badge.text(update.badge);
+  }
+
+  // ── Handler binding ──
+
+  /**
+   * Bind the expandable-mode disclosure click.
+   * See the handler-binding contract on {@link BaseBar}.
    *
    * @param $root Root jQuery element.
    */
@@ -451,13 +613,11 @@ export abstract class BaseBar<TData> implements IBaseBar {
   }
 
   /**
-   * Bind the delegated contextmenu handler with namespace deduplication.
-   * Always binds to the generated `[data-{ns}-context-action]` selector.
-   * Calls `preventDefault` + `stopPropagation`, then `onRightClick(event, data)`.
-   * Catches rejected thenables and synchronous errors to prevent unhandled rejections.
+   * Bind the delegated contextmenu handler.
+   * See the handler-binding contract on {@link BaseBar}.
    *
    * @param $root Root jQuery element.
-   * @param data Current data for passing to onRightClick.
+   * @param data Current bar data, forwarded to `onRightClick`.
    */
   private bindContextMenu($root: JQuery, data: TData): void {
     const selector = `[${this.bemDataAttr('context-action')}]`;

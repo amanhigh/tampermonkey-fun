@@ -31,8 +31,10 @@ jobs:
     - name: Build and lint
       run: just build
 
-    - name: Build IMDb userscript
-      run: just imdb
+    - name: Bundle userscripts
+      run: |
+        just bundle
+        just bundle barkat development
       
     - name: Run tests
       run: just test

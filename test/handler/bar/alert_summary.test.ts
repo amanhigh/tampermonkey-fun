@@ -87,6 +87,16 @@ const { Notifier } = jest.requireMock('../../../src/util/notify');
 
 // ── Helpers ──
 
+/**
+ * Non-empty root paints. `refresh()` first clears the root (empty bars stay hidden
+ * via CSS), so content assertions must skip that clear call.
+ */
+function contentHtmlCalls(): string[] {
+  return mockRootEl.html.mock.calls
+    .map((c: any[]) => c[0] as string)
+    .filter((html: string) => html !== '');
+}
+
 function getPillClickHandler(): ((event: any) => void) | undefined {
   const call = mockRootEl.on.mock.calls.find(
     (c: any[]) => c[0] === 'click' && c[1] === PILL_SELECTOR
@@ -231,7 +241,7 @@ describe('AlertSummaryBar', () => {
 
       await bar.refresh();
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+      const html = contentHtmlCalls()[0];
       expect(html).toContain('No Alerts');
       expect(html).toContain(BEM.EMPTY);
     });
@@ -249,7 +259,7 @@ describe('AlertSummaryBar', () => {
 
       await bar.refresh();
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+      const html = contentHtmlCalls()[0];
       expect(html).toContain('No Pair');
       expect(html).toContain(BEM.NO_PAIR);
     });
@@ -265,7 +275,7 @@ describe('AlertSummaryBar', () => {
 
       await bar.refresh();
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+      const html = contentHtmlCalls()[0];
       expect(html).toContain(BEM.PILL_LOW);
       expect(html).toContain('100');
       expect(html).toContain(BEM.PILL);
@@ -282,7 +292,7 @@ describe('AlertSummaryBar', () => {
 
       await bar.refresh();
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+      const html = contentHtmlCalls()[0];
       expect(html).toContain(BEM.PILL_HIGH);
       expect(html).toContain('300');
     });
@@ -298,7 +308,7 @@ describe('AlertSummaryBar', () => {
 
       await bar.refresh();
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+      const html = contentHtmlCalls()[0];
       expect(html).toContain(BEM.PILL_PENDING);
       expect(html).toContain('150');
     });
@@ -316,7 +326,7 @@ describe('AlertSummaryBar', () => {
 
       await bar.refresh();
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+      const html = contentHtmlCalls()[0];
       // Three pills present
       expect(html).toContain(BEM.PILL_LOW);
       expect(html).toContain(BEM.PILL_HIGH);
@@ -331,7 +341,7 @@ describe('AlertSummaryBar', () => {
 
       await bar.refresh();
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+      const html = contentHtmlCalls()[0];
       expect(html).not.toContain('aria-expanded');
       expect(html).not.toContain('aria-controls');
       expect(html).not.toContain('hidden');
@@ -523,7 +533,7 @@ describe('AlertSummaryBar', () => {
       );
       await bar.refresh();
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+      const html = contentHtmlCalls()[0];
       expect(html).toContain('No Pair');
     });
   });
@@ -568,7 +578,7 @@ describe('AlertSummaryBar', () => {
       );
       await bar.refresh();
 
-      const html = mockRootEl.html.mock.calls[0][0] as string;
+      const html = contentHtmlCalls()[0];
       expect(html).toContain('No Pair');
       warnSpy.mockRestore();
     });
