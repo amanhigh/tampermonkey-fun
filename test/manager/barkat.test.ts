@@ -5,14 +5,32 @@ import { Constants } from '../../src/models/constant';
 import { ITickerManager } from '../../src/manager/ticker';
 import { IDomManager } from '../../src/manager/dom';
 import { EventBus } from '../../src/manager/event_bus';
-import { DomainEventType } from '../../src/models/domain_event';
+import { DomainEvent, DomainEventType } from '../../src/models/domain_event';
 import { TickerArea, TickerVisibility } from '../../src/models/dom';
 import { Ticker, TickerType } from '../../src/models/ticker';
+import { Notifier } from '../../src/util/notify';
+
+// Mock Notifier to avoid DOM issues
+jest.mock('../../src/util/notify', () => ({
+  Notifier: {
+    success: jest.fn(),
+    yellow: jest.fn(),
+  },
+}));
 
 /** Builds an equity ticker record with the native symbol as its identity. */
 function makeTicker(ticker: string): Ticker {
   return new Ticker({ ticker, type: TickerType.EQUITY });
 }
+
+/** Every event that triggers a watchlist warm-up; only FIRST_LOAD carries a ticker. */
+const WARMUP_EVENTS: DomainEvent[] = [
+  { type: DomainEventType.FIRST_LOAD, ticker: 'AAPL' },
+  { type: DomainEventType.TIMER },
+];
+
+/** The types of every warm-up event, for subscriptions that span all of them. */
+const WARMUP_EVENT_TYPES = WARMUP_EVENTS.map((event) => event.type);
 
 describe('BarkatManager', () => {
   let barkatManager: IBarkatManager;
@@ -80,40 +98,51 @@ describe('BarkatManager', () => {
       barkatManager.registerEvents(eventBus);
     });
 
-    it('should query confirmed equities and submit only watchlist native names on FIRST_LOAD', async () => {
-      mockTickerManager.listTickers.mockResolvedValue([
-        makeTicker('AAPL'),
-        makeTicker('BRK.B'),
-        makeTicker('AAPL'),
-        makeTicker('INTC'),
-        makeTicker('MSFT'),
-      ]);
-      mockDomManager.getTickers.mockReturnValue(new Set(['AAPL', 'BRK.B', 'UNKNOWN']));
+    it.each(WARMUP_EVENTS)(
+      'should query confirmed equities and submit only watchlist native names on $type',
+      async (event) => {
+        mockTickerManager.listTickers.mockResolvedValue([
+          makeTicker('AAPL'),
+          makeTicker('BRK.B'),
+          makeTicker('AAPL'),
+          makeTicker('INTC'),
+          makeTicker('MSFT'),
+        ]);
+        mockDomManager.getTickers.mockReturnValue(new Set(['AAPL', 'BRK.B', 'UNKNOWN']));
 
-      await eventBus.publish({ type: DomainEventType.FIRST_LOAD, ticker: 'AAPL' });
+        await eventBus.publish(event);
 
-      // The current ALL watchlist snapshot is the only membership source.
-      expect(mockDomManager.getTickers).toHaveBeenCalledTimes(1);
-      expect(mockDomManager.getTickers).toHaveBeenCalledWith(TickerArea.WATCHLIST, TickerVisibility.ALL);
+        // The current ALL watchlist snapshot is the only membership source.
+        expect(mockDomManager.getTickers).toHaveBeenCalledTimes(1);
+        expect(mockDomManager.getTickers).toHaveBeenCalledWith(TickerArea.WATCHLIST, TickerVisibility.ALL);
 
-      expect(mockTickerManager.listTickers).toHaveBeenCalledTimes(1);
-      expect(mockTickerManager.listTickers).toHaveBeenCalledWith({ type: TickerType.EQUITY });
+        expect(mockTickerManager.listTickers).toHaveBeenCalledTimes(1);
+        expect(mockTickerManager.listTickers).toHaveBeenCalledWith({ type: TickerType.EQUITY });
 
-      // Unmatched (UNKNOWN) and non-watchlist (INTC/MSFT) records are dropped and
-      // the repeated AAPL metadata record is de-duplicated.
-      expect(mockBarkatClient.warmupTickers).toHaveBeenCalledTimes(1);
-      expect(mockBarkatClient.warmupTickers).toHaveBeenCalledWith(['AAPL', 'BRK.B']);
-    });
+        // Unmatched (UNKNOWN) and non-watchlist (INTC/MSFT) records are dropped and
+        // the repeated AAPL metadata record is de-duplicated.
+        expect(mockBarkatClient.warmupTickers).toHaveBeenCalledTimes(1);
+        expect(mockBarkatClient.warmupTickers).toHaveBeenCalledWith(['AAPL', 'BRK.B']);
 
-    it('should submit nothing for an empty watchlist snapshot without querying metadata', async () => {
-      mockDomManager.getTickers.mockReturnValue(new Set<string>());
+        // The submitted ticker count is reported to the user.
+        expect(Notifier.success).toHaveBeenCalledTimes(1);
+        expect(Notifier.success).toHaveBeenCalledWith('🔥 Warmed up 2 ticker(s)');
+      }
+    );
 
-      await eventBus.publish({ type: DomainEventType.FIRST_LOAD, ticker: 'AAPL' });
+    it.each(WARMUP_EVENTS)(
+      'should submit nothing on $type for an empty watchlist snapshot without querying metadata',
+      async (event) => {
+        mockDomManager.getTickers.mockReturnValue(new Set<string>());
 
-      expect(mockDomManager.getTickers).toHaveBeenCalledTimes(1);
-      expect(mockTickerManager.listTickers).not.toHaveBeenCalled();
-      expect(mockBarkatClient.warmupTickers).not.toHaveBeenCalled();
-    });
+        await eventBus.publish(event);
+
+        expect(mockDomManager.getTickers).toHaveBeenCalledTimes(1);
+        expect(mockTickerManager.listTickers).not.toHaveBeenCalled();
+        expect(mockBarkatClient.warmupTickers).not.toHaveBeenCalled();
+        expect(Notifier.success).not.toHaveBeenCalled();
+      }
+    );
 
     it('should submit nothing when no equity record matches the watchlist', async () => {
       mockTickerManager.listTickers.mockResolvedValue([makeTicker('MSFT')]);
@@ -123,17 +152,23 @@ describe('BarkatManager', () => {
 
       expect(mockTickerManager.listTickers).toHaveBeenCalledTimes(1);
       expect(mockBarkatClient.warmupTickers).not.toHaveBeenCalled();
+      expect(Notifier.success).not.toHaveBeenCalled();
     });
 
-    it('should submit again for each subsequent event', async () => {
+    it('should warm up again on TIMER with an unchanged watchlist', async () => {
       mockTickerManager.listTickers.mockResolvedValue([makeTicker('AAPL')]);
       mockDomManager.getTickers.mockReturnValue(new Set(['AAPL']));
 
       await eventBus.publish({ type: DomainEventType.FIRST_LOAD, ticker: 'AAPL' });
-      await eventBus.publish({ type: DomainEventType.FIRST_LOAD, ticker: 'AAPL' });
+      await eventBus.publish({ type: DomainEventType.TIMER });
 
+      // The tick re-reads and resubmits on every occurrence: no de-duplication
+      // against the previous submission happens in the manager.
       expect(mockTickerManager.listTickers).toHaveBeenCalledTimes(2);
+      expect(mockDomManager.getTickers).toHaveBeenCalledTimes(2);
       expect(mockBarkatClient.warmupTickers).toHaveBeenCalledTimes(2);
+      expect(mockBarkatClient.warmupTickers).toHaveBeenLastCalledWith(['AAPL']);
+      expect(Notifier.success).toHaveBeenCalledTimes(2);
     });
 
     it('should re-read the snapshot on WATCHLIST_CHANGED, ignoring the add/remove delta', async () => {
@@ -158,6 +193,7 @@ describe('BarkatManager', () => {
       expect(mockBarkatClient.warmupTickers).toHaveBeenCalledTimes(1);
       expect(mockBarkatClient.warmupTickers).toHaveBeenCalledWith(['AAPL', 'BRK.B', 'INTC']);
       expect(mockBarkatClient.warmupTickers).not.toHaveBeenCalledWith(['MSFT', 'INTC']);
+      expect(Notifier.success).toHaveBeenLastCalledWith('🔥 Warmed up 3 ticker(s)');
     });
 
     it('should not warm up on chart, category, timeframe or other ticker events', async () => {
@@ -173,15 +209,24 @@ describe('BarkatManager', () => {
       expect(mockBarkatClient.warmupTickers).not.toHaveBeenCalled();
     });
 
-    it.each([
-      { stage: 'metadata', expectedFirstSubmissionCount: 0 },
-      { stage: 'submission', expectedFirstSubmissionCount: 1 },
-    ])(
-      'should log $stage failures, keep resolving and allow a later event to succeed',
-      async ({ stage, expectedFirstSubmissionCount }) => {
+    it.each(
+      WARMUP_EVENTS.flatMap((event) =>
+        [
+          { stage: 'metadata', expectedFirstSubmissionCount: 0 },
+          { stage: 'submission', expectedFirstSubmissionCount: 1 },
+        ].map(({ stage, expectedFirstSubmissionCount }) => ({
+          event,
+          stage,
+          expectedFirstSubmissionCount,
+        }))
+      )
+    )(
+      'should log $stage failures on $event.type, keep resolving and allow a later event to succeed',
+      async ({ event, stage, expectedFirstSubmissionCount }) => {
         const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+        // A sibling consumer of every warm-up event must never be affected by a warm-up rejection.
         const refreshStub = jest.fn().mockResolvedValue(undefined);
-        eventBus.subscribe(DomainEventType.FIRST_LOAD, refreshStub);
+        eventBus.subscribeMany(WARMUP_EVENT_TYPES, refreshStub);
 
         try {
           mockTickerManager.listTickers.mockResolvedValue([makeTicker('AAPL')]);
@@ -191,25 +236,21 @@ describe('BarkatManager', () => {
             mockBarkatClient.warmupTickers.mockRejectedValueOnce(new Error('Failed to warm up tickers: AAPL'));
           }
 
-          await expect(
-            eventBus.publish({ type: DomainEventType.FIRST_LOAD, ticker: 'AAPL' })
-          ).resolves.toBeUndefined();
+          await expect(eventBus.publish(event)).resolves.toBeUndefined();
 
           // Other subscribers for the same event are unaffected by the rejection.
           expect(refreshStub).toHaveBeenCalledTimes(1);
-          expect(consoleError).toHaveBeenCalledWith(
-            expect.stringContaining(DomainEventType.FIRST_LOAD),
-            expect.any(Error)
-          );
+          expect(consoleError).toHaveBeenCalledWith(expect.stringContaining(event.type), expect.any(Error));
           expect(mockBarkatClient.warmupTickers).toHaveBeenCalledTimes(expectedFirstSubmissionCount);
+          // A failed warm-up reports nothing to the user.
+          expect(Notifier.success).not.toHaveBeenCalled();
 
-          await expect(
-            eventBus.publish({ type: DomainEventType.FIRST_LOAD, ticker: 'AAPL' })
-          ).resolves.toBeUndefined();
+          await expect(eventBus.publish(event)).resolves.toBeUndefined();
 
           expect(refreshStub).toHaveBeenCalledTimes(2);
           expect(mockBarkatClient.warmupTickers).toHaveBeenCalledTimes(expectedFirstSubmissionCount + 1);
           expect(mockBarkatClient.warmupTickers).toHaveBeenLastCalledWith(['AAPL']);
+          expect(Notifier.success).toHaveBeenCalledWith('🔥 Warmed up 1 ticker(s)');
         } finally {
           consoleError.mockRestore();
         }

@@ -56,39 +56,16 @@ export interface ITradingViewManager {
    * @returns Promise resolving when state change is complete
    */
   setSwiftKeysState(enabled: boolean): Promise<void>;
-
-  /**
-   * Starts automatic saving of workspace at regular intervals
-   */
-  startAutoSave(): void;
 }
 
 /**
  * Manages TradingView page interactions and DOM operations
  */
 export class TradingViewManager implements ITradingViewManager {
-  private static readonly SAVE_INTERVAL = 30 * 1000;
-
   /**
    * @param waitUtil Manager for DOM operations
    */
   constructor(private readonly waitUtil: IWaitUtil) {}
-
-  public startAutoSave(): void {
-    setInterval(() => this.autoSave(), TradingViewManager.SAVE_INTERVAL);
-  }
-
-  private autoSave(): void {
-    this.clickSaveButton();
-    Notifier.success('Workspace saved');
-  }
-
-  private clickSaveButton(): void {
-    const $save = $(Constants.DOM.HEADER.SAVE);
-    if ($save.length) {
-      $save.click();
-    }
-  }
 
   /** @inheritdoc */
   getLastTradedPrice(): number {

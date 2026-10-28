@@ -64,18 +64,47 @@ frontend only decides *which* tickers to submit and *when*.
 -   **Eligibility**: only tickers in the active watchlist that resolve to a
     confirmed, tracked equity ticker record are submitted. Unknown tickers and
     non-equity records are skipped silently.
--   **Triggers**: the current watchlist snapshot is submitted once on first load
-    and again on every watchlist membership change. Each trigger re-reads the
-    full watchlist from the DOM, so event deltas (including removals) are never
-    trusted.
+-   **Triggers**: the current watchlist snapshot is submitted once on first load,
+    again on every watchlist membership change, and again on every periodic tick
+    (the tick itself is specified in [Barkat Timer](#barkat-timer)). Each trigger
+    re-reads the full watchlist from the DOM, so event deltas (including removals)
+    are never trusted.
     -   Chart selection, category, timeframe and metadata changes never trigger a
         warm-up.
     -   Warm-up runs independently of the paint/refresh path: it never delays the
         UI, and a failed request only logs.
 -   **Accepted, not complete**: a resolved call means the backend *accepted* the
-    request; it does not mean coverage is ready yet.
--   **Recovery**: there are no timers, retries or background polling. A failed
-    warm-up is retried only by the next load or membership trigger.
+    request; it does not mean coverage is ready yet. This holds for every
+    trigger, the periodic tick included.
+-   **Ticker count notification**: a submitted batch reports its size with
+    `🔥 Warmed up N ticker(s)`. Nothing is shown for an empty snapshot, an empty
+    match or a failed request.
+-   **Recovery**: there is no dedicated retry timer or background polling. A
+    failed warm-up is retried by the next load, membership change or periodic
+    tick, whichever comes first.
+
+## Barkat Timer
+The authoritative description of the periodic `TIMER` tick that drives the
+Barkat userscript's recurring work.
+
+-   **Starts once**: the 60-second interval starts on `FIRST_LOAD`, which is
+    published once the DOM is ready. A repeated `FIRST_LOAD` reuses the running
+    interval instead of starting a second one.
+-   **First tick after one interval**: the tick fires 60 seconds after the
+    interval starts, never immediately.
+-   **Consumers**: each tick publishes one payload-free `TIMER` event. The timer
+    manager saves the workspace on that tick, so autosave is owned here rather
+    than by the TradingView manager, and watchlist warm-up consumes the same
+    event independently. Neither waits for the other, so one slow or failing
+    consumer never delays the other.
+-   **Same page lifetime only**: the interval lives in the page — a reload or a
+    new tab starts a fresh one, and nothing is persisted or resumed.
+-   **Browser throttling and per-tab cadence**: background tabs may be throttled
+    by the browser, so ticks there may arrive late instead of every 60 seconds,
+    and each tab runs its own interval, so cadence is per tab and tabs are not
+    coordinated.
+-   **Not a completion signal**: a tick only submits work; accept semantics stay
+    as described in [Barkat Watchlist Warm-up](#barkat-watchlist-warm-up).
 
 ## Seer Sidekick
 The Seer userscript runs on `http://seerr.media.lan/*` and on `https://www.airtelxstream.in/*`. Only the Seerr origin gets the panel; the Airtel Xstream origin only gets the marked search assistant described in [Seer Xstream Search](#seer-xstream-search).

@@ -25,7 +25,8 @@ const mockJQueryElement = {
   innerHTML: 'Test Symbol',
 };
 
-const mockJQuery = jest.fn((selector: string) => {
+// Default selector dispatch for the jQuery mock, reusable by tests that override it
+const defaultJQueryImpl = (selector: string): any => {
   switch (selector) {
     case Constants.DOM.BASIC.LTP:
       return mockJQueryElement;
@@ -38,7 +39,9 @@ const mockJQuery = jest.fn((selector: string) => {
     default:
       return { ...mockJQueryElement, length: 0 };
   }
-});
+};
+
+const mockJQuery = jest.fn((selector: string) => defaultJQueryImpl(selector));
 
 // Setup global $
 (global as any).$ = mockJQuery;
@@ -93,25 +96,6 @@ describe('TradingViewManager', () => {
 
     test('handles negative prices', () => {
       expect(manager.parsePriceFromText('Copy price -123.45')).toBe(-123.45);
-    });
-  });
-
-  describe('startAutoSave', () => {
-    beforeEach(() => {
-      jest.useFakeTimers();
-    });
-
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
-    test('should set up auto-save interval', () => {
-      const setIntervalSpy = jest.spyOn(global, 'setInterval');
-
-      manager.startAutoSave();
-
-      expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 30000);
-      setIntervalSpy.mockRestore();
     });
   });
 

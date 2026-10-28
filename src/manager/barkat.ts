@@ -3,6 +3,7 @@ import { BarkatTickerAnalysis } from '../models/barkat';
 import { TickerType } from '../models/ticker';
 import { TickerArea, TickerVisibility } from '../models/dom';
 import { DomainEventType } from '../models/domain_event';
+import { Notifier } from '../util/notify';
 import { IDomManager } from './dom';
 import { IDomainEventConsumer, ISubscriber } from './event_bus';
 import { ITickerManager } from './ticker';
@@ -44,9 +45,12 @@ export class BarkatManager implements IBarkatManager {
   /** @inheritdoc */
   registerEvents(subscriber: ISubscriber): void {
     // The event bus owns rejection logging; failures are not handled here.
-    subscriber.subscribeMany([DomainEventType.FIRST_LOAD, DomainEventType.WATCHLIST_CHANGED], async () => {
-      await this.warmupWatchlist();
-    });
+    subscriber.subscribeMany(
+      [DomainEventType.FIRST_LOAD, DomainEventType.WATCHLIST_CHANGED, DomainEventType.TIMER],
+      async () => {
+        await this.warmupWatchlist();
+      }
+    );
   }
 
   /**
@@ -55,7 +59,8 @@ export class BarkatManager implements IBarkatManager {
    * Reads the equity ticker metadata, keeps only records whose native ticker is
    * present in the DOM snapshot, de-duplicates them and submits the result to
    * the backend. An empty snapshot or an empty match submits nothing.
-   * Nothing is cached, retried or scheduled.
+   * Nothing is cached or retried: each trigger is handled on its own, and this
+   * manager owns no scheduler — the timer that publishes TIMER lives elsewhere.
    */
   private async warmupWatchlist(): Promise<void> {
     const snapshot = this.domManager.getTickers(TickerArea.WATCHLIST, TickerVisibility.ALL);
@@ -78,5 +83,6 @@ export class BarkatManager implements IBarkatManager {
     }
 
     await this.barkatClient.warmupTickers([...batch]);
+    Notifier.success(`🔥 Warmed up ${batch.size} ticker(s)`);
   }
 }
