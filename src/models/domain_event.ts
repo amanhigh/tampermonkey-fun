@@ -14,6 +14,7 @@ export enum DomainEventType {
   ALERTS_CHANGED = 'ALERTS_CHANGED',
   TICKER_METADATA_CHANGED = 'TICKER_METADATA_CHANGED',
   FIRST_LOAD = 'FIRST_LOAD',
+  TIMER = 'TIMER',
 }
 
 // ── Reusable Payload Interfaces ──
@@ -80,6 +81,11 @@ export interface TickerMetadataChangedEvent
 
 export interface FirstLoadEvent extends DomainEventBase<DomainEventType.FIRST_LOAD>, TickerPayload {}
 
+/**
+ * Payload-free event published on every timer tick.
+ */
+export type TimerEvent = DomainEventBase<DomainEventType.TIMER>;
+
 // ── Event-by-Type Map ──
 
 /**
@@ -99,6 +105,7 @@ export interface DomainEventByType {
   [DomainEventType.ALERTS_CHANGED]: AlertsChangedEvent;
   [DomainEventType.TICKER_METADATA_CHANGED]: TickerMetadataChangedEvent;
   [DomainEventType.FIRST_LOAD]: FirstLoadEvent;
+  [DomainEventType.TIMER]: TimerEvent;
 }
 
 // ── Event Union ──
@@ -114,4 +121,5 @@ export type DomainEvent =
   | TickerChangedEvent
   | AlertsChangedEvent
   | TickerMetadataChangedEvent
-  | FirstLoadEvent;
+  | FirstLoadEvent
+  | TimerEvent;

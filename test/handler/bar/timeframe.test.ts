@@ -2,7 +2,7 @@ import { TimeFrameBar, ITimeFrameHandler } from '../../../src/handler/bar/timefr
 import { ITimeFrameManager } from '../../../src/manager/timeframe';
 import { IBarkatManager } from '../../../src/manager/barkat';
 import { IDomManager } from '../../../src/manager/dom';
-import { TickerTimeframe } from '../../../src/models/timeframe';
+import { TimeframeInfo, TickerTimeframe } from '../../../src/models/timeframe';
 import { BarkatStatus, BarkatTickerAnalysis, BarkatTimeframe } from '../../../src/models/barkat';
 import { ISubscriber } from '../../../src/manager/event_bus';
 import { DomainEventType } from '../../../src/models/domain_event';
@@ -327,6 +327,19 @@ function lastMarkerHtml(): string {
   return markerHtml[markerHtml.length - 1] ?? '';
 }
 
+/**
+ * Builds the timeframe info object returned by `getTimeFrameInfo` for the given
+ * active codes.
+ * @param activeCodes - Backend-active timeframe codes
+ * @param reviewExempt - Whether the ticker type is exempt from timeframe review
+ */
+function selectionOf(
+  activeCodes: readonly TickerTimeframe[],
+  reviewExempt = false
+): TimeframeInfo {
+  return { activeCodes, reviewExempt };
+}
+
 /** Builds a valid analysis payload with all four assessed rows. */
 function buildAnalysis(
   ticker: string,
@@ -357,7 +370,9 @@ describe('TimeFrameBar', () => {
     mockTimeFrameManager = {
       apply: jest.fn(),
       getCurrentConfig: jest.fn(),
-      getActiveTimeframes: jest.fn().mockResolvedValue(['TMN', 'MN', 'WK', 'DL']),
+      getTimeFrameInfo: jest.fn().mockResolvedValue(
+        selectionOf([TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL])
+      ),
       getSequence: jest.fn(),
       toggleTimeframe: jest.fn(),
     } as any;
@@ -401,9 +416,9 @@ describe('TimeFrameBar', () => {
     });
 
     it('should mark backend-active chips with active class', async () => {
-      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
+      mockTimeFrameManager.getTimeFrameInfo.mockResolvedValue(selectionOf([
         TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL,
-      ]);
+      ]));
 
       const bar = createBar();
       await bar.refresh();
@@ -418,9 +433,9 @@ describe('TimeFrameBar', () => {
     });
 
     it('should mark non-backend chips with inactive class', async () => {
-      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
+      mockTimeFrameManager.getTimeFrameInfo.mockResolvedValue(selectionOf([
         TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL,
-      ]);
+      ]));
 
       const bar = createBar();
       await bar.refresh();
@@ -453,8 +468,8 @@ describe('TimeFrameBar', () => {
     });
 
     it('should keep the bar hidden while the mandatory selection request is pending', async () => {
-      const selection = deferred<readonly TickerTimeframe[]>();
-      mockTimeFrameManager.getActiveTimeframes.mockReturnValue(selection.promise);
+      const selection = deferred<TimeframeInfo>();
+      mockTimeFrameManager.getTimeFrameInfo.mockReturnValue(selection.promise);
 
       const bar = createBar();
       const pending = bar.refresh();
@@ -465,7 +480,9 @@ describe('TimeFrameBar', () => {
       expect(contentHtmlCalls()).toHaveLength(0);
       expect(mockBarkatManager.getTickerAnalysis).not.toHaveBeenCalled();
 
-      selection.resolve([TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK]);
+      selection.resolve(
+        selectionOf([TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK])
+      );
       await pending;
 
       expect(contentHtmlCalls()).toHaveLength(1);
@@ -477,21 +494,23 @@ describe('TimeFrameBar', () => {
       await bar.refresh();
       expect(contentHtmlCalls()).toHaveLength(1);
 
-      const selection = deferred<readonly TickerTimeframe[]>();
-      mockTimeFrameManager.getActiveTimeframes.mockReturnValue(selection.promise);
+      const selection = deferred<TimeframeInfo>();
+      mockTimeFrameManager.getTimeFrameInfo.mockReturnValue(selection.promise);
       mockRootEl.html.mockClear();
 
       const pending = bar.refresh();
       expect(mockRootEl.html).toHaveBeenCalledWith('');
       expect(contentHtmlCalls()).toHaveLength(0);
 
-      selection.resolve([TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK]);
+      selection.resolve(
+        selectionOf([TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK])
+      );
       await pending;
       expect(contentHtmlCalls()).toHaveLength(1);
     });
 
     it('should treat an empty selection as a valid painted state', async () => {
-      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([]);
+      mockTimeFrameManager.getTimeFrameInfo.mockResolvedValue(selectionOf([]));
 
       const bar = createBar();
       await bar.refresh();
@@ -506,7 +525,7 @@ describe('TimeFrameBar', () => {
   });
 
   describe('registerEvents', () => {
-    it('should subscribe to both timeframe refresh events through subscribeMany', () => {
+    it('should subscribe to all timeframe refresh events through subscribeMany', () => {
       const bar = createBar();
       const mockSubscriber: jest.Mocked<ISubscriber> = {
         subscribe: jest.fn(),
@@ -516,7 +535,12 @@ describe('TimeFrameBar', () => {
       bar.registerEvents(mockSubscriber);
 
       expect(mockSubscriber.subscribeMany).toHaveBeenCalledWith(
-        [DomainEventType.TICKER_CHANGED, DomainEventType.TICKER_TIMEFRAMES_CHANGED],
+        [
+          DomainEventType.TICKER_CHANGED,
+          DomainEventType.TICKER_TIMEFRAMES_CHANGED,
+          DomainEventType.TICKER_CATEGORY_CHANGED,
+          DomainEventType.TICKER_METADATA_CHANGED,
+        ],
         expect.any(Function)
       );
       expect(mockSubscriber.subscribe).not.toHaveBeenCalled();
@@ -602,9 +626,9 @@ describe('TimeFrameBar', () => {
     });
 
     it('should apply ERROR status when fewer than 3 active timeframes', async () => {
-      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
+      mockTimeFrameManager.getTimeFrameInfo.mockResolvedValue(selectionOf([
         TickerTimeframe.WK, TickerTimeframe.DL,
-      ]);
+      ]));
 
       const bar = createBar();
       await bar.refresh();
@@ -613,9 +637,9 @@ describe('TimeFrameBar', () => {
     });
 
     it('should apply ERROR when fewer than 3 even if YR is present', async () => {
-      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
+      mockTimeFrameManager.getTimeFrameInfo.mockResolvedValue(selectionOf([
         TickerTimeframe.YR, TickerTimeframe.WK,
-      ]);
+      ]));
 
       const bar = createBar();
       await bar.refresh();
@@ -624,9 +648,9 @@ describe('TimeFrameBar', () => {
     });
 
     it('should apply WARN status when at least 3 active timeframes without YR', async () => {
-      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
+      mockTimeFrameManager.getTimeFrameInfo.mockResolvedValue(selectionOf([
         TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK,
-      ]);
+      ]));
 
       const bar = createBar();
       await bar.refresh();
@@ -635,9 +659,9 @@ describe('TimeFrameBar', () => {
     });
 
     it('should apply OK status when at least 3 active timeframes including YR', async () => {
-      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
+      mockTimeFrameManager.getTimeFrameInfo.mockResolvedValue(selectionOf([
         TickerTimeframe.YR, TickerTimeframe.TMN, TickerTimeframe.MN,
-      ]);
+      ]));
 
       const bar = createBar();
       await bar.refresh();
@@ -679,10 +703,12 @@ describe('TimeFrameBar', () => {
     it.each(matrix)(
       'should badge and title only on mismatch: %s',
       async (_label, isActive, status, expectBadge, expectedTitle) => {
-        mockTimeFrameManager.getActiveTimeframes.mockResolvedValue(
-          isActive
-            ? [TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK]
-            : [TickerTimeframe.SMN, TickerTimeframe.MN, TickerTimeframe.WK]
+        mockTimeFrameManager.getTimeFrameInfo.mockResolvedValue(
+          selectionOf(
+            isActive
+              ? [TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK]
+              : [TickerTimeframe.SMN, TickerTimeframe.MN, TickerTimeframe.WK]
+          )
         );
         mockBarkatManager.getTickerAnalysis.mockResolvedValue(
           buildAnalysis('AAPL', { [TickerTimeframe.TMN]: status })
@@ -709,9 +735,9 @@ describe('TimeFrameBar', () => {
     );
 
     it('should leave every chip undecorated when all assessed selections match', async () => {
-      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
+      mockTimeFrameManager.getTimeFrameInfo.mockResolvedValue(selectionOf([
         TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK,
-      ]);
+      ]));
       // Unselected SMN is not preferred, so every assessed row agrees with the selection
       mockBarkatManager.getTickerAnalysis.mockResolvedValue(
         buildAnalysis('AAPL', { [TickerTimeframe.SMN]: 'fail' })
@@ -735,9 +761,9 @@ describe('TimeFrameBar', () => {
     });
 
     it('should never badge YR or DL even when active and unassessed', async () => {
-      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
+      mockTimeFrameManager.getTimeFrameInfo.mockResolvedValue(selectionOf([
         TickerTimeframe.YR, TickerTimeframe.DL, TickerTimeframe.MN, TickerTimeframe.WK,
-      ]);
+      ]));
       mockBarkatManager.getTickerAnalysis.mockResolvedValue(
         buildAnalysis('AAPL', {
           [TickerTimeframe.SMN]: 'fail',
@@ -813,9 +839,9 @@ describe('TimeFrameBar', () => {
 
   describe('Barkat failure handling', () => {
     it('should stay quiet and drop old badges when analysis is rejected', async () => {
-      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
+      mockTimeFrameManager.getTimeFrameInfo.mockResolvedValue(selectionOf([
         TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK,
-      ]);
+      ]));
       mockBarkatManager.getTickerAnalysis.mockResolvedValueOnce(
         buildAnalysis('AAPL', { [TickerTimeframe.TMN]: 'fail' })
       );
@@ -840,9 +866,9 @@ describe('TimeFrameBar', () => {
 
     it('should mark indicators unavailable quietly without changing the business status', async () => {
       mockBarkatManager.getTickerAnalysis.mockRejectedValue(new Error('service down'));
-      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
+      mockTimeFrameManager.getTimeFrameInfo.mockResolvedValue(selectionOf([
         TickerTimeframe.YR, TickerTimeframe.TMN, TickerTimeframe.MN,
-      ]);
+      ]));
 
       const bar = createBar();
       await bar.refresh();
@@ -855,47 +881,118 @@ describe('TimeFrameBar', () => {
     });
   });
 
+  describe('review-exempt tickers', () => {
+    const matrix: Array<[string, readonly TickerTimeframe[]]> = [
+      ['INDEX', [TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL]],
+      ['COMPOSITE', [TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN]],
+    ];
+
+    it.each(matrix)(
+      'should paint chips only for the exempt %s ticker type',
+      async (_type, activeCodes) => {
+        mockTimeFrameManager.getTimeFrameInfo.mockResolvedValue(selectionOf(activeCodes, true));
+
+        const bar = createBar();
+        await bar.refresh();
+
+        const html = lastHtml();
+        // All six chips paint with generic titles and no analysis decoration
+        for (const code of Object.values(TickerTimeframe) as TickerTimeframe[]) {
+          expect(chipHtml(html, code)).toContain(BEM.CHIP);
+          expect(chipState(code).title).toBe(CLICK_HINT);
+          expect(chipState(code).badge).toBeNull();
+        }
+        expect(html).not.toContain(BADGE_CLASS);
+        expect(mockBarkatManager.getTickerAnalysis).not.toHaveBeenCalled();
+
+        // No loading or unavailable marker: READY renders nothing
+        expect(markerHtml).toHaveLength(0);
+        expect(mockMarkerEl.length).toBe(0);
+        expect(lastMarkerHtml()).toBe('');
+        expect(rootAttrs.get('aria-busy')).toBe('false');
+
+        // Chips stay interactive for exempt tickers
+        simulateChipClick(TickerTimeframe.WK);
+        expect(mockTimeFrameManager.toggleTimeframe).toHaveBeenCalledWith(TickerTimeframe.WK);
+      }
+    );
+
+    it('should start the analysis phase when a ticker becomes review-eligible', async () => {
+      mockTimeFrameManager.getTimeFrameInfo.mockResolvedValueOnce(
+        selectionOf([TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK], true)
+      );
+
+      const bar = createBar();
+      await bar.refresh();
+
+      expect(mockBarkatManager.getTickerAnalysis).not.toHaveBeenCalled();
+      expect(chipState(TickerTimeframe.TMN).badge).toBeNull();
+
+      mockTimeFrameManager.getTimeFrameInfo.mockResolvedValueOnce(
+        selectionOf([TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK])
+      );
+      mockBarkatManager.getTickerAnalysis.mockResolvedValueOnce(
+        buildAnalysis('AAPL', { [TickerTimeframe.TMN]: 'fail' })
+      );
+
+      await bar.refresh();
+
+      expect(mockBarkatManager.getTickerAnalysis).toHaveBeenCalledTimes(1);
+      expect(chipState(TickerTimeframe.TMN).badge).toBe(BEM.BADGE_GLYPH);
+      expect(chipState(TickerTimeframe.TMN).title).toBe(TITLE_SELECTED_NOT_PREFERRED);
+      expect(rootAttrs.get('aria-busy')).toBe('false');
+    });
+  });
+
   describe('captured ticker and stale phase guards', () => {
     it('should capture the ticker before loading the selection', async () => {
-      const selection = deferred<readonly TickerTimeframe[]>();
-      mockTimeFrameManager.getActiveTimeframes.mockReturnValue(selection.promise);
+      const selection = deferred<TimeframeInfo>();
+      mockTimeFrameManager.getTimeFrameInfo.mockReturnValue(selection.promise);
 
       const bar = createBar();
       const pending = bar.refresh();
       expect(mockDomManager.getTicker).toHaveBeenCalledTimes(1);
+      expect(mockTimeFrameManager.getTimeFrameInfo).toHaveBeenCalledWith('AAPL');
 
       // Ticker switches while the selection is still loading
       mockDomManager.getTicker.mockReturnValue('MSFT');
-      selection.resolve([TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK]);
+      selection.resolve(selectionOf([TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK]));
       await pending;
 
       // Analysis still runs for the ticker captured by this request
+      expect(mockTimeFrameManager.getTimeFrameInfo).toHaveBeenCalledTimes(1);
       expect(mockBarkatManager.getTickerAnalysis).toHaveBeenCalledWith('AAPL');
     });
 
     it('should ignore a stale mandatory selection phase result', async () => {
-      mockTimeFrameManager.getActiveTimeframes.mockResolvedValueOnce([
-        TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL,
-      ]);
+      mockTimeFrameManager.getTimeFrameInfo.mockResolvedValueOnce(
+        selectionOf([
+          TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL,
+        ])
+      );
 
       const bar = createBar();
       await bar.refresh();
 
       // Newer refresh is pending on selections; the old content is cleared
-      const staleSelection = deferred<readonly TickerTimeframe[]>();
-      mockTimeFrameManager.getActiveTimeframes.mockReturnValueOnce(staleSelection.promise);
+      const staleSelection = deferred<TimeframeInfo>();
+      mockTimeFrameManager.getTimeFrameInfo.mockReturnValueOnce(staleSelection.promise);
       const stale = bar.refresh();
       expect(lastHtml()).toContain(BEM.ACTIVE);
 
       // A still newer refresh completes and becomes the painted state
-      mockTimeFrameManager.getActiveTimeframes.mockResolvedValueOnce([
-        TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN,
-      ]);
+      mockTimeFrameManager.getTimeFrameInfo.mockResolvedValueOnce(
+        selectionOf([
+          TickerTimeframe.YR, TickerTimeframe.SMN, TickerTimeframe.TMN, TickerTimeframe.MN,
+        ])
+      );
       await bar.refresh();
       const painted = contentHtmlCalls().length;
 
       // The older pending selection resolves late and must be ignored
-      staleSelection.resolve([TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL]);
+      staleSelection.resolve(
+        selectionOf([TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK, TickerTimeframe.DL])
+      );
       await stale;
 
       const html = lastHtml();
@@ -904,18 +1001,25 @@ describe('TimeFrameBar', () => {
       expect(chipHtml(html, TickerTimeframe.DL)).toContain(BEM.INACTIVE);
     });
 
-    it('should ignore a stale indicator phase result', async () => {
+    it('should discard a late analysis when a newer exempt selection settles first', async () => {
       const firstAnalysis = deferred<BarkatTickerAnalysis>();
-      mockBarkatManager.getTickerAnalysis
-        .mockReturnValueOnce(firstAnalysis.promise)
-        .mockResolvedValueOnce(buildAnalysis('AAPL'));
+      mockBarkatManager.getTickerAnalysis.mockReturnValueOnce(firstAnalysis.promise);
 
       const bar = createBar();
       const first = bar.refresh();
       await flushAsync();
+      expect(mockBarkatManager.getTickerAnalysis).toHaveBeenCalledTimes(1);
 
+      // A newer request for a review-exempt type skips the analysis phase entirely
+      mockTimeFrameManager.getTimeFrameInfo.mockResolvedValueOnce(
+        selectionOf([TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK], true)
+      );
       await bar.refresh();
 
+      expect(mockBarkatManager.getTickerAnalysis).toHaveBeenCalledTimes(1);
+      expect(rootAttrs.get('aria-busy')).toBe('false');
+
+      // The earlier eligible request resolves late and its overlay is discarded
       firstAnalysis.resolve(
         buildAnalysis('AAPL', {
           [TickerTimeframe.SMN]: 'fail',
@@ -926,19 +1030,20 @@ describe('TimeFrameBar', () => {
       );
       await first;
 
-      // Only the legitimate mismatch badge for the unselected SMN survives
-      expect(chipState(TickerTimeframe.MN).badge).toBeNull();
-      expect(chipState(TickerTimeframe.MN).title).toBe(CLICK_HINT);
-      expect(chipState(TickerTimeframe.SMN).badge).toBe(BEM.BADGE_GLYPH);
-      expect(chipState(TickerTimeframe.SMN).title).toBe(TITLE_UNSELECTED_PREFERRED);
+      for (const code of Object.values(TickerTimeframe) as TickerTimeframe[]) {
+        expect(chipState(code).badge).toBeNull();
+        expect(chipState(code).title).toBe(CLICK_HINT);
+      }
+      expect(mockMarkerEl.length).toBe(0);
+      expect(rootAttrs.get('aria-busy')).toBe('false');
     });
   });
 
   describe('native titles and bindings', () => {
     it('should keep full detail out of the chip markup', async () => {
-      mockTimeFrameManager.getActiveTimeframes.mockResolvedValue([
+      mockTimeFrameManager.getTimeFrameInfo.mockResolvedValue(selectionOf([
         TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK,
-      ]);
+      ]));
       mockBarkatManager.getTickerAnalysis.mockResolvedValue(
         buildAnalysis('AAPL', { [TickerTimeframe.MN]: 'warning' })
       );

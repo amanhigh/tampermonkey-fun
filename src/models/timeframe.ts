@@ -36,6 +36,19 @@ export type Timeframe = Readonly<{
 export type Sequence = readonly [TickerTimeframe, TickerTimeframe, TickerTimeframe, TickerTimeframe];
 
 /**
+ * Timeframe-based eligibility snapshot for a single ticker.
+ *
+ * `activeCodes` holds the backend timeframe codes sorted by catalog order.
+ * `reviewExempt` is true when the ticker type is exempt from timeframe
+ * review (INDEX/COMPOSITE) and false whenever eligibility is unknown,
+ * e.g. after a backend read failure.
+ */
+export interface TimeframeInfo {
+  readonly activeCodes: readonly TickerTimeframe[];
+  readonly reviewExempt: boolean;
+}
+
+/**
  * TMN-prefixed Sequence (4-tuple) for timeframe hotkeys and screenshot flows.
  * Represents TMN → MN → WK → DL in catalog order.
  * Used when the ticker's allowed timeframes include DL, and as the default

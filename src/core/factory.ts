@@ -77,7 +77,8 @@ import { IGlobalErrorHandler, GlobalErrorHandler } from '../handler/error';
 import { IAlertFeedManager, AlertFeedManager } from '../manager/alertfeed';
 import { ISeerManager, SeerManager } from '../manager/seer';
 import { ISearchManager, SearchManager } from '../manager/search';
-import { IPublisher, ISubscriber, IEventBus, EventBus } from '../manager/event_bus';
+import { IPublisher, ISubscriber, IEventBus, EventBus, IDomainEventConsumer } from '../manager/event_bus';
+import { TimerManager } from '../manager/timer';
 import { IImdbManager, ImdbManager } from '../manager/imdb';
 import { IPanelHandler, PanelHandler } from '../handler/panel';
 import { IPicassoHandler, PicassoHandler } from '../handler/picasso';
@@ -128,8 +129,7 @@ export class Factory {
             Factory.handler.command(),
             Factory.handler.kite(),
             Factory.handler.alertFeed(),
-            Factory.handler.dashboardSync(),
-            Factory.manager.tv()
+            Factory.handler.dashboardSync()
           )
       ),
 
@@ -141,10 +141,7 @@ export class Factory {
     picasso: (): PicassoApp =>
       Factory.getInstance('picassoApp', () => new PicassoApp(Factory.handler.global(), Factory.handler.picasso())),
     seer: (): SeerApp =>
-      Factory.getInstance(
-        'seerApp',
-        () => new SeerApp(Factory.handler.seer(), Factory.handler.global(), Factory.handler.search())
-      ),
+      Factory.getInstance('seerApp', () => new SeerApp(Factory.handler.seer(), Factory.handler.search())),
   };
 
   /**
@@ -191,6 +188,9 @@ export class Factory {
    * Handles business logic and orchestration
    */
   public static manager = {
+    timer: (): IDomainEventConsumer =>
+      Factory.getInstance('timerManager', () => new TimerManager(Factory.manager.eventPublisher())),
+
     timeFrame: (): ITimeFrameManager =>
       Factory.getInstance(
         'timeframeManager',
@@ -478,6 +478,7 @@ export class Factory {
               Factory.handler.tickerChange(),
               Factory.handler.dashboardSync(),
               Factory.manager.barkat(),
+              Factory.manager.timer(),
             ],
             Factory.manager.eventSubscriber(),
             Factory.manager.tv()
@@ -658,7 +659,7 @@ export class Factory {
     seer: (): ISeerHandler =>
       Factory.getInstance('seerHandler', () => new SeerHandler(Factory.manager.seer(), Factory.manager.search())),
     search: (): ISearchHandler =>
-      Factory.getInstance('searchHandler', () => new SearchHandler(Factory.manager.search())),
+      Factory.getInstance('searchHandler', () => new SearchHandler(Factory.manager.search(), Factory.util.observer())),
   };
 
   /**

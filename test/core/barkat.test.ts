@@ -12,7 +12,6 @@ import { IKiteHandler } from '../../src/handler/kite';
 import { IAlertFeedHandler } from '../../src/handler/alertfeed';
 import { IGlobalErrorHandler } from '../../src/handler/error';
 import { IDashboardSyncHandler } from '../../src/handler/dashboard_sync';
-import { ITradingViewManager } from '../../src/manager/tv';
 import { IToolbarHandler } from '../../src/handler/toolbar';
 
 describe('Barkat', () => {
@@ -57,8 +56,7 @@ describe('Barkat', () => {
       {} as ICommandInputHandler,
       {} as IKiteHandler,
       {} as IAlertFeedHandler,
-      dashboardSyncHandlerMock,
-      {} as ITradingViewManager
+      dashboardSyncHandlerMock
     );
 
     return { app, errorHandlerMock, journalSyncHandlerMock, dashboardSyncHandlerMock };

@@ -24,6 +24,7 @@ describe('SeerManager', () => {
     client = {
       getBaseUrl: jest.fn().mockReturnValue('http://seerr.media.lan/api/v1'),
       getDeleteTarget: jest.fn().mockResolvedValue(buildTarget()),
+      hasMediaRecord: jest.fn().mockResolvedValue(true),
       getSearchTitle: jest.fn().mockResolvedValue('Dune'),
       deleteFiles: jest.fn().mockResolvedValue(undefined),
       deleteRequest: jest.fn().mockResolvedValue(undefined),
@@ -47,6 +48,90 @@ describe('SeerManager', () => {
         expect(manager.isDetailPage(pathname)).toBe(false);
       }
     );
+  });
+
+  describe('hasMediaRecord', () => {
+    it('delegates the canonical movie route to the client', async () => {
+      await expect(manager.hasMediaRecord('/movie/603/')).resolves.toBe(true);
+
+      expect(client.hasMediaRecord).toHaveBeenCalledWith('/movie/603');
+    });
+
+    it('canonicalizes a nested tv season route to its media route', async () => {
+      client.hasMediaRecord.mockResolvedValue(false);
+
+      await expect(manager.hasMediaRecord('/tv/1399/season/2')).resolves.toBe(false);
+
+      expect(client.hasMediaRecord).toHaveBeenCalledWith('/tv/1399');
+    });
+
+    it.each(['/discover', '/movie/0', 'movie/603'])(
+      'rejects the unsupported route %s before any client call',
+      async (pathname: string) => {
+        await expect(manager.hasMediaRecord(pathname)).rejects.toThrow(
+          `Unsupported Seer route: ${pathname}`
+        );
+
+        expect(client.hasMediaRecord).not.toHaveBeenCalled();
+      }
+    );
+
+    it('propagates a client failure unchanged', async () => {
+      client.hasMediaRecord.mockRejectedValue(new ApiError(500, 'Server Error'));
+
+      await expect(manager.hasMediaRecord(MOVIE_ROUTE)).rejects.toMatchObject({ status: 500 });
+    });
+
+    it('never deletes anything while reading presence', async () => {
+      await manager.hasMediaRecord(MOVIE_ROUTE);
+
+      expect(client.getDeleteTarget).not.toHaveBeenCalled();
+      expect(client.deleteFiles).not.toHaveBeenCalled();
+      expect(client.deleteRequest).not.toHaveBeenCalled();
+      expect(client.deleteMedia).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getMediaTitle', () => {
+    it('delegates the canonical movie route to the client', async () => {
+      await expect(manager.getMediaTitle('/movie/603/')).resolves.toBe('Dune');
+
+      expect(client.getSearchTitle).toHaveBeenCalledWith('/movie/603');
+    });
+
+    it('canonicalizes a nested tv season route to its media route', async () => {
+      client.getSearchTitle.mockResolvedValue('Game of Thrones');
+
+      await expect(manager.getMediaTitle('/tv/1399/season/2')).resolves.toBe('Game of Thrones');
+
+      expect(client.getSearchTitle).toHaveBeenCalledWith('/tv/1399');
+    });
+
+    it.each(['/discover', '/movie/0', 'movie/603'])(
+      'rejects the unsupported route %s before any client call',
+      async (pathname: string) => {
+        await expect(manager.getMediaTitle(pathname)).rejects.toThrow(
+          `Unsupported Seer route: ${pathname}`
+        );
+
+        expect(client.getSearchTitle).not.toHaveBeenCalled();
+      }
+    );
+
+    it('propagates a client failure unchanged', async () => {
+      client.getSearchTitle.mockRejectedValue(new ApiError(500, 'Server Error'));
+
+      await expect(manager.getMediaTitle(MOVIE_ROUTE)).rejects.toMatchObject({ status: 500 });
+    });
+
+    it('never deletes anything while reading the title', async () => {
+      await manager.getMediaTitle(MOVIE_ROUTE);
+
+      expect(client.getDeleteTarget).not.toHaveBeenCalled();
+      expect(client.deleteFiles).not.toHaveBeenCalled();
+      expect(client.deleteRequest).not.toHaveBeenCalled();
+      expect(client.deleteMedia).not.toHaveBeenCalled();
+    });
   });
 
   describe('deleteMedia', () => {

@@ -70,7 +70,7 @@ describe('JournalManager', () => {
 
     // Mock TimeFrameManager
     mockTimeFrameManager = {
-      getActiveTimeframes: jest.fn(),
+      getTimeFrameInfo: jest.fn(),
       toggleTimeframe: jest.fn(),
       getSequence: jest.fn().mockImplementation((tf: TickerTimeframe) => {
         if (tf === TickerTimeframe.YR) return Promise.resolve(YR_SEQUENCE);

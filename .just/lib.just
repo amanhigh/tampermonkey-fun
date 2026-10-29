@@ -16,3 +16,7 @@ _detail task info:
 
 _title task info:
     echo '{{BOLD}}{{GREEN}}[{{task}}]{{NORMAL}} {{info}}'
+
+# ── Command runner ──
+_run-no-output command:
+    eval {{quote(command)}} >/dev/null 2>&1

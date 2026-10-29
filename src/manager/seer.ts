@@ -15,6 +15,20 @@ export interface ISeerManager {
   isDetailPage(pathname: string): boolean;
 
   /**
+   * Report whether the Seer page has a media record, without changing anything.
+   * @param pathname - Browser pathname of the page
+   * @returns Promise resolving with true when the page has a valid media record
+   */
+  hasMediaRecord(pathname: string): Promise<boolean>;
+
+  /**
+   * Resolve the human readable title of the page.
+   * @param pathname - Browser pathname of the page
+   * @returns Promise resolving with the first usable title of the page
+   */
+  getMediaTitle(pathname: string): Promise<string>;
+
+  /**
    * Delete the files, requests and media entry of the page.
    * @param pathname - Browser pathname captured when the deletion was confirmed
    * @returns Promise resolving once every deletion step succeeded
@@ -32,6 +46,16 @@ export class SeerManager implements ISeerManager {
   /** @inheritdoc */
   isDetailPage(pathname: string): boolean {
     return isSeerDetailPage(pathname);
+  }
+
+  /** @inheritdoc */
+  async hasMediaRecord(pathname: string): Promise<boolean> {
+    return this.client.hasMediaRecord(canonicalSeerDetailPath(pathname));
+  }
+
+  /** @inheritdoc */
+  async getMediaTitle(pathname: string): Promise<string> {
+    return this.client.getSearchTitle(canonicalSeerDetailPath(pathname));
   }
 
   /** @inheritdoc */

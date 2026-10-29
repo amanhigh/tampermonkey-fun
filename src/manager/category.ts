@@ -7,7 +7,7 @@ import { TickerState, TickerUpdateRequest } from '../models/ticker';
 import { WatchCategory, WatchCategoryId } from '../models/watch';
 import { FlagCategory, FlagCategoryId } from '../models/flag';
 import { TickerCategory, TickerTag } from '../models/category';
-import { Ticker, TickerType } from '../models/ticker';
+import { Ticker, isTimeframeReviewExempt } from '../models/ticker';
 import { TickerTimeframe } from '../models/timeframe';
 import { WatchClassifier, FlagClassifier } from './classification';
 import { IPublisher } from './event_bus';
@@ -291,7 +291,7 @@ export class CategoryManager implements ICategoryManager {
     const tags: TickerTag[] = [];
 
     // Pending timeframe review does not apply to index or composite tickers.
-    const isTimeframeExempt = tickerRecord.type === TickerType.INDEX || tickerRecord.type === TickerType.COMPOSITE;
+    const isTimeframeExempt = isTimeframeReviewExempt(tickerRecord.type);
 
     if (!isTimeframeExempt && !tickerRecord.timeframes.includes(TickerTimeframe.YR)) {
       tags.push(TickerTag.TIMEFRAME_PENDING);

@@ -10,7 +10,6 @@ import { IKiteHandler } from '../handler/kite';
 import { IAlertFeedHandler } from '../handler/alertfeed';
 import { IGlobalErrorHandler } from '../handler/error';
 import { IDashboardSyncHandler } from '../handler/dashboard_sync';
-import { ITradingViewManager } from '../manager/tv';
 import { IToolbarHandler } from '../handler/toolbar';
 import { Factory } from './factory';
 
@@ -28,8 +27,7 @@ export class Barkat {
     private readonly commandHandler: ICommandInputHandler,
     private readonly kiteHandler: IKiteHandler,
     private readonly alertFeedHandler: IAlertFeedHandler,
-    private readonly dashboardSyncHandler: IDashboardSyncHandler,
-    private readonly tvManager: ITradingViewManager
+    private readonly dashboardSyncHandler: IDashboardSyncHandler
   ) {}
 
   private isInvestingSite(): boolean {
@@ -115,7 +113,6 @@ export class Barkat {
     this.uiUtil.buildWrapper(Constants.UI.IDS.AREAS.AUDIT).hide().appendTo($area);
     this.journalHandler.renderToolbar();
     this.kiteHandler.setupGttRefreshListener();
-    this.tvManager.startAutoSave();
     this.onloadHandler.init();
     console.info('TradingView UI setup');
   }

@@ -4,7 +4,6 @@ jest.mock('../../src/core/factory', () => ({
 
 import { Factory } from '../../src/core/factory';
 import { RunSeer, SeerApp } from '../../src/core/seer';
-import { IGlobalErrorHandler } from '../../src/handler/error';
 import { ISearchHandler } from '../../src/handler/search';
 import { ISeerHandler } from '../../src/handler/seer';
 
@@ -17,8 +16,18 @@ const AIRTEL_ORIGIN = 'https://www.airtelxstream.in';
 /** Origin unrelated to the userscript. */
 const FOREIGN_ORIGIN = 'https://example.test';
 
-/** Window stand-in carrying only the origin the app dispatches on. */
-const page = { location: { origin: SEERR_ORIGIN } };
+/** Pre-existing page error hooks that Seer must leave untouched. */
+const pageOnError = jest.fn();
+const pageOnUnhandledRejection = jest.fn();
+const pageAddEventListener = jest.fn();
+
+/** Window stand-in carrying the origin the app dispatches on and page error hooks. */
+const page = {
+  location: { origin: SEERR_ORIGIN },
+  onerror: pageOnError,
+  onunhandledrejection: pageOnUnhandledRejection,
+  addEventListener: pageAddEventListener,
+};
 
 /** Install the page double for the duration of the suite. */
 function installPage(): void {
@@ -28,6 +37,14 @@ function installPage(): void {
 /** Publish the origin the app must dispatch on. */
 function visit(origin: string): void {
   page.location.origin = origin;
+}
+
+/** Assert that Seer neither replaced nor added global error/rejection hooks. */
+function expectPageErrorHooksUntouched(): void {
+  expect(page.onerror).toBe(pageOnError);
+  expect(page.onunhandledrejection).toBe(pageOnUnhandledRejection);
+  expect(pageAddEventListener).not.toHaveBeenCalledWith('error', expect.any(Function));
+  expect(pageAddEventListener).not.toHaveBeenCalledWith('unhandledrejection', expect.any(Function));
 }
 
 describe('SeerApp startup', () => {
@@ -42,7 +59,6 @@ describe('SeerApp startup', () => {
 
 describe('SeerApp', () => {
   let seerHandler: jest.Mocked<ISeerHandler>;
-  let errorHandler: jest.Mocked<IGlobalErrorHandler>;
   let searchHandler: jest.Mocked<ISearchHandler>;
   let app: SeerApp;
 
@@ -52,47 +68,40 @@ describe('SeerApp', () => {
     installPage();
 
     seerHandler = { initialize: jest.fn() };
-    errorHandler = { registerGlobalErrorHandlers: jest.fn() };
     searchHandler = { searchXstream: jest.fn() };
-    app = new SeerApp(seerHandler, errorHandler, searchHandler);
+    app = new SeerApp(seerHandler, searchHandler);
   });
 
   afterEach(() => {
     delete (globalThis as unknown as Record<string, unknown>).window;
   });
 
-  it('registers global error handlers before initializing the Seerr handler', () => {
+  it('initializes the Seerr handler on the Seerr origin', () => {
     app.initialize();
 
-    expect(errorHandler.registerGlobalErrorHandlers).toHaveBeenCalledTimes(1);
     expect(seerHandler.initialize).toHaveBeenCalledTimes(1);
     expect(searchHandler.searchXstream).not.toHaveBeenCalled();
-    expect(errorHandler.registerGlobalErrorHandlers.mock.invocationCallOrder[0]).toBeLessThan(
-      seerHandler.initialize.mock.invocationCallOrder[0]
-    );
+    expectPageErrorHooksUntouched();
   });
 
-  it('registers global error handlers before arming the Airtel search handler', () => {
+  it('arms the Airtel search handler on the Airtel origin', () => {
     visit(AIRTEL_ORIGIN);
 
     app.initialize();
 
-    expect(errorHandler.registerGlobalErrorHandlers).toHaveBeenCalledTimes(1);
     expect(searchHandler.searchXstream).toHaveBeenCalledTimes(1);
     expect(seerHandler.initialize).not.toHaveBeenCalled();
-    expect(errorHandler.registerGlobalErrorHandlers.mock.invocationCallOrder[0]).toBeLessThan(
-      searchHandler.searchXstream.mock.invocationCallOrder[0]
-    );
+    expectPageErrorHooksUntouched();
   });
 
-  it('initializes neither handler on an unrelated origin but still registers errors', () => {
+  it('initializes neither handler on an unrelated origin', () => {
     visit(FOREIGN_ORIGIN);
 
     app.initialize();
 
-    expect(errorHandler.registerGlobalErrorHandlers).toHaveBeenCalledTimes(1);
     expect(seerHandler.initialize).not.toHaveBeenCalled();
     expect(searchHandler.searchXstream).not.toHaveBeenCalled();
+    expectPageErrorHooksUntouched();
   });
 
   it('selects the handler by exact origin only', () => {
@@ -101,11 +110,12 @@ describe('SeerApp', () => {
 
     expect(seerHandler.initialize).not.toHaveBeenCalled();
     expect(searchHandler.searchXstream).not.toHaveBeenCalled();
+    expectPageErrorHooksUntouched();
   });
 
   it('does not start the app when only constructed', () => {
     expect(Factory.app.seer).not.toHaveBeenCalled();
-    expect(errorHandler.registerGlobalErrorHandlers).not.toHaveBeenCalled();
+    expectPageErrorHooksUntouched();
   });
 });
 

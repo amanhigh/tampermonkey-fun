@@ -113,6 +113,17 @@ export interface TickerListResponse {
 }
 
 /**
+ * Checks whether a ticker type is exempt from timeframe review.
+ * INDEX and COMPOSITE instruments are tracked without a reviewed
+ * timeframe set, so pending-review rules do not apply to them.
+ * @param type Ticker type to check
+ * @returns True when timeframe review does not apply
+ */
+export function isTimeframeReviewExempt(type: TickerType): boolean {
+  return type === TickerType.INDEX || type === TickerType.COMPOSITE;
+}
+
+/**
  * Checks if a symbol is a composite symbol containing special characters
  * like '/', '*', '-', ':' or matching special-case composite tickers.
  * @param symbol Symbol to check

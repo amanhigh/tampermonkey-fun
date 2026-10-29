@@ -36,7 +36,7 @@ describe('StyleManager', () => {
 
     // Mock TimeFrameManager
     mockTimeFrameManager = {
-      getActiveTimeframes: jest.fn(),
+      getTimeFrameInfo: jest.fn(),
       toggleTimeframe: jest.fn(),
       getSequence: jest.fn(),
       apply: jest.fn(),
