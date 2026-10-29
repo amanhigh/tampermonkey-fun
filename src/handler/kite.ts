@@ -1,14 +1,14 @@
 import { IKiteManager } from '../manager/kite';
 import { IDomManager } from '../manager/dom';
 import { IWaitUtil } from '../util/wait';
-import { Constants } from '../models/constant';
-import { Order, GttApiResponse } from '../models/kite';
-import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../models/gtt';
+import { Constants } from '../models/shared/constant';
+import { Order, GttApiResponse } from '../models/integrations/kite';
+import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../models/barkat/gtt';
 import { Notifier } from '../util/notify';
 import { ITradingViewManager } from '../manager/tv';
 import { IUIUtil } from '../util/ui';
 import { IDomainEventConsumer, ISubscriber } from '../manager/event_bus';
-import { DomainEventType } from '../models/domain_event';
+import { DomainEventType } from '../models/barkat/domain_event';
 
 /**
  * Configuration for order button display

@@ -1,6 +1,6 @@
 import { StaleReviewPlugin } from '../../src/manager/stale_review_plugin';
 import { IAuditClient } from '../../src/client/audit';
-import { AuditExecutionResult } from '../../src/models/audit_catalogue';
+import { AuditExecutionResult } from '../../src/models/barkat/audit/audit_catalogue';
 
 describe('StaleReviewPlugin (backend adapter)', () => {
   let plugin: StaleReviewPlugin;

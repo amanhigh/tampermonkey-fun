@@ -1,5 +1,5 @@
 import { KiteClient, IKiteClient } from '../../src/client/kite';
-import { CreateGttRequest, GttApiResponse, OrderType } from '../../src/models/kite';
+import { CreateGttRequest, GttApiResponse, OrderType } from '../../src/models/integrations/kite';
 
 // Mock the BaseClient's makeRequest method
 jest.mock('../../src/client/base', () => {

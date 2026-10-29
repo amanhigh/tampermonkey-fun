@@ -13,11 +13,11 @@ import {
   JournalQueryParams,
   JournalRecord,
   JournalResultStatus,
-} from '../models/journal';
-import { ScreenshotResponse } from '../models/os';
-import { Constants } from '../models/constant';
-import { JournalOpenEvent } from '../models/events';
-import { TickerTimeframe } from '../models/timeframe';
+} from '../models/barkat/journal';
+import { ScreenshotResponse } from '../models/integrations/os';
+import { Constants } from '../models/shared/constant';
+import { JournalOpenEvent } from '../models/shared/events';
+import { TickerTimeframe } from '../models/barkat/market/timeframe';
 
 /**
  * Interface for managing trading journal operations

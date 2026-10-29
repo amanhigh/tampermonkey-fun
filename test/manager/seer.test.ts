@@ -1,7 +1,7 @@
 import { ISeerClient } from '../../src/client/seer';
 import { ISeerManager, SeerManager } from '../../src/manager/seer';
-import { ApiError } from '../../src/models/api_error';
-import { SeerDeleteTarget, SeerVariant } from '../../src/models/seer';
+import { ApiError } from '../../src/models/shared/api_error';
+import { SeerDeleteTarget, SeerVariant } from '../../src/models/integrations/seer';
 
 /** Build a deletion target with sane defaults for the fields under test. */
 function buildTarget(overrides: Partial<SeerDeleteTarget> = {}): SeerDeleteTarget {

@@ -1,5 +1,5 @@
 import { UIUtil } from '../../src/util/ui';
-import { BarId, BAR_CLASS } from '../../src/models/bar';
+import { BarId, BAR_CLASS } from '../../src/models/presentation/bar';
 
 // ── Local jQuery mock ──
 

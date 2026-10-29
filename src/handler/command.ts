@@ -1,6 +1,6 @@
 import { ITickerHandler } from './ticker';
 import { IAlertHandler } from './alert';
-import { Constants } from '../models/constant';
+import { Constants } from '../models/shared/constant';
 import { Notifier } from '../util/notify';
 
 /**

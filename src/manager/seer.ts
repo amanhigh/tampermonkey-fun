@@ -1,6 +1,6 @@
 import { ISeerClient } from '../client/seer';
-import { ApiError } from '../models/api_error';
-import { SeerDeleteTarget } from '../models/seer';
+import { ApiError } from '../models/shared/api_error';
+import { SeerDeleteTarget } from '../models/integrations/seer';
 import { canonicalSeerDetailPath, isSeerDetailPage } from '../util/seer';
 
 /**

@@ -2,10 +2,10 @@ import { AlertFeedManager, IAlertFeedManager } from '../../src/manager/alertfeed
 import { IDisplayManager } from '../../src/manager/display';
 import { ICategoryManager } from '../../src/manager/category';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
-import { DisplayState } from '../../src/models/display';
-import { AlertTicker } from '../../src/models/alert_ticker';
-import { TickerCategory } from '../../src/models/category';
-import { WatchCategoryId } from '../../src/models/watch';
+import { DisplayState } from '../../src/models/presentation/display';
+import { AlertTicker } from '../../src/models/barkat/alert/alert_ticker';
+import { TickerCategory } from '../../src/models/barkat/market/category';
+import { WatchCategoryId } from '../../src/models/barkat/market/watch';
 
 // Mock GM global
 (global as any).GM = {

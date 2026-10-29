@@ -31,8 +31,8 @@ import {
   BarIndicatorState,
   BarIndicatorUpdate,
   BarStatus,
-} from '../../../src/models/bar';
-import { DomainEventType } from '../../../src/models/domain_event';
+} from '../../../src/models/presentation/bar';
+import { DomainEventType } from '../../../src/models/barkat/domain_event';
 
 // ── Mock jQuery ──
 

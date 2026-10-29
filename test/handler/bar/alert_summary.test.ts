@@ -21,11 +21,11 @@ import { IDomManager } from '../../../src/manager/dom';
 import { IAlertManager } from '../../../src/manager/alert';
 import { ICategoryManager } from '../../../src/manager/category';
 import { ITradingViewManager } from '../../../src/manager/tv';
-import { Alert } from '../../../src/models/alert';
+import { Alert } from '../../../src/models/barkat/alert/alert';
 import { ISubscriber } from '../../../src/manager/event_bus';
-import { DomainEventType } from '../../../src/models/domain_event';
-import { WatchCategoryId } from '../../../src/models/watch';
-import { BAR_CLASS, BarStatus } from '../../../src/models/bar';
+import { DomainEventType } from '../../../src/models/barkat/domain_event';
+import { WatchCategoryId } from '../../../src/models/barkat/market/watch';
+import { BAR_CLASS, BarStatus } from '../../../src/models/presentation/bar';
 
 // ── Constants ──
 

@@ -1,6 +1,6 @@
 import { AlertsPlugin } from '../../src/manager/alerts_plugin';
 import { IAuditClient } from '../../src/client/audit';
-import { AuditExecutionResult } from '../../src/models/audit_catalogue';
+import { AuditExecutionResult } from '../../src/models/barkat/audit/audit_catalogue';
 
 describe('AlertsPlugin (backend adapter)', () => {
   let plugin: AlertsPlugin;

@@ -1,5 +1,5 @@
-import { Constants } from '../models/constant';
-import { TickerArea, TickerVisibility } from '../models/dom';
+import { Constants } from '../models/shared/constant';
+import { TickerArea, TickerVisibility } from '../models/presentation/dom';
 
 /** Mouse button codes for filtering */
 const LEFT_CLICK = 1;

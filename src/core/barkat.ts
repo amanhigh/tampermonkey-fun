@@ -1,7 +1,7 @@
 import '../style/main.less';
 import { UIUtil } from '../util/ui';
-import { Constants } from '../models/constant';
-import { BarId } from '../models/bar';
+import { Constants } from '../models/shared/constant';
+import { BarId } from '../models/presentation/bar';
 import { IOnLoadHandler } from '../handler/onload';
 import { IJournalHandler } from '../handler/journal';
 import { IJournalSyncHandler } from '../handler/journal_sync';

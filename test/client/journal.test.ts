@@ -1,6 +1,6 @@
 import { JournalClient, IJournalClient } from '../../src/client/journal';
-import { Constants } from '../../src/models/constant';
-import { TickerTimeframe } from '../../src/models/timeframe';
+import { Constants } from '../../src/models/shared/constant';
+import { TickerTimeframe } from '../../src/models/barkat/market/timeframe';
 
 // Mock the BaseClient's makeRequest method (same pattern as alert_ticker.test.ts)
 jest.mock('../../src/client/base', () => {

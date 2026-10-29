@@ -2,7 +2,7 @@ import { IWaitUtil } from '../util/wait';
 import { Notifier } from '../util/notify';
 import { IKeyUtil } from '../util/key';
 import { ISmartPrompt } from '../util/smart';
-import { PICASSO_CONSTANTS, PICASSO_KEY_MAPPINGS, PicassoCategory } from '../models/picasso';
+import { PICASSO_CONSTANTS, PICASSO_KEY_MAPPINGS, PicassoCategory } from '../models/integrations/picasso';
 
 export interface IPicassoHandler {
   initialize(): void;

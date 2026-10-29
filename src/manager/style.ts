@@ -1,4 +1,4 @@
-import { Constants } from '../models/constant';
+import { Constants } from '../models/shared/constant';
 import { WaitUtil } from '../util/wait';
 import { ITimeFrameManager } from './timeframe';
 

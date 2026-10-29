@@ -1,12 +1,12 @@
-import { Constants } from '../models/constant';
+import { Constants } from '../models/shared/constant';
 import { ITimeFrameManager } from '../manager/timeframe';
 import { IStyleManager } from '../manager/style';
 import { IWatchListHandler } from '../handler/watchlist';
 import { IFlagHandler } from '../handler/flag';
 import { IJournalHandler } from './journal';
 import { IKiteHandler } from './kite';
-import { FlagCategoryId } from '../models/flag';
-import { WatchCategoryId } from '../models/watch';
+import { FlagCategoryId } from '../models/barkat/market/flag';
+import { WatchCategoryId } from '../models/barkat/market/watch';
 
 /**
  * Type definitions for key bindings and actions

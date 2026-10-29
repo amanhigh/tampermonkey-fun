@@ -89,4 +89,4 @@ export class AuditSectionRegistry {
 }
 
 // Re-export type for convenience
-export type { AuditId } from '../models/constant';
+export type { AuditId } from '../models/shared/constant';

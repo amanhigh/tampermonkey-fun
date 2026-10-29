@@ -1,5 +1,5 @@
 import { FilterManager, IFilterManager } from '../../src/manager/filter';
-import { TickerArea } from '../../src/models/dom';
+import { TickerArea } from '../../src/models/presentation/dom';
 
 // Mock jQuery globally for DOM manipulation
 const mockJQuery = jest.fn(() => ({

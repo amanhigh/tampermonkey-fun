@@ -1,5 +1,5 @@
 import { StaleReviewSection } from '../../src/handler/stale_review_section';
-import { IAudit, AuditResult } from '../../src/models/audit';
+import { IAudit, AuditResult } from '../../src/models/barkat/audit/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
 import { Notifier } from '../../src/util/notify';
 

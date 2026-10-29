@@ -7,15 +7,15 @@ import { ITickerManager, TickerManager } from '../manager/ticker';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { IDomManager } from '../manager/dom';
 import { ITradingViewManager } from '../manager/tv';
-import { Constants } from '../models/constant';
-import { ApiError } from '../models/api_error';
+import { Constants } from '../models/shared/constant';
+import { ApiError } from '../models/shared/api_error';
 import { Notifier } from '../util/notify';
-import { AlertTicker } from '../models/alert_ticker';
-import { AlertClicked, AlertClickAction } from '../models/events';
+import { AlertTicker } from '../models/barkat/alert/alert_ticker';
+import { AlertClicked, AlertClickAction } from '../models/shared/events';
 import { ITickerHandler } from './ticker';
 import { IAlertTickerHandler } from './alert_ticker';
 
-import { PairInfo } from '../models/alert';
+import { PairInfo } from '../models/barkat/alert/alert';
 
 /**
  * Interface for managing alert operations

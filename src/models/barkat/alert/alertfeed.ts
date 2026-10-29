@@ -1,5 +1,5 @@
-import { BaseEvent } from './events';
-import { DisplayInfo } from './display';
+import { BaseEvent } from '../../shared/events';
+import { DisplayInfo } from '../../presentation/display';
 
 /**
  * Class representing an alert feed event

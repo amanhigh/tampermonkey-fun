@@ -1,5 +1,5 @@
 import { IDomManager } from '../manager/dom';
-import { Constants } from '../models/constant';
+import { Constants } from '../models/shared/constant';
 import { IUIUtil } from '../util/ui';
 import { IAlertHandler } from './alert';
 import { IJournalHandler } from './journal';

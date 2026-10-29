@@ -1,12 +1,12 @@
 import { BaseBar, IBaseBar } from './base';
-import { BarId, BarStatus } from '../../models/bar';
-import { AlertTicker, AlertTickerType } from '../../models/alert_ticker';
+import { BarId, BarStatus } from '../../models/presentation/bar';
+import { AlertTicker, AlertTickerType } from '../../models/barkat/alert/alert_ticker';
 import { IDomManager } from '../../manager/dom';
 import { IAlertTickerManager } from '../../manager/alert_ticker';
 import { ITickerManager, TickerManager } from '../../manager/ticker';
 import { IUIUtil } from '../../util/ui';
-import { DomainEventType } from '../../models/domain_event';
-import { ApiError } from '../../models/api_error';
+import { DomainEventType } from '../../models/barkat/domain_event';
+import { ApiError } from '../../models/shared/api_error';
 import { Notifier } from '../../util/notify';
 import { escapeHtml } from '../../util/html';
 

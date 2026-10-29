@@ -1,8 +1,8 @@
-import { AuditResult } from '../models/audit';
-import { AuditFinding } from '../models/audit_catalogue';
+import { AuditResult } from '../models/barkat/audit/audit';
+import { AuditFinding } from '../models/barkat/audit/audit_catalogue';
 import { IAuditClient } from '../client/audit';
 import { BackendAuditPlugin } from './backend_audit_base';
-import { Constants } from '../models/constant';
+import { Constants } from '../models/shared/constant';
 
 /**
  * Stale Review Audit plugin (FR-004 / FR-016): detects tickers not opened within the

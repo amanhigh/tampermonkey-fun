@@ -1,11 +1,11 @@
-import { TickerArea, TickerVisibility } from '../models/dom';
+import { TickerArea, TickerVisibility } from '../models/presentation/dom';
 import { ICategoryManager } from './category';
 import { IDomManager } from './dom';
 import { IDisplayManager } from './display';
 import { IRecentManager } from './recent';
-import { Constants } from '../models/constant';
-import { BucketSummary, WatchCategoryId, WatchCategory } from '../models/watch';
-import { TickerCategory, TickerTag } from '../models/category';
+import { Constants } from '../models/shared/constant';
+import { BucketSummary, WatchCategoryId, WatchCategory } from '../models/barkat/market/watch';
+import { TickerCategory, TickerTag } from '../models/barkat/market/category';
 
 /**
  * Interface for managing painting operations for TradingView elements

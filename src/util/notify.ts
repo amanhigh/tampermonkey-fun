@@ -1,4 +1,4 @@
-import { Color } from '../models/color';
+import { Color } from '../models/presentation/color';
 
 /**
  * Utility class for displaying notifications in the UI.

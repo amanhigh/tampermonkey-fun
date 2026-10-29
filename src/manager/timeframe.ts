@@ -6,15 +6,15 @@ import {
   TMN_SEQUENCE,
   SMN_SEQUENCE,
   YR_SEQUENCE,
-} from '../models/timeframe';
-import { Constants } from '../models/constant';
-import { DomainEventType } from '../models/domain_event';
+} from '../models/barkat/market/timeframe';
+import { Constants } from '../models/shared/constant';
+import { DomainEventType } from '../models/barkat/domain_event';
 import { Notifier } from '../util/notify';
 import { ITickerManager } from './ticker';
 import { IDomManager } from './dom';
 import { IPublisher } from './event_bus';
-import { ApiError } from '../models/api_error';
-import { isTimeframeReviewExempt } from '../models/ticker';
+import { ApiError } from '../models/shared/api_error';
+import { isTimeframeReviewExempt } from '../models/barkat/market/ticker';
 
 // ── Catalog & Lookups ──
 // Ordered catalog of all timeframe metadata with pre-built lookup maps.

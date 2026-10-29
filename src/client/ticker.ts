@@ -7,9 +7,9 @@ import {
   TickerQueryParams,
   Ticker,
   TickerUpdateRequest,
-} from '../models/ticker';
-import { KohanEnvelope } from '../models/api';
-import { Constants } from '../models/constant';
+} from '../models/barkat/market/ticker';
+import { KohanEnvelope } from '../models/shared/api';
+import { Constants } from '../models/shared/constant';
 
 /**
  * TickerClient handles Barkat ticker CRUD and listing operations against the Kohan backend.

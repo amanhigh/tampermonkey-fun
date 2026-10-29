@@ -1,5 +1,5 @@
 import { OsClient, IOsClient } from '../../src/client/os';
-import { Constants } from '../../src/models/constant';
+import { Constants } from '../../src/models/shared/constant';
 
 // Mock the BaseClient's makeRequest method
 jest.mock('../../src/client/base', () => {

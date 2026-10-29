@@ -1,8 +1,8 @@
-import { AuditResult } from '../models/audit';
-import { AuditFinding, AuditExecutionResult } from '../models/audit_catalogue';
+import { AuditResult } from '../models/barkat/audit/audit';
+import { AuditFinding, AuditExecutionResult } from '../models/barkat/audit/audit_catalogue';
 import { IAuditClient } from '../client/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
-import { Constants } from '../models/constant';
+import { Constants } from '../models/shared/constant';
 
 /**
  * Base class for backend-adapter audit plugins.

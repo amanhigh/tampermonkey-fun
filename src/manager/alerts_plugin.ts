@@ -1,6 +1,6 @@
 import { IAuditClient } from '../client/audit';
 import { BackendAuditPlugin } from './backend_audit_base';
-import { Constants } from '../models/constant';
+import { Constants } from '../models/shared/constant';
 
 /**
  * Alerts Coverage audit plugin.

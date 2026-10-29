@@ -1,4 +1,4 @@
-import { SeerDetailPath } from '../models/seer';
+import { SeerDetailPath } from '../models/integrations/seer';
 
 /**
  * Report whether a browser pathname belongs to a Seer movie or tv detail page.
