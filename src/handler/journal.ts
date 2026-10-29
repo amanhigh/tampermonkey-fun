@@ -6,17 +6,17 @@ import { IOsClient } from '../client/os';
 import { IJournalManager } from '../manager/journal';
 import { ISmartPrompt, SmartChoiceGroup, SmartPromptResponseType } from '../util/smart';
 import { IUIUtil } from '../util/ui';
-import { Constants } from '../models/constant';
-import { JournalActionType } from '../models/journal';
+import { Constants } from '../models/shared/constant';
+import { JournalActionType } from '../models/barkat/journal';
 import { DomManager } from '../manager/dom';
 import { Notifier } from '../util/notify';
 import { ITradingViewManager } from '../manager/tv';
 import { IStyleManager } from '../manager/style';
 import { ICategoryManager } from '../manager/category';
 import { ITimeFrameManager } from '../manager/timeframe';
-import { CreateJournalNoteRequest, JournalResultStatus, JournalTopTimeframe } from '../models/journal';
-import { ScreenshotResponse } from '../models/os';
-import { TickerTimeframe } from '../models/timeframe';
+import { CreateJournalNoteRequest, JournalResultStatus, JournalTopTimeframe } from '../models/barkat/journal';
+import { ScreenshotResponse } from '../models/integrations/os';
+import { TickerTimeframe } from '../models/barkat/market/timeframe';
 import { IJournalSyncHandler } from './journal_sync';
 
 /**

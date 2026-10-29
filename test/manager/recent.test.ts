@@ -1,10 +1,10 @@
 import { RecentManager, IRecentManager } from '../../src/manager/recent';
 import { ITickerClient } from '../../src/client/ticker';
 import { IPublisher } from '../../src/manager/event_bus';
-import { DomainEventType } from '../../src/models/domain_event';
-import { Ticker } from '../../src/models/ticker';
-import { Constants } from '../../src/models/constant';
-import { ApiError } from '../../src/models/api_error';
+import { DomainEventType } from '../../src/models/barkat/domain_event';
+import { Ticker } from '../../src/models/barkat/market/ticker';
+import { Constants } from '../../src/models/shared/constant';
+import { ApiError } from '../../src/models/shared/api_error';
 
 describe('RecentManager', () => {
   let recentManager: IRecentManager;

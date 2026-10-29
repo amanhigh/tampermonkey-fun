@@ -1,5 +1,5 @@
 import { InstrumentClient, IInstrumentClient } from '../../src/client/instrument';
-import { InvestingResponse } from '../../src/models/investing';
+import { InvestingResponse } from '../../src/models/integrations/investing';
 
 // Mock the BaseClient's makeRequest method
 jest.mock('../../src/client/base', () => {

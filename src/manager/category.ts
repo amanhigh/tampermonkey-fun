@@ -1,17 +1,17 @@
 import { LRUCache } from 'lru-cache';
-import { Constants } from '../models/constant';
+import { Constants } from '../models/shared/constant';
 import { ITickerManager } from './ticker';
 import { IJournalManager } from './journal';
 import { Notifier } from '../util/notify';
-import { TickerState, TickerUpdateRequest } from '../models/ticker';
-import { WatchCategory, WatchCategoryId } from '../models/watch';
-import { FlagCategory, FlagCategoryId } from '../models/flag';
-import { TickerCategory, TickerTag } from '../models/category';
-import { Ticker, isTimeframeReviewExempt } from '../models/ticker';
-import { TickerTimeframe } from '../models/timeframe';
+import { TickerState, TickerUpdateRequest } from '../models/barkat/market/ticker';
+import { WatchCategory, WatchCategoryId } from '../models/barkat/market/watch';
+import { FlagCategory, FlagCategoryId } from '../models/barkat/market/flag';
+import { TickerCategory, TickerTag } from '../models/barkat/market/category';
+import { Ticker, isTimeframeReviewExempt } from '../models/barkat/market/ticker';
+import { TickerTimeframe } from '../models/barkat/market/timeframe';
 import { WatchClassifier, FlagClassifier } from './classification';
 import { IPublisher } from './event_bus';
-import { DomainEventType } from '../models/domain_event';
+import { DomainEventType } from '../models/barkat/domain_event';
 
 // Re-export classification helpers for test and external use
 export { WatchClassifier, FlagClassifier };

@@ -4,8 +4,8 @@
 
 import { IJournalManager } from '../manager/journal';
 import { IDomManager } from '../manager/dom';
-import { Constants } from '../models/constant';
-import { JournalOpenEvent } from '../models/events';
+import { Constants } from '../models/shared/constant';
+import { JournalOpenEvent } from '../models/shared/events';
 
 /**
  * Interface for handling journal synchronization

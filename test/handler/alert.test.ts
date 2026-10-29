@@ -6,9 +6,9 @@ import { ITickerManager } from '../../src/manager/ticker';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { ITickerHandler } from '../../src/handler/ticker';
 import { IAlertTickerHandler } from '../../src/handler/alert_ticker';
-import { ApiError, wrapClientError } from '../../src/models/api_error';
-import { AlertClicked, AlertClickAction } from '../../src/models/events';
-import { AlertTicker } from '../../src/models/alert_ticker';
+import { ApiError, wrapClientError } from '../../src/models/shared/api_error';
+import { AlertClicked, AlertClickAction } from '../../src/models/shared/events';
+import { AlertTicker } from '../../src/models/barkat/alert/alert_ticker';
 
 jest.mock('../../src/util/notify', () => ({
   Notifier: {

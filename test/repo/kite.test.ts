@@ -1,7 +1,7 @@
 import { KiteRepo, IKiteRepo } from '../../src/repo/kite';
-import { GttCreateEvent, GttDeleteEvent, GttRefreshEvent } from '../../src/models/gtt';
-import { Order, OrderType } from '../../src/models/kite';
-import { Constants } from '../../src/models/constant';
+import { GttCreateEvent, GttDeleteEvent, GttRefreshEvent } from '../../src/models/barkat/gtt';
+import { Order, OrderType } from '../../src/models/integrations/kite';
+import { Constants } from '../../src/models/shared/constant';
 
 // Mock GM API
 const mockGM = {

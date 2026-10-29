@@ -1,5 +1,5 @@
 import { Factory } from '../../src/core/factory';
-import { Constants } from '../../src/models/constant';
+import { Constants } from '../../src/models/shared/constant';
 
 // Minimal mocks for instantiation only (no runtime operations)
 (global as any).$ = jest.fn(() => ({

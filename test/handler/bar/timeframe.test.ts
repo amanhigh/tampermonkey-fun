@@ -2,12 +2,12 @@ import { TimeFrameBar, ITimeFrameHandler } from '../../../src/handler/bar/timefr
 import { ITimeFrameManager } from '../../../src/manager/timeframe';
 import { IBarkatManager } from '../../../src/manager/barkat';
 import { IDomManager } from '../../../src/manager/dom';
-import { TimeframeInfo, TickerTimeframe } from '../../../src/models/timeframe';
-import { BarkatStatus, BarkatTickerAnalysis, BarkatTimeframe } from '../../../src/models/barkat';
+import { TimeframeInfo, TickerTimeframe } from '../../../src/models/barkat/market/timeframe';
+import { BarkatStatus, BarkatTickerAnalysis, BarkatTimeframe } from '../../../src/models/barkat/market/analysis';
 import { ISubscriber } from '../../../src/manager/event_bus';
-import { DomainEventType } from '../../../src/models/domain_event';
+import { DomainEventType } from '../../../src/models/barkat/domain_event';
 import { Notifier } from '../../../src/util/notify';
-import { BarId, BAR_CLASS, BAR_INDICATOR_BADGE_CLASS, BAR_INDICATORS_CLASS, BarStatus } from '../../../src/models/bar';
+import { BarId, BAR_CLASS, BAR_INDICATOR_BADGE_CLASS, BAR_INDICATORS_CLASS, BarStatus } from '../../../src/models/presentation/bar';
 
 // ── Constants ──
 

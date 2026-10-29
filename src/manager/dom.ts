@@ -1,5 +1,5 @@
-import { Constants } from '../models/constant';
-import { TickerArea, TickerVisibility } from '../models/dom';
+import { Constants } from '../models/shared/constant';
+import { TickerArea, TickerVisibility } from '../models/presentation/dom';
 import { IWaitUtil } from '../util/wait';
 import { ITickerManager } from './ticker';
 /**

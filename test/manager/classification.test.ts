@@ -2,10 +2,10 @@ import {
   WatchClassifier,
   FlagClassifier,
 } from '../../src/manager/classification';
-import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/ticker';
-import { TickerTimeframe } from '../../src/models/timeframe';
-import { WatchCategoryId } from '../../src/models/watch';
-import { FlagCategoryId } from '../../src/models/flag';
+import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/barkat/market/ticker';
+import { TickerTimeframe } from '../../src/models/barkat/market/timeframe';
+import { WatchCategoryId } from '../../src/models/barkat/market/watch';
+import { FlagCategoryId } from '../../src/models/barkat/market/flag';
 
 // ════════════════════════════════════════════
 // Watch Category Helper Tests

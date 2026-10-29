@@ -1,6 +1,6 @@
-import { ScreenshotResponse } from './os';
-import { PaginationMetadata } from './api';
-import { TickerTimeframe } from './timeframe';
+import { ScreenshotResponse } from '../integrations/os';
+import { PaginationMetadata } from '../shared/api';
+import { TickerTimeframe } from './market/timeframe';
 
 // ── Journal API Types ──
 

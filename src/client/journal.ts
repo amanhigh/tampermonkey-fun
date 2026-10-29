@@ -8,9 +8,9 @@ import {
   JournalRecord,
   UpdateJournalStatusRequest,
   UpdateJournalStatusResponse,
-} from '../models/journal';
-import { KohanEnvelope } from '../models/api';
-import { Constants } from '../models/constant';
+} from '../models/barkat/journal';
+import { KohanEnvelope } from '../models/shared/api';
+import { Constants } from '../models/shared/constant';
 
 /**
  * JournalClient handles journal CRUD and sub-resource operations

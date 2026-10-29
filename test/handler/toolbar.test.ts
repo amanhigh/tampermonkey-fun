@@ -5,7 +5,7 @@ import { IAlertHandler } from '../../src/handler/alert';
 import { IPanelHandler } from '../../src/handler/panel';
 import { IJournalHandler } from '../../src/handler/journal';
 import { IDomManager } from '../../src/manager/dom';
-import { Constants } from '../../src/models/constant';
+import { Constants } from '../../src/models/shared/constant';
 
 const mockJQuery = {
   append: jest.fn().mockReturnThis(),

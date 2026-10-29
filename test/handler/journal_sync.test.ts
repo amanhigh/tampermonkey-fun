@@ -1,9 +1,9 @@
 import { JournalSyncHandler } from '../../src/handler/journal_sync';
 import { IJournalManager } from '../../src/manager/journal';
 import { IDomManager } from '../../src/manager/dom';
-import { Constants } from '../../src/models/constant';
-import { JournalOpenEvent } from '../../src/models/events';
-import { TickerTimeframe } from '../../src/models/timeframe';
+import { Constants } from '../../src/models/shared/constant';
+import { JournalOpenEvent } from '../../src/models/shared/events';
+import { TickerTimeframe } from '../../src/models/barkat/market/timeframe';
 
 describe('JournalSyncHandler', () => {
   let journalSyncHandler: JournalSyncHandler;

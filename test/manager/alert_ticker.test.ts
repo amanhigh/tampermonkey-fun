@@ -1,8 +1,8 @@
 import { IAlertTickerManager, AlertTickerManager } from '../../src/manager/alert_ticker';
 import { IAlertTickerClient } from '../../src/client/alert_ticker';
 import { IPublisher } from '../../src/manager/event_bus';
-import { DomainEventType } from '../../src/models/domain_event';
-import { AlertTicker } from '../../src/models/alert_ticker';
+import { DomainEventType } from '../../src/models/barkat/domain_event';
+import { AlertTicker } from '../../src/models/barkat/alert/alert_ticker';
 
 describe('AlertTickerManager', () => {
   let manager: IAlertTickerManager;

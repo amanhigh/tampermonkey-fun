@@ -4,8 +4,8 @@ import { ITickerManager, TickerManager } from '../manager/ticker';
 import { ILifecycleManager } from '../manager/lifecycle';
 import { IStyleManager } from '../manager/style';
 import { IAlertTickerHandler } from './alert_ticker';
-import { TickerTimeframe, TMN_SEQUENCE, SMN_SEQUENCE } from '../models/timeframe';
-import { TickerType, TickerState, TickerTrend } from '../models/ticker';
+import { TickerTimeframe, TMN_SEQUENCE, SMN_SEQUENCE } from '../models/barkat/market/timeframe';
+import { TickerType, TickerState, TickerTrend } from '../models/barkat/market/ticker';
 
 /**
  * Interface for managing ticker operations

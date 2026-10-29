@@ -1,10 +1,10 @@
-import { Constants } from '../models/constant';
-import { TickerArea, TickerVisibility } from '../models/dom';
+import { Constants } from '../models/shared/constant';
+import { TickerArea, TickerVisibility } from '../models/presentation/dom';
 import { IPaintManager } from './paint';
 import { ICategoryManager } from './category';
 import { IPublisher } from './event_bus';
 import { IDomManager } from './dom';
-import { DomainEventType } from '../models/domain_event';
+import { DomainEventType } from '../models/barkat/domain_event';
 
 /**
  * Interface for managing TradingView watchlist operations.

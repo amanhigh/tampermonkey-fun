@@ -1,5 +1,5 @@
 import { ISearchManager } from '../manager/search';
-import { Constants } from '../models/constant';
+import { Constants } from '../models/shared/constant';
 import { escapeHtml } from '../util/html';
 import { Notifier } from '../util/notify';
 import { IObserveUtil } from '../util/observer';

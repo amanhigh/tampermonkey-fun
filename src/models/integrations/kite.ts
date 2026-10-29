@@ -1,5 +1,5 @@
 /* eslint-disable max-params */
-import { BaseEvent } from './events';
+import { BaseEvent } from '../shared/events';
 
 /**
  * Base class for all Kite order related entities

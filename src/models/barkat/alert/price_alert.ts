@@ -1,6 +1,6 @@
 // ── Price Alert Types ──
 
-import { PaginationMetadata } from './api';
+import { PaginationMetadata } from '../../shared/api';
 
 /** Sort fields supported by GET /v1/api/alerts. */
 export type PriceAlertSortBy = 'trigger_price' | 'created_at';

@@ -1,4 +1,4 @@
-import { Alert } from '../models/alert';
+import { Alert } from '../models/barkat/alert/alert';
 import { BaseClient, IBaseClient } from './base';
 
 /**

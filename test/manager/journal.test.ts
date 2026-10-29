@@ -7,10 +7,10 @@ import {
   JournalRecord,
   JournalTimeframe,
   JournalResultStatus,
-} from '../../src/models/journal';
-import { TickerTimeframe, TMN_SEQUENCE, SMN_SEQUENCE, YR_SEQUENCE } from '../../src/models/timeframe';
-import { ScreenshotResponse } from '../../src/models/os';
-import { JournalOpenEvent } from '../../src/models/events';
+} from '../../src/models/barkat/journal';
+import { TickerTimeframe, TMN_SEQUENCE, SMN_SEQUENCE, YR_SEQUENCE } from '../../src/models/barkat/market/timeframe';
+import { ScreenshotResponse } from '../../src/models/integrations/os';
+import { JournalOpenEvent } from '../../src/models/shared/events';
 import { Notifier } from '../../src/util/notify';
 
 // Mock Notifier

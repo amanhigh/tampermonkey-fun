@@ -1,9 +1,9 @@
 import { LRUCache } from 'lru-cache';
 import { ITickerClient } from '../client/ticker';
-import { Constants } from '../models/constant';
+import { Constants } from '../models/shared/constant';
 import { IPublisher } from './event_bus';
-import { DomainEventType } from '../models/domain_event';
-import { ApiError } from '../models/api_error';
+import { DomainEventType } from '../models/barkat/domain_event';
+import { ApiError } from '../models/shared/api_error';
 
 /**
  * Interface for managing recent ticker data operations.

@@ -1,4 +1,4 @@
-import { IAudit } from '../models/audit';
+import { IAudit } from '../models/barkat/audit/audit';
 import { BaseManager } from './base';
 
 /**

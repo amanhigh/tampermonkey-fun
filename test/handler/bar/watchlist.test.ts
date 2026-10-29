@@ -31,9 +31,9 @@
 import { WatchlistBar, IWatchlistBar } from '../../../src/handler/bar/watchlist';
 import { IPaintManager } from '../../../src/manager/paint';
 import { IFilterManager } from '../../../src/manager/filter';
-import { BucketSummary, ALL_WATCH_CATEGORIES, WatchCategoryId } from '../../../src/models/watch';
-import { BAR_CLASS, BarStatus } from '../../../src/models/bar';
-import { DomainEventType } from '../../../src/models/domain_event';
+import { BucketSummary, ALL_WATCH_CATEGORIES, WatchCategoryId } from '../../../src/models/barkat/market/watch';
+import { BAR_CLASS, BarStatus } from '../../../src/models/presentation/bar';
+import { DomainEventType } from '../../../src/models/barkat/domain_event';
 
 // ── Constants ──
 

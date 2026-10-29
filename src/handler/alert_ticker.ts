@@ -1,6 +1,6 @@
 import { ISmartPrompt, SmartPromptResponseType } from '../util/smart';
 import { IInvestingManager } from '../manager/investing';
-import { Instrument } from '../models/investing';
+import { Instrument } from '../models/integrations/investing';
 import { IAlertTickerManager } from '../manager/alert_ticker';
 import { IDomManager } from '../manager/dom';
 import { Notifier } from '../util/notify';

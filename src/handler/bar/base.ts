@@ -1,5 +1,5 @@
 import { IDomainEventConsumer, ISubscriber } from '../../manager/event_bus';
-import { DomainEventType } from '../../models/domain_event';
+import { DomainEventType } from '../../models/barkat/domain_event';
 import {
   BAR_CLASS,
   BAR_INDICATOR_BADGE_CLASS,
@@ -8,7 +8,7 @@ import {
   BarIndicatorState,
   BarIndicatorUpdate,
   BarStatus,
-} from '../../models/bar';
+} from '../../models/presentation/bar';
 import { escapeHtml } from '../../util/html';
 
 /** Accessible labels for the shared optional-indicator marker. */

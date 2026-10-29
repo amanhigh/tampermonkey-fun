@@ -1,8 +1,8 @@
-import { AuditResult } from '../models/audit';
+import { AuditResult } from '../models/barkat/audit/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
 import { IKiteRepo } from '../repo/kite';
-import { Constants } from '../models/constant';
-import { Order, OrderType } from '../models/kite';
+import { Constants } from '../models/shared/constant';
+import { Order, OrderType } from '../models/integrations/kite';
 
 /**
  * Trade Risk Multiple Audit plugin: identifies GTT orders with non-standard risk multiples.

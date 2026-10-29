@@ -1,5 +1,5 @@
 import { BaseClient, IBaseClient } from '../../src/client/base';
-import { ApiError } from '../../src/models/api_error';
+import { ApiError } from '../../src/models/shared/api_error';
 
 // Mock GM.xmlHttpRequest
 const mockXmlHttpRequest = jest.fn();

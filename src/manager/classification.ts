@@ -1,8 +1,8 @@
-import { TickerTimeframe } from '../models/timeframe';
-import { Constants } from '../models/constant';
-import { Ticker, TickerType, TickerState, TickerTrend } from '../models/ticker';
-import { ALL_WATCH_CATEGORIES, WatchCategory, WatchCategoryId } from '../models/watch';
-import { ALL_FLAG_CATEGORIES, FlagCategory, FlagCategoryId } from '../models/flag';
+import { TickerTimeframe } from '../models/barkat/market/timeframe';
+import { Constants } from '../models/shared/constant';
+import { Ticker, TickerType, TickerState, TickerTrend } from '../models/barkat/market/ticker';
+import { ALL_WATCH_CATEGORIES, WatchCategory, WatchCategoryId } from '../models/barkat/market/watch';
+import { ALL_FLAG_CATEGORIES, FlagCategory, FlagCategoryId } from '../models/barkat/market/flag';
 
 // ════════════════════════════════════════════
 // WatchClassifier

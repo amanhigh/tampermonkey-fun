@@ -1,6 +1,6 @@
 import { TradingViewManager } from '../../src/manager/tv';
 import { WaitUtil } from '../../src/util/wait';
-import { Constants } from '../../src/models/constant';
+import { Constants } from '../../src/models/shared/constant';
 
 // Mock Notifier to avoid DOM issues
 jest.mock('../../src/util/notify', () => ({

@@ -1,4 +1,4 @@
-import { IAudit, AuditResult } from '../models/audit';
+import { IAudit, AuditResult } from '../models/barkat/audit/audit';
 
 /**
  * Specification for an audit section

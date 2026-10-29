@@ -5,12 +5,12 @@ import { IAlertManager } from '../../src/manager/alert';
 import { IAlertFeedManager } from '../../src/manager/alertfeed';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { IInvestingManager } from '../../src/manager/investing';
-import { AlertTicker } from '../../src/models/alert_ticker';
-import { Instrument } from '../../src/models/investing';
-import { AlertClickAction } from '../../src/models/events';
-import { DisplayState } from '../../src/models/display';
+import { AlertTicker } from '../../src/models/barkat/alert/alert_ticker';
+import { Instrument } from '../../src/models/integrations/investing';
+import { AlertClickAction } from '../../src/models/shared/events';
+import { DisplayState } from '../../src/models/presentation/display';
 import { ISubscriber } from '../../src/manager/event_bus';
-import { DomainEventType } from '../../src/models/domain_event';
+import { DomainEventType } from '../../src/models/barkat/domain_event';
 
 // Mock Notifier
 jest.mock('../../src/util/notify', () => ({
