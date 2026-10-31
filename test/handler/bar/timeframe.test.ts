@@ -19,7 +19,7 @@ const CHIP_CLICK_EVENT = `click.${EVENT_NS}`;
 /** Shared optional-indicator marker rendered by BaseBar. */
 const MARKER_SELECTOR = `.${BAR_INDICATORS_CLASS}`;
 
-/** Shared optional-indicator badge class used for the mismatch corner badge. */
+/** Shared optional-indicator badge class used for the Barkat severity corner badge. */
 const BADGE_CLASS = BAR_INDICATOR_BADGE_CLASS;
 
 /** Loading / unavailable marker labels rendered by BaseBar. */
@@ -29,11 +29,17 @@ const INDICATORS_UNAVAILABLE_LABEL = 'Indicators unavailable';
 /** Generic click hint used as the native chip tooltip. */
 const CLICK_HINT = 'Click to add/remove.';
 
-/** Native tooltip for a selected chip whose Barkat verdict is not preferred. */
-const TITLE_SELECTED_NOT_PREFERRED = 'Selected \u00B7 Barkat: not preferred. Click to remove.';
+/** Native tooltip for a selected chip whose Barkat verdict is `warning`. */
+const TITLE_SELECTED_WARNING = 'Selected \u00B7 Barkat: warning. Click to remove.';
 
-/** Native tooltip for an unselected chip whose Barkat verdict is preferred. */
-const TITLE_UNSELECTED_PREFERRED = 'Not selected \u00B7 Barkat: preferred. Click to add.';
+/** Native tooltip for a selected chip whose Barkat verdict is `fail`. */
+const TITLE_SELECTED_FAIL = 'Selected \u00B7 Barkat: fail. Click to remove.';
+
+/** Native tooltip for an unselected chip whose Barkat verdict is `warning`. */
+const TITLE_UNSELECTED_WARNING = 'Not selected \u00B7 Barkat: warning. Click to add.';
+
+/** Native tooltip for an unselected chip whose Barkat verdict is `fail`. */
+const TITLE_UNSELECTED_FAIL = 'Not selected \u00B7 Barkat: fail. Click to add.';
 
 /** BEM class names expected from the finalized BaseBar/TimeFrameBar contract. */
 const BEM = {
@@ -43,7 +49,8 @@ const BEM = {
   INACTIVE: 'aman-tf-bar__chip--inactive',
   LOADING: 'aman-tf-bar__chip--loading',
   BADGE: BADGE_CLASS,
-  BADGE_GLYPH: '\u2260',
+  BADGE_WARNING: '\u26A0\uFE0F',
+  BADGE_FAIL: '\u274C',
 } as const;
 
 /** Supported (assessed) Barkat frames. */
@@ -691,18 +698,18 @@ describe('TimeFrameBar', () => {
   // ── Barkat overlay ──
 
   describe('Barkat badge policy', () => {
-    const matrix: Array<[string, boolean, BarkatStatus, boolean, string]> = [
-      ['active + pass', true, 'pass', false, CLICK_HINT],
-      ['active + warning', true, 'warning', true, TITLE_SELECTED_NOT_PREFERRED],
-      ['active + fail', true, 'fail', true, TITLE_SELECTED_NOT_PREFERRED],
-      ['inactive + pass', false, 'pass', true, TITLE_UNSELECTED_PREFERRED],
-      ['inactive + warning', false, 'warning', false, CLICK_HINT],
-      ['inactive + fail', false, 'fail', false, CLICK_HINT],
+    const matrix: Array<[string, boolean, BarkatStatus, string | null, string]> = [
+      ['active + pass', true, 'pass', null, CLICK_HINT],
+      ['active + warning', true, 'warning', BEM.BADGE_WARNING, TITLE_SELECTED_WARNING],
+      ['active + fail', true, 'fail', BEM.BADGE_FAIL, TITLE_SELECTED_FAIL],
+      ['inactive + pass', false, 'pass', null, CLICK_HINT],
+      ['inactive + warning', false, 'warning', BEM.BADGE_WARNING, TITLE_UNSELECTED_WARNING],
+      ['inactive + fail', false, 'fail', BEM.BADGE_FAIL, TITLE_UNSELECTED_FAIL],
     ];
 
     it.each(matrix)(
-      'should badge and title only on mismatch: %s',
-      async (_label, isActive, status, expectBadge, expectedTitle) => {
+      'should badge every assessed warning/fail row regardless of selection: %s',
+      async (_label, isActive, status, expectedBadge, expectedTitle) => {
         mockTimeFrameManager.getTimeFrameInfo.mockResolvedValue(
           selectionOf(
             isActive
@@ -722,11 +729,11 @@ describe('TimeFrameBar', () => {
 
         const state = chipState(TickerTimeframe.TMN);
         expect(state.title).toBe(expectedTitle);
-        if (expectBadge) {
-          expect(state.badge).toBe(BEM.BADGE_GLYPH);
+        if (expectedBadge) {
+          expect(state.badge).toBe(expectedBadge);
         } else {
           expect(state.badge).toBeNull();
-          // Matching rows are never decorated: no title write, no badge lookup/append
+          // `pass` rows are never decorated: no title write, no badge lookup/append
           expect(chipEl(TickerTimeframe.TMN).attr).not.toHaveBeenCalled();
           expect(chipEl(TickerTimeframe.TMN).find).not.toHaveBeenCalled();
           expect(chipEl(TickerTimeframe.TMN).append).not.toHaveBeenCalled();
@@ -734,20 +741,19 @@ describe('TimeFrameBar', () => {
       }
     );
 
-    it('should leave every chip undecorated when all assessed selections match', async () => {
+    it('should leave every chip undecorated when all assessed rows pass', async () => {
       mockTimeFrameManager.getTimeFrameInfo.mockResolvedValue(selectionOf([
         TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK,
       ]));
-      // Unselected SMN is not preferred, so every assessed row agrees with the selection
-      mockBarkatManager.getTickerAnalysis.mockResolvedValue(
-        buildAnalysis('AAPL', { [TickerTimeframe.SMN]: 'fail' })
-      );
+      // A `pass` verdict never badges, selected or not
+      mockBarkatManager.getTickerAnalysis.mockResolvedValue(buildAnalysis('AAPL'));
 
       const bar = createBar();
       await bar.refresh();
 
       for (const code of Object.values(TickerTimeframe) as TickerTimeframe[]) {
         expect(chipState(code).badge).toBeNull();
+        expect(chipState(code).title).toBe(CLICK_HINT);
         expect(chipEl(code).attr).not.toHaveBeenCalled();
         expect(chipEl(code).append).not.toHaveBeenCalled();
       }
@@ -776,14 +782,17 @@ describe('TimeFrameBar', () => {
       const bar = createBar();
       await bar.refresh();
 
-      // Unassessed YR/DL keep the generic hint, never a mismatch title or badge
+      // Unassessed YR/DL keep the generic hint, never a verdict title or badge
       expect(chipState(TickerTimeframe.YR).badge).toBeNull();
       expect(chipState(TickerTimeframe.DL).badge).toBeNull();
       expect(chipState(TickerTimeframe.YR).title).toBe(CLICK_HINT);
       expect(chipState(TickerTimeframe.DL).title).toBe(CLICK_HINT);
-      // Active rows that fail are badged, proving the overlay is live
-      expect(chipState(TickerTimeframe.MN).badge).toBe(BEM.BADGE_GLYPH);
-      expect(chipState(TickerTimeframe.MN).title).toBe(TITLE_SELECTED_NOT_PREFERRED);
+      // Assessed rows that fail are badged, proving the overlay is live
+      expect(chipState(TickerTimeframe.MN).badge).toBe(BEM.BADGE_FAIL);
+      expect(chipState(TickerTimeframe.MN).title).toBe(TITLE_SELECTED_FAIL);
+      // Unselected fail rows are badged too
+      expect(chipState(TickerTimeframe.SMN).badge).toBe(BEM.BADGE_FAIL);
+      expect(chipState(TickerTimeframe.SMN).title).toBe(TITLE_UNSELECTED_FAIL);
     });
 
     it('should paint usable chips and a loading marker while Barkat is pending', async () => {
@@ -816,7 +825,7 @@ describe('TimeFrameBar', () => {
       analysis.resolve(buildAnalysis('AAPL', { [TickerTimeframe.TMN]: 'fail' }));
       await pending;
 
-      expect(chipState(TickerTimeframe.TMN).badge).toBe(BEM.BADGE_GLYPH);
+      expect(chipState(TickerTimeframe.TMN).badge).toBe(BEM.BADGE_FAIL);
       expect(mockMarkerEl.remove).toHaveBeenCalled();
       expect(rootAttrs.get('aria-busy')).toBe('false');
 
@@ -830,10 +839,39 @@ describe('TimeFrameBar', () => {
         expect.stringContaining(`class="${BADGE_CLASS}"`)
       );
       expect(chipEl(TickerTimeframe.TMN).append).toHaveBeenCalledWith(
-        expect.stringContaining(BEM.BADGE_GLYPH)
+        expect.stringContaining(BEM.BADGE_FAIL)
       );
-      expect(chipEl(TickerTimeframe.TMN).attr).toHaveBeenCalledWith('title', TITLE_SELECTED_NOT_PREFERRED);
+      expect(chipEl(TickerTimeframe.TMN).attr).toHaveBeenCalledWith('title', TITLE_SELECTED_FAIL);
       expect(chipState(TickerTimeframe.MN).badge).toBeNull();
+    });
+
+    it('should refresh a badged chip from fail to warning to pass with full cleanup', async () => {
+      const activeSelection = selectionOf([TickerTimeframe.TMN, TickerTimeframe.MN, TickerTimeframe.WK]);
+      mockTimeFrameManager.getTimeFrameInfo.mockResolvedValue(activeSelection);
+
+      const bar = createBar();
+
+      mockBarkatManager.getTickerAnalysis.mockResolvedValueOnce(
+        buildAnalysis('AAPL', { [TickerTimeframe.TMN]: 'fail' })
+      );
+      await bar.refresh();
+      expect(chipState(TickerTimeframe.TMN).badge).toBe(BEM.BADGE_FAIL);
+      expect(chipState(TickerTimeframe.TMN).title).toBe(TITLE_SELECTED_FAIL);
+
+      // Refresh repaints the chips: the warning overlay then rewrites badge and title
+      mockBarkatManager.getTickerAnalysis.mockResolvedValueOnce(
+        buildAnalysis('AAPL', { [TickerTimeframe.TMN]: 'warning' })
+      );
+      await bar.refresh();
+      expect(chipState(TickerTimeframe.TMN).badge).toBe(BEM.BADGE_WARNING);
+      expect(chipState(TickerTimeframe.TMN).title).toBe(TITLE_SELECTED_WARNING);
+
+      // A pass refresh repaints plain chips: badge and verdict title are gone
+      mockBarkatManager.getTickerAnalysis.mockResolvedValueOnce(buildAnalysis('AAPL'));
+      await bar.refresh();
+
+      expect(chipState(TickerTimeframe.TMN).badge).toBeNull();
+      expect(chipState(TickerTimeframe.TMN).title).toBe(CLICK_HINT);
     });
   });
 
@@ -848,7 +886,7 @@ describe('TimeFrameBar', () => {
 
       const bar = createBar();
       await bar.refresh();
-      expect(chipState(TickerTimeframe.TMN).badge).toBe(BEM.BADGE_GLYPH);
+      expect(chipState(TickerTimeframe.TMN).badge).toBe(BEM.BADGE_FAIL);
 
       mockBarkatManager.getTickerAnalysis.mockRejectedValueOnce(new Error('service down'));
       await bar.refresh();
@@ -938,8 +976,8 @@ describe('TimeFrameBar', () => {
       await bar.refresh();
 
       expect(mockBarkatManager.getTickerAnalysis).toHaveBeenCalledTimes(1);
-      expect(chipState(TickerTimeframe.TMN).badge).toBe(BEM.BADGE_GLYPH);
-      expect(chipState(TickerTimeframe.TMN).title).toBe(TITLE_SELECTED_NOT_PREFERRED);
+      expect(chipState(TickerTimeframe.TMN).badge).toBe(BEM.BADGE_FAIL);
+      expect(chipState(TickerTimeframe.TMN).title).toBe(TITLE_SELECTED_FAIL);
       expect(rootAttrs.get('aria-busy')).toBe('false');
     });
   });
@@ -1053,8 +1091,8 @@ describe('TimeFrameBar', () => {
 
       const html = lastHtml();
       const chip = chipHtml(html, TickerTimeframe.MN);
-      // Mismatch chip carries only the short native hint
-      expect(chipState(TickerTimeframe.MN).title).toBe(TITLE_SELECTED_NOT_PREFERRED);
+      // Badged chip carries only the short native hint
+      expect(chipState(TickerTimeframe.MN).title).toBe(TITLE_SELECTED_WARNING);
       expect(chip).not.toContain('Zone failures');
       expect(chip).not.toContain('Strategy wins');
       expect(chip).not.toContain('Strategy entries');
