@@ -1,5 +1,5 @@
 import { JournalHandler } from '../../src/handler/journal';
-import { IOsClient } from '../../src/client/os';
+import { IOsClient } from '../../src/client/kohan/os';
 import { IJournalManager } from '../../src/manager/journal';
 import { ISmartPrompt, SmartChoiceGroup, SmartPromptResponseType } from '../../src/util/smart';
 import { IUIUtil } from '../../src/util/ui';

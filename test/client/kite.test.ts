@@ -1,4 +1,4 @@
-import { KiteClient, IKiteClient } from '../../src/client/kite';
+import { KiteClient, IKiteClient } from '../../src/client/integrations/kite';
 import { CreateGttRequest, GttApiResponse, OrderType } from '../../src/models/integrations/kite';
 
 // Mock the BaseClient's makeRequest method

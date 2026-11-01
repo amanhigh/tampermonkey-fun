@@ -1,4 +1,4 @@
-import { IKiteClient } from '../client/kite';
+import { IKiteClient } from '../client/integrations/kite';
 import { CreateGttRequest, GttApiResponse } from '../models/integrations/kite';
 import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../models/barkat/gtt';
 import { IKiteRepo } from '../repo/kite';

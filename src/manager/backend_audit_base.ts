@@ -1,6 +1,6 @@
 import { AuditResult } from '../models/barkat/audit/audit';
 import { AuditFinding, AuditExecutionResult } from '../models/barkat/audit/audit_catalogue';
-import { IAuditClient } from '../client/audit';
+import { IAuditClient } from '../client/kohan/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
 import { Constants } from '../models/shared/constant';
 

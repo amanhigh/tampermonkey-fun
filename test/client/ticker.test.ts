@@ -1,4 +1,4 @@
-import { TickerClient, ITickerClient } from '../../src/client/ticker';
+import { TickerClient, ITickerClient } from '../../src/client/kohan/ticker';
 import { TickerType, TickerState, TickerTrend } from '../../src/models/barkat/market/ticker';
 import { TickerTimeframe } from '../../src/models/barkat/market/timeframe';
 import { Constants } from '../../src/models/shared/constant';

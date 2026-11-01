@@ -1,4 +1,4 @@
-import { KohanClient } from '../../src/client/kohan';
+import { KohanClient } from '../../src/client/kohan/kohan';
 
 // Test subclass that exposes protected helpers for unit testing
 class TestKohanClient extends KohanClient {

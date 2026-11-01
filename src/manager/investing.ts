@@ -1,4 +1,4 @@
-import { IInstrumentClient } from '../client/instrument';
+import { IInstrumentClient } from '../client/integrations/instrument';
 import { Instrument } from '../models/integrations/investing';
 
 /**

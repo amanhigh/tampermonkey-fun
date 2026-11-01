@@ -1,4 +1,4 @@
-import { IAlertTickerClient } from '../client/alert_ticker';
+import { IAlertTickerClient } from '../client/kohan/alert_ticker';
 import {
   AlertTicker,
   AlertTickerListResponse,

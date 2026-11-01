@@ -1,8 +1,8 @@
 import { LifecycleManager, ILifecycleManager, StartTrackingRequest } from '../../src/manager/lifecycle';
-import { ITickerClient } from '../../src/client/ticker';
-import { IPriceAlertClient } from '../../src/client/price_alert';
+import { ITickerClient } from '../../src/client/kohan/ticker';
+import { IPriceAlertClient } from '../../src/client/kohan/price_alert';
 import { PriceAlert } from '../../src/models/barkat/alert/price_alert';
-import { IInvestingClient } from '../../src/client/investing';
+import { IInvestingClient } from '../../src/client/integrations/investing';
 import { ICategoryManager } from '../../src/manager/category';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { IAlertManager } from '../../src/manager/alert';

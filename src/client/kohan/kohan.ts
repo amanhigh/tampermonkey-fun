@@ -1,4 +1,4 @@
-import { BaseClient, IBaseClient } from './base';
+import { BaseClient, IBaseClient } from '../base';
 
 /**
  * Semantic type alias for clients backed by the Kohan backend.

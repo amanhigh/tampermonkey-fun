@@ -1,4 +1,4 @@
-import { InstrumentClient, IInstrumentClient } from '../../src/client/instrument';
+import { InstrumentClient, IInstrumentClient } from '../../src/client/integrations/instrument';
 import { InvestingResponse } from '../../src/models/integrations/investing';
 
 // Mock the BaseClient's makeRequest method

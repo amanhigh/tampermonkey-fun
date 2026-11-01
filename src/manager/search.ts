@@ -1,4 +1,4 @@
-import { ISeerClient } from '../client/seer';
+import { ISeerClient } from '../client/integrations/seer';
 import { Constants } from '../models/shared/constant';
 import { canonicalSeerDetailPath } from '../util/seer';
 

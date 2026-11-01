@@ -1,4 +1,4 @@
-import { ITickerClient } from '../client/ticker';
+import { ITickerClient } from '../client/kohan/ticker';
 import {
   CreateTickerRequest,
   TickerQueryParams,

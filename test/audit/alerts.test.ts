@@ -1,5 +1,5 @@
 import { AlertsPlugin } from '../../src/manager/alerts_plugin';
-import { IAuditClient } from '../../src/client/audit';
+import { IAuditClient } from '../../src/client/kohan/audit';
 import { AuditExecutionResult } from '../../src/models/barkat/audit/audit_catalogue';
 
 describe('AlertsPlugin (backend adapter)', () => {

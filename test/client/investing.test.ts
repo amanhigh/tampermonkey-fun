@@ -1,4 +1,4 @@
-import { InvestingClient, IInvestingClient } from '../../src/client/investing';
+import { InvestingClient, IInvestingClient } from '../../src/client/integrations/investing';
 import { Alert } from '../../src/models/barkat/alert/alert';
 
 // Mock the BaseClient's makeRequest method

@@ -1,4 +1,4 @@
-import { JournalClient, IJournalClient } from '../../src/client/journal';
+import { JournalClient, IJournalClient } from '../../src/client/kohan/journal';
 import { Constants } from '../../src/models/shared/constant';
 import { TickerTimeframe } from '../../src/models/barkat/market/timeframe';
 

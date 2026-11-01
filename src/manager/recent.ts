@@ -1,5 +1,5 @@
 import { LRUCache } from 'lru-cache';
-import { ITickerClient } from '../client/ticker';
+import { ITickerClient } from '../client/kohan/ticker';
 import { Constants } from '../models/shared/constant';
 import { IPublisher } from './event_bus';
 import { DomainEventType } from '../models/barkat/domain_event';

@@ -1,4 +1,4 @@
-import { ISeerClient, SeerClient } from '../../src/client/seer';
+import { ISeerClient, SeerClient } from '../../src/client/integrations/seer';
 import { ApiError } from '../../src/models/shared/api_error';
 import { Constants } from '../../src/models/shared/constant';
 import { SeerVariant } from '../../src/models/integrations/seer';

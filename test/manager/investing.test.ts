@@ -1,5 +1,5 @@
 import { IInvestingManager, InvestingManager } from '../../src/manager/investing';
-import { IInstrumentClient } from '../../src/client/instrument';
+import { IInstrumentClient } from '../../src/client/integrations/instrument';
 
 describe('InvestingManager', () => {
   let manager: IInvestingManager;

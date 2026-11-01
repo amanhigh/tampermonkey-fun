@@ -38,7 +38,7 @@ This is a TypeScript-based Tampermonkey/Greasemonkey userscript development envi
   - `presentation/`: bars, DOM descriptions, display state and colors
   - `shared/`: API primitives, serialized events and cross-cutting constants
 - **`src/repo/`**: Data access layer and storage repositories  
-- **`src/client/`**: External API clients (Kite, Investing.com)
+- **`src/client/`**: Shared transport in the root, Kohan endpoint clients in `kohan/`, and external service clients in `integrations/`
 - **`src/util/`**: Utility functions and helpers
 - **`src/style/`**: LESS stylesheets
 
