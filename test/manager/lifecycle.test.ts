@@ -1,17 +1,17 @@
 import { LifecycleManager, ILifecycleManager, StartTrackingRequest } from '../../src/manager/lifecycle';
 import { ITickerClient } from '../../src/client/ticker';
 import { IPriceAlertClient } from '../../src/client/price_alert';
-import { PriceAlert } from '../../src/models/price_alert';
+import { PriceAlert } from '../../src/models/barkat/alert/price_alert';
 import { IInvestingClient } from '../../src/client/investing';
 import { ICategoryManager } from '../../src/manager/category';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { IAlertManager } from '../../src/manager/alert';
 import { IPublisher } from '../../src/manager/event_bus';
-import { DomainEventType } from '../../src/models/domain_event';
-import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/ticker';
-import { TickerTimeframe } from '../../src/models/timeframe';
-import { AlertTicker } from '../../src/models/alert_ticker';
-import { Alert } from '../../src/models/alert';
+import { DomainEventType } from '../../src/models/barkat/domain_event';
+import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/barkat/market/ticker';
+import { TickerTimeframe } from '../../src/models/barkat/market/timeframe';
+import { AlertTicker } from '../../src/models/barkat/alert/alert_ticker';
+import { Alert } from '../../src/models/barkat/alert/alert';
 
 describe('LifecycleManager', () => {
   let manager: ILifecycleManager;

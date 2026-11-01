@@ -1,13 +1,13 @@
 import { ITickerClient } from '../client/ticker';
 import { IPriceAlertClient } from '../client/price_alert';
 import { IInvestingClient } from '../client/investing';
-import { CreateTickerRequest, Ticker } from '../models/ticker';
-import { Alert } from '../models/alert';
+import { CreateTickerRequest, Ticker } from '../models/barkat/market/ticker';
+import { Alert } from '../models/barkat/alert/alert';
 import { ICategoryManager } from './category';
 import { IAlertTickerManager } from './alert_ticker';
 import { IAlertManager } from './alert';
 import { IPublisher } from './event_bus';
-import { DomainEventType } from '../models/domain_event';
+import { DomainEventType } from '../models/barkat/domain_event';
 
 /**
  * Request type for starting to track a new primary ticker.

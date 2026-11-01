@@ -5,7 +5,7 @@ import { ILifecycleManager } from '../../src/manager/lifecycle';
 import { IStyleManager } from '../../src/manager/style';
 import { IAlertTickerHandler } from '../../src/handler/alert_ticker';
 import { Notifier } from '../../src/util/notify';
-import { Ticker } from '../../src/models/ticker';
+import { Ticker } from '../../src/models/barkat/market/ticker';
 
 // Mock Notifier
 jest.mock('../../src/util/notify', () => ({

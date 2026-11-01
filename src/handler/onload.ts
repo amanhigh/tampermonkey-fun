@@ -1,5 +1,5 @@
-import { Constants } from '../models/constant';
-import { TickerArea } from '../models/dom';
+import { Constants } from '../models/shared/constant';
+import { TickerArea } from '../models/presentation/dom';
 import { IObserveUtil } from '../util/observer';
 import { IWaitUtil } from '../util/wait';
 import { IWatchListHandler } from './watchlist';
@@ -11,7 +11,7 @@ import { IPaintManager } from '../manager/paint';
 import { IDomManager } from '../manager/dom';
 import { ITradingViewManager } from '../manager/tv';
 import { IDomainEventConsumer, ISubscriber, IPublisher } from '../manager/event_bus';
-import { DomainEventType } from '../models/domain_event';
+import { DomainEventType } from '../models/barkat/domain_event';
 
 /**
  * Interface for application initialization handling

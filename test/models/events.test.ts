@@ -1,4 +1,4 @@
-import { AlertClicked, AlertClickAction, DashboardTickerChangedEvent } from '../../src/models/events';
+import { AlertClicked, AlertClickAction, DashboardTickerChangedEvent } from '../../src/models/shared/events';
 
 describe('AlertClicked', () => {
   describe('constructor', () => {

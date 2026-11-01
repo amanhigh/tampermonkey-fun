@@ -5,9 +5,9 @@ import {
   AlertTickerQueryParams,
   AlertTickerType,
   CreateAlertTickerRequest,
-} from '../models/alert_ticker';
+} from '../models/barkat/alert/alert_ticker';
 import { IPublisher } from './event_bus';
-import { DomainEventType } from '../models/domain_event';
+import { DomainEventType } from '../models/barkat/domain_event';
 import { BaseManager } from './base';
 
 /**

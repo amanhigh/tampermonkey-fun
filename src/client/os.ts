@@ -1,8 +1,8 @@
 import { BaseClient, IBaseClient } from './base';
-import { JournalTimeframe } from '../models/journal';
-import { KohanEnvelope } from '../models/api';
-import { ScreenshotRequest, ScreenshotResponse } from '../models/os';
-import { Constants } from '../models/constant';
+import { JournalTimeframe } from '../models/barkat/journal';
+import { KohanEnvelope } from '../models/shared/api';
+import { ScreenshotRequest, ScreenshotResponse } from '../models/integrations/os';
+import { Constants } from '../models/shared/constant';
 
 /**
  * OsClient handles OS-level operations against the local Kohan API:

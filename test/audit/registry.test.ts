@@ -1,7 +1,7 @@
 import { AuditSectionRegistry } from '../../src/util/audit_registry';
 import { IAuditSection } from '../../src/handler/audit_section';
-import { IAudit } from '../../src/models/audit';
-import { Constants } from '../../src/models/constant';
+import { IAudit } from '../../src/models/barkat/audit/audit';
+import { Constants } from '../../src/models/shared/constant';
 
 describe('AuditSectionRegistry', () => {
   let registry: AuditSectionRegistry;

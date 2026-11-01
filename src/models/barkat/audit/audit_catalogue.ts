@@ -2,7 +2,7 @@
 // These types mirror the backend audit API DTOs in go-fun/models/barkat/audit.go.
 // They are distinct from the frontend audit plugin models in audit.ts.
 
-import { KohanEnvelope, PaginationMetadata } from './api';
+import { KohanEnvelope, PaginationMetadata } from '../../shared/api';
 
 /** Severity levels for audit findings. */
 export type AuditFindingSeverity = 'LOW' | 'MEDIUM' | 'HIGH';

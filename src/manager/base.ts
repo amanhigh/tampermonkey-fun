@@ -1,5 +1,5 @@
-import { PaginationMetadata } from '../models/api';
-import { Constants } from '../models/constant';
+import { PaginationMetadata } from '../models/shared/api';
+import { Constants } from '../models/shared/constant';
 
 /**
  * Constraint ensuring a page envelope carries pagination metadata

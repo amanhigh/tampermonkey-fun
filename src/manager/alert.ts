@@ -1,15 +1,15 @@
 import { IInvestingClient } from '../client/investing';
 import { IPriceAlertClient } from '../client/price_alert';
-import { Alert, PairInfo } from '../models/alert';
-import { Constants } from '../models/constant';
-import { AlertClicked, AlertClickAction } from '../models/events';
-import { PriceAlert, PriceAlertInput, PriceAlertListResponse } from '../models/price_alert';
+import { Alert, PairInfo } from '../models/barkat/alert/alert';
+import { Constants } from '../models/shared/constant';
+import { AlertClicked, AlertClickAction } from '../models/shared/events';
+import { PriceAlert, PriceAlertInput, PriceAlertListResponse } from '../models/barkat/alert/price_alert';
 import { Notifier } from '../util/notify';
 import { IAlertTickerManager } from './alert_ticker';
 import { IDomManager } from './dom';
 import { ITradingViewManager } from './tv';
 import { IPublisher } from './event_bus';
-import { DomainEventType } from '../models/domain_event';
+import { DomainEventType } from '../models/barkat/domain_event';
 import { BaseManager } from './base';
 
 /**

@@ -1,5 +1,5 @@
 import { Notifier } from '../../src/util/notify';
-import { Color } from '../../src/models/color';
+import { Color } from '../../src/models/presentation/color';
 
 // Mock DOM environment for static testing
 const mockDOM = {

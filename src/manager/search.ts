@@ -1,5 +1,5 @@
 import { ISeerClient } from '../client/seer';
-import { Constants } from '../models/constant';
+import { Constants } from '../models/shared/constant';
 import { canonicalSeerDetailPath } from '../util/seer';
 
 /**

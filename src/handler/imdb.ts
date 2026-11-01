@@ -1,4 +1,4 @@
-import { IMDB_CONSTANTS } from '../models/imdb';
+import { IMDB_CONSTANTS } from '../models/integrations/imdb';
 
 export interface IImdbHandler {
   handleListMovies(): void;

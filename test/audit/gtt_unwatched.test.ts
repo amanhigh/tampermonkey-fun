@@ -1,10 +1,10 @@
 import { GttPlugin } from '../../src/manager/gtt_plugin';
 import { IKiteRepo } from '../../src/repo/kite';
 import { ICategoryManager } from '../../src/manager/category';
-import { GttRefreshEvent } from '../../src/models/gtt';
-import { Order, OrderType } from '../../src/models/kite';
-import { WatchCategoryId } from '../../src/models/watch';
-import { TickerState } from '../../src/models/ticker';
+import { GttRefreshEvent } from '../../src/models/barkat/gtt';
+import { Order, OrderType } from '../../src/models/integrations/kite';
+import { WatchCategoryId } from '../../src/models/barkat/market/watch';
+import { TickerState } from '../../src/models/barkat/market/ticker';
 
 // Unit tests for GttUnwatchedAudit: only SET_JOURNAL and RUNNING count as watched
 

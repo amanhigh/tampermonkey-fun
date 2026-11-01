@@ -3,8 +3,8 @@ import { IPaintManager } from '../../src/manager/paint';
 import { ICategoryManager } from '../../src/manager/category';
 import { IDomManager } from '../../src/manager/dom';
 import { IPublisher } from '../../src/manager/event_bus';
-import { Constants } from '../../src/models/constant';
-import { DomainEventType } from '../../src/models/domain_event';
+import { Constants } from '../../src/models/shared/constant';
+import { DomainEventType } from '../../src/models/barkat/domain_event';
 
 // Mock GM global for watchlist silo
 (global as any).GM = {

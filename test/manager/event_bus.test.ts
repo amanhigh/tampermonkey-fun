@@ -1,5 +1,5 @@
 import { EventBus } from '../../src/manager/event_bus';
-import { DomainEventType } from '../../src/models/domain_event';
+import { DomainEventType } from '../../src/models/barkat/domain_event';
 
 describe('EventBus', () => {
   let eventBus: EventBus;

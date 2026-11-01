@@ -1,5 +1,5 @@
 import { BaseClient, IBaseClient } from './base';
-import { CreateGttRequest, GttApiResponse } from '../models/kite';
+import { CreateGttRequest, GttApiResponse } from '../models/integrations/kite';
 
 /**
  * Client for Zerodha GTT (Good Till Triggered) Operations

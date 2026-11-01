@@ -1,9 +1,9 @@
-import { AuditResult } from '../models/audit';
+import { AuditResult } from '../models/barkat/audit/audit';
 import { BaseAuditPlugin } from './audit_plugin_base';
 import { IKiteRepo } from '../repo/kite';
 import { ICategoryManager } from './category';
-import { Constants } from '../models/constant';
-import { WatchCategoryId } from '../models/watch';
+import { Constants } from '../models/shared/constant';
+import { WatchCategoryId } from '../models/barkat/market/watch';
 
 /**
  * GTT Unwatched Audit plugin: identifies GTT orders for tickers not in watchlists.

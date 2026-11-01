@@ -1,7 +1,7 @@
 import { KiteManager, IKiteManager } from '../../src/manager/kite';
 import { IKiteClient } from '../../src/client/kite';
 import { IKiteRepo } from '../../src/repo/kite';
-import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../../src/models/gtt';
+import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../../src/models/barkat/gtt';
 
 // Mock dependencies
 const mockKiteClient: jest.Mocked<IKiteClient> = {

@@ -1,6 +1,6 @@
 import { BaseClient, IBaseClient } from './base';
-import { Constants } from '../models/constant';
-import { SeerDeleteTarget, SeerDetailPath, SeerVariant } from '../models/seer';
+import { Constants } from '../models/shared/constant';
+import { SeerDeleteTarget, SeerDetailPath, SeerVariant } from '../models/integrations/seer';
 
 /**
  * SeerClient deletes media, files and requests through the Seerr API.

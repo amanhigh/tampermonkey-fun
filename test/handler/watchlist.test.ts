@@ -3,9 +3,9 @@ import { ITradingViewWatchlistManager } from '../../src/manager/watchlist';
 import { ISyncUtil } from '../../src/util/sync';
 import { ICategoryManager } from '../../src/manager/category';
 import { IDomManager } from '../../src/manager/dom';
-import { WatchCategoryId } from '../../src/models/watch';
+import { WatchCategoryId } from '../../src/models/barkat/market/watch';
 import { ISubscriber } from '../../src/manager/event_bus';
-import { DomainEventType } from '../../src/models/domain_event';
+import { DomainEventType } from '../../src/models/barkat/domain_event';
 
 describe('WatchListHandler', () => {
   let handler: IWatchListHandler;

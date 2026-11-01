@@ -1,4 +1,4 @@
-import { Constants } from '../../src/models/constant';
+import { Constants } from '../../src/models/shared/constant';
 import { IPriceAlertClient, PriceAlertClient } from '../../src/client/price_alert';
 
 // Mock the BaseClient's makeRequest method

@@ -1,4 +1,4 @@
-import { Constants } from '../../src/models/constant';
+import { Constants } from '../../src/models/shared/constant';
 import { IAuditClient, AuditClient } from '../../src/client/audit';
 
 // Mock the BaseClient's makeRequest method

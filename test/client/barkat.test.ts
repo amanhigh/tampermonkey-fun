@@ -1,8 +1,8 @@
-import { Constants } from '../../src/models/constant';
-import { ApiError } from '../../src/models/api_error';
-import { TickerTimeframe } from '../../src/models/timeframe';
+import { Constants } from '../../src/models/shared/constant';
+import { ApiError } from '../../src/models/shared/api_error';
+import { TickerTimeframe } from '../../src/models/barkat/market/timeframe';
 import { BarkatClient, IBarkatClient } from '../../src/client/barkat';
-import { BarkatTickerAnalysis } from '../../src/models/barkat';
+import { BarkatTickerAnalysis } from '../../src/models/barkat/market/analysis';
 
 // Mock the BaseClient's makeRequest method
 jest.mock('../../src/client/base', () => {

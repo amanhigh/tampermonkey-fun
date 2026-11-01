@@ -1,4 +1,4 @@
-import { InvestingResponse } from '../models/investing';
+import { InvestingResponse } from '../models/integrations/investing';
 import { BaseClient, IBaseClient } from './base';
 
 /**

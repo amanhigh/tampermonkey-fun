@@ -1,4 +1,4 @@
-import { DomainEvent, DomainEventByType } from '../models/domain_event';
+import { DomainEvent, DomainEventByType } from '../models/barkat/domain_event';
 
 /**
  * Type alias for a handler function that processes a domain event.

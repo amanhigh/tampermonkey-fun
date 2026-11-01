@@ -5,9 +5,9 @@ import {
   AlertTickerQueryParams,
   AlertTicker,
   CreateAlertTickerRequest,
-} from '../models/alert_ticker';
-import { KohanEnvelope } from '../models/api';
-import { Constants } from '../models/constant';
+} from '../models/barkat/alert/alert_ticker';
+import { KohanEnvelope } from '../models/shared/api';
+import { Constants } from '../models/shared/constant';
 
 /**
  * AlertTickerClient handles Alert ticker (Investing.com identity) CRUD and listing

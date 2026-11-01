@@ -5,9 +5,9 @@ import {
   TickerListResponse,
   Ticker,
   TickerUpdateRequest,
-} from '../models/ticker';
+} from '../models/barkat/market/ticker';
 import { IPublisher } from './event_bus';
-import { DomainEventType } from '../models/domain_event';
+import { DomainEventType } from '../models/barkat/domain_event';
 import { BaseManager } from './base';
 
 /** Exchange aliases that map to canonical backend-accepted values. */

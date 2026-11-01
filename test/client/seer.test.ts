@@ -1,7 +1,7 @@
 import { ISeerClient, SeerClient } from '../../src/client/seer';
-import { ApiError } from '../../src/models/api_error';
-import { Constants } from '../../src/models/constant';
-import { SeerVariant } from '../../src/models/seer';
+import { ApiError } from '../../src/models/shared/api_error';
+import { Constants } from '../../src/models/shared/constant';
+import { SeerVariant } from '../../src/models/integrations/seer';
 
 // The inherited BaseClient transport runs on GM.xmlHttpRequest.
 const xmlHttpRequestMock = jest.fn();

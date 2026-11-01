@@ -1,8 +1,8 @@
 import { IBarkatClient } from '../client/barkat';
-import { BarkatTickerAnalysis } from '../models/barkat';
-import { TickerType } from '../models/ticker';
-import { TickerArea, TickerVisibility } from '../models/dom';
-import { DomainEventType } from '../models/domain_event';
+import { BarkatTickerAnalysis } from '../models/barkat/market/analysis';
+import { TickerType } from '../models/barkat/market/ticker';
+import { TickerArea, TickerVisibility } from '../models/presentation/dom';
+import { DomainEventType } from '../models/barkat/domain_event';
 import { Notifier } from '../util/notify';
 import { IDomManager } from './dom';
 import { IDomainEventConsumer, ISubscriber } from './event_bus';

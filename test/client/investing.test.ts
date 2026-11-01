@@ -1,5 +1,5 @@
 import { InvestingClient, IInvestingClient } from '../../src/client/investing';
-import { Alert } from '../../src/models/alert';
+import { Alert } from '../../src/models/barkat/alert/alert';
 
 // Mock the BaseClient's makeRequest method
 jest.mock('../../src/client/base', () => {

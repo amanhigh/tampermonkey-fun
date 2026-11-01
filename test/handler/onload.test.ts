@@ -10,9 +10,9 @@ import { IDomManager } from '../../src/manager/dom';
 import { IJournalSyncHandler } from '../../src/handler/journal_sync';
 import { ITradingViewManager } from '../../src/manager/tv';
 import { IDomainEventConsumer, ISubscriber, IPublisher } from '../../src/manager/event_bus';
-import { DomainEventType } from '../../src/models/domain_event';
-import { Constants } from '../../src/models/constant';
-import { TickerArea } from '../../src/models/dom';
+import { DomainEventType } from '../../src/models/barkat/domain_event';
+import { Constants } from '../../src/models/shared/constant';
+import { TickerArea } from '../../src/models/presentation/dom';
 
 // Mock document and jQuery
 const mockDocument = {

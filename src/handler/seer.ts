@@ -1,6 +1,6 @@
 import { ISearchManager } from '../manager/search';
 import { ISeerManager } from '../manager/seer';
-import { Constants } from '../models/constant';
+import { Constants } from '../models/shared/constant';
 import { escapeHtml } from '../util/html';
 import { Notifier } from '../util/notify';
 

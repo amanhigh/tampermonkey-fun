@@ -29,7 +29,14 @@ This is a TypeScript-based Tampermonkey/Greasemonkey userscript development envi
 - **`src/core/`**: Main application entry points (experiment.ts, barkat.ts, imdb.ts, picasso.ts, seer.ts)
 - **`src/handler/`**: Event handlers and user interaction logic
 - **`src/manager/`**: Business logic managers for different features
-- **`src/models/`**: Data models and type definitions
+- **`src/models/`**: Data models and type definitions grouped by ownership:
+  - `barkat/market/`: tickers, timeframes, classification and analysis
+  - `barkat/alert/`: alert mappings, prices and feed events
+  - `barkat/audit/`: audit plugin and backend catalogue contracts
+  - `barkat/`: journal, GTT and cross-capability domain events
+  - `integrations/`: external service and site contracts/configuration
+  - `presentation/`: bars, DOM descriptions, display state and colors
+  - `shared/`: API primitives, serialized events and cross-cutting constants
 - **`src/repo/`**: Data access layer and storage repositories  
 - **`src/client/`**: External API clients (Kite, Investing.com)
 - **`src/util/`**: Utility functions and helpers

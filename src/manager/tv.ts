@@ -1,4 +1,4 @@
-import { Constants } from '../models/constant';
+import { Constants } from '../models/shared/constant';
 import { Notifier } from '../util/notify';
 import { IWaitUtil } from '../util/wait';
 

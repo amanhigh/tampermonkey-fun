@@ -1,5 +1,5 @@
-import { AuditResult } from '../models/audit';
-import { Constants } from '../models/constant';
+import { AuditResult } from '../models/barkat/audit/audit';
+import { Constants } from '../models/shared/constant';
 
 /**
  * Base class for all audit section implementations

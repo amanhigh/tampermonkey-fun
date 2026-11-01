@@ -1,5 +1,5 @@
 import { IInstrumentClient } from '../client/instrument';
-import { Instrument } from '../models/investing';
+import { Instrument } from '../models/integrations/investing';
 
 /**
  * Interface for managing Investing.com instrument resolution.

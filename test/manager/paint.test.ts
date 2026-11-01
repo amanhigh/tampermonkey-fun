@@ -1,13 +1,13 @@
-import { TickerArea, TickerVisibility } from '../../src/models/dom';
+import { TickerArea, TickerVisibility } from '../../src/models/presentation/dom';
 import { PaintManager, IPaintManager } from '../../src/manager/paint';
 import { ICategoryManager } from '../../src/manager/category';
 import { IDomManager } from '../../src/manager/dom';
 import { IDisplayManager } from '../../src/manager/display';
 import { IRecentManager } from '../../src/manager/recent';
-import { Constants } from '../../src/models/constant';
-import { TickerCategory, TickerTag } from '../../src/models/category';
-import { WatchCategoryId } from '../../src/models/watch';
-import { TickerTrend } from '../../src/models/ticker';
+import { Constants } from '../../src/models/shared/constant';
+import { TickerCategory, TickerTag } from '../../src/models/barkat/market/category';
+import { WatchCategoryId } from '../../src/models/barkat/market/watch';
+import { TickerTrend } from '../../src/models/barkat/market/ticker';
 
 // Mock jQuery
 const mockJQueryElement: any = {

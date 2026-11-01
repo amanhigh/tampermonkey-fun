@@ -1,7 +1,7 @@
 import { TickerClient, ITickerClient } from '../../src/client/ticker';
-import { TickerType, TickerState, TickerTrend } from '../../src/models/ticker';
-import { TickerTimeframe } from '../../src/models/timeframe';
-import { Constants } from '../../src/models/constant';
+import { TickerType, TickerState, TickerTrend } from '../../src/models/barkat/market/ticker';
+import { TickerTimeframe } from '../../src/models/barkat/market/timeframe';
+import { Constants } from '../../src/models/shared/constant';
 
 // Mock the BaseClient's makeRequest method
 jest.mock('../../src/client/base', () => {
