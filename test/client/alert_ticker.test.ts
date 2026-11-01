@@ -1,4 +1,4 @@
-import { AlertTickerClient, IAlertTickerClient } from '../../src/client/alert_ticker';
+import { AlertTickerClient, IAlertTickerClient } from '../../src/client/kohan/alert_ticker';
 import { Constants } from '../../src/models/shared/constant';
 
 // Mock the BaseClient's makeRequest method

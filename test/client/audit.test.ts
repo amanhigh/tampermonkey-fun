@@ -1,5 +1,5 @@
 import { Constants } from '../../src/models/shared/constant';
-import { IAuditClient, AuditClient } from '../../src/client/audit';
+import { IAuditClient, AuditClient } from '../../src/client/kohan/audit';
 
 // Mock the BaseClient's makeRequest method
 jest.mock('../../src/client/base', () => {

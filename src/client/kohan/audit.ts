@@ -1,7 +1,7 @@
 import { KohanClient, IKohanClient } from './kohan';
-import { KohanEnvelope } from '../models/shared/api';
-import { Constants } from '../models/shared/constant';
-import { AuditCatalog, AuditExecutionResult } from '../models/barkat/audit/audit_catalogue';
+import { KohanEnvelope } from '../../models/shared/api';
+import { Constants } from '../../models/shared/constant';
+import { AuditCatalog, AuditExecutionResult } from '../../models/barkat/audit/audit_catalogue';
 
 /**
  * AuditClient handles audit catalogue listing and execution against the Kohan backend.

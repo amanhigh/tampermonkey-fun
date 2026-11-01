@@ -1,4 +1,4 @@
-import { wrapClientError } from './base';
+import { wrapClientError } from '../base';
 import { KohanClient, IKohanClient } from './kohan';
 import {
   CreateTickerRequest,
@@ -7,9 +7,9 @@ import {
   TickerQueryParams,
   Ticker,
   TickerUpdateRequest,
-} from '../models/barkat/market/ticker';
-import { KohanEnvelope } from '../models/shared/api';
-import { Constants } from '../models/shared/constant';
+} from '../../models/barkat/market/ticker';
+import { KohanEnvelope } from '../../models/shared/api';
+import { Constants } from '../../models/shared/constant';
 
 /**
  * TickerClient handles Barkat ticker CRUD and listing operations against the Kohan backend.

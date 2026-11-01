@@ -1,7 +1,7 @@
 import { KohanClient, IKohanClient } from './kohan';
-import { wrapClientError } from './base';
-import { KohanEnvelope } from '../models/shared/api';
-import { Constants } from '../models/shared/constant';
+import { wrapClientError } from '../base';
+import { KohanEnvelope } from '../../models/shared/api';
+import { Constants } from '../../models/shared/constant';
 import {
   PendingPriceAlertRequest,
   PriceAlert,
@@ -10,7 +10,7 @@ import {
   PriceAlertQueryParams,
   PriceAlertReplaceRequest,
   PriceAlertReplaceResult,
-} from '../models/barkat/alert/price_alert';
+} from '../../models/barkat/alert/price_alert';
 
 /**
  * PriceAlertClient handles price alert replacement, pending creation, deletion,

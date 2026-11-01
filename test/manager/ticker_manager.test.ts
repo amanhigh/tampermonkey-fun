@@ -1,5 +1,5 @@
 import { ITickerManager, TickerManager } from '../../src/manager/ticker';
-import { ITickerClient } from '../../src/client/ticker';
+import { ITickerClient } from '../../src/client/kohan/ticker';
 import { TickerListResponse, Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/barkat/market/ticker';
 import { IPublisher } from '../../src/manager/event_bus';
 import { DomainEventType } from '../../src/models/barkat/domain_event';

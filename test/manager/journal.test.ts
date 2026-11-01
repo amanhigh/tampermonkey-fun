@@ -1,7 +1,7 @@
 import { JournalManager, IJournalManager } from '../../src/manager/journal';
 import { ITimeFrameManager } from '../../src/manager/timeframe';
-import { IJournalClient } from '../../src/client/journal';
-import { IOsClient } from '../../src/client/os';
+import { IJournalClient } from '../../src/client/kohan/journal';
+import { IOsClient } from '../../src/client/kohan/os';
 import {
   CreateJournalInput,
   JournalRecord,

@@ -1,8 +1,8 @@
 import { ITimeFrameManager } from './timeframe';
 import { BaseManager } from './base';
 import { Notifier } from '../util/notify';
-import { IJournalClient } from '../client/journal';
-import { IOsClient } from '../client/os';
+import { IJournalClient } from '../client/kohan/journal';
+import { IOsClient } from '../client/kohan/os';
 import {
   CreateJournalInput,
   CreateJournalImageRequest,

@@ -1,4 +1,4 @@
-import { OsClient, IOsClient } from '../../src/client/os';
+import { OsClient, IOsClient } from '../../src/client/kohan/os';
 import { Constants } from '../../src/models/shared/constant';
 
 // Mock the BaseClient's makeRequest method

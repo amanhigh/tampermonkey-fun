@@ -2,7 +2,7 @@
  * Interface and implementations for journal handling operations
  */
 
-import { IOsClient } from '../client/os';
+import { IOsClient } from '../client/kohan/os';
 import { IJournalManager } from '../manager/journal';
 import { ISmartPrompt, SmartChoiceGroup, SmartPromptResponseType } from '../util/smart';
 import { IUIUtil } from '../util/ui';

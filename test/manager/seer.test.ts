@@ -1,4 +1,4 @@
-import { ISeerClient } from '../../src/client/seer';
+import { ISeerClient } from '../../src/client/integrations/seer';
 import { ISeerManager, SeerManager } from '../../src/manager/seer';
 import { ApiError } from '../../src/models/shared/api_error';
 import { SeerDeleteTarget, SeerVariant } from '../../src/models/integrations/seer';

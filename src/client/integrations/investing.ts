@@ -1,5 +1,5 @@
-import { Alert } from '../models/barkat/alert/alert';
-import { BaseClient, IBaseClient } from './base';
+import { Alert } from '../../models/barkat/alert/alert';
+import { BaseClient, IBaseClient } from '../base';
 
 /**
  * Interface for interacting with Investing.com API

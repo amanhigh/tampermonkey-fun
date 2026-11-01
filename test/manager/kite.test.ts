@@ -1,5 +1,5 @@
 import { KiteManager, IKiteManager } from '../../src/manager/kite';
-import { IKiteClient } from '../../src/client/kite';
+import { IKiteClient } from '../../src/client/integrations/kite';
 import { IKiteRepo } from '../../src/repo/kite';
 import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../../src/models/barkat/gtt';
 

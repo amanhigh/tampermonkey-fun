@@ -1,5 +1,5 @@
-import { IInvestingClient } from '../../src/client/investing';
-import { IPriceAlertClient } from '../../src/client/price_alert';
+import { IInvestingClient } from '../../src/client/integrations/investing';
+import { IPriceAlertClient } from '../../src/client/kohan/price_alert';
 import { Alert, PairInfo } from '../../src/models/barkat/alert/alert';
 import { AlertTicker } from '../../src/models/barkat/alert/alert_ticker';
 import { AlertClickAction } from '../../src/models/shared/events';

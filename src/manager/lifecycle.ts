@@ -1,6 +1,6 @@
-import { ITickerClient } from '../client/ticker';
-import { IPriceAlertClient } from '../client/price_alert';
-import { IInvestingClient } from '../client/investing';
+import { ITickerClient } from '../client/kohan/ticker';
+import { IPriceAlertClient } from '../client/kohan/price_alert';
+import { IInvestingClient } from '../client/integrations/investing';
 import { CreateTickerRequest, Ticker } from '../models/barkat/market/ticker';
 import { Alert } from '../models/barkat/alert/alert';
 import { ICategoryManager } from './category';
