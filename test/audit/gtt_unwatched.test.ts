@@ -1,6 +1,6 @@
-import { GttPlugin } from '../../src/manager/gtt_plugin';
+import { GttPlugin } from '../../src/manager/barkat/audit/gtt_plugin';
 import { IKiteRepo } from '../../src/repo/kite';
-import { ICategoryManager } from '../../src/manager/category';
+import { ICategoryManager } from '../../src/manager/barkat/market/category';
 import { GttRefreshEvent } from '../../src/models/barkat/gtt';
 import { Order, OrderType } from '../../src/models/integrations/kite';
 import { WatchCategoryId } from '../../src/models/barkat/market/watch';

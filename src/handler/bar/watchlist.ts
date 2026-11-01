@@ -1,8 +1,8 @@
 import { BaseBar, IBaseBar } from './base';
 import { BarId, BarStatus } from '../../models/presentation/bar';
 import { BucketSummary, ALL_WATCH_CATEGORIES, WatchCategoryId } from '../../models/barkat/market/watch';
-import { IPaintManager } from '../../manager/paint';
-import { IFilterManager } from '../../manager/filter';
+import { IPaintManager } from '../../manager/presentation/paint';
+import { IFilterManager } from '../../manager/presentation/filter';
 import { DomainEventType } from '../../models/barkat/domain_event';
 
 /**

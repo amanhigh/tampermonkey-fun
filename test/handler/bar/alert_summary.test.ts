@@ -17,12 +17,12 @@
  */
 
 import { AlertSummaryBar, IAlertSummaryBar } from '../../../src/handler/bar/alert_summary';
-import { IDomManager } from '../../../src/manager/dom';
-import { IAlertManager } from '../../../src/manager/alert';
-import { ICategoryManager } from '../../../src/manager/category';
-import { ITradingViewManager } from '../../../src/manager/tv';
+import { IDomManager } from '../../../src/manager/presentation/dom';
+import { IAlertManager } from '../../../src/manager/barkat/alert/alert';
+import { ICategoryManager } from '../../../src/manager/barkat/market/category';
+import { ITradingViewManager } from '../../../src/manager/presentation/tv';
 import { Alert } from '../../../src/models/barkat/alert/alert';
-import { ISubscriber } from '../../../src/manager/event_bus';
+import { ISubscriber } from '../../../src/manager/core/event_bus';
 import { DomainEventType } from '../../../src/models/barkat/domain_event';
 import { WatchCategoryId } from '../../../src/models/barkat/market/watch';
 import { BAR_CLASS, BarStatus } from '../../../src/models/presentation/bar';

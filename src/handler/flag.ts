@@ -1,5 +1,5 @@
-import { ICategoryManager } from '../manager/category';
-import { IDomManager } from '../manager/dom';
+import { ICategoryManager } from '../manager/barkat/market/category';
+import { IDomManager } from '../manager/presentation/dom';
 import { FlagCategoryId } from '../models/barkat/market/flag';
 
 /**

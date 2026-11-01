@@ -1,6 +1,6 @@
-import { RecentManager, IRecentManager } from '../../src/manager/recent';
+import { RecentManager, IRecentManager } from '../../src/manager/barkat/market/recent';
 import { ITickerClient } from '../../src/client/kohan/ticker';
-import { IPublisher } from '../../src/manager/event_bus';
+import { IPublisher } from '../../src/manager/core/event_bus';
 import { DomainEventType } from '../../src/models/barkat/domain_event';
 import { Ticker } from '../../src/models/barkat/market/ticker';
 import { Constants } from '../../src/models/shared/constant';

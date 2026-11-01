@@ -28,7 +28,7 @@ This is a TypeScript-based Tampermonkey/Greasemonkey userscript development envi
 ### Core Structure
 - **`src/core/`**: Main application entry points (experiment.ts, barkat.ts, imdb.ts, picasso.ts, seer.ts)
 - **`src/handler/`**: Event handlers and user interaction logic
-- **`src/manager/`**: Business logic managers for different features
+- **`src/manager/`**: Managers grouped by capability: Barkat market, alerts, audit and workflow; presentation; integrations; and shared core infrastructure in `core/`
 - **`src/models/`**: Data models and type definitions grouped by ownership:
   - `barkat/market/`: tickers, timeframes, classification and analysis
   - `barkat/alert/`: alert mappings, prices and feed events

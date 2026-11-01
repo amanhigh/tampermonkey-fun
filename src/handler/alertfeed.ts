@@ -2,15 +2,15 @@ import { Constants } from '../models/shared/constant';
 import { IUIUtil } from '../util/ui';
 import { Notifier } from '../util/notify';
 import { AlertClickAction } from '../models/shared/events';
-import { IAlertManager } from '../manager/alert';
-import { IAlertFeedManager } from '../manager/alertfeed';
-import { IDisplayManager } from '../manager/display';
+import { IAlertManager } from '../manager/barkat/alert/alert';
+import { IAlertFeedManager } from '../manager/barkat/alert/alertfeed';
+import { IDisplayManager } from '../manager/presentation/display';
 import { DisplayState, DisplayInfo } from '../models/presentation/display';
 import { AlertFeedEvent } from '../models/barkat/alert/alertfeed';
-import { IAlertTickerManager } from '../manager/alert_ticker';
-import { IInvestingManager } from '../manager/investing';
+import { IAlertTickerManager } from '../manager/barkat/alert/alert_ticker';
+import { IInvestingManager } from '../manager/integrations/investing';
 import { AlertTicker } from '../models/barkat/alert/alert_ticker';
-import { ISubscriber, IDomainEventConsumer } from '../manager/event_bus';
+import { ISubscriber, IDomainEventConsumer } from '../manager/core/event_bus';
 import { DomainEventType } from '../models/barkat/domain_event';
 
 export interface IAlertFeedHandler extends IDomainEventConsumer {

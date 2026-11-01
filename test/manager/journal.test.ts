@@ -1,5 +1,5 @@
-import { JournalManager, IJournalManager } from '../../src/manager/journal';
-import { ITimeFrameManager } from '../../src/manager/timeframe';
+import { JournalManager, IJournalManager } from '../../src/manager/barkat/workflow/journal';
+import { ITimeFrameManager } from '../../src/manager/barkat/market/timeframe';
 import { IJournalClient } from '../../src/client/kohan/journal';
 import { IOsClient } from '../../src/client/kohan/os';
 import {

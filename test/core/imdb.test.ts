@@ -5,7 +5,7 @@ jest.mock('../../src/core/factory', () => ({
 import { ImdbApp } from '../../src/core/imdb';
 import { IImdbHandler } from '../../src/handler/imdb';
 import { IGlobalErrorHandler } from '../../src/handler/error';
-import { IImdbManager } from '../../src/manager/imdb';
+import { IImdbManager } from '../../src/manager/integrations/imdb';
 
 describe('ImdbApp', () => {
   let originalGmDescriptor: PropertyDescriptor | undefined;

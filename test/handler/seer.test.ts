@@ -1,6 +1,6 @@
 import { SeerHandler } from '../../src/handler/seer';
-import { ISearchManager } from '../../src/manager/search';
-import { ISeerManager } from '../../src/manager/seer';
+import { ISearchManager } from '../../src/manager/integrations/search';
+import { ISeerManager } from '../../src/manager/integrations/seer';
 import { Constants } from '../../src/models/shared/constant';
 
 // The handler must only call Notifier; its DOM rendering is out of scope here.

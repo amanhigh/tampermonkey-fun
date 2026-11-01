@@ -1,7 +1,7 @@
-import { DomManager, IDomManager } from '../../src/manager/dom';
+import { DomManager, IDomManager } from '../../src/manager/presentation/dom';
 import { TickerArea, TickerVisibility } from '../../src/models/presentation/dom';
 import { IWaitUtil } from '../../src/util/wait';
-import { ITickerManager } from '../../src/manager/ticker';
+import { ITickerManager } from '../../src/manager/barkat/market/ticker';
 import { Constants } from '../../src/models/shared/constant';
 import { Ticker } from '../../src/models/barkat/market/ticker';
 

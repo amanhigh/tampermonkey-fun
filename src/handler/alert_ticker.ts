@@ -1,10 +1,10 @@
 import { ISmartPrompt, SmartPromptResponseType } from '../util/smart';
-import { IInvestingManager } from '../manager/investing';
+import { IInvestingManager } from '../manager/integrations/investing';
 import { Instrument } from '../models/integrations/investing';
-import { IAlertTickerManager } from '../manager/alert_ticker';
-import { IDomManager } from '../manager/dom';
+import { IAlertTickerManager } from '../manager/barkat/alert/alert_ticker';
+import { IDomManager } from '../manager/presentation/dom';
 import { Notifier } from '../util/notify';
-import { TickerManager } from '../manager/ticker';
+import { TickerManager } from '../manager/barkat/market/ticker';
 
 /**
  * Interface for managing investing.com pair linking operations

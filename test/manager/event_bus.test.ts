@@ -1,4 +1,4 @@
-import { EventBus } from '../../src/manager/event_bus';
+import { EventBus } from '../../src/manager/core/event_bus';
 import { DomainEventType } from '../../src/models/barkat/domain_event';
 
 describe('EventBus', () => {

@@ -1,10 +1,10 @@
 import { BaseBar, IBaseBar } from './base';
 import { BarId, BarStatus } from '../../models/presentation/bar';
 import { Alert } from '../../models/barkat/alert/alert';
-import { IDomManager } from '../../manager/dom';
-import { IAlertManager } from '../../manager/alert';
-import { ICategoryManager } from '../../manager/category';
-import { ITradingViewManager } from '../../manager/tv';
+import { IDomManager } from '../../manager/presentation/dom';
+import { IAlertManager } from '../../manager/barkat/alert/alert';
+import { ICategoryManager } from '../../manager/barkat/market/category';
+import { ITradingViewManager } from '../../manager/presentation/tv';
 import { DomainEventType } from '../../models/barkat/domain_event';
 import { WatchCategoryId } from '../../models/barkat/market/watch';
 import { Notifier } from '../../util/notify';

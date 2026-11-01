@@ -1,4 +1,4 @@
-import { TradeRiskPlugin } from '../../src/manager/trade_risk_plugin';
+import { TradeRiskPlugin } from '../../src/manager/barkat/audit/trade_risk_plugin';
 import { IKiteRepo } from '../../src/repo/kite';
 import { GttRefreshEvent } from '../../src/models/barkat/gtt';
 import { Order, OrderType } from '../../src/models/integrations/kite';

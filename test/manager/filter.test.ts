@@ -1,4 +1,4 @@
-import { FilterManager, IFilterManager } from '../../src/manager/filter';
+import { FilterManager, IFilterManager } from '../../src/manager/presentation/filter';
 import { TickerArea } from '../../src/models/presentation/dom';
 
 // Mock jQuery globally for DOM manipulation

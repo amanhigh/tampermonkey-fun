@@ -1,8 +1,8 @@
 import { KeyConfig, IKeyConfig } from '../../src/handler/key_config';
-import { ITimeFrameManager } from '../../src/manager/timeframe';
+import { ITimeFrameManager } from '../../src/manager/barkat/market/timeframe';
 import { IWatchListHandler } from '../../src/handler/watchlist';
 import { IFlagHandler } from '../../src/handler/flag';
-import { IStyleManager } from '../../src/manager/style';
+import { IStyleManager } from '../../src/manager/presentation/style';
 import { IJournalHandler } from '../../src/handler/journal';
 import { IKiteHandler } from '../../src/handler/kite';
 

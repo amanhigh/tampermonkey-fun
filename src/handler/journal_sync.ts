@@ -2,8 +2,8 @@
  * Interface and implementations for journal synchronization
  */
 
-import { IJournalManager } from '../manager/journal';
-import { IDomManager } from '../manager/dom';
+import { IJournalManager } from '../manager/barkat/workflow/journal';
+import { IDomManager } from '../manager/presentation/dom';
 import { Constants } from '../models/shared/constant';
 import { JournalOpenEvent } from '../models/shared/events';
 

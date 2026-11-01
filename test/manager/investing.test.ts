@@ -1,4 +1,4 @@
-import { IInvestingManager, InvestingManager } from '../../src/manager/investing';
+import { IInvestingManager, InvestingManager } from '../../src/manager/integrations/investing';
 import { IInstrumentClient } from '../../src/client/integrations/instrument';
 
 describe('InvestingManager', () => {

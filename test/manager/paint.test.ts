@@ -1,9 +1,9 @@
 import { TickerArea, TickerVisibility } from '../../src/models/presentation/dom';
-import { PaintManager, IPaintManager } from '../../src/manager/paint';
-import { ICategoryManager } from '../../src/manager/category';
-import { IDomManager } from '../../src/manager/dom';
-import { IDisplayManager } from '../../src/manager/display';
-import { IRecentManager } from '../../src/manager/recent';
+import { PaintManager, IPaintManager } from '../../src/manager/presentation/paint';
+import { ICategoryManager } from '../../src/manager/barkat/market/category';
+import { IDomManager } from '../../src/manager/presentation/dom';
+import { IDisplayManager } from '../../src/manager/presentation/display';
+import { IRecentManager } from '../../src/manager/barkat/market/recent';
 import { Constants } from '../../src/models/shared/constant';
 import { TickerCategory, TickerTag } from '../../src/models/barkat/market/category';
 import { WatchCategoryId } from '../../src/models/barkat/market/watch';

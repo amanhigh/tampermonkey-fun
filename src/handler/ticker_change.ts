@@ -1,7 +1,7 @@
-import { IDomManager } from '../manager/dom';
-import { IRecentManager } from '../manager/recent';
+import { IDomManager } from '../manager/presentation/dom';
+import { IRecentManager } from '../manager/barkat/market/recent';
 import { ISyncUtil } from '../util/sync';
-import { IDomainEventConsumer, ISubscriber } from '../manager/event_bus';
+import { IDomainEventConsumer, ISubscriber } from '../manager/core/event_bus';
 import { DomainEventType } from '../models/barkat/domain_event';
 import { Constants } from '../models/shared/constant';
 

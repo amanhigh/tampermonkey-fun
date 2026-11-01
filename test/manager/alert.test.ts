@@ -3,11 +3,11 @@ import { IPriceAlertClient } from '../../src/client/kohan/price_alert';
 import { Alert, PairInfo } from '../../src/models/barkat/alert/alert';
 import { AlertTicker } from '../../src/models/barkat/alert/alert_ticker';
 import { AlertClickAction } from '../../src/models/shared/events';
-import { AlertManager, IAlertManager } from '../../src/manager/alert';
-import { IAlertTickerManager } from '../../src/manager/alert_ticker';
-import { IDomManager } from '../../src/manager/dom';
-import { ITradingViewManager } from '../../src/manager/tv';
-import { IPublisher } from '../../src/manager/event_bus';
+import { AlertManager, IAlertManager } from '../../src/manager/barkat/alert/alert';
+import { IAlertTickerManager } from '../../src/manager/barkat/alert/alert_ticker';
+import { IDomManager } from '../../src/manager/presentation/dom';
+import { ITradingViewManager } from '../../src/manager/presentation/tv';
+import { IPublisher } from '../../src/manager/core/event_bus';
 import { Constants } from '../../src/models/shared/constant';
 
 jest.mock('../../src/util/notify', () => ({

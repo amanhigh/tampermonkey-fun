@@ -1,7 +1,7 @@
-import { ITickerManager, TickerManager } from '../../src/manager/ticker';
+import { ITickerManager, TickerManager } from '../../src/manager/barkat/market/ticker';
 import { ITickerClient } from '../../src/client/kohan/ticker';
 import { TickerListResponse, Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/barkat/market/ticker';
-import { IPublisher } from '../../src/manager/event_bus';
+import { IPublisher } from '../../src/manager/core/event_bus';
 import { DomainEventType } from '../../src/models/barkat/domain_event';
 
 /** Helper to create a TickerListResponse fixture. */

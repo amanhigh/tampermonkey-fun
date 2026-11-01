@@ -1,4 +1,4 @@
-import { TradingViewManager } from '../../src/manager/tv';
+import { TradingViewManager } from '../../src/manager/presentation/tv';
 import { WaitUtil } from '../../src/util/wait';
 import { Constants } from '../../src/models/shared/constant';
 

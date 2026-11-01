@@ -1,4 +1,4 @@
-import { IDomainEventConsumer, ISubscriber } from '../../manager/event_bus';
+import { IDomainEventConsumer, ISubscriber } from '../../manager/core/event_bus';
 import { DomainEventType } from '../../models/barkat/domain_event';
 import {
   BAR_CLASS,

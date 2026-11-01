@@ -1,4 +1,4 @@
-import { ImdbManager } from '../../src/manager/imdb';
+import { ImdbManager } from '../../src/manager/integrations/imdb';
 
 describe('ImdbManager', () => {
   let manager: ImdbManager;
