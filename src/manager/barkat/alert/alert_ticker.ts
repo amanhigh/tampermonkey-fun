@@ -1,0 +1,148 @@
+import { IAlertTickerClient } from '../../../client/kohan/alert_ticker';
+import {
+  AlertTicker,
+  AlertTickerListResponse,
+  AlertTickerQueryParams,
+  AlertTickerType,
+  CreateAlertTickerRequest,
+} from '../../../models/barkat/alert/alert_ticker';
+import { IPublisher } from '../../core/event_bus';
+import { DomainEventType } from '../../../models/barkat/domain_event';
+import { BaseManager } from '../../core/base';
+
+/**
+ * Interface for managing Alert Ticker (Investing.com identity) operations.
+ *
+ * Domain methods:
+ * - linkAlertTicker → attach an Investing ticker under a TV ticker
+ * - getPrimaryAlertTicker → get the PRIMARY Alert ticker for a TV ticker
+ * - getAlertTickers → list all Alert tickers (audit/global flows)
+ * - fetchAlertTicker → look up an Alert ticker by its symbol
+ */
+export interface IAlertTickerManager {
+  /**
+   * Attach an Alert (Investing) ticker under a primary TV ticker.
+   * Type is auto-selected: SECONDARY if a PRIMARY already exists, otherwise PRIMARY.
+   * @param ticker - Parent primary ticker identity
+   * @param data - Alert ticker creation payload (without type)
+   * @returns Promise resolving with created Alert ticker record
+   */
+  linkAlertTicker(ticker: string, data: Omit<CreateAlertTickerRequest, 'type'>): Promise<AlertTicker>;
+
+  /**
+   * Get the PRIMARY Alert ticker for a given TV ticker, or null if none exists.
+   * @param ticker - Primary ticker identity
+   * @returns Promise resolving with the PRIMARY Alert ticker, or null
+   */
+  getPrimaryAlertTicker(ticker: string): Promise<AlertTicker | null>;
+
+  /**
+   * Fetch an Alert ticker by its Investing.com symbol.
+   * @param investingTicker - Alert/Investing ticker symbol
+   * @returns Promise resolving with the Alert ticker record, or null if not found
+   */
+  fetchAlertTicker(investingTicker: string): Promise<AlertTicker | null>;
+
+  /**
+   * List all Alert tickers (auto-paginated). Used for audit coverage and global flows.
+   * @returns Promise resolving with all Alert ticker records
+   */
+  getAlertTickers(): Promise<AlertTicker[]>;
+
+  /**
+   * Get all linked alert tickers for a specific TV ticker.
+   * @param ticker - TV ticker to lookup linked alert tickers for
+   * @returns Promise resolving with array of linked Alert tickers (empty if none)
+   */
+  getAlertTickersForTicker(ticker: string): Promise<AlertTicker[]>;
+
+  /**
+   * Delete an Alert ticker by its Investing.com symbol.
+   * Publishes ALERT_TICKER_DELETED with the parent ticker so consumers
+   * (display, alert feed) can react with full context.
+   * @param alertTicker - Alert ticker symbol to delete
+   * @param parentTicker - Parent TV ticker for the deletion event payload
+   */
+  deleteAlertTicker(alertTicker: string, parentTicker: string): Promise<void>;
+}
+
+/**
+ * Manages Alert Ticker (Investing.com identity) operations against the Kohan backend.
+ */
+export class AlertTickerManager extends BaseManager implements IAlertTickerManager {
+  constructor(
+    private readonly alertTickerClient: IAlertTickerClient,
+    private readonly publisher: IPublisher
+  ) {
+    super();
+  }
+
+  /** @inheritdoc */
+  async linkAlertTicker(ticker: string, data: Omit<CreateAlertTickerRequest, 'type'>): Promise<AlertTicker> {
+    const primary = await this.getPrimaryAlertTicker(ticker);
+    const type: AlertTickerType = primary ? 'SECONDARY' : 'PRIMARY';
+    const alertTicker = await this.alertTickerClient.createAlertTicker(ticker, { ...data, type });
+
+    // Publish domain event so consumers (alert feed, etc.) react
+    await this.publisher.publish({
+      type: DomainEventType.ALERT_TICKER_LINKED,
+      ticker,
+      alertTicker: alertTicker.symbol,
+    });
+
+    return alertTicker;
+  }
+
+  /** @inheritdoc */
+  async getPrimaryAlertTicker(ticker: string): Promise<AlertTicker | null> {
+    const { alert_tickers } = await this.alertTickerClient.listAlertTickers({
+      ticker,
+      type: 'PRIMARY',
+      offset: 0,
+      limit: 1,
+    });
+    return alert_tickers[0] ?? null;
+  }
+
+  /** @inheritdoc */
+  async fetchAlertTicker(investingTicker: string): Promise<AlertTicker | null> {
+    try {
+      return await this.alertTickerClient.getAlertTicker(investingTicker);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Fetch all Alert tickers matching the given query params, auto-paginating.
+   * @param params - Query filters forwarded to the client (offset/limit are injected)
+   */
+  private async listAllAlertTickers(params: AlertTickerQueryParams): Promise<AlertTicker[]> {
+    return this.listAllPages<AlertTickerListResponse, AlertTicker>(
+      async (offset, limit) => this.alertTickerClient.listAlertTickers({ ...params, offset, limit }),
+      (page) => page.alert_tickers
+    );
+  }
+
+  /** @inheritdoc */
+  async getAlertTickers(): Promise<AlertTicker[]> {
+    return this.listAllAlertTickers({});
+  }
+
+  /** @inheritdoc */
+  async getAlertTickersForTicker(ticker: string): Promise<AlertTicker[]> {
+    return this.listAllAlertTickers({ ticker });
+  }
+
+  /** @inheritdoc */
+  async deleteAlertTicker(alertTicker: string, parentTicker: string): Promise<void> {
+    await this.alertTickerClient.deleteAlertTicker(alertTicker);
+
+    // Publish deletion event so alert-feed / display subscribers repaint
+    await this.publisher.publish({
+      type: DomainEventType.ALERT_TICKER_DELETED,
+      alertTicker,
+      ticker: parentTicker,
+    });
+  }
+}

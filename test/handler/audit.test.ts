@@ -4,9 +4,9 @@ import { IUIUtil } from '../../src/util/ui';
 import { AlertState } from '../../src/models/barkat/alert/alert';
 import { Constants } from '../../src/models/shared/constant';
 import { IAlertTickerHandler } from '../../src/handler/alert_ticker';
-import { IDomManager } from '../../src/manager/dom';
+import { IDomManager } from '../../src/manager/presentation/dom';
 import { DomainEventType } from '../../src/models/barkat/domain_event';
-import { ISubscriber } from '../../src/manager/event_bus';
+import { ISubscriber } from '../../src/manager/core/event_bus';
 
 // Mock jQuery globally for DOM operations
 const mockJQuery = {

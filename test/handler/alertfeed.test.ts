@@ -1,15 +1,15 @@
 import { AlertFeedHandler } from '../../src/handler/alertfeed';
 import { IUIUtil } from '../../src/util/ui';
-import { IDisplayManager } from '../../src/manager/display';
-import { IAlertManager } from '../../src/manager/alert';
-import { IAlertFeedManager } from '../../src/manager/alertfeed';
-import { IAlertTickerManager } from '../../src/manager/alert_ticker';
-import { IInvestingManager } from '../../src/manager/investing';
+import { IDisplayManager } from '../../src/manager/presentation/display';
+import { IAlertManager } from '../../src/manager/barkat/alert/alert';
+import { IAlertFeedManager } from '../../src/manager/barkat/alert/alertfeed';
+import { IAlertTickerManager } from '../../src/manager/barkat/alert/alert_ticker';
+import { IInvestingManager } from '../../src/manager/integrations/investing';
 import { AlertTicker } from '../../src/models/barkat/alert/alert_ticker';
 import { Instrument } from '../../src/models/integrations/investing';
 import { AlertClickAction } from '../../src/models/shared/events';
 import { DisplayState } from '../../src/models/presentation/display';
-import { ISubscriber } from '../../src/manager/event_bus';
+import { ISubscriber } from '../../src/manager/core/event_bus';
 import { DomainEventType } from '../../src/models/barkat/domain_event';
 
 // Mock Notifier

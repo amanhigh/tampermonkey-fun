@@ -1,7 +1,7 @@
-import { TimeFrameManager, ITimeFrameManager } from '../../src/manager/timeframe';
-import { ITickerManager } from '../../src/manager/ticker';
-import { IDomManager } from '../../src/manager/dom';
-import { IPublisher } from '../../src/manager/event_bus';
+import { TimeFrameManager, ITimeFrameManager } from '../../src/manager/barkat/market/timeframe';
+import { ITickerManager } from '../../src/manager/barkat/market/ticker';
+import { IDomManager } from '../../src/manager/presentation/dom';
+import { IPublisher } from '../../src/manager/core/event_bus';
 import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/barkat/market/ticker';
 import { ApiError } from '../../src/models/shared/api_error';
 import { Constants } from '../../src/models/shared/constant';

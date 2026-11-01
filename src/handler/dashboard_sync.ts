@@ -1,6 +1,6 @@
-import { IDashboardSyncManager } from '../manager/dashboard_sync';
+import { IDashboardSyncManager } from '../manager/core/dashboard_sync';
 import { DashboardTickerChangedEvent } from '../models/shared/events';
-import { ISubscriber, IDomainEventConsumer } from '../manager/event_bus';
+import { ISubscriber, IDomainEventConsumer } from '../manager/core/event_bus';
 import { DomainEventType } from '../models/barkat/domain_event';
 import { Constants } from '../models/shared/constant';
 

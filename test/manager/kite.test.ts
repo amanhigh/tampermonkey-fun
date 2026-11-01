@@ -1,4 +1,4 @@
-import { KiteManager, IKiteManager } from '../../src/manager/kite';
+import { KiteManager, IKiteManager } from '../../src/manager/integrations/kite';
 import { IKiteClient } from '../../src/client/integrations/kite';
 import { IKiteRepo } from '../../src/repo/kite';
 import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../../src/models/barkat/gtt';

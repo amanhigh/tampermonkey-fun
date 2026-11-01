@@ -2,11 +2,11 @@
  * Interface and implementations for alert handling operations
  */
 
-import { IAlertManager } from '../manager/alert';
-import { ITickerManager, TickerManager } from '../manager/ticker';
-import { IAlertTickerManager } from '../manager/alert_ticker';
-import { IDomManager } from '../manager/dom';
-import { ITradingViewManager } from '../manager/tv';
+import { IAlertManager } from '../manager/barkat/alert/alert';
+import { ITickerManager, TickerManager } from '../manager/barkat/market/ticker';
+import { IAlertTickerManager } from '../manager/barkat/alert/alert_ticker';
+import { IDomManager } from '../manager/presentation/dom';
+import { ITradingViewManager } from '../manager/presentation/tv';
 import { Constants } from '../models/shared/constant';
 import { ApiError } from '../models/shared/api_error';
 import { Notifier } from '../util/notify';

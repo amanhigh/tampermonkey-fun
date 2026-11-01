@@ -3,8 +3,8 @@ import { AuditSectionRegistry } from '../util/audit_registry';
 import { IUIUtil } from '../util/ui';
 import { AuditRenderer } from '../util/audit_renderer';
 import { IAlertTickerHandler } from './alert_ticker';
-import { IDomManager } from '../manager/dom';
-import { ISubscriber, IDomainEventConsumer } from '../manager/event_bus';
+import { IDomManager } from '../manager/presentation/dom';
+import { ISubscriber, IDomainEventConsumer } from '../manager/core/event_bus';
 import { DomainEventType } from '../models/barkat/domain_event';
 
 /**

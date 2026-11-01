@@ -4,7 +4,7 @@ import { ITickerHandler } from '../../src/handler/ticker';
 import { IAlertHandler } from '../../src/handler/alert';
 import { IPanelHandler } from '../../src/handler/panel';
 import { IJournalHandler } from '../../src/handler/journal';
-import { IDomManager } from '../../src/manager/dom';
+import { IDomManager } from '../../src/manager/presentation/dom';
 import { Constants } from '../../src/models/shared/constant';
 
 const mockJQuery = {

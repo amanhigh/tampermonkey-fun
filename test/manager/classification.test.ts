@@ -1,7 +1,7 @@
 import {
   WatchClassifier,
   FlagClassifier,
-} from '../../src/manager/classification';
+} from '../../src/manager/barkat/market/classification';
 import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/barkat/market/ticker';
 import { TickerTimeframe } from '../../src/models/barkat/market/timeframe';
 import { WatchCategoryId } from '../../src/models/barkat/market/watch';

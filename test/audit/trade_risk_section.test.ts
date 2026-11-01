@@ -1,7 +1,7 @@
 import { TradeRiskSection } from '../../src/handler/trade_risk_section';
 import { IAudit, AuditResult } from '../../src/models/barkat/audit/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
-import { IKiteManager } from '../../src/manager/kite';
+import { IKiteManager } from '../../src/manager/integrations/kite';
 import { Notifier } from '../../src/util/notify';
 
 describe('TradeRiskSection', () => {

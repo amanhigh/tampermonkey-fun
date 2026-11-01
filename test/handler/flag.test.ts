@@ -1,6 +1,6 @@
 import { FlagHandler, IFlagHandler } from '../../src/handler/flag';
-import { ICategoryManager } from '../../src/manager/category';
-import { IDomManager } from '../../src/manager/dom';
+import { ICategoryManager } from '../../src/manager/barkat/market/category';
+import { IDomManager } from '../../src/manager/presentation/dom';
 import { FlagCategoryId } from '../../src/models/barkat/market/flag';
 
 describe('FlagHandler', () => {

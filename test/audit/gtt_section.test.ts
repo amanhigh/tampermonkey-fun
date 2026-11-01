@@ -1,7 +1,7 @@
 import { GttAuditSection } from '../../src/handler/gtt_section';
 import { IAudit, AuditResult } from '../../src/models/barkat/audit/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
-import { IKiteManager } from '../../src/manager/kite';
+import { IKiteManager } from '../../src/manager/integrations/kite';
 import { IUIUtil } from '../../src/util/ui';
 import { Notifier } from '../../src/util/notify';
 

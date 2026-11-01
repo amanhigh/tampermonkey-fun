@@ -1,4 +1,4 @@
-import { ITradingViewManager } from '../manager/tv';
+import { ITradingViewManager } from '../manager/presentation/tv';
 import { IKeyUtil } from '../util/key';
 import { Notifier } from '../util/notify';
 import { IKeyConfig } from './key_config';

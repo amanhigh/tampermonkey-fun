@@ -1,5 +1,5 @@
 import { ISeerClient } from '../../src/client/integrations/seer';
-import { ISearchManager, SearchManager } from '../../src/manager/search';
+import { ISearchManager, SearchManager } from '../../src/manager/integrations/search';
 import { ApiError } from '../../src/models/shared/api_error';
 import { Constants } from '../../src/models/shared/constant';
 

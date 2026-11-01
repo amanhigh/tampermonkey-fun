@@ -2,7 +2,7 @@ import { IAuditSection } from './audit_section';
 import { IAudit, AuditResult } from '../models/barkat/audit/audit';
 import { BaseAuditSection } from './audit_section_base';
 import { ITickerHandler } from './ticker';
-import { IKiteManager } from '../manager/kite';
+import { IKiteManager } from '../manager/integrations/kite';
 import { IUIUtil } from '../util/ui';
 import { Constants } from '../models/shared/constant';
 import { Notifier } from '../util/notify';

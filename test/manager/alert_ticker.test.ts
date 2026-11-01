@@ -1,6 +1,6 @@
-import { IAlertTickerManager, AlertTickerManager } from '../../src/manager/alert_ticker';
+import { IAlertTickerManager, AlertTickerManager } from '../../src/manager/barkat/alert/alert_ticker';
 import { IAlertTickerClient } from '../../src/client/kohan/alert_ticker';
-import { IPublisher } from '../../src/manager/event_bus';
+import { IPublisher } from '../../src/manager/core/event_bus';
 import { DomainEventType } from '../../src/models/barkat/domain_event';
 import { AlertTicker } from '../../src/models/barkat/alert/alert_ticker';
 

@@ -1,4 +1,4 @@
-import { IDomManager } from '../manager/dom';
+import { IDomManager } from '../manager/presentation/dom';
 import { Constants } from '../models/shared/constant';
 import { IUIUtil } from '../util/ui';
 import { IAlertHandler } from './alert';

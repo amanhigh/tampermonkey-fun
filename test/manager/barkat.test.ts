@@ -1,10 +1,10 @@
-import { BarkatManager, IBarkatManager } from '../../src/manager/barkat';
+import { BarkatManager, IBarkatManager } from '../../src/manager/barkat/market/barkat';
 import { IBarkatClient } from '../../src/client/barkat';
 import { BarkatTickerAnalysis } from '../../src/models/barkat/market/analysis';
 import { Constants } from '../../src/models/shared/constant';
-import { ITickerManager } from '../../src/manager/ticker';
-import { IDomManager } from '../../src/manager/dom';
-import { EventBus } from '../../src/manager/event_bus';
+import { ITickerManager } from '../../src/manager/barkat/market/ticker';
+import { IDomManager } from '../../src/manager/presentation/dom';
+import { EventBus } from '../../src/manager/core/event_bus';
 import { DomainEvent, DomainEventType } from '../../src/models/barkat/domain_event';
 import { TickerArea, TickerVisibility } from '../../src/models/presentation/dom';
 import { Ticker, TickerType } from '../../src/models/barkat/market/ticker';

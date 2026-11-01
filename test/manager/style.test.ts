@@ -1,5 +1,5 @@
-import { StyleManager, IStyleManager } from '../../src/manager/style';
-import { ITimeFrameManager } from '../../src/manager/timeframe';
+import { StyleManager, IStyleManager } from '../../src/manager/presentation/style';
+import { ITimeFrameManager } from '../../src/manager/barkat/market/timeframe';
 import { WaitUtil } from '../../src/util/wait';
 import { TickerTimeframe, Timeframe } from '../../src/models/barkat/market/timeframe';
 import { Constants } from '../../src/models/shared/constant';

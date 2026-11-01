@@ -1,4 +1,4 @@
-import { StaleReviewPlugin } from '../../src/manager/stale_review_plugin';
+import { StaleReviewPlugin } from '../../src/manager/barkat/audit/stale_review_plugin';
 import { IAuditClient } from '../../src/client/kohan/audit';
 import { AuditExecutionResult } from '../../src/models/barkat/audit/audit_catalogue';
 

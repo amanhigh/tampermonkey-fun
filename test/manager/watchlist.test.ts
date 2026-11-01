@@ -1,8 +1,8 @@
-import { TradingViewWatchlistManager, ITradingViewWatchlistManager } from '../../src/manager/watchlist';
-import { IPaintManager } from '../../src/manager/paint';
-import { ICategoryManager } from '../../src/manager/category';
-import { IDomManager } from '../../src/manager/dom';
-import { IPublisher } from '../../src/manager/event_bus';
+import { TradingViewWatchlistManager, ITradingViewWatchlistManager } from '../../src/manager/presentation/watchlist';
+import { IPaintManager } from '../../src/manager/presentation/paint';
+import { ICategoryManager } from '../../src/manager/barkat/market/category';
+import { IDomManager } from '../../src/manager/presentation/dom';
+import { IPublisher } from '../../src/manager/core/event_bus';
 import { Constants } from '../../src/models/shared/constant';
 import { DomainEventType } from '../../src/models/barkat/domain_event';
 

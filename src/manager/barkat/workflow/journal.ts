@@ -1,0 +1,273 @@
+import { ITimeFrameManager } from '../market/timeframe';
+import { BaseManager } from '../../core/base';
+import { Notifier } from '../../../util/notify';
+import { IJournalClient } from '../../../client/kohan/journal';
+import { IOsClient } from '../../../client/kohan/os';
+import {
+  CreateJournalInput,
+  CreateJournalImageRequest,
+  CreateJournalRequest,
+  CreateJournalTagRequest,
+  JournalListResponse,
+  JournalTimeframe,
+  JournalQueryParams,
+  JournalRecord,
+  JournalResultStatus,
+} from '../../../models/barkat/journal';
+import { ScreenshotResponse } from '../../../models/integrations/os';
+import { Constants } from '../../../models/shared/constant';
+import { JournalOpenEvent } from '../../../models/shared/events';
+import { TickerTimeframe } from '../../../models/barkat/market/timeframe';
+
+/**
+ * Interface for managing trading journal operations
+ */
+export interface IJournalManager {
+  /**
+   * Creates a journal through the new Journal API.
+   * @param input Journal creation input
+   * @returns Promise resolving with created journal data
+   */
+  createJournal(input: CreateJournalInput): Promise<JournalRecord>;
+
+  /**
+   * Gets a journal by its external ID.
+   * @param journalId Journal external ID
+   * @returns Promise resolving with the journal record
+   */
+  getJournal(journalId: string): Promise<JournalRecord>;
+
+  /**
+   * Takes screenshots for the given ticker using the derived timeframe sequence.
+   * @param ticker Trading symbol to capture
+   * @param type Screenshot purpose/type used in filenames
+   * @param timeframe TradingView timeframe bucket that selects the screenshot sequence
+   * @returns Promise resolving with successfully captured screenshots; timeframes that cannot be applied are warned and skipped
+   */
+  screenshotTicker(ticker: string, type: string, timeframe: TickerTimeframe): Promise<ScreenshotResponse[]>;
+
+  /**
+   * Finds the latest TAKEN/RUNNING journal for a ticker.
+   * @param ticker Trading symbol to search for
+   * @returns Promise resolving with the running journal or null if none found
+   */
+  findRunningJournal(ticker: string): Promise<JournalRecord | null>;
+
+  /**
+   * Appends screenshots as images to an existing journal.
+   * @param journalId Journal external ID
+   * @param screenshots Captured screenshots to add
+   */
+  addJournalImages(journalId: string, screenshots: ScreenshotResponse[]): Promise<void>;
+
+  /**
+   * Adds parsed reason tags to an existing journal. Skips empty reasons.
+   * @param journalId Journal external ID
+   * @param reason Reason string to parse into tags
+   */
+  addReasonTags(journalId: string, reason: string): Promise<void>;
+
+  /**
+   * Updates a journal's status to a result status.
+   * @param journalId Journal external ID
+   * @param status Result status to set
+   */
+  updateJournalStatus(journalId: string, status: JournalResultStatus): Promise<void>;
+
+  /**
+   * Creates formatted text combining symbol and reason for clipboard copying
+   * @param reason - Trading reason code
+   * @returns Formatted text (e.g., "HGS - oe")
+   */
+  createReasonText(reason: string): string;
+
+  /**
+   * Lists all journals matching the given query parameters, auto-paginating.
+   * @param params Query parameters for filtering journals
+   * @returns Promise resolving with all matching journal records
+   */
+  listJournals(params: JournalQueryParams): Promise<JournalRecord[]>;
+
+  /**
+   * Publishes an open-journal event for localhost review tabs.
+   * @param journalId Created journal identifier
+   */
+  publishJournalOpenEvent(journalId: string): Promise<void>;
+
+  /**
+   * Publishes that a localhost journal page has opened.
+   * @param journalId Identifier from the opened localhost journal page
+   */
+  publishJournalOpenedEvent(journalId: string): Promise<void>;
+}
+
+/**
+ * Manages trading journal entries and operations.
+ */
+export class JournalManager extends BaseManager implements IJournalManager {
+  constructor(
+    private readonly journalClient: IJournalClient,
+    private readonly osClient: IOsClient,
+    private readonly timeframeManager: ITimeFrameManager
+  ) {
+    super();
+  }
+
+  /** @inheritdoc */
+  public async createJournal(input: CreateJournalInput): Promise<JournalRecord> {
+    const request: CreateJournalRequest = {
+      ticker: input.ticker.toUpperCase(),
+      top_timeframe: input.topTimeframe,
+      type: input.type,
+      status: input.status,
+      images: input.screenshots.map((screenshot) => ({
+        timeframe: screenshot.timeframe as JournalTimeframe,
+        file_name: screenshot.file_name,
+      })),
+      tags: this.toReasonTagRequest(input.reason),
+      notes: input.notes,
+    };
+
+    const journal = await this.journalClient.createJournal(request);
+    Notifier.success(`Journal created: ${journal.ticker} ${journal.type} ${journal.status}`);
+    return journal;
+  }
+
+  /** @inheritdoc */
+  public async getJournal(journalId: string): Promise<JournalRecord> {
+    return this.journalClient.getJournal(journalId);
+  }
+
+  /** @inheritdoc */
+  public async findRunningJournal(ticker: string): Promise<JournalRecord | null> {
+    try {
+      const response = await this.journalClient.listJournals({
+        ticker,
+        type: 'TAKEN',
+        status: 'RUNNING',
+        limit: 5,
+        'sort-by': 'created_at',
+        'sort-order': 'desc',
+      });
+
+      if (response.journals.length > 1) {
+        throw new Error(`Multiple running journals found for ${ticker}. Using the most recent.`);
+      }
+
+      return response.journals.length > 0 ? response.journals[0] : null;
+    } catch (error) {
+      throw new Error(`Failed to find running journal: ${(error as Error).message}`);
+    }
+  }
+
+  /** @inheritdoc */
+  public async addJournalImages(journalId: string, screenshots: ScreenshotResponse[]): Promise<void> {
+    for (const screenshot of screenshots) {
+      const image: CreateJournalImageRequest = {
+        timeframe: screenshot.timeframe as JournalTimeframe,
+        file_name: screenshot.file_name,
+      };
+      await this.journalClient.addJournalImage(journalId, image);
+    }
+  }
+
+  /** @inheritdoc */
+  public async addReasonTags(journalId: string, reason: string): Promise<void> {
+    if (!reason) {
+      return;
+    }
+
+    const tags = this.toReasonTagRequest(reason);
+    if (tags) {
+      for (const tag of tags) {
+        await this.journalClient.addJournalTag(journalId, tag);
+      }
+    }
+  }
+
+  /** @inheritdoc */
+  public async updateJournalStatus(journalId: string, status: JournalResultStatus): Promise<void> {
+    await this.journalClient.updateJournalStatus(journalId, { status });
+  }
+
+  /** @inheritdoc */
+  public async listJournals(params: JournalQueryParams): Promise<JournalRecord[]> {
+    return this.listAllPages<JournalListResponse, JournalRecord>(
+      async (offset, limit) => this.journalClient.listJournals({ ...params, offset, limit }),
+      (page) => page.journals
+    );
+  }
+
+  /** @inheritdoc */
+  public async publishJournalOpenEvent(journalId: string): Promise<void> {
+    await GM.setValue(Constants.STORAGE.EVENTS.JOURNAL_OPEN, new JournalOpenEvent(journalId).stringify());
+  }
+
+  /** @inheritdoc */
+  public async publishJournalOpenedEvent(journalId: string): Promise<void> {
+    await GM.setValue(Constants.STORAGE.EVENTS.JOURNAL_OPENED, new JournalOpenEvent(journalId).stringify());
+  }
+
+  /** @inheritdoc */
+  public async screenshotTicker(
+    ticker: string,
+    type: string,
+    timeframe: TickerTimeframe
+  ): Promise<ScreenshotResponse[]> {
+    const sequence = await this.timeframeManager.getSequence(timeframe);
+    const screenshots: ScreenshotResponse[] = [];
+    const screenshotType = type.toLowerCase();
+
+    for (let position = 0; position < sequence.length; position++) {
+      const code = sequence[position];
+      const order = position + 1;
+      const applied = this.timeframeManager.applyTimeframe(code);
+      if (!applied) {
+        Notifier.warn(`Skipped screenshot: timeframe ${code} could not be applied`);
+        continue;
+      }
+
+      const fileName = `${ticker.toUpperCase()}_${this.getScreenshotTimestamp()}_${order}_${code.toLowerCase()}_${screenshotType}.png`;
+      const screenshot = await this.osClient.screenshot({
+        file_name: fileName,
+        directory_type: 'JOURNAL',
+        type: 'FULL',
+        window: 'TradingView',
+        notify: false,
+      });
+      screenshot.timeframe = code as JournalTimeframe;
+      screenshots.push(screenshot);
+    }
+
+    return screenshots;
+  }
+
+  /** @inheritdoc */
+  createReasonText(reason: string): string {
+    const timeframe = this.timeframeManager.getCurrentConfig().code;
+    return `${timeframe} - ${reason}`;
+  }
+
+  private getScreenshotTimestamp(): string {
+    const now = new Date();
+    const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    const time = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+    return `${date}_${time}`;
+  }
+
+  private toReasonTagRequest(reason: string): CreateJournalTagRequest[] | undefined {
+    if (!reason) {
+      return undefined;
+    }
+
+    const [tag, ...overrideParts] = reason.split('-');
+    const override = overrideParts.join('-');
+    const tagRequest = {
+      tag,
+      type: 'REASON' as const,
+      ...(override ? { override } : {}),
+    };
+
+    return [tagRequest];
+  }
+}

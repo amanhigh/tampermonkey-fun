@@ -1,4 +1,4 @@
-import { BaseManager, IBaseManager, PageFetcher, ItemExtractor } from '../../src/manager/base';
+import { BaseManager, IBaseManager, PageFetcher, ItemExtractor } from '../../src/manager/core/base';
 import { PaginationMetadata } from '../../src/models/shared/api';
 
 /** Concrete subclass for testing the abstract BaseManager. */
