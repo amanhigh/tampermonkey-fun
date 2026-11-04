@@ -151,7 +151,7 @@ export class TimeFrameBar extends BaseBar<TimeFrameBarData> implements ITimeFram
    * Matching chips are therefore left completely undecorated, and a fully matching
    * analysis yields no updates at all. Unassessed timeframes (YR, DL) never appear
    * as analysis rows, so they keep the generic hint too. Verdict values are
-   * backend-owned (see `models/barkat.ts`); the update shape and in-place
+   * backend-owned (see `models/barkat/market/analysis.ts`); the update shape and in-place
    * application contract belong to {@link BarIndicatorUpdate} / `BaseBar`. A
    * rejection propagates to BaseBar, which marks indicators unavailable quietly.
    *
