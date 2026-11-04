@@ -7,12 +7,9 @@ jest.mock('../../src/util/notify', () => ({
 
 import { SearchHandler } from '../../src/handler/search';
 import { ISearchManager } from '../../src/manager/search';
-import { Constants } from '../../src/models/constant';
+import { SearchProvider } from '../../src/models/search';
 import { Notifier } from '../../src/util/notify';
 import { IObserveUtil } from '../../src/util/observer';
-
-/** Marker Seer appends to the search url it opens. */
-const MARKER = Constants.SEER.AUTO_MARKER;
 
 /** Search title every case arms. */
 const TITLE = 'Dune';
@@ -20,38 +17,54 @@ const TITLE = 'Dune';
 /** Deadline after which an unresolved title reports the manual fallback. */
 const TIMEOUT_MS = 15000;
 
+/** Marker style arming one provider search page. */
+type Marker =
+  | { readonly kind: 'fragment'; readonly value: string }
+  | { readonly kind: 'query'; readonly name: string; readonly value: string };
+
 /** Settings that distinguish the two provider search pages under test. */
 interface Provider {
   readonly label: string;
   readonly origin: string;
-  readonly method: 'searchXstream' | 'searchBinge';
-  readonly match: 'findXstreamMatch' | 'findBingeMatch';
+  readonly provider: SearchProvider;
   readonly inputId: string;
   readonly resultSelector: string;
   readonly detailPath: string;
+  readonly marker: Marker;
+}
+
+/** Append the provider marker to a search url the way Seer opens it. */
+function mark(searchUrl: string, marker: Marker): string {
+  if (marker.kind === 'fragment') {
+    return `${searchUrl}${marker.value}`;
+  }
+  const separator = new URL(searchUrl).search.length > 0 ? '&' : '?';
+  return `${searchUrl}${separator}${marker.name}=${marker.value}`;
 }
 
 /** Provider configurations that share the one bounded lifecycle. */
 const PROVIDERS: Provider[] = [
   {
     label: 'Airtel Xstream',
-    origin: Constants.SEER.AIRTEL_BASE_URL,
-    method: 'searchXstream',
-    match: 'findXstreamMatch',
+    origin: 'https://www.airtelxstream.in',
+    provider: SearchProvider.XSTREAM,
     inputId: 'classic-search-input-new',
     resultSelector:
       '#search-layout-container-searchResultV2 li.cs-grid-tile a.cs-grid-tile-button[href], ' +
       '.cs-hero-banner-rail .hero-banner-wrapper a.hero-banner[href]',
     detailPath: '/movies/dune/HOTSTAR_DTH_MOVIE_9',
+    marker: { kind: 'fragment', value: '#seer-auto' },
   },
   {
     label: 'Tata Play Binge',
-    origin: Constants.SEER.BINGE_BASE_URL,
-    method: 'searchBinge',
-    match: 'findBingeMatch',
+    origin: 'https://www.tataplaybinge.com',
+    provider: SearchProvider.BINGE,
     inputId: 'search-input',
     resultSelector: '.search-result-list a.listing-block[href]',
     detailPath: '/watch/movies/dune/9',
+    // Browser verified: `?q=Yaaran%20Diyan%20Poun%20Baaran&seer-auto=1` keeps Binge's search
+    // input clean and returns both matching ids, while `#seer-auto` becomes search text there.
+    marker: { kind: 'query', name: 'seer-auto', value: '1' },
   },
 ];
 
@@ -187,10 +200,8 @@ beforeEach(() => {
 
   observe = new FakeObserveUtil();
   manager = {
-    getXstreamUrl: jest.fn(),
-    findXstreamMatch: jest.fn().mockReturnValue(undefined),
-    getBingeUrl: jest.fn(),
-    findBingeMatch: jest.fn().mockReturnValue(undefined),
+    getUrl: jest.fn(),
+    findMatch: jest.fn().mockReturnValue(undefined),
   };
   handler = new SearchHandler(manager, observe as unknown as IObserveUtil);
 
@@ -216,18 +227,32 @@ function reachDeadline(): void {
 
 describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
   const searchUrl = `${provider.origin}/search?q=${TITLE}`;
-  const markedUrl = `${searchUrl}${MARKER}`;
+  const markedUrl = mark(searchUrl, provider.marker);
   const detailUrl = `${provider.origin}${provider.detailPath}`;
   const host = new URL(provider.origin).host;
+  const wrongMarkerUrl =
+    provider.marker.kind === 'fragment'
+      ? `${provider.origin}/search?q=${TITLE}#other`
+      : `${provider.origin}/search?q=${TITLE}&${provider.marker.name}=0`;
+  const invalidUrls: Array<[string, string]> = [
+    ['a foreign origin', mark(`https://${host}.evil.test/search?q=${TITLE}`, provider.marker)],
+    ['an insecure origin', mark(`http://${host}/search?q=${TITLE}`, provider.marker)],
+    ['another provider route', mark(`${provider.origin}/discover?q=${TITLE}`, provider.marker)],
+    ['a search page without the marker', searchUrl],
+    ['a search page with another marker', wrongMarkerUrl],
+    ['a blank query', mark(`${provider.origin}/search?q=%20%20`, provider.marker)],
+    ['a missing query', mark(`${provider.origin}/search`, provider.marker)],
+  ];
+  if (provider.marker.kind === 'query') {
+    invalidUrls.push(
+      ['a marked page with a foreign fragment', `${markedUrl}#other`],
+      ['a legacy fragment marker', `${provider.origin}/search?q=${TITLE}#seer-auto`]
+    );
+  }
 
   /** Arm the bounded match of this provider. */
   function start(): void {
-    handler[provider.method]();
-  }
-
-  /** Manager mock that resolves the unique rendered result of this provider. */
-  function findMatch(): jest.Mock {
-    return manager[provider.match] as jest.Mock;
+    handler.search(provider.provider);
   }
 
   beforeEach(() => {
@@ -258,6 +283,19 @@ describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
       expect(observe.options).toEqual({ childList: true, subtree: true });
     });
 
+    it('consumes only the marker while keeping every other query value encoded', () => {
+      visit(mark(`${provider.origin}/search?lang=en&q=${encodeURIComponent('Dune: Part Two')}`, provider.marker));
+
+      start();
+
+      expect(fakeHistory.replaceState).toHaveBeenCalledWith(
+        { idx: 7 },
+        '',
+        `${provider.origin}/search?lang=en&q=Dune%3A%20Part%20Two`
+      );
+      expect(page.location.href).toBe(`${provider.origin}/search?lang=en&q=Dune%3A%20Part%20Two`);
+    });
+
     it('is idempotent across repeated searches', () => {
       start();
       start();
@@ -267,21 +305,13 @@ describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
       expect(jest.getTimerCount()).toBe(1);
       expect(observe.nodeObserver).toHaveBeenCalledTimes(1);
 
-      findMatch().mockReturnValue(detailUrl);
+      manager.findMatch.mockReturnValue(detailUrl);
       observe.fire();
 
       expect(page.location.replace).toHaveBeenCalledTimes(1);
     });
 
-    it.each([
-      ['a foreign origin', `https://${host}.evil.test/search?q=${TITLE}${MARKER}`],
-      ['an insecure origin', `http://${host}/search?q=${TITLE}${MARKER}`],
-      ['another provider route', `${provider.origin}/discover?q=${TITLE}${MARKER}`],
-      ['a search page without the marker', searchUrl],
-      ['a search page with another fragment', `${provider.origin}/search?q=${TITLE}#other`],
-      ['a blank query', `${provider.origin}/search?q=%20%20${MARKER}`],
-      ['a missing query', `${provider.origin}/search${MARKER}`],
-    ])('ignores %s', (_case: string, href: string) => {
+    it.each(invalidUrls)('ignores %s', (_case: string, href: string) => {
       visit(href);
 
       start();
@@ -293,19 +323,19 @@ describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
 
       reachDeadline();
 
-      expect(findMatch()).not.toHaveBeenCalled();
+      expect(manager.findMatch).not.toHaveBeenCalled();
       expect(page.location.replace).not.toHaveBeenCalled();
     });
   });
 
   describe('matching', () => {
     it('follows a unique immediate result without waiting for the deadline', () => {
-      findMatch().mockReturnValue(detailUrl);
+      manager.findMatch.mockReturnValue(detailUrl);
 
       start();
 
-      expect(findMatch()).toHaveBeenCalledTimes(1);
-      expect(findMatch()).toHaveBeenCalledWith(fakeDocument, TITLE);
+      expect(manager.findMatch).toHaveBeenCalledTimes(1);
+      expect(manager.findMatch).toHaveBeenCalledWith(provider.provider, fakeDocument, TITLE);
       expect(page.location.replace).toHaveBeenCalledWith(detailUrl);
       expect(observe.observer.disconnect).toHaveBeenCalledTimes(1);
       expect(Notifier.info).not.toHaveBeenCalled();
@@ -318,11 +348,11 @@ describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
 
       expect(page.location.replace).not.toHaveBeenCalled();
 
-      findMatch().mockReturnValue(detailUrl);
+      manager.findMatch.mockReturnValue(detailUrl);
       observe.fire();
 
-      expect(findMatch()).toHaveBeenCalledTimes(2);
-      expect(findMatch()).toHaveBeenLastCalledWith(fakeDocument, TITLE);
+      expect(manager.findMatch).toHaveBeenCalledTimes(2);
+      expect(manager.findMatch).toHaveBeenLastCalledWith(provider.provider, fakeDocument, TITLE);
       expect(page.location.replace).toHaveBeenCalledWith(detailUrl);
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
@@ -338,7 +368,7 @@ describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
       observe.fire();
       observe.fire();
 
-      expect(findMatch()).toHaveBeenCalledTimes(3);
+      expect(manager.findMatch).toHaveBeenCalledTimes(3);
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
@@ -348,10 +378,10 @@ describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
     it('matches on the final deadline check when no node callback arrived', () => {
       start();
 
-      findMatch().mockReturnValue(detailUrl);
+      manager.findMatch.mockReturnValue(detailUrl);
       reachDeadline();
 
-      expect(findMatch()).toHaveBeenCalledTimes(2);
+      expect(manager.findMatch).toHaveBeenCalledTimes(2);
       expect(page.location.replace).toHaveBeenCalledWith(detailUrl);
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
@@ -361,12 +391,12 @@ describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
     });
 
     it('searches the decoded query title while keeping the encoded query', () => {
-      visit(`${provider.origin}/search?q=${encodeURIComponent('Dune: Part Two & More')}${MARKER}`);
-      findMatch().mockReturnValue(detailUrl);
+      visit(mark(`${provider.origin}/search?q=${encodeURIComponent('Dune: Part Two & More')}`, provider.marker));
+      manager.findMatch.mockReturnValue(detailUrl);
 
       start();
 
-      expect(findMatch()).toHaveBeenCalledWith(fakeDocument, 'Dune: Part Two & More');
+      expect(manager.findMatch).toHaveBeenCalledWith(provider.provider, fakeDocument, 'Dune: Part Two & More');
       expect(fakeHistory.replaceState).toHaveBeenCalledWith(
         { idx: 7 },
         '',
@@ -379,7 +409,7 @@ describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
 
       reachDeadline();
 
-      expect(findMatch()).toHaveBeenCalledTimes(2);
+      expect(manager.findMatch).toHaveBeenCalledTimes(2);
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(Notifier.info).toHaveBeenCalledTimes(1);
       const message = jest.mocked(Notifier.info).mock.calls[0][0];
@@ -394,7 +424,7 @@ describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
 
       reachDeadline();
 
-      expect(findMatch()).toHaveBeenCalledTimes(1);
+      expect(manager.findMatch).toHaveBeenCalledTimes(1);
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
@@ -404,14 +434,14 @@ describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
     });
 
     it('does not navigate when the url changed while the results were matched', () => {
-      findMatch().mockImplementation(() => {
+      manager.findMatch.mockImplementation(() => {
         visit(`${provider.origin}/search?q=Other`);
         return detailUrl;
       });
 
       start();
 
-      expect(findMatch()).toHaveBeenCalledTimes(1);
+      expect(manager.findMatch).toHaveBeenCalledTimes(1);
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
@@ -422,27 +452,27 @@ describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
 
     it('does not navigate when the url changed during a later match', () => {
       start();
-      findMatch().mockImplementation(() => {
+      manager.findMatch.mockImplementation(() => {
         visit(`${provider.origin}/search?q=Other`);
         return detailUrl;
       });
 
       observe.fire();
 
-      expect(findMatch()).toHaveBeenCalledTimes(2);
+      expect(manager.findMatch).toHaveBeenCalledTimes(2);
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
     });
 
     it('reports one escaped failure and stays on the search page', () => {
-      findMatch().mockImplementation(() => {
+      manager.findMatch.mockImplementation(() => {
         throw new Error('Bad <b>markup</b> "here"');
       });
 
       start();
 
-      expect(findMatch()).toHaveBeenCalledTimes(1);
+      expect(manager.findMatch).toHaveBeenCalledTimes(1);
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).toHaveBeenCalledTimes(1);
@@ -459,14 +489,14 @@ describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
 
     it('reports one escaped failure when a later match throws and stops observing', () => {
       start();
-      findMatch().mockImplementation(() => {
+      manager.findMatch.mockImplementation(() => {
         throw new Error('late <b>failure</b>');
       });
 
       observe.fire();
       observe.fire();
 
-      expect(findMatch()).toHaveBeenCalledTimes(2);
+      expect(manager.findMatch).toHaveBeenCalledTimes(2);
       expect(Notifier.error).toHaveBeenCalledTimes(1);
       expect(jest.mocked(Notifier.error).mock.calls[0][0]).toContain('late &lt;b&gt;failure&lt;/b&gt;');
       expect(page.location.replace).not.toHaveBeenCalled();
@@ -481,7 +511,7 @@ describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
 
       start();
 
-      expect(findMatch()).not.toHaveBeenCalled();
+      expect(manager.findMatch).not.toHaveBeenCalled();
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).toHaveBeenCalledTimes(1);
@@ -501,7 +531,7 @@ describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
       fakeDocument.dispatch('input', { target: new FakeElement(provider.inputId) });
       reachDeadline();
 
-      expect(findMatch()).toHaveBeenCalledTimes(1);
+      expect(manager.findMatch).toHaveBeenCalledTimes(1);
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(fakeDocument.count).toBe(0);
       expect(page.count).toBe(0);
@@ -515,7 +545,7 @@ describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
       fakeDocument.dispatch('input', { target: new FakeElement('another-field') });
       reachDeadline();
 
-      expect(findMatch()).toHaveBeenCalledTimes(2);
+      expect(manager.findMatch).toHaveBeenCalledTimes(2);
     });
 
     it('cancels when a rendered result is selected without intercepting the click', () => {
@@ -531,7 +561,7 @@ describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
       });
       reachDeadline();
 
-      expect(findMatch()).toHaveBeenCalledTimes(1);
+      expect(manager.findMatch).toHaveBeenCalledTimes(1);
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(preventDefault).not.toHaveBeenCalled();
       expect(stopPropagation).not.toHaveBeenCalled();
@@ -544,7 +574,7 @@ describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
       fakeDocument.dispatch('click', { target: new FakeElement() });
       reachDeadline();
 
-      expect(findMatch()).toHaveBeenCalledTimes(2);
+      expect(manager.findMatch).toHaveBeenCalledTimes(2);
     });
 
     it.each(['pagehide', 'popstate', 'hashchange'])('cancels on %s', (type: string) => {
@@ -553,7 +583,7 @@ describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
       page.dispatch(type);
       reachDeadline();
 
-      expect(findMatch()).toHaveBeenCalledTimes(1);
+      expect(manager.findMatch).toHaveBeenCalledTimes(1);
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
@@ -576,11 +606,11 @@ describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
       start();
 
       page.dispatch('pagehide');
-      findMatch().mockReturnValue(detailUrl);
+      manager.findMatch.mockReturnValue(detailUrl);
       observe.fire();
       observe.fire();
 
-      expect(findMatch()).toHaveBeenCalledTimes(1);
+      expect(manager.findMatch).toHaveBeenCalledTimes(1);
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();

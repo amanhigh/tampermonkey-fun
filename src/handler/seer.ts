@@ -1,6 +1,7 @@
 import { ISearchManager } from '../manager/search';
 import { ISeerManager } from '../manager/seer';
 import { Constants } from '../models/constant';
+import { SEARCH_PROVIDERS, SearchButtonConfig, SearchProvider } from '../models/search';
 import { escapeHtml } from '../util/html';
 import { Notifier } from '../util/notify';
 
@@ -118,7 +119,7 @@ export class SeerHandler implements ISeerHandler {
   };
 
   /** Resolve the provider search url of the live route, then open it in a foreground tab. */
-  private async openSearch(button: SearchButton): Promise<void> {
+  private async openSearch(button: SearchButtonConfig): Promise<void> {
     if (this.searchBusy.has(button.id)) {
       return;
     }
@@ -130,13 +131,13 @@ export class SeerHandler implements ISeerHandler {
     this.searchBusy.add(button.id);
     this.updateButton(button.id, button.openingLabel, true);
     try {
-      const url = await button.resolve(pathname);
+      const url = await this.search.getUrl(button.provider, pathname);
       if (this.gone || window.location.pathname !== pathname) {
         return;
       }
       await (GM.openInTab as GMOpenInTab)(url, { active: true, setParent: true });
     } catch (error) {
-      this.reportSearchFailure(button.provider, pathname, error);
+      this.reportSearchFailure(button.failureLabel, pathname, error);
     } finally {
       this.searchBusy.delete(button.id);
       this.updateButton(button.id, button.label, false);
@@ -144,14 +145,11 @@ export class SeerHandler implements ISeerHandler {
   }
 
   /** Report a failed search lookup or tab open, only while the route is still live. */
-  private reportSearchFailure(provider: string, pathname: string, error: unknown): void {
+  private reportSearchFailure(label: string, pathname: string, error: unknown): void {
     if (this.gone || window.location.pathname !== pathname) {
       return;
     }
-    Notifier.error(
-      escapeHtml(`Seer ${provider} search failed for ${pathname}: ${toMessage(error)}`),
-      FAILURE_TIMEOUT_MS
-    );
+    Notifier.error(escapeHtml(`Seer ${label} search failed for ${pathname}: ${toMessage(error)}`), FAILURE_TIMEOUT_MS);
   }
 
   /** Confirm the irreversible deletion of the verified live route, then run it once. */
@@ -256,24 +254,9 @@ export class SeerHandler implements ISeerHandler {
     document.body.appendChild(panel);
   }
 
-  /** Provider search buttons mounted beside Delete, each with its own busy state and resolver. */
-  private searchButtons(): SearchButton[] {
-    return [
-      {
-        id: Constants.UI.IDS.SEER.XSTREAM_BUTTON,
-        label: XSTREAM_LABEL,
-        openingLabel: XSTREAM_OPENING_LABEL,
-        provider: 'Xstream',
-        resolve: this.search.getXstreamUrl.bind(this.search),
-      },
-      {
-        id: Constants.UI.IDS.SEER.BINGE_BUTTON,
-        label: BINGE_LABEL,
-        openingLabel: BINGE_OPENING_LABEL,
-        provider: 'Binge',
-        resolve: this.search.getBingeUrl.bind(this.search),
-      },
-    ];
+  /** Provider search buttons mounted beside Delete, in the shared provider order. */
+  private searchButtons(): SearchButtonConfig[] {
+    return [SEARCH_PROVIDERS[SearchProvider.XSTREAM].button, SEARCH_PROVIDERS[SearchProvider.BINGE].button];
   }
 
   /** Build one panel button with its shared and modifier classes. */
@@ -288,20 +271,6 @@ export class SeerHandler implements ISeerHandler {
   }
 }
 
-/** Settings that distinguish one provider search button from the other. */
-interface SearchButton {
-  /** Stable id of the mounted button and its own busy state. */
-  readonly id: string;
-  /** Idle label of the button. */
-  readonly label: string;
-  /** Label shown while the search url is resolved and the tab opens. */
-  readonly openingLabel: string;
-  /** Human readable provider name used by the failure notification. */
-  readonly provider: string;
-  /** Manager method that resolves the provider search url of the captured route. */
-  readonly resolve: (pathname: string) => Promise<string>;
-}
-
 /** Poll interval for keeping the panel in sync with the live route. */
 const VISIBILITY_POLL_MS = 400;
 
@@ -310,18 +279,6 @@ const REFRESH_DELAY_MS = 2000;
 
 /** Display duration of the failure notification in milliseconds. */
 const FAILURE_TIMEOUT_MS = 8000;
-
-/** Idle label of the Xstream search button. */
-const XSTREAM_LABEL = '▶️ Xtreme';
-
-/** Label shown while the Xstream search url is resolved and the tab opens. */
-const XSTREAM_OPENING_LABEL = 'Opening Xstream…';
-
-/** Idle label of the Binge search button. */
-const BINGE_LABEL = '▶️ Binge';
-
-/** Label shown while the Binge search url is resolved and the tab opens. */
-const BINGE_OPENING_LABEL = 'Opening Binge…';
 
 /** Idle label of the deletion button. */
 const DELETE_LABEL = '🗑️ Delete';

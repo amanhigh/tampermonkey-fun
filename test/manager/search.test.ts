@@ -1,19 +1,22 @@
 import { ISeerClient } from '../../src/client/seer';
 import { ISearchManager, SearchManager } from '../../src/manager/search';
 import { ApiError } from '../../src/models/api_error';
-import { Constants } from '../../src/models/constant';
+import { SearchProvider } from '../../src/models/search';
 
 /** Detail route used by the search-url tests. */
 const MOVIE_ROUTE = '/movie/603';
 
 /** Airtel Xstream origin shared by every expectation. */
-const AIRTEL = Constants.SEER.AIRTEL_BASE_URL;
+const AIRTEL = 'https://www.airtelxstream.in';
 
 /** Tata Play Binge origin shared by every expectation. */
-const BINGE = Constants.SEER.BINGE_BASE_URL;
+const BINGE = 'https://www.tataplaybinge.com';
 
-/** Marker every opened search url carries; detail destinations never carry it. */
-const MARKER = Constants.SEER.AUTO_MARKER;
+/** Fragment marker every opened Airtel Xstream search url carries; detail destinations never carry it. */
+const MARKER = '#seer-auto';
+
+/** Query marker every opened Binge search url carries; Binge reads a fragment as search text. */
+const BINGE_MARKER = 'seer-auto=1';
 
 /** Verified grid result destination of the fixture title. */
 const AVATAR_URL = `${AIRTEL}/movies/avatar/HOTSTAR_DTH_MOVIE_3617`;
@@ -113,13 +116,29 @@ function bingeAnchor(href: string, alt?: string, logoAlt?: string): FakeNode {
 
 /** Run the Xstream matcher against a stand-in root. */
 function match(root: FakeResultRoot | FakeNode, title: string): string | undefined {
-  return manager.findXstreamMatch(root as unknown as ParentNode, title);
+  return manager.findMatch(SearchProvider.XSTREAM, root as unknown as ParentNode, title);
 }
 
 /** Run the Binge matcher against a stand-in root. */
 function bingeMatch(root: FakeResultRoot | FakeNode, title: string): string | undefined {
-  return manager.findBingeMatch(root as unknown as ParentNode, title);
+  return manager.findMatch(SearchProvider.BINGE, root as unknown as ParentNode, title);
 }
+
+/** Settings that distinguish the two provider search urls under test. */
+interface UrlCase {
+  /** Provider whose search url is resolved. */
+  readonly provider: SearchProvider;
+  /** Origin every expectation of this provider carries. */
+  readonly origin: string;
+  /** Explicit marker suffix every opened search url of this provider carries. */
+  readonly suffix: string;
+}
+
+/** Provider search urls sharing the one title resolution and build path. */
+const URL_CASES: UrlCase[] = [
+  { provider: SearchProvider.XSTREAM, origin: AIRTEL, suffix: MARKER },
+  { provider: SearchProvider.BINGE, origin: BINGE, suffix: `&${BINGE_MARKER}` },
+];
 
 let manager: ISearchManager;
 let client: jest.Mocked<ISeerClient>;
@@ -138,11 +157,13 @@ beforeEach(() => {
 });
 
 describe('SearchManager', () => {
-  describe('getXstreamUrl', () => {
-    it('builds the Airtel search url from the movie title of the canonical route', async () => {
+  describe.each(URL_CASES)('getUrl on $provider', (urlCase: UrlCase) => {
+    it('builds the marked search url from the movie title of the canonical route', async () => {
       client.getSearchTitle.mockResolvedValue('Dune');
 
-      await expect(manager.getXstreamUrl('/movie/603/')).resolves.toBe(`${AIRTEL}/search?q=Dune${MARKER}`);
+      await expect(manager.getUrl(urlCase.provider, '/movie/603/')).resolves.toBe(
+        `${urlCase.origin}/search?q=Dune${urlCase.suffix}`
+      );
 
       expect(client.getSearchTitle).toHaveBeenCalledWith('/movie/603');
     });
@@ -150,7 +171,9 @@ describe('SearchManager', () => {
     it('canonicalizes a nested season route before resolving the title', async () => {
       client.getSearchTitle.mockResolvedValue('Shogun');
 
-      await expect(manager.getXstreamUrl('/tv/1399/season/2')).resolves.toBe(`${AIRTEL}/search?q=Shogun${MARKER}`);
+      await expect(manager.getUrl(urlCase.provider, '/tv/1399/season/2')).resolves.toBe(
+        `${urlCase.origin}/search?q=Shogun${urlCase.suffix}`
+      );
 
       expect(client.getSearchTitle).toHaveBeenCalledWith('/tv/1399');
     });
@@ -158,15 +181,17 @@ describe('SearchManager', () => {
     it('encodes the resolved title in the query', async () => {
       client.getSearchTitle.mockResolvedValue('Dune: Part Two & More');
 
-      await expect(manager.getXstreamUrl('/movie/603')).resolves.toBe(
-        `${AIRTEL}/search?q=Dune%3A%20Part%20Two%20%26%20More${MARKER}`
+      await expect(manager.getUrl(urlCase.provider, '/movie/603')).resolves.toBe(
+        `${urlCase.origin}/search?q=Dune%3A%20Part%20Two%20%26%20More${urlCase.suffix}`
       );
     });
 
     it.each(['/discover', '/movie/0', 'movie/603'])(
       'rejects the unsupported route %s before any API call',
       async (pathname: string) => {
-        await expect(manager.getXstreamUrl(pathname)).rejects.toThrow(`Unsupported Seer route: ${pathname}`);
+        await expect(manager.getUrl(urlCase.provider, pathname)).rejects.toThrow(
+          `Unsupported Seer route: ${pathname}`
+        );
 
         expect(client.getSearchTitle).not.toHaveBeenCalled();
       }
@@ -175,7 +200,7 @@ describe('SearchManager', () => {
     it('deletes nothing while resolving the search url', async () => {
       client.getSearchTitle.mockResolvedValue('Dune');
 
-      await manager.getXstreamUrl(MOVIE_ROUTE);
+      await manager.getUrl(urlCase.provider, MOVIE_ROUTE);
 
       expect(client.deleteFiles).not.toHaveBeenCalled();
       expect(client.deleteRequest).not.toHaveBeenCalled();
@@ -185,11 +210,11 @@ describe('SearchManager', () => {
     it('propagates a title resolution failure unchanged', async () => {
       client.getSearchTitle.mockRejectedValue(new ApiError(500, 'Server Error'));
 
-      await expect(manager.getXstreamUrl(MOVIE_ROUTE)).rejects.toMatchObject({ status: 500 });
+      await expect(manager.getUrl(urlCase.provider, MOVIE_ROUTE)).rejects.toMatchObject({ status: 500 });
     });
   });
 
-  describe('findXstreamMatch', () => {
+  describe('findMatch on Airtel Xstream', () => {
     it('returns the single grid result whose rendered title matches exactly', () => {
       const root = new FakeResultRoot([
         gridAnchor('/movies/avatar/HOTSTAR_DTH_MOVIE_3617', 'Avatar'),
@@ -300,48 +325,7 @@ describe('SearchManager', () => {
     });
   });
 
-  describe('getBingeUrl', () => {
-    it('builds the Binge search url from the movie title of the canonical route', async () => {
-      client.getSearchTitle.mockResolvedValue('Dune');
-
-      await expect(manager.getBingeUrl('/movie/603/')).resolves.toBe(`${BINGE}/search?q=Dune${MARKER}`);
-
-      expect(client.getSearchTitle).toHaveBeenCalledWith('/movie/603');
-    });
-
-    it('canonicalizes a nested season route before resolving the title', async () => {
-      client.getSearchTitle.mockResolvedValue('Shogun');
-
-      await expect(manager.getBingeUrl('/tv/1399/season/2')).resolves.toBe(`${BINGE}/search?q=Shogun${MARKER}`);
-
-      expect(client.getSearchTitle).toHaveBeenCalledWith('/tv/1399');
-    });
-
-    it('encodes the resolved title in the query', async () => {
-      client.getSearchTitle.mockResolvedValue('Dune: Part Two & More');
-
-      await expect(manager.getBingeUrl('/movie/603')).resolves.toBe(
-        `${BINGE}/search?q=Dune%3A%20Part%20Two%20%26%20More${MARKER}`
-      );
-    });
-
-    it.each(['/discover', '/movie/0', 'movie/603'])(
-      'rejects the unsupported route %s before any API call',
-      async (pathname: string) => {
-        await expect(manager.getBingeUrl(pathname)).rejects.toThrow(`Unsupported Seer route: ${pathname}`);
-
-        expect(client.getSearchTitle).not.toHaveBeenCalled();
-      }
-    );
-
-    it('propagates a title resolution failure unchanged', async () => {
-      client.getSearchTitle.mockRejectedValue(new ApiError(500, 'Server Error'));
-
-      await expect(manager.getBingeUrl(MOVIE_ROUTE)).rejects.toMatchObject({ status: 500 });
-    });
-  });
-
-  describe('findBingeMatch', () => {
+  describe('findMatch on Tata Play Binge', () => {
     it('returns the single result whose poster alt text matches exactly', () => {
       const root = new FakeResultRoot([], [], [
         bingeAnchor('/watch/movies/catalog-entry/3617', 'Avatar'),

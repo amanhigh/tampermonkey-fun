@@ -1,88 +1,154 @@
 import { ISeerClient } from '../client/seer';
-import { Constants } from '../models/constant';
+import {
+  SEARCH_CONSTANTS,
+  SEARCH_PROVIDERS,
+  SearchMarker,
+  SearchProvider,
+  SearchProviderConfig,
+} from '../models/search';
 import { canonicalSeerDetailPath } from '../util/seer';
 
 /**
- * ISearchManager resolves the Airtel Xstream search url of a Seer detail page.
+ * ISearchManager resolves the provider search url of a Seer detail page and follows the
+ * rendered provider result of its title.
  */
 export interface ISearchManager {
   /**
-   * Resolve the Airtel Xstream search url of the page.
+   * Resolve the search url of one provider for the page.
+   * @param provider - Provider whose search page is opened
    * @param pathname - Browser pathname of a Seer movie or tv detail page
-   * @returns Promise resolving with the encoded Airtel Xstream search url
+   * @returns Promise resolving with the encoded marked provider search url
    */
-  getXstreamUrl(pathname: string): Promise<string>;
+  getUrl(provider: SearchProvider, pathname: string): Promise<string>;
 
   /**
-   * Find the one Xstream search result whose title or slug matches the media exactly.
-   * @param root - Document holding the rendered Airtel Xstream search results
+   * Find the one provider search result whose title or slug matches the media exactly.
+   * @param provider - Provider whose rendered search results are read
+   * @param root - Document holding the rendered provider search results
    * @param title - Media title displayed by Seer
    * @returns Detail url of the unique match, or undefined when nothing or several results match
    */
-  findXstreamMatch(root: ParentNode, title: string): string | undefined;
+  findMatch(provider: SearchProvider, root: ParentNode, title: string): string | undefined;
 }
 
 /**
- * SearchManager maps a Seer detail route to the Airtel Xstream search of its title
- * and resolves the rendered Xstream result of that title.
+ * SearchManager maps a Seer detail route to the provider search of its title
+ * and resolves the rendered provider result of that title.
  */
 export class SearchManager implements ISearchManager {
   constructor(private readonly client: ISeerClient) {}
 
   /** @inheritdoc */
-  async getXstreamUrl(pathname: string): Promise<string> {
+  async getUrl(provider: SearchProvider, pathname: string): Promise<string> {
     const title = await this.client.getSearchTitle(canonicalSeerDetailPath(pathname));
-    return `${Constants.SEER.AIRTEL_BASE_URL}/search?q=${encodeURIComponent(title)}${Constants.SEER.AUTO_MARKER}`;
+    return buildSearchUrl(SEARCH_PROVIDERS[provider], title);
   }
 
   /** @inheritdoc */
-  findXstreamMatch(root: ParentNode, title: string): string | undefined {
+  findMatch(provider: SearchProvider, root: ParentNode, title: string): string | undefined {
     const expected = normalizeLabel(title);
     if (!expected) {
       return undefined;
     }
 
-    const destinations = new Set<string>();
-    readResultAnchors(root).forEach((anchor) => {
-      const destination = readMatch(anchor, expected);
-      if (destination !== undefined) {
-        destinations.add(destination);
-      }
-    });
-    return destinations.size === 1 ? [...destinations][0] : undefined;
+    return findUniqueDestination(readResultAnchors(root, SEARCH_PROVIDERS[provider]), expected, provider);
   }
 }
 
-/** Origin every opened Airtel Xstream url must keep. */
-const AIRTEL_ORIGIN = new URL(Constants.SEER.AIRTEL_BASE_URL).origin;
+/** Provider readers of the rendered title that labels one result link. */
+const TITLE_READERS: Readonly<Record<SearchProvider, (anchor: Element) => string>> = {
+  [SearchProvider.XSTREAM]: readXstreamLabel,
+  [SearchProvider.BINGE]: readBingeLabel,
+};
 
-/** Rendered grid result links inside the document of the Airtel Xstream search results. */
-const GRID_LINK_SELECTOR = '#search-layout-container-searchResultV2 li.cs-grid-tile a.cs-grid-tile-button[href]';
+/** Read the result links rendered in the document of one provider search page. */
+function readResultAnchors(root: ParentNode, provider: SearchProviderConfig): Element[] {
+  return provider.resultSelectors.flatMap((selector) => Array.from(root.querySelectorAll(selector)));
+}
 
-/** Rendered hero result links inside the document of the Airtel Xstream search rail. */
-const HERO_LINK_SELECTOR = '.cs-hero-banner-rail .hero-banner-wrapper a.hero-banner[href]';
-
-/** Title node rendered inside a grid result link. */
-const GRID_TITLE_SELECTOR = '.cs-grid-tile-title';
-
-/** Title node rendered beside a hero result link. */
-const HERO_TITLE_SELECTOR = '.hero-title';
-
-/** Verified Airtel Xstream media detail paths, e.g. `/movies/avatar/HOTSTAR_DTH_MOVIE_3617`. */
-const MEDIA_PATH_PATTERN = /^\/(?:movies|tv-shows)\/([^/]+)\/([^/]+)\/?$/;
-
-/** Read the grid and hero result links rendered in the document of the search results. */
-function readResultAnchors(root: ParentNode): Element[] {
-  const grid = Array.from(root.querySelectorAll(GRID_LINK_SELECTOR));
-  const hero = Array.from(root.querySelectorAll(HERO_LINK_SELECTOR));
-  return [...grid, ...hero];
+/**
+ * Collect the defined destinations of the result links that match the expected label and return the
+ * sole distinct one, so nothing or an ambiguous pair reports undefined.
+ * @param anchors - Rendered result links of one provider search page
+ * @param expected - Normalized title the rendered results must match
+ * @param provider - Provider whose readers resolve one link to its defined detail url
+ */
+function findUniqueDestination(anchors: Element[], expected: string, provider: SearchProvider): string | undefined {
+  const destinations = new Set<string>();
+  anchors.forEach((anchor) => {
+    const destination = readMatch(anchor, expected, provider);
+    if (destination !== undefined) {
+      destinations.add(destination);
+    }
+  });
+  return destinations.size === 1 ? [...destinations][0] : undefined;
 }
 
 /**
  * Read the canonical detail url of one result link when its decoded slug or rendered title matches
- * the expected label, parsing the href once and rejecting untrusted origins as well as malformed encodings.
+ * the expected label, parsing the href once and rejecting untrusted origins as well as malformed
+ * encodings.
+ * @param anchor - Rendered result link of one provider search page
+ * @param expected - Normalized title the rendered result must match
+ * @param provider - Provider whose origin, detail route and title node drive the read
  */
-function readMatch(anchor: Element, expected: string): string | undefined {
+function readMatch(anchor: Element, expected: string, provider: SearchProvider): string | undefined {
+  const config = SEARCH_PROVIDERS[provider];
+  // Every provider origin is https, so the origin check also rejects every other scheme.
+  const url = readTrustedUrl(anchor, config.origin);
+  const slug = url === undefined ? undefined : readDecodedSlug(url.pathname, config.detailPathPattern);
+  if (url === undefined || slug === undefined) {
+    return undefined;
+  }
+
+  const matched = normalizeLabel(slug) === expected || normalizeLabel(TITLE_READERS[provider](anchor)) === expected;
+  return matched ? `${url.origin}${canonicalDetailPath(url.pathname, config)}` : undefined;
+}
+
+/** Read the rendered title of an Airtel Xstream result link, from its grid title, aria-label or hero title. */
+function readXstreamLabel(anchor: Element): string {
+  const candidates = [
+    anchor.querySelector(SEARCH_CONSTANTS.TITLE_SELECTORS.GRID)?.textContent,
+    anchor.getAttribute('aria-label'),
+    anchor.parentElement?.querySelector(SEARCH_CONSTANTS.TITLE_SELECTORS.HERO)?.textContent,
+  ];
+  return candidates.find((candidate) => candidate && candidate.trim().length > 0) ?? '';
+}
+
+/** Read the poster alt text that labels one Tata Play Binge result, ignoring provider logo alt text. */
+function readBingeLabel(anchor: Element): string {
+  return anchor.querySelector(SEARCH_CONSTANTS.TITLE_SELECTORS.BINGE)?.getAttribute('alt') ?? '';
+}
+
+/**
+ * Build the marked search url of one provider, keeping the title fully encoded.
+ * @param provider - Provider whose origin and marker build the url
+ * @param title - Media title searched on the provider site
+ */
+function buildSearchUrl(provider: SearchProviderConfig, title: string): string {
+  const query = `${SEARCH_CONSTANTS.SEARCH_PATH}?${SEARCH_CONSTANTS.SEARCH_QUERY_KEY}=${encodeURIComponent(title)}`;
+  return `${provider.origin}${query}${markerSuffix(provider.marker)}`;
+}
+
+/**
+ * Read the url suffix that carries the marker of one provider.
+ * @param marker - Provider marker appended after the query
+ */
+function markerSuffix(marker: SearchMarker): string {
+  return marker.kind === 'fragment' ? marker.value : `&${marker.name}=${marker.value}`;
+}
+
+/**
+ * Read the detail path a provider reports, dropping the trailing slash when the provider allows it.
+ * @param pathname - Verified detail pathname of one result link
+ * @param provider - Provider whose trailing slash rule drives the path
+ */
+function canonicalDetailPath(pathname: string, provider: SearchProviderConfig): string {
+  return provider.stripTrailingSlash && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+}
+
+/** Read a trusted https url from a result link, rejecting untrusted origins, credentials and bad hrefs. */
+function readTrustedUrl(anchor: Element, baseUrl: string): URL | undefined {
   const href = anchor.getAttribute('href');
   if (!href) {
     return undefined;
@@ -90,39 +156,21 @@ function readMatch(anchor: Element, expected: string): string | undefined {
 
   let url: URL;
   try {
-    url = new URL(href, Constants.SEER.AIRTEL_BASE_URL);
+    url = new URL(href, baseUrl);
   } catch {
     return undefined;
   }
 
-  // The Airtel origin is https, so the origin check also rejects every other scheme.
-  const trusted = url.origin === AIRTEL_ORIGIN && !url.username && !url.password;
-  if (!trusted) {
-    return undefined;
-  }
-
-  let slug: string | undefined;
-  try {
-    slug = MEDIA_PATH_PATTERN.exec(decodeURIComponent(url.pathname))?.[1];
-  } catch {
-    slug = undefined;
-  }
-  if (slug === undefined) {
-    return undefined;
-  }
-
-  const matched = normalizeLabel(slug) === expected || normalizeLabel(readLabel(anchor)) === expected;
-  return matched ? `${url.origin}${url.pathname}` : undefined;
+  return url.origin === baseUrl && !url.username && !url.password ? url : undefined;
 }
 
-/** Read the rendered title of a result link, from its grid title, aria-label or hero title. */
-function readLabel(anchor: Element): string {
-  const candidates = [
-    anchor.querySelector(GRID_TITLE_SELECTOR)?.textContent,
-    anchor.getAttribute('aria-label'),
-    anchor.parentElement?.querySelector(HERO_TITLE_SELECTOR)?.textContent,
-  ];
-  return candidates.find((candidate) => candidate && candidate.trim().length > 0) ?? '';
+/** Decode a pathname and read the slug captured by a detail route pattern, rejecting malformed encodings. */
+function readDecodedSlug(pathname: string, pattern: RegExp): string | undefined {
+  try {
+    return pattern.exec(decodeURIComponent(pathname))?.[1];
+  } catch {
+    return undefined;
+  }
 }
 
 /** Normalize a label for comparison: fold accents, unify `&`, drop punctuation and spacing. */

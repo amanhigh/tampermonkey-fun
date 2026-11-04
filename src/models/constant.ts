@@ -240,15 +240,9 @@ Support:
     BASE_URL: 'http://barkat.app.lan/v1/api',
   },
 
-  /** Seerr media server API consumed by the Seer userscript */
+  /** Seerr media server API consumed by the Seer userscript; provider search data lives in models/search.ts */
   SEER: {
     BASE_URL: 'http://seerr.media.lan/api/v1',
-    /** Airtel Xstream origin used for title search links */
-    AIRTEL_BASE_URL: 'https://www.airtelxstream.in',
-    /** Tata Play Binge origin used for title search links */
-    BINGE_BASE_URL: 'https://www.tataplaybinge.com',
-    /** Marker appended to every provider url Seer opens or resolves */
-    AUTO_MARKER: '#seer-auto',
   },
 
   /** Cache configuration for manager lookups */

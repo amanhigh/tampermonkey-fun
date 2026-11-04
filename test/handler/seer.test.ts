@@ -2,6 +2,7 @@ import { SeerHandler } from '../../src/handler/seer';
 import { ISearchManager } from '../../src/manager/search';
 import { ISeerManager } from '../../src/manager/seer';
 import { Constants } from '../../src/models/constant';
+import { SearchProvider } from '../../src/models/search';
 
 // The handler must only call Notifier; its DOM rendering is out of scope here.
 jest.mock('../../src/util/notify', () => ({
@@ -174,8 +175,8 @@ interface SearchCase {
   readonly openingLabel: string;
   /** Search url the provider resolves by default. */
   readonly url: string;
-  /** Manager method that resolves the provider search url. */
-  readonly resolve: 'getXstreamUrl' | 'getBingeUrl';
+  /** Provider whose search url the button resolves. */
+  readonly provider: SearchProvider;
 }
 
 /** Provider search buttons that share the one lifecycle. */
@@ -186,7 +187,7 @@ const SEARCH_CASES: SearchCase[] = [
     idleLabel: '▶️ Xtreme',
     openingLabel: 'Opening Xstream…',
     url: XSTREAM_URL,
-    resolve: 'getXstreamUrl',
+    provider: SearchProvider.XSTREAM,
   },
   {
     name: 'Binge',
@@ -194,9 +195,14 @@ const SEARCH_CASES: SearchCase[] = [
     idleLabel: '▶️ Binge',
     openingLabel: 'Opening Binge…',
     url: BINGE_URL,
-    resolve: 'getBingeUrl',
+    provider: SearchProvider.BINGE,
   },
 ];
+
+/** Search url one provider resolves by default. */
+function defaultUrl(provider: SearchProvider): string {
+  return provider === SearchProvider.XSTREAM ? XSTREAM_URL : BINGE_URL;
+}
 
 describe('SeerHandler', () => {
   let fakeDocument: FakeDocument;
@@ -234,10 +240,8 @@ describe('SeerHandler', () => {
       deleteMedia: jest.fn().mockResolvedValue(undefined),
     };
     search = {
-      getXstreamUrl: jest.fn().mockResolvedValue(XSTREAM_URL),
-      findXstreamMatch: jest.fn(),
-      getBingeUrl: jest.fn().mockResolvedValue(BINGE_URL),
-      findBingeMatch: jest.fn(),
+      getUrl: jest.fn().mockImplementation((provider: SearchProvider) => Promise.resolve(defaultUrl(provider))),
+      findMatch: jest.fn(),
     };
     jest.mocked(Notifier.success).mockClear();
     jest.mocked(Notifier.error).mockClear();
@@ -479,7 +483,7 @@ describe('SeerHandler', () => {
       expect(panel()?.hidden).toBe(false);
       expect(deleteButton()?.hidden).toBe(false);
       expect(manager.deleteMedia).not.toHaveBeenCalled();
-      expect(search.getXstreamUrl).not.toHaveBeenCalled();
+      expect(search.getUrl).not.toHaveBeenCalled();
     });
 
     it('hides the panel on an unsupported route before the first poll', async () => {
@@ -506,17 +510,14 @@ describe('SeerHandler', () => {
     /** The other provider, which must stay untouched by this provider's search. */
     const other = SEARCH_CASES.find((candidate) => candidate.buttonId !== provider.buttonId) as SearchCase;
 
-    /** Mock of the manager method that resolves this provider's search url. */
-    const resolveMock = (): jest.Mock => search[provider.resolve] as jest.Mock;
-
     it('opens the resolved search url in the foreground tab of the live route captured at click', async () => {
       await openRoute();
       navigate(TV_ROUTE);
 
       await clickSearch(provider.buttonId);
 
-      expect(search[provider.resolve]).toHaveBeenCalledTimes(1);
-      expect(search[provider.resolve]).toHaveBeenCalledWith(TV_ROUTE);
+      expect(search.getUrl).toHaveBeenCalledTimes(1);
+      expect(search.getUrl).toHaveBeenCalledWith(provider.provider, TV_ROUTE);
       expect(openInTabMock).toHaveBeenCalledTimes(1);
       expect(openInTabMock).toHaveBeenCalledWith(provider.url, { active: true, setParent: true });
       expect(Notifier.success).not.toHaveBeenCalled();
@@ -532,21 +533,21 @@ describe('SeerHandler', () => {
 
       await clickSearch(provider.buttonId);
 
-      expect(search[provider.resolve]).not.toHaveBeenCalled();
+      expect(search.getUrl).not.toHaveBeenCalled();
       expect(openInTabMock).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
     });
 
     it('disables only its own button while opening and ignores duplicate clicks', async () => {
       const lookup = defer<string>();
-      resolveMock().mockReturnValue(lookup.promise);
+      search.getUrl.mockReturnValue(lookup.promise);
       await openRoute();
 
       searchButton(provider.buttonId)?.click();
       searchButton(provider.buttonId)?.click();
       await flush();
 
-      expect(resolveMock()).toHaveBeenCalledTimes(1);
+      expect(search.getUrl).toHaveBeenCalledTimes(1);
       expect(searchButton(provider.buttonId)?.textContent).toBe(provider.openingLabel);
       expect(searchButton(provider.buttonId)?.disabled).toBe(true);
       expect(searchButton(other.buttonId)?.textContent).toBe(other.idleLabel);
@@ -565,7 +566,7 @@ describe('SeerHandler', () => {
 
     it('opens no tab for a route that changed during the lookup', async () => {
       const lookup = defer<string>();
-      resolveMock().mockReturnValue(lookup.promise);
+      search.getUrl.mockReturnValue(lookup.promise);
       await openRoute();
       await clickSearch(provider.buttonId);
 
@@ -581,7 +582,7 @@ describe('SeerHandler', () => {
 
     it('opens no tab and reports nothing after the page exits during the lookup', async () => {
       const lookup = defer<string>();
-      resolveMock().mockReturnValue(lookup.promise);
+      search.getUrl.mockReturnValue(lookup.promise);
       await openRoute();
       await clickSearch(provider.buttonId);
 
@@ -594,7 +595,7 @@ describe('SeerHandler', () => {
     });
 
     it('reports an escaped lookup failure for eight seconds and restores the button', async () => {
-      resolveMock().mockRejectedValue(new Error('No Seer title for <b>/movie/603</b> "detail"'));
+      search.getUrl.mockRejectedValue(new Error('No Seer title for <b>/movie/603</b> "detail"'));
       await openRoute();
 
       await clickSearch(provider.buttonId);
@@ -619,7 +620,7 @@ describe('SeerHandler', () => {
 
       await clickSearch(provider.buttonId);
 
-      expect(search[provider.resolve]).toHaveBeenCalledWith(MOVIE_ROUTE);
+      expect(search.getUrl).toHaveBeenCalledWith(provider.provider, MOVIE_ROUTE);
       expect(Notifier.error).toHaveBeenCalledWith(
         expect.stringContaining(`Seer ${provider.name} search failed for /movie/603`),
         FAILURE_TIMEOUT_MS
@@ -630,7 +631,7 @@ describe('SeerHandler', () => {
     });
 
     it('stays silent when the lookup fails after navigating away', async () => {
-      resolveMock().mockImplementation(() => {
+      search.getUrl.mockImplementation(() => {
         navigate(TV_ROUTE);
         return Promise.reject(new Error('boom'));
       });
@@ -678,16 +679,18 @@ describe('SeerHandler', () => {
     it('runs both provider searches at once without blocking Delete', async () => {
       const xstream = defer<string>();
       const binge = defer<string>();
-      search.getXstreamUrl.mockReturnValue(xstream.promise);
-      search.getBingeUrl.mockReturnValue(binge.promise);
+      search.getUrl.mockImplementation((provider: SearchProvider) =>
+        provider === SearchProvider.XSTREAM ? xstream.promise : binge.promise
+      );
       await openRoute();
 
       await clickSearch(Constants.UI.IDS.SEER.XSTREAM_BUTTON);
       await clickSearch(Constants.UI.IDS.SEER.BINGE_BUTTON);
       await clickSearch(Constants.UI.IDS.SEER.BINGE_BUTTON);
 
-      expect(search.getXstreamUrl).toHaveBeenCalledTimes(1);
-      expect(search.getBingeUrl).toHaveBeenCalledTimes(1);
+      expect(search.getUrl).toHaveBeenCalledTimes(2);
+      expect(search.getUrl).toHaveBeenCalledWith(SearchProvider.XSTREAM, MOVIE_ROUTE);
+      expect(search.getUrl).toHaveBeenCalledWith(SearchProvider.BINGE, MOVIE_ROUTE);
       expect(xstreamButton()?.textContent).toBe('Opening Xstream…');
       expect(xstreamButton()?.disabled).toBe(true);
       expect(bingeButton()?.textContent).toBe('Opening Binge…');
@@ -733,7 +736,7 @@ describe('SeerHandler', () => {
       expect(confirmMock.mock.calls[0][0]).toContain('cannot be undone');
       expect(manager.deleteMedia).toHaveBeenCalledTimes(1);
       expect(manager.deleteMedia).toHaveBeenCalledWith(MOVIE_ROUTE);
-      expect(search.getXstreamUrl).not.toHaveBeenCalled();
+      expect(search.getUrl).not.toHaveBeenCalled();
       expect(openInTabMock).not.toHaveBeenCalled();
       expect(Notifier.success).toHaveBeenCalledWith(
         'Deleted &quot;Dune&quot;. Library files, requests and media entry removed. The page will refresh.'

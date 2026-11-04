@@ -6,6 +6,7 @@ import { Factory } from '../../src/core/factory';
 import { RunSeer, SeerApp } from '../../src/core/seer';
 import { ISearchHandler } from '../../src/handler/search';
 import { ISeerHandler } from '../../src/handler/seer';
+import { SearchProvider } from '../../src/models/search';
 
 /** Origin of the Seerr detail pages. */
 const SEERR_ORIGIN = 'http://seerr.media.lan';
@@ -71,7 +72,7 @@ describe('SeerApp', () => {
     installPage();
 
     seerHandler = { initialize: jest.fn() };
-    searchHandler = { searchXstream: jest.fn(), searchBinge: jest.fn() };
+    searchHandler = { search: jest.fn() };
     app = new SeerApp(seerHandler, searchHandler);
   });
 
@@ -83,8 +84,7 @@ describe('SeerApp', () => {
     app.initialize();
 
     expect(seerHandler.initialize).toHaveBeenCalledTimes(1);
-    expect(searchHandler.searchXstream).not.toHaveBeenCalled();
-    expect(searchHandler.searchBinge).not.toHaveBeenCalled();
+    expect(searchHandler.search).not.toHaveBeenCalled();
     expectPageErrorHooksUntouched();
   });
 
@@ -93,8 +93,8 @@ describe('SeerApp', () => {
 
     app.initialize();
 
-    expect(searchHandler.searchXstream).toHaveBeenCalledTimes(1);
-    expect(searchHandler.searchBinge).not.toHaveBeenCalled();
+    expect(searchHandler.search).toHaveBeenCalledTimes(1);
+    expect(searchHandler.search).toHaveBeenCalledWith(SearchProvider.XSTREAM);
     expect(seerHandler.initialize).not.toHaveBeenCalled();
     expectPageErrorHooksUntouched();
   });
@@ -104,8 +104,8 @@ describe('SeerApp', () => {
 
     app.initialize();
 
-    expect(searchHandler.searchBinge).toHaveBeenCalledTimes(1);
-    expect(searchHandler.searchXstream).not.toHaveBeenCalled();
+    expect(searchHandler.search).toHaveBeenCalledTimes(1);
+    expect(searchHandler.search).toHaveBeenCalledWith(SearchProvider.BINGE);
     expect(seerHandler.initialize).not.toHaveBeenCalled();
     expectPageErrorHooksUntouched();
   });
@@ -116,8 +116,7 @@ describe('SeerApp', () => {
     app.initialize();
 
     expect(seerHandler.initialize).not.toHaveBeenCalled();
-    expect(searchHandler.searchXstream).not.toHaveBeenCalled();
-    expect(searchHandler.searchBinge).not.toHaveBeenCalled();
+    expect(searchHandler.search).not.toHaveBeenCalled();
     expectPageErrorHooksUntouched();
   });
 
@@ -130,8 +129,7 @@ describe('SeerApp', () => {
     app.initialize();
 
     expect(seerHandler.initialize).not.toHaveBeenCalled();
-    expect(searchHandler.searchXstream).not.toHaveBeenCalled();
-    expect(searchHandler.searchBinge).not.toHaveBeenCalled();
+    expect(searchHandler.search).not.toHaveBeenCalled();
     expectPageErrorHooksUntouched();
   });
 

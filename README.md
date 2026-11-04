@@ -123,7 +123,7 @@ The authoritative description of the search lifecycle and title rules shared by 
 -   **Independent busy states**: each search button disables itself and shows its own opening label (`Opening Xstream…` or `Opening Binge…`) until its lookup and tab open settle, so extra clicks on the same button meanwhile are ignored. The other search button and Delete keep their own busy state, so no button blocks another and both searches may run at once.
 -   **Stale results stay silent**: when the pathname changed or the page exited during the lookup, no tab opens, no notification is shown and the button returns to idle.
 -   **Escaped failures**: a failed lookup or tab open shows one escaped error notification naming the provider and the route for 8 s, and only while that route is still live. No retry, timer or background polling runs during that lookup phase.
--   **Marked search url only**: the assistant runs only on a provider search page at `/search?q=…#seer-auto`. It consumes the fragment once with `history.replaceState`, keeping the query and the history state, and ignores every other origin, route, fragment or blank `q`.
+-   **Marked search url only**: the assistant runs only on a provider search page at `/search?q=…` carrying that provider's marker — the `#seer-auto` fragment for Airtel Xstream and the `seer-auto=1` query parameter for Tata Play Binge. It consumes the marker once with `history.replaceState`, keeping the rest of the query and the history state, and ignores every other origin, route, marker, foreign fragment or blank `q`.
 -   **One title, immediate match and node observation**: after arming, the rendered results are matched against that one `q` title at once, then again whenever a node is added or removed below the document root, through a single node observer built with `childList` + `subtree`. A single 15 s deadline is the only timer: its final check reports the outcome when no result appeared meanwhile. Attribute changes and character-data changes are mutations too, but this node observer does not watch them, so such a change only triggers a match when a node addition or removal follows, or at the deadline. No polling and no retry runs.
 -   **Unique result wins**: when exactly one rendered result matches the title (or its decoded slug, ignoring case, accents and punctuation), the tab navigates to that provider's detail url with `location.replace`, so the back button does not return to the search page.
 -   **Manual fallback**: when no single result matches, the assistant navigates nowhere and shows one escaped notice asking for a manual pick. A match failure shows one escaped error instead and leaves the search page in place. Provider IDs never resolve ambiguity: when several results could match, the pick stays manual.
@@ -136,7 +136,7 @@ The `▶️ Binge` button reuses the lifecycle and title rules above; only these
 
 | Aspect | Binge behaviour |
 | --- | --- |
-| Origin and search url | `https://www.tataplaybinge.com/search?q=…#seer-auto` |
+| Origin and search url | `https://www.tataplaybinge.com/search?q=…`, marked as described in [Seer Xstream Search](#seer-xstream-search) |
 | Result elements | `.search-result-list a.listing-block[href]`, labelled by the poster `alt` text |
 | Match inputs | poster alt text or decoded slug of `/watch/{movies\|shows\|series}/{slug}/{id}` |
 

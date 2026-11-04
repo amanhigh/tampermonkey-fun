@@ -2,16 +2,16 @@ import '../style/seer.less';
 import { ISearchHandler } from '../handler/search';
 import { ISeerHandler } from '../handler/seer';
 import { Constants } from '../models/constant';
+import { SEARCH_PROVIDERS, SearchProvider } from '../models/search';
 import { Factory } from './factory';
 
 /** Origin of the Seerr detail pages that carry the panel. */
 const SEERR_ORIGIN = new URL(Constants.SEER.BASE_URL).origin;
 
-/** Origin of the Airtel Xstream search pages that carry the automatic match. */
-const AIRTEL_ORIGIN = new URL(Constants.SEER.AIRTEL_BASE_URL).origin;
-
-/** Origin of the Tata Play Binge search pages that carry the automatic match. */
-const BINGE_ORIGIN = new URL(Constants.SEER.BINGE_BASE_URL).origin;
+/** Provider search page selected by its exact origin, shared with the provider data. */
+const SEARCH_ORIGINS: ReadonlyMap<string, SearchProvider> = new Map(
+  Object.values(SEARCH_PROVIDERS).map((config) => [config.origin, config.button.provider])
+);
 
 export class SeerApp {
   constructor(
@@ -23,10 +23,12 @@ export class SeerApp {
     const origin = window.location.origin;
     if (origin === SEERR_ORIGIN) {
       this.seerHandler.initialize();
-    } else if (origin === AIRTEL_ORIGIN) {
-      this.searchHandler.searchXstream();
-    } else if (origin === BINGE_ORIGIN) {
-      this.searchHandler.searchBinge();
+      return;
+    }
+
+    const provider = SEARCH_ORIGINS.get(origin);
+    if (provider !== undefined) {
+      this.searchHandler.search(provider);
     }
   }
 }
