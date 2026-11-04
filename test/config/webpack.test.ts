@@ -49,6 +49,14 @@ function requireLines(header: string): string[] {
   return header.split('\n').filter((line) => line.startsWith('// @require'));
 }
 
+function metaValues(header: string, directive: string): string[] {
+  const prefix = `// @${directive}`;
+  return header
+    .split('\n')
+    .filter((line) => line.startsWith(prefix))
+    .map((line) => line.slice(prefix.length).trim());
+}
+
 function withoutRequires(header: string): string {
   return header
     .split('\n')
@@ -115,11 +123,29 @@ describe('webpack config development requires', () => {
     expect(fileURLToPath(requires[1])).toBe(path.join(config.output.path, 'debug/barkat.js'));
   });
 
-  it('keeps every non-require header line identical to production so dev replaces prod', () => {
-    const [debug] = developmentConfigs('barkat');
-    const [production] = productionConfigs('barkat');
+  it.each(['barkat', 'seer'])(
+    'keeps every non-require header line of %s identical to production so dev replaces prod',
+    (project: string) => {
+      const [debug] = developmentConfigs(project);
+      const [production] = productionConfigs(project);
 
-    expect(withoutRequires(headerOf(debug))).toBe(withoutRequires(headerOf(production)));
+      expect(withoutRequires(headerOf(debug))).toBe(withoutRequires(headerOf(production)));
+    }
+  );
+});
+
+describe('webpack config Seer provider metadata', () => {
+  it('matches both search providers without adding grants or connects', () => {
+    const header = headerOf(productionConfigs('seer')[0]);
+
+    expect(metaValues(header, 'match')).toEqual([
+      'http://seerr.media.lan/*',
+      'https://www.airtelxstream.in/*',
+      'https://www.tataplaybinge.com/*',
+    ]);
+    expect(metaValues(header, 'grant')).toEqual(['GM.xmlHttpRequest', 'GM.openInTab']);
+    expect(metaValues(header, 'connect')).toEqual(['seerr.media.lan']);
+    expect(metaValues(header, 'description')[0]).toContain('Tata Play Binge');
   });
 });
 

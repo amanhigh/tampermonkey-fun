@@ -21,7 +21,7 @@ export interface ISeerClient extends IBaseClient {
   hasMediaRecord(detailPath: SeerDetailPath): Promise<boolean>;
 
   /**
-   * Resolve the Airtel Xstream search title of a Seer detail page.
+   * Resolve the search title of a Seer detail page.
    * @param detailPath - Canonical detail path, `/movie/{tmdbId}` or `/tv/{id}`
    * @returns Promise resolving with the first usable title of the page
    */

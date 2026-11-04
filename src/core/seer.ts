@@ -10,6 +10,9 @@ const SEERR_ORIGIN = new URL(Constants.SEER.BASE_URL).origin;
 /** Origin of the Airtel Xstream search pages that carry the automatic match. */
 const AIRTEL_ORIGIN = new URL(Constants.SEER.AIRTEL_BASE_URL).origin;
 
+/** Origin of the Tata Play Binge search pages that carry the automatic match. */
+const BINGE_ORIGIN = new URL(Constants.SEER.BINGE_BASE_URL).origin;
+
 export class SeerApp {
   constructor(
     private readonly seerHandler: ISeerHandler,
@@ -22,6 +25,8 @@ export class SeerApp {
       this.seerHandler.initialize();
     } else if (origin === AIRTEL_ORIGIN) {
       this.searchHandler.searchXstream();
+    } else if (origin === BINGE_ORIGIN) {
+      this.searchHandler.searchBinge();
     }
   }
 }

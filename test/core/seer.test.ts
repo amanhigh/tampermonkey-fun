@@ -13,6 +13,9 @@ const SEERR_ORIGIN = 'http://seerr.media.lan';
 /** Origin of the Airtel Xstream search pages. */
 const AIRTEL_ORIGIN = 'https://www.airtelxstream.in';
 
+/** Origin of the Tata Play Binge search pages. */
+const BINGE_ORIGIN = 'https://www.tataplaybinge.com';
+
 /** Origin unrelated to the userscript. */
 const FOREIGN_ORIGIN = 'https://example.test';
 
@@ -68,7 +71,7 @@ describe('SeerApp', () => {
     installPage();
 
     seerHandler = { initialize: jest.fn() };
-    searchHandler = { searchXstream: jest.fn() };
+    searchHandler = { searchXstream: jest.fn(), searchBinge: jest.fn() };
     app = new SeerApp(seerHandler, searchHandler);
   });
 
@@ -81,6 +84,7 @@ describe('SeerApp', () => {
 
     expect(seerHandler.initialize).toHaveBeenCalledTimes(1);
     expect(searchHandler.searchXstream).not.toHaveBeenCalled();
+    expect(searchHandler.searchBinge).not.toHaveBeenCalled();
     expectPageErrorHooksUntouched();
   });
 
@@ -90,6 +94,18 @@ describe('SeerApp', () => {
     app.initialize();
 
     expect(searchHandler.searchXstream).toHaveBeenCalledTimes(1);
+    expect(searchHandler.searchBinge).not.toHaveBeenCalled();
+    expect(seerHandler.initialize).not.toHaveBeenCalled();
+    expectPageErrorHooksUntouched();
+  });
+
+  it('arms the Binge search handler on the Binge origin', () => {
+    visit(BINGE_ORIGIN);
+
+    app.initialize();
+
+    expect(searchHandler.searchBinge).toHaveBeenCalledTimes(1);
+    expect(searchHandler.searchXstream).not.toHaveBeenCalled();
     expect(seerHandler.initialize).not.toHaveBeenCalled();
     expectPageErrorHooksUntouched();
   });
@@ -101,15 +117,21 @@ describe('SeerApp', () => {
 
     expect(seerHandler.initialize).not.toHaveBeenCalled();
     expect(searchHandler.searchXstream).not.toHaveBeenCalled();
+    expect(searchHandler.searchBinge).not.toHaveBeenCalled();
     expectPageErrorHooksUntouched();
   });
 
-  it('selects the handler by exact origin only', () => {
-    visit(`${SEERR_ORIGIN}:8448`);
+  it.each([
+    ['the Seerr origin with a port', `${SEERR_ORIGIN}:8448`],
+    ['the Airtel origin with a port', `${AIRTEL_ORIGIN}:8448`],
+    ['the Binge origin with a port', `${BINGE_ORIGIN}:8448`],
+  ])('selects the handler by exact origin only, not %s', (_case: string, origin: string) => {
+    visit(origin);
     app.initialize();
 
     expect(seerHandler.initialize).not.toHaveBeenCalled();
     expect(searchHandler.searchXstream).not.toHaveBeenCalled();
+    expect(searchHandler.searchBinge).not.toHaveBeenCalled();
     expectPageErrorHooksUntouched();
   });
 

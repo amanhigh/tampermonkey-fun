@@ -8,19 +8,19 @@ import { Notifier } from '../util/notify';
  * ISeerHandler owns the Seer sidekick panel.
  */
 export interface ISeerHandler {
-  /** Mount the Search and Delete buttons once and keep them visible only on detail routes. */
+  /** Mount the provider search and Delete buttons once and keep them visible only on detail routes. */
   initialize(): void;
 }
 
 /**
- * SeerHandler renders the Xstream search and Delete buttons, keeps their
- * visibility in sync with the live route, opens one Airtel Xstream search tab
- * and runs one confirmed files → requests → media deletion.
+ * SeerHandler renders the Xstream, Binge and Delete buttons, keeps their
+ * visibility in sync with the live route, opens one provider search tab per
+ * click and runs one confirmed files → requests → media deletion.
  */
 export class SeerHandler implements ISeerHandler {
   private started = false;
   private busy = false;
-  private xstreamBusy = false;
+  private readonly searchBusy = new Set<string>();
   private gone = false;
   private observedPath: string | null = null;
   private generation = 0;
@@ -112,19 +112,14 @@ export class SeerHandler implements ISeerHandler {
     }
   }
 
-  /** Click handler for the Xstream search button. */
-  private readonly handleXstreamClick = (): void => {
-    void this.runXstream();
-  };
-
   /** Click handler for the Delete button. */
   private readonly handleDeleteClick = (): void => {
     void this.runDelete();
   };
 
-  /** Resolve the search url of the live route, then open it in a foreground tab. */
-  private async runXstream(): Promise<void> {
-    if (this.xstreamBusy) {
+  /** Resolve the provider search url of the live route, then open it in a foreground tab. */
+  private async openSearch(button: SearchButton): Promise<void> {
+    if (this.searchBusy.has(button.id)) {
       return;
     }
     const pathname = window.location.pathname;
@@ -132,28 +127,31 @@ export class SeerHandler implements ISeerHandler {
       return;
     }
 
-    this.xstreamBusy = true;
-    this.updateButton(Constants.UI.IDS.SEER.XSTREAM_BUTTON, OPENING_LABEL, true);
+    this.searchBusy.add(button.id);
+    this.updateButton(button.id, button.openingLabel, true);
     try {
-      const url = await this.search.getXstreamUrl(pathname);
+      const url = await button.resolve(pathname);
       if (this.gone || window.location.pathname !== pathname) {
         return;
       }
       await (GM.openInTab as GMOpenInTab)(url, { active: true, setParent: true });
     } catch (error) {
-      this.reportXstreamFailure(pathname, error);
+      this.reportSearchFailure(button.provider, pathname, error);
     } finally {
-      this.xstreamBusy = false;
-      this.updateButton(Constants.UI.IDS.SEER.XSTREAM_BUTTON, XSTREAM_LABEL, false);
+      this.searchBusy.delete(button.id);
+      this.updateButton(button.id, button.label, false);
     }
   }
 
   /** Report a failed search lookup or tab open, only while the route is still live. */
-  private reportXstreamFailure(pathname: string, error: unknown): void {
+  private reportSearchFailure(provider: string, pathname: string, error: unknown): void {
     if (this.gone || window.location.pathname !== pathname) {
       return;
     }
-    Notifier.error(escapeHtml(`Seer Xstream search failed for ${pathname}: ${toMessage(error)}`), FAILURE_TIMEOUT_MS);
+    Notifier.error(
+      escapeHtml(`Seer ${provider} search failed for ${pathname}: ${toMessage(error)}`),
+      FAILURE_TIMEOUT_MS
+    );
   }
 
   /** Confirm the irreversible deletion of the verified live route, then run it once. */
@@ -240,14 +238,13 @@ export class SeerHandler implements ISeerHandler {
     const panel = document.createElement('div');
     panel.id = Constants.UI.IDS.SEER.PANEL;
     panel.className = 'seer-panel';
-    panel.appendChild(
-      this.createButton(
-        Constants.UI.IDS.SEER.XSTREAM_BUTTON,
-        'seer-panel__xstream',
-        XSTREAM_LABEL,
-        this.handleXstreamClick
-      )
-    );
+    this.searchButtons().forEach((button) => {
+      panel.appendChild(
+        this.createButton(button.id, 'seer-panel__search', button.label, () => {
+          void this.openSearch(button);
+        })
+      );
+    });
     const deleteButton = this.createButton(
       Constants.UI.IDS.SEER.DELETE_BUTTON,
       'seer-panel__delete',
@@ -257,6 +254,26 @@ export class SeerHandler implements ISeerHandler {
     deleteButton.hidden = true;
     panel.appendChild(deleteButton);
     document.body.appendChild(panel);
+  }
+
+  /** Provider search buttons mounted beside Delete, each with its own busy state and resolver. */
+  private searchButtons(): SearchButton[] {
+    return [
+      {
+        id: Constants.UI.IDS.SEER.XSTREAM_BUTTON,
+        label: XSTREAM_LABEL,
+        openingLabel: XSTREAM_OPENING_LABEL,
+        provider: 'Xstream',
+        resolve: this.search.getXstreamUrl.bind(this.search),
+      },
+      {
+        id: Constants.UI.IDS.SEER.BINGE_BUTTON,
+        label: BINGE_LABEL,
+        openingLabel: BINGE_OPENING_LABEL,
+        provider: 'Binge',
+        resolve: this.search.getBingeUrl.bind(this.search),
+      },
+    ];
   }
 
   /** Build one panel button with its shared and modifier classes. */
@@ -269,6 +286,20 @@ export class SeerHandler implements ISeerHandler {
     button.addEventListener('click', onClick);
     return button;
   }
+}
+
+/** Settings that distinguish one provider search button from the other. */
+interface SearchButton {
+  /** Stable id of the mounted button and its own busy state. */
+  readonly id: string;
+  /** Idle label of the button. */
+  readonly label: string;
+  /** Label shown while the search url is resolved and the tab opens. */
+  readonly openingLabel: string;
+  /** Human readable provider name used by the failure notification. */
+  readonly provider: string;
+  /** Manager method that resolves the provider search url of the captured route. */
+  readonly resolve: (pathname: string) => Promise<string>;
 }
 
 /** Poll interval for keeping the panel in sync with the live route. */
@@ -284,7 +315,13 @@ const FAILURE_TIMEOUT_MS = 8000;
 const XSTREAM_LABEL = '▶️ Xtreme';
 
 /** Label shown while the Xstream search url is resolved and the tab opens. */
-const OPENING_LABEL = 'Opening Xstream…';
+const XSTREAM_OPENING_LABEL = 'Opening Xstream…';
+
+/** Idle label of the Binge search button. */
+const BINGE_LABEL = '▶️ Binge';
+
+/** Label shown while the Binge search url is resolved and the tab opens. */
+const BINGE_OPENING_LABEL = 'Opening Binge…';
 
 /** Idle label of the deletion button. */
 const DELETE_LABEL = '🗑️ Delete';

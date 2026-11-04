@@ -107,30 +107,40 @@ Barkat userscript's recurring work.
     as described in [Barkat Watchlist Warm-up](#barkat-watchlist-warm-up).
 
 ## Seer Sidekick
-The Seer userscript runs on `http://seerr.media.lan/*` and on `https://www.airtelxstream.in/*`. Only the Seerr origin gets the panel; the Airtel Xstream origin only gets the marked search assistant described in [Seer Xstream Search](#seer-xstream-search).
+The Seer userscript runs on `http://seerr.media.lan/*`, on `https://www.airtelxstream.in/*` and on `https://www.tataplaybinge.com/*`. Only the Seerr origin gets the panel; each provider origin only gets the marked search assistant described in [Seer Xstream Search](#seer-xstream-search).
 
--   **Origin selection**: exactly one handler runs per page — the panel on the Seerr origin, the search assistant on the Airtel Xstream origin. On any other origin neither handler runs.
+-   **Origin selection**: exactly one handler runs per page — the panel on the Seerr origin, one provider's search assistant on that provider's origin. On any other origin neither handler runs.
 -   **Notifications only from own failures**: Seer registers no global `error` or `unhandledrejection` handler, so host-page errors (such as Airtel Xstream's React hydration warnings) stay console-only. Only failures Seer catches itself are reported through the shared `Notifier`.
--   **Panel and route polling**: the panel is mounted once, and one local 400 ms poll of the live pathname shows it only on `/movie/{id}` and `/tv/{id}`, hides it elsewhere and removes it on `pagehide`. The poll only keeps the panel and Delete visibility current; the read-only media-record check behind that visibility is specified in [Seer Deletion](#seer-deletion), and nothing is opened or deleted on load.
--   **Captured on click**: each button acts on the pathname captured when it is clicked and resolves its own target fresh at that moment; Delete additionally requires the route to be media-record verified as described in [Seer Deletion](#seer-deletion). Search never waits for that visibility. The two buttons share nothing beyond this panel; each section below is authoritative for its own button.
+-   **Panel and route polling**: the panel is mounted once with its three buttons, and one local 400 ms poll of the live pathname shows it only on `/movie/{id}` and `/tv/{id}`, hides it elsewhere and removes it on `pagehide`. The poll only keeps the panel and Delete visibility current; the read-only media-record check behind that visibility is specified in [Seer Deletion](#seer-deletion), and nothing is opened or deleted on load.
+-   **Captured on click**: each of the three buttons acts on the pathname captured when it is clicked and resolves its own target fresh at that moment; Delete additionally requires the route to be media-record verified as described in [Seer Deletion](#seer-deletion). Search never waits for that visibility. The two search buttons share the lifecycle and title rules of [Seer Xstream Search](#seer-xstream-search), and the provider sections below only add what differs per provider.
 
 ## Seer Xstream Search
-The authoritative description of the search button (labelled `▶️ Xtreme`) and of the search assistant it arms.
+The authoritative description of the search lifecycle and title rules shared by both search buttons — `▶️ Xtreme` for Airtel Xstream and `▶️ Binge` for Tata Play Binge — and of the search assistant they arm. The provider section below only adds what differs from these rules.
 
 -   **Supported route required**: a click on any other live route does nothing — no lookup, no tab and no notification.
--   **Title fallback**: the first usable title of the Seer detail response is searched on Airtel Xstream — `title` then `originalTitle` for movies, `name` then `originalName` for tv, trimmed with blank values skipped. The title is resolved fresh on every click; nothing is preloaded.
--   **One active tab**: the search opens in a foreground tab that keeps the Seer tab as its parent, and nothing else is opened.
--   **Duplicate prevention**: the button disables itself and shows `Opening Xstream…` until the lookup and the tab open settle, so extra clicks meanwhile are ignored. Delete keeps its own busy state, so neither button blocks the other.
+-   **Title fallback**: the first usable title of the Seer detail response is searched on the clicked provider — `title` then `originalTitle` for movies, `name` then `originalName` for tv, trimmed with blank values skipped. The title is resolved fresh on every click; nothing is preloaded.
+-   **One active tab**: the search opens in one foreground tab that keeps the Seer tab as its parent, and nothing else is opened.
+-   **Independent busy states**: each search button disables itself and shows its own opening label (`Opening Xstream…` or `Opening Binge…`) until its lookup and tab open settle, so extra clicks on the same button meanwhile are ignored. The other search button and Delete keep their own busy state, so no button blocks another and both searches may run at once.
 -   **Stale results stay silent**: when the pathname changed or the page exited during the lookup, no tab opens, no notification is shown and the button returns to idle.
--   **Escaped failures**: a failed lookup or tab open shows one escaped error notification naming the route for 8 s, and only while that route is still live. No retry, timer or background polling runs during that lookup phase.
--   **Marked search url only**: the assistant runs only on Airtel Xstream `/search?q=…#seer-auto`. It consumes the fragment once with `history.replaceState`, keeping the query and the history state, and ignores every other origin, route, fragment or blank `q`.
+-   **Escaped failures**: a failed lookup or tab open shows one escaped error notification naming the provider and the route for 8 s, and only while that route is still live. No retry, timer or background polling runs during that lookup phase.
+-   **Marked search url only**: the assistant runs only on a provider search page at `/search?q=…#seer-auto`. It consumes the fragment once with `history.replaceState`, keeping the query and the history state, and ignores every other origin, route, fragment or blank `q`.
 -   **One title, immediate match and node observation**: after arming, the rendered results are matched against that one `q` title at once, then again whenever a node is added or removed below the document root, through a single node observer built with `childList` + `subtree`. A single 15 s deadline is the only timer: its final check reports the outcome when no result appeared meanwhile. Attribute changes and character-data changes are mutations too, but this node observer does not watch them, so such a change only triggers a match when a node addition or removal follows, or at the deadline. No polling and no retry runs.
--   **Unique result wins**: when exactly one rendered grid or hero result matches the title (or its decoded slug, ignoring case, accents and punctuation), the tab navigates to that Airtel detail url with `location.replace`, so the back button does not return to the search page.
--   **Manual fallback**: when no single result matches, the assistant navigates nowhere and shows one escaped notice asking for a manual pick. A match failure shows one escaped error instead and leaves the search page in place.
+-   **Unique result wins**: when exactly one rendered result matches the title (or its decoded slug, ignoring case, accents and punctuation), the tab navigates to that provider's detail url with `location.replace`, so the back button does not return to the search page.
+-   **Manual fallback**: when no single result matches, the assistant navigates nowhere and shows one escaped notice asking for a manual pick. A match failure shows one escaped error instead and leaves the search page in place. Provider IDs never resolve ambiguity: when several results could match, the pick stays manual.
 -   **Independent tabs**: each marked search tab decides for itself from its own url; there is no storage, cache or cross-tab coordination.
--   **Cancelled by the user**: editing the search box, selecting a grid or hero result, `pagehide`, `popstate` and `hashchange` cancel the pending match and release its timer, observer and listeners. A click is never intercepted, and a changed live url cancels the pending match.
--   **Out of scope**: search only opens the Airtel Xstream search page and follows its unique result; it never deletes and never touches Seer media state.
+-   **Cancelled by the user**: editing the search box, selecting a rendered result, `pagehide`, `popstate` and `hashchange` cancel the pending match and release its timer, observer and listeners. A click is never intercepted, and a changed live url cancels the pending match.
+-   **Out of scope**: search only opens the clicked provider's search page and follows its unique result; it never deletes, never touches Seer media state, and never checks availability or plays anything.
 
+## Seer Binge Search
+The `▶️ Binge` button reuses the lifecycle and title rules above; only these provider details differ.
+
+| Aspect | Binge behaviour |
+| --- | --- |
+| Origin and search url | `https://www.tataplaybinge.com/search?q=…#seer-auto` |
+| Result elements | `.search-result-list a.listing-block[href]`, labelled by the poster `alt` text |
+| Match inputs | poster alt text or decoded slug of `/watch/{movies\|shows\|series}/{slug}/{id}` |
+
+Distinct Binge provider ids stay separate destinations even when their slug matches, so such a result keeps the manual fallback of [Seer Xstream Search](#seer-xstream-search).
 
 ## Seer Deletion
 The authoritative description of what the Delete button does.
@@ -145,7 +155,7 @@ The authoritative description of what the Delete button does.
 -   **Confirmed route wins over navigation**: after the confirmation the captured route is deleted even if the SPA moves to another page, and the outcome feedback is labelled as described in **Notifications, not dialogs** below. A success on the captured route shows its notification immediately and refreshes the page 2 s later; the refresh is skipped when the pathname is no longer that route or the page is left during the delay, and the button then returns to idle. A success after navigating away only notifies and schedules no refresh, and an error never refreshes.
 -   **Notifications, not dialogs**: exactly two outcomes are reported through the shared `Notifier`, which renders HTML, so both messages are escaped. A success reads `Deleted "{title}". Library files, requests and media entry removed.` and appends ` The page will refresh.` only while the captured route is still live; a failure reads `Deletion failed for "{title}": {error}` and stays 8 s. `{title}` is taken from the captured route by the title-resolution rules of [Seer Xstream Search](#seer-xstream-search), resolved once after the confirmation and before the first deletion call. When that title lookup fails, the captured pathname is used as the label and the deletion still runs.
 -   **Page exit cannot guarantee completion**: `pagehide` removes the panel and its polling, discards any pending visibility check, and suppresses later feedback, but a deletion already in flight is not cancelled and may still complete server-side. This is not tab visibility: switching tabs or backgrounding the page does not signal `pagehide`.
--   **Out of scope**: no direct torrent client calls; deletion stays on the Seer API. Opening the Airtel Xstream search is the separate [Seer Xstream Search](#seer-xstream-search) button.
+-   **Out of scope**: no direct torrent client calls; deletion stays on the Seer API. Opening the provider searches is documented separately in [Seer Xstream Search](#seer-xstream-search).
 
 ## NPM Commands
 Key `npm` commands for project and dependency management:

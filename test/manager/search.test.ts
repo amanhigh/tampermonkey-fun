@@ -9,6 +9,9 @@ const MOVIE_ROUTE = '/movie/603';
 /** Airtel Xstream origin shared by every expectation. */
 const AIRTEL = Constants.SEER.AIRTEL_BASE_URL;
 
+/** Tata Play Binge origin shared by every expectation. */
+const BINGE = Constants.SEER.BINGE_BASE_URL;
+
 /** Marker every opened search url carries; detail destinations never carry it. */
 const MARKER = Constants.SEER.AUTO_MARKER;
 
@@ -17,6 +20,9 @@ const AVATAR_URL = `${AIRTEL}/movies/avatar/HOTSTAR_DTH_MOVIE_3617`;
 
 /** Verified hero result destination of the fixture title. */
 const HALO_URL = `${AIRTEL}/tv-shows/halo/HOTSTAR_DTH_TVSHOW_1971308176`;
+
+/** Verified Binge movie result destination of the fixture title. */
+const BINGE_AVATAR_URL = `${BINGE}/watch/movies/avatar/3617`;
 
 /** Element stand-in covering the DOM surface read by the result matcher. */
 class FakeNode {
@@ -43,24 +49,28 @@ class FakeNode {
 
   /** Match a single class selector against the direct children. */
   querySelector(selector: string): FakeNode | null {
-    const name = selector.replace(/^\./, '');
+    const name = selector.match(/\.([\w-]+)/)?.[1] ?? selector;
     return this.children.find((child) => child.className === name) ?? null;
   }
 }
 
-/** Search result container stand-in answering the grid and hero selectors. */
+/** Search result container stand-in answering the grid, hero and listing selectors. */
 class FakeResultRoot {
   constructor(
     private readonly grid: FakeNode[] = [],
-    private readonly hero: FakeNode[] = []
+    private readonly hero: FakeNode[] = [],
+    private readonly listing: FakeNode[] = []
   ) {}
 
-  /** Answer the two scoped selectors the matcher issues. */
+  /** Answer the scoped selectors the matchers issue. */
   querySelectorAll(selector: string): FakeNode[] {
     if (selector.includes('cs-grid-tile')) {
       return this.grid;
     }
-    return selector.includes('hero-banner') ? this.hero : [];
+    if (selector.includes('hero-banner')) {
+      return this.hero;
+    }
+    return selector.includes('listing-block') ? this.listing : [];
   }
 }
 
@@ -89,9 +99,26 @@ function heroAnchor(href: string, title?: string): FakeNode {
   return anchor;
 }
 
-/** Run the matcher against a stand-in root. */
+/** Binge listing anchor whose poster alt text labels the result. */
+function bingeAnchor(href: string, alt?: string, logoAlt?: string): FakeNode {
+  const anchor = new FakeNode({ href });
+  if (alt !== undefined) {
+    anchor.append(new FakeNode({ alt }, 'card-image'));
+  }
+  if (logoAlt !== undefined) {
+    anchor.append(new FakeNode({ alt: logoAlt }, 'provider-logo'));
+  }
+  return anchor;
+}
+
+/** Run the Xstream matcher against a stand-in root. */
 function match(root: FakeResultRoot | FakeNode, title: string): string | undefined {
   return manager.findXstreamMatch(root as unknown as ParentNode, title);
+}
+
+/** Run the Binge matcher against a stand-in root. */
+function bingeMatch(root: FakeResultRoot | FakeNode, title: string): string | undefined {
+  return manager.findBingeMatch(root as unknown as ParentNode, title);
 }
 
 let manager: ISearchManager;
@@ -270,6 +297,160 @@ describe('SearchManager', () => {
       const root = new FakeResultRoot([gridAnchor(href, 'Avatar')]);
 
       expect(match(root, 'Avatar')).toBeUndefined();
+    });
+  });
+
+  describe('getBingeUrl', () => {
+    it('builds the Binge search url from the movie title of the canonical route', async () => {
+      client.getSearchTitle.mockResolvedValue('Dune');
+
+      await expect(manager.getBingeUrl('/movie/603/')).resolves.toBe(`${BINGE}/search?q=Dune${MARKER}`);
+
+      expect(client.getSearchTitle).toHaveBeenCalledWith('/movie/603');
+    });
+
+    it('canonicalizes a nested season route before resolving the title', async () => {
+      client.getSearchTitle.mockResolvedValue('Shogun');
+
+      await expect(manager.getBingeUrl('/tv/1399/season/2')).resolves.toBe(`${BINGE}/search?q=Shogun${MARKER}`);
+
+      expect(client.getSearchTitle).toHaveBeenCalledWith('/tv/1399');
+    });
+
+    it('encodes the resolved title in the query', async () => {
+      client.getSearchTitle.mockResolvedValue('Dune: Part Two & More');
+
+      await expect(manager.getBingeUrl('/movie/603')).resolves.toBe(
+        `${BINGE}/search?q=Dune%3A%20Part%20Two%20%26%20More${MARKER}`
+      );
+    });
+
+    it.each(['/discover', '/movie/0', 'movie/603'])(
+      'rejects the unsupported route %s before any API call',
+      async (pathname: string) => {
+        await expect(manager.getBingeUrl(pathname)).rejects.toThrow(`Unsupported Seer route: ${pathname}`);
+
+        expect(client.getSearchTitle).not.toHaveBeenCalled();
+      }
+    );
+
+    it('propagates a title resolution failure unchanged', async () => {
+      client.getSearchTitle.mockRejectedValue(new ApiError(500, 'Server Error'));
+
+      await expect(manager.getBingeUrl(MOVIE_ROUTE)).rejects.toMatchObject({ status: 500 });
+    });
+  });
+
+  describe('findBingeMatch', () => {
+    it('returns the single result whose poster alt text matches exactly', () => {
+      const root = new FakeResultRoot([], [], [
+        bingeAnchor('/watch/movies/catalog-entry/3617', 'Avatar'),
+        bingeAnchor('/watch/movies/dune/9', 'Dune'),
+      ]);
+
+      expect(bingeMatch(root, 'Avatar')).toBe(`${BINGE}/watch/movies/catalog-entry/3617`);
+    });
+
+    it('matches the full decoded slug when the poster alt text differs', () => {
+      const root = new FakeResultRoot([], [], [bingeAnchor('/watch/movies/avatar/3617', 'Avatar: The Way')]);
+
+      expect(bingeMatch(root, 'Avatar')).toBe(BINGE_AVATAR_URL);
+    });
+
+    it('matches a percent encoded slug after decoding it', () => {
+      const root = new FakeResultRoot([], [], [bingeAnchor('/watch/movies/la%20casa/7', 'Other')]);
+
+      expect(bingeMatch(root, 'La Casa')).toBe(`${BINGE}/watch/movies/la%20casa/7`);
+    });
+
+    it('ignores accents, case and punctuation on both sides of the comparison', () => {
+      const root = new FakeResultRoot([], [], [bingeAnchor('/watch/movies/amelie/5', 'AMÉLIE!')]);
+
+      expect(bingeMatch(root, 'amelie')).toBe(`${BINGE}/watch/movies/amelie/5`);
+    });
+
+    it('reads the poster alt text and never the provider logo alt text', () => {
+      const matched = new FakeResultRoot([], [], [bingeAnchor('/watch/movies/avatar/3617', 'Avatar', 'Netflix')]);
+      const logoOnly = new FakeResultRoot([], [], [bingeAnchor('/watch/movies/other/5', 'Other', 'Avatar')]);
+
+      expect(bingeMatch(matched, 'Avatar')).toBe(BINGE_AVATAR_URL);
+      expect(bingeMatch(logoOnly, 'Avatar')).toBeUndefined();
+    });
+
+    it.each(['movies', 'shows', 'series'])('accepts the verified %s detail route', (kind: string) => {
+      const root = new FakeResultRoot([], [], [bingeAnchor(`/watch/${kind}/avatar/3617`, 'Avatar')]);
+
+      expect(bingeMatch(root, 'Avatar')).toBe(`${BINGE}/watch/${kind}/avatar/3617`);
+    });
+
+    it('collapses the same destination carrying query, hash or trailing slash', () => {
+      const root = new FakeResultRoot([], [], [
+        bingeAnchor('/watch/movies/avatar/3617?utm=grid', 'Avatar'),
+        bingeAnchor('/watch/movies/avatar/3617#hero', 'Avatar'),
+        bingeAnchor('/watch/movies/avatar/3617/', 'Avatar'),
+      ]);
+
+      expect(bingeMatch(root, 'Avatar')).toBe(BINGE_AVATAR_URL);
+    });
+
+    it('returns undefined when the same slug resolves to two distinct ids', () => {
+      const root = new FakeResultRoot([], [], [
+        bingeAnchor('/watch/movies/yaaran-diyan-poun-baaran/4176001', 'Yaaran Diyan Poun Baaran'),
+        bingeAnchor('/watch/movies/yaaran-diyan-poun-baaran/3536543', 'Yaaran Diyan Poun Baaran'),
+      ]);
+
+      expect(bingeMatch(root, 'Yaaran Diyan Poun Baaran')).toBeUndefined();
+    });
+
+    it('returns undefined when several distinct destinations match', () => {
+      const root = new FakeResultRoot([], [], [
+        bingeAnchor('/watch/movies/avatar/3617', 'Avatar'),
+        bingeAnchor('/watch/shows/avatar/9999', 'Avatar'),
+      ]);
+
+      expect(bingeMatch(root, 'Avatar')).toBeUndefined();
+    });
+
+    it.each([
+      ['a longer title', 'Avatar', 'Avatar 2', '/watch/movies/avatar2/11'],
+      ['a longer slug', 'Avatar', 'Other', '/watch/movies/avatar-2/11'],
+      ['a shorter title', 'Avatar', 'Ava', '/watch/movies/ava/3617'],
+      ['a partial slug', 'Avat', 'Other', '/watch/movies/avatar/3617'],
+    ])('rejects %s instead of matching a substring', (_case: string, title: string, alt: string, href: string) => {
+      const root = new FakeResultRoot([], [], [bingeAnchor(href, alt)]);
+
+      expect(bingeMatch(root, title)).toBeUndefined();
+    });
+
+    it('returns undefined when nothing matches', () => {
+      const root = new FakeResultRoot([], [], [bingeAnchor('/watch/movies/dune/9', 'Dune')]);
+
+      expect(bingeMatch(root, 'Avatar')).toBeUndefined();
+    });
+
+    it('returns undefined for an empty title without reading the results', () => {
+      const root = new FakeResultRoot([], [], [bingeAnchor('/watch/movies/avatar/3617', 'Avatar')]);
+
+      expect(bingeMatch(root, '  ')).toBeUndefined();
+    });
+
+    it.each([
+      ['an insecure origin', 'http://www.tataplaybinge.com/watch/movies/avatar/3617'],
+      ['a foreign origin', 'https://www.tataplaybinge.com.evil.test/watch/movies/avatar/3617'],
+      ['a non https scheme', 'javascript:alert(1)'],
+      ['credentials', 'https://user:pass@www.tataplaybinge.com/watch/movies/avatar/3617'],
+      ['malformed percent encoding', 'https://www.tataplaybinge.com/watch/movies/avatar%2/3617'],
+      ['a search path', 'https://www.tataplaybinge.com/search?q=Avatar'],
+      ['a missing media id', 'https://www.tataplaybinge.com/watch/movies/avatar'],
+      ['a non numeric media id', 'https://www.tataplaybinge.com/watch/movies/avatar/abc'],
+      ['a zero media id', 'https://www.tataplaybinge.com/watch/movies/avatar/0'],
+      ['an extra path segment', 'https://www.tataplaybinge.com/watch/movies/avatar/3617/trailer'],
+      ['an unverified media type', 'https://www.tataplaybinge.com/watch/tv-shows/avatar/3617'],
+      ['an empty href', ''],
+    ])('rejects %s', (_case: string, href: string) => {
+      const root = new FakeResultRoot([], [], [bingeAnchor(href, 'Avatar')]);
+
+      expect(bingeMatch(root, 'Avatar')).toBeUndefined();
     });
   });
 });

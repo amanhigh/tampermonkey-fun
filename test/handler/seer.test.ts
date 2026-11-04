@@ -159,6 +159,45 @@ const PATCHED_GLOBALS = ['document', 'window', 'HTMLButtonElement', 'confirm', '
 /** Search url the manager resolves by default. */
 const XSTREAM_URL = 'https://www.airtelxstream.in/search?q=Dune';
 
+/** Binge search url the manager resolves by default. */
+const BINGE_URL = 'https://www.tataplaybinge.com/search?q=Dune';
+
+/** Settings that distinguish the two provider search buttons under test. */
+interface SearchCase {
+  /** Provider name used by the describe block and the escaped failure notification. */
+  readonly name: string;
+  /** Mounted button id of the provider. */
+  readonly buttonId: string;
+  /** Idle label of the provider button. */
+  readonly idleLabel: string;
+  /** Label shown while the provider search opens. */
+  readonly openingLabel: string;
+  /** Search url the provider resolves by default. */
+  readonly url: string;
+  /** Manager method that resolves the provider search url. */
+  readonly resolve: 'getXstreamUrl' | 'getBingeUrl';
+}
+
+/** Provider search buttons that share the one lifecycle. */
+const SEARCH_CASES: SearchCase[] = [
+  {
+    name: 'Xstream',
+    buttonId: Constants.UI.IDS.SEER.XSTREAM_BUTTON,
+    idleLabel: '▶️ Xtreme',
+    openingLabel: 'Opening Xstream…',
+    url: XSTREAM_URL,
+    resolve: 'getXstreamUrl',
+  },
+  {
+    name: 'Binge',
+    buttonId: Constants.UI.IDS.SEER.BINGE_BUTTON,
+    idleLabel: '▶️ Binge',
+    openingLabel: 'Opening Binge…',
+    url: BINGE_URL,
+    resolve: 'getBingeUrl',
+  },
+];
+
 describe('SeerHandler', () => {
   let fakeDocument: FakeDocument;
   let fakeWindow: FakeWindow;
@@ -197,6 +236,8 @@ describe('SeerHandler', () => {
     search = {
       getXstreamUrl: jest.fn().mockResolvedValue(XSTREAM_URL),
       findXstreamMatch: jest.fn(),
+      getBingeUrl: jest.fn().mockResolvedValue(BINGE_URL),
+      findBingeMatch: jest.fn(),
     };
     jest.mocked(Notifier.success).mockClear();
     jest.mocked(Notifier.error).mockClear();
@@ -250,9 +291,19 @@ describe('SeerHandler', () => {
     return fakeDocument.getElementById(Constants.UI.IDS.SEER.XSTREAM_BUTTON);
   }
 
-  /** Click the mounted Search Xstream button and let the queued work start. */
-  async function clickXstream(): Promise<void> {
-    xstreamButton()?.click();
+  /** Mounted Search Binge button, if any. */
+  function bingeButton(): FakeElement | undefined {
+    return fakeDocument.getElementById(Constants.UI.IDS.SEER.BINGE_BUTTON);
+  }
+
+  /** Mounted provider search button by id, if any. */
+  function searchButton(id: string): FakeElement | undefined {
+    return fakeDocument.getElementById(id);
+  }
+
+  /** Click one provider search button by id and let the queued work start. */
+  async function clickSearch(id: string): Promise<void> {
+    searchButton(id)?.click();
     await flush();
   }
 
@@ -268,15 +319,17 @@ describe('SeerHandler', () => {
   }
 
   describe('initialize', () => {
-    it('mounts the Search Xstream and Delete buttons once', async () => {
+    it('mounts the Search Xstream, Search Binge and Delete buttons once', async () => {
       await openRoute();
       await openRoute();
 
       expect(fakeDocument.createdWithTag('div')).toHaveLength(1);
-      expect(fakeDocument.createdWithTag('button')).toHaveLength(2);
+      expect(fakeDocument.createdWithTag('button')).toHaveLength(3);
       expect(manager.hasMediaRecord).toHaveBeenCalledTimes(1);
       expect(xstreamButton()?.textContent).toBe('▶️ Xtreme');
       expect(xstreamButton()?.disabled).toBe(false);
+      expect(bingeButton()?.textContent).toBe('▶️ Binge');
+      expect(bingeButton()?.disabled).toBe(false);
       expect(deleteButton()?.textContent).toBe('🗑️ Delete');
       expect(deleteButton()?.disabled).toBe(false);
       expect(deleteButton()?.hidden).toBe(false);
@@ -291,6 +344,7 @@ describe('SeerHandler', () => {
 
       expect(panel()?.hidden).toBe(false);
       expect(xstreamButton()?.hidden).toBe(false);
+      expect(bingeButton()?.hidden).toBe(false);
       expect(deleteButton()?.hidden).toBe(true);
 
       presence.resolve(true);
@@ -448,83 +502,91 @@ describe('SeerHandler', () => {
     });
   });
 
-  describe('xstream search', () => {
+  describe.each(SEARCH_CASES)('$name search', (provider) => {
+    /** The other provider, which must stay untouched by this provider's search. */
+    const other = SEARCH_CASES.find((candidate) => candidate.buttonId !== provider.buttonId) as SearchCase;
+
+    /** Mock of the manager method that resolves this provider's search url. */
+    const resolveMock = (): jest.Mock => search[provider.resolve] as jest.Mock;
+
     it('opens the resolved search url in the foreground tab of the live route captured at click', async () => {
       await openRoute();
       navigate(TV_ROUTE);
 
-      await clickXstream();
+      await clickSearch(provider.buttonId);
 
-      expect(search.getXstreamUrl).toHaveBeenCalledTimes(1);
-      expect(search.getXstreamUrl).toHaveBeenCalledWith(TV_ROUTE);
+      expect(search[provider.resolve]).toHaveBeenCalledTimes(1);
+      expect(search[provider.resolve]).toHaveBeenCalledWith(TV_ROUTE);
       expect(openInTabMock).toHaveBeenCalledTimes(1);
-      expect(openInTabMock).toHaveBeenCalledWith(XSTREAM_URL, { active: true, setParent: true });
+      expect(openInTabMock).toHaveBeenCalledWith(provider.url, { active: true, setParent: true });
       expect(Notifier.success).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
       expect(manager.deleteMedia).not.toHaveBeenCalled();
-      expect(xstreamButton()?.textContent).toBe('▶️ Xtreme');
-      expect(xstreamButton()?.disabled).toBe(false);
+      expect(searchButton(provider.buttonId)?.textContent).toBe(provider.idleLabel);
+      expect(searchButton(provider.buttonId)?.disabled).toBe(false);
     });
 
     it('does nothing on an unsupported live route', async () => {
       await openRoute();
       navigate(UNSUPPORTED_ROUTE);
 
-      await clickXstream();
+      await clickSearch(provider.buttonId);
 
-      expect(search.getXstreamUrl).not.toHaveBeenCalled();
+      expect(search[provider.resolve]).not.toHaveBeenCalled();
       expect(openInTabMock).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
     });
 
-    it('disables only the search button while opening and ignores duplicate clicks', async () => {
+    it('disables only its own button while opening and ignores duplicate clicks', async () => {
       const lookup = defer<string>();
-      search.getXstreamUrl.mockReturnValue(lookup.promise);
+      resolveMock().mockReturnValue(lookup.promise);
       await openRoute();
 
-      xstreamButton()?.click();
-      xstreamButton()?.click();
+      searchButton(provider.buttonId)?.click();
+      searchButton(provider.buttonId)?.click();
       await flush();
 
-      expect(search.getXstreamUrl).toHaveBeenCalledTimes(1);
-      expect(xstreamButton()?.textContent).toBe('Opening Xstream…');
-      expect(xstreamButton()?.disabled).toBe(true);
+      expect(resolveMock()).toHaveBeenCalledTimes(1);
+      expect(searchButton(provider.buttonId)?.textContent).toBe(provider.openingLabel);
+      expect(searchButton(provider.buttonId)?.disabled).toBe(true);
+      expect(searchButton(other.buttonId)?.textContent).toBe(other.idleLabel);
+      expect(searchButton(other.buttonId)?.disabled).toBe(false);
       expect(deleteButton()?.textContent).toBe('🗑️ Delete');
       expect(deleteButton()?.disabled).toBe(false);
       expect(openInTabMock).not.toHaveBeenCalled();
 
-      lookup.resolve(XSTREAM_URL);
+      lookup.resolve(provider.url);
       await flush();
 
       expect(openInTabMock).toHaveBeenCalledTimes(1);
-      expect(xstreamButton()?.textContent).toBe('▶️ Xtreme');
-      expect(xstreamButton()?.disabled).toBe(false);
+      expect(searchButton(provider.buttonId)?.textContent).toBe(provider.idleLabel);
+      expect(searchButton(provider.buttonId)?.disabled).toBe(false);
     });
 
     it('opens no tab for a route that changed during the lookup', async () => {
       const lookup = defer<string>();
-      search.getXstreamUrl.mockReturnValue(lookup.promise);
+      resolveMock().mockReturnValue(lookup.promise);
       await openRoute();
-      await clickXstream();
+      await clickSearch(provider.buttonId);
 
       navigate(TV_ROUTE);
-      lookup.resolve(XSTREAM_URL);
+      lookup.resolve(provider.url);
       await flush();
 
       expect(openInTabMock).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
-      expect(xstreamButton()?.textContent).toBe('▶️ Xtreme');
-      expect(xstreamButton()?.disabled).toBe(false);
+      expect(searchButton(provider.buttonId)?.textContent).toBe(provider.idleLabel);
+      expect(searchButton(provider.buttonId)?.disabled).toBe(false);
     });
 
     it('opens no tab and reports nothing after the page exits during the lookup', async () => {
       const lookup = defer<string>();
-      search.getXstreamUrl.mockReturnValue(lookup.promise);
+      resolveMock().mockReturnValue(lookup.promise);
       await openRoute();
-      await clickXstream();
+      await clickSearch(provider.buttonId);
 
       fakeWindow.dispatch('pagehide');
-      lookup.resolve(XSTREAM_URL);
+      lookup.resolve(provider.url);
       await flush();
 
       expect(openInTabMock).not.toHaveBeenCalled();
@@ -532,14 +594,14 @@ describe('SeerHandler', () => {
     });
 
     it('reports an escaped lookup failure for eight seconds and restores the button', async () => {
-      search.getXstreamUrl.mockRejectedValue(new Error('No Seer title for <b>/movie/603</b> "detail"'));
+      resolveMock().mockRejectedValue(new Error('No Seer title for <b>/movie/603</b> "detail"'));
       await openRoute();
 
-      await clickXstream();
+      await clickSearch(provider.buttonId);
 
       expect(openInTabMock).not.toHaveBeenCalled();
       expect(Notifier.error).toHaveBeenCalledWith(
-        expect.stringContaining('Seer Xstream search failed for /movie/603'),
+        expect.stringContaining(`Seer ${provider.name} search failed for /movie/603`),
         FAILURE_TIMEOUT_MS
       );
       const message = jest.mocked(Notifier.error).mock.calls[0][0];
@@ -547,38 +609,38 @@ describe('SeerHandler', () => {
       expect(message).toContain('&lt;b&gt;/movie/603&lt;/b&gt;');
       expect(message).toContain('&quot;detail&quot;');
       expect(Notifier.success).not.toHaveBeenCalled();
-      expect(xstreamButton()?.textContent).toBe('▶️ Xtreme');
-      expect(xstreamButton()?.disabled).toBe(false);
+      expect(searchButton(provider.buttonId)?.textContent).toBe(provider.idleLabel);
+      expect(searchButton(provider.buttonId)?.disabled).toBe(false);
     });
 
     it('reports a failure when the tab cannot be opened', async () => {
       openInTabMock.mockRejectedValue(new Error('GM.openInTab <denied>'));
       await openRoute();
 
-      await clickXstream();
+      await clickSearch(provider.buttonId);
 
-      expect(search.getXstreamUrl).toHaveBeenCalledWith(MOVIE_ROUTE);
+      expect(search[provider.resolve]).toHaveBeenCalledWith(MOVIE_ROUTE);
       expect(Notifier.error).toHaveBeenCalledWith(
-        expect.stringContaining('Seer Xstream search failed for /movie/603'),
+        expect.stringContaining(`Seer ${provider.name} search failed for /movie/603`),
         FAILURE_TIMEOUT_MS
       );
       expect(jest.mocked(Notifier.error).mock.calls[0][0]).toContain('&lt;denied&gt;');
-      expect(xstreamButton()?.textContent).toBe('▶️ Xtreme');
-      expect(xstreamButton()?.disabled).toBe(false);
+      expect(searchButton(provider.buttonId)?.textContent).toBe(provider.idleLabel);
+      expect(searchButton(provider.buttonId)?.disabled).toBe(false);
     });
 
     it('stays silent when the lookup fails after navigating away', async () => {
-      search.getXstreamUrl.mockImplementation(() => {
+      resolveMock().mockImplementation(() => {
         navigate(TV_ROUTE);
         return Promise.reject(new Error('boom'));
       });
       await openRoute();
 
-      await clickXstream();
+      await clickSearch(provider.buttonId);
 
       expect(openInTabMock).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
-      expect(xstreamButton()?.disabled).toBe(false);
+      expect(searchButton(provider.buttonId)?.disabled).toBe(false);
     });
 
     it('opens the search while the Delete button is hidden for a route without a media record', async () => {
@@ -587,7 +649,7 @@ describe('SeerHandler', () => {
 
       expect(deleteButton()?.hidden).toBe(true);
 
-      await clickXstream();
+      await clickSearch(provider.buttonId);
 
       expect(openInTabMock).toHaveBeenCalledTimes(1);
       expect(Notifier.error).not.toHaveBeenCalled();
@@ -601,7 +663,7 @@ describe('SeerHandler', () => {
 
       expect(deleteButton()?.hidden).toBe(true);
 
-      await clickXstream();
+      await clickSearch(provider.buttonId);
 
       expect(openInTabMock).toHaveBeenCalledTimes(1);
 
@@ -609,6 +671,55 @@ describe('SeerHandler', () => {
       await flush();
 
       expect(deleteButton()?.hidden).toBe(false);
+    });
+  });
+
+  describe('independent searches', () => {
+    it('runs both provider searches at once without blocking Delete', async () => {
+      const xstream = defer<string>();
+      const binge = defer<string>();
+      search.getXstreamUrl.mockReturnValue(xstream.promise);
+      search.getBingeUrl.mockReturnValue(binge.promise);
+      await openRoute();
+
+      await clickSearch(Constants.UI.IDS.SEER.XSTREAM_BUTTON);
+      await clickSearch(Constants.UI.IDS.SEER.BINGE_BUTTON);
+      await clickSearch(Constants.UI.IDS.SEER.BINGE_BUTTON);
+
+      expect(search.getXstreamUrl).toHaveBeenCalledTimes(1);
+      expect(search.getBingeUrl).toHaveBeenCalledTimes(1);
+      expect(xstreamButton()?.textContent).toBe('Opening Xstream…');
+      expect(xstreamButton()?.disabled).toBe(true);
+      expect(bingeButton()?.textContent).toBe('Opening Binge…');
+      expect(bingeButton()?.disabled).toBe(true);
+      expect(deleteButton()?.disabled).toBe(false);
+
+      await clickDelete();
+
+      expect(confirmMock).toHaveBeenCalledTimes(1);
+      expect(manager.deleteMedia).toHaveBeenCalledWith(MOVIE_ROUTE);
+
+      xstream.resolve(XSTREAM_URL);
+      await flush();
+
+      expect(openInTabMock).toHaveBeenCalledTimes(1);
+      expect(openInTabMock).toHaveBeenCalledWith(XSTREAM_URL, { active: true, setParent: true });
+      expect(xstreamButton()?.textContent).toBe('▶️ Xtreme');
+      expect(xstreamButton()?.disabled).toBe(false);
+      expect(bingeButton()?.textContent).toBe('Opening Binge…');
+      expect(bingeButton()?.disabled).toBe(true);
+
+      binge.resolve(BINGE_URL);
+      await flush();
+
+      expect(openInTabMock).toHaveBeenCalledTimes(2);
+      expect(openInTabMock).toHaveBeenLastCalledWith(BINGE_URL, { active: true, setParent: true });
+      expect(bingeButton()?.textContent).toBe('▶️ Binge');
+      expect(bingeButton()?.disabled).toBe(false);
+
+      await advanceRefresh();
+
+      expect(Notifier.error).not.toHaveBeenCalled();
     });
   });
 

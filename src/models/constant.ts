@@ -91,6 +91,7 @@ export const Constants = Object.freeze({
       SEER: {
         PANEL: 'seerr-sidekick-panel',
         XSTREAM_BUTTON: 'seerr-sidekick-xstream',
+        BINGE_BUTTON: 'seerr-sidekick-binge',
         DELETE_BUTTON: 'seerr-sidekick-delete',
       },
     },
@@ -244,7 +245,9 @@ Support:
     BASE_URL: 'http://seerr.media.lan/api/v1',
     /** Airtel Xstream origin used for title search links */
     AIRTEL_BASE_URL: 'https://www.airtelxstream.in',
-    /** Marker appended to every Airtel Xstream url Seer opens or resolves */
+    /** Tata Play Binge origin used for title search links */
+    BINGE_BASE_URL: 'https://www.tataplaybinge.com',
+    /** Marker appended to every provider url Seer opens or resolves */
     AUTO_MARKER: '#seer-auto',
   },
 

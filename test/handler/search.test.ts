@@ -11,39 +11,62 @@ import { Constants } from '../../src/models/constant';
 import { Notifier } from '../../src/util/notify';
 import { IObserveUtil } from '../../src/util/observer';
 
-/** Airtel Xstream origin used by every case. */
-const AIRTEL = Constants.SEER.AIRTEL_BASE_URL;
-
 /** Marker Seer appends to the search url it opens. */
 const MARKER = Constants.SEER.AUTO_MARKER;
 
-/** Search url without the marker, as captured after it is consumed. */
-const SEARCH_URL = `${AIRTEL}/search?q=Dune`;
-
-/** Search url Seer opens, carrying the marker. */
-const MARKED_URL = `${SEARCH_URL}${MARKER}`;
-
-/** Unique result a resolved match returns. */
-const DETAIL_URL = `${AIRTEL}/movies/dune/HOTSTAR_DTH_MOVIE_9`;
+/** Search title every case arms. */
+const TITLE = 'Dune';
 
 /** Deadline after which an unresolved title reports the manual fallback. */
 const TIMEOUT_MS = 15000;
 
-/** Search box id whose edits cancel the pending match. */
-const SEARCH_INPUT_ID = 'classic-search-input-new';
+/** Settings that distinguish the two provider search pages under test. */
+interface Provider {
+  readonly label: string;
+  readonly origin: string;
+  readonly method: 'searchXstream' | 'searchBinge';
+  readonly match: 'findXstreamMatch' | 'findBingeMatch';
+  readonly inputId: string;
+  readonly resultSelector: string;
+  readonly detailPath: string;
+}
+
+/** Provider configurations that share the one bounded lifecycle. */
+const PROVIDERS: Provider[] = [
+  {
+    label: 'Airtel Xstream',
+    origin: Constants.SEER.AIRTEL_BASE_URL,
+    method: 'searchXstream',
+    match: 'findXstreamMatch',
+    inputId: 'classic-search-input-new',
+    resultSelector:
+      '#search-layout-container-searchResultV2 li.cs-grid-tile a.cs-grid-tile-button[href], ' +
+      '.cs-hero-banner-rail .hero-banner-wrapper a.hero-banner[href]',
+    detailPath: '/movies/dune/HOTSTAR_DTH_MOVIE_9',
+  },
+  {
+    label: 'Tata Play Binge',
+    origin: Constants.SEER.BINGE_BASE_URL,
+    method: 'searchBinge',
+    match: 'findBingeMatch',
+    inputId: 'search-input',
+    resultSelector: '.search-result-list a.listing-block[href]',
+    detailPath: '/watch/movies/dune/9',
+  },
+];
 
 type Listener = (event: Event) => void;
 
-/** Element stand-in the handler recognises via `instanceof` and reads for its id and closest result. */
+/** Element stand-in the handler recognises via `instanceof`, its id and the selector it sits inside. */
 class FakeElement {
   constructor(
     readonly id = '',
-    private readonly insideResult = false
+    private readonly insideSelector?: string
   ) {}
 
-  /** Report a result link only for elements marked as rendered results. */
-  closest(): object | null {
-    return this.insideResult ? {} : null;
+  /** Report a result link only when the requested selector is the one this element sits inside. */
+  closest(selector: string): object | null {
+    return this.insideSelector === selector ? {} : null;
   }
 }
 
@@ -156,7 +179,6 @@ beforeEach(() => {
   page = new FakeWindow();
   fakeDocument = new FakeDocument();
   fakeHistory = new FakeHistory();
-  visit(MARKED_URL);
 
   installGlobal('document', fakeDocument);
   installGlobal('window', page);
@@ -167,6 +189,8 @@ beforeEach(() => {
   manager = {
     getXstreamUrl: jest.fn(),
     findXstreamMatch: jest.fn().mockReturnValue(undefined),
+    getBingeUrl: jest.fn(),
+    findBingeMatch: jest.fn().mockReturnValue(undefined),
   };
   handler = new SearchHandler(manager, observe as unknown as IObserveUtil);
 
@@ -190,7 +214,26 @@ function reachDeadline(): void {
   jest.advanceTimersByTime(TIMEOUT_MS);
 }
 
-describe('SearchHandler', () => {
+describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
+  const searchUrl = `${provider.origin}/search?q=${TITLE}`;
+  const markedUrl = `${searchUrl}${MARKER}`;
+  const detailUrl = `${provider.origin}${provider.detailPath}`;
+  const host = new URL(provider.origin).host;
+
+  /** Arm the bounded match of this provider. */
+  function start(): void {
+    handler[provider.method]();
+  }
+
+  /** Manager mock that resolves the unique rendered result of this provider. */
+  function findMatch(): jest.Mock {
+    return manager[provider.match] as jest.Mock;
+  }
+
+  beforeEach(() => {
+    visit(markedUrl);
+  });
+
   describe('opt in', () => {
     it('does no work when only constructed', () => {
       new SearchHandler(manager, observe as unknown as IObserveUtil);
@@ -203,10 +246,10 @@ describe('SearchHandler', () => {
     });
 
     it('arms one deadline and one node observation on the marked search page of a non-blank query', () => {
-      handler.searchXstream();
+      start();
 
-      expect(fakeHistory.replaceState).toHaveBeenCalledWith({ idx: 7 }, '', SEARCH_URL);
-      expect(page.location.href).toBe(SEARCH_URL);
+      expect(fakeHistory.replaceState).toHaveBeenCalledWith({ idx: 7 }, '', searchUrl);
+      expect(page.location.href).toBe(searchUrl);
       expect(jest.getTimerCount()).toBe(1);
       expect(fakeDocument.count).toBe(2);
       expect(page.count).toBe(3);
@@ -216,32 +259,32 @@ describe('SearchHandler', () => {
     });
 
     it('is idempotent across repeated searches', () => {
-      handler.searchXstream();
-      handler.searchXstream();
-      handler.searchXstream();
+      start();
+      start();
+      start();
 
       expect(fakeHistory.replaceState).toHaveBeenCalledTimes(1);
       expect(jest.getTimerCount()).toBe(1);
       expect(observe.nodeObserver).toHaveBeenCalledTimes(1);
 
-      manager.findXstreamMatch.mockReturnValue(DETAIL_URL);
+      findMatch().mockReturnValue(detailUrl);
       observe.fire();
 
       expect(page.location.replace).toHaveBeenCalledTimes(1);
     });
 
     it.each([
-      ['a foreign origin', `https://www.airtelxstream.in.evil.test/search?q=Dune${MARKER}`],
-      ['an insecure origin', `http://www.airtelxstream.in/search?q=Dune${MARKER}`],
-      ['another Airtel Xstream route', `${AIRTEL}/discover?q=Dune${MARKER}`],
-      ['a search page without the marker', SEARCH_URL],
-      ['a search page with another fragment', `${AIRTEL}/search?q=Dune#other`],
-      ['a blank query', `${AIRTEL}/search?q=%20%20${MARKER}`],
-      ['a missing query', `${AIRTEL}/search${MARKER}`],
+      ['a foreign origin', `https://${host}.evil.test/search?q=${TITLE}${MARKER}`],
+      ['an insecure origin', `http://${host}/search?q=${TITLE}${MARKER}`],
+      ['another provider route', `${provider.origin}/discover?q=${TITLE}${MARKER}`],
+      ['a search page without the marker', searchUrl],
+      ['a search page with another fragment', `${provider.origin}/search?q=${TITLE}#other`],
+      ['a blank query', `${provider.origin}/search?q=%20%20${MARKER}`],
+      ['a missing query', `${provider.origin}/search${MARKER}`],
     ])('ignores %s', (_case: string, href: string) => {
       visit(href);
 
-      handler.searchXstream();
+      start();
 
       expect(fakeHistory.replaceState).not.toHaveBeenCalled();
       expect(observe.nodeObserver).not.toHaveBeenCalled();
@@ -250,20 +293,20 @@ describe('SearchHandler', () => {
 
       reachDeadline();
 
-      expect(manager.findXstreamMatch).not.toHaveBeenCalled();
+      expect(findMatch()).not.toHaveBeenCalled();
       expect(page.location.replace).not.toHaveBeenCalled();
     });
   });
 
   describe('matching', () => {
     it('follows a unique immediate result without waiting for the deadline', () => {
-      manager.findXstreamMatch.mockReturnValue(DETAIL_URL);
+      findMatch().mockReturnValue(detailUrl);
 
-      handler.searchXstream();
+      start();
 
-      expect(manager.findXstreamMatch).toHaveBeenCalledTimes(1);
-      expect(manager.findXstreamMatch).toHaveBeenCalledWith(fakeDocument, 'Dune');
-      expect(page.location.replace).toHaveBeenCalledWith(DETAIL_URL);
+      expect(findMatch()).toHaveBeenCalledTimes(1);
+      expect(findMatch()).toHaveBeenCalledWith(fakeDocument, TITLE);
+      expect(page.location.replace).toHaveBeenCalledWith(detailUrl);
       expect(observe.observer.disconnect).toHaveBeenCalledTimes(1);
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
@@ -271,16 +314,16 @@ describe('SearchHandler', () => {
     });
 
     it('follows a result rendered after arming', () => {
-      handler.searchXstream();
+      start();
 
       expect(page.location.replace).not.toHaveBeenCalled();
 
-      manager.findXstreamMatch.mockReturnValue(DETAIL_URL);
+      findMatch().mockReturnValue(detailUrl);
       observe.fire();
 
-      expect(manager.findXstreamMatch).toHaveBeenCalledTimes(2);
-      expect(manager.findXstreamMatch).toHaveBeenLastCalledWith(fakeDocument, 'Dune');
-      expect(page.location.replace).toHaveBeenCalledWith(DETAIL_URL);
+      expect(findMatch()).toHaveBeenCalledTimes(2);
+      expect(findMatch()).toHaveBeenLastCalledWith(fakeDocument, TITLE);
+      expect(page.location.replace).toHaveBeenCalledWith(detailUrl);
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
       expect(fakeDocument.count).toBe(0);
@@ -289,13 +332,13 @@ describe('SearchHandler', () => {
     });
 
     it('stays silent while the results are unresolved', () => {
-      handler.searchXstream();
+      start();
 
       jest.advanceTimersByTime(TIMEOUT_MS - 1);
       observe.fire();
       observe.fire();
 
-      expect(manager.findXstreamMatch).toHaveBeenCalledTimes(3);
+      expect(findMatch()).toHaveBeenCalledTimes(3);
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
@@ -303,13 +346,13 @@ describe('SearchHandler', () => {
     });
 
     it('matches on the final deadline check when no node callback arrived', () => {
-      handler.searchXstream();
+      start();
 
-      manager.findXstreamMatch.mockReturnValue(DETAIL_URL);
+      findMatch().mockReturnValue(detailUrl);
       reachDeadline();
 
-      expect(manager.findXstreamMatch).toHaveBeenCalledTimes(2);
-      expect(page.location.replace).toHaveBeenCalledWith(DETAIL_URL);
+      expect(findMatch()).toHaveBeenCalledTimes(2);
+      expect(page.location.replace).toHaveBeenCalledWith(detailUrl);
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
       expect(observe.observer.disconnect).toHaveBeenCalledTimes(1);
@@ -318,40 +361,40 @@ describe('SearchHandler', () => {
     });
 
     it('searches the decoded query title while keeping the encoded query', () => {
-      visit(`${AIRTEL}/search?q=${encodeURIComponent('Dune: Part Two & More')}${MARKER}`);
-      manager.findXstreamMatch.mockReturnValue(DETAIL_URL);
+      visit(`${provider.origin}/search?q=${encodeURIComponent('Dune: Part Two & More')}${MARKER}`);
+      findMatch().mockReturnValue(detailUrl);
 
-      handler.searchXstream();
+      start();
 
-      expect(manager.findXstreamMatch).toHaveBeenCalledWith(fakeDocument, 'Dune: Part Two & More');
+      expect(findMatch()).toHaveBeenCalledWith(fakeDocument, 'Dune: Part Two & More');
       expect(fakeHistory.replaceState).toHaveBeenCalledWith(
         { idx: 7 },
         '',
-        `${AIRTEL}/search?q=Dune%3A%20Part%20Two%20%26%20More`
+        `${provider.origin}/search?q=Dune%3A%20Part%20Two%20%26%20More`
       );
     });
 
     it('reports one escaped manual fallback when no single result matches before the deadline', () => {
-      handler.searchXstream();
+      start();
 
       reachDeadline();
 
-      expect(manager.findXstreamMatch).toHaveBeenCalledTimes(2);
+      expect(findMatch()).toHaveBeenCalledTimes(2);
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(Notifier.info).toHaveBeenCalledTimes(1);
       const message = jest.mocked(Notifier.info).mock.calls[0][0];
-      expect(message).toContain('No single Airtel Xstream result for &quot;Dune&quot;');
+      expect(message).toContain(`No single ${provider.label} result for &quot;${TITLE}&quot;`);
       expect(message).toContain('Pick the title manually');
       expect(Notifier.error).not.toHaveBeenCalled();
     });
 
     it('cancels silently when another pushState changed the url before the deadline', () => {
-      handler.searchXstream();
-      visit(`${AIRTEL}/search?q=Other`);
+      start();
+      visit(`${provider.origin}/search?q=Other`);
 
       reachDeadline();
 
-      expect(manager.findXstreamMatch).toHaveBeenCalledTimes(1);
+      expect(findMatch()).toHaveBeenCalledTimes(1);
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
@@ -361,14 +404,14 @@ describe('SearchHandler', () => {
     });
 
     it('does not navigate when the url changed while the results were matched', () => {
-      manager.findXstreamMatch.mockImplementation(() => {
-        visit(`${AIRTEL}/search?q=Other`);
-        return DETAIL_URL;
+      findMatch().mockImplementation(() => {
+        visit(`${provider.origin}/search?q=Other`);
+        return detailUrl;
       });
 
-      handler.searchXstream();
+      start();
 
-      expect(manager.findXstreamMatch).toHaveBeenCalledTimes(1);
+      expect(findMatch()).toHaveBeenCalledTimes(1);
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
@@ -378,33 +421,33 @@ describe('SearchHandler', () => {
     });
 
     it('does not navigate when the url changed during a later match', () => {
-      handler.searchXstream();
-      manager.findXstreamMatch.mockImplementation(() => {
-        visit(`${AIRTEL}/search?q=Other`);
-        return DETAIL_URL;
+      start();
+      findMatch().mockImplementation(() => {
+        visit(`${provider.origin}/search?q=Other`);
+        return detailUrl;
       });
 
       observe.fire();
 
-      expect(manager.findXstreamMatch).toHaveBeenCalledTimes(2);
+      expect(findMatch()).toHaveBeenCalledTimes(2);
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
     });
 
     it('reports one escaped failure and stays on the search page', () => {
-      manager.findXstreamMatch.mockImplementation(() => {
+      findMatch().mockImplementation(() => {
         throw new Error('Bad <b>markup</b> "here"');
       });
 
-      handler.searchXstream();
+      start();
 
-      expect(manager.findXstreamMatch).toHaveBeenCalledTimes(1);
+      expect(findMatch()).toHaveBeenCalledTimes(1);
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).toHaveBeenCalledTimes(1);
       const message = jest.mocked(Notifier.error).mock.calls[0][0];
-      expect(message).toContain('Airtel Xstream match failed for &quot;Dune&quot;');
+      expect(message).toContain(`${provider.label} match failed for &quot;${TITLE}&quot;`);
       expect(message).not.toContain('<b>');
       expect(message).toContain('&lt;b&gt;markup&lt;/b&gt;');
       expect(message).toContain('&quot;here&quot;');
@@ -415,15 +458,15 @@ describe('SearchHandler', () => {
     });
 
     it('reports one escaped failure when a later match throws and stops observing', () => {
-      handler.searchXstream();
-      manager.findXstreamMatch.mockImplementation(() => {
+      start();
+      findMatch().mockImplementation(() => {
         throw new Error('late <b>failure</b>');
       });
 
       observe.fire();
       observe.fire();
 
-      expect(manager.findXstreamMatch).toHaveBeenCalledTimes(2);
+      expect(findMatch()).toHaveBeenCalledTimes(2);
       expect(Notifier.error).toHaveBeenCalledTimes(1);
       expect(jest.mocked(Notifier.error).mock.calls[0][0]).toContain('late &lt;b&gt;failure&lt;/b&gt;');
       expect(page.location.replace).not.toHaveBeenCalled();
@@ -436,14 +479,14 @@ describe('SearchHandler', () => {
         throw new Error('Cannot <b>observe</b>');
       });
 
-      handler.searchXstream();
+      start();
 
-      expect(manager.findXstreamMatch).not.toHaveBeenCalled();
+      expect(findMatch()).not.toHaveBeenCalled();
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).toHaveBeenCalledTimes(1);
       const message = jest.mocked(Notifier.error).mock.calls[0][0];
-      expect(message).toContain('Airtel Xstream match failed for &quot;Dune&quot;');
+      expect(message).toContain(`${provider.label} match failed for &quot;${TITLE}&quot;`);
       expect(message).toContain('Cannot &lt;b&gt;observe&lt;/b&gt;');
       expect(fakeDocument.count).toBe(0);
       expect(page.count).toBe(0);
@@ -453,12 +496,12 @@ describe('SearchHandler', () => {
 
   describe('cancellation', () => {
     it('cancels when the search box is edited', () => {
-      handler.searchXstream();
+      start();
 
-      fakeDocument.dispatch('input', { target: new FakeElement(SEARCH_INPUT_ID) });
+      fakeDocument.dispatch('input', { target: new FakeElement(provider.inputId) });
       reachDeadline();
 
-      expect(manager.findXstreamMatch).toHaveBeenCalledTimes(1);
+      expect(findMatch()).toHaveBeenCalledTimes(1);
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(fakeDocument.count).toBe(0);
       expect(page.count).toBe(0);
@@ -467,24 +510,28 @@ describe('SearchHandler', () => {
     });
 
     it('keeps waiting when another field is edited', () => {
-      handler.searchXstream();
+      start();
 
       fakeDocument.dispatch('input', { target: new FakeElement('another-field') });
       reachDeadline();
 
-      expect(manager.findXstreamMatch).toHaveBeenCalledTimes(2);
+      expect(findMatch()).toHaveBeenCalledTimes(2);
     });
 
-    it('cancels when a rendered grid or hero result is selected without intercepting the click', () => {
+    it('cancels when a rendered result is selected without intercepting the click', () => {
       const preventDefault = jest.fn();
       const stopPropagation = jest.fn();
 
-      handler.searchXstream();
+      start();
 
-      fakeDocument.dispatch('click', { target: new FakeElement('', true), preventDefault, stopPropagation });
+      fakeDocument.dispatch('click', {
+        target: new FakeElement('', provider.resultSelector),
+        preventDefault,
+        stopPropagation,
+      });
       reachDeadline();
 
-      expect(manager.findXstreamMatch).toHaveBeenCalledTimes(1);
+      expect(findMatch()).toHaveBeenCalledTimes(1);
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(preventDefault).not.toHaveBeenCalled();
       expect(stopPropagation).not.toHaveBeenCalled();
@@ -492,21 +539,21 @@ describe('SearchHandler', () => {
     });
 
     it('keeps waiting when a click misses every result link', () => {
-      handler.searchXstream();
+      start();
 
       fakeDocument.dispatch('click', { target: new FakeElement() });
       reachDeadline();
 
-      expect(manager.findXstreamMatch).toHaveBeenCalledTimes(2);
+      expect(findMatch()).toHaveBeenCalledTimes(2);
     });
 
     it.each(['pagehide', 'popstate', 'hashchange'])('cancels on %s', (type: string) => {
-      handler.searchXstream();
+      start();
 
       page.dispatch(type);
       reachDeadline();
 
-      expect(manager.findXstreamMatch).toHaveBeenCalledTimes(1);
+      expect(findMatch()).toHaveBeenCalledTimes(1);
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
@@ -515,7 +562,7 @@ describe('SearchHandler', () => {
     });
 
     it('releases the timer, the observation and the listeners once the match is done', () => {
-      handler.searchXstream();
+      start();
 
       reachDeadline();
 
@@ -526,24 +573,24 @@ describe('SearchHandler', () => {
     });
 
     it('ignores a late node callback after cancellation', () => {
-      handler.searchXstream();
+      start();
 
       page.dispatch('pagehide');
-      manager.findXstreamMatch.mockReturnValue(DETAIL_URL);
+      findMatch().mockReturnValue(detailUrl);
       observe.fire();
       observe.fire();
 
-      expect(manager.findXstreamMatch).toHaveBeenCalledTimes(1);
+      expect(findMatch()).toHaveBeenCalledTimes(1);
       expect(page.location.replace).not.toHaveBeenCalled();
       expect(Notifier.info).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
     });
 
     it('releases the run once even when cancelling repeats', () => {
-      handler.searchXstream();
+      start();
 
-      fakeDocument.dispatch('input', { target: new FakeElement(SEARCH_INPUT_ID) });
-      fakeDocument.dispatch('input', { target: new FakeElement(SEARCH_INPUT_ID) });
+      fakeDocument.dispatch('input', { target: new FakeElement(provider.inputId) });
+      fakeDocument.dispatch('input', { target: new FakeElement(provider.inputId) });
       page.dispatch('pagehide');
       page.dispatch('hashchange');
 
