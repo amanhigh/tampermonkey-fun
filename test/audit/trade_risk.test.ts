@@ -1,7 +1,7 @@
 import { TradeRiskPlugin } from '../../src/manager/trade_risk_plugin';
 import { IKiteRepo } from '../../src/repo/kite';
-import { GttRefreshEvent } from '../../src/models/gtt';
-import { Order, OrderType } from '../../src/models/kite';
+import { GttRefreshEvent } from '../../src/models/barkat/gtt';
+import { Order, OrderType } from '../../src/models/integrations/kite';
 
 describe('TradeRiskPlugin', () => {
   let plugin: TradeRiskPlugin;

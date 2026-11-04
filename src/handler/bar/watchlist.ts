@@ -1,9 +1,9 @@
 import { BaseBar, IBaseBar } from './base';
-import { BarId, BarStatus } from '../../models/bar';
-import { BucketSummary, ALL_WATCH_CATEGORIES, WatchCategoryId } from '../../models/watch';
+import { BarId, BarStatus } from '../../models/presentation/bar';
+import { BucketSummary, ALL_WATCH_CATEGORIES, WatchCategoryId } from '../../models/barkat/market/watch';
 import { IPaintManager } from '../../manager/paint';
 import { IFilterManager } from '../../manager/filter';
-import { DomainEventType } from '../../models/domain_event';
+import { DomainEventType } from '../../models/barkat/domain_event';
 
 /**
  * Compact watchlist bar displaying category filter chips.

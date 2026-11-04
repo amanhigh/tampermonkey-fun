@@ -1,7 +1,7 @@
 import { ISearchManager } from '../manager/search';
 import { ISeerManager } from '../manager/seer';
-import { Constants } from '../models/constant';
-import { SEARCH_PROVIDERS, SearchProvider } from '../models/search';
+import { Constants } from '../models/shared/constant';
+import { SEARCH_PROVIDERS, SearchProvider } from '../models/integrations/search';
 import { escapeHtml } from '../util/html';
 import { Notifier } from '../util/notify';
 

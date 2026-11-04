@@ -6,7 +6,7 @@ import { Factory } from '../../src/core/factory';
 import { RunSeer, SeerApp } from '../../src/core/seer';
 import { ISearchHandler } from '../../src/handler/search';
 import { ISeerHandler } from '../../src/handler/seer';
-import { SearchProvider } from '../../src/models/search';
+import { SearchProvider } from '../../src/models/integrations/search';
 
 /** Origin of the Seerr detail pages. */
 const SEERR_ORIGIN = 'http://seerr.media.lan';

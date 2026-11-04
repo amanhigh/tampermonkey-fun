@@ -1,9 +1,9 @@
 import { DomManager, IDomManager } from '../../src/manager/dom';
-import { TickerArea, TickerVisibility } from '../../src/models/dom';
+import { TickerArea, TickerVisibility } from '../../src/models/presentation/dom';
 import { IWaitUtil } from '../../src/util/wait';
 import { ITickerManager } from '../../src/manager/ticker';
-import { Constants } from '../../src/models/constant';
-import { Ticker } from '../../src/models/ticker';
+import { Constants } from '../../src/models/shared/constant';
+import { Ticker } from '../../src/models/barkat/market/ticker';
 
 // Mock jQuery globally
 const mockTextFn = jest.fn();

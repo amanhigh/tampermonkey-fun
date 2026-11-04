@@ -1,6 +1,6 @@
 // ── Alert Ticker Types ──
 
-import { PaginationMetadata } from './api';
+import { PaginationMetadata } from '../../shared/api';
 
 /** Alert ticker type: PRIMARY is the canonical alert-bearing ticker; SECONDARY is a lookup alias. */
 export type AlertTickerType = 'PRIMARY' | 'SECONDARY';

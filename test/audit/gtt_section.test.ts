@@ -1,5 +1,5 @@
 import { GttAuditSection } from '../../src/handler/gtt_section';
-import { IAudit, AuditResult } from '../../src/models/audit';
+import { IAudit, AuditResult } from '../../src/models/barkat/audit/audit';
 import { ITickerHandler } from '../../src/handler/ticker';
 import { IKiteManager } from '../../src/manager/kite';
 import { IUIUtil } from '../../src/util/ui';

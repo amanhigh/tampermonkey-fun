@@ -1,4 +1,4 @@
-import { JournalTimeframe } from './journal';
+import { JournalTimeframe } from '../barkat/journal';
 
 // ── OS / Screenshot Types ──
 

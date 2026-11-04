@@ -1,8 +1,8 @@
 import { StyleManager, IStyleManager } from '../../src/manager/style';
 import { ITimeFrameManager } from '../../src/manager/timeframe';
 import { WaitUtil } from '../../src/util/wait';
-import { TickerTimeframe, Timeframe } from '../../src/models/timeframe';
-import { Constants } from '../../src/models/constant';
+import { TickerTimeframe, Timeframe } from '../../src/models/barkat/market/timeframe';
+import { Constants } from '../../src/models/shared/constant';
 
 // Mock jQuery
 const mockJQueryElement = {

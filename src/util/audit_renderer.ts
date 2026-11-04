@@ -1,5 +1,5 @@
-import { AuditResult } from '../models/audit';
-import { Constants } from '../models/constant';
+import { AuditResult } from '../models/barkat/audit/audit';
+import { Constants } from '../models/shared/constant';
 import { IUIUtil } from '../util/ui';
 import { IAuditSection } from '../handler/audit_section';
 

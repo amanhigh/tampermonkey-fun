@@ -1,8 +1,8 @@
 import '../style/seer.less';
 import { ISearchHandler } from '../handler/search';
 import { ISeerHandler } from '../handler/seer';
-import { Constants } from '../models/constant';
-import { SEARCH_PROVIDERS, SearchProvider } from '../models/search';
+import { Constants } from '../models/shared/constant';
+import { SEARCH_PROVIDERS, SearchProvider } from '../models/integrations/search';
 import { Factory } from './factory';
 
 /** Origin of the Seerr detail pages that carry the panel. */

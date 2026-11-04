@@ -1,5 +1,5 @@
-import { Constants } from '../models/constant';
-import { DashboardTickerChangedEvent } from '../models/events';
+import { Constants } from '../models/shared/constant';
+import { DashboardTickerChangedEvent } from '../models/shared/events';
 
 /**
  * Interface for managing cross-site dashboard synchronization.

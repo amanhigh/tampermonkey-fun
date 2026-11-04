@@ -1,5 +1,5 @@
-import { Constants } from '../models/constant';
-import { GttCreateEvent, GttDeleteEvent, GttRefreshEvent } from '../models/gtt';
+import { Constants } from '../models/shared/constant';
+import { GttCreateEvent, GttDeleteEvent, GttRefreshEvent } from '../models/barkat/gtt';
 
 /**
  * Interface for Kite repository operations

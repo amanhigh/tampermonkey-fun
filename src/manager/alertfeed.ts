@@ -1,6 +1,6 @@
-import { AlertFeedEvent } from '../models/alertfeed';
-import { Constants } from '../models/constant';
-import { WatchCategoryId } from '../models/watch';
+import { AlertFeedEvent } from '../models/barkat/alert/alertfeed';
+import { Constants } from '../models/shared/constant';
+import { WatchCategoryId } from '../models/barkat/market/watch';
 import { IAlertTickerManager } from './alert_ticker';
 import { ICategoryManager } from './category';
 import { IDisplayManager } from './display';

@@ -2,10 +2,10 @@ import { DisplayManager, IDisplayManager } from '../../src/manager/display';
 import { ICategoryManager } from '../../src/manager/category';
 import { IRecentManager } from '../../src/manager/recent';
 import { ITickerManager } from '../../src/manager/ticker';
-import { DisplayState } from '../../src/models/display';
-import { Constants } from '../../src/models/constant';
-import { ApiError } from '../../src/models/api_error';
-import { WatchCategory, WatchCategoryId } from '../../src/models/watch';
+import { DisplayState } from '../../src/models/presentation/display';
+import { Constants } from '../../src/models/shared/constant';
+import { ApiError } from '../../src/models/shared/api_error';
+import { WatchCategory, WatchCategoryId } from '../../src/models/barkat/market/watch';
 
 describe('DisplayManager', () => {
   let displayManager: IDisplayManager;

@@ -1,4 +1,4 @@
-import { Ticker } from '../../src/models/ticker';
+import { Ticker } from '../../src/models/barkat/market/ticker';
 
 describe('Ticker', () => {
   describe('qualifiedName', () => {

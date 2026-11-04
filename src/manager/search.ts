@@ -1,11 +1,11 @@
-import { ISeerClient } from '../client/seer';
+import { ISeerClient } from '../client/integrations/seer';
 import {
   SEARCH_CONSTANTS,
   SEARCH_PROVIDERS,
   SearchMarker,
   SearchProvider,
   SearchProviderConfig,
-} from '../models/search';
+} from '../models/integrations/search';
 import { canonicalSeerDetailPath } from '../util/seer';
 
 /**

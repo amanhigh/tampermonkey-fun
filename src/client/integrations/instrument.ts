@@ -1,5 +1,5 @@
-import { InvestingResponse } from '../models/investing';
-import { BaseClient, IBaseClient } from './base';
+import { InvestingResponse } from '../../models/integrations/investing';
+import { BaseClient, IBaseClient } from '../base';
 
 /**
  * Client for the public Investing.com instrument search API.

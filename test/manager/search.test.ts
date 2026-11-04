@@ -1,7 +1,7 @@
-import { ISeerClient } from '../../src/client/seer';
+import { ISeerClient } from '../../src/client/integrations/seer';
 import { ISearchManager, SearchManager } from '../../src/manager/search';
-import { ApiError } from '../../src/models/api_error';
-import { SearchProvider } from '../../src/models/search';
+import { ApiError } from '../../src/models/shared/api_error';
+import { SearchProvider } from '../../src/models/integrations/search';
 
 /** Detail route used by the search-url tests. */
 const MOVIE_ROUTE = '/movie/603';

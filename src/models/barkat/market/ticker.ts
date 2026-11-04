@@ -1,6 +1,6 @@
 // ── Enums matching Go models/barkat/ticker.go ──
 
-import { PaginationMetadata } from './api';
+import { PaginationMetadata } from '../../shared/api';
 import { TickerTimeframe } from './timeframe';
 
 /** Broad ticker classification. */
@@ -28,7 +28,7 @@ export enum TickerTrend {
   DOWNTREND = 'DOWNTREND',
 }
 
-import { AlertTicker } from './alert_ticker';
+import { AlertTicker } from '../alert/alert_ticker';
 
 // ── Primary Ticker Class ──
 

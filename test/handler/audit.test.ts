@@ -1,11 +1,11 @@
 import { AuditHandler } from '../../src/handler/audit';
 import { AuditSectionRegistry } from '../../src/util/audit_registry';
 import { IUIUtil } from '../../src/util/ui';
-import { AlertState } from '../../src/models/alert';
-import { Constants } from '../../src/models/constant';
+import { AlertState } from '../../src/models/barkat/alert/alert';
+import { Constants } from '../../src/models/shared/constant';
 import { IAlertTickerHandler } from '../../src/handler/alert_ticker';
 import { IDomManager } from '../../src/manager/dom';
-import { DomainEventType } from '../../src/models/domain_event';
+import { DomainEventType } from '../../src/models/barkat/domain_event';
 import { ISubscriber } from '../../src/manager/event_bus';
 
 // Mock jQuery globally for DOM operations

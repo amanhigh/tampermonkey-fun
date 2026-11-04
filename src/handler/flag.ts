@@ -1,6 +1,6 @@
 import { ICategoryManager } from '../manager/category';
 import { IDomManager } from '../manager/dom';
-import { FlagCategoryId } from '../models/flag';
+import { FlagCategoryId } from '../models/barkat/market/flag';
 
 /**
  * Handles flag-related operations and UI updates

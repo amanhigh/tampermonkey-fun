@@ -1,5 +1,5 @@
-import { BaseEvent } from './events';
-import { Order } from './kite';
+import { BaseEvent } from '../shared/events';
+import { Order } from '../integrations/kite';
 
 /**
  * Event for creating new GTT orders

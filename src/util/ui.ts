@@ -1,4 +1,4 @@
-import { BAR_CLASS, BarId } from '../models/bar';
+import { BAR_CLASS, BarId } from '../models/presentation/bar';
 
 /**
  * Interface for UI building operations

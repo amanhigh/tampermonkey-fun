@@ -5,7 +5,7 @@ import {
   SearchMarker,
   SearchProvider,
   SearchProviderConfig,
-} from '../models/search';
+} from '../models/integrations/search';
 import { escapeHtml } from '../util/html';
 import { Notifier } from '../util/notify';
 import { IObserveUtil } from '../util/observer';

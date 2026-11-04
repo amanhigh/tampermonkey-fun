@@ -1,11 +1,11 @@
-import { Constants } from '../models/constant';
-import { BarkatTickerAnalysis } from '../models/barkat';
+import { Constants } from '../models/shared/constant';
+import { BarkatTickerAnalysis } from '../models/barkat/market/analysis';
 import { BaseClient, IBaseClient, wrapClientError } from './base';
 
 /**
  * Transport client for the Barkat API.
  * Request/response contract, accept semantics and policy are owned by the
- * Barkat backend (see models/barkat.ts); this layer only transports payloads.
+ * Barkat backend (see models/barkat/market/analysis.ts); this layer only transports payloads.
  */
 export interface IBarkatClient extends IBaseClient {
   /**

@@ -1,6 +1,6 @@
 import { DashboardSyncManager, IDashboardSyncManager } from '../../src/manager/dashboard_sync';
-import { DashboardTickerChangedEvent } from '../../src/models/events';
-import { Constants } from '../../src/models/constant';
+import { DashboardTickerChangedEvent } from '../../src/models/shared/events';
+import { Constants } from '../../src/models/shared/constant';
 
 // Mock GM
 (global as any).GM = {

@@ -1,5 +1,5 @@
-import { Constants } from '../models/constant';
-import { DomainEventType } from '../models/domain_event';
+import { Constants } from '../models/shared/constant';
+import { DomainEventType } from '../models/barkat/domain_event';
 import { Notifier } from '../util/notify';
 import { IDomainEventConsumer, IPublisher, ISubscriber } from './event_bus';
 

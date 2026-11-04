@@ -1,19 +1,19 @@
 /* eslint-disable max-lines */
 // FIXME: Group models/manager/handler into feature sub-packages (barkat/, journal/, audit/) instead of flat files.
-import { InvestingClient, IInvestingClient } from '../client/investing';
+import { InvestingClient, IInvestingClient } from '../client/integrations/investing';
 import { ImdbHandler, IImdbHandler } from '../handler/imdb';
 import { ISeerHandler, SeerHandler } from '../handler/seer';
 import { ISearchHandler, SearchHandler } from '../handler/search';
-import { KiteClient, IKiteClient } from '../client/kite';
-import { JournalClient, IJournalClient } from '../client/journal';
-import { OsClient, IOsClient } from '../client/os';
-import { TickerClient, ITickerClient } from '../client/ticker';
-import { AlertTickerClient, IAlertTickerClient } from '../client/alert_ticker';
-import { IPriceAlertClient, PriceAlertClient } from '../client/price_alert';
-import { IAuditClient, AuditClient } from '../client/audit';
-import { InstrumentClient, IInstrumentClient } from '../client/instrument';
+import { KiteClient, IKiteClient } from '../client/integrations/kite';
+import { JournalClient, IJournalClient } from '../client/kohan/journal';
+import { OsClient, IOsClient } from '../client/kohan/os';
+import { TickerClient, ITickerClient } from '../client/kohan/ticker';
+import { AlertTickerClient, IAlertTickerClient } from '../client/kohan/alert_ticker';
+import { IPriceAlertClient, PriceAlertClient } from '../client/kohan/price_alert';
+import { IAuditClient, AuditClient } from '../client/kohan/audit';
+import { InstrumentClient, IInstrumentClient } from '../client/integrations/instrument';
 import { IBarkatClient, BarkatClient } from '../client/barkat';
-import { ISeerClient, SeerClient } from '../client/seer';
+import { ISeerClient, SeerClient } from '../client/integrations/seer';
 import { IBarkatManager, BarkatManager } from '../manager/barkat';
 import { UIUtil, IUIUtil } from '../util/ui';
 import { ObserveUtil, IObserveUtil } from '../util/observer';

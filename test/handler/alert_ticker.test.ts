@@ -3,7 +3,7 @@ import { IInvestingManager } from '../../src/manager/investing';
 import { IAlertTickerManager } from '../../src/manager/alert_ticker';
 import { ISmartPrompt, SmartPromptResponseType } from '../../src/util/smart';
 import { IDomManager } from '../../src/manager/dom';
-import { Instrument } from '../../src/models/investing';
+import { Instrument } from '../../src/models/integrations/investing';
 
 // Mock Notifier
 jest.mock('../../src/util/notify', () => ({

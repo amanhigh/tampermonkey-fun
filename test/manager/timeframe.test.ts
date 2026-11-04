@@ -2,12 +2,12 @@ import { TimeFrameManager, ITimeFrameManager } from '../../src/manager/timeframe
 import { ITickerManager } from '../../src/manager/ticker';
 import { IDomManager } from '../../src/manager/dom';
 import { IPublisher } from '../../src/manager/event_bus';
-import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/ticker';
-import { ApiError } from '../../src/models/api_error';
-import { Constants } from '../../src/models/constant';
+import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/barkat/market/ticker';
+import { ApiError } from '../../src/models/shared/api_error';
+import { Constants } from '../../src/models/shared/constant';
 import { Notifier } from '../../src/util/notify';
-import { Sequence, TickerTimeframe, TMN_SEQUENCE, SMN_SEQUENCE, YR_SEQUENCE } from '../../src/models/timeframe';
-import { DomainEventType } from '../../src/models/domain_event';
+import { Sequence, TickerTimeframe, TMN_SEQUENCE, SMN_SEQUENCE, YR_SEQUENCE } from '../../src/models/barkat/market/timeframe';
+import { DomainEventType } from '../../src/models/barkat/domain_event';
 
 // Mock jQuery with simplified approach - avoid complex interface typing
 const mockJQuery = jest.fn();

@@ -2,8 +2,8 @@ import { IDomManager } from '../manager/dom';
 import { IRecentManager } from '../manager/recent';
 import { ISyncUtil } from '../util/sync';
 import { IDomainEventConsumer, ISubscriber } from '../manager/event_bus';
-import { DomainEventType } from '../models/domain_event';
-import { Constants } from '../models/constant';
+import { DomainEventType } from '../models/barkat/domain_event';
+import { Constants } from '../models/shared/constant';
 
 export interface ITickerChangeHandler extends IDomainEventConsumer {
   onTickerChange(): void;

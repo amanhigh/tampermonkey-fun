@@ -1,14 +1,14 @@
 import { AlertBar, IAlertBar, AlertBarData } from '../../../src/handler/bar/alert';
-import { AlertTicker } from '../../../src/models/alert_ticker';
+import { AlertTicker } from '../../../src/models/barkat/alert/alert_ticker';
 import { IDomManager } from '../../../src/manager/dom';
 import { IAlertTickerManager } from '../../../src/manager/alert_ticker';
 import { ITickerManager } from '../../../src/manager/ticker';
-import { Ticker } from '../../../src/models/ticker';
+import { Ticker } from '../../../src/models/barkat/market/ticker';
 import { IUIUtil } from '../../../src/util/ui';
 import { ISubscriber } from '../../../src/manager/event_bus';
-import { DomainEventType } from '../../../src/models/domain_event';
-import { ApiError, wrapClientError } from '../../../src/models/api_error';
-import { BarId, BAR_CLASS, BarStatus } from '../../../src/models/bar';
+import { DomainEventType } from '../../../src/models/barkat/domain_event';
+import { ApiError, wrapClientError } from '../../../src/models/shared/api_error';
+import { BarId, BAR_CLASS, BarStatus } from '../../../src/models/presentation/bar';
 
 // ── Constants ──
 

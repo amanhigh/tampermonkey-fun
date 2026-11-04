@@ -1,5 +1,5 @@
 import { JournalHandler } from '../../src/handler/journal';
-import { IOsClient } from '../../src/client/os';
+import { IOsClient } from '../../src/client/kohan/os';
 import { IJournalManager } from '../../src/manager/journal';
 import { ISmartPrompt, SmartChoiceGroup, SmartPromptResponseType } from '../../src/util/smart';
 import { IUIUtil } from '../../src/util/ui';
@@ -9,9 +9,9 @@ import { DomManager } from '../../src/manager/dom';
 import { ICategoryManager } from '../../src/manager/category';
 import { ITimeFrameManager } from '../../src/manager/timeframe';
 import { IJournalSyncHandler } from '../../src/handler/journal_sync';
-import { JournalActionType } from '../../src/models/journal';
-import { Constants } from '../../src/models/constant';
-import { TickerTimeframe, Sequence } from '../../src/models/timeframe';
+import { JournalActionType } from '../../src/models/barkat/journal';
+import { Constants } from '../../src/models/shared/constant';
+import { TickerTimeframe, Sequence } from '../../src/models/barkat/market/timeframe';
 import { Notifier } from '../../src/util/notify';
 
 jest.mock('../../src/util/notify', () => ({

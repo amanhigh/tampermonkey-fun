@@ -1,5 +1,5 @@
-import { Constants } from '../../src/models/constant';
-import { IPriceAlertClient, PriceAlertClient } from '../../src/client/price_alert';
+import { Constants } from '../../src/models/shared/constant';
+import { IPriceAlertClient, PriceAlertClient } from '../../src/client/kohan/price_alert';
 
 // Mock the BaseClient's makeRequest method
 jest.mock('../../src/client/base', () => {

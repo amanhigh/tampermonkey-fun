@@ -115,7 +115,7 @@ The Seer userscript runs on `http://seerr.media.lan/*`, on `https://www.airtelxs
 -   **Captured on click**: each of the three buttons acts on the pathname captured when it is clicked and resolves its own target fresh at that moment; Delete additionally requires the route to be media-record verified as described in [Seer Deletion](#seer-deletion). Search never waits for that visibility. The two search buttons share the lifecycle and title rules of [Seer Xstream Search](#seer-xstream-search), and the provider sections below only add what differs per provider.
 
 ## Seer Xstream Search
-The authoritative description of the search lifecycle and title rules shared by both search buttons — `▶️ Xtreme` for Airtel Xstream and `▶️ Binge` for Tata Play Binge — and of the search assistant they arm. The provider section below only adds what differs from these rules.
+The authoritative description of the search lifecycle and title rules shared by both search buttons — `▶️ Xstream` for Airtel Xstream and `▶️ Binge` for Tata Play Binge — and of the search assistant they arm. The provider section below only adds what differs from these rules.
 
 -   **Supported route required**: a click on any other live route does nothing — no lookup, no tab and no notification.
 -   **Title fallback**: the first usable title of the Seer detail response is searched on the clicked provider — `title` then `originalTitle` for movies, `name` then `originalName` for tv, trimmed with blank values skipped. The title is resolved fresh on every click; nothing is preloaded.

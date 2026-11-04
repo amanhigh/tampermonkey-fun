@@ -1,6 +1,6 @@
 import { AuditRenderer } from '../../src/util/audit_renderer';
 import { IAuditSection } from '../../src/handler/audit_section';
-import { AuditResult } from '../../src/models/audit';
+import { AuditResult } from '../../src/models/barkat/audit/audit';
 import { IUIUtil } from '../../src/util/ui';
 
 interface MockJQuery {

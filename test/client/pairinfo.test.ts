@@ -1,4 +1,4 @@
-import { PairInfo } from '../../src/models/alert';
+import { PairInfo } from '../../src/models/barkat/alert/alert';
 
 describe('PairInfo', () => {
   describe('constructor validation', () => {

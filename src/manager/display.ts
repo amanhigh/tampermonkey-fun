@@ -1,7 +1,7 @@
-import { DisplayState, DisplayInfo } from '../models/display';
-import { Constants } from '../models/constant';
-import { Color } from '../models/color';
-import { ApiError } from '../models/api_error';
+import { DisplayState, DisplayInfo } from '../models/presentation/display';
+import { Constants } from '../models/shared/constant';
+import { Color } from '../models/presentation/color';
+import { ApiError } from '../models/shared/api_error';
 import { ICategoryManager } from './category';
 import { IRecentManager } from './recent';
 import { ITickerManager } from './ticker';

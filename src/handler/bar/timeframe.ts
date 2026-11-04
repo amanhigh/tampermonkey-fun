@@ -1,7 +1,7 @@
 import { BaseBar, IBaseBar } from './base';
-import { BarId, BarIndicatorUpdate, BarStatus } from '../../models/bar';
-import { DomainEventType } from '../../models/domain_event';
-import { TickerTimeframe, TimeframeInfo } from '../../models/timeframe';
+import { BarId, BarIndicatorUpdate, BarStatus } from '../../models/presentation/bar';
+import { DomainEventType } from '../../models/barkat/domain_event';
+import { TickerTimeframe, TimeframeInfo } from '../../models/barkat/market/timeframe';
 import { ITimeFrameManager } from '../../manager/timeframe';
 import { IBarkatManager } from '../../manager/barkat';
 import { IDomManager } from '../../manager/dom';
