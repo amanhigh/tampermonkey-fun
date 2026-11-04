@@ -82,6 +82,12 @@ export const SEARCH_CONSTANTS = Object.freeze({
   }),
 });
 
+/** Channel preference of a Tata Play Binge result: Chaupal wins over other matching channels. */
+export const BINGE_CHANNEL_PREFERENCE = Object.freeze({
+  selector: '.card-provider-logo img[alt]',
+  label: 'Chaupal',
+});
+
 /** Settings of every provider search page, keyed by provider. */
 export const SEARCH_PROVIDERS: Readonly<Record<SearchProvider, SearchProviderConfig>> = {
   [SearchProvider.XSTREAM]: {

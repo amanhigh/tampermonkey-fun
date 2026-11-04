@@ -27,6 +27,12 @@ const HALO_URL = `${AIRTEL}/tv-shows/halo/HOTSTAR_DTH_TVSHOW_1971308176`;
 /** Verified Binge movie result destination of the fixture title. */
 const BINGE_AVATAR_URL = `${BINGE}/watch/movies/avatar/3617`;
 
+/** Live Chaupal listing of the fixture title, which must win over the Zee5 listing. */
+const MAURH_CHAUPAL_URL = `${BINGE}/watch/movies/maurh/3841544`;
+
+/** Live Zee5 listing of the fixture title, which loses to the Chaupal listing. */
+const MAURH_ZEE5_URL = `${BINGE}/watch/movies/maurh/2654494`;
+
 /** Element stand-in covering the DOM surface read by the result matcher. */
 class FakeNode {
   parentElement: FakeNode | null = null;
@@ -50,8 +56,12 @@ class FakeNode {
     return this;
   }
 
-  /** Match a single class selector against the direct children. */
+  /** Match a single class selector, or the channel logo image, against the direct children. */
   querySelector(selector: string): FakeNode | null {
+    if (selector === '.card-provider-logo img[alt]') {
+      const logo = this.children.find((child) => child.className === 'card-provider-logo');
+      return logo?.children.find((child) => child.getAttribute('alt') !== null) ?? null;
+    }
     const name = selector.match(/\.([\w-]+)/)?.[1] ?? selector;
     return this.children.find((child) => child.className === name) ?? null;
   }
@@ -100,14 +110,16 @@ function heroAnchor(href: string, title?: string): FakeNode {
   return anchor;
 }
 
-/** Binge listing anchor whose poster alt text labels the result. */
+/** Binge listing anchor whose poster alt text labels the result and logo alt text names its channel. */
 function bingeAnchor(href: string, alt?: string, logoAlt?: string): FakeNode {
   const anchor = new FakeNode({ href });
   if (alt !== undefined) {
     anchor.append(new FakeNode({ alt }, 'card-image'));
   }
   if (logoAlt !== undefined) {
-    anchor.append(new FakeNode({ alt: logoAlt }, 'provider-logo'));
+    const logo = new FakeNode({}, 'card-provider-logo');
+    logo.append(new FakeNode({ alt: logoAlt }));
+    anchor.append(logo);
   }
   return anchor;
 }
@@ -121,6 +133,24 @@ function match(root: FakeResultRoot | FakeNode, title: string): string | undefin
 function bingeMatch(root: FakeResultRoot | FakeNode, title: string): string | undefined {
   return manager.findMatch(SearchProvider.BINGE, root as unknown as ParentNode, title);
 }
+
+/** Ordering cases of the two live Maurh listings: the Chaupal destination must win either way. */
+const MAURH_ORDERING: Array<[string, Array<[string, string]>]> = [
+  [
+    'before Zee5',
+    [
+      [MAURH_CHAUPAL_URL, 'Chaupal'],
+      [MAURH_ZEE5_URL, 'Zee5'],
+    ],
+  ],
+  [
+    'after Zee5',
+    [
+      [MAURH_ZEE5_URL, 'Zee5'],
+      [MAURH_CHAUPAL_URL, 'Chaupal'],
+    ],
+  ],
+];
 
 /** Settings that distinguish the two provider search urls under test. */
 interface UrlCase {
@@ -357,6 +387,68 @@ describe('SearchManager', () => {
 
       expect(bingeMatch(matched, 'Avatar')).toBe(BINGE_AVATAR_URL);
       expect(bingeMatch(logoOnly, 'Avatar')).toBeUndefined();
+    });
+
+    it.each(MAURH_ORDERING)(
+      'prefers the Chaupal destination when it is listed %s',
+      (_case: string, entries: Array<[string, string]>) => {
+        const root = new FakeResultRoot(
+          [],
+          [],
+          entries.map(([href, channel]) => bingeAnchor(href, 'Maurh', channel))
+        );
+
+        expect(bingeMatch(root, 'Maurh')).toBe(MAURH_CHAUPAL_URL);
+      }
+    );
+
+    it('compares the channel logo label trimmed and case-insensitively', () => {
+      const root = new FakeResultRoot([], [], [
+        bingeAnchor('/watch/movies/maurh/222', 'Maurh', '  chAuPaL '),
+        bingeAnchor('/watch/movies/maurh/111', 'Maurh', 'Zee5'),
+      ]);
+
+      expect(bingeMatch(root, 'Maurh')).toBe(`${BINGE}/watch/movies/maurh/222`);
+    });
+
+    it('returns undefined when several Chaupal destinations match', () => {
+      const root = new FakeResultRoot([], [], [
+        bingeAnchor('/watch/movies/maurh/222', 'Maurh', 'Chaupal'),
+        bingeAnchor('/watch/movies/maurh/333', 'Maurh', 'Chaupal'),
+      ]);
+
+      expect(bingeMatch(root, 'Maurh')).toBeUndefined();
+    });
+
+    it('ignores a Chaupal logo on a result that does not match the title', () => {
+      const root = new FakeResultRoot([], [], [
+        bingeAnchor('/watch/movies/dune/9', 'Dune', 'Chaupal'),
+        bingeAnchor('/watch/movies/avatar/3617', 'Avatar', 'Netflix'),
+      ]);
+
+      expect(bingeMatch(root, 'Avatar')).toBe(BINGE_AVATAR_URL);
+    });
+
+    it.each([
+      ['an insecure origin', 'http://www.tataplaybinge.com/watch/movies/avatar/222'],
+      ['a foreign origin', 'https://www.tataplaybinge.com.evil.test/watch/movies/avatar/222'],
+    ])('ignores a Chaupal logo on a result with %s', (_case: string, href: string) => {
+      const root = new FakeResultRoot([], [], [
+        bingeAnchor(href, 'Avatar', 'Chaupal'),
+        bingeAnchor('/watch/movies/avatar/3617', 'Avatar', 'Netflix'),
+      ]);
+
+      expect(bingeMatch(root, 'Avatar')).toBe(BINGE_AVATAR_URL);
+    });
+
+    it('collapses duplicate Chaupal destinations before requiring uniqueness', () => {
+      const root = new FakeResultRoot([], [], [
+        bingeAnchor('/watch/movies/maurh/222', 'Maurh', 'Chaupal'),
+        bingeAnchor('/watch/movies/maurh/222?utm=grid', 'Maurh', 'Chaupal'),
+        bingeAnchor('/watch/movies/maurh/111', 'Maurh', 'Zee5'),
+      ]);
+
+      expect(bingeMatch(root, 'Maurh')).toBe(`${BINGE}/watch/movies/maurh/222`);
     });
 
     it.each(['movies', 'shows', 'series'])('accepts the verified %s detail route', (kind: string) => {

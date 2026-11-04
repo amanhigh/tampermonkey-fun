@@ -1,5 +1,6 @@
 import { ISeerClient } from '../client/integrations/seer';
 import {
+  BINGE_CHANNEL_PREFERENCE,
   SEARCH_CONSTANTS,
   SEARCH_PROVIDERS,
   SearchMarker,
@@ -23,6 +24,9 @@ export interface ISearchManager {
 
   /**
    * Find the one provider search result whose title or slug matches the media exactly.
+   *
+   * A provider with a channel preference first keeps the matching results of its preferred
+   * channel, and only falls back to every matching result when none carries that channel.
    * @param provider - Provider whose rendered search results are read
    * @param root - Document holding the rendered provider search results
    * @param title - Media title displayed by Seer
@@ -68,20 +72,34 @@ function readResultAnchors(root: ParentNode, provider: SearchProviderConfig): El
 
 /**
  * Collect the defined destinations of the result links that match the expected label and return the
- * sole distinct one, so nothing or an ambiguous pair reports undefined.
+ * sole distinct one, so nothing or an ambiguous pair reports undefined. Binge matching results of its
+ * preferred channel are kept unless none carries it, in which case every matching destination counts.
  * @param anchors - Rendered result links of one provider search page
  * @param expected - Normalized title the rendered results must match
  * @param provider - Provider whose readers resolve one link to its defined detail url
  */
 function findUniqueDestination(anchors: Element[], expected: string, provider: SearchProvider): string | undefined {
   const destinations = new Set<string>();
+  const preferred = new Set<string>();
   anchors.forEach((anchor) => {
     const destination = readMatch(anchor, expected, provider);
-    if (destination !== undefined) {
-      destinations.add(destination);
+    if (destination === undefined) {
+      return;
+    }
+    destinations.add(destination);
+    if (provider === SearchProvider.BINGE && matchesBingeChannel(anchor)) {
+      preferred.add(destination);
     }
   });
-  return destinations.size === 1 ? [...destinations][0] : undefined;
+
+  const candidates = preferred.size > 0 ? preferred : destinations;
+  return candidates.size === 1 ? [...candidates][0] : undefined;
+}
+
+/** Whether the channel logo of one Binge result link carries the preferred Chaupal channel label. */
+function matchesBingeChannel(anchor: Element): boolean {
+  const label = anchor.querySelector(BINGE_CHANNEL_PREFERENCE.selector)?.getAttribute('alt') ?? '';
+  return label.trim().toLowerCase() === BINGE_CHANNEL_PREFERENCE.label.toLowerCase();
 }
 
 /**
