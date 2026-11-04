@@ -78,7 +78,6 @@ export class SearchHandler implements ISearchHandler {
    */
   private watch(config: SearchProviderConfig): void {
     const signal = this.controller.signal;
-    const resultSelector = config.resultSelectors.join(', ');
     document.addEventListener(
       'input',
       (event) => {
@@ -91,7 +90,7 @@ export class SearchHandler implements ISearchHandler {
     document.addEventListener(
       'click',
       (event) => {
-        if (event.target instanceof Element && event.target.closest(resultSelector) !== null) {
+        if (event.target instanceof Element && event.target.closest(config.resultSelector) !== null) {
           this.cleanup();
         }
       },

@@ -184,7 +184,7 @@ const SEARCH_CASES: SearchCase[] = [
   {
     name: 'Xstream',
     buttonId: Constants.UI.IDS.SEER.XSTREAM_BUTTON,
-    idleLabel: '▶️ Xtreme',
+    idleLabel: '▶️ Xstream',
     openingLabel: 'Opening Xstream…',
     url: XSTREAM_URL,
     provider: SearchProvider.XSTREAM,
@@ -330,7 +330,7 @@ describe('SeerHandler', () => {
       expect(fakeDocument.createdWithTag('div')).toHaveLength(1);
       expect(fakeDocument.createdWithTag('button')).toHaveLength(3);
       expect(manager.hasMediaRecord).toHaveBeenCalledTimes(1);
-      expect(xstreamButton()?.textContent).toBe('▶️ Xtreme');
+      expect(xstreamButton()?.textContent).toBe('▶️ Xstream');
       expect(xstreamButton()?.disabled).toBe(false);
       expect(bingeButton()?.textContent).toBe('▶️ Binge');
       expect(bingeButton()?.disabled).toBe(false);
@@ -707,7 +707,7 @@ describe('SeerHandler', () => {
 
       expect(openInTabMock).toHaveBeenCalledTimes(1);
       expect(openInTabMock).toHaveBeenCalledWith(XSTREAM_URL, { active: true, setParent: true });
-      expect(xstreamButton()?.textContent).toBe('▶️ Xtreme');
+      expect(xstreamButton()?.textContent).toBe('▶️ Xstream');
       expect(xstreamButton()?.disabled).toBe(false);
       expect(bingeButton()?.textContent).toBe('Opening Binge…');
       expect(bingeButton()?.disabled).toBe(true);

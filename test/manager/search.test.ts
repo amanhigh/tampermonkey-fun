@@ -65,15 +65,13 @@ class FakeResultRoot {
     private readonly listing: FakeNode[] = []
   ) {}
 
-  /** Answer the scoped selectors the matchers issue. */
+  /** Answer a combined selector list by collecting every matching fixture group. */
   querySelectorAll(selector: string): FakeNode[] {
-    if (selector.includes('cs-grid-tile')) {
-      return this.grid;
-    }
-    if (selector.includes('hero-banner')) {
-      return this.hero;
-    }
-    return selector.includes('listing-block') ? this.listing : [];
+    return [
+      ...(selector.includes('cs-grid-tile') ? this.grid : []),
+      ...(selector.includes('hero-banner') ? this.hero : []),
+      ...(selector.includes('listing-block') ? this.listing : []),
+    ];
   }
 }
 

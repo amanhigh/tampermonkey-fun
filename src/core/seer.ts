@@ -8,9 +8,9 @@ import { Factory } from './factory';
 /** Origin of the Seerr detail pages that carry the panel. */
 const SEERR_ORIGIN = new URL(Constants.SEER.BASE_URL).origin;
 
-/** Provider search page selected by its exact origin, shared with the provider data. */
+/** Provider search page selected by its exact origin, keyed through the provider data. */
 const SEARCH_ORIGINS: ReadonlyMap<string, SearchProvider> = new Map(
-  Object.values(SEARCH_PROVIDERS).map((config) => [config.origin, config.button.provider])
+  Object.values(SearchProvider).map((provider) => [SEARCH_PROVIDERS[provider].origin, provider])
 );
 
 export class SeerApp {

@@ -1,7 +1,7 @@
 import { ISearchManager } from '../manager/search';
 import { ISeerManager } from '../manager/seer';
 import { Constants } from '../models/constant';
-import { SEARCH_PROVIDERS, SearchButtonConfig, SearchProvider } from '../models/search';
+import { SEARCH_PROVIDERS, SearchProvider } from '../models/search';
 import { escapeHtml } from '../util/html';
 import { Notifier } from '../util/notify';
 
@@ -119,7 +119,8 @@ export class SeerHandler implements ISeerHandler {
   };
 
   /** Resolve the provider search url of the live route, then open it in a foreground tab. */
-  private async openSearch(button: SearchButtonConfig): Promise<void> {
+  private async openSearch(provider: SearchProvider): Promise<void> {
+    const button = SEARCH_PROVIDERS[provider].button;
     if (this.searchBusy.has(button.id)) {
       return;
     }
@@ -129,18 +130,18 @@ export class SeerHandler implements ISeerHandler {
     }
 
     this.searchBusy.add(button.id);
-    this.updateButton(button.id, button.openingLabel, true);
+    this.updateButton(button.id, `Opening ${button.label}…`, true);
     try {
-      const url = await this.search.getUrl(button.provider, pathname);
+      const url = await this.search.getUrl(provider, pathname);
       if (this.gone || window.location.pathname !== pathname) {
         return;
       }
       await (GM.openInTab as GMOpenInTab)(url, { active: true, setParent: true });
     } catch (error) {
-      this.reportSearchFailure(button.failureLabel, pathname, error);
+      this.reportSearchFailure(button.label, pathname, error);
     } finally {
       this.searchBusy.delete(button.id);
-      this.updateButton(button.id, button.label, false);
+      this.updateButton(button.id, `▶️ ${button.label}`, false);
     }
   }
 
@@ -236,10 +237,11 @@ export class SeerHandler implements ISeerHandler {
     const panel = document.createElement('div');
     panel.id = Constants.UI.IDS.SEER.PANEL;
     panel.className = 'seer-panel';
-    this.searchButtons().forEach((button) => {
+    [SearchProvider.XSTREAM, SearchProvider.BINGE].forEach((provider) => {
+      const button = SEARCH_PROVIDERS[provider].button;
       panel.appendChild(
-        this.createButton(button.id, 'seer-panel__search', button.label, () => {
-          void this.openSearch(button);
+        this.createButton(button.id, 'seer-panel__search', `▶️ ${button.label}`, () => {
+          void this.openSearch(provider);
         })
       );
     });
@@ -252,11 +254,6 @@ export class SeerHandler implements ISeerHandler {
     deleteButton.hidden = true;
     panel.appendChild(deleteButton);
     document.body.appendChild(panel);
-  }
-
-  /** Provider search buttons mounted beside Delete, in the shared provider order. */
-  private searchButtons(): SearchButtonConfig[] {
-    return [SEARCH_PROVIDERS[SearchProvider.XSTREAM].button, SEARCH_PROVIDERS[SearchProvider.BINGE].button];
   }
 
   /** Build one panel button with its shared and modifier classes. */

@@ -63,7 +63,7 @@ const TITLE_READERS: Readonly<Record<SearchProvider, (anchor: Element) => string
 
 /** Read the result links rendered in the document of one provider search page. */
 function readResultAnchors(root: ParentNode, provider: SearchProviderConfig): Element[] {
-  return provider.resultSelectors.flatMap((selector) => Array.from(root.querySelectorAll(selector)));
+  return Array.from(root.querySelectorAll(provider.resultSelector));
 }
 
 /**
