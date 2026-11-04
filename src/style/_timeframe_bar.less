@@ -1,7 +1,7 @@
 // ── Timeframe Bar Styles ──
 // Dedicated bar below the display card showing clickable timeframe chips.
-// Chips use escaped native `title` tooltips; the Barkat severity badge is an
-// absolute corner overlay so it adds no layout width or height.
+// Chips use escaped native `title` tooltips; the Barkat recommendation/mismatch
+// badge is an absolute corner overlay so it adds no layout width or height.
 
 // Per-timeframe active colors — Heatmap Spectrum (long = warm, short = cool)
 @tf-color-yr: #f87171;    // Coral Red   — hottest
@@ -15,7 +15,7 @@
 @tf-color-inactive: rgba(255, 255, 255, 0.3);
 @tf-bg-inactive: rgba(255, 255, 255, 0.06);
 
-// Severity badge fallback for monochrome glyph rendering; emoji go their own way
+// Badge color fallback for monochrome glyph rendering; emoji go their own way
 @tf-badge-fallback: #f8fafc;
 
 // ============================================
@@ -87,8 +87,8 @@
     // ============================================
     // Reuses the shared indicator badge class (`BAR_INDICATOR_BADGE_CLASS`)
     // already styled in `_bar.less`; only the chip corner positioning is local,
-    // so the overlay adds no layout width or height. Severity is carried by the
-    // glyph itself (⚠️ warning, ❌ fail), so no per-verdict class is needed.
+    // so the overlay adds no layout width or height. The recommendation/mismatch
+    // meaning is carried by the glyph itself, so no per-verdict class is needed.
     .aman-bar__badge {
         position: absolute;
         top: -4px;

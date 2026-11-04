@@ -19,11 +19,14 @@ const CLICK_HINT = 'Click to add/remove.';
 /** Namespaced jQuery event namespace for delegated bindings on this bar. */
 const EVENT_NS = 'bar-tf';
 
-/** Severity glyph per assessed, non-`pass` verdict; `pass` carries no badge. */
+/** Severity glyph per assessed, non-`pass` verdict on a selected chip. */
 const VERDICT_GLYPHS = {
   warning: '\u26A0\uFE0F',
   fail: '\u274C',
 } as const;
+
+/** Green tick for an unselected chip that Barkat assesses as `pass` (preferred). */
+const PREFERRED_GLYPH = '\u2705';
 
 // ── Data contract ──
 
@@ -57,9 +60,10 @@ export type ITimeFrameHandler = IBaseBar;
  *
  * Barkat analysis is a secondary, read-only overlay delivered through the shared
  * optional-indicator lifecycle: chips paint from the selection load alone (while
- * the bar is hidden during that mandatory phase), then the verdict badge and
- * native `title` hint are updated in place once the analysis resolves. Verdict
- * decoration policy lives in {@link loadIndicators}. Full analysis detail lives in
+ * the bar is hidden during that mandatory phase), then badges and native `title`
+ * hints are updated in place once the analysis resolves — but only on chips whose
+ * selection mismatches the verdict. The single authoritative policy table lives in
+ * {@link loadIndicators}. Full analysis detail lives in
  * the side panel, so no metric-level markup is rendered here. Analysis failure is
  * quiet (no notifications) and only marks indicators unavailable through BaseBar.
  * Review-exempt ticker types skip this phase entirely (see
@@ -133,15 +137,23 @@ export class TimeFrameBar extends BaseBar<TimeFrameBarData> implements ITimeFram
 
   /**
    * Loads the Barkat analysis for the captured ticker and emits in-place
-   * badge/title updates for every assessed `warning` or `fail` row, independent of
-   * whether that chip is selected: the glyph carries the severity and the native
-   * title states the painted selection, the verdict, and the click action that
-   * toggles it. `pass` rows and unassessed timeframes (YR, DL never appear as
-   * analysis rows) are left undecorated, so an all-`pass` analysis yields no
-   * updates at all. Verdict policy is backend-owned (see `models/barkat.ts`); the
-   * update shape and in-place application contract belong to
-   * {@link BarIndicatorUpdate} / `BaseBar`. A rejection propagates to BaseBar,
-   * which marks indicators unavailable quietly.
+   * badge/title updates only for chips whose selection *mismatches* their verdict.
+   * This method owns the single authoritative badge policy for the bar:
+   *
+   * | Selected | Verdict          | Badge | Native title                                      |
+   * | -------- | ---------------- | ----- | ------------------------------------------------- |
+   * | yes      | `pass`           | none  | generic click hint (untouched)                    |
+   * | yes      | `warning`        | ⚠️    | `Selected · Barkat: warning. Click to remove.`    |
+   * | yes      | `fail`           | ❌    | `Selected · Barkat: fail. Click to remove.`       |
+   * | no       | `pass`           | ✅    | `Not selected · Barkat: preferred. Click to add.` |
+   * | no       | `warning`/`fail` | none  | generic click hint (untouched)                    |
+   *
+   * Matching chips are therefore left completely undecorated, and a fully matching
+   * analysis yields no updates at all. Unassessed timeframes (YR, DL) never appear
+   * as analysis rows, so they keep the generic hint too. Verdict values are
+   * backend-owned (see `models/barkat.ts`); the update shape and in-place
+   * application contract belong to {@link BarIndicatorUpdate} / `BaseBar`. A
+   * rejection propagates to BaseBar, which marks indicators unavailable quietly.
    *
    * @inheritdoc
    */
@@ -151,17 +163,18 @@ export class TimeFrameBar extends BaseBar<TimeFrameBarData> implements ITimeFram
     const updates: BarIndicatorUpdate[] = [];
 
     for (const row of analysis.timeframes) {
-      if (row.status === 'pass') {
+      const isActive = activeCodes.includes(row.timeframe);
+      const isPreferred = row.status === 'pass';
+      if (isActive === isPreferred) {
         continue;
       }
 
-      const isActive = activeCodes.includes(row.timeframe);
-      const selection = isActive ? 'Selected' : 'Not selected';
-      const action = isActive ? 'remove' : 'add';
       updates.push({
         selector: `.${this.bemElement('chip')}[${this.bemDataAttr('code')}="${row.timeframe}"]`,
-        badge: VERDICT_GLYPHS[row.status],
-        title: `${selection} \u00B7 Barkat: ${row.status}. Click to ${action}.`,
+        badge: row.status === 'pass' ? PREFERRED_GLYPH : VERDICT_GLYPHS[row.status],
+        title: isActive
+          ? `Selected \u00B7 Barkat: ${row.status}. Click to remove.`
+          : 'Not selected \u00B7 Barkat: preferred. Click to add.',
       });
     }
 
@@ -248,9 +261,11 @@ export class TimeFrameBar extends BaseBar<TimeFrameBarData> implements ITimeFram
 
   /**
    * Builds one chip button with its escaped native tooltip.
-   * The severity badge is an absolutely positioned overlay added later in place
+   * The mismatch badge is an absolutely positioned overlay added later in place
    * through the optional-indicator lifecycle, so the row keeps its original
    * width and height and the chip node is never replaced.
+   * Painted chips always start from the generic hint; only mismatching chips are
+   * re-titled after the analysis resolves (see {@link loadIndicators}).
    * @param code - Timeframe code (YR, SMN, etc.)
    * @param isActive - Whether this chip is currently active in the backend
    */
