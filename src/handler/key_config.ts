@@ -1,6 +1,6 @@
 import { Constants } from '../models/shared/constant';
-import { ITimeFrameManager } from '../manager/timeframe';
-import { IStyleManager } from '../manager/style';
+import { ITimeFrameManager } from '../manager/barkat/market/timeframe';
+import { IStyleManager } from '../manager/presentation/style';
 import { IWatchListHandler } from '../handler/watchlist';
 import { IFlagHandler } from '../handler/flag';
 import { IJournalHandler } from './journal';

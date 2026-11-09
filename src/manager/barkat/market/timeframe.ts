@@ -1,0 +1,240 @@
+import {
+  Timeframe,
+  TickerTimeframe,
+  Sequence,
+  TimeframeInfo,
+  TMN_SEQUENCE,
+  SMN_SEQUENCE,
+  YR_SEQUENCE,
+} from '../../../models/barkat/market/timeframe';
+import { Constants } from '../../../models/shared/constant';
+import { DomainEventType } from '../../../models/barkat/domain_event';
+import { Notifier } from '../../../util/notify';
+import { ITickerManager } from './ticker';
+import { IDomManager } from '../../presentation/dom';
+import { IPublisher } from '../../core/event_bus';
+import { ApiError } from '../../../models/shared/api_error';
+import { isTimeframeReviewExempt } from '../../../models/barkat/market/ticker';
+
+// ── Catalog & Lookups ──
+// Ordered catalog of all timeframe metadata with pre-built lookup maps.
+// Single source of truth for ranking, toolbar position, style, and display order.
+
+const TIMEFRAMES: readonly Timeframe[] = [
+  { code: TickerTimeframe.YR, label: '12M', rank: 0, toolbar: 7, style: 'H' },
+  { code: TickerTimeframe.SMN, label: '6M', rank: 1, toolbar: 6, style: 'I' },
+  { code: TickerTimeframe.TMN, label: '3M', rank: 2, toolbar: 5, style: 'T' },
+  { code: TickerTimeframe.MN, label: 'M', rank: 3, toolbar: 4, style: 'VH' },
+  { code: TickerTimeframe.WK, label: 'W', rank: 4, toolbar: 3, style: 'H' },
+  { code: TickerTimeframe.DL, label: 'D', rank: 5, toolbar: 2, style: 'I' },
+];
+
+const TIMEFRAME_BY_CODE: ReadonlyMap<TickerTimeframe, Timeframe> = new Map(TIMEFRAMES.map((tf) => [tf.code, tf]));
+const TIMEFRAME_BY_TOOLBAR: ReadonlyMap<number, Timeframe> = new Map(TIMEFRAMES.map((tf) => [tf.toolbar, tf]));
+const SEQUENCE_BY_TIMEFRAME: ReadonlyMap<TickerTimeframe, Sequence> = new Map([
+  [TickerTimeframe.YR, YR_SEQUENCE],
+  [TickerTimeframe.SMN, SMN_SEQUENCE],
+  [TickerTimeframe.TMN, TMN_SEQUENCE],
+]);
+
+/**
+ * Filters timeframe codes to only those in the catalog, preserving catalog order.
+ * Unknown/invalid codes are silently dropped.
+ */
+function toSupportedTimeframes(codes: TickerTimeframe[]): Timeframe[] {
+  const active = new Set(codes);
+  return TIMEFRAMES.filter((tf) => active.has(tf.code));
+}
+
+// ── Public Interface ──
+// Methods are named without "forCurrentTicker" suffix because the manager
+// always operates on the current TradingView ticker.
+
+export interface ITimeFrameManager {
+  /** Load the timeframe info (sorted active codes plus review
+   * exemption) for the given ticker in a single backend read.
+   * Falls back to TMN_SEQUENCE with `reviewExempt: false` when backend
+   * read fails.
+   * @param ticker Ticker symbol to resolve
+   */
+  getTimeFrameInfo(ticker: string): Promise<TimeframeInfo>;
+
+  /** Toggle a timeframe code for the current ticker on/off in the backend.
+   * Publishes TICKER_TIMEFRAMES_CHANGED on success.
+   * @throws Error if backend update fails */
+  toggleTimeframe(code: TickerTimeframe): Promise<TickerTimeframe[]>;
+
+  /** Get the derived Sequence (4-tuple) for the current ticker.
+   * @param timeframe - When supplied with `YR`, `SMN`, or `TMN`, returns
+   *   the corresponding `YR_SEQUENCE`, `SMN_SEQUENCE`, or `TMN_SEQUENCE`
+   *   directly, bypassing backend auto-derivation.  When omitted the normal
+   *   AUTO behaviour applies:
+   *   - Empty/unsupported list → TMN_SEQUENCE (TMN, MN, WK, DL)
+   *   - Contains DL            → TMN_SEQUENCE (TMN, MN, WK, DL)
+   *   - Contains WK, no DL     → SMN_SEQUENCE (SMN, TMN, MN, WK)
+   *   - Lacks WK and DL        → YR_SEQUENCE (YR, SMN, TMN, MN) */
+  getSequence(timeframe?: TickerTimeframe): Promise<Sequence>;
+
+  /** Apply timeframe to chart at given position in the auto-derived Sequence.
+   * @param position - Position in Sequence (0-3)
+   * @returns True if successfully applied */
+  apply(position: number): Promise<boolean>;
+
+  /** Apply a timeframe code directly through the chart toolbar.
+   * @param code - Timeframe code to apply
+   * @returns True if successfully applied */
+  applyTimeframe(code: TickerTimeframe): boolean;
+
+  /** Get currently selected timeframe from the DOM toolbar.
+   * @returns Current timeframe metadata */
+  getCurrentConfig(): Timeframe;
+}
+
+// ── Manager Implementation ──
+
+/**
+ * Manages all timeframe operations and state for trading view.
+ *
+ * Owns the timeframe catalog (codes, labels, ranks, toolbar positions, styles),
+ * sequence derivation, and default timeframe policies.
+ *
+ * The Sequence is derived from the ticker's allowed timeframes:
+ *   - Contains DL     → TMN_SEQUENCE (TMN, MN, WK, DL)
+ *   - Contains WK     → SMN_SEQUENCE (SMN, TMN, MN, WK)
+ *   - Lacks WK and DL → YR_SEQUENCE (YR, SMN, TMN, MN)
+ *   - Fallback        → TMN_SEQUENCE (TMN, MN, WK, DL)
+ *
+ * Hotkeys 1-4 apply timeframes by position in the derived Sequence
+ * rather than from a fixed sequence.
+ */
+export class TimeFrameManager implements ITimeFrameManager {
+  constructor(
+    private readonly tickerManager: ITickerManager,
+    private readonly domManager: IDomManager,
+    private readonly publisher: IPublisher
+  ) {}
+
+  // ── Backend Operations ──
+
+  /** @inheritdoc */
+  async getTimeFrameInfo(ticker: string): Promise<TimeframeInfo> {
+    try {
+      const record = await this.tickerManager.getTicker(ticker);
+      const active = toSupportedTimeframes(record.timeframes as TickerTimeframe[]);
+      return {
+        activeCodes: active.map((tf) => tf.code),
+        reviewExempt: isTimeframeReviewExempt(record.type),
+      };
+    } catch (error) {
+      // Untracked ticker (404) — silently fall back to defaults, no warning
+      if (ApiError.isNotFoundError(error)) {
+        return { activeCodes: [...TMN_SEQUENCE], reviewExempt: false };
+      }
+      Notifier.warn(`getTimeFrameInfo: ${(error as Error).message}. Falling back to default timeframes.`);
+      return { activeCodes: [...TMN_SEQUENCE], reviewExempt: false };
+    }
+  }
+
+  /** @inheritdoc */
+  async toggleTimeframe(code: TickerTimeframe): Promise<TickerTimeframe[]> {
+    const tvTicker = this.domManager.getTicker();
+
+    // Get current timeframes via shared method (handles untracked/404 silently)
+    const current = [...(await this.getActiveTimeframes())];
+    const isActive = current.includes(code);
+    const updated = isActive ? current.filter((c) => c !== code) : [...current, code];
+    const sorted = toSupportedTimeframes(updated).map((tf) => tf.code);
+
+    // Persist to backend; silently skip update for untracked tickers
+    try {
+      await this.tickerManager.updateTicker(tvTicker, { timeframes: sorted });
+    } catch (error) {
+      if (ApiError.isNotFoundError(error)) {
+        return sorted;
+      }
+      throw error;
+    }
+
+    void this.publisher.publish({
+      type: DomainEventType.TICKER_TIMEFRAMES_CHANGED,
+      ticker: tvTicker,
+    });
+
+    return sorted;
+  }
+
+  /** @inheritdoc */
+  async getSequence(timeframe?: TickerTimeframe): Promise<Sequence> {
+    const explicitSequence = timeframe === undefined ? undefined : SEQUENCE_BY_TIMEFRAME.get(timeframe);
+    if (explicitSequence) {
+      return explicitSequence;
+    }
+    // AUTO behaviour — derive from backend timeframes
+    const codes = await this.getActiveTimeframes();
+    if (codes.length === 0 || codes.includes(TickerTimeframe.DL)) {
+      return TMN_SEQUENCE;
+    }
+    if (codes.includes(TickerTimeframe.WK)) {
+      return SMN_SEQUENCE;
+    }
+    return YR_SEQUENCE;
+  }
+
+  // ── DOM Operations ──
+
+  /** @inheritdoc */
+  async apply(position: number): Promise<boolean> {
+    const resolvedSequence = await this.getSequence();
+    if (position < 0 || position >= resolvedSequence.length) {
+      return false;
+    }
+    const code = resolvedSequence[position];
+    return this.applyTimeframe(code);
+  }
+
+  /** @inheritdoc */
+  applyTimeframe(code: TickerTimeframe): boolean {
+    const config = TIMEFRAME_BY_CODE.get(code);
+    if (!config) {
+      return false;
+    }
+    return this.clickTimeFrameToolbar(config.toolbar);
+  }
+
+  /** @inheritdoc */
+  getCurrentConfig(): Timeframe {
+    const $activeButton = $(`${Constants.DOM.HEADER.TIMEFRAME}[aria-checked="true"]`);
+
+    if ($activeButton.length === 0) {
+      Notifier.warn('Timeframe Detection Failed - Using Monthly as Fallback');
+      return TIMEFRAME_BY_CODE.get(TickerTimeframe.MN)!;
+    }
+
+    const index = $(Constants.DOM.HEADER.TIMEFRAME).index($activeButton);
+    return TIMEFRAME_BY_TOOLBAR.get(index) ?? TIMEFRAME_BY_CODE.get(TickerTimeframe.MN)!;
+  }
+
+  // ── Private Helpers ──
+
+  /**
+   * Resolve the active backend timeframe codes for the current DOM ticker,
+   * sorted by catalog order, through a single `getTimeFrameInfo` read.
+   * Shared by `toggleTimeframe` and `getSequence`.
+   */
+  private async getActiveTimeframes(): Promise<readonly TickerTimeframe[]> {
+    const selection = await this.getTimeFrameInfo(this.domManager.getTicker());
+    return selection.activeCodes;
+  }
+
+  /**
+   * Click toolbar button for timeframe selection.
+   */
+  private clickTimeFrameToolbar(toolbarPosition: number): boolean {
+    const $timeframe = $(`${Constants.DOM.HEADER.TIMEFRAME}:nth(${toolbarPosition})`);
+    if ($timeframe.length === 0) {
+      return false;
+    }
+    $timeframe.click();
+    return true;
+  }
+}

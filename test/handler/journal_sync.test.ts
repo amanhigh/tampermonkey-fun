@@ -1,6 +1,6 @@
 import { JournalSyncHandler } from '../../src/handler/journal_sync';
-import { IJournalManager } from '../../src/manager/journal';
-import { IDomManager } from '../../src/manager/dom';
+import { IJournalManager } from '../../src/manager/barkat/workflow/journal';
+import { IDomManager } from '../../src/manager/presentation/dom';
 import { Constants } from '../../src/models/shared/constant';
 import { JournalOpenEvent } from '../../src/models/shared/events';
 import { TickerTimeframe } from '../../src/models/barkat/market/timeframe';

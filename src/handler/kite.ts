@@ -1,13 +1,13 @@
-import { IKiteManager } from '../manager/kite';
-import { IDomManager } from '../manager/dom';
+import { IKiteManager } from '../manager/integrations/kite';
+import { IDomManager } from '../manager/presentation/dom';
 import { IWaitUtil } from '../util/wait';
 import { Constants } from '../models/shared/constant';
 import { Order, GttApiResponse } from '../models/integrations/kite';
 import { GttCreateEvent, GttRefreshEvent, GttDeleteEvent } from '../models/barkat/gtt';
 import { Notifier } from '../util/notify';
-import { ITradingViewManager } from '../manager/tv';
+import { ITradingViewManager } from '../manager/presentation/tv';
 import { IUIUtil } from '../util/ui';
-import { IDomainEventConsumer, ISubscriber } from '../manager/event_bus';
+import { IDomainEventConsumer, ISubscriber } from '../manager/core/event_bus';
 import { DomainEventType } from '../models/barkat/domain_event';
 
 /**

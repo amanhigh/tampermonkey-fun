@@ -2,13 +2,13 @@
  * Interface and implementation for handling watchlist-related events and updates
  */
 
-import { ICategoryManager } from '../manager/category';
-import { ITradingViewWatchlistManager } from '../manager/watchlist';
+import { ICategoryManager } from '../manager/barkat/market/category';
+import { ITradingViewWatchlistManager } from '../manager/presentation/watchlist';
 import { ISyncUtil } from '../util/sync';
 import { TickerArea, TickerVisibility } from '../models/presentation/dom';
 import { WatchCategoryId } from '../models/barkat/market/watch';
-import { IDomManager } from '../manager/dom';
-import { IDomainEventConsumer, ISubscriber } from '../manager/event_bus';
+import { IDomManager } from '../manager/presentation/dom';
+import { IDomainEventConsumer, ISubscriber } from '../manager/core/event_bus';
 import { DomainEventType } from '../models/barkat/domain_event';
 import { Constants } from '../models/shared/constant';
 

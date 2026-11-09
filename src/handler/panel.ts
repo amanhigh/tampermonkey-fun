@@ -1,6 +1,6 @@
 import { ISmartPrompt, SmartPromptResponseType } from '../util/smart';
 import { ITickerHandler } from './ticker';
-import { IDomManager } from '../manager/dom';
+import { IDomManager } from '../manager/presentation/dom';
 
 export interface IPanelHandler {
   showPanel(): Promise<void>;

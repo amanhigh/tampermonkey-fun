@@ -1,7 +1,7 @@
-import { AlertFeedManager, IAlertFeedManager } from '../../src/manager/alertfeed';
-import { IDisplayManager } from '../../src/manager/display';
-import { ICategoryManager } from '../../src/manager/category';
-import { IAlertTickerManager } from '../../src/manager/alert_ticker';
+import { AlertFeedManager, IAlertFeedManager } from '../../src/manager/barkat/alert/alertfeed';
+import { IDisplayManager } from '../../src/manager/presentation/display';
+import { ICategoryManager } from '../../src/manager/barkat/market/category';
+import { IAlertTickerManager } from '../../src/manager/barkat/alert/alert_ticker';
 import { DisplayState } from '../../src/models/presentation/display';
 import { AlertTicker } from '../../src/models/barkat/alert/alert_ticker';
 import { TickerCategory } from '../../src/models/barkat/market/category';

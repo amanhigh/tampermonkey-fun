@@ -6,7 +6,7 @@ jest.mock('../../src/util/notify', () => ({
 }));
 
 import { SearchHandler } from '../../src/handler/search';
-import { ISearchManager } from '../../src/manager/search';
+import { ISearchManager } from '../../src/manager/integrations/search';
 import { Constants } from '../../src/models/shared/constant';
 import { Notifier } from '../../src/util/notify';
 import { IObserveUtil } from '../../src/util/observer';

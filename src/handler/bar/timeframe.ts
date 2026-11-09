@@ -2,9 +2,9 @@ import { BaseBar, IBaseBar } from './base';
 import { BarId, BarIndicatorUpdate, BarStatus } from '../../models/presentation/bar';
 import { DomainEventType } from '../../models/barkat/domain_event';
 import { TickerTimeframe, TimeframeInfo } from '../../models/barkat/market/timeframe';
-import { ITimeFrameManager } from '../../manager/timeframe';
-import { IBarkatManager } from '../../manager/barkat';
-import { IDomManager } from '../../manager/dom';
+import { ITimeFrameManager } from '../../manager/barkat/market/timeframe';
+import { IBarkatManager } from '../../manager/barkat/market/barkat';
+import { IDomManager } from '../../manager/presentation/dom';
 import { escapeHtml } from '../../util/html';
 import { Notifier } from '../../util/notify';
 

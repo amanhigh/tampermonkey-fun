@@ -1,4 +1,4 @@
-import { DashboardSyncManager, IDashboardSyncManager } from '../../src/manager/dashboard_sync';
+import { DashboardSyncManager, IDashboardSyncManager } from '../../src/manager/core/dashboard_sync';
 import { DashboardTickerChangedEvent } from '../../src/models/shared/events';
 import { Constants } from '../../src/models/shared/constant';
 

@@ -1,8 +1,8 @@
 import { Notifier } from '../util/notify';
-import { IDomManager } from '../manager/dom';
-import { ITickerManager, TickerManager } from '../manager/ticker';
-import { ILifecycleManager } from '../manager/lifecycle';
-import { IStyleManager } from '../manager/style';
+import { IDomManager } from '../manager/presentation/dom';
+import { ITickerManager, TickerManager } from '../manager/barkat/market/ticker';
+import { ILifecycleManager } from '../manager/barkat/workflow/lifecycle';
+import { IStyleManager } from '../manager/presentation/style';
 import { IAlertTickerHandler } from './alert_ticker';
 import { TickerTimeframe, TMN_SEQUENCE, SMN_SEQUENCE } from '../models/barkat/market/timeframe';
 import { TickerType, TickerState, TickerTrend } from '../models/barkat/market/ticker';

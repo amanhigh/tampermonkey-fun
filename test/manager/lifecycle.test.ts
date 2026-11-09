@@ -1,12 +1,12 @@
-import { LifecycleManager, ILifecycleManager, StartTrackingRequest } from '../../src/manager/lifecycle';
+import { LifecycleManager, ILifecycleManager, StartTrackingRequest } from '../../src/manager/barkat/workflow/lifecycle';
 import { ITickerClient } from '../../src/client/kohan/ticker';
 import { IPriceAlertClient } from '../../src/client/kohan/price_alert';
 import { PriceAlert } from '../../src/models/barkat/alert/price_alert';
 import { IInvestingClient } from '../../src/client/integrations/investing';
-import { ICategoryManager } from '../../src/manager/category';
-import { IAlertTickerManager } from '../../src/manager/alert_ticker';
-import { IAlertManager } from '../../src/manager/alert';
-import { IPublisher } from '../../src/manager/event_bus';
+import { ICategoryManager } from '../../src/manager/barkat/market/category';
+import { IAlertTickerManager } from '../../src/manager/barkat/alert/alert_ticker';
+import { IAlertManager } from '../../src/manager/barkat/alert/alert';
+import { IPublisher } from '../../src/manager/core/event_bus';
 import { DomainEventType } from '../../src/models/barkat/domain_event';
 import { Ticker, TickerType, TickerState, TickerTrend } from '../../src/models/barkat/market/ticker';
 import { TickerTimeframe } from '../../src/models/barkat/market/timeframe';

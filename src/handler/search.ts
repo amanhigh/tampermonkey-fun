@@ -1,4 +1,4 @@
-import { ISearchManager } from '../manager/search';
+import { ISearchManager } from '../manager/integrations/search';
 import { Constants } from '../models/shared/constant';
 import { escapeHtml } from '../util/html';
 import { Notifier } from '../util/notify';

@@ -7,10 +7,10 @@ import { ITickerChangeHandler } from './ticker_change';
 import { IHotkeyHandler } from './hotkey';
 import { IAlertHandler } from './alert';
 import { IJournalSyncHandler } from './journal_sync';
-import { IPaintManager } from '../manager/paint';
-import { IDomManager } from '../manager/dom';
-import { ITradingViewManager } from '../manager/tv';
-import { IDomainEventConsumer, ISubscriber, IPublisher } from '../manager/event_bus';
+import { IPaintManager } from '../manager/presentation/paint';
+import { IDomManager } from '../manager/presentation/dom';
+import { ITradingViewManager } from '../manager/presentation/tv';
+import { IDomainEventConsumer, ISubscriber, IPublisher } from '../manager/core/event_bus';
 import { DomainEventType } from '../models/barkat/domain_event';
 
 /**

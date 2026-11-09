@@ -1,8 +1,8 @@
 import { KiteHandler } from '../../src/handler/kite';
-import { IKiteManager } from '../../src/manager/kite';
+import { IKiteManager } from '../../src/manager/integrations/kite';
 import { IWaitUtil } from '../../src/util/wait';
-import { IDomManager } from '../../src/manager/dom';
-import { ITradingViewManager } from '../../src/manager/tv';
+import { IDomManager } from '../../src/manager/presentation/dom';
+import { ITradingViewManager } from '../../src/manager/presentation/tv';
 import { IUIUtil } from '../../src/util/ui';
 
 describe('KiteHandler', () => {

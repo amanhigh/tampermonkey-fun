@@ -1,5 +1,5 @@
-import { EventBus } from '../../src/manager/event_bus';
-import { TimerManager } from '../../src/manager/timer';
+import { EventBus } from '../../src/manager/core/event_bus';
+import { TimerManager } from '../../src/manager/core/timer';
 import { Constants } from '../../src/models/shared/constant';
 import { DomainEventType } from '../../src/models/barkat/domain_event';
 import { Notifier } from '../../src/util/notify';

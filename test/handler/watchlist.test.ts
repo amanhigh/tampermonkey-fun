@@ -1,10 +1,10 @@
 import { WatchListHandler, IWatchListHandler } from '../../src/handler/watchlist';
-import { ITradingViewWatchlistManager } from '../../src/manager/watchlist';
+import { ITradingViewWatchlistManager } from '../../src/manager/presentation/watchlist';
 import { ISyncUtil } from '../../src/util/sync';
-import { ICategoryManager } from '../../src/manager/category';
-import { IDomManager } from '../../src/manager/dom';
+import { ICategoryManager } from '../../src/manager/barkat/market/category';
+import { IDomManager } from '../../src/manager/presentation/dom';
 import { WatchCategoryId } from '../../src/models/barkat/market/watch';
-import { ISubscriber } from '../../src/manager/event_bus';
+import { ISubscriber } from '../../src/manager/core/event_bus';
 import { DomainEventType } from '../../src/models/barkat/domain_event';
 
 describe('WatchListHandler', () => {

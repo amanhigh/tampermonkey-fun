@@ -1,5 +1,5 @@
-import { IStyleManager } from '../manager/style';
-import { IDomManager } from '../manager/dom';
+import { IStyleManager } from '../manager/presentation/style';
+import { IDomManager } from '../manager/presentation/dom';
 import { IAlertHandler } from './alert';
 
 /**

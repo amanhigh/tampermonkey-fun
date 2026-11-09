@@ -1,5 +1,5 @@
 import { IImdbHandler } from '../handler/imdb';
-import { IImdbManager } from '../manager/imdb';
+import { IImdbManager } from '../manager/integrations/imdb';
 import { IGlobalErrorHandler } from '../handler/error';
 import { Factory } from './factory';
 

@@ -1,4 +1,4 @@
-import { AlertsPlugin } from '../../src/manager/alerts_plugin';
+import { AlertsPlugin } from '../../src/manager/barkat/audit/alerts_plugin';
 import { IAuditClient } from '../../src/client/kohan/audit';
 import { AuditExecutionResult } from '../../src/models/barkat/audit/audit_catalogue';
 

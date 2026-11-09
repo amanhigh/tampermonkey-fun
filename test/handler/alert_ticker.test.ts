@@ -1,8 +1,8 @@
 import { AlertTickerHandler } from '../../src/handler/alert_ticker';
-import { IInvestingManager } from '../../src/manager/investing';
-import { IAlertTickerManager } from '../../src/manager/alert_ticker';
+import { IInvestingManager } from '../../src/manager/integrations/investing';
+import { IAlertTickerManager } from '../../src/manager/barkat/alert/alert_ticker';
 import { ISmartPrompt, SmartPromptResponseType } from '../../src/util/smart';
-import { IDomManager } from '../../src/manager/dom';
+import { IDomManager } from '../../src/manager/presentation/dom';
 import { Instrument } from '../../src/models/integrations/investing';
 
 // Mock Notifier

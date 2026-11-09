@@ -1,0 +1,127 @@
+import { ITickerClient } from '../../../client/kohan/ticker';
+import {
+  CreateTickerRequest,
+  TickerQueryParams,
+  TickerListResponse,
+  Ticker,
+  TickerUpdateRequest,
+} from '../../../models/barkat/market/ticker';
+import { IPublisher } from '../../core/event_bus';
+import { DomainEventType } from '../../../models/barkat/domain_event';
+import { BaseManager } from '../../core/base';
+
+/** Exchange aliases that map to canonical backend-accepted values. */
+const EXCHANGE_ALIAS: Record<string, string> = {
+  'NYSE ARCA': 'AMEX',
+};
+
+/**
+ * Request type for starting to track a new primary ticker.
+ * Alias for the backend create-ticker request.
+ */
+export type StartTrackingRequest = CreateTickerRequest;
+
+/**
+ * Interface for managing primary TradingView ticker lifecycle and data.
+ *
+ * Domain methods:
+ * - markRecent → convenience over PATCH last-opened
+ * - setExchange → convenience over updateTicker
+ *
+ * Generic read/write methods mirror the backend client.
+ */
+export interface ITickerManager {
+  /**
+   * Get one primary ticker record.
+   * @param ticker - Primary ticker identity
+   * @returns Promise resolving with ticker record
+   */
+  getTicker(ticker: string): Promise<Ticker>;
+
+  /**
+   * Update mutable primary ticker metadata.
+   * @param ticker - Primary ticker identity
+   * @param data - Partial update payload
+   * @returns Promise resolving with updated ticker record
+   */
+  updateTicker(ticker: string, data: TickerUpdateRequest): Promise<Ticker>;
+
+  /**
+   * Record the current ticker as recently opened.
+   * Internally calls PATCH last_opened_at with current timestamp.
+   * @param ticker - Primary ticker identity
+   */
+  markRecent(ticker: string): Promise<void>;
+
+  /**
+   * List ALL primary tickers matching filters, auto-paginating.
+   * @param params - Query parameters
+   * @returns Promise resolving with all matching ticker records
+   */
+  listTickers(params: TickerQueryParams): Promise<Ticker[]>;
+
+  /**
+   * Set the exchange on a primary ticker.
+   * Convenience wrapping updateTicker with { exchange }.
+   * @param ticker - Primary ticker identity
+   * @param exchange - Exchange code (e.g. "NSE")
+   * @returns Promise resolving with updated ticker record
+   */
+  setExchange(ticker: string, exchange: string): Promise<Ticker>;
+}
+
+/**
+ * Manages primary TradingView ticker CRUD against the Kohan backend.
+ */
+export class TickerManager extends BaseManager implements ITickerManager {
+  constructor(
+    private readonly tickerClient: ITickerClient,
+    private readonly publisher: IPublisher
+  ) {
+    super();
+  }
+
+  /** @inheritdoc */
+  async getTicker(ticker: string): Promise<Ticker> {
+    return this.tickerClient.getTicker(ticker);
+  }
+
+  /** @inheritdoc */
+  async updateTicker(ticker: string, data: TickerUpdateRequest): Promise<Ticker> {
+    return this.tickerClient.updateTicker(ticker, data);
+  }
+
+  /** @inheritdoc */
+  async markRecent(ticker: string): Promise<void> {
+    await this.tickerClient.patchTickerLastOpened(ticker, {
+      last_opened_at: new Date().toISOString(),
+    });
+  }
+
+  /** @inheritdoc */
+  async listTickers(params: TickerQueryParams): Promise<Ticker[]> {
+    return this.listAllPages<TickerListResponse, Ticker>(
+      async (offset, limit) => this.tickerClient.listTickers({ ...params, offset, limit }),
+      (page) => page.tickers
+    );
+  }
+
+  /** @inheritdoc */
+  async setExchange(ticker: string, exchange: string): Promise<Ticker> {
+    const result = await this.tickerClient.updateTicker(ticker, { exchange });
+    void this.publisher.publish({
+      type: DomainEventType.TICKER_METADATA_CHANGED,
+      ticker,
+    });
+    return result;
+  }
+
+  /**
+   * Canonicalize a raw exchange string to a backend-accepted value.
+   * E.g. "NYSE Arca" → "AMEX".  Idempotent for already-canonical values.
+   */
+  static canonicalizeExchange(exchange: string): string {
+    const upper = exchange.toUpperCase().trim();
+    return EXCHANGE_ALIAS[upper] ?? exchange;
+  }
+}

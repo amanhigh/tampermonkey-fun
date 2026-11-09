@@ -1,7 +1,7 @@
-import { DisplayManager, IDisplayManager } from '../../src/manager/display';
-import { ICategoryManager } from '../../src/manager/category';
-import { IRecentManager } from '../../src/manager/recent';
-import { ITickerManager } from '../../src/manager/ticker';
+import { DisplayManager, IDisplayManager } from '../../src/manager/presentation/display';
+import { ICategoryManager } from '../../src/manager/barkat/market/category';
+import { IRecentManager } from '../../src/manager/barkat/market/recent';
+import { ITickerManager } from '../../src/manager/barkat/market/ticker';
 import { DisplayState } from '../../src/models/presentation/display';
 import { Constants } from '../../src/models/shared/constant';
 import { ApiError } from '../../src/models/shared/api_error';

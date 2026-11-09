@@ -1,9 +1,9 @@
 import { AlertHandler } from '../../src/handler/alert';
-import { IAlertManager } from '../../src/manager/alert';
-import { ITradingViewManager } from '../../src/manager/tv';
-import { IDomManager } from '../../src/manager/dom';
-import { ITickerManager } from '../../src/manager/ticker';
-import { IAlertTickerManager } from '../../src/manager/alert_ticker';
+import { IAlertManager } from '../../src/manager/barkat/alert/alert';
+import { ITradingViewManager } from '../../src/manager/presentation/tv';
+import { IDomManager } from '../../src/manager/presentation/dom';
+import { ITickerManager } from '../../src/manager/barkat/market/ticker';
+import { IAlertTickerManager } from '../../src/manager/barkat/alert/alert_ticker';
 import { ITickerHandler } from '../../src/handler/ticker';
 import { IAlertTickerHandler } from '../../src/handler/alert_ticker';
 import { ApiError, wrapClientError } from '../../src/models/shared/api_error';
