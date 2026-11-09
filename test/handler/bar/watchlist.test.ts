@@ -28,7 +28,7 @@
  *  - Blacklisted rendered only in expanded details
  */
 
-import { WatchlistBar, IWatchlistBar } from '../../../src/handler/bar/watchlist';
+import { WatchlistBar, IWatchlistBar } from '../../../src/handler/presentation/bar/watchlist';
 import { IPaintManager } from '../../../src/manager/presentation/paint';
 import { IFilterManager } from '../../../src/manager/presentation/filter';
 import { BucketSummary, ALL_WATCH_CATEGORIES, WatchCategoryId } from '../../../src/models/barkat/market/watch';

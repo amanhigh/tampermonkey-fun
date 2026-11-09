@@ -1,5 +1,5 @@
 import { AuditSectionRegistry } from '../../src/util/audit_registry';
-import { IAuditSection } from '../../src/handler/audit_section';
+import { IAuditSection } from '../../src/handler/barkat/audit/audit_section';
 import { IAudit } from '../../src/models/barkat/audit/audit';
 import { Constants } from '../../src/models/shared/constant';
 

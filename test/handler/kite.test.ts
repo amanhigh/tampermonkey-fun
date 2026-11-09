@@ -1,4 +1,4 @@
-import { KiteHandler } from '../../src/handler/kite';
+import { KiteHandler } from '../../src/handler/integrations/kite';
 import { IKiteManager } from '../../src/manager/integrations/kite';
 import { IWaitUtil } from '../../src/util/wait';
 import { IDomManager } from '../../src/manager/presentation/dom';

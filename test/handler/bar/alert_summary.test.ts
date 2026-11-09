@@ -16,7 +16,7 @@
  *  - Category-lookup failure still leaving No Pair rendered
  */
 
-import { AlertSummaryBar, IAlertSummaryBar } from '../../../src/handler/bar/alert_summary';
+import { AlertSummaryBar, IAlertSummaryBar } from '../../../src/handler/presentation/bar/alert_summary';
 import { IDomManager } from '../../../src/manager/presentation/dom';
 import { IAlertManager } from '../../../src/manager/barkat/alert/alert';
 import { ICategoryManager } from '../../../src/manager/barkat/market/category';

@@ -1,6 +1,6 @@
-import { StaleReviewSection } from '../../src/handler/stale_review_section';
+import { StaleReviewSection } from '../../src/handler/barkat/audit/stale_review_section';
 import { IAudit, AuditResult } from '../../src/models/barkat/audit/audit';
-import { ITickerHandler } from '../../src/handler/ticker';
+import { ITickerHandler } from '../../src/handler/barkat/market/ticker';
 import { Notifier } from '../../src/util/notify';
 
 describe('StaleReviewSection', () => {

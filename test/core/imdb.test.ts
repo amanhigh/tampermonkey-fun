@@ -3,8 +3,8 @@ jest.mock('../../src/core/factory', () => ({
 }));
 
 import { ImdbApp } from '../../src/core/imdb';
-import { IImdbHandler } from '../../src/handler/imdb';
-import { IGlobalErrorHandler } from '../../src/handler/error';
+import { IImdbHandler } from '../../src/handler/integrations/imdb';
+import { IGlobalErrorHandler } from '../../src/handler/core/error';
 import { IImdbManager } from '../../src/manager/integrations/imdb';
 
 describe('ImdbApp', () => {

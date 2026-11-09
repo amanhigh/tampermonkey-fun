@@ -1,4 +1,4 @@
-import { ImdbHandler } from '../../src/handler/imdb';
+import { ImdbHandler } from '../../src/handler/integrations/imdb';
 
 describe('ImdbHandler', () => {
   let openInTabMock: jest.Mock;

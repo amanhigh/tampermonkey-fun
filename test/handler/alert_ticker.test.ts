@@ -1,4 +1,4 @@
-import { AlertTickerHandler } from '../../src/handler/alert_ticker';
+import { AlertTickerHandler } from '../../src/handler/barkat/alert/alert_ticker';
 import { IInvestingManager } from '../../src/manager/integrations/investing';
 import { IAlertTickerManager } from '../../src/manager/barkat/alert/alert_ticker';
 import { ISmartPrompt, SmartPromptResponseType } from '../../src/util/smart';

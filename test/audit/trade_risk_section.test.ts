@@ -1,6 +1,6 @@
-import { TradeRiskSection } from '../../src/handler/trade_risk_section';
+import { TradeRiskSection } from '../../src/handler/barkat/audit/trade_risk_section';
 import { IAudit, AuditResult } from '../../src/models/barkat/audit/audit';
-import { ITickerHandler } from '../../src/handler/ticker';
+import { ITickerHandler } from '../../src/handler/barkat/market/ticker';
 import { IKiteManager } from '../../src/manager/integrations/kite';
 import { Notifier } from '../../src/util/notify';
 

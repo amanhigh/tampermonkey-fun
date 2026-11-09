@@ -1,4 +1,4 @@
-import { TimeFrameBar, ITimeFrameHandler } from '../../../src/handler/bar/timeframe';
+import { TimeFrameBar, ITimeFrameHandler } from '../../../src/handler/presentation/bar/timeframe';
 import { ITimeFrameManager } from '../../../src/manager/barkat/market/timeframe';
 import { IBarkatManager } from '../../../src/manager/barkat/market/barkat';
 import { IDomManager } from '../../../src/manager/presentation/dom';

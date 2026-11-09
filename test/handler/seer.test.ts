@@ -1,4 +1,4 @@
-import { SeerHandler } from '../../src/handler/seer';
+import { SeerHandler } from '../../src/handler/integrations/seer';
 import { ISearchManager } from '../../src/manager/integrations/search';
 import { ISeerManager } from '../../src/manager/integrations/seer';
 import { Constants } from '../../src/models/shared/constant';

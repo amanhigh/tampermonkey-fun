@@ -1,9 +1,9 @@
-import { TickerHandler } from '../../src/handler/ticker';
+import { TickerHandler } from '../../src/handler/barkat/market/ticker';
 import { IDomManager } from '../../src/manager/presentation/dom';
 import { ITickerManager } from '../../src/manager/barkat/market/ticker';
 import { ILifecycleManager } from '../../src/manager/barkat/workflow/lifecycle';
 import { IStyleManager } from '../../src/manager/presentation/style';
-import { IAlertTickerHandler } from '../../src/handler/alert_ticker';
+import { IAlertTickerHandler } from '../../src/handler/barkat/alert/alert_ticker';
 import { Notifier } from '../../src/util/notify';
 import { Ticker } from '../../src/models/barkat/market/ticker';
 

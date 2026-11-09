@@ -1,10 +1,10 @@
-import { KeyConfig, IKeyConfig } from '../../src/handler/key_config';
+import { KeyConfig, IKeyConfig } from '../../src/handler/core/key_config';
 import { ITimeFrameManager } from '../../src/manager/barkat/market/timeframe';
-import { IWatchListHandler } from '../../src/handler/watchlist';
-import { IFlagHandler } from '../../src/handler/flag';
+import { IWatchListHandler } from '../../src/handler/barkat/market/watchlist';
+import { IFlagHandler } from '../../src/handler/barkat/market/flag';
 import { IStyleManager } from '../../src/manager/presentation/style';
-import { IJournalHandler } from '../../src/handler/journal';
-import { IKiteHandler } from '../../src/handler/kite';
+import { IJournalHandler } from '../../src/handler/barkat/workflow/journal';
+import { IKiteHandler } from '../../src/handler/integrations/kite';
 
 describe('KeyConfig', () => {
   let keyConfig: IKeyConfig;

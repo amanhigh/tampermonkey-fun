@@ -1,5 +1,5 @@
-import { IGlobalErrorHandler } from '../handler/error';
-import { IPicassoHandler } from '../handler/picasso';
+import { IGlobalErrorHandler } from '../handler/core/error';
+import { IPicassoHandler } from '../handler/integrations/picasso';
 import { Factory } from './factory';
 
 export class PicassoApp {

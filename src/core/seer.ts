@@ -1,6 +1,6 @@
 import '../style/seer.less';
-import { ISearchHandler } from '../handler/search';
-import { ISeerHandler } from '../handler/seer';
+import { ISearchHandler } from '../handler/integrations/search';
+import { ISeerHandler } from '../handler/integrations/seer';
 import { Constants } from '../models/shared/constant';
 import { Factory } from './factory';
 

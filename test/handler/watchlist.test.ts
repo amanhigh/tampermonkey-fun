@@ -1,4 +1,4 @@
-import { WatchListHandler, IWatchListHandler } from '../../src/handler/watchlist';
+import { WatchListHandler, IWatchListHandler } from '../../src/handler/barkat/market/watchlist';
 import { ITradingViewWatchlistManager } from '../../src/manager/presentation/watchlist';
 import { ISyncUtil } from '../../src/util/sync';
 import { ICategoryManager } from '../../src/manager/barkat/market/category';

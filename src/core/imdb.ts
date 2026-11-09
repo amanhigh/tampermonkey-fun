@@ -1,6 +1,6 @@
-import { IImdbHandler } from '../handler/imdb';
+import { IImdbHandler } from '../handler/integrations/imdb';
 import { IImdbManager } from '../manager/integrations/imdb';
-import { IGlobalErrorHandler } from '../handler/error';
+import { IGlobalErrorHandler } from '../handler/core/error';
 import { Factory } from './factory';
 
 export class ImdbApp {

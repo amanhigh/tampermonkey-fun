@@ -1,9 +1,9 @@
-import { AuditHandler } from '../../src/handler/audit';
+import { AuditHandler } from '../../src/handler/barkat/audit/audit';
 import { AuditSectionRegistry } from '../../src/util/audit_registry';
 import { IUIUtil } from '../../src/util/ui';
 import { AlertState } from '../../src/models/barkat/alert/alert';
 import { Constants } from '../../src/models/shared/constant';
-import { IAlertTickerHandler } from '../../src/handler/alert_ticker';
+import { IAlertTickerHandler } from '../../src/handler/barkat/alert/alert_ticker';
 import { IDomManager } from '../../src/manager/presentation/dom';
 import { DomainEventType } from '../../src/models/barkat/domain_event';
 import { ISubscriber } from '../../src/manager/core/event_bus';

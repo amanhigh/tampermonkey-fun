@@ -1,9 +1,9 @@
-import { ToolbarHandler } from '../../src/handler/toolbar';
+import { ToolbarHandler } from '../../src/handler/presentation/toolbar';
 import { IUIUtil } from '../../src/util/ui';
-import { ITickerHandler } from '../../src/handler/ticker';
-import { IAlertHandler } from '../../src/handler/alert';
-import { IPanelHandler } from '../../src/handler/panel';
-import { IJournalHandler } from '../../src/handler/journal';
+import { ITickerHandler } from '../../src/handler/barkat/market/ticker';
+import { IAlertHandler } from '../../src/handler/barkat/alert/alert';
+import { IPanelHandler } from '../../src/handler/presentation/panel';
+import { IJournalHandler } from '../../src/handler/barkat/workflow/journal';
 import { IDomManager } from '../../src/manager/presentation/dom';
 import { Constants } from '../../src/models/shared/constant';
 

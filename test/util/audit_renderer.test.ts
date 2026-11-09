@@ -1,5 +1,5 @@
 import { AuditRenderer } from '../../src/util/audit_renderer';
-import { IAuditSection } from '../../src/handler/audit_section';
+import { IAuditSection } from '../../src/handler/barkat/audit/audit_section';
 import { AuditResult } from '../../src/models/barkat/audit/audit';
 import { IUIUtil } from '../../src/util/ui';
 

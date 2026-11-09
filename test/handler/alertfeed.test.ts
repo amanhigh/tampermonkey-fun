@@ -1,4 +1,4 @@
-import { AlertFeedHandler } from '../../src/handler/alertfeed';
+import { AlertFeedHandler } from '../../src/handler/barkat/alert/alertfeed';
 import { IUIUtil } from '../../src/util/ui';
 import { IDisplayManager } from '../../src/manager/presentation/display';
 import { IAlertManager } from '../../src/manager/barkat/alert/alert';

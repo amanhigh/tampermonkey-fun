@@ -1,4 +1,4 @@
-import { AlertBar, IAlertBar, AlertBarData } from '../../../src/handler/bar/alert';
+import { AlertBar, IAlertBar, AlertBarData } from '../../../src/handler/presentation/bar/alert';
 import { AlertTicker } from '../../../src/models/barkat/alert/alert_ticker';
 import { IDomManager } from '../../../src/manager/presentation/dom';
 import { IAlertTickerManager } from '../../../src/manager/barkat/alert/alert_ticker';
