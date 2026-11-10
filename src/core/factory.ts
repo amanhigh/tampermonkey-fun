@@ -1,9 +1,9 @@
 /* eslint-disable max-lines */
 // FIXME: Group models/manager/handler into feature sub-packages (barkat/, journal/, audit/) instead of flat files.
 import { InvestingClient, IInvestingClient } from '../client/integrations/investing';
-import { ImdbHandler, IImdbHandler } from '../handler/imdb';
-import { ISeerHandler, SeerHandler } from '../handler/seer';
-import { ISearchHandler, SearchHandler } from '../handler/search';
+import { ImdbHandler, IImdbHandler } from '../handler/integrations/imdb';
+import { ISeerHandler, SeerHandler } from '../handler/integrations/seer';
+import { ISearchHandler, SearchHandler } from '../handler/integrations/search';
 import { KiteClient, IKiteClient } from '../client/integrations/kite';
 import { JournalClient, IJournalClient } from '../client/kohan/journal';
 import { OsClient, IOsClient } from '../client/kohan/os';
@@ -43,58 +43,58 @@ import { IAlertTickerManager, AlertTickerManager } from '../manager/barkat/alert
 import { IInvestingManager, InvestingManager } from '../manager/integrations/investing';
 
 // Handler Imports
-import { IAlertHandler, AlertHandler } from '../handler/alert';
-import { IAlertSummaryBar, AlertSummaryBar } from '../handler/bar/alert_summary';
-import { AuditHandler, IAuditHandler } from '../handler/audit';
-import { JournalHandler, IJournalHandler } from '../handler/journal';
-import { JournalSyncHandler, IJournalSyncHandler } from '../handler/journal_sync';
-import { HotkeyHandler, IHotkeyHandler } from '../handler/hotkey';
-import { KeyConfig } from '../handler/key_config';
-import { IModifierKeyConfig, ModifierKeyConfig } from '../handler/modifier_config';
+import { IAlertHandler, AlertHandler } from '../handler/barkat/alert/alert';
+import { IAlertSummaryBar, AlertSummaryBar } from '../handler/presentation/bar/alert_summary';
+import { AuditHandler, IAuditHandler } from '../handler/barkat/audit/audit';
+import { JournalHandler, IJournalHandler } from '../handler/barkat/workflow/journal';
+import { JournalSyncHandler, IJournalSyncHandler } from '../handler/barkat/workflow/journal_sync';
+import { HotkeyHandler, IHotkeyHandler } from '../handler/core/hotkey';
+import { KeyConfig } from '../handler/core/key_config';
+import { IModifierKeyConfig, ModifierKeyConfig } from '../handler/core/modifier_config';
 
-import { IDashboardSyncHandler, DashboardSyncHandler } from '../handler/dashboard_sync';
-import { IAlertBar, AlertBar } from '../handler/bar/alert';
-import { ITimeFrameHandler, TimeFrameBar } from '../handler/bar/timeframe';
-import { IKiteHandler, KiteHandler } from '../handler/kite';
+import { IDashboardSyncHandler, DashboardSyncHandler } from '../handler/core/dashboard_sync';
+import { IAlertBar, AlertBar } from '../handler/presentation/bar/alert';
+import { ITimeFrameHandler, TimeFrameBar } from '../handler/presentation/bar/timeframe';
+import { IKiteHandler, KiteHandler } from '../handler/integrations/kite';
 import { IKiteManager, KiteManager } from '../manager/integrations/kite';
 import { IStyleManager, StyleManager } from '../manager/presentation/style';
 import { ICategoryManager, CategoryManager } from '../manager/barkat/market/category';
 import { IRecentManager, RecentManager } from '../manager/barkat/market/recent';
 import { IDashboardSyncManager, DashboardSyncManager } from '../manager/core/dashboard_sync';
 import { IDisplayManager, DisplayManager } from '../manager/presentation/display';
-import { IWatchListHandler, WatchListHandler } from '../handler/watchlist';
-import { IWatchlistBar, WatchlistBar } from '../handler/bar/watchlist';
-import { IOnLoadHandler, OnLoadHandler } from '../handler/onload';
-import { IFlagHandler, FlagHandler } from '../handler/flag';
+import { IWatchListHandler, WatchListHandler } from '../handler/barkat/market/watchlist';
+import { IWatchlistBar, WatchlistBar } from '../handler/presentation/bar/watchlist';
+import { IOnLoadHandler, OnLoadHandler } from '../handler/core/onload';
+import { IFlagHandler, FlagHandler } from '../handler/barkat/market/flag';
 import { IKiteRepo, KiteRepo } from '../repo/kite';
-import { IAlertTickerHandler, AlertTickerHandler } from '../handler/alert_ticker';
-import { ITickerHandler, TickerHandler } from '../handler/ticker';
-import { ITickerChangeHandler, TickerChangeHandler } from '../handler/ticker_change';
+import { IAlertTickerHandler, AlertTickerHandler } from '../handler/barkat/alert/alert_ticker';
+import { ITickerHandler, TickerHandler } from '../handler/barkat/market/ticker';
+import { ITickerChangeHandler, TickerChangeHandler } from '../handler/barkat/market/ticker_change';
 
-import { ICommandInputHandler, CommandInputHandler } from '../handler/command';
-import { AlertFeedHandler, IAlertFeedHandler } from '../handler/alertfeed';
-import { IGlobalErrorHandler, GlobalErrorHandler } from '../handler/error';
+import { ICommandInputHandler, CommandInputHandler } from '../handler/core/command';
+import { AlertFeedHandler, IAlertFeedHandler } from '../handler/barkat/alert/alertfeed';
+import { IGlobalErrorHandler, GlobalErrorHandler } from '../handler/core/error';
 import { IAlertFeedManager, AlertFeedManager } from '../manager/barkat/alert/alertfeed';
 import { ISeerManager, SeerManager } from '../manager/integrations/seer';
 import { ISearchManager, SearchManager } from '../manager/integrations/search';
 import { IPublisher, ISubscriber, IEventBus, EventBus, IDomainEventConsumer } from '../manager/core/event_bus';
 import { TimerManager } from '../manager/core/timer';
 import { IImdbManager, ImdbManager } from '../manager/integrations/imdb';
-import { IPanelHandler, PanelHandler } from '../handler/panel';
-import { IPicassoHandler, PicassoHandler } from '../handler/picasso';
+import { IPanelHandler, PanelHandler } from '../handler/presentation/panel';
+import { IPicassoHandler, PicassoHandler } from '../handler/integrations/picasso';
 import { PicassoApp } from './picasso';
 import { AuditSectionRegistry } from '../util/audit_registry';
 import { AlertsPlugin } from '../manager/barkat/audit/alerts_plugin';
 import { GttPlugin } from '../manager/barkat/audit/gtt_plugin';
 
 import { TradeRiskPlugin } from '../manager/barkat/audit/trade_risk_plugin';
-import { AlertsAuditSection } from '../handler/alerts_section';
-import { GttAuditSection } from '../handler/gtt_section';
+import { AlertsAuditSection } from '../handler/barkat/audit/alerts_section';
+import { GttAuditSection } from '../handler/barkat/audit/gtt_section';
 
-import { TradeRiskSection } from '../handler/trade_risk_section';
+import { TradeRiskSection } from '../handler/barkat/audit/trade_risk_section';
 import { StaleReviewPlugin } from '../manager/barkat/audit/stale_review_plugin';
-import { StaleReviewSection } from '../handler/stale_review_section';
-import { IToolbarHandler, ToolbarHandler } from '../handler/toolbar';
+import { StaleReviewSection } from '../handler/barkat/audit/stale_review_section';
+import { IToolbarHandler, ToolbarHandler } from '../handler/presentation/toolbar';
 
 /**
  * Project Architecture Overview

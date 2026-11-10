@@ -1,7 +1,7 @@
 import { AuditResult } from '../models/barkat/audit/audit';
 import { Constants } from '../models/shared/constant';
 import { IUIUtil } from '../util/ui';
-import { IAuditSection } from '../handler/audit_section';
+import { IAuditSection } from '../handler/barkat/audit/audit_section';
 
 /**
  * Renderer for audit sections - displays audit results with interactive UI

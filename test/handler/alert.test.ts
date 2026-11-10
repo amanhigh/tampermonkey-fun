@@ -1,11 +1,11 @@
-import { AlertHandler } from '../../src/handler/alert';
+import { AlertHandler } from '../../src/handler/barkat/alert/alert';
 import { IAlertManager } from '../../src/manager/barkat/alert/alert';
 import { ITradingViewManager } from '../../src/manager/presentation/tv';
 import { IDomManager } from '../../src/manager/presentation/dom';
 import { ITickerManager } from '../../src/manager/barkat/market/ticker';
 import { IAlertTickerManager } from '../../src/manager/barkat/alert/alert_ticker';
-import { ITickerHandler } from '../../src/handler/ticker';
-import { IAlertTickerHandler } from '../../src/handler/alert_ticker';
+import { ITickerHandler } from '../../src/handler/barkat/market/ticker';
+import { IAlertTickerHandler } from '../../src/handler/barkat/alert/alert_ticker';
 import { ApiError, wrapClientError } from '../../src/models/shared/api_error';
 import { AlertClicked, AlertClickAction } from '../../src/models/shared/events';
 import { AlertTicker } from '../../src/models/barkat/alert/alert_ticker';

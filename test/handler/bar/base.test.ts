@@ -22,7 +22,7 @@
  *    repaint without refetch, and missing-root no-op
  */
 
-import { BaseBar, IBaseBar } from '../../../src/handler/bar/base';
+import { BaseBar, IBaseBar } from '../../../src/handler/presentation/bar/base';
 import {
   BarId,
   BAR_CLASS,

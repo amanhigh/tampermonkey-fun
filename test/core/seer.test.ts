@@ -4,8 +4,8 @@ jest.mock('../../src/core/factory', () => ({
 
 import { Factory } from '../../src/core/factory';
 import { RunSeer, SeerApp } from '../../src/core/seer';
-import { ISearchHandler } from '../../src/handler/search';
-import { ISeerHandler } from '../../src/handler/seer';
+import { ISearchHandler } from '../../src/handler/integrations/search';
+import { ISeerHandler } from '../../src/handler/integrations/seer';
 
 /** Origin of the Seerr detail pages. */
 const SEERR_ORIGIN = 'http://seerr.media.lan';

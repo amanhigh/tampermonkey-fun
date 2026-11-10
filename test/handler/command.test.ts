@@ -1,6 +1,6 @@
-import { CommandInputHandler } from '../../src/handler/command';
-import { IAlertHandler } from '../../src/handler/alert';
-import { ITickerHandler } from '../../src/handler/ticker';
+import { CommandInputHandler } from '../../src/handler/core/command';
+import { IAlertHandler } from '../../src/handler/barkat/alert/alert';
+import { ITickerHandler } from '../../src/handler/barkat/market/ticker';
 import { Notifier } from '../../src/util/notify';
 
 jest.mock('../../src/util/notify', () => ({

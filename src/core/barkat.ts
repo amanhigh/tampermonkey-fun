@@ -2,15 +2,15 @@ import '../style/main.less';
 import { UIUtil } from '../util/ui';
 import { Constants } from '../models/shared/constant';
 import { BarId } from '../models/presentation/bar';
-import { IOnLoadHandler } from '../handler/onload';
-import { IJournalHandler } from '../handler/journal';
-import { IJournalSyncHandler } from '../handler/journal_sync';
-import { ICommandInputHandler } from '../handler/command';
-import { IKiteHandler } from '../handler/kite';
-import { IAlertFeedHandler } from '../handler/alertfeed';
-import { IGlobalErrorHandler } from '../handler/error';
-import { IDashboardSyncHandler } from '../handler/dashboard_sync';
-import { IToolbarHandler } from '../handler/toolbar';
+import { IOnLoadHandler } from '../handler/core/onload';
+import { IJournalHandler } from '../handler/barkat/workflow/journal';
+import { IJournalSyncHandler } from '../handler/barkat/workflow/journal_sync';
+import { ICommandInputHandler } from '../handler/core/command';
+import { IKiteHandler } from '../handler/integrations/kite';
+import { IAlertFeedHandler } from '../handler/barkat/alert/alertfeed';
+import { IGlobalErrorHandler } from '../handler/core/error';
+import { IDashboardSyncHandler } from '../handler/core/dashboard_sync';
+import { IToolbarHandler } from '../handler/presentation/toolbar';
 import { Factory } from './factory';
 
 export class Barkat {

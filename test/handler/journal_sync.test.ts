@@ -1,4 +1,4 @@
-import { JournalSyncHandler } from '../../src/handler/journal_sync';
+import { JournalSyncHandler } from '../../src/handler/barkat/workflow/journal_sync';
 import { IJournalManager } from '../../src/manager/barkat/workflow/journal';
 import { IDomManager } from '../../src/manager/presentation/dom';
 import { Constants } from '../../src/models/shared/constant';

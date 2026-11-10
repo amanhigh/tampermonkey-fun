@@ -1,4 +1,4 @@
-import { IAuditSection } from '../handler/audit_section';
+import { IAuditSection } from '../handler/barkat/audit/audit_section';
 
 /**
  * Registry for managing audit sections

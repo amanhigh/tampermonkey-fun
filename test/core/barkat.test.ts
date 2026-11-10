@@ -4,15 +4,15 @@ jest.mock('../../src/core/factory', () => ({
 
 import { Barkat } from '../../src/core/barkat';
 import { UIUtil } from '../../src/util/ui';
-import { IOnLoadHandler } from '../../src/handler/onload';
-import { IJournalHandler } from '../../src/handler/journal';
-import { IJournalSyncHandler } from '../../src/handler/journal_sync';
-import { ICommandInputHandler } from '../../src/handler/command';
-import { IKiteHandler } from '../../src/handler/kite';
-import { IAlertFeedHandler } from '../../src/handler/alertfeed';
-import { IGlobalErrorHandler } from '../../src/handler/error';
-import { IDashboardSyncHandler } from '../../src/handler/dashboard_sync';
-import { IToolbarHandler } from '../../src/handler/toolbar';
+import { IOnLoadHandler } from '../../src/handler/core/onload';
+import { IJournalHandler } from '../../src/handler/barkat/workflow/journal';
+import { IJournalSyncHandler } from '../../src/handler/barkat/workflow/journal_sync';
+import { ICommandInputHandler } from '../../src/handler/core/command';
+import { IKiteHandler } from '../../src/handler/integrations/kite';
+import { IAlertFeedHandler } from '../../src/handler/barkat/alert/alertfeed';
+import { IGlobalErrorHandler } from '../../src/handler/core/error';
+import { IDashboardSyncHandler } from '../../src/handler/core/dashboard_sync';
+import { IToolbarHandler } from '../../src/handler/presentation/toolbar';
 
 describe('Barkat', () => {
   const originalWindowDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'window');

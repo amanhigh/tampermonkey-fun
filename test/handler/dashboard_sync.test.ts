@@ -1,4 +1,4 @@
-import { DashboardSyncHandler, IDashboardSyncHandler } from '../../src/handler/dashboard_sync';
+import { DashboardSyncHandler, IDashboardSyncHandler } from '../../src/handler/core/dashboard_sync';
 import { IDashboardSyncManager } from '../../src/manager/core/dashboard_sync';
 import { EventBus, ISubscriber } from '../../src/manager/core/event_bus';
 import { DomainEventType } from '../../src/models/barkat/domain_event';

@@ -1,4 +1,4 @@
-import { JournalHandler } from '../../src/handler/journal';
+import { JournalHandler } from '../../src/handler/barkat/workflow/journal';
 import { IOsClient } from '../../src/client/kohan/os';
 import { IJournalManager } from '../../src/manager/barkat/workflow/journal';
 import { ISmartPrompt, SmartChoiceGroup, SmartPromptResponseType } from '../../src/util/smart';
@@ -8,7 +8,7 @@ import { IStyleManager } from '../../src/manager/presentation/style';
 import { DomManager } from '../../src/manager/presentation/dom';
 import { ICategoryManager } from '../../src/manager/barkat/market/category';
 import { ITimeFrameManager } from '../../src/manager/barkat/market/timeframe';
-import { IJournalSyncHandler } from '../../src/handler/journal_sync';
+import { IJournalSyncHandler } from '../../src/handler/barkat/workflow/journal_sync';
 import { JournalActionType } from '../../src/models/barkat/journal';
 import { Constants } from '../../src/models/shared/constant';
 import { TickerTimeframe, Sequence } from '../../src/models/barkat/market/timeframe';
