@@ -18,6 +18,9 @@ const MARKER = '#seer-auto';
 /** Query marker every opened Binge search url carries; Binge reads a fragment as search text. */
 const BINGE_MARKER = 'seer-auto=1';
 
+/** YouTube results page every resolved YouTube search url starts with. */
+const YOUTUBE = 'https://www.youtube.com/results?search_query=';
+
 /** Verified grid result destination of the fixture title. */
 const AVATAR_URL = `${AIRTEL}/movies/avatar/HOTSTAR_DTH_MOVIE_3617`;
 
@@ -152,21 +155,47 @@ const MAURH_ORDERING: Array<[string, Array<[string, string]>]> = [
   ],
 ];
 
-/** Settings that distinguish the two provider search urls under test. */
+/** Settings that distinguish the provider search urls under test. */
 interface UrlCase {
   /** Provider whose search url is resolved. */
   readonly provider: SearchProvider;
   /** Origin every expectation of this provider carries. */
   readonly origin: string;
+  /** Search route every expectation of this provider carries. */
+  readonly path: string;
+  /** Query key carrying the searched title. */
+  readonly queryKey: string;
+  /** Encoded title suffix appended to every searched title. */
+  readonly titleSuffix: string;
   /** Explicit marker suffix every opened search url of this provider carries. */
   readonly suffix: string;
 }
 
 /** Provider search urls sharing the one title resolution and build path. */
 const URL_CASES: UrlCase[] = [
-  { provider: SearchProvider.XSTREAM, origin: AIRTEL, suffix: MARKER },
-  { provider: SearchProvider.BINGE, origin: BINGE, suffix: `&${BINGE_MARKER}` },
+  { provider: SearchProvider.XSTREAM, origin: AIRTEL, path: '/search', queryKey: 'q', titleSuffix: '', suffix: MARKER },
+  {
+    provider: SearchProvider.BINGE,
+    origin: BINGE,
+    path: '/search',
+    queryKey: 'q',
+    titleSuffix: '',
+    suffix: `&${BINGE_MARKER}`,
+  },
+  {
+    provider: SearchProvider.YOUTUBE,
+    origin: 'https://www.youtube.com',
+    path: '/results',
+    queryKey: 'search_query',
+    titleSuffix: '+Full+Movie',
+    suffix: '',
+  },
 ];
+
+/** Every provider search url of one title, built literally from the case instead of the registry. */
+function searchUrl(urlCase: UrlCase, encodedTitle: string): string {
+  return `${urlCase.origin}${urlCase.path}?${urlCase.queryKey}=${encodedTitle}${urlCase.titleSuffix}${urlCase.suffix}`;
+}
 
 let manager: ISearchManager;
 let client: jest.Mocked<ISeerClient>;
@@ -186,12 +215,10 @@ beforeEach(() => {
 
 describe('SearchManager', () => {
   describe.each(URL_CASES)('getUrl on $provider', (urlCase: UrlCase) => {
-    it('builds the marked search url from the movie title of the canonical route', async () => {
+    it('builds the search url from the movie title of the canonical route', async () => {
       client.getSearchTitle.mockResolvedValue('Dune');
 
-      await expect(manager.getUrl(urlCase.provider, '/movie/603/')).resolves.toBe(
-        `${urlCase.origin}/search?q=Dune${urlCase.suffix}`
-      );
+      await expect(manager.getUrl(urlCase.provider, '/movie/603/')).resolves.toBe(searchUrl(urlCase, 'Dune'));
 
       expect(client.getSearchTitle).toHaveBeenCalledWith('/movie/603');
     });
@@ -200,18 +227,19 @@ describe('SearchManager', () => {
       client.getSearchTitle.mockResolvedValue('Shogun');
 
       await expect(manager.getUrl(urlCase.provider, '/tv/1399/season/2')).resolves.toBe(
-        `${urlCase.origin}/search?q=Shogun${urlCase.suffix}`
+        searchUrl(urlCase, 'Shogun')
       );
 
       expect(client.getSearchTitle).toHaveBeenCalledWith('/tv/1399');
     });
 
-    it('encodes the resolved title in the query', async () => {
-      client.getSearchTitle.mockResolvedValue('Dune: Part Two & More');
+    it.each([
+      ['punctuation and ampersands', 'Dune: Part Two & More', 'Dune%3A+Part+Two+%26+More'],
+      ['non latin text', 'நாயகன்', '%E0%AE%A8%E0%AE%BE%E0%AE%AF%E0%AE%95%E0%AE%A9%E0%AF%8D'],
+    ])('keeps the query fully encoded for %s', async (_case: string, title: string, encoded: string) => {
+      client.getSearchTitle.mockResolvedValue(title);
 
-      await expect(manager.getUrl(urlCase.provider, '/movie/603')).resolves.toBe(
-        `${urlCase.origin}/search?q=Dune%3A%20Part%20Two%20%26%20More${urlCase.suffix}`
-      );
+      await expect(manager.getUrl(urlCase.provider, '/movie/603')).resolves.toBe(searchUrl(urlCase, encoded));
     });
 
     it.each(['/discover', '/movie/0', 'movie/603'])(
@@ -239,6 +267,16 @@ describe('SearchManager', () => {
       client.getSearchTitle.mockRejectedValue(new ApiError(500, 'Server Error'));
 
       await expect(manager.getUrl(urlCase.provider, MOVIE_ROUTE)).rejects.toMatchObject({ status: 500 });
+    });
+  });
+
+  describe('getUrl for YouTube', () => {
+    it('searches the full movie of the resolved title', async () => {
+      client.getSearchTitle.mockResolvedValue('Rang Ishqay Da');
+
+      await expect(manager.getUrl(SearchProvider.YOUTUBE, MOVIE_ROUTE)).resolves.toBe(
+        `${YOUTUBE}Rang+Ishqay+Da+Full+Movie`
+      );
     });
   });
 

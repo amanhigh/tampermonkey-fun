@@ -92,6 +92,7 @@ export const Constants = Object.freeze({
         PANEL: 'seerr-sidekick-panel',
         XSTREAM_BUTTON: 'seerr-sidekick-xstream',
         BINGE_BUTTON: 'seerr-sidekick-binge',
+        YOUTUBE_BUTTON: 'seerr-sidekick-youtube',
         DELETE_BUTTON: 'seerr-sidekick-delete',
       },
     },

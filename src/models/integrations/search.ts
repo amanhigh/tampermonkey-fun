@@ -1,16 +1,18 @@
 /**
  * Provider search data shared by the Seer core, search handler and search manager.
  *
- * This module is deliberately data only: it holds the origins, markers, selectors and
- * button settings of every provider, and owns no DOM, network or notification behaviour.
+ * This module is deliberately data only: it holds the settings of every provider search page,
+ * including whether Seer follows its rendered results, and owns no DOM, network or
+ * notification behaviour.
  */
 
 import { Constants } from '../shared/constant';
 
-/** Provider search sites Seer opens and follows. */
+/** Provider search sites Seer opens. */
 export enum SearchProvider {
   XSTREAM = 'xstream',
   BINGE = 'binge',
+  YOUTUBE = 'youtube',
 }
 
 /**
@@ -41,12 +43,8 @@ export interface SearchButtonConfig {
   readonly label: string;
 }
 
-/** Settings that distinguish one provider search page from another. */
-export interface SearchProviderConfig {
-  /** Human readable provider name used by the notices. */
-  readonly label: string;
-  /** Origin the marked search page must keep. */
-  readonly origin: string;
+/** Settings of one provider page whose rendered results Seer follows automatically. */
+export interface SearchMatchConfig {
   /** Live search box whose edits cancel the pending match. */
   readonly inputId: string;
   /** Native CSS selector list of rendered result links; selecting one cancels the pending match. */
@@ -57,16 +55,43 @@ export interface SearchProviderConfig {
   readonly detailPathPattern: RegExp;
   /** Whether a resolved detail path drops its trailing slash. */
   readonly stripTrailingSlash: boolean;
+}
+
+/** What Seer does with the provider page a search opens. */
+export enum SearchBehaviour {
+  /** Open the provider results page and leave the pick to the human. */
+  OPEN_RESULTS = 'open-results',
+  /** Open the provider results page and follow its single matching result. */
+  FOLLOW_MATCH = 'follow-match',
+}
+
+/** Settings that distinguish one provider search page from another. */
+export interface SearchProviderConfig {
+  /** Human readable provider name used by the notices. */
+  readonly label: string;
+  /** Origin of the provider search page. */
+  readonly origin: string;
+  /** Pathname of the provider search page. */
+  readonly searchPath: string;
+  /** Query parameter carrying the searched title. */
+  readonly queryKey: string;
+  /** Text appended to the searched title. */
+  readonly titleSuffix: string;
+  /**
+   * Whether the Seer panel mounts this provider's search button. It only controls
+   * that button's visibility and does not affect the provider's search page assistant.
+   */
+  readonly enabled: boolean;
+  /** How Seer uses the provider page a search opens. */
+  readonly behaviour: SearchBehaviour;
+  /** Rendered result settings, present only for providers that follow their results. */
+  readonly match?: SearchMatchConfig;
   /** Seer panel button opening this provider search. */
   readonly button: SearchButtonConfig;
 }
 
-/** Shared timing, route and title constants of the provider search pages. */
+/** Shared timing and title constants of the provider search pages. */
 export const SEARCH_CONSTANTS = Object.freeze({
-  /** Pathname shared by every provider search page. */
-  SEARCH_PATH: '/search',
-  /** Query parameter carrying the searched title. */
-  SEARCH_QUERY_KEY: 'q',
   /** Deadline after which the unmatched title reports the manual fallback once. */
   MATCH_TIMEOUT_MS: 15000,
   /** Display duration of a single notice or failure notification in milliseconds. */
@@ -93,13 +118,20 @@ export const SEARCH_PROVIDERS: Readonly<Record<SearchProvider, SearchProviderCon
   [SearchProvider.XSTREAM]: {
     label: 'Airtel Xstream',
     origin: 'https://www.airtelxstream.in',
-    inputId: 'classic-search-input-new',
-    resultSelector:
-      '#search-layout-container-searchResultV2 li.cs-grid-tile a.cs-grid-tile-button[href], ' +
-      '.cs-hero-banner-rail .hero-banner-wrapper a.hero-banner[href]',
-    marker: { kind: 'fragment', value: '#seer-auto' },
-    detailPathPattern: /^\/(?:movies|tv-shows)\/([^/]+)\/([^/]+)\/?$/,
-    stripTrailingSlash: false,
+    searchPath: '/search',
+    queryKey: 'q',
+    titleSuffix: '',
+    enabled: false,
+    behaviour: SearchBehaviour.FOLLOW_MATCH,
+    match: {
+      inputId: 'classic-search-input-new',
+      resultSelector:
+        '#search-layout-container-searchResultV2 li.cs-grid-tile a.cs-grid-tile-button[href], ' +
+        '.cs-hero-banner-rail .hero-banner-wrapper a.hero-banner[href]',
+      marker: { kind: 'fragment', value: '#seer-auto' },
+      detailPathPattern: /^\/(?:movies|tv-shows)\/([^/]+)\/([^/]+)\/?$/,
+      stripTrailingSlash: false,
+    },
     button: {
       id: Constants.UI.IDS.SEER.XSTREAM_BUTTON,
       label: 'Xstream',
@@ -108,16 +140,33 @@ export const SEARCH_PROVIDERS: Readonly<Record<SearchProvider, SearchProviderCon
   [SearchProvider.BINGE]: {
     label: 'Tata Play Binge',
     origin: 'https://www.tataplaybinge.com',
-    inputId: 'search-input',
-    resultSelector: '.search-result-list a.listing-block[href]',
-    // Browser verified: `?q=Yaaran%20Diyan%20Poun%20Baaran&seer-auto=1` keeps Binge's search
-    // input clean and returns both matching ids, while `#seer-auto` becomes search text there.
-    marker: { kind: 'query', name: 'seer-auto', value: '1' },
-    detailPathPattern: /^\/watch\/(?:movies|shows|series)\/([^/]+)\/([1-9]\d*)\/?$/,
-    stripTrailingSlash: true,
+    searchPath: '/search',
+    queryKey: 'q',
+    titleSuffix: '',
+    enabled: true,
+    behaviour: SearchBehaviour.FOLLOW_MATCH,
+    match: {
+      inputId: 'search-input',
+      resultSelector: '.search-result-list a.listing-block[href]',
+      // Browser verified: `?q=Yaaran%20Diyan%20Poun%20Baaran&seer-auto=1` keeps Binge's search
+      // input clean and returns both matching ids, while `#seer-auto` becomes search text there.
+      marker: { kind: 'query', name: 'seer-auto', value: '1' },
+      detailPathPattern: /^\/watch\/(?:movies|shows|series)\/([^/]+)\/([1-9]\d*)\/?$/,
+      stripTrailingSlash: true,
+    },
     button: {
       id: Constants.UI.IDS.SEER.BINGE_BUTTON,
       label: 'Binge',
     },
+  },
+  [SearchProvider.YOUTUBE]: {
+    label: 'YouTube',
+    origin: 'https://www.youtube.com',
+    searchPath: '/results',
+    queryKey: 'search_query',
+    titleSuffix: ' Full Movie',
+    enabled: true,
+    behaviour: SearchBehaviour.OPEN_RESULTS,
+    button: { id: Constants.UI.IDS.SEER.YOUTUBE_BUTTON, label: 'YouTube' },
   },
 };

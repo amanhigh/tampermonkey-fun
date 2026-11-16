@@ -631,3 +631,19 @@ describe.each(PROVIDERS)('SearchHandler on $label', (provider: Provider) => {
     });
   });
 });
+
+describe('SearchHandler on YouTube', () => {
+  it('does no work on a provider results page Seer does not follow', () => {
+    visit('https://www.youtube.com/results?search_query=Dune+Full+Movie');
+
+    handler.search(SearchProvider.YOUTUBE);
+
+    expect(fakeHistory.replaceState).not.toHaveBeenCalled();
+    expect(observe.nodeObserver).not.toHaveBeenCalled();
+    expect(fakeDocument.count).toBe(0);
+    expect(page.count).toBe(0);
+    expect(jest.getTimerCount()).toBe(0);
+    expect(manager.findMatch).not.toHaveBeenCalled();
+    expect(page.location.replace).not.toHaveBeenCalled();
+  });
+});

@@ -4,6 +4,7 @@ import {
   SEARCH_CONSTANTS,
   SEARCH_PROVIDERS,
   SearchMarker,
+  SearchMatchConfig,
   SearchProvider,
   SearchProviderConfig,
 } from '../models/integrations/search';
@@ -50,24 +51,29 @@ export class SearchManager implements ISearchManager {
 
   /** @inheritdoc */
   findMatch(provider: SearchProvider, root: ParentNode, title: string): string | undefined {
+    const match = SEARCH_PROVIDERS[provider].match;
+    if (match === undefined) {
+      return undefined;
+    }
+
     const expected = normalizeLabel(title);
     if (!expected) {
       return undefined;
     }
 
-    return findUniqueDestination(readResultAnchors(root, SEARCH_PROVIDERS[provider]), expected, provider);
+    return findUniqueDestination(readResultAnchors(root, match), expected, provider, match);
   }
 }
 
 /** Provider readers of the rendered title that labels one result link. */
-const TITLE_READERS: Readonly<Record<SearchProvider, (anchor: Element) => string>> = {
+const TITLE_READERS: Readonly<Partial<Record<SearchProvider, (anchor: Element) => string>>> = {
   [SearchProvider.XSTREAM]: readXstreamLabel,
   [SearchProvider.BINGE]: readBingeLabel,
 };
 
 /** Read the result links rendered in the document of one provider search page. */
-function readResultAnchors(root: ParentNode, provider: SearchProviderConfig): Element[] {
-  return Array.from(root.querySelectorAll(provider.resultSelector));
+function readResultAnchors(root: ParentNode, match: SearchMatchConfig): Element[] {
+  return Array.from(root.querySelectorAll(match.resultSelector));
 }
 
 /**
@@ -77,12 +83,18 @@ function readResultAnchors(root: ParentNode, provider: SearchProviderConfig): El
  * @param anchors - Rendered result links of one provider search page
  * @param expected - Normalized title the rendered results must match
  * @param provider - Provider whose readers resolve one link to its defined detail url
+ * @param match - Match settings of the provider page whose rendered results Seer follows
  */
-function findUniqueDestination(anchors: Element[], expected: string, provider: SearchProvider): string | undefined {
+function findUniqueDestination(
+  anchors: Element[],
+  expected: string,
+  provider: SearchProvider,
+  match: SearchMatchConfig
+): string | undefined {
   const destinations = new Set<string>();
   const preferred = new Set<string>();
   anchors.forEach((anchor) => {
-    const destination = readMatch(anchor, expected, provider);
+    const destination = readMatch(anchor, expected, provider, match);
     if (destination === undefined) {
       return;
     }
@@ -108,19 +120,26 @@ function matchesBingeChannel(anchor: Element): boolean {
  * encodings.
  * @param anchor - Rendered result link of one provider search page
  * @param expected - Normalized title the rendered result must match
- * @param provider - Provider whose origin, detail route and title node drive the read
+ * @param provider - Provider whose origin and title node drive the read
+ * @param match - Match settings of the provider page whose rendered results Seer follows
  */
-function readMatch(anchor: Element, expected: string, provider: SearchProvider): string | undefined {
+function readMatch(
+  anchor: Element,
+  expected: string,
+  provider: SearchProvider,
+  match: SearchMatchConfig
+): string | undefined {
   const config = SEARCH_PROVIDERS[provider];
   // Every provider origin is https, so the origin check also rejects every other scheme.
   const url = readTrustedUrl(anchor, config.origin);
-  const slug = url === undefined ? undefined : readDecodedSlug(url.pathname, config.detailPathPattern);
+  const slug = url === undefined ? undefined : readDecodedSlug(url.pathname, match.detailPathPattern);
   if (url === undefined || slug === undefined) {
     return undefined;
   }
 
-  const matched = normalizeLabel(slug) === expected || normalizeLabel(TITLE_READERS[provider](anchor)) === expected;
-  return matched ? `${url.origin}${canonicalDetailPath(url.pathname, config)}` : undefined;
+  const matched =
+    normalizeLabel(slug) === expected || normalizeLabel(TITLE_READERS[provider]?.(anchor) ?? '') === expected;
+  return matched ? `${url.origin}${canonicalDetailPath(url.pathname, match)}` : undefined;
 }
 
 /** Read the rendered title of an Airtel Xstream result link, from its grid title, aria-label or hero title. */
@@ -139,13 +158,15 @@ function readBingeLabel(anchor: Element): string {
 }
 
 /**
- * Build the marked search url of one provider, keeping the title fully encoded.
- * @param provider - Provider whose origin and marker build the url
+ * Build the search url of one provider, marked and armed for the automatic match when Seer follows
+ * its rendered results and plain otherwise, keeping the title fully encoded.
+ * @param config - Provider whose origin, search route, query key and marker build the url
  * @param title - Media title searched on the provider site
  */
-function buildSearchUrl(provider: SearchProviderConfig, title: string): string {
-  const query = `${SEARCH_CONSTANTS.SEARCH_PATH}?${SEARCH_CONSTANTS.SEARCH_QUERY_KEY}=${encodeURIComponent(title)}`;
-  return `${provider.origin}${query}${markerSuffix(provider.marker)}`;
+function buildSearchUrl(config: SearchProviderConfig, title: string): string {
+  const query = new URLSearchParams({ [config.queryKey]: `${title}${config.titleSuffix}` });
+  const marker = config.match === undefined ? '' : markerSuffix(config.match.marker);
+  return `${config.origin}${config.searchPath}?${query}${marker}`;
 }
 
 /**
@@ -159,10 +180,10 @@ function markerSuffix(marker: SearchMarker): string {
 /**
  * Read the detail path a provider reports, dropping the trailing slash when the provider allows it.
  * @param pathname - Verified detail pathname of one result link
- * @param provider - Provider whose trailing slash rule drives the path
+ * @param match - Match settings of the provider page whose trailing slash rule drives the path
  */
-function canonicalDetailPath(pathname: string, provider: SearchProviderConfig): string {
-  return provider.stripTrailingSlash && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+function canonicalDetailPath(pathname: string, match: SearchMatchConfig): string {
+  return match.stripTrailingSlash && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
 }
 
 /** Read a trusted https url from a result link, rejecting untrusted origins, credentials and bad hrefs. */

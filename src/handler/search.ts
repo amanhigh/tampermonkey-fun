@@ -3,6 +3,7 @@ import {
   SEARCH_CONSTANTS,
   SEARCH_PROVIDERS,
   SearchMarker,
+  SearchMatchConfig,
   SearchProvider,
   SearchProviderConfig,
 } from '../models/integrations/search';
@@ -49,17 +50,22 @@ export class SearchHandler implements ISearchHandler {
     this.started = true;
 
     const config = SEARCH_PROVIDERS[provider];
-    const url = new URL(window.location.href);
-    const title = url.searchParams.get(SEARCH_CONSTANTS.SEARCH_QUERY_KEY)?.trim() ?? '';
-    if (!isArmed(url, title, config)) {
+    const match = config.match;
+    if (match === undefined) {
       return;
     }
 
-    history.replaceState(history.state, '', consumeMarker(url, config.marker));
+    const url = new URL(window.location.href);
+    const title = url.searchParams.get(config.queryKey)?.trim() ?? '';
+    if (!isArmed(url, title, config, match)) {
+      return;
+    }
+
+    history.replaceState(history.state, '', consumeMarker(url, match.marker));
     const capturedHref = window.location.href;
 
     try {
-      this.watch(config);
+      this.watch(match);
       this.timer = setTimeout(() => this.match(title, capturedHref, provider, true), SEARCH_CONSTANTS.MATCH_TIMEOUT_MS);
       this.observer = this.observe.nodeObserver(
         document.documentElement,
@@ -74,14 +80,14 @@ export class SearchHandler implements ISearchHandler {
 
   /**
    * Watch the page for edits, selections, navigation and exit, never intercepting a click.
-   * @param config - Provider whose search box and result links cancel the pending match
+   * @param match - Match settings of the provider page whose search box and result links cancel the pending match
    */
-  private watch(config: SearchProviderConfig): void {
+  private watch(match: SearchMatchConfig): void {
     const signal = this.controller.signal;
     document.addEventListener(
       'input',
       (event) => {
-        if (event.target instanceof Element && event.target.id === config.inputId) {
+        if (event.target instanceof Element && event.target.id === match.inputId) {
           this.cleanup();
         }
       },
@@ -90,7 +96,7 @@ export class SearchHandler implements ISearchHandler {
     document.addEventListener(
       'click',
       (event) => {
-        if (event.target instanceof Element && event.target.closest(config.resultSelector) !== null) {
+        if (event.target instanceof Element && event.target.closest(match.resultSelector) !== null) {
           this.cleanup();
         }
       },
@@ -175,15 +181,16 @@ export class SearchHandler implements ISearchHandler {
  * Report whether a live url is the marked search page of one provider: exact origin and path, a
  * non-blank query, the provider marker, and no foreign fragment.
  * @param url - Live url of the provider page under test
- * @param title - Trimmed `q` title of the live url
- * @param config - Provider whose origin and marker drive the check
+ * @param title - Trimmed query title of the live url
+ * @param config - Provider whose origin and search route drive the check
+ * @param match - Match settings of the provider page supplying the marker
  */
-function isArmed(url: URL, title: string, config: SearchProviderConfig): boolean {
+function isArmed(url: URL, title: string, config: SearchProviderConfig, match: SearchMatchConfig): boolean {
   return (
     url.origin === config.origin &&
-    url.pathname === SEARCH_CONSTANTS.SEARCH_PATH &&
+    url.pathname === config.searchPath &&
     title.length > 0 &&
-    isMarkerPresent(url, config.marker)
+    isMarkerPresent(url, match.marker)
   );
 }
 

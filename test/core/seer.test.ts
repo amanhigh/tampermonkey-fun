@@ -17,6 +17,9 @@ const AIRTEL_ORIGIN = 'https://www.airtelxstream.in';
 /** Origin of the Tata Play Binge search pages. */
 const BINGE_ORIGIN = 'https://www.tataplaybinge.com';
 
+/** Origin of the YouTube search pages. */
+const YOUTUBE_ORIGIN = 'https://www.youtube.com';
+
 /** Origin unrelated to the userscript. */
 const FOREIGN_ORIGIN = 'https://example.test';
 
@@ -88,7 +91,7 @@ describe('SeerApp', () => {
     expectPageErrorHooksUntouched();
   });
 
-  it('arms the Airtel search handler on the Airtel origin', () => {
+  it('arms the Airtel search handler on the Airtel origin even though that panel button is disabled', () => {
     visit(AIRTEL_ORIGIN);
 
     app.initialize();
@@ -107,6 +110,16 @@ describe('SeerApp', () => {
     expect(searchHandler.search).toHaveBeenCalledTimes(1);
     expect(searchHandler.search).toHaveBeenCalledWith(SearchProvider.BINGE);
     expect(seerHandler.initialize).not.toHaveBeenCalled();
+    expectPageErrorHooksUntouched();
+  });
+
+  it('initializes neither handler on the YouTube origin', () => {
+    visit(YOUTUBE_ORIGIN);
+
+    app.initialize();
+
+    expect(seerHandler.initialize).not.toHaveBeenCalled();
+    expect(searchHandler.search).not.toHaveBeenCalled();
     expectPageErrorHooksUntouched();
   });
 

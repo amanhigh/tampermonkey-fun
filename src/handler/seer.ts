@@ -9,14 +9,17 @@ import { Notifier } from '../util/notify';
  * ISeerHandler owns the Seer sidekick panel.
  */
 export interface ISeerHandler {
-  /** Mount the provider search and Delete buttons once and keep them visible only on detail routes. */
+  /**
+   * Mount the enabled provider search buttons plus the hidden-until-verified Delete
+   * button once, and keep them visible only on detail routes.
+   */
   initialize(): void;
 }
 
 /**
- * SeerHandler renders the Xstream, Binge and Delete buttons, keeps their
- * visibility in sync with the live route, opens one provider search tab per
- * click and runs one confirmed files → requests → media deletion.
+ * SeerHandler renders the enabled provider search buttons plus the hidden-until-verified
+ * Delete button, keeps their visibility in sync with the live route, opens one search tab
+ * per click and runs one confirmed files → requests → media deletion.
  */
 export class SeerHandler implements ISeerHandler {
   private started = false;
@@ -118,7 +121,7 @@ export class SeerHandler implements ISeerHandler {
     void this.runDelete();
   };
 
-  /** Resolve the provider search url of the live route, then open it in a foreground tab. */
+  /** Resolve the search url of the live route for the given provider, then open it in a foreground tab. */
   private async openSearch(provider: SearchProvider): Promise<void> {
     const button = SEARCH_PROVIDERS[provider].button;
     if (this.searchBusy.has(button.id)) {
@@ -237,14 +240,16 @@ export class SeerHandler implements ISeerHandler {
     const panel = document.createElement('div');
     panel.id = Constants.UI.IDS.SEER.PANEL;
     panel.className = 'seer-panel';
-    [SearchProvider.XSTREAM, SearchProvider.BINGE].forEach((provider) => {
-      const button = SEARCH_PROVIDERS[provider].button;
-      panel.appendChild(
-        this.createButton(button.id, 'seer-panel__search', `▶️ ${button.label}`, () => {
-          void this.openSearch(provider);
-        })
-      );
-    });
+    Object.values(SearchProvider)
+      .filter((provider) => SEARCH_PROVIDERS[provider].enabled)
+      .forEach((provider) => {
+        const button = SEARCH_PROVIDERS[provider].button;
+        panel.appendChild(
+          this.createButton(button.id, 'seer-panel__search', `▶️ ${button.label}`, () => {
+            void this.openSearch(provider);
+          })
+        );
+      });
     const deleteButton = this.createButton(
       Constants.UI.IDS.SEER.DELETE_BUTTON,
       'seer-panel__delete',

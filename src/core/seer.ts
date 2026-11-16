@@ -2,7 +2,7 @@ import '../style/seer.less';
 import { ISearchHandler } from '../handler/search';
 import { ISeerHandler } from '../handler/seer';
 import { Constants } from '../models/shared/constant';
-import { SEARCH_PROVIDERS, SearchProvider } from '../models/integrations/search';
+import { SEARCH_PROVIDERS, SearchBehaviour, SearchProvider } from '../models/integrations/search';
 import { Factory } from './factory';
 
 /** Origin of the Seerr detail pages that carry the panel. */
@@ -10,7 +10,10 @@ const SEERR_ORIGIN = new URL(Constants.SEER.BASE_URL).origin;
 
 /** Provider search page selected by its exact origin, keyed through the provider data. */
 const SEARCH_ORIGINS: ReadonlyMap<string, SearchProvider> = new Map(
-  Object.values(SearchProvider).map((provider) => [SEARCH_PROVIDERS[provider].origin, provider])
+  Object.values(SearchProvider).flatMap((provider) => {
+    const config = SEARCH_PROVIDERS[provider];
+    return config.behaviour === SearchBehaviour.FOLLOW_MATCH ? [[config.origin, provider] as const] : [];
+  })
 );
 
 export class SeerApp {

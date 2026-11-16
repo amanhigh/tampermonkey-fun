@@ -2,7 +2,7 @@ import { SeerHandler } from '../../src/handler/seer';
 import { ISearchManager } from '../../src/manager/search';
 import { ISeerManager } from '../../src/manager/seer';
 import { Constants } from '../../src/models/shared/constant';
-import { SearchProvider } from '../../src/models/integrations/search';
+import { SEARCH_PROVIDERS, SearchProvider } from '../../src/models/integrations/search';
 
 // The handler must only call Notifier; its DOM rendering is out of scope here.
 jest.mock('../../src/util/notify', () => ({
@@ -163,23 +163,33 @@ const XSTREAM_URL = 'https://www.airtelxstream.in/search?q=Dune';
 /** Binge search url the manager resolves by default. */
 const BINGE_URL = 'https://www.tataplaybinge.com/search?q=Dune';
 
-/** Settings that distinguish the two provider search buttons under test. */
+/** YouTube search url the manager resolves by default. */
+const YOUTUBE_URL = 'https://www.youtube.com/results?search_query=Dune+Full+Movie';
+
+/** Search url one provider resolves by default. */
+const PROVIDER_URLS: Readonly<Record<SearchProvider, string>> = {
+  [SearchProvider.XSTREAM]: XSTREAM_URL,
+  [SearchProvider.BINGE]: BINGE_URL,
+  [SearchProvider.YOUTUBE]: YOUTUBE_URL,
+};
+
+/** Settings that distinguish the mounted search buttons under test. */
 interface SearchCase {
-  /** Provider name used by the describe block and the escaped failure notification. */
+  /** Button name used by the describe block and the escaped failure notification. */
   readonly name: string;
-  /** Mounted button id of the provider. */
+  /** Mounted button id of the search. */
   readonly buttonId: string;
-  /** Idle label of the provider button. */
+  /** Idle label of the button. */
   readonly idleLabel: string;
-  /** Label shown while the provider search opens. */
+  /** Label shown while the search opens. */
   readonly openingLabel: string;
-  /** Search url the provider resolves by default. */
+  /** Search url the search resolves by default. */
   readonly url: string;
   /** Provider whose search url the button resolves. */
   readonly provider: SearchProvider;
 }
 
-/** Provider search buttons that share the one lifecycle. */
+/** Search buttons that share the one lifecycle. */
 const SEARCH_CASES: SearchCase[] = [
   {
     name: 'Xstream',
@@ -197,12 +207,18 @@ const SEARCH_CASES: SearchCase[] = [
     url: BINGE_URL,
     provider: SearchProvider.BINGE,
   },
+  {
+    name: 'YouTube',
+    buttonId: Constants.UI.IDS.SEER.YOUTUBE_BUTTON,
+    idleLabel: '▶️ YouTube',
+    openingLabel: 'Opening YouTube…',
+    url: YOUTUBE_URL,
+    provider: SearchProvider.YOUTUBE,
+  },
 ];
 
-/** Search url one provider resolves by default. */
-function defaultUrl(provider: SearchProvider): string {
-  return provider === SearchProvider.XSTREAM ? XSTREAM_URL : BINGE_URL;
-}
+/** Search buttons the panel actually mounts, so the shared lifecycle runs for exactly those. */
+const MOUNTED_SEARCH_CASES: SearchCase[] = SEARCH_CASES.filter((entry) => SEARCH_PROVIDERS[entry.provider].enabled);
 
 describe('SeerHandler', () => {
   let fakeDocument: FakeDocument;
@@ -240,7 +256,7 @@ describe('SeerHandler', () => {
       deleteMedia: jest.fn().mockResolvedValue(undefined),
     };
     search = {
-      getUrl: jest.fn().mockImplementation((provider: SearchProvider) => Promise.resolve(defaultUrl(provider))),
+      getUrl: jest.fn().mockImplementation((provider: SearchProvider) => Promise.resolve(PROVIDER_URLS[provider])),
       findMatch: jest.fn(),
     };
     jest.mocked(Notifier.success).mockClear();
@@ -290,14 +306,14 @@ describe('SeerHandler', () => {
     return fakeDocument.getElementById(Constants.UI.IDS.SEER.DELETE_BUTTON);
   }
 
-  /** Mounted Search Xstream button, if any. */
-  function xstreamButton(): FakeElement | undefined {
-    return fakeDocument.getElementById(Constants.UI.IDS.SEER.XSTREAM_BUTTON);
-  }
-
   /** Mounted Search Binge button, if any. */
   function bingeButton(): FakeElement | undefined {
     return fakeDocument.getElementById(Constants.UI.IDS.SEER.BINGE_BUTTON);
+  }
+
+  /** Mounted Search YouTube button, if any. */
+  function youtubeButton(): FakeElement | undefined {
+    return fakeDocument.getElementById(Constants.UI.IDS.SEER.YOUTUBE_BUTTON);
   }
 
   /** Mounted provider search button by id, if any. */
@@ -323,17 +339,22 @@ describe('SeerHandler', () => {
   }
 
   describe('initialize', () => {
-    it('mounts the Search Xstream, Search Binge and Delete buttons once', async () => {
+    it('mounts the enabled search buttons and the Delete button once', async () => {
       await openRoute();
       await openRoute();
 
       expect(fakeDocument.createdWithTag('div')).toHaveLength(1);
       expect(fakeDocument.createdWithTag('button')).toHaveLength(3);
+      expect(panel()?.children.map((child) => child.id)).toEqual([
+        Constants.UI.IDS.SEER.BINGE_BUTTON,
+        Constants.UI.IDS.SEER.YOUTUBE_BUTTON,
+        Constants.UI.IDS.SEER.DELETE_BUTTON,
+      ]);
       expect(manager.hasMediaRecord).toHaveBeenCalledTimes(1);
-      expect(xstreamButton()?.textContent).toBe('▶️ Xstream');
-      expect(xstreamButton()?.disabled).toBe(false);
       expect(bingeButton()?.textContent).toBe('▶️ Binge');
       expect(bingeButton()?.disabled).toBe(false);
+      expect(youtubeButton()?.textContent).toBe('▶️ YouTube');
+      expect(youtubeButton()?.disabled).toBe(false);
       expect(deleteButton()?.textContent).toBe('🗑️ Delete');
       expect(deleteButton()?.disabled).toBe(false);
       expect(deleteButton()?.hidden).toBe(false);
@@ -347,8 +368,8 @@ describe('SeerHandler', () => {
       await flush();
 
       expect(panel()?.hidden).toBe(false);
-      expect(xstreamButton()?.hidden).toBe(false);
       expect(bingeButton()?.hidden).toBe(false);
+      expect(youtubeButton()?.hidden).toBe(false);
       expect(deleteButton()?.hidden).toBe(true);
 
       presence.resolve(true);
@@ -506,32 +527,32 @@ describe('SeerHandler', () => {
     });
   });
 
-  describe.each(SEARCH_CASES)('$name search', (provider) => {
-    /** The other provider, which must stay untouched by this provider's search. */
-    const other = SEARCH_CASES.find((candidate) => candidate.buttonId !== provider.buttonId) as SearchCase;
+  describe.each(MOUNTED_SEARCH_CASES)('$name search', (entry) => {
+    /** Every other mounted search button, which must stay untouched by this search. */
+    const others = MOUNTED_SEARCH_CASES.filter((candidate) => candidate.buttonId !== entry.buttonId);
 
     it('opens the resolved search url in the foreground tab of the live route captured at click', async () => {
       await openRoute();
       navigate(TV_ROUTE);
 
-      await clickSearch(provider.buttonId);
+      await clickSearch(entry.buttonId);
 
       expect(search.getUrl).toHaveBeenCalledTimes(1);
-      expect(search.getUrl).toHaveBeenCalledWith(provider.provider, TV_ROUTE);
+      expect(search.getUrl).toHaveBeenCalledWith(entry.provider, TV_ROUTE);
       expect(openInTabMock).toHaveBeenCalledTimes(1);
-      expect(openInTabMock).toHaveBeenCalledWith(provider.url, { active: true, setParent: true });
+      expect(openInTabMock).toHaveBeenCalledWith(entry.url, { active: true, setParent: true });
       expect(Notifier.success).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
       expect(manager.deleteMedia).not.toHaveBeenCalled();
-      expect(searchButton(provider.buttonId)?.textContent).toBe(provider.idleLabel);
-      expect(searchButton(provider.buttonId)?.disabled).toBe(false);
+      expect(searchButton(entry.buttonId)?.textContent).toBe(entry.idleLabel);
+      expect(searchButton(entry.buttonId)?.disabled).toBe(false);
     });
 
     it('does nothing on an unsupported live route', async () => {
       await openRoute();
       navigate(UNSUPPORTED_ROUTE);
 
-      await clickSearch(provider.buttonId);
+      await clickSearch(entry.buttonId);
 
       expect(search.getUrl).not.toHaveBeenCalled();
       expect(openInTabMock).not.toHaveBeenCalled();
@@ -540,54 +561,61 @@ describe('SeerHandler', () => {
 
     it('disables only its own button while opening and ignores duplicate clicks', async () => {
       const lookup = defer<string>();
-      search.getUrl.mockReturnValue(lookup.promise);
+      jest.mocked(search.getUrl).mockReturnValue(lookup.promise);
       await openRoute();
 
-      searchButton(provider.buttonId)?.click();
-      searchButton(provider.buttonId)?.click();
+      searchButton(entry.buttonId)?.click();
+      searchButton(entry.buttonId)?.click();
       await flush();
 
       expect(search.getUrl).toHaveBeenCalledTimes(1);
-      expect(searchButton(provider.buttonId)?.textContent).toBe(provider.openingLabel);
-      expect(searchButton(provider.buttonId)?.disabled).toBe(true);
-      expect(searchButton(other.buttonId)?.textContent).toBe(other.idleLabel);
-      expect(searchButton(other.buttonId)?.disabled).toBe(false);
+      expect(search.getUrl).toHaveBeenCalledWith(entry.provider, MOVIE_ROUTE);
+      expect(searchButton(entry.buttonId)?.textContent).toBe(entry.openingLabel);
+      expect(searchButton(entry.buttonId)?.disabled).toBe(true);
+      others.forEach((other) => {
+        expect(searchButton(other.buttonId)?.textContent).toBe(other.idleLabel);
+        expect(searchButton(other.buttonId)?.disabled).toBe(false);
+      });
       expect(deleteButton()?.textContent).toBe('🗑️ Delete');
       expect(deleteButton()?.disabled).toBe(false);
       expect(openInTabMock).not.toHaveBeenCalled();
 
-      lookup.resolve(provider.url);
+      lookup.resolve(entry.url);
       await flush();
 
       expect(openInTabMock).toHaveBeenCalledTimes(1);
-      expect(searchButton(provider.buttonId)?.textContent).toBe(provider.idleLabel);
-      expect(searchButton(provider.buttonId)?.disabled).toBe(false);
+      expect(searchButton(entry.buttonId)?.textContent).toBe(entry.idleLabel);
+      expect(searchButton(entry.buttonId)?.disabled).toBe(false);
+      others.forEach((other) => {
+        expect(searchButton(other.buttonId)?.textContent).toBe(other.idleLabel);
+        expect(searchButton(other.buttonId)?.disabled).toBe(false);
+      });
     });
 
     it('opens no tab for a route that changed during the lookup', async () => {
       const lookup = defer<string>();
-      search.getUrl.mockReturnValue(lookup.promise);
+      jest.mocked(search.getUrl).mockReturnValue(lookup.promise);
       await openRoute();
-      await clickSearch(provider.buttonId);
+      await clickSearch(entry.buttonId);
 
       navigate(TV_ROUTE);
-      lookup.resolve(provider.url);
+      lookup.resolve(entry.url);
       await flush();
 
       expect(openInTabMock).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
-      expect(searchButton(provider.buttonId)?.textContent).toBe(provider.idleLabel);
-      expect(searchButton(provider.buttonId)?.disabled).toBe(false);
+      expect(searchButton(entry.buttonId)?.textContent).toBe(entry.idleLabel);
+      expect(searchButton(entry.buttonId)?.disabled).toBe(false);
     });
 
     it('opens no tab and reports nothing after the page exits during the lookup', async () => {
       const lookup = defer<string>();
-      search.getUrl.mockReturnValue(lookup.promise);
+      jest.mocked(search.getUrl).mockReturnValue(lookup.promise);
       await openRoute();
-      await clickSearch(provider.buttonId);
+      await clickSearch(entry.buttonId);
 
       fakeWindow.dispatch('pagehide');
-      lookup.resolve(provider.url);
+      lookup.resolve(entry.url);
       await flush();
 
       expect(openInTabMock).not.toHaveBeenCalled();
@@ -595,14 +623,14 @@ describe('SeerHandler', () => {
     });
 
     it('reports an escaped lookup failure for eight seconds and restores the button', async () => {
-      search.getUrl.mockRejectedValue(new Error('No Seer title for <b>/movie/603</b> "detail"'));
+      jest.mocked(search.getUrl).mockRejectedValue(new Error('No Seer title for <b>/movie/603</b> "detail"'));
       await openRoute();
 
-      await clickSearch(provider.buttonId);
+      await clickSearch(entry.buttonId);
 
       expect(openInTabMock).not.toHaveBeenCalled();
       expect(Notifier.error).toHaveBeenCalledWith(
-        expect.stringContaining(`Seer ${provider.name} search failed for /movie/603`),
+        expect.stringContaining(`Seer ${entry.name} search failed for /movie/603`),
         FAILURE_TIMEOUT_MS
       );
       const message = jest.mocked(Notifier.error).mock.calls[0][0];
@@ -610,38 +638,39 @@ describe('SeerHandler', () => {
       expect(message).toContain('&lt;b&gt;/movie/603&lt;/b&gt;');
       expect(message).toContain('&quot;detail&quot;');
       expect(Notifier.success).not.toHaveBeenCalled();
-      expect(searchButton(provider.buttonId)?.textContent).toBe(provider.idleLabel);
-      expect(searchButton(provider.buttonId)?.disabled).toBe(false);
+      expect(searchButton(entry.buttonId)?.textContent).toBe(entry.idleLabel);
+      expect(searchButton(entry.buttonId)?.disabled).toBe(false);
     });
 
     it('reports a failure when the tab cannot be opened', async () => {
       openInTabMock.mockRejectedValue(new Error('GM.openInTab <denied>'));
       await openRoute();
 
-      await clickSearch(provider.buttonId);
+      await clickSearch(entry.buttonId);
 
-      expect(search.getUrl).toHaveBeenCalledWith(provider.provider, MOVIE_ROUTE);
+      expect(search.getUrl).toHaveBeenCalledTimes(1);
+      expect(search.getUrl).toHaveBeenCalledWith(entry.provider, MOVIE_ROUTE);
       expect(Notifier.error).toHaveBeenCalledWith(
-        expect.stringContaining(`Seer ${provider.name} search failed for /movie/603`),
+        expect.stringContaining(`Seer ${entry.name} search failed for /movie/603`),
         FAILURE_TIMEOUT_MS
       );
       expect(jest.mocked(Notifier.error).mock.calls[0][0]).toContain('&lt;denied&gt;');
-      expect(searchButton(provider.buttonId)?.textContent).toBe(provider.idleLabel);
-      expect(searchButton(provider.buttonId)?.disabled).toBe(false);
+      expect(searchButton(entry.buttonId)?.textContent).toBe(entry.idleLabel);
+      expect(searchButton(entry.buttonId)?.disabled).toBe(false);
     });
 
     it('stays silent when the lookup fails after navigating away', async () => {
-      search.getUrl.mockImplementation(() => {
+      jest.mocked(search.getUrl).mockImplementation(() => {
         navigate(TV_ROUTE);
         return Promise.reject(new Error('boom'));
       });
       await openRoute();
 
-      await clickSearch(provider.buttonId);
+      await clickSearch(entry.buttonId);
 
       expect(openInTabMock).not.toHaveBeenCalled();
       expect(Notifier.error).not.toHaveBeenCalled();
-      expect(searchButton(provider.buttonId)?.disabled).toBe(false);
+      expect(searchButton(entry.buttonId)?.disabled).toBe(false);
     });
 
     it('opens the search while the Delete button is hidden for a route without a media record', async () => {
@@ -650,7 +679,7 @@ describe('SeerHandler', () => {
 
       expect(deleteButton()?.hidden).toBe(true);
 
-      await clickSearch(provider.buttonId);
+      await clickSearch(entry.buttonId);
 
       expect(openInTabMock).toHaveBeenCalledTimes(1);
       expect(Notifier.error).not.toHaveBeenCalled();
@@ -664,7 +693,7 @@ describe('SeerHandler', () => {
 
       expect(deleteButton()?.hidden).toBe(true);
 
-      await clickSearch(provider.buttonId);
+      await clickSearch(entry.buttonId);
 
       expect(openInTabMock).toHaveBeenCalledTimes(1);
 
@@ -676,25 +705,28 @@ describe('SeerHandler', () => {
   });
 
   describe('independent searches', () => {
-    it('runs both provider searches at once without blocking Delete', async () => {
-      const xstream = defer<string>();
+    it('runs the mounted Binge and YouTube searches at once without blocking Delete', async () => {
       const binge = defer<string>();
-      search.getUrl.mockImplementation((provider: SearchProvider) =>
-        provider === SearchProvider.XSTREAM ? xstream.promise : binge.promise
-      );
+      const youtube = defer<string>();
+      jest.mocked(search.getUrl).mockImplementation((provider: SearchProvider) => {
+        return provider === SearchProvider.BINGE ? binge.promise : youtube.promise;
+      });
       await openRoute();
 
-      await clickSearch(Constants.UI.IDS.SEER.XSTREAM_BUTTON);
       await clickSearch(Constants.UI.IDS.SEER.BINGE_BUTTON);
+      await clickSearch(Constants.UI.IDS.SEER.YOUTUBE_BUTTON);
       await clickSearch(Constants.UI.IDS.SEER.BINGE_BUTTON);
+      await clickSearch(Constants.UI.IDS.SEER.YOUTUBE_BUTTON);
 
       expect(search.getUrl).toHaveBeenCalledTimes(2);
-      expect(search.getUrl).toHaveBeenCalledWith(SearchProvider.XSTREAM, MOVIE_ROUTE);
-      expect(search.getUrl).toHaveBeenCalledWith(SearchProvider.BINGE, MOVIE_ROUTE);
-      expect(xstreamButton()?.textContent).toBe('Opening Xstream…');
-      expect(xstreamButton()?.disabled).toBe(true);
+      MOUNTED_SEARCH_CASES.forEach((entry) => {
+        expect(search.getUrl).toHaveBeenCalledWith(entry.provider, MOVIE_ROUTE);
+      });
+      expect(searchButton(Constants.UI.IDS.SEER.XSTREAM_BUTTON)).toBeUndefined();
       expect(bingeButton()?.textContent).toBe('Opening Binge…');
       expect(bingeButton()?.disabled).toBe(true);
+      expect(youtubeButton()?.textContent).toBe('Opening YouTube…');
+      expect(youtubeButton()?.disabled).toBe(true);
       expect(deleteButton()?.disabled).toBe(false);
 
       await clickDelete();
@@ -702,23 +734,23 @@ describe('SeerHandler', () => {
       expect(confirmMock).toHaveBeenCalledTimes(1);
       expect(manager.deleteMedia).toHaveBeenCalledWith(MOVIE_ROUTE);
 
-      xstream.resolve(XSTREAM_URL);
-      await flush();
-
-      expect(openInTabMock).toHaveBeenCalledTimes(1);
-      expect(openInTabMock).toHaveBeenCalledWith(XSTREAM_URL, { active: true, setParent: true });
-      expect(xstreamButton()?.textContent).toBe('▶️ Xstream');
-      expect(xstreamButton()?.disabled).toBe(false);
-      expect(bingeButton()?.textContent).toBe('Opening Binge…');
-      expect(bingeButton()?.disabled).toBe(true);
-
       binge.resolve(BINGE_URL);
       await flush();
 
-      expect(openInTabMock).toHaveBeenCalledTimes(2);
-      expect(openInTabMock).toHaveBeenLastCalledWith(BINGE_URL, { active: true, setParent: true });
+      expect(openInTabMock).toHaveBeenCalledTimes(1);
+      expect(openInTabMock).toHaveBeenCalledWith(BINGE_URL, { active: true, setParent: true });
       expect(bingeButton()?.textContent).toBe('▶️ Binge');
       expect(bingeButton()?.disabled).toBe(false);
+      expect(youtubeButton()?.textContent).toBe('Opening YouTube…');
+      expect(youtubeButton()?.disabled).toBe(true);
+
+      youtube.resolve(YOUTUBE_URL);
+      await flush();
+
+      expect(openInTabMock).toHaveBeenCalledTimes(2);
+      expect(openInTabMock).toHaveBeenLastCalledWith(YOUTUBE_URL, { active: true, setParent: true });
+      expect(youtubeButton()?.textContent).toBe('▶️ YouTube');
+      expect(youtubeButton()?.disabled).toBe(false);
 
       await advanceRefresh();
 
